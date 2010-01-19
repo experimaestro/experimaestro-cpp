@@ -23,6 +23,7 @@ import bpiwowar.argparser.StringScanException;
 import bpiwowar.log.Logger;
 
 /**
+ * The server displays information and responds to XML RPC tasks
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 class ServerTask  {

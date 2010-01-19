@@ -1,4 +1,4 @@
-package bpiwowar.expmanager;
+package bpiwowar.expmanager.jobs;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,8 +40,6 @@ public class JobManager {
 	}
 
 	/**
-	 * 
-	 * @param array
 	 */
 	public void execute(Job job) {
 		logger.info("Executing %s", job);

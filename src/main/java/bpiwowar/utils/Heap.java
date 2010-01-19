@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * Heaps are binary tree for which a node value is smaller than the value of any
- * of its children
+ * of its children. Two nodes can have the same value.
  * 
  * arrays for which a[k] <= a[2*k+1] and a[k] <= a[2*k+2] for all k
  * 

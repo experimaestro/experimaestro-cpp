@@ -3,7 +3,7 @@ package bpiwowar.expmanager;
 import java.util.ArrayList;
 
 /**
- * A tool description
+ * A task description
  * 
  * <pre>
  * </pre>
