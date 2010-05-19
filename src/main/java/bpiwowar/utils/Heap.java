@@ -2,6 +2,7 @@ package bpiwowar.utils;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -55,10 +56,23 @@ final public class Heap<E extends HeapElement<E>> {
 
 	List<E> list = new ArrayList<E>();
 
+	Comparator<E> comparator = null;
+
 	/**
 	 * Default construction
 	 */
+	@SuppressWarnings("unchecked")
 	public Heap() {
+		// We use the default comparator, but this might generate exceptions
+		// latter
+		this.comparator = new DefaultComparator();
+	}
+
+	/**
+	 * Default construction
+	 */
+	public Heap(Comparator<E> comparator) {
+		this.comparator = comparator;
 	}
 
 	/**
@@ -102,7 +116,7 @@ final public class Heap<E extends HeapElement<E>> {
 		int i = list.size() - 1;
 		list.get(i).setIndex(i);
 		while (i > 0) {
-			if (list.get((i - 1) / 2).compareTo(list.get(i)) <= 0)
+			if (comparator.compare(list.get((i - 1) / 2), list.get(i)) <= 0)
 				break;
 			swap((i - 1) / 2, i);
 			i = (i - 1) / 2;
@@ -135,13 +149,14 @@ final public class Heap<E extends HeapElement<E>> {
 				hole_index = l;
 				break;
 			} else {
-				if (list.get(2 * hole_index + 1).compareTo(
-						list.get(2 * hole_index + 2)) < 0)
+				if (comparator.compare(list.get(2 * hole_index + 1), list
+						.get(2 * hole_index + 2)) < 0)
 					new_hole_index = l;
 				else
 					new_hole_index = l + 1;
 
-				if (list.get(L - 1).compareTo(list.get(new_hole_index)) > 0) {
+				if (comparator.compare(list.get(L - 1), list
+						.get(new_hole_index)) > 0) {
 					setItem(hole_index, list.get(new_hole_index));
 					hole_index = new_hole_index;
 				} else
@@ -156,7 +171,7 @@ final public class Heap<E extends HeapElement<E>> {
 	}
 
 	private int compare(int j, int k) {
-		return list.get(j).compareTo(list.get(k));
+		return comparator.compare(list.get(j), list.get(k));
 	}
 
 	/**
@@ -219,7 +234,7 @@ final public class Heap<E extends HeapElement<E>> {
 				return false;
 			if (k > 0) {
 				final int p = (k - 1) / 2;
-				if (list.get(p).compareTo(list.get(k)) > 0)
+				if (comparator.compare(list.get(p), list.get(k)) > 0)
 					return false;
 			}
 			return verify(2 * k + 1) && verify(2 * k + 2);

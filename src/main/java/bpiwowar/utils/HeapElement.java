@@ -5,7 +5,7 @@ package bpiwowar.utils;
  * @date 22/03/2007
  *
  */
-public interface HeapElement<E> extends Comparable<E> {
+public interface HeapElement<E> {
 	int getIndex();
 
 	void setIndex(int index);

@@ -27,54 +27,11 @@ import org.mozilla.javascript.Scriptable;
 import bpiwowar.argparser.ArgParseException;
 import bpiwowar.argparser.ArgParser;
 import bpiwowar.argparser.ArgParserOption;
+import bpiwowar.expmanager.server.ServerTask;
+import bpiwowar.expmanager.tasks.RunJob;
 import bpiwowar.log.Logger;
 
 public class Main {
-	public static class TestFunctionDefinition extends
-			ExtensionFunctionDefinition {
-		private static final long serialVersionUID = 1L;
-		private static final StructuredQName qName = new StructuredQName("sax",
-				"net.bpiwowar.sax", "test-function");
-
-		@Override
-		public ExtensionFunctionCall makeCallExpression() {
-			return new ExtensionFunctionCall() {
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public SequenceIterator call(SequenceIterator[] arguments,
-						XPathContext context) throws XPathException {
-					logger.info("Calling!");
-					return SingletonIterator.makeIterator(BooleanValue.TRUE);
-				}
-			};
-		}
-
-		@Override
-		public SequenceType getResultType(SequenceType[] suppliedArgumentTypes) {
-			return SequenceType.SINGLE_BOOLEAN;
-		}
-
-		@Override
-		public int getMinimumNumberOfArguments() {
-			return 0;
-		}
-
-		@Override
-		public int getMaximumNumberOfArguments() {
-			return 0;
-		}
-
-		@Override
-		public StructuredQName getFunctionQName() {
-			return qName;
-		}
-
-		@Override
-		public SequenceType[] getArgumentTypes() {
-			return new SequenceType[] { SequenceType.SINGLE_BOOLEAN };
-		}
-	}
 
 	final static private Logger logger = Logger.getLogger();;
 
@@ -88,7 +45,6 @@ public class Main {
 			System.exit(1);
 		}
 
-		logger.info("Stopping the experiment manager");
 		System.exit(0);
 	}
 
@@ -111,9 +67,12 @@ public class Main {
 		String task = args[0];
 		args = Arrays.copyOfRange(args, 1, args.length);
 
-		// Server
+		// --- Server task ---
 		if ("server".equals(task))
 			new ServerTask(this, args).run();
+
+		else if ("run-job".equals(task))
+			new RunJob(args);
 
 		// Test
 		else if ("xquery".equals(task)) {
@@ -174,7 +133,7 @@ public class Main {
 
 		}
 
-		// Test
+		// ---- Execute a javascript --- 
 		else if ("script".equals(task)) {
 			// Creates and enters a Context. The Context stores information
 			// about the execution environment of a script.
@@ -213,4 +172,56 @@ public class Main {
 		else
 			throw new ArgParseException("Task " + task + " does not exist");
 	}
+
+	
+	/**
+	 * Test for XQuery extensions
+	 * @author B. Piwowarski <benjamin@bpiwowar.net>
+	 */
+	public static class TestFunctionDefinition extends
+			ExtensionFunctionDefinition {
+		private static final long serialVersionUID = 1L;
+		private static final StructuredQName qName = new StructuredQName("sax",
+				"net.bpiwowar.sax", "test-function");
+
+		@Override
+		public ExtensionFunctionCall makeCallExpression() {
+			return new ExtensionFunctionCall() {
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public SequenceIterator call(SequenceIterator[] arguments,
+						XPathContext context) throws XPathException {
+					logger.info("Calling!");
+					return SingletonIterator.makeIterator(BooleanValue.TRUE);
+				}
+			};
+		}
+
+		@Override
+		public SequenceType getResultType(SequenceType[] suppliedArgumentTypes) {
+			return SequenceType.SINGLE_BOOLEAN;
+		}
+
+		@Override
+		public int getMinimumNumberOfArguments() {
+			return 0;
+		}
+
+		@Override
+		public int getMaximumNumberOfArguments() {
+			return 0;
+		}
+
+		@Override
+		public StructuredQName getFunctionQName() {
+			return qName;
+		}
+
+		@Override
+		public SequenceType[] getArgumentTypes() {
+			return new SequenceType[] { SequenceType.SINGLE_BOOLEAN };
+		}
+	}
+
 }

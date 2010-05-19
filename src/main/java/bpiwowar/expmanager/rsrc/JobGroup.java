@@ -1,4 +1,4 @@
-package bpiwowar.expmanager.jobs;
+package bpiwowar.expmanager.rsrc;
 
 /**
  * A group of jobs
