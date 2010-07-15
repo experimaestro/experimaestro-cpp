@@ -103,6 +103,7 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	/**
 	 * This is where the real job gets done
 	 * 
+	 * @return The error code (0 if everything went fine)
 	 * @throws Throwable
 	 */
 	protected int doRun() throws Throwable {

@@ -30,7 +30,7 @@ Every resource (see below) has a unique ID which is a path to a directory contai
 
 Based on the file ${FILE}
 - ${FILE}.lock     locks the write access to the status (can also be used as an exclusive lock to the resource)
-- ${FILE}.status   (optional) contains the PID of the running process (two columns PID MODE) where MODE is rw, r, w
+- ${FILE}.status   (optional) contains the PID of the running process (two columns PID MODE separated by space) where MODE is rw, r, w
 - ${FILE}.done     created when the job was successfully executed
 - ${FILE}.log.err  contains the error log output
 - ${FILE}.log.std  contains the standard log output
