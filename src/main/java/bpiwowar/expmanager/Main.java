@@ -28,6 +28,7 @@ import bpiwowar.argparser.ArgParseException;
 import bpiwowar.argparser.ArgParser;
 import bpiwowar.argparser.ArgParserOption;
 import bpiwowar.expmanager.server.ServerTask;
+import bpiwowar.expmanager.tasks.CreateData;
 import bpiwowar.expmanager.tasks.RunJob;
 import bpiwowar.log.Logger;
 
@@ -73,6 +74,10 @@ public class Main {
 
 		else if ("run-job".equals(task))
 			new RunJob(args);
+		
+		else if ("create-data".equals(task)) {
+			new CreateData(args);
+		}
 
 		// Test
 		else if ("xquery".equals(task)) {

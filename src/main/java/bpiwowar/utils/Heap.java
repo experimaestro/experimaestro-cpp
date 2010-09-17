@@ -3,6 +3,7 @@ package bpiwowar.utils;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -21,7 +22,7 @@ import java.util.List;
  * @author bpiwowar
  * 
  */
-final public class Heap<E extends HeapElement<E>> {
+final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
 
 	/**
 	 * Default element for a heap
@@ -275,6 +276,10 @@ final public class Heap<E extends HeapElement<E>> {
 
 	public boolean isEmpty() {
 		return list.isEmpty();
+	}
+
+	public Iterator<E> iterator() {
+		return list.iterator();
 	}
 
 }

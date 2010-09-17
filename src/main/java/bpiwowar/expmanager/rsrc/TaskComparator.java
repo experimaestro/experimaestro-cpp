@@ -9,11 +9,20 @@ import java.util.Comparator;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class TaskComparator implements Comparator<Task> {
+	/**
+	 * A public instance
+	 */
 	public static final Comparator<Task> INSTANCE = new TaskComparator();
 
+	/**
+	 * Private since the public instance should be used in all cases
+	 */
 	private TaskComparator() {
 	}
 
+	/* (non-Javadoc)
+	 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+	 */
 	public int compare(Task a, Task o) {
 		// Jobs are in a heap, where the smaller element is at the top
 		// so smaller means run before

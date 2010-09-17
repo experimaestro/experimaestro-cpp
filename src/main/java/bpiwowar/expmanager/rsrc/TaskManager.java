@@ -7,12 +7,16 @@ import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import bpiwowar.log.Logger;
 import bpiwowar.utils.GenericHelper;
 import bpiwowar.utils.Heap;
 import bpiwowar.utils.ThreadCount;
+import bpiwowar.utils.iterators.AbstractIterator;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
@@ -64,14 +68,37 @@ public class TaskManager {
 						LOGGER.warn("Houston, we had a problem: %s", t);
 					}
 				}
-				resources.remove(task);
 			} catch (InterruptedException e) {
 				LOGGER.warn("We were interrupted %s", e);
 			}
 
 			counter.del();
 		}
+	}
 
+	/**
+	 * This task runner takes a new task each time
+	 */
+	class ResourceChecker extends TimerTask {
+		@Override
+		public void run() {
+			synchronized (TaskManager.this) {
+				boolean changed = false;
+				// Update resources status
+				for (WeakReference<Resource> wr : resources.values()) {
+					Resource resource = wr.get();
+					if (resource != null) {
+						if (resource.updateStatus()) {
+							resource.notifyListeners();
+							changed = true;
+						}
+					}
+				}
+				LOGGER.info("Checked resources (changes=%b)", changed);
+				if (changed)
+					TaskManager.this.notify();
+			}
+		}
 	}
 
 	/**
@@ -94,6 +121,10 @@ public class TaskManager {
 			counter.add();
 			new TaskRunner().start();
 		}
+
+		// Add a timer thread for checking resources (every ten seconds)
+		Timer timer = new Timer("check-rsrc");
+		timer.schedule(new ResourceChecker(), 10000, 10000);
 
 		LOGGER.info("Done - ready to work now");
 
@@ -128,7 +159,7 @@ public class TaskManager {
 	 */
 	synchronized public Resource getResource(String id) {
 		WeakReference<Resource> ref = resources.get(id);
-		Resource resource = ref.get();
+		Resource resource = ref != null ? ref.get() : null;
 
 		if (resource == null) {
 			// Try to get it from disk
@@ -141,8 +172,8 @@ public class TaskManager {
 					FileInputStream is = new FileInputStream(file);
 					resource = (Resource) new XStream().fromXML(is);
 					is.close();
-					resources.put(resource.identifier, new WeakReference<Resource>(
-							resource));
+					resources.put(resource.identifier,
+							new WeakReference<Resource>(resource));
 				} catch (IOException e) {
 					resource = null;
 					LOGGER.error("Could not load resource %s", id);
@@ -155,13 +186,26 @@ public class TaskManager {
 	}
 
 	/**
+	 * Add a given resource
+	 */
+	synchronized public void add(Resource task) {
+		// --- Notify
+		LOGGER.info("Add the resource %s", task);
+		resources.put(task.identifier, new WeakReference<Resource>(task));
+	}
+
+	/**
 	 * Add a given job
 	 */
 	synchronized public void add(Task task) {
 		// --- Notify
 		LOGGER.info("Add the task %s", task);
+
 		tasks.add(task);
 		taskSet.add(task);
+
+		// Also adds it as a resource
+		resources.put(task.identifier, new WeakReference<Resource>(task));
 
 		// --- Notify if a task runner is waiting for a fresh new task
 		notify();
@@ -172,8 +216,13 @@ public class TaskManager {
 	 * heap)
 	 */
 	synchronized void updateState(Task task) {
-		// Update the task and notify ourselves since
+		// Update the task and notify ourselves since we might want
+		// to run new processes
+		
+		// Update the heap
 		tasks.update(task);
+		
+		// Notify
 		notify();
 	}
 
@@ -189,6 +238,7 @@ public class TaskManager {
 			synchronized (this) {
 				if (!tasks.isEmpty()) {
 					final Task task = tasks.peek();
+					LOGGER.info("Checking task %s for execution", task);
 					if (task.nbUnsatisfied == 0)
 						return tasks.pop();
 				}
@@ -198,5 +248,32 @@ public class TaskManager {
 			}
 
 		}
+	}
+
+	/**
+	 * Iterator on resources
+	 */
+	public Iterable<Resource> resources() {
+		return new Iterable<Resource>() {
+			public Iterator<Resource> iterator() {
+				return new AbstractIterator<Resource>() {
+					Iterator<WeakReference<Resource>> iterator = resources
+							.values().iterator();
+
+					@Override
+					protected boolean storeNext() {
+						while (iterator.hasNext()) {
+							if ((value = iterator.next().get()) != null)
+								return true;
+						}
+						return false;
+					}
+				};
+			}
+		};
+	}
+
+	public Iterable<Task> tasks() {
+		return tasks;
 	}
 }

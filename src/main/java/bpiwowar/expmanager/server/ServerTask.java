@@ -35,12 +35,13 @@ import bpiwowar.argparser.IllegalArgumentValue;
 import bpiwowar.argparser.InvalidHolderException;
 import bpiwowar.argparser.checkers.IOChecker;
 import bpiwowar.expmanager.Main;
+import bpiwowar.expmanager.locks.LockType;
 import bpiwowar.expmanager.rsrc.CommandLineTask;
-import bpiwowar.expmanager.rsrc.DependencyType;
+import bpiwowar.expmanager.rsrc.LockMode;
 import bpiwowar.expmanager.rsrc.Resource;
 import bpiwowar.expmanager.rsrc.SimpleData;
+import bpiwowar.expmanager.rsrc.Task;
 import bpiwowar.expmanager.rsrc.TaskManager;
-import bpiwowar.expmanager.rsrc.SimpleData.Mode;
 import bpiwowar.log.Logger;
 
 /**
@@ -105,12 +106,30 @@ public class ServerTask {
 			this.taskManager = taskManager;
 		}
 
+		public boolean addData(String id, String mode, boolean exists) {
+			logger.info("Addind data %s [%s/%b]", id, mode, exists);
+			taskManager.add(new SimpleData(taskManager, id, LockMode
+					.valueOf(mode), exists));
+			return true;
+		}
+
+		/**
+		 * Run a bash command
+		 * 
+		 * @param name
+		 * @param priority
+		 * @param command
+		 * @param depends
+		 * @param readLocks
+		 * @param writeLocks
+		 * @return
+		 */
 		public boolean runCommand(String name, int priority, Object[] command,
 				Object[] depends, Object[] readLocks, Object[] writeLocks) {
 			logger.info(
 					"Running command %s [%s] (priority %d); read=%s, write=%s",
-					name, Arrays.toString(command), priority, Arrays
-							.toString(readLocks), Arrays.toString(writeLocks));
+					name, Arrays.toString(command), priority,
+					Arrays.toString(readLocks), Arrays.toString(writeLocks));
 
 			String[] commandArgs = new String[command.length];
 			for (int i = command.length; --i >= 0;)
@@ -119,24 +138,34 @@ public class ServerTask {
 			CommandLineTask job = new CommandLineTask(taskManager, name,
 					commandArgs);
 
+			// Process locks
+			for (Object depend : depends) {
+				Resource resource = taskManager.getResource((String) depend);
+				if (resource == null)
+					throw new RuntimeException("Resource " + depend
+							+ " was not found");
+				job.addDependency(resource, LockType.GENERATED);
+			}
+
 			// We have to wait for read lock resources to be generated
 			for (Object readLock : readLocks) {
 				Resource resource = taskManager.getResource((String) readLock);
 				if (resource == null)
 					throw new RuntimeException("Resource " + readLock
 							+ " was not found");
-				job.addDependency(resource, DependencyType.READ_ACCESS);
+				job.addDependency(resource, LockType.READ_ACCESS);
 			}
 
+			// Write locks
 			for (Object writeLock : writeLocks) {
 				final String id = (String) writeLock;
 				Resource resource = taskManager.getResource(id);
 				if (resource == null) {
 					resource = new SimpleData(taskManager, id,
-							Mode.EXCLUSIVE_WRITE);
+							LockMode.EXCLUSIVE_WRITER, false);
 					resource.register(job);
 				}
-				job.addDependency(resource, DependencyType.WRITE_ACCESS);
+				job.addDependency(resource, LockType.WRITE_ACCESS);
 			}
 
 			taskManager.add(job);
@@ -241,10 +270,49 @@ public class ServerTask {
 
 		// --- Adding a general purpose servlet
 		Context context = new Context(server, "/", Context.SESSIONS);
+		context.addServlet(new ServletHolder(new StatusServlet(taskManager)),
+				"/status");
 		context.addServlet(new ServletHolder(new HelloServlet()), "/*");
 
 		server.start();
 		server.join();
+	}
+
+	/**
+	 * Gives the current task status
+	 * 
+	 * @author B. Piwowarski <benjamin@bpiwowar.net>
+	 */
+	public class StatusServlet extends HttpServlet {
+		private static final long serialVersionUID = 1L;
+		private final TaskManager manager;
+
+		public StatusServlet(TaskManager manager) {
+			this.manager = manager;
+		}
+
+		protected void doGet(HttpServletRequest request,
+				HttpServletResponse response) throws ServletException,
+				IOException {
+			response.setContentType("text/html");
+			response.setStatus(HttpServletResponse.SC_OK);
+			final PrintWriter out = response.getWriter();
+
+			out.println("<h1>Waiting tasks</h1>");
+			out.println("<ul>");
+			for (Task task : manager.tasks()) {
+				out.format("<li>%s</li>", task);
+			}
+			out.println("</ul>");
+
+			out.println("<h1>List of resources</h1>");
+			out.println("<ul>");
+			for (Resource resource : manager.resources()) {
+				out.format("<li>[%s, %b] %s</li>", resource.getClass(),
+						resource, resource.isGenerated());
+			}
+			out.println("</ul>");
+		}
 	}
 
 	public static class HelloServlet extends HttpServlet {

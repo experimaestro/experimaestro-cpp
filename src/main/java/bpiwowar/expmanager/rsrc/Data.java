@@ -1,6 +1,5 @@
 package bpiwowar.expmanager.rsrc;
 
-
 /**
  * Represents some data that can be produced by a given job
  * 
@@ -8,15 +7,13 @@ package bpiwowar.expmanager.rsrc;
  */
 public abstract class Data extends Resource {
 
-	public Data(TaskManager taskManager, String identifier) {
-		super(taskManager, identifier);
+	public Data(TaskManager taskManager, String identifier, LockMode mode) {
+		super(taskManager, identifier, mode);
 	}
 
 	/**
 	 * The job that can or has generated this data (if any)
 	 */
 	transient Job generatingJob = null;
-	
-	
 
 }

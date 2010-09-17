@@ -5,9 +5,6 @@ import java.util.ArrayList;
 /**
  * A task description
  * 
- * <pre>
- * </pre>
- * 
  * @author Benjamin Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class TaskDescription {

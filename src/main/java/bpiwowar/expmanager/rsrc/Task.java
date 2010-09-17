@@ -1,15 +1,23 @@
 package bpiwowar.expmanager.rsrc;
 
+import static java.lang.String.format;
+
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import bpiwowar.expmanager.locks.FileLock;
+import bpiwowar.expmanager.locks.Lock;
+import bpiwowar.expmanager.locks.LockType;
+import bpiwowar.expmanager.locks.UnlockableException;
+import bpiwowar.expmanager.utils.PID;
 import bpiwowar.log.Logger;
 import bpiwowar.utils.HeapElement;
 
 /**
- * A task is a resource that can be run- that starts and ends (which
+ * A task is a resource that can be run - that starts and ends (which
  * differentiate it with a server) and generate data
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -23,7 +31,7 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	 * @param taskManager
 	 */
 	public Task(TaskManager taskManager, String identifier) {
-		super(taskManager, identifier);
+		super(taskManager, identifier, LockMode.EXCLUSIVE_WRITER);
 	}
 
 	/**
@@ -40,11 +48,11 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	 * What is the status of a dependency This class stores the previous status
 	 * (satisfied or not) in order to update the number of blocking resources
 	 */
-	static public class DependencyStatus {
-		DependencyType type = null;
+	static public class DependencyStatusCache {
+		LockType type = null;
 		boolean isSatisfied = false;
 
-		public DependencyStatus(DependencyType type, boolean isSatisfied) {
+		public DependencyStatusCache(LockType type, boolean isSatisfied) {
 			super();
 			this.type = type;
 			this.isSatisfied = isSatisfied;
@@ -54,7 +62,7 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	/**
 	 * The dependencies for this job (dependencies are on any resource)
 	 */
-	private SortedMap<Resource, DependencyStatus> dependencies = new TreeMap<Resource, DependencyStatus>();
+	private SortedMap<Resource, DependencyStatusCache> dependencies = new TreeMap<Resource, DependencyStatusCache>();
 
 	/**
 	 * Number of unsatisfied dependencies
@@ -67,13 +75,23 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	 * @param data
 	 *            The data we depend upon
 	 */
-	public void addDependency(Resource resource, DependencyType type) {
+	public void addDependency(Resource resource, LockType type) {
+
+		LOGGER.info("Adding dependency %s to %s for %s", type, resource, this);
+		final DependencyStatus accept = resource.accept(type);
+		if (accept == DependencyStatus.ERROR)
+			throw new RuntimeException(format(
+					"Resource %s cannot be satisfied for lock type %s",
+					resource, type));
+
 		resource.register(this);
-		final boolean ready = resource.isReady(type);
+
+		final boolean ready = accept.isOK();
+
 		synchronized (this) {
 			if (!ready)
 				nbUnsatisfied++;
-			dependencies.put(resource, new DependencyStatus(type, ready));
+			dependencies.put(resource, new DependencyStatusCache(type, ready));
 		}
 	}
 
@@ -103,10 +121,13 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	/**
 	 * This is where the real job gets done
 	 * 
+	 * @param locks
+	 *            The set of locks that were taken
+	 * 
 	 * @return The error code (0 if everything went fine)
 	 * @throws Throwable
 	 */
-	protected int doRun() throws Throwable {
+	protected int doRun(ArrayList<Lock> locks) throws Throwable {
 		return 1;
 	}
 
@@ -123,76 +144,103 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 			return;
 		}
 
-		// Lock
-		File lockFile = new File(identifier + ".lock");
+		// Our locks
+		ArrayList<Lock> locks = new ArrayList<Lock>();
+
 		try {
 			while (true) {
 				// Check if not done
 				if (doneFile.exists()) {
 					LOGGER.info("Task %s is already done", identifier);
-					lockFile.delete();
+					lockfile.delete();
 					return;
 				}
 
-				if (lockFile.createNewFile()) {
-					// Check if not done
-					if (doneFile.exists()) {
-						LOGGER.info("Task %s is already done", identifier);
-						lockFile.delete();
-						return;
-					}
-
-					lockFile.deleteOnExit();
-
-					LOGGER.info("Running task %s", identifier);
-					try {
-						// Run the task
-						int code = doRun();
-
-						if (code != 0)
-							throw new RuntimeException(String.format(
-									"Error while running the task (code %d)",
-									code));
-
-						// Create the "done" file
-						LOGGER.info("Done");
-						doneFile.createNewFile();
-						generated = true;
-					} catch (Throwable e) {
-						LOGGER.warn("Error while running: %s", e);
-					} finally {
-						lockFile.delete();
-					}
-
-					break;
-				} else {
+				// Try to lock, otherwise wait
+				try {
+					locks.add(new FileLock(lockfile, true));
+				} catch (UnlockableException e) {
 					synchronized (this) {
 						try {
 							// Wait five seconds before looking again
 							wait(5000);
-						} catch (InterruptedException e) {
+						} catch (InterruptedException ee) {
 						}
 					}
+					continue;
 				}
+
+				// Check if not done (again, but now we have a lock so we
+				// will be sure of the result)
+				if (doneFile.exists()) {
+					LOGGER.info("Task %s is already done", identifier);
+					lockfile.delete();
+					return;
+				}
+
+				lockfile.deleteOnExit();
+				int pid = PID.getPID();
+
+				// Now, tries to lock all the resources
+				for (Entry<Resource, DependencyStatusCache> dependency : dependencies
+						.entrySet()) {
+					Resource rsrc = dependency.getKey();
+					final Lock lock = rsrc
+							.lock(pid, dependency.getValue().type);
+					if (lock != null)
+						locks.add(lock);
+				}
+
+				// And run!
+				LOGGER.info("Running task %s", identifier);
+				try {
+					// Run the task
+					int code = doRun(locks);
+
+					if (code != 0)
+						throw new RuntimeException(String.format(
+								"Error while running the task (code %d)", code));
+
+					// Create the "done" file
+					LOGGER.info("Done");
+					doneFile.createNewFile();
+					generated = true;
+					notifyListeners();
+				} catch (Throwable e) {
+					LOGGER.warn("Error while running: %s", e);
+				} finally {
+					// Dispose of the locks we adquired
+					for (Lock lock : locks)
+						lock.dispose();
+				}
+
+				break;
 			}
-		} catch (IOException e) {
+		} catch (UnlockableException e) {
 			throw new RuntimeException(e);
+		} finally {
+			// Dispose of all locks
+			for (Lock lock : locks)
+				lock.dispose();
 		}
 
 	}
 
 	/**
-	 * Notify that resource has changed
+	 * Called when a resource status has changed
 	 * 
-	 * @param message
+	 * @param resource
+	 *            The resource has changed
 	 * @param objects
 	 */
 	synchronized public void notify(Resource resource, Object... objects) {
 		// Get the status
-		DependencyStatus status = dependencies.get(resource);
+		DependencyStatusCache status = dependencies.get(resource);
 
-		int k = resource.isReady(status.type) ? 1 : 0;
-		final int diff = k - (status.isSatisfied ? 1 : 0);
+		int k = resource.accept(status.type).isOK() ? 1 : 0;
+		final int diff = (status.isSatisfied ? 1 : 0) - k;
+
+		LOGGER.info("Got a notification from %s [%d/%d]", resource, k, diff);
 
 		// Update
 		nbUnsatisfied += diff;
@@ -213,14 +261,4 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	public void setIndex(int index) {
 		this.index = index;
 	}
-
-	@Override
-	public boolean isReady(DependencyType type) {
-		if (type != DependencyType.GENERATED)
-			throw new RuntimeException(
-					"A task dependency can only be on its completion");
-
-		return generated;
-	}
-
 }

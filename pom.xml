@@ -54,7 +54,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>net.bpiwowar</groupId>
-			<artifactId>argparser</artifactId>
+			<artifactId>argj</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
