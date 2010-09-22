@@ -1,14 +1,17 @@
 /**
  * 
  */
-package bpiwowar.expmanager.server;
+package bpiwowar.expmanager.tasks;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.servlet.ServletConfig;
@@ -27,14 +30,15 @@ import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 
-import bpiwowar.argparser.ArgParseException;
-import bpiwowar.argparser.ArgParser;
 import bpiwowar.argparser.Argument;
-import bpiwowar.argparser.IllegalArgumentValue;
-import bpiwowar.argparser.InvalidHolderException;
 import bpiwowar.argparser.checkers.IOChecker;
-import bpiwowar.expmanager.Main;
+import bpiwowar.experiments.AbstractTask;
+import bpiwowar.experiments.TaskDescription;
+import bpiwowar.expmanager.experiments.JSHandler;
+import bpiwowar.expmanager.experiments.Repository;
 import bpiwowar.expmanager.locks.LockType;
 import bpiwowar.expmanager.rsrc.CommandLineTask;
 import bpiwowar.expmanager.rsrc.LockMode;
@@ -49,7 +53,8 @@ import bpiwowar.log.Logger;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class ServerTask {
+@TaskDescription(name = "server", project = { "xpmanager" })
+public class ServerTask extends AbstractTask {
 	final static private Logger logger = Logger.getLogger();
 
 	@Argument(name = "xmlrpc", help = "XML RPC configuration file")
@@ -60,23 +65,6 @@ public class ServerTask {
 
 	@Argument(name = "nb-threads", help = "Number of threads")
 	int nbThreads = 10;
-
-	/**
-	 * Initialise the server task
-	 * 
-	 * @param options
-	 * @param args
-	 * @throws InvalidHolderException
-	 * @throws ArgParseException
-	 * @throws IllegalArgumentValue
-	 */
-	public ServerTask(Main options, String[] args)
-			throws InvalidHolderException, ArgParseException,
-			IllegalArgumentValue {
-		ArgParser argParser = new ArgParser("[options]");
-		argParser.addOptions(this);
-		argParser.matchAllArgs(args);
-	}
 
 	/**
 	 * Just for debug purposes, we provide a Calculator with two methods (add
@@ -100,10 +88,19 @@ public class ServerTask {
 	 * @author B. Piwowarski <benjamin@bpiwowar.net>
 	 */
 	static public class RPCTaskManager {
+		/**
+		 * The task manager
+		 */
 		private TaskManager taskManager;
 
-		void setTaskServer(TaskManager taskManager) {
+		/**
+		 * Repository
+		 */
+		Repository repository;
+
+		void setTaskServer(TaskManager taskManager, Repository repository) {
 			this.taskManager = taskManager;
+			this.repository = repository;
 		}
 
 		public boolean addData(String id, String mode, boolean exists) {
@@ -113,18 +110,89 @@ public class ServerTask {
 			return true;
 		}
 
+		static public class JSGetEnv {
+			private final Map<String, String> environment;
+
+			public JSGetEnv(Map<String, String> environment) {
+				this.environment = environment;
+			}
+
+			public String get(String key) {
+				return environment.get(key);
+			}
+
+			public String get(String key, String defaultValue) {
+				String value = environment.get(key);
+				if (value == null)
+					return defaultValue;
+				return value;
+			}
+
+		}
+
+		org.mozilla.javascript.Context cx = org.mozilla.javascript.Context
+				.enter();
+
+		@Override
+		protected void finalize() throws Throwable {
+			super.finalize();
+			org.mozilla.javascript.Context.exit();
+		}
+
 		/**
-		 * Run a bash command
-		 * 
-		 * @param name
-		 * @param priority
-		 * @param command
-		 * @param depends
-		 * @param readLocks
-		 * @param writeLocks
-		 * @return
+		 * Run a javascript
+		 */
+		public boolean runJSScript(boolean isFile, String content,
+				Map<String, String> environment) {
+			// Creates and enters a Context. The Context stores information
+			// about the execution environment of a script.
+			try {
+				// Initialize the standard objects (Object, Function, etc.)
+				// This must be done before scripts can be executed. Returns
+				// a scope object that we use in later calls.
+				Scriptable scope = cx.initStandardObjects();
+
+				ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
+						environment), 0);
+				JSHandler jsXPM = new JSHandler(cx, scope, repository,
+						taskManager);
+				ScriptableObject.defineProperty(scope, "xpm", jsXPM, 0);
+
+				final Object result;
+				if (isFile)
+					result = cx.evaluateReader(scope, new FileReader(content),
+							content, 1, null);
+				else
+					result = cx
+							.evaluateString(scope, content, "stdin", 1, null);
+
+				if (result != null)
+					logger.info(result.toString());
+				else
+					logger.info("Null result");
+
+				// Object object = scope.get("Task", null);
+				// if (object instanceof NativeFunction) {
+				// org.mozilla.javascript.Context cx2 =
+				// org.mozilla.javascript.Context
+				// .enter();
+				// ((NativeFunction) object).call(cx2, scope, scope, null);
+				// org.mozilla.javascript.Context.exit();
+				// }
+
+			} catch (FileNotFoundException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			return true;
+		}
+
+		/**
+		 * Add a command line job
 		 */
 		public boolean runCommand(String name, int priority, Object[] command,
+				Map<String, String> env, String workingDirectory,
 				Object[] depends, Object[] readLocks, Object[] writeLocks) {
 			logger.info(
 					"Running command %s [%s] (priority %d); read=%s, write=%s",
@@ -136,7 +204,7 @@ public class ServerTask {
 				commandArgs[i] = command[i].toString();
 
 			CommandLineTask job = new CommandLineTask(taskManager, name,
-					commandArgs);
+					commandArgs, env, new File(workingDirectory));
 
 			// Process locks
 			for (Object depend : depends) {
@@ -176,12 +244,15 @@ public class ServerTask {
 	/**
 	 * Server thread
 	 */
-	public void run() throws Throwable {
+	public int execute() throws Throwable {
+
 		logger.info("Starting server");
 		Server server = new Server(8080);
 
 		final TaskManager taskManager = new TaskManager(taskmanagerDirectory,
 				nbThreads);
+
+		final Repository repository = new Repository();
 
 		// --- Set the XML RPC
 
@@ -207,7 +278,8 @@ public class ServerTask {
 									Object object = pClass.newInstance();
 									if (object instanceof RPCTaskManager) {
 										((RPCTaskManager) object)
-												.setTaskServer(taskManager);
+												.setTaskServer(taskManager,
+														repository);
 									}
 									return object;
 								} catch (InstantiationException e) {
@@ -276,6 +348,8 @@ public class ServerTask {
 
 		server.start();
 		server.join();
+
+		return 0;
 	}
 
 	/**

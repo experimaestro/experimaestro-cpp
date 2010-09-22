@@ -8,6 +8,12 @@ public abstract class Information {
 	 */
 	String id;
 	
+	
+	public Information(String id) {
+		super();
+		this.id = id;
+	}
+
 	/**
 	 * Creates a new experiment
 	 */

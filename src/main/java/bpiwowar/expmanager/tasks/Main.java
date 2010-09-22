@@ -1,6 +1,5 @@
-package bpiwowar.expmanager;
+package bpiwowar.expmanager.tasks;
 
-import java.io.FileReader;
 import java.util.Arrays;
 import java.util.List;
 
@@ -21,15 +20,11 @@ import net.sf.saxon.value.SequenceType;
 
 import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeFunction;
 import org.mozilla.javascript.Scriptable;
 
 import bpiwowar.argparser.ArgParseException;
 import bpiwowar.argparser.ArgParser;
 import bpiwowar.argparser.ArgParserOption;
-import bpiwowar.expmanager.server.ServerTask;
-import bpiwowar.expmanager.tasks.CreateData;
-import bpiwowar.expmanager.tasks.RunJob;
 import bpiwowar.log.Logger;
 
 public class Main {
@@ -69,18 +64,8 @@ public class Main {
 		args = Arrays.copyOfRange(args, 1, args.length);
 
 		// --- Server task ---
-		if ("server".equals(task))
-			new ServerTask(this, args).run();
 
-		else if ("run-job".equals(task))
-			new RunJob(args);
-		
-		else if ("create-data".equals(task)) {
-			new CreateData(args);
-		}
-
-		// Test
-		else if ("xquery".equals(task)) {
+		if ("xquery".equals(task)) {
 			Configuration config = new Configuration();
 			config.setAllowExternalFunctions(true);
 			config.registerExtensionFunction(new TestFunctionDefinition());
@@ -94,12 +79,12 @@ public class Main {
 
 			for (Object i : evaluate)
 				if (i instanceof TinyElementImpl)
-					logger.info("XQ: %s", ((TinyElementImpl) i)
-							.getDisplayName());
+					logger.info("XQ: %s",
+							((TinyElementImpl) i).getDisplayName());
 				else
 					logger.info("XQ: %s", i);
 
-			//			
+			//
 			// XQDataSource xqjd = new SaxonXQDataSource();
 			// XQConnection xqjc = xqjd.getConnection();
 			// XQStaticContext xqsc = xqjc.getStaticContext();
@@ -138,49 +123,14 @@ public class Main {
 
 		}
 
-		// ---- Execute a javascript --- 
-		else if ("script".equals(task)) {
-			// Creates and enters a Context. The Context stores information
-			// about the execution environment of a script.
-			Context cx = Context.enter();
-			try {
-				// Initialize the standard objects (Object, Function, etc.)
-				// This must be done before scripts can be executed. Returns
-				// a scope object that we use in later calls.
-				Scriptable scope = cx.initStandardObjects();
-
-				// Collect the arguments into a single string.
-				for (int i = 0; i < args.length; i++) {
-					logger.info("Executing %s", args[i]);
-					Object result = cx.evaluateReader(scope, new FileReader(
-							args[i]), args[i], 1, null);
-					System.err.println(result.getClass());
-					// Convert the result to a string and print it.
-					System.err.println(Context.toString(result));
-				}
-
-				Object object = scope.get("Task", null);
-				if (object instanceof NativeFunction) {
-					Context cx2 = Context.enter();
-					((NativeFunction) object).call(cx2, scope, scope, null);
-					Context.exit();
-				}
-
-			} finally {
-				// Exit from the context.
-				Context.exit();
-			}
-
-		}
-
 		// Unknown command
 		else
 			throw new ArgParseException("Task " + task + " does not exist");
 	}
 
-	
 	/**
 	 * Test for XQuery extensions
+	 * 
 	 * @author B. Piwowarski <benjamin@bpiwowar.net>
 	 */
 	public static class TestFunctionDefinition extends

@@ -1,21 +1,17 @@
 package bpiwowar.expmanager.tasks;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeSet;
 
-import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
 
-import bpiwowar.argparser.ArgParseException;
-import bpiwowar.argparser.ArgParser;
-import bpiwowar.argparser.ArgParserOption;
 import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.argparser.ArgumentRegexp;
-import bpiwowar.argparser.IllegalArgumentValue;
+import bpiwowar.experiments.AbstractTask;
+import bpiwowar.experiments.TaskDescription;
 import bpiwowar.expmanager.tasks.config.XMLRPCClientConfig;
 import bpiwowar.utils.GenericHelper;
 
@@ -25,7 +21,8 @@ import bpiwowar.utils.GenericHelper;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class RunJob {
+@TaskDescription(name = "add-job", project = { "xpmanager" })
+public class AddJob extends AbstractTask {
 	@ArgumentClass(prefix = "xmlrpc", help = "Configuration file for the XML RPC call", required = true)
 	XMLRPCClientConfig xmlrpcClientConfig;
 
@@ -55,20 +52,24 @@ public class RunJob {
 	@Argument(name = "lock-read", help = "Lock for read", required = false)
 	TreeSet<File> readLocks = GenericHelper.newTreeSet();
 
+	/**
+	 * Remaining command line arguments
+	 */
+	private String[] command;
+
 	@Argument(name = "data", required = false, help = "Produced data")
 	void addData(File file) {
 
 	}
 
-	public RunJob(String[] args) throws IllegalArgumentValue, IOException,
-			ArgParseException, XmlRpcException {
-		// Read the arguments
-		ArgParser argParser = new ArgParser("create-job");
-		argParser.addOptions(this);
-		String[] command = argParser.matchAllArgs(args, 0,
-				ArgParserOption.STOP_FIRST_UNMATCHED,
-				ArgParserOption.EXCEPTION_ON_ERROR);
+	@Override
+	public String[] processTrailingArguments(String[] args) throws Exception {
+		this.command = args;
+		return null;
+	}
 
+	public int execute() throws Throwable {
+		// Read the arguments
 		if (command == null || command.length == 0)
 			throw new RuntimeException("There should be a command to run");
 
@@ -80,20 +81,22 @@ public class RunJob {
 		params.add(basename.getAbsolutePath().toString());
 		params.add(priority);
 		params.add(command);
+		params.add(System.getenv());
+		params.add(System.getProperty("user.dir"));
 		params.add(getFullPathArray(depends));
 		params.add(getFullPathArray(readLocks));
 		params.add(getFullPathArray(writeLocks));
 
 		Boolean returns = (Boolean) client.execute("TaskManager.runCommand",
 				params.toArray());
-		if (!returns)
-			throw new RuntimeException();
+
+		return returns ? 0 : 1;
 	}
 
 	private Object getFullPathArray(TreeSet<File> set) {
 		String[] array = new String[set.size()];
 		int i = 0;
-		for (File s : set) 
+		for (File s : set)
 			array[i++] = s.getAbsolutePath();
 		return array;
 	}

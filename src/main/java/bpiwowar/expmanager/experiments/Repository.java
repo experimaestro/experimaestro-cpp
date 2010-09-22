@@ -1,8 +1,9 @@
 package bpiwowar.expmanager.experiments;
 
-import java.io.File;
 import java.util.Map;
 import java.util.TreeMap;
+
+import bpiwowar.log.Logger;
 
 /**
  * This class generates new experiments
@@ -10,11 +11,13 @@ import java.util.TreeMap;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Repository {
+	final static private Logger LOGGER = Logger.getLogger();
+	
 	/**
 	 * The list of available experiments
 	 */
 	Map<String, Information> experiments = new TreeMap<String, Information>();
-
+	
 	/**
 	 * @return
 	 */
@@ -38,15 +41,8 @@ public class Repository {
 	 * @param information
 	 */
 	public void register(Information information) {
+		LOGGER.info("Registering experiment %s", information.id);
 		experiments.put(information.id, information);
 	}
 
-	/**
-	 * Register new experiment information
-	 * 
-	 * @param file
-	 *            The file where the experimental information comes from
-	 */
-	public void register(File file) {
-	}
 }

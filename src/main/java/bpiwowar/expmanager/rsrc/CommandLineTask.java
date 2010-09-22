@@ -1,8 +1,12 @@
 package bpiwowar.expmanager.rsrc;
 
+import static java.lang.String.format;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
 import bpiwowar.argparser.ListAdaptator;
 import bpiwowar.expmanager.locks.Lock;
@@ -27,6 +31,10 @@ public class CommandLineTask extends Task {
 	 */
 	final String shellCommand = "/bin/bash";
 
+	private String[] envp = null;
+
+	private File workingDirectory;
+
 	/**
 	 * Constructs the command line
 	 * 
@@ -35,8 +43,19 @@ public class CommandLineTask extends Task {
 	 * @param command
 	 */
 	public CommandLineTask(TaskManager taskManager, String identifier,
-			String[] command) {
+			String[] commandArgs, Map<String, String> env,
+			File workingDirectory) {
+
 		super(taskManager, identifier);
+
+		// Copy the environment
+		if (env != null) {
+			envp = new String[env.size()];
+			int i = 0;
+			for (Map.Entry<String, String> entry : env.entrySet())
+				envp[i++] = format("%s=%s", entry.getKey(), entry.getValue());
+		}
+		this.workingDirectory = workingDirectory;
 
 		this.command = new String[] {
 				shellCommand,
@@ -62,13 +81,19 @@ public class CommandLineTask extends Task {
 
 	}
 
+	public CommandLineTask(TaskManager taskManager, String identifier,
+			String[] command) {
+		this(taskManager, identifier, command, null, null);
+	}
+
 	@Override
 	protected int doRun(ArrayList<Lock> locks) throws IOException,
 			InterruptedException {
 		// Runs the command
 		LOGGER.info("Evaluating command %s", Arrays.toString(command));
-		Process p = Runtime.getRuntime().exec(command);
-		
+		final Process p = Runtime.getRuntime().exec(command, envp,
+				workingDirectory);
+
 		// Changing the ownership of the different logs
 		final int pid = bpiwowar.expmanager.utils.PID.getPID(p);
 		for (Lock lock : locks) {
