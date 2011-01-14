@@ -10,14 +10,17 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.UniqueTag;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import bpiwowar.expmanager.rsrc.CommandLineTask;
 import bpiwowar.expmanager.rsrc.TaskManager;
 import bpiwowar.log.Logger;
+import bpiwowar.utils.JSUtils;
 
 /**
- * Handle javascript calls
+ * This class contains both utility static methods and functions that can be
+ * called from javascript
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -27,18 +30,21 @@ public class JSHandler {
 	/**
 	 * The experiment repository
 	 */
-	private final Repository repository;
+	private final TaskRepository repository;
 
 	/**
-	 * Our scope
+	 * Our scope (global among javascripts)
 	 */
 	private final Scriptable scope;
 
+	/**
+	 * The context (local)
+	 */
 	private Context context;
 
 	private final TaskManager manager;
 
-	public JSHandler(Context cx, Scriptable scope, Repository repository,
+	public JSHandler(Context cx, Scriptable scope, TaskRepository repository,
 			TaskManager manager) {
 		this.context = cx;
 		this.scope = scope;
@@ -51,18 +57,18 @@ public class JSHandler {
 	 * 
 	 * @param object
 	 */
-	public void addExperiment(NativeObject object) {
-		repository.register(new JSInformation(context, scope, object));
+	public void addTask(NativeObject object) {
+		repository.register(new JSTaskInformation(context, scope, object));
 	}
 
 	/**
-	 * Get the documentation of an experiment
+	 * Get the documentation for a task of a given id
 	 * 
 	 * @param id
-	 * @return
+	 * @return An XHTML string or null if the task does not exist
 	 */
 	public String getDocumentation(String id) {
-		Information information = repository.get(id);
+		TaskInformation information = repository.get(id);
 		if (information == null)
 			return null;
 
@@ -70,22 +76,27 @@ public class JSHandler {
 	}
 
 	/**
-	 * Get the documentation of an experiment
+	 * Get the information about a given task
 	 * 
 	 * @param id
 	 * @return
 	 */
-	public Information getExperiment(String id) {
-		Information information = repository.get(id);
+	public TaskInformation getExperiment(String id) {
+		TaskInformation information = repository.get(id);
 		return information;
 	}
 
+	
 	/**
 	 * Run a command line experiment
-	 * 
+	 * @param jsargs a native array
+	 * @param a E4X object 
 	 * @return
 	 */
-	public void addCommandLineJob(String identifier, Object jsargs) {
+	public void addCommandLineJob(String identifier, Object jsargs,
+			Object jsresources) {
+		// --- Process arguments: convert the javascript array into a Java array
+		// of String
 		final String[] args;
 		if (jsargs instanceof NativeArray) {
 			NativeArray array = ((NativeArray) jsargs);
@@ -99,14 +110,20 @@ public class JSHandler {
 		} else
 			throw new RuntimeException(format(
 					"Cannot handle an array of type %s", jsargs.getClass()));
-
-		// Add it
+		
+		// --- Process the resources
+		Node resources = JSUtils.toDOM(jsresources);
+		NodeList children = resources.getChildNodes();
+		
+		
+		
+		// --- Add it
 		CommandLineTask task = new CommandLineTask(manager, identifier, args);
 		manager.add(task);
 	}
 
 	/**
-	 * Captures a bash script
+	 * Simple evaluation of shell commands
 	 * 
 	 * @return
 	 * @throws IOException
@@ -142,19 +159,6 @@ public class JSHandler {
 
 		int error = p.waitFor();
 		return new NativeArray(new Object[] { error, sb.toString() });
-	}
-
-	/**
-	 * @param object
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	static <T> T get(Scriptable scope, String name, NativeObject object) {
-		final Object _value = object.get(name, scope);
-		if (_value == UniqueTag.NOT_FOUND)
-			throw new RuntimeException(format("Could not find property '%s'",
-					name));
-		return (T) _value;
 	}
 
 }

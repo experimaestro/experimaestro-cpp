@@ -2,8 +2,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.bpiwowar</groupId>
-	<artifactId>expmanager</artifactId>
-	<name>expmanager</name>
+	<artifactId>experimaestro</artifactId>
+	<name>experimaestro</name>
 	<version>0.0.1-SNAPSHOT</version>
 	<description>Experiment manager framework</description>
 

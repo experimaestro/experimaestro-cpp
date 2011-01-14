@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# To start the server
+
+
+# --- Check paths
+
+version=0.0.1-SNAPSHOT
+name=experimaestro-$version.jar
+dir="$(dirname "$(readlink -f  "$0")")"
+
+JAR=""
+for f in "$dir/$name" "$dir/../target/experimaestro-$version-bin.dir/$name"; do
+	if test -f "$f";  then
+		JAR="$f"		
+		break
+	fi
+done
+
+
+if test -z "$JAR"; then
+	echo "Could not find experimaestro jar file" 1>&2
+	exit 1
+fi
+
+# --- Run commands
+
+case "$1" in
+
+server) java -jar $JAR "$@";;
+
+add-job) shift; python "$dir/add-job.py" "$@";; 
+
+*) echo "Unkown command '$1'"; exit 1;;
+esac

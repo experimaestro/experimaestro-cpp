@@ -24,10 +24,12 @@ public class QName implements Comparable<QName> {
 	}
 
 	/**
-	 * Build from another package name
+	 * Creates a qualified name which is a prefix of a given qualified name
 	 * 
 	 * @param key
+	 *            The qualified name
 	 * @param length
+	 *            The
 	 */
 	public QName(QName key, int length) {
 		array = new String[length];
@@ -35,9 +37,14 @@ public class QName implements Comparable<QName> {
 			array[i] = key.array[i];
 	}
 
-	public QName(String key, QName qName) {
+	/**
+	 * Creates a qualified name with a new prefix
+	 * @param prefix The prefix
+	 * @param qName The qualified name that is used as a base
+	 */
+	public QName(String prefix, QName qName) {
 		this.array = new String[1 + qName.size()];
-		this.array[0] = key;
+		this.array[0] = prefix;
 		for (int i = 0; i < qName.size(); i++)
 			this.array[i + 1] = qName.array[i];
 	}

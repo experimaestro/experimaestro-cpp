@@ -48,6 +48,8 @@ public class CommandLineTask extends Task {
 
 		super(taskManager, identifier);
 
+		LOGGER.info("Command is %s", Arrays.toString(commandArgs));
+		
 		// Copy the environment
 		if (env != null) {
 			envp = new String[env.size()];
@@ -61,7 +63,7 @@ public class CommandLineTask extends Task {
 				shellCommand,
 				"-c",
 				String.format("( %s ) > %s.out 2> %2$s.err", Output.toString(
-						" ", ListAdaptator.create(command),
+						" ", ListAdaptator.create(commandArgs),
 						new Output.Formatter<String>() {
 							public String format(String t) {
 								StringBuilder sb = new StringBuilder();
@@ -90,7 +92,7 @@ public class CommandLineTask extends Task {
 	protected int doRun(ArrayList<Lock> locks) throws IOException,
 			InterruptedException {
 		// Runs the command
-		LOGGER.info("Evaluating command %s", Arrays.toString(command));
+		LOGGER.info("Evaluating command [%s] %s with environment %s", workingDirectory, Arrays.toString(command), Arrays.toString(envp));
 		final Process p = Runtime.getRuntime().exec(command, envp,
 				workingDirectory);
 

@@ -11,7 +11,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-import bpiwowar.argparser.ReadLineIterator;
+import bpiwowar.argparser.utils.ReadLineIterator;
 import bpiwowar.expmanager.locks.FileLock;
 import bpiwowar.expmanager.locks.Lock;
 import bpiwowar.expmanager.locks.LockType;

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
@@ -38,7 +39,7 @@ import bpiwowar.argparser.checkers.IOChecker;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
 import bpiwowar.expmanager.experiments.JSHandler;
-import bpiwowar.expmanager.experiments.Repository;
+import bpiwowar.expmanager.experiments.TaskRepository;
 import bpiwowar.expmanager.locks.LockType;
 import bpiwowar.expmanager.rsrc.CommandLineTask;
 import bpiwowar.expmanager.rsrc.LockMode;
@@ -47,6 +48,7 @@ import bpiwowar.expmanager.rsrc.SimpleData;
 import bpiwowar.expmanager.rsrc.Task;
 import bpiwowar.expmanager.rsrc.TaskManager;
 import bpiwowar.log.Logger;
+import bpiwowar.utils.Output;
 
 /**
  * The server displays information about the tasks and responds to XML RPC tasks
@@ -96,9 +98,9 @@ public class ServerTask extends AbstractTask {
 		/**
 		 * Repository
 		 */
-		Repository repository;
+		TaskRepository repository;
 
-		void setTaskServer(TaskManager taskManager, Repository repository) {
+		void setTaskServer(TaskManager taskManager, TaskRepository repository) {
 			this.taskManager = taskManager;
 			this.repository = repository;
 		}
@@ -192,12 +194,21 @@ public class ServerTask extends AbstractTask {
 		 * Add a command line job
 		 */
 		public boolean runCommand(String name, int priority, Object[] command,
-				Map<String, String> env, String workingDirectory,
-				Object[] depends, Object[] readLocks, Object[] writeLocks) {
+				Object[] envArray, String workingDirectory, Object[] depends,
+				Object[] readLocks, Object[] writeLocks) {
+			Map<String, String> env = new TreeMap<String, String>();
+			for (Object x : envArray) {
+				Object[] o = (Object[]) x;
+				if (o.length != 2)
+					// FIXME: should be a proper one
+					throw new RuntimeException();
+				env.put((String) o[0], (String) o[1]);
+			}
 			logger.info(
-					"Running command %s [%s] (priority %d); read=%s, write=%s",
+					"Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",
 					name, Arrays.toString(command), priority,
-					Arrays.toString(readLocks), Arrays.toString(writeLocks));
+					Arrays.toString(readLocks), Arrays.toString(writeLocks),
+					Output.toString(", ", env.entrySet()));
 
 			String[] commandArgs = new String[command.length];
 			for (int i = command.length; --i >= 0;)
@@ -252,7 +263,7 @@ public class ServerTask extends AbstractTask {
 		final TaskManager taskManager = new TaskManager(taskmanagerDirectory,
 				nbThreads);
 
-		final Repository repository = new Repository();
+		final TaskRepository repository = new TaskRepository();
 
 		// --- Set the XML RPC
 

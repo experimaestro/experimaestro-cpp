@@ -1,18 +1,32 @@
 <assembly>
-  <id>bin</id>
-  <formats>
-    <format>dir</format>
-  </formats>
-  <includeBaseDirectory>false</includeBaseDirectory>
- 
-  <dependencySets>
-    <dependencySet>
-	  <!--<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>-->
-      <unpack>false</unpack>
-      <scope>runtime</scope>
-    </dependencySet>
-    
-  </dependencySets>
-  
+	<id>bin</id>
+	<formats>
+		<format>dir</format>
+	</formats>
+	<includeBaseDirectory>false</includeBaseDirectory>
 
+	<dependencySets>
+		<dependencySet>
+			<!--<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping> -->
+			<unpack>false</unpack>
+			<scope>runtime</scope>
+		</dependencySet>
+
+	</dependencySets>
+
+	<fileSets>
+
+		<fileSet>
+			<directory>target/nar/jni-renaissance-0.0.1-SNAPSHOT-x86_64-MacOSX-gpp-jni/lib/x86_64-MacOSX-gpp/jni
+			</directory>
+			<outputDirectory>lib/x86_64-MacOSX-g++</outputDirectory>
+		</fileSet>
+
+
+		<fileSet>
+			<directory>scripts</directory>
+			<fileMode>0755</fileMode>
+			<outputDirectory></outputDirectory>
+		</fileSet>
+	</fileSets>
 </assembly>
