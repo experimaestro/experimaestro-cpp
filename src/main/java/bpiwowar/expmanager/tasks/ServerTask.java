@@ -390,11 +390,21 @@ public class ServerTask extends AbstractTask {
 			}
 			out.println("</ul>");
 
-			out.println("<h1>List of resources</h1>");
+			out.println("<h1>List of resources (generated)</h1>");
 			out.println("<ul>");
 			for (Resource resource : manager.resources()) {
-				out.format("<li>[%s, %b] %s</li>", resource.getClass(),
-						resource, resource.isGenerated());
+				if (resource.isGenerated())
+					out.format("<li>[%s] %s</li>", resource.getClass(),
+							resource);
+			}
+			out.println("</ul>");
+
+			out.println("<h1>List of resources (not generated)</h1>");
+			out.println("<ul>");
+			for (Resource resource : manager.resources()) {
+				if (!resource.isGenerated())
+					out.format("<li>[%s] %s</li>", resource.getClass(),
+							resource);
 			}
 			out.println("</ul>");
 		}
