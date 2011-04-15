@@ -109,4 +109,11 @@ public final class Logger extends org.apache.log4j.Logger {
 		}
 	}
 
+	public void log(Level level, String format, Object... values) {
+		if (repository.isDisabled(level.toInt()))
+			return;
+		if (isEnabledFor(level))
+			forcedLog(FQCN, level, String.format(format, values), null);
+	}
+
 }
