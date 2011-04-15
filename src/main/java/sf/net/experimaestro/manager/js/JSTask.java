@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
@@ -17,9 +17,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.NamedParameter;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * Task as implemented by a javascript object
@@ -119,10 +122,10 @@ public class JSTask extends Task {
 
 	@Override
 	public Document run() {
-		LOGGER.info("[Running] task: %s", taskFactory.id);
+		LOGGER.info("[Running] task: %s", taskFactory.getId());
 		Scriptable result = (Scriptable) runFunction.call(jsContext, jsScope,
 				jsObject, new Object[] {});
-		LOGGER.info("[/Running] task: %s", taskFactory.id);
+		LOGGER.info("[/Running] task: %s", taskFactory.getId());
 
 		Node node = JSUtils.toDOM(result);
 		if (node instanceof Document)

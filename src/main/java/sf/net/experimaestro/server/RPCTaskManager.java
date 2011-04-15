@@ -16,7 +16,7 @@ import org.mozilla.javascript.WrappedException;
 
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.manager.XPMObject;
+import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.rsrc.CommandLineTask;
 import sf.net.experimaestro.rsrc.LockMode;
 import sf.net.experimaestro.rsrc.Resource;

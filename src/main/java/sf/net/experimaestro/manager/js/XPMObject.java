@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
@@ -22,6 +22,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.rsrc.CommandLineTask;
 import sf.net.experimaestro.rsrc.TaskManager;
 import sf.net.experimaestro.utils.JSUtils;

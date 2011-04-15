@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.js;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -12,6 +12,9 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.org.mozilla.javascript.internal.UniqueTag;
@@ -78,7 +81,7 @@ public class JSJointTaskFactory extends JSTaskFactory {
 			String fromPath = (String) jsConnection.get(1, jsConnections);
 			String to = (String) jsConnection.get(2, jsConnections);
 			String toSlot = (String) jsConnection.get(3, jsConnections);
-			LOGGER.info("Task %s : connects %s [%s] to %s [%s]", this.id, from,
+			LOGGER.info("Task %s : connects %s [%s] to %s [%s]", this.getId(), from,
 					fromPath, to, toSlot);
 		}
 

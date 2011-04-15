@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
@@ -17,6 +17,10 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.NamedParameter;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 

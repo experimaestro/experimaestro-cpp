@@ -15,7 +15,7 @@ public abstract class TaskFactory {
 	/**
 	 * The identifier of this experiment
 	 */
-	QName id;
+	protected QName id;
 
 	/**
 	 * The version
@@ -57,7 +57,7 @@ public abstract class TaskFactory {
 	/**
 	 * Creates a new experiment
 	 */
-	abstract Task create();
+	public abstract Task create();
 
 	/**
 	 * Returns the qualified name for this task

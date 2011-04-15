@@ -11,7 +11,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.JSUtils;
 
 public abstract class Task {
@@ -22,9 +22,9 @@ public abstract class Task {
 	/**
 	 * The information related to this class of experiment
 	 */
-	TaskFactory taskFactory;
+	protected TaskFactory taskFactory;
 
-	Task(TaskFactory information) {
+	protected Task(TaskFactory information) {
 		this.taskFactory = information;
 	}
 
@@ -96,6 +96,6 @@ public abstract class Task {
 	 * 
 	 * @return An XML description of the output
 	 */
-	abstract Document run();
+	public abstract Document run();
 
 }
