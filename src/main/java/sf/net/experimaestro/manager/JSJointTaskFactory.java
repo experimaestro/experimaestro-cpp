@@ -14,8 +14,8 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 
-import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.log.Logger;
 import sun.org.mozilla.javascript.internal.UniqueTag;
 
 
