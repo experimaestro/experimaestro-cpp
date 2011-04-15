@@ -12,7 +12,7 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.PID;
 
@@ -232,13 +232,14 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 	 * @param objects
 	 */
 	synchronized public void notify(Resource resource, Object... objects) {
-		// Get the status
+		// Get the cached status
 		DependencyStatusCache status = dependencies.get(resource);
-
+		
 		int k = resource.accept(status.type).isOK() ? 1 : 0;
+		
 		final int diff = (status.isSatisfied ? 1 : 0) - k;
 
-		LOGGER.info("Got a notification from %s [%d/%d]", resource, k, diff);
+		LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this, resource, k, status.type, diff);
 
 		// Update
 		nbUnsatisfied += diff;

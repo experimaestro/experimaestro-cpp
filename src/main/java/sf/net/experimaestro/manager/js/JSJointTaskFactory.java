@@ -92,10 +92,6 @@ public class JSJointTaskFactory extends JSTaskFactory {
 		return JSUtils.get(jsScope, "description", jsObject).toString();
 	}
 
-	public Task jsFunction_create() {
-		LOGGER.info("!!!!!!!!!!!!js create CALLED!!!!!!");
-		return create();
-	}
 
 	@Override
 	public Task create() {

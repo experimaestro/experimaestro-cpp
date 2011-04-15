@@ -15,7 +15,7 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.PID;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
@@ -138,7 +138,7 @@ public abstract class Resource implements Comparable<Resource> {
 		OK_STATUS, OK_LOCK, GO, WAIT, ERROR;
 
 		public boolean isOK() {
-			return this == OK_LOCK || this == OK_LOCK || this == GO;
+			return this == OK_LOCK || this == GO;
 		}
 	}
 

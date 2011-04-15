@@ -19,16 +19,18 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.utils.log.Logger;
-import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.rsrc.CommandLineTask;
+import sf.net.experimaestro.rsrc.LockMode;
+import sf.net.experimaestro.rsrc.Resource;
+import sf.net.experimaestro.rsrc.SimpleData;
 import sf.net.experimaestro.rsrc.TaskManager;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -37,33 +39,6 @@ import sf.net.experimaestro.utils.XMLUtils;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class XPMObject {
-
-	/**
-	 * Task factory as seen by JavaScript
-	 * 
-	 * @author B. Piwowarski <benjamin@bpiwowar.net>
-	 */
-	static public class TaskFactoryJSWrapper extends ScriptableObject {
-		private TaskFactory information;
-
-		public TaskFactoryJSWrapper() {
-		}
-
-		public void jsConstructor(Scriptable information) {
-			if (information != null)
-				this.information = (TaskFactory) ((NativeJavaObject) information)
-						.unwrap();
-		}
-
-		public Task jsFunction_create() {
-			return information.create();
-		}
-
-		@Override
-		public String getClassName() {
-			return "TaskFactory";
-		}
-	}
 
 	private static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
 
@@ -110,6 +85,7 @@ public class XPMObject {
 		this.manager = manager;
 
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
+		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
 	}
 
 	/**
@@ -140,7 +116,7 @@ public class XPMObject {
 	public Scriptable getExperiment(String namespace, String id) {
 		TaskFactory factory = repository.get(new QName(namespace, id));
 		LOGGER.info("Information %s", factory);
-		return context.newObject(scope, "TaskFactory",
+		return context.newObject(scope, "XPMTaskFactory",
 				new Object[] { Context.javaToJS(factory, scope) });
 	}
 
@@ -172,23 +148,42 @@ public class XPMObject {
 			args = new String[length];
 			for (int i = 0; i < length; i++) {
 				Object el = array.get(i, array);
-				LOGGER.debug("arg %d: %s/%s", i, el, el.getClass());
-				if (el instanceof NativeJavaObject)
-					args[i] = ((NativeJavaObject) el).unwrap().toString();
-				else
-					args[i] = el.toString();
+				args[i] = toString(el);
+				LOGGER.debug("arg %d: [%s] %s", i, el.getClass(), args[i]);
 			}
 		} else
 			throw new RuntimeException(format(
 					"Cannot handle an array of type %s", jsargs.getClass()));
 
-		// --- Process the resources
-		Node resources = JSUtils.toDOM(jsresources);
-		NodeList children = resources.getChildNodes();
+		CommandLineTask task = new CommandLineTask(manager, identifier, args);
+
+		// --- Resources
+		NativeArray resources = ((NativeArray) jsresources);
+		for (int i = (int) resources.getLength(); --i >= 0;) {
+			NativeArray array = (NativeArray) resources.get(i, resources);
+			assert array.getLength() == 2;
+			Resource resource = manager.getResource(toString(array
+					.get(0, array)));
+			LockType lockType = LockType.valueOf(toString(array.get(1, array)));
+			LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource, lockType);
+			task.addDependency(resource, lockType);
+		}
 
 		// --- Add it
-		CommandLineTask task = new CommandLineTask(manager, identifier, args);
 		manager.add(task);
+	}
+
+	static private String toString(Object object) {
+		if (object instanceof NativeJavaObject)
+			return ((NativeJavaObject) object).unwrap().toString();
+		return object.toString();
+	}
+
+	public String addData(String identifier) {
+		LockMode mode = LockMode.SINGLE_WRITER;
+		SimpleData resource = new SimpleData(manager, identifier, mode, false);
+		manager.add(resource);
+		return identifier;
 	}
 
 	/**

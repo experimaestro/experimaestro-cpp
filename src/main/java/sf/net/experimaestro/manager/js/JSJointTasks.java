@@ -18,18 +18,18 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.NamedParameter;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.utils.Converter;
+import sf.net.experimaestro.utils.Maps;
 import sf.net.experimaestro.utils.log.Logger;
 
-
 /**
- * Meta-task composed of several interconnected tasks
+ * Meta-task composed of several interconnected tasks defined in JavaScript
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JSJointTasks extends JSTask {
 	final static private Logger LOGGER = Logger.getLogger();
-	
-	
+
 	/**
 	 * Standard initialisation
 	 * 
@@ -37,31 +37,43 @@ public class JSJointTasks extends JSTask {
 	 * @param context
 	 * @param scope
 	 */
-	JSJointTasks(JSJointTaskFactory taskFactory, Context context, Scriptable scope,
-			NativeObject jsObject) {
+	JSJointTasks(JSJointTaskFactory taskFactory, Context context,
+			Scriptable scope, NativeObject jsObject) {
 		super(taskFactory, context, scope, jsObject);
-		
-		// Now, creates all the subtasks so that the run method
-		// can access it
-		jsObject.defineProperty("tasks", tasks, ScriptableObject.READONLY);
-		
-		for(Entry<String, TaskFactory> entry: taskFactory.getSubtasks().entrySet()) {
+
+		// Create a JavaScript map
+		Scriptable jsMap = Context.getCurrentContext().newObject(jsScope,
+				"Object", new Object[] {});
+		jsObject.defineProperty("tasks", jsMap, ScriptableObject.READONLY);
+
+		// Creates the sub-tasks and map them to javascript
+		for (Entry<String, TaskFactory> entry : taskFactory.getSubtasks()
+				.entrySet()) {
 			String id = entry.getKey();
 			TaskFactory factory = entry.getValue();
 			LOGGER.debug("Creating sub-task %s", id);
-			
+
 			Task task = factory.create();
 			tasks.put(id, task);
+
+			jsMap.put(id, jsMap, jsContext.newObject(jsScope, "XPMTask",
+					new Object[] { task }));
 		}
+
+	}
+
+	public java.util.Map<String, Task> getSubTasks() {
+		return tasks;
 	}
 
 	/**
 	 * Maps a local identifier to an experiment
 	 */
 	Map<String, Task> tasks = new TreeMap<String, Task>();
-	
+
 	/**
 	 * Get a sub task
+	 * 
 	 * @param id
 	 * @return
 	 */
@@ -83,7 +95,7 @@ public class JSJointTasks extends JSTask {
 	@Override
 	public void setParameter(DotName id, Node value) {
 		LOGGER.debug("Setting parameter [%s]", id);
-		
+
 		// Find which experiments match
 		if (id.size() >= 2) {
 			Task task = tasks.get(id.get(0));
@@ -93,16 +105,17 @@ public class JSJointTasks extends JSTask {
 			task.setParameter(id.offset(1), value);
 		} else {
 			super.setParameter(id, value);
-//			// Unqualified id
-//			ArrayList<Entry<String, Task>> matches = new ArrayList<Entry<String, Task>>();
-//
-//			for (Entry<String, Task> outer : tasks.entrySet()) {
-//				for (Entry<DotName, NamedParameter> inner : outer.getValue()
-//						.getParameters().entrySet()) {
-//					if (inner.getKey().getName().equals(id.get(0)))
-//						matches.add(outer);
-//				}
-//			}
+			// // Unqualified id
+			// ArrayList<Entry<String, Task>> matches = new
+			// ArrayList<Entry<String, Task>>();
+			//
+			// for (Entry<String, Task> outer : tasks.entrySet()) {
+			// for (Entry<DotName, NamedParameter> inner : outer.getValue()
+			// .getParameters().entrySet()) {
+			// if (inner.getKey().getName().equals(id.get(0)))
+			// matches.add(outer);
+			// }
+			// }
 		}
 
 	}
@@ -135,7 +148,5 @@ public class JSJointTasks extends JSTask {
 
 		return map;
 	}
-	
-	
 
 }

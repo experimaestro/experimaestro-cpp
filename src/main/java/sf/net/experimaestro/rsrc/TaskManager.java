@@ -14,7 +14,7 @@ import java.util.TimerTask;
 
 import org.apache.log4j.Level;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.GenericHelper;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -246,7 +246,7 @@ public class TaskManager {
 			synchronized (this) {
 				if (!tasks.isEmpty()) {
 					final Task task = tasks.peek();
-					LOGGER.info("Checking task %s for execution", task);
+					LOGGER.info("Checking task %s for execution [%d unsatisfied]", task, task.nbUnsatisfied);
 					if (task.nbUnsatisfied == 0)
 						return tasks.pop();
 				}

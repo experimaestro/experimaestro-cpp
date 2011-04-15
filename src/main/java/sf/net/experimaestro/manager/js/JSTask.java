@@ -13,6 +13,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -32,8 +33,8 @@ import sf.net.experimaestro.utils.log.Logger;
 public class JSTask extends Task {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	private final Context jsContext;
-	private final Scriptable jsScope;
+	protected final Context jsContext;
+	final Scriptable jsScope;
 	private final NativeObject jsObject;
 
 	/**
@@ -41,10 +42,6 @@ public class JSTask extends Task {
 	 */
 	private Function runFunction;
 
-	/**
-	 * The setParameter function
-	 */
-	private Function setParameterFunction;
 
 	/**
 	 * Initialise a new task from a JavaScript object
@@ -73,46 +70,50 @@ public class JSTask extends Task {
 					format("Could not find the function run() in the object"));
 		}
 
-		// Get (optional) set parameter function
-		setParameterFunction = (Function) JSUtils.get(jsScope, "getParameters",
-				jsObject, null);
+		// Set inputs
+		Scriptable jsInputs = Context.getCurrentContext().newObject(jsScope, "Object",
+				new Object[] {});
+		jsObject.put("inputs", jsObject, jsInputs);
+
 	}
 
 	@Override
 	public void setParameter(DotName id, Node value) {
-		// FIXME
-		LOGGER.debug("Setting parameter %s", id);
+		// FIXME: should cope with dot names
+		LOGGER.debug("[set] parameter %s to %s", id, value);
 		final String name = id.getName();
 
-		if (setParameterFunction == null) {
-			// FIXME: should do some checking with getParameters()
-			short nodeType = value.getNodeType();
-			if (nodeType == Node.ELEMENT_NODE)
-				jsObject.put(name, jsObject,
-						JSUtils.domToE4X(value, jsContext, jsScope));
-			else if (nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
-				// Embed in a list
-				NodeList childNodes = value.getChildNodes();
-				Scriptable[] nodes = new Scriptable[childNodes.getLength()];
-				for (int i = 0; i < nodes.length; i++)
-					nodes[i] = JSUtils.domToE4X(childNodes.item(i), jsContext,
-							jsScope);
-				Scriptable object = jsContext.newObject(jsScope, "XMLList",
-						nodes);
-				LOGGER.debug(value.getTextContent());
-				jsObject.put(name, jsObject, object);
+		// FIXME: should do some checking with getParameters()
 
-			} else
-				throw new RuntimeException("Cannot handle type " + nodeType);
-		} else {
-			setParameterFunction.call(jsContext, jsScope, jsScope,
-					new Object[] { name, value });
+		short nodeType = value.getNodeType();
+		Scriptable jsInput = null;
+
+		if (nodeType == Node.ELEMENT_NODE) {
+			jsInput = JSUtils.domToE4X(value, jsContext, jsScope);
+		} else if (nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
+			// Embed in a list
+			NodeList childNodes = value.getChildNodes();
+			Scriptable[] nodes = new Scriptable[childNodes.getLength()];
+			for (int i = 0; i < nodes.length; i++)
+				nodes[i] = JSUtils.domToE4X(childNodes.item(i), jsContext,
+						jsScope);
+			jsInput = jsContext.newObject(jsScope, "XMLList", nodes);
 		}
+
+		if (jsInput == null)
+			throw new RuntimeException("Cannot handle type " + nodeType);
+
+		// Set this value
+
+		Scriptable jsInputs = (Scriptable) jsObject.get("inputs", jsObject);
+		jsInputs.put(name, jsInputs, jsInput);
+
+		LOGGER.debug("[/set] parameter %s (task %s)", name, factory.getId());
 	}
 
 	@Override
 	public Map<DotName, NamedParameter> getParameters() {
-		return taskFactory.getInputs();
+		return factory.getInputs();
 	}
 
 	@Override
@@ -120,13 +121,17 @@ public class JSTask extends Task {
 		return null;
 	}
 
-	@Override
-	public Document run() {
-		LOGGER.info("[Running] task: %s", taskFactory.getId());
+	public Scriptable jsrun() {
+		LOGGER.info("[Running] task: %s", factory.getId());
 		Scriptable result = (Scriptable) runFunction.call(jsContext, jsScope,
 				jsObject, new Object[] {});
-		LOGGER.info("[/Running] task: %s", taskFactory.getId());
+		LOGGER.info("[/Running] task: %s", factory.getId());
+		return result;
+	}
 
+	@Override
+	public Document run() {
+		Scriptable result = jsrun();
 		Node node = JSUtils.toDOM(result);
 		if (node instanceof Document)
 			return (Document) node;
@@ -149,7 +154,7 @@ public class JSTask extends Task {
 		node = node.cloneNode(true);
 		document.adoptNode(node);
 		document.appendChild(node);
-		
+
 		return document;
 	}
 

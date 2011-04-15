@@ -12,7 +12,6 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 
 import sf.net.experimaestro.utils.log.Logger;
-import sf.net.experimaestro.utils.JSUtils;
 
 public abstract class Task {
 	public final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
@@ -22,31 +21,10 @@ public abstract class Task {
 	/**
 	 * The information related to this class of experiment
 	 */
-	protected TaskFactory taskFactory;
+	protected TaskFactory factory;
 
 	protected Task(TaskFactory information) {
-		this.taskFactory = information;
-	}
-
-	/**
-	 * Set a parameter
-	 * 
-	 * @param id
-	 * @param value
-	 */
-	public void setParameter(String _id, Object value) {
-		DotName id = DotName.parse(_id);
-		LOGGER.info("Value has class %s for parameter id", value.getClass());
-
-		if (value instanceof Node)
-			setParameter(id, (Node) value);
-		else if (value instanceof String) 
-			setParameter(id, (String) value);
-		else if (JSUtils.isXML(value)) {
-			setParameter(id, JSUtils.toDOM(value));
-		} else {
-			setParameter(id, (String)value.toString());
-		}
+		this.factory = information;
 	}
 
 	/**
@@ -64,10 +42,27 @@ public abstract class Task {
 					.createDocumentFragment();
 			fragment.setTextContent(value);
 			setParameter(id, fragment);
-			LOGGER.debug("Set string parameter [%s]: %s", id, fragment.getTextContent());
+			LOGGER.debug("Set string parameter [%s]: %s", id,
+					fragment.getTextContent());
 		} catch (ParserConfigurationException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * Returns the factory that created this task
+	 */
+	public TaskFactory getFactory() {
+		return factory;
+	}
+
+	/**
+	 * Get the list of sub tasks
+	 * 
+	 * @return A map or null
+	 */
+	public Map<String, Task> getSubTasks() {
+		return null;
 	}
 
 	/**
