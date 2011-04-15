@@ -1,7 +1,9 @@
 package sf.net.experimaestro.manager;
 
+import javax.xml.namespace.QName;
+
 /**
- * A type
+ * A parameter definition
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -14,7 +16,7 @@ public class NamedParameter {
 	/**
 	 * The type of the parameter
 	 */
-	Type type;
+	QName type;
 	
 	/**
 	 * The name of this parameter

@@ -58,7 +58,7 @@ public class FileLock implements Lock {
 			boolean success = lockFile.delete();
 			lockFile = null;
 			if (!success)
-				LOGGER.warn("Could not deleted lock file %s", lockFile);
+				LOGGER.warn("Could not delete lock file %s", lockFile);
 			return success;
 		}
 		return true;

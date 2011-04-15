@@ -12,9 +12,9 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.PID;
-import sf.net.experimaestro.utils.log.Logger;
 
 
 /**
@@ -209,10 +209,6 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 					notifyListeners();
 				} catch (Throwable e) {
 					LOGGER.warn("Error while running: %s", e);
-				} finally {
-					// Dispose of the locks we adquired
-					for (Lock lock : locks)
-						lock.dispose();
 				}
 
 				break;
@@ -221,6 +217,7 @@ public class Task extends Resource implements HeapElement<Task>, Runnable {
 			throw new RuntimeException(e);
 		} finally {
 			// Dispose of all locks
+			LOGGER.info("Dispose of locks for %s", this);
 			for (Lock lock : locks)
 				lock.dispose();
 		}

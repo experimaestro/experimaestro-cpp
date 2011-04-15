@@ -1,6 +1,6 @@
 package sf.net.experimaestro.rsrc;
 
-import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.log.Logger;
 
 /**
  * 

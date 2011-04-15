@@ -12,11 +12,13 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.log4j.Level;
+
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.GenericHelper;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import sf.net.experimaestro.utils.log.Logger;
 
 
 import com.sleepycat.je.DatabaseException;
@@ -91,11 +93,16 @@ public class TaskManager {
 					if (resource != null) {
 						if (resource.updateStatus()) {
 							resource.notifyListeners();
+							
+							// Notify the task manager in the case of a task
+							if (resource instanceof Task)
+								TaskManager.this.updateState((Task) resource);
+							
 							changed = true;
 						}
 					}
 				}
-				LOGGER.info("Checked resources (changes=%b)", changed);
+				LOGGER.log(changed ? Level.INFO : Level.DEBUG, "Checked resources (changes=%b)", changed);
 				if (changed)
 					TaskManager.this.notify();
 			}
@@ -219,10 +226,10 @@ public class TaskManager {
 	synchronized void updateState(Task task) {
 		// Update the task and notify ourselves since we might want
 		// to run new processes
-		
+
 		// Update the heap
 		tasks.update(task);
-		
+
 		// Notify
 		notify();
 	}
@@ -254,7 +261,7 @@ public class TaskManager {
 	/**
 	 * Iterator on resources
 	 */
-	public Iterable<Resource> resources() {
+	synchronized public Iterable<Resource> resources() {
 		return new Iterable<Resource>() {
 			public Iterator<Resource> iterator() {
 				return new AbstractIterator<Resource>() {

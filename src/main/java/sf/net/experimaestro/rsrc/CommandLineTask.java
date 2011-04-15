@@ -3,14 +3,17 @@ package sf.net.experimaestro.rsrc;
 import static java.lang.String.format;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.log.Logger;
 
 import bpiwowar.argparser.ListAdaptator;
 
@@ -42,15 +45,15 @@ public class CommandLineTask extends Task {
 	 * @param taskManager
 	 * @param identifier
 	 * @param command
+	 * @throws FileNotFoundException
 	 */
 	public CommandLineTask(TaskManager taskManager, String identifier,
-			String[] commandArgs, Map<String, String> env,
-			File workingDirectory) {
+			String[] commandArgs, Map<String, String> env, File workingDirectory) {
 
 		super(taskManager, identifier);
 
 		LOGGER.info("Command is %s", Arrays.toString(commandArgs));
-		
+
 		// Copy the environment
 		if (env != null) {
 			envp = new String[env.size()];
@@ -60,6 +63,7 @@ public class CommandLineTask extends Task {
 		}
 		this.workingDirectory = workingDirectory;
 
+		// Construct command
 		this.command = new String[] {
 				shellCommand,
 				"-c",
@@ -93,24 +97,46 @@ public class CommandLineTask extends Task {
 	protected int doRun(ArrayList<Lock> locks) throws IOException,
 			InterruptedException {
 		// Runs the command
-		LOGGER.info("Evaluating command [%s] %s with environment %s", workingDirectory, Arrays.toString(command), Arrays.toString(envp));
-		final Process p = Runtime.getRuntime().exec(command, envp,
-				workingDirectory);
+		LOGGER.info("Evaluating command [%s] %s with environment %s",
+				workingDirectory, Arrays.toString(command),
+				Arrays.toString(envp));
 
-		// Changing the ownership of the different logs
-		final int pid = sf.net.experimaestro.utils.PID.getPID(p);
-		for (Lock lock : locks) {
-			lock.changeOwnership(pid);
-		}
+		// Write command
+		PrintWriter writer = new PrintWriter(new File(String.format("%s.run",
+				identifier)));
+		writer.format("%nCommand:%s%n", command[2]);
+		writer.format("Working directory %s%n", workingDirectory);
+		writer.format("Environment:%n%s%n%n", Arrays.toString(envp));
 
-		synchronized (p) {
-			LOGGER.info("Waiting for the process (PID %d) to end", pid);
-			int code = p.waitFor();
-			if (code != 0)
-				throw new RuntimeException("Process ended with errors (code "
-						+ code + ")");
-			LOGGER.info("Done");
-			return code;
+		writer.close();
+
+		// --- Execute command
+
+		Process p = null;
+		try {
+			p = Runtime.getRuntime().exec(command, envp, workingDirectory);
+
+			// Changing the ownership of the different logs
+			final int pid = sf.net.experimaestro.utils.PID.getPID(p);
+			for (Lock lock : locks) {
+				lock.changeOwnership(pid);
+			}
+
+			synchronized (p) {
+				LOGGER.info("Waiting for the process (PID %d) to end", pid);
+				int code = p.waitFor();
+				if (code != 0)
+					throw new RuntimeException(
+							"Process ended with errors (code " + code + ")");
+				LOGGER.info("Process (PID %d) ended without error", pid);
+				return code;
+			}
+		} finally {
+			if (p != null) {
+				p.getInputStream().close();
+				p.getOutputStream().close();
+				p.getErrorStream().close();
+			}
 		}
 	}
 }

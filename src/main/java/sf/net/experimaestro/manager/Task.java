@@ -2,34 +2,93 @@ package sf.net.experimaestro.manager;
 
 import java.util.Map;
 
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Node;
+
+import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.JSUtils;
 
 public abstract class Task {
+	public final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
+			.newInstance();
+	final static private Logger LOGGER = Logger.getLogger();
+
 	/**
 	 * The information related to this class of experiment
 	 */
-	TaskInformation information;
+	TaskFactory taskFactory;
+
+	Task(TaskFactory information) {
+		this.taskFactory = information;
+	}
 
 	/**
 	 * Set a parameter
 	 * 
 	 * @param id
-	 *            The identifier for this parameter
 	 * @param value
-	 *            The value to be set
 	 */
-	abstract public void setParameter(QName id, Object value);
+	public void setParameter(String _id, Object value) {
+		DotName id = DotName.parse(_id);
+		LOGGER.info("Value has class %s for parameter id", value.getClass());
+
+		if (value instanceof Node)
+			setParameter(id, (Node) value);
+		else if (value instanceof String) 
+			setParameter(id, (String) value);
+		else if (JSUtils.isXML(value)) {
+			setParameter(id, JSUtils.toDOM(value));
+		} else {
+			setParameter(id, (String)value.toString());
+		}
+	}
+
+	/**
+	 * Set a parameter.
+	 * 
+	 * Utility function that wraps the string into an XML fragment
+	 * 
+	 * @param id
+	 * @param value
+	 */
+	public void setParameter(DotName id, String value) {
+		try {
+			DocumentBuilder docBuilder = dbFactory.newDocumentBuilder();
+			DocumentFragment fragment = docBuilder.newDocument()
+					.createDocumentFragment();
+			fragment.setTextContent(value);
+			setParameter(id, fragment);
+			LOGGER.debug("Set string parameter [%s]: %s", id, fragment.getTextContent());
+		} catch (ParserConfigurationException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Set a parameter
+	 * 
+	 * @param id
+	 *            The identifier for this parameter (dot names)
+	 * @param value
+	 *            The value to be set (this should be an XML fragment)
+	 */
+	abstract public void setParameter(DotName id, Node value);
 
 	/**
 	 * Get the list of parameters
 	 */
-	abstract public Map<QName, NamedParameter> getParameters();
+	abstract public Map<DotName, NamedParameter> getParameters();
 
 	/**
 	 * Get the current outputs (given the current parameters)
 	 */
-	abstract public Map<QName, Type> getOutputs();
+	abstract public Map<DotName, QName> getOutputs();
 
 	/**
 	 * Run this task. The output is a valid XML document where top level

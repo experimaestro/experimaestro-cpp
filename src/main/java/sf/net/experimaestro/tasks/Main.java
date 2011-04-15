@@ -22,7 +22,7 @@ import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 
-import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.log.Logger;
 
 import bpiwowar.argparser.ArgParseException;
 import bpiwowar.argparser.ArgParser;

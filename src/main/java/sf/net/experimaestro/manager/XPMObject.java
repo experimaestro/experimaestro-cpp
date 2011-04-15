@@ -3,21 +3,27 @@ package sf.net.experimaestro.manager;
 import static java.lang.String.format;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Map;
+
+import javax.xml.namespace.QName;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.rsrc.CommandLineTask;
 import sf.net.experimaestro.rsrc.TaskManager;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
-
+import sf.net.experimaestro.utils.XMLUtils;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -25,8 +31,15 @@ import sf.net.experimaestro.utils.log.Logger;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSHandler {
+public class XPMObject {
+	private static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
+
 	final static private Logger LOGGER = Logger.getLogger();
+
+	/**
+	 * The environment variable that contains the script path
+	 */
+	public static final String ENV_SCRIPTPATH = "XPM_JS_SCRIPTPATH";
 
 	/**
 	 * The experiment repository
@@ -45,9 +58,18 @@ public class JSHandler {
 
 	private final TaskManager manager;
 
-	public JSHandler(Context cx, Scriptable scope, TaskRepository repository,
-			TaskManager manager) {
+	private final Map<String, String> environment;
+
+	private static ThreadLocal<ArrayList<String>> log = new ThreadLocal<ArrayList<String>>() {
+		protected synchronized ArrayList<String> initialValue() {
+			return new ArrayList<String>();
+		}
+	};
+
+	public XPMObject(Context cx, Map<String, String> environment,
+			Scriptable scope, TaskRepository repository, TaskManager manager) {
 		this.context = cx;
+		this.environment = environment;
 		this.scope = scope;
 		this.repository = repository;
 		this.manager = manager;
@@ -58,8 +80,18 @@ public class JSHandler {
 	 * 
 	 * @param object
 	 */
-	public void addTask(NativeObject object) {
-		repository.register(new JSTaskInformation(context, scope, object));
+	public void addTaskFactory(NativeObject object) {
+		repository.register(new JSTaskFactory(context, scope, object));
+	}
+
+	/**
+	 * Add an experiment
+	 * 
+	 * @param object
+	 */
+	public void addJointTaskFactory(NativeObject object) {
+		repository.register(new JSJointTaskFactory(repository, context, scope,
+				object));
 	}
 
 	/**
@@ -68,8 +100,8 @@ public class JSHandler {
 	 * @param id
 	 * @return An XHTML string or null if the task does not exist
 	 */
-	public String getDocumentation(String id) {
-		TaskInformation information = repository.get(id);
+	public String getDocumentation(String namespace, String id) {
+		TaskFactory information = repository.get(new QName(namespace, id));
 		if (information == null)
 			return null;
 
@@ -82,22 +114,32 @@ public class JSHandler {
 	 * @param id
 	 * @return
 	 */
-	public TaskInformation getExperiment(String id) {
-		TaskInformation information = repository.get(id);
+	public TaskFactory getExperiment(String namespace, String id) {
+		TaskFactory information = repository.get(new QName(namespace, id));
 		return information;
 	}
 
-	
+	/**
+	 * Returns the script path if available
+	 */
+	public String getScriptPath() {
+		return environment.get(ENV_SCRIPTPATH);
+	}
+
 	/**
 	 * Run a command line experiment
-	 * @param jsargs a native array
-	 * @param a E4X object 
+	 * 
+	 * @param jsargs
+	 *            a native array
+	 * @param a
+	 *            E4X object
 	 * @return
 	 */
 	public void addCommandLineJob(String identifier, Object jsargs,
 			Object jsresources) {
 		// --- Process arguments: convert the javascript array into a Java array
 		// of String
+		LOGGER.debug("Adding command line job");
 		final String[] args;
 		if (jsargs instanceof NativeArray) {
 			NativeArray array = ((NativeArray) jsargs);
@@ -106,18 +148,19 @@ public class JSHandler {
 			for (int i = 0; i < length; i++) {
 				Object el = array.get(i, array);
 				LOGGER.debug("arg %d: %s/%s", i, el, el.getClass());
-				args[i] = el.toString();
+				if (el instanceof NativeJavaObject)
+					args[i] = ((NativeJavaObject) el).unwrap().toString();
+				else
+					args[i] = el.toString();
 			}
 		} else
 			throw new RuntimeException(format(
 					"Cannot handle an array of type %s", jsargs.getClass()));
-		
+
 		// --- Process the resources
 		Node resources = JSUtils.toDOM(jsresources);
 		NodeList children = resources.getChildNodes();
-		
-		
-		
+
 		// --- Add it
 		CommandLineTask task = new CommandLineTask(manager, identifier, args);
 		manager.add(task);
@@ -139,6 +182,8 @@ public class JSHandler {
 			args = new String[length];
 			for (int i = 0; i < length; i++) {
 				Object el = array.get(i, array);
+				if (el instanceof NativeJavaObject)
+					el = ((NativeJavaObject) el).unwrap();
 				LOGGER.debug("arg %d: %s/%s", i, el, el.getClass());
 				args[i] = el.toString();
 			}
@@ -161,5 +206,58 @@ public class JSHandler {
 		int error = p.waitFor();
 		return new NativeArray(new Object[] { error, sb.toString() });
 	}
+
+	/**
+	 * Log a message to be returned to the client
+	 */
+	public void log(String format, Object... objects) {
+		String msg = format(format, objects);
+		log.get().add(msg);
+		LOGGER.debug(msg);
+	}
+
+	/**
+	 * Get the log for the current thread
+	 * 
+	 * @return
+	 */
+	static public ArrayList<String> getLog() {
+		return log.get();
+	}
+
+	/**
+	 * Get a QName
+	 */
+	public QName qName(String namespaceURI, String localPart) {
+		return new QName(namespaceURI, localPart);
+	}
+
+	/**
+	 * Get experimaestro namespace
+	 */
+	public String ns() {
+		return EXPERIMAESTRO_NS;
+	}
+
+	// XML Utilities
+
+	public Scriptable domToE4X(Node node) {
+		return JSUtils.domToE4X(node, context, scope);
+	}
+
+	public String xmlToString(Node node) {
+		return XMLUtils.toString(node);
+	}
+
+	public static void resetLog() {
+		log.set(new ArrayList<String>());
+	}
+
+	public File filepath(File file, String... names) {
+		for (String name : names)
+			file = new File(file, name);
+		return file;
+	}
+	
 
 }

@@ -15,8 +15,8 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.PID;
-import sf.net.experimaestro.utils.log.Logger;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
 
@@ -51,9 +51,16 @@ public abstract class Resource implements Comparable<Resource> {
 	protected boolean generated = false;
 
 	/**
+	 * If the resource is currently locked
+	 */
+	boolean locked;
+
+	
+	/**
 	 * The access mode
 	 */
 	private LockMode lockmode;
+
 
 	/**
 	 * Constructs a resource
@@ -119,6 +126,11 @@ public abstract class Resource implements Comparable<Resource> {
 		boolean generated = new File(identifier + ".done").exists();
 		updated |= generated != this.generated;
 		this.generated = generated;
+		
+		boolean locked = new File(identifier + ".lock").exists();
+		updated |= locked != this.locked;
+		this.locked = locked;
+
 		return updated;
 	}
 

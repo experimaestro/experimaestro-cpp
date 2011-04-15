@@ -5,11 +5,11 @@ import java.util.Arrays;
 import bpiwowar.argparser.utils.Output;
 
 /**
- * A qualified variable name
+ * A variable name with various levels separated by dots
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class QName implements Comparable<QName> {
+public class DotName implements Comparable<DotName> {
 	/**
 	 * The qualified name
 	 */
@@ -18,9 +18,9 @@ public class QName implements Comparable<QName> {
 	/**
 	 * Construction
 	 */
-	public QName(String[] qName) {
+	public DotName(String[] array) {
 		super();
-		this.array = qName;
+		this.array = array;
 	}
 
 	/**
@@ -31,7 +31,7 @@ public class QName implements Comparable<QName> {
 	 * @param length
 	 *            The
 	 */
-	public QName(QName key, int length) {
+	public DotName(DotName key, int length) {
 		array = new String[length];
 		for (int i = 0; i < length; i++)
 			array[i] = key.array[i];
@@ -42,7 +42,7 @@ public class QName implements Comparable<QName> {
 	 * @param prefix The prefix
 	 * @param qName The qualified name that is used as a base
 	 */
-	public QName(String prefix, QName qName) {
+	public DotName(String prefix, DotName qName) {
 		this.array = new String[1 + qName.size()];
 		this.array[0] = prefix;
 		for (int i = 0; i < qName.size(); i++)
@@ -52,7 +52,7 @@ public class QName implements Comparable<QName> {
 	/**
 	 * Creates an unqualified name
 	 */
-	public QName(String name) {
+	public DotName(String name) {
 		this.array = new String[] { name };
 	}
 
@@ -62,11 +62,11 @@ public class QName implements Comparable<QName> {
 	 * @param offset
 	 * @return
 	 */
-	public QName offset(int offset) {
+	public DotName offset(int offset) {
 		String[] name = new String[array.length - offset];
 		for (int i = offset; i < array.length; i++)
 			name[i - offset] = array[i];
-		return new QName(name);
+		return new DotName(name);
 	}
 
 	@Override
@@ -81,7 +81,7 @@ public class QName implements Comparable<QName> {
 	/**
 	 * Returns the length of the common prefix
 	 */
-	public int commonPrefixLength(QName o) {
+	public int commonPrefixLength(DotName o) {
 		if (o == null)
 			return 0;
 
@@ -124,7 +124,7 @@ public class QName implements Comparable<QName> {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		QName other = (QName) obj;
+		DotName other = (DotName) obj;
 		if (!Arrays.equals(array, other.array)) {
 			return false;
 		}
@@ -132,7 +132,7 @@ public class QName implements Comparable<QName> {
 	}
 
 	@Override
-	public int compareTo(QName o) {
+	public int compareTo(DotName o) {
 		// Compare package name first
 		int min = Math.min(array.length, o.array.length);
 		for (int i = 0; i < min; i++) {
@@ -158,6 +158,17 @@ public class QName implements Comparable<QName> {
 	 */
 	public String get(int index) {
 		return array[index];
+	}
+
+	/**
+	 * Creates a DotName from an unparsed string identifier containing
+	 * dots.
+	 * 
+	 * @param name The full identifier to be parsed
+	 * @return
+	 */
+	public static DotName parse(String name) {
+		return new DotName(name.split("\\."));
 	}
 
 }

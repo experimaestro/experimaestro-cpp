@@ -4,16 +4,18 @@ import static java.lang.String.format;
 
 import java.util.Map;
 
+import javax.xml.namespace.QName;
+
 /**
  * Information about an experiment
  * 
  * @author B. Piwowarski
  */
-public abstract class TaskInformation {
+public abstract class TaskFactory {
 	/**
 	 * The identifier of this experiment
 	 */
-	String id;
+	QName id;
 
 	/**
 	 * The version
@@ -25,16 +27,17 @@ public abstract class TaskInformation {
 	 */
 	String group;
 
-	public TaskInformation(String id, String version, String group) {
+	/**
+	 * Initialise a task
+	 * @param id The id of the task
+	 * @param version
+	 * @param group
+	 */
+	public TaskFactory(QName id, String version, String group) {
 		this.id = id;
 		this.version = version;
 		this.group = group;
 	}
-
-	/**
-	 * Creates a new experiment
-	 */
-	abstract Task create();
 
 	/**
 	 * Documentation in XHTML format
@@ -49,6 +52,11 @@ public abstract class TaskInformation {
 	 * @return a map of mappings from a qualified name to a named parameter or
 	 *         null if non existent
 	 */
-	abstract public Map<QName, NamedParameter> getParameters();
+	abstract public Map<DotName, NamedParameter> getInputs();
+
+	/**
+	 * Creates a new experiment
+	 */
+	abstract Task create();
 
 }

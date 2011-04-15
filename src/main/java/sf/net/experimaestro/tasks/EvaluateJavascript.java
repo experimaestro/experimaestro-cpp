@@ -7,9 +7,9 @@ import java.io.InputStreamReader;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
+import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.tasks.ServerTask.RPCTaskManager.JSGetEnv;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
 
 import bpiwowar.argparser.Argument;
 import bpiwowar.experiments.AbstractTask;

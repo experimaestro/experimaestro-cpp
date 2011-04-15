@@ -11,15 +11,40 @@ import java.util.Properties;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
-import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.log.Logger;
 
 import bpiwowar.argparser.Argument;
+import bpiwowar.argparser.ArgumentPostProcessor;
 
 public class XMLRPCClientConfig {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	@Argument(name = "file", help = "The name of the file containing the XML RPC configuration for the client")
+	@Argument(name = "file", help = "The name of the file containing the XML RPC configuration for the client", required=true)
 	File xmlrpcfile;
+
+	private Properties xmlrpcConfig;
+
+	
+	@ArgumentPostProcessor()
+	public void init() throws FileNotFoundException, IOException {
+		LOGGER.info("Loading properies from file %s", xmlrpcfile);
+		xmlrpcConfig = new Properties();
+		xmlrpcConfig.load(new FileInputStream(xmlrpcfile));
+	}
+	
+	/**
+	 * 
+	 * Get a property defined in the file
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
+	public String getProperty(String key, String defaultValue) {
+		final String value = xmlrpcConfig.getProperty(key);
+		if (value == null)
+			return defaultValue;
+		return value;
+	}
 
 	/**
 	 * Gets a client from the RPC file
@@ -31,8 +56,6 @@ public class XMLRPCClientConfig {
 	 */
 	public XmlRpcClient getClient() throws IOException, FileNotFoundException,
 			MalformedURLException {
-		Properties xmlrpcConfig = new Properties();
-		xmlrpcConfig.load(new FileInputStream(xmlrpcfile));
 
 		XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
 		final String url = xmlrpcConfig.getProperty("url");
@@ -44,6 +67,7 @@ public class XMLRPCClientConfig {
 			config.setBasicPassword(xmlrpcConfig.getProperty("password"));
 		}
 
+		LOGGER.info("Connecting to server %s with username %s", url, config.getBasicUserName());
 		XmlRpcClient client = new XmlRpcClient();
 		client.setConfig(config);
 		return client;

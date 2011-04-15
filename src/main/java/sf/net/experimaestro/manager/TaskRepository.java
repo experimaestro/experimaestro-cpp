@@ -1,9 +1,11 @@
 package sf.net.experimaestro.manager;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
-import sf.net.experimaestro.utils.log.Logger;
+import javax.xml.namespace.QName;
+
+import sf.net.experimaestro.log.Logger;
 
 
 /**
@@ -17,12 +19,12 @@ public class TaskRepository {
 	/**
 	 * The list of available experiments
 	 */
-	Map<String, TaskInformation> experiments = new TreeMap<String, TaskInformation>();
+	Map<QName, TaskFactory> experiments = new HashMap<QName, TaskFactory>();
 	
 	/**
 	 * @return
 	 */
-	public Iterable<TaskInformation> experiments() {
+	public Iterable<TaskFactory> experiments() {
 		return experiments.values();
 	}
 
@@ -32,7 +34,7 @@ public class TaskRepository {
 	 * @param name
 	 * @return
 	 */
-	public TaskInformation get(String name) {
+	public TaskFactory get(QName name) {
 		return experiments.get(name);
 	}
 
@@ -41,7 +43,7 @@ public class TaskRepository {
 	 * 
 	 * @param information
 	 */
-	public void register(TaskInformation information) {
+	public void register(TaskFactory information) {
 		LOGGER.info("Registering experiment %s", information.id);
 		experiments.put(information.id, information);
 	}
