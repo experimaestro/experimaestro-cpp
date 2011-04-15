@@ -5,7 +5,6 @@ import org.apache.log4j.spi.LoggerFactory;
 
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 
-
 public final class Logger extends org.apache.log4j.Logger {
 
 	static public class Factory implements LoggerFactory {
