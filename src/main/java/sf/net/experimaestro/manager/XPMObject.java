@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -16,10 +17,11 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.rsrc.CommandLineTask;
 import sf.net.experimaestro.rsrc.TaskManager;
 import sf.net.experimaestro.utils.JSUtils;
@@ -32,6 +34,34 @@ import sf.net.experimaestro.utils.XMLUtils;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class XPMObject {
+
+	/**
+	 * Task factory as seen by JavaScript
+	 * 
+	 * @author B. Piwowarski <benjamin@bpiwowar.net>
+	 */
+	static public class TaskFactoryJSWrapper extends ScriptableObject {
+		private TaskFactory information;
+
+		public TaskFactoryJSWrapper() {
+		}
+
+		public void jsConstructor(Scriptable information) {
+			if (information != null)
+				this.information = (TaskFactory) ((NativeJavaObject) information)
+						.unwrap();
+		}
+
+		public Task jsFunction_create() {
+			return information.create();
+		}
+
+		@Override
+		public String getClassName() {
+			return "TaskFactory";
+		}
+	}
+
 	private static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
 
 	final static private Logger LOGGER = Logger.getLogger();
@@ -67,12 +97,16 @@ public class XPMObject {
 	};
 
 	public XPMObject(Context cx, Map<String, String> environment,
-			Scriptable scope, TaskRepository repository, TaskManager manager) {
+			Scriptable scope, TaskRepository repository, TaskManager manager)
+			throws IllegalAccessException, InstantiationException,
+			InvocationTargetException {
 		this.context = cx;
 		this.environment = environment;
 		this.scope = scope;
 		this.repository = repository;
 		this.manager = manager;
+
+		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 	}
 
 	/**
@@ -95,28 +129,16 @@ public class XPMObject {
 	}
 
 	/**
-	 * Get the documentation for a task of a given id
-	 * 
-	 * @param id
-	 * @return An XHTML string or null if the task does not exist
-	 */
-	public String getDocumentation(String namespace, String id) {
-		TaskFactory information = repository.get(new QName(namespace, id));
-		if (information == null)
-			return null;
-
-		return information.getDocumentation();
-	}
-
-	/**
 	 * Get the information about a given task
 	 * 
 	 * @param id
 	 * @return
 	 */
-	public TaskFactory getExperiment(String namespace, String id) {
-		TaskFactory information = repository.get(new QName(namespace, id));
-		return information;
+	public Scriptable getExperiment(String namespace, String id) {
+		TaskFactory factory = repository.get(new QName(namespace, id));
+		LOGGER.info("Information %s", factory);
+		return context.newObject(scope, "TaskFactory",
+				new Object[] { Context.javaToJS(factory, scope) });
 	}
 
 	/**
@@ -258,6 +280,5 @@ public class XPMObject {
 			file = new File(file, name);
 		return file;
 	}
-	
 
 }

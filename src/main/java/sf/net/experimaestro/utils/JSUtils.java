@@ -2,7 +2,11 @@ package sf.net.experimaestro.utils;
 
 import static java.lang.String.format;
 
+import java.io.IOException;
+import java.io.StringReader;
+
 import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.mozilla.javascript.Context;
@@ -14,10 +18,14 @@ import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
-import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.utils.log.Logger;
 
 public class JSUtils {
 	final static private Logger LOGGER = Logger.getLogger();
@@ -80,11 +88,39 @@ public class JSUtils {
 			String className = xmlObject.getClassName();
 
 			// Use Rhino implementation for XML objects
-			if (className.equals("XML"))
+			if (className.equals("XML")) {
+				// FIXME: this stripts all whitespaces!
 				return XMLLibImpl.toDomNode(object);
+//				DocumentBuilderFactory builderFactory = DocumentBuilderFactory
+//						.newInstance();
+//				Document document;
+//				try {
+//					DocumentBuilder builder = builderFactory
+//							.newDocumentBuilder();
+//					document = builder.parse(new InputSource(new StringReader(
+//							"<root>" + object.toString() + "</root>")));
+//				} catch (SAXException e) {
+//					LOGGER.error(object.toString());
+//					throw new RuntimeException(e);
+//				} catch (IOException e) {
+//					throw new RuntimeException(e);
+//				} catch (ParserConfigurationException e) {
+//					throw new RuntimeException(e);
+//				}
+//				Element el = document.getDocumentElement();
+//				NodeList nodes = el.getChildNodes();
+//				if (nodes.getLength() == 1)
+//					return nodes.item(0);
+//				DocumentFragment fragment = document.createDocumentFragment();
+//				for (int i = 0; i < nodes.getLength(); i++)
+//					fragment.appendChild(nodes.item(i));
+//				return fragment;
+
+			}
 
 			// Should be an XMLList
 			if (className.equals("XMLList")) {
+				LOGGER.info("Transforming from XMLList [%s]", object);
 				IdScriptableObject xmlList = (IdScriptableObject) xmlObject;
 				DocumentBuilder docBuilder;
 				try {

@@ -23,7 +23,6 @@ if len(sys.argv) < 2:
 xmlrpc = xmlrpclib.ServerProxy("http://localhost:8080/xmlrpc/")
 
 # Get the ID
-id=sys.argv.pop(0)
 
 env=[]
 for key,value in os.environ.iteritems():

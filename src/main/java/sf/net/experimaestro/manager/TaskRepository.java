@@ -5,7 +5,7 @@ import java.util.Map;
 
 import javax.xml.namespace.QName;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 
 
 /**
@@ -24,7 +24,7 @@ public class TaskRepository {
 	/**
 	 * @return
 	 */
-	public Iterable<TaskFactory> experiments() {
+	public Iterable<TaskFactory> tasks() {
 		return experiments.values();
 	}
 

@@ -2,7 +2,6 @@ package sf.net.experimaestro.manager;
 
 import static java.lang.String.format;
 
-import java.io.File;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -13,12 +12,13 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.log.Logger;
 import sf.net.experimaestro.utils.JSUtils;
-
+import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * A task factory as defined by a JavaScript object
@@ -31,16 +31,16 @@ public class JSTaskFactory extends TaskFactory {
 	/**
 	 * The scope
 	 */
-	Scriptable scope;
+	Scriptable jsScope;
 
 	/**
 	 * The server
 	 */
-	private NativeObject jsObject;
+	protected NativeObject jsObject;
 
-	private final Context context;
+	protected final Context jsContext;
 
-	private Map<DotName, NamedParameter> inputs;
+	protected Map<DotName, NamedParameter> inputs;
 
 	private Object output;
 
@@ -58,13 +58,13 @@ public class JSTaskFactory extends TaskFactory {
 			NativeObject jsObject) {
 		super(getQName(scope, jsObject), getPropertyString(scope, "version",
 				jsObject), null);
-		this.context = context;
-		this.scope = scope;
+		this.jsContext = context;
+		this.jsScope = scope;
 		this.jsObject = jsObject;
 
 		output = JSUtils.get(scope, "output", jsObject);
 
-		// Get the task inputs
+		// --- Get the task inputs
 		Object input = JSUtils.get(scope, "input", jsObject);
 		inputs = new TreeMap<DotName, NamedParameter>();
 		if (!JSUtils.isXML(input))
@@ -78,12 +78,32 @@ public class JSTaskFactory extends TaskFactory {
 			Node item = list.item(i);
 			if (item.getNodeType() != Node.ELEMENT_NODE)
 				continue;
-			Node idNode = item.getAttributes().getNamedItem("id");
+			NamedNodeMap attributes = item.getAttributes();
+
+			Element el = (Element) item;
+			Node idNode = attributes.getNamedItem("id");
 			if (idNode == null)
-				throw new RuntimeException(format("Input without id in %s", this.id));
+				throw new RuntimeException(format("Input without id in %s",
+						this.id));
 			String idAtt = idNode.getTextContent();
 			LOGGER.info("New attribute %s for task %s", idAtt, this.id);
-			inputs.put(new DotName(idAtt), new NamedParameter());
+
+			String type = el.getAttribute("type");
+
+			String optional = el.getAttribute("optional");
+			boolean isOptional = optional != null && optional.equals("true") ? true
+					: false;
+
+			String documentation;
+			if (el.hasAttribute("help"))
+				documentation = el.getAttribute("help");
+			else {
+				documentation = sf.net.experimaestro.utils.XMLUtils
+						.toString(el.getChildNodes());
+			}
+
+			inputs.put(new DotName(idAtt), new NamedParameter(type, isOptional,
+					documentation));
 		}
 
 	}
@@ -104,28 +124,31 @@ public class JSTaskFactory extends TaskFactory {
 	}
 
 	@Override
-	String getDocumentation() {
-		return JSUtils.get(scope, "description", jsObject).toString();
+	public String getDocumentation() {
+		return JSUtils.get(jsScope, "description", jsObject).toString();
 	}
 
 	@Override
 	public Task create() {
 		// Get the "create" method
-		Object fObj = JSUtils.get(scope, "create", jsObject);
+		Object fObj = JSUtils.get(jsScope, "create", jsObject);
 
 		if (!(fObj instanceof Function))
 			throw new RuntimeException("create is undefined or not a function.");
 
 		// Call it
 		Function f = (Function) fObj;
-		Object result = f.call(context, scope, scope, new Object[] {});
+		Object result = f.call(jsContext, jsScope, jsScope, new Object[] {});
 		LOGGER.info("Created a new experiment: %s (%s)", result,
 				result.getClass());
-		return new JSTask(this, context, scope, (NativeObject) result);
+		return new JSTask(this, jsContext, jsScope, (NativeObject) result);
 	}
+	
 
 	@Override
 	public Map<DotName, NamedParameter> getInputs() {
 		return inputs;
 	}
+
+
 }

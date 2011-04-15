@@ -16,15 +16,30 @@ public class NamedParameter {
 	/**
 	 * The type of the parameter
 	 */
-	QName type;
-	
-	/**
-	 * The name of this parameter
-	 */
-	String name;
-	
+	String type;
+
 	/**
 	 * Documentation for this parameter
 	 */
 	String documentation;
+	
+	public boolean isOptional() {
+		return optional;
+	}
+	
+	public String getDocumentation() {
+		return documentation;
+	}
+	
+	public String getType() {
+		return type;
+	}
+
+	public NamedParameter(String type, boolean optional, String documentation) {
+		this.type = type;
+		this.optional = optional;
+		this.documentation = documentation;
+	}
+	
+	
 }

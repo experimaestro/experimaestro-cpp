@@ -23,6 +23,12 @@ import sf.net.experimaestro.rsrc.TaskManager;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+/**
+ * The XML-RPC servlet for experimaestro
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ */
 public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	private final TaskRepository repository;
 	private final TaskManager taskManager;
@@ -73,7 +79,6 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	protected PropertyHandlerMapping newPropertyHandlerMapping(URL url)
 			throws IOException, XmlRpcException {
 		PropertyHandlerMapping mapping = new PropertyHandlerMapping();
-		// mapping.setAuthenticationHandler(authenticationHandler);
 
 		RequestProcessorFactoryFactory factory = new RequestProcessorFactoryFactory() {
 			public RequestProcessorFactory getRequestProcessorFactory(

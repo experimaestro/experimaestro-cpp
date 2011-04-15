@@ -1,7 +1,5 @@
 package sf.net.experimaestro.manager;
 
-import static java.lang.String.format;
-
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -18,7 +16,6 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.org.mozilla.javascript.internal.UniqueTag;
 
-
 /**
  * A joint task factory as defined by a JavaScript object.
  * 
@@ -26,25 +23,12 @@ import sun.org.mozilla.javascript.internal.UniqueTag;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSJointTaskFactory extends TaskFactory {
+public class JSJointTaskFactory extends JSTaskFactory {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
-	 * The scope
+	 * Sub-tasks
 	 */
-	Scriptable scope;
-
-	/**
-	 * The server
-	 */
-	private NativeObject jsObject;
-
-	private final Context context;
-
-	private Object input;
-
-	private Object output;
-
 	private Map<String, TaskFactory> subtasks = new TreeMap<String, TaskFactory>();
 
 	/**
@@ -59,15 +43,7 @@ public class JSJointTaskFactory extends TaskFactory {
 	 */
 	public JSJointTaskFactory(TaskRepository repository, Context context,
 			Scriptable scope, NativeObject jsObject) {
-		super(getQName(scope, jsObject), getPropertyString(scope, "version",
-				jsObject), null);
-		this.context = context;
-		this.scope = scope;
-		this.jsObject = jsObject;
-
-		// Get the input & output
-		input = JSUtils.get(scope, "input", jsObject, null);
-		output = JSUtils.get(scope, "output", jsObject, null);
+		super(context, scope, jsObject);
 
 		// Get the list of sub-tasks
 		NativeObject jsTasks = JSUtils.get(scope, "tasks", jsObject);
@@ -75,8 +51,11 @@ public class JSJointTaskFactory extends TaskFactory {
 			String id = (String) _id;
 			NativeJavaObject taskId = (NativeJavaObject) JSUtils.get(scope, id,
 					jsTasks);
-			getSubtasks().put(id, repository.get((QName) taskId.unwrap()));
+			TaskFactory subTask = repository.get((QName) taskId.unwrap());
+			getSubtasks().put(id, subTask);
 		}
+		
+		
 
 		// --- Now, connects
 
@@ -105,54 +84,37 @@ public class JSJointTaskFactory extends TaskFactory {
 
 	}
 
-	private static QName getQName(Scriptable scope, NativeObject jsObject) {
-		NativeJavaObject object = (NativeJavaObject) JSUtils.get(scope, "id",
-				jsObject);
-		return (QName) object.unwrap();
-	}
-
-	private static String getPropertyString(Scriptable scope, String name,
-			NativeObject jsObject) {
-		Object object = JSUtils.get(scope, name, jsObject);
-		if (object instanceof String)
-			return (String) object;
-
-		throw new RuntimeException(format("Field %s is not a String", name));
-	}
-
 	@Override
-	String getDocumentation() {
-		return JSUtils.get(scope, "description", jsObject).toString();
+	public String getDocumentation() {
+		return JSUtils.get(jsScope, "description", jsObject).toString();
+	}
+
+	public Task jsFunction_create() {
+		LOGGER.info("!!!!!!!!!!!!js create CALLED!!!!!!");
+		return create();
 	}
 
 	@Override
 	public Task create() {
 		// Get the "create" method
-		Object fObj = JSUtils.get(scope, "create", jsObject);
+		Object fObj = JSUtils.get(jsScope, "create", jsObject);
 
 		if (!(fObj instanceof Function))
 			throw new RuntimeException("Could not find a create function");
-		
+
 		// Call it
 		Function f = (Function) fObj;
-		Object result = f.call(context, scope, scope, new Object[] {});
-		
+		Object result = f.call(jsContext, jsScope, jsScope, new Object[] {});
+
 		if (result == UniqueTag.NOT_FOUND)
-			throw new RuntimeException("The create function did not return an object");
+			throw new RuntimeException(
+					"The create function did not return an object");
 		LOGGER.info("Created a new experiment: %s (%s)", result,
 				result.getClass());
 
-
-		return new JSJointTasks(this, context, scope, (NativeObject) result);
+		return new JSJointTasks(this, jsContext, jsScope, (NativeObject) result);
 	}
 
-	@Override
-	public Map<DotName, NamedParameter> getInputs() {
-		NativeObject inputs = (NativeObject) JSUtils.get(scope, "input",
-				jsObject);
-
-		return null;
-	}
 
 	public Map<String, TaskFactory> getSubtasks() {
 		return subtasks;

@@ -42,7 +42,7 @@ public abstract class TaskFactory {
 	/**
 	 * Documentation in XHTML format
 	 */
-	String getDocumentation() {
+	public String getDocumentation() {
 		return format("<p>No documentation found for experiment %s</p>", id);
 	}
 
@@ -59,4 +59,22 @@ public abstract class TaskFactory {
 	 */
 	abstract Task create();
 
+	/**
+	 * Returns the qualified name for this task
+	 */
+	public QName getId() {
+		return id;
+	}
+
+	public Object getVersion() {
+		return version;
+	}
+
+	/**
+	 * Get the list of subtasks
+	 * @return
+	 */
+	public Map<String, TaskFactory> getSubtasks() {
+		return null;
+	}
 }

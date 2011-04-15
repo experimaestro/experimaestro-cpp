@@ -17,8 +17,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.XMLUtils;
 
 /**
  * Task as implemented by a javascript object
@@ -118,9 +119,10 @@ public class JSTask extends Task {
 
 	@Override
 	public Document run() {
-		LOGGER.info("Running task: %s", taskFactory.id);
+		LOGGER.info("[Running] task: %s", taskFactory.id);
 		Scriptable result = (Scriptable) runFunction.call(jsContext, jsScope,
 				jsObject, new Object[] {});
+		LOGGER.info("[/Running] task: %s", taskFactory.id);
 
 		Node node = JSUtils.toDOM(result);
 		if (node instanceof Document)
@@ -141,10 +143,10 @@ public class JSTask extends Task {
 
 		// creating a new DOM-document...
 		Document document = loader.newDocument();
-		// node = node.cloneNode(true);
+		node = node.cloneNode(true);
 		document.adoptNode(node);
 		document.appendChild(node);
-
+		
 		return document;
 	}
 

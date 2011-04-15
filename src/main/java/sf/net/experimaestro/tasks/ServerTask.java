@@ -3,9 +3,7 @@
  */
 package sf.net.experimaestro.tasks;
 
-
 import java.io.File;
-
 
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
@@ -69,10 +67,8 @@ public class ServerTask extends AbstractTask {
 		// Set up the server
 		Server server = new Server(port);
 
-		HandlerList list = new HandlerList();
-		server.setHandler(list);
 
-		Context context = new Context(list, "/");
+		Context context = new Context(server, "/");
 
 		// -- Security
 		// From
@@ -116,7 +112,7 @@ public class ServerTask extends AbstractTask {
 		
 		// --- Add the status servlet
 
-		context.addServlet(new ServletHolder(new TasksServlet(taskManager)),
+		context.addServlet(new ServletHolder(new TasksServlet(repository, taskManager)),
 				"/tasks/*");
 
 		
@@ -124,7 +120,6 @@ public class ServerTask extends AbstractTask {
 
 		context.addServlet(new ServletHolder(new ContentServlet()), "/*");
 
-		LOGGER.info("Handlers: %s", Output.toString(", ", list.getHandlers()));
 		// final URL warUrl =
 		// this.getClass().getClassLoader().getResource("web");
 		// final String warUrlString = warUrl.toExternalForm();
@@ -137,5 +132,8 @@ public class ServerTask extends AbstractTask {
 
 		return 0;
 	}
+
+	
+
 
 }

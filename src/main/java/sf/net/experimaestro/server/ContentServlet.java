@@ -25,15 +25,12 @@ public class ContentServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException,
-			IOException {
+			HttpServletResponse response) throws ServletException, IOException {
 
 		URL url = ContentServlet.class.getResource(format("/web%s",
 				request.getRequestURI()));
 
 		if (url != null) {
-			LOGGER.info(url.getUserInfo());
-			LOGGER.info("Here %s", url);
 			FileSystemManager fsManager = VFS.getManager();
 			FileObject file = fsManager.resolveFile(url.toExternalForm());
 			if (file.getType() == FileType.FOLDER) {
@@ -58,14 +55,18 @@ public class ContentServlet extends HttpServlet {
 		}
 
 		// Not found
+		error404(request, response);
+
+	}
+
+	public static void error404(HttpServletRequest request,
+			HttpServletResponse response) throws IOException {
 		response.setContentType("text/html");
 		response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 		final PrintWriter out = response.getWriter();
 		out.println("<html><head><title>Error</title></head><body>");
 		out.println("<h1>Page not found</h1>");
-		out.format("<p>This URI was not found: %s</p>",
-				request.getRequestURI());
+		out.format("<p>This URI was not found: %s</p>", request.getRequestURI());
 		out.println("</body></html>");
-
 	}
 }

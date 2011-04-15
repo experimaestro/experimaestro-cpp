@@ -27,7 +27,7 @@ fi
 
 case "$1" in
 
-server) java -jar $JAR "$@";;
+server) java -Xmx1g -jar $JAR "$@";;
 
 add-job) shift; python "$dir/add-job.py" "$@";; 
 

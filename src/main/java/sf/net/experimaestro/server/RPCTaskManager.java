@@ -26,7 +26,7 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
- * Our RPC handler for task manager
+ * Our RPC handler for experimaestro
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -43,6 +43,12 @@ public class RPCTaskManager {
 	 */
 	TaskRepository repository;
 
+	/**
+	 * Set the task server
+	 * 
+	 * @param taskManager
+	 * @param repository
+	 */
 	void setTaskServer(TaskManager taskManager, TaskRepository repository) {
 		this.taskManager = taskManager;
 		this.repository = repository;
