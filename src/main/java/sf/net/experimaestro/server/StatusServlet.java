@@ -8,9 +8,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import sf.net.experimaestro.rsrc.Resource;
-import sf.net.experimaestro.rsrc.Task;
-import sf.net.experimaestro.rsrc.TaskManager;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.Task;
+import sf.net.experimaestro.scheduler.TaskManager;
 
 /**
  * Gives the current task status

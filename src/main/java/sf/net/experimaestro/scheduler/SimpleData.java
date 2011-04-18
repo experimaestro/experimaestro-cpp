@@ -1,4 +1,4 @@
-package sf.net.experimaestro.rsrc;
+package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.utils.log.Logger;
 

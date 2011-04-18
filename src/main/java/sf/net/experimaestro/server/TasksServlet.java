@@ -16,7 +16,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.NamedParameter;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.rsrc.TaskManager;
+import sf.net.experimaestro.scheduler.TaskManager;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**

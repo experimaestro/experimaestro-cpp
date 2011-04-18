@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 import org.apache.xmlrpc.client.XmlRpcClient;
 
-import sf.net.experimaestro.rsrc.LockMode;
+import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
 import sf.net.experimaestro.utils.GenericHelper;
 

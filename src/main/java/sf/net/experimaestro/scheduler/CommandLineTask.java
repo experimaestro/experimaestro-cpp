@@ -1,4 +1,4 @@
-package sf.net.experimaestro.rsrc;
+package sf.net.experimaestro.scheduler;
 
 import static java.lang.String.format;
 
@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.Output;
 
 import bpiwowar.argparser.ListAdaptator;

@@ -17,11 +17,11 @@ import org.mozilla.javascript.WrappedException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.rsrc.CommandLineTask;
-import sf.net.experimaestro.rsrc.LockMode;
-import sf.net.experimaestro.rsrc.Resource;
-import sf.net.experimaestro.rsrc.SimpleData;
-import sf.net.experimaestro.rsrc.TaskManager;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.LockMode;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.SimpleData;
+import sf.net.experimaestro.scheduler.TaskManager;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 

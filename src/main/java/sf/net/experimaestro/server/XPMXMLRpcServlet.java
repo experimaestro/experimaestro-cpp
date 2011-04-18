@@ -16,7 +16,7 @@ import org.apache.xmlrpc.server.XmlRpcHandlerMapping;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.rsrc.TaskManager;
+import sf.net.experimaestro.scheduler.TaskManager;
 
 /**
  * The XML-RPC servlet

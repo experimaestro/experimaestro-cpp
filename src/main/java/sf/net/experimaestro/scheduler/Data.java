@@ -1,4 +1,4 @@
-package sf.net.experimaestro.rsrc;
+package sf.net.experimaestro.scheduler;
 
 /**
  * Represents some data that can be produced by a given job

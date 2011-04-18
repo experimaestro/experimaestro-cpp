@@ -16,7 +16,7 @@ import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.rsrc.TaskManager;
+import sf.net.experimaestro.scheduler.TaskManager;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
