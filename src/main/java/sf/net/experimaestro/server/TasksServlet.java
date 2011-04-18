@@ -14,7 +14,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.NamedParameter;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.scheduler.TaskManager;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -27,10 +27,10 @@ public class TasksServlet extends XPMServlet {
 
 	private static final long serialVersionUID = 1L;
 	
-	private final TaskManager manager;
+	private final Scheduler manager;
 	private final TaskRepository repository;
 
-	public TasksServlet(TaskRepository repository, TaskManager manager) {
+	public TasksServlet(TaskRepository repository, Scheduler manager) {
 		this.repository = repository;
 		this.manager = manager;
 	}

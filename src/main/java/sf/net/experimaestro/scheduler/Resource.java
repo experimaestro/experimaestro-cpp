@@ -32,7 +32,7 @@ public abstract class Resource implements Comparable<Resource> {
 	/**
 	 * Task manager
 	 */
-	transient final TaskManager taskManager;
+	transient final Scheduler taskManager;
 
 	/**
 	 * Our set of listeners (resources that are listening to changes in the
@@ -69,7 +69,7 @@ public abstract class Resource implements Comparable<Resource> {
 	 * @param identifier
 	 * @param mode
 	 */
-	public Resource(TaskManager taskManager, String identifier, LockMode mode) {
+	public Resource(Scheduler taskManager, String identifier, LockMode mode) {
 		this.taskManager = taskManager;
 		this.identifier = identifier;
 		this.lockmode = mode;
@@ -430,5 +430,12 @@ public abstract class Resource implements Comparable<Resource> {
 	 */
 	public String getIdentifier() {
 		return identifier;
+	}
+	
+	/**
+	 * Is the resource locked?
+	 */
+	public boolean isLocked() {
+		return locked;
 	}
 }

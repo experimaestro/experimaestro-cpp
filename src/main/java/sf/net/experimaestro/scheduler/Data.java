@@ -7,7 +7,7 @@ package sf.net.experimaestro.scheduler;
  */
 public abstract class Data extends Resource {
 
-	public Data(TaskManager taskManager, String identifier, LockMode mode) {
+	public Data(Scheduler taskManager, String identifier, LockMode mode) {
 		super(taskManager, identifier, mode);
 	}
 

@@ -27,7 +27,7 @@ import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.SimpleData;
-import sf.net.experimaestro.scheduler.TaskManager;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -64,7 +64,7 @@ public class XPMObject {
 	 */
 	private Context context;
 
-	private final TaskManager manager;
+	private final Scheduler manager;
 
 	private final Map<String, String> environment;
 
@@ -75,7 +75,7 @@ public class XPMObject {
 	};
 
 	public XPMObject(Context cx, Map<String, String> environment,
-			Scriptable scope, TaskRepository repository, TaskManager manager)
+			Scriptable scope, TaskRepository repository, Scheduler manager)
 			throws IllegalAccessException, InstantiationException,
 			InvocationTargetException {
 		this.context = cx;

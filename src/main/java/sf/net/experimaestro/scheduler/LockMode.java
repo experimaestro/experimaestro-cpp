@@ -8,7 +8,7 @@ import bpiwowar.argparser.EnumValue;
 public enum LockMode {
 	@EnumValue(value = "read-only", help = "Creates a resource that can only be read")
 	/**
-	 * The resource need not (and can not) be locked
+	 * The resource need not (and cannot) be locked
 	 */
 	READ_ONLY,
 
@@ -27,7 +27,7 @@ public enum LockMode {
 
 	/**
 	 * A resouce that can be read/write by many (typically a server). In this
-	 * mode, there will be no lock tacken
+	 * mode, no lock mechanism is used
 	 */
 	@EnumValue(value = "multiple-writer", help = "Creates a resource that can be read and written by many")
 	MULTIPLE_WRITER;

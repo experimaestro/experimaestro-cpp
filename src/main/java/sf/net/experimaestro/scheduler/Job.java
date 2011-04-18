@@ -18,7 +18,7 @@ import sf.net.experimaestro.utils.PID;
 
 
 /**
- * A task is a resource that can be run - that starts and ends (which
+ * A job is a resource that can be run - that starts and ends (which
  * differentiate it with a server) and generate data
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -31,7 +31,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 * 
 	 * @param taskManager
 	 */
-	public Job(TaskManager taskManager, String identifier) {
+	public Job(Scheduler taskManager, String identifier) {
 		super(taskManager, identifier, LockMode.EXCLUSIVE_WRITER);
 	}
 
@@ -58,6 +58,10 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 			this.type = type;
 			this.isSatisfied = isSatisfied;
 		}
+		
+		public LockType getType() {
+			return type;
+		}
 	}
 
 	/**
@@ -70,6 +74,11 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	int nbUnsatisfied;
 
+	
+	public SortedMap<Resource, DependencyStatusCache> getDependencies() {
+		return dependencies;
+	}
+	
 	/**
 	 * Add a dependency
 	 * 

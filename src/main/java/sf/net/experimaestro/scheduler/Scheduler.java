@@ -20,7 +20,6 @@ import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
 
-
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 import com.thoughtworks.xstream.XStream;
@@ -28,9 +27,9 @@ import com.thoughtworks.xstream.XStream;
 /**
  * Thread manager for running commands - it has a pool of runs
  * 
- * @author bpiwowar
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskManager {
+public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -85,7 +84,7 @@ public class TaskManager {
 	class ResourceChecker extends TimerTask {
 		@Override
 		public void run() {
-			synchronized (TaskManager.this) {
+			synchronized (Scheduler.this) {
 				boolean changed = false;
 				// Update resources status
 				for (WeakReference<Resource> wr : resources.values()) {
@@ -93,18 +92,19 @@ public class TaskManager {
 					if (resource != null) {
 						if (resource.updateStatus()) {
 							resource.notifyListeners();
-							
+
 							// Notify the task manager in the case of a task
 							if (resource instanceof Job)
-								TaskManager.this.updateState((Job) resource);
-							
+								Scheduler.this.updateState((Job) resource);
+
 							changed = true;
 						}
 					}
 				}
-				LOGGER.log(changed ? Level.INFO : Level.DEBUG, "Checked resources (changes=%b)", changed);
+				LOGGER.log(changed ? Level.INFO : Level.DEBUG,
+						"Checked resources (changes=%b)", changed);
 				if (changed)
-					TaskManager.this.notify();
+					Scheduler.this.notify();
 			}
 		}
 	}
@@ -117,7 +117,7 @@ public class TaskManager {
 	 * @throws EnvironmentLockedException
 	 * @throws DatabaseException
 	 */
-	public TaskManager(File baseDirectory, int nbThreads)
+	public Scheduler(File baseDirectory, int nbThreads)
 			throws EnvironmentLockedException, DatabaseException {
 		// Get the parameters
 		this.baseDirectory = baseDirectory;
@@ -246,7 +246,9 @@ public class TaskManager {
 			synchronized (this) {
 				if (!tasks.isEmpty()) {
 					final Job task = tasks.peek();
-					LOGGER.info("Checking task %s for execution [%d unsatisfied]", task, task.nbUnsatisfied);
+					LOGGER.info(
+							"Checking task %s for execution [%d unsatisfied]",
+							task, task.nbUnsatisfied);
 					if (task.nbUnsatisfied == 0)
 						return tasks.pop();
 				}

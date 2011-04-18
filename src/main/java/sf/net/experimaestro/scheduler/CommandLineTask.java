@@ -47,7 +47,7 @@ public class CommandLineTask extends Job {
 	 * @param command
 	 * @throws FileNotFoundException
 	 */
-	public CommandLineTask(TaskManager taskManager, String identifier,
+	public CommandLineTask(Scheduler taskManager, String identifier,
 			String[] commandArgs, Map<String, String> env, File workingDirectory) {
 
 		super(taskManager, identifier);
@@ -88,7 +88,7 @@ public class CommandLineTask extends Job {
 
 	}
 
-	public CommandLineTask(TaskManager taskManager, String identifier,
+	public CommandLineTask(Scheduler taskManager, String identifier,
 			String[] command) {
 		this(taskManager, identifier, command, null, null);
 	}

@@ -16,7 +16,7 @@ import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
 import sf.net.experimaestro.manager.TaskRepository;
-import sf.net.experimaestro.scheduler.TaskManager;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
@@ -59,7 +59,7 @@ public class ServerTask extends AbstractTask {
 		LOGGER.info("Starting server on port %d", port);
 
 		// --- Set up the task manager
-		final TaskManager taskManager = new TaskManager(taskmanagerDirectory,
+		final Scheduler taskManager = new Scheduler(taskmanagerDirectory,
 				nbThreads);
 
 		final TaskRepository repository = new TaskRepository();

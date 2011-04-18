@@ -21,7 +21,7 @@ import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.SimpleData;
-import sf.net.experimaestro.scheduler.TaskManager;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -36,7 +36,7 @@ public class RPCTaskManager {
 	/**
 	 * The task manager
 	 */
-	private TaskManager taskManager;
+	private Scheduler taskManager;
 
 	/**
 	 * Repository
@@ -49,7 +49,7 @@ public class RPCTaskManager {
 	 * @param taskManager
 	 * @param repository
 	 */
-	void setTaskServer(TaskManager taskManager, TaskRepository repository) {
+	void setTaskServer(Scheduler taskManager, TaskRepository repository) {
 		this.taskManager = taskManager;
 		this.repository = repository;
 	}
