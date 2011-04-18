@@ -38,7 +38,7 @@ public abstract class Resource implements Comparable<Resource> {
 	 * Our set of listeners (resources that are listening to changes in the
 	 * state of this resource)
 	 */
-	transient Set<Task> listeners = new HashSet<Task>();
+	transient Set<Job> listeners = new HashSet<Job>();
 
 	/**
 	 * File based identifier
@@ -80,14 +80,14 @@ public abstract class Resource implements Comparable<Resource> {
 	/**
 	 * Register a task that waits for our output
 	 */
-	synchronized public void register(Task task) {
+	synchronized public void register(Job task) {
 		listeners.add(task);
 	}
 
 	/**
 	 * Unregister a task
 	 */
-	public void unregister(Task task) {
+	public void unregister(Job task) {
 		listeners.remove(task);
 	}
 
@@ -96,7 +96,7 @@ public abstract class Resource implements Comparable<Resource> {
 	 * producing it)
 	 */
 	void notifyListeners(Object... objects) {
-		for (Task task : listeners)
+		for (Job task : listeners)
 			task.notify(this, objects);
 	}
 
@@ -423,4 +423,12 @@ public abstract class Resource implements Comparable<Resource> {
 		}
 	}
 
+	
+	/**
+	 * Get the task identifier
+	 * @return The task unique identifier
+	 */
+	public String getIdentifier() {
+		return identifier;
+	}
 }

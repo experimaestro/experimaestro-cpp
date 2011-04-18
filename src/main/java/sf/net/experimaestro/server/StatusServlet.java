@@ -2,14 +2,14 @@ package sf.net.experimaestro.server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Task;
+import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.TaskManager;
 
 /**
@@ -17,7 +17,7 @@ import sf.net.experimaestro.scheduler.TaskManager;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class StatusServlet extends HttpServlet {
+public class StatusServlet extends XPMServlet {
 	private static final long serialVersionUID = 1L;
 	private final TaskManager manager;
 
@@ -26,35 +26,58 @@ public class StatusServlet extends HttpServlet {
 	}
 
 	protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException,
-			IOException {
-		response.setContentType("text/html");
-		response.setStatus(HttpServletResponse.SC_OK);
-		final PrintWriter out = response.getWriter();
+			HttpServletResponse response) throws ServletException, IOException {
 
-		out.println("<h1>Waiting tasks</h1>");
-		out.println("<ul>");
-		for (Task task : manager.tasks()) {
-			out.format("<li>%s</li>", task);
-		}
-		out.println("</ul>");
+		String localPath = request.getRequestURI().substring(
+				request.getServletPath().length());
 
-		out.println("<h1>List of resources (generated)</h1>");
-		out.println("<ul>");
-		for (Resource resource : manager.resources()) {
-			if (resource.isGenerated())
-				out.format("<li>[%s] %s</li>", resource.getClass(),
-						resource);
-		}
-		out.println("</ul>");
+		if (localPath.equals("")) {
+			final PrintWriter out = startHTMLResponse(response);
+			out.println("<html><head><title>Experimaestro - Jobs</title></head><body>");
 
-		out.println("<h1>List of resources (not generated)</h1>");
-		out.println("<ul>");
-		for (Resource resource : manager.resources()) {
-			if (!resource.isGenerated())
-				out.format("<li>[%s] %s</li>", resource.getClass(),
-						resource);
+			out.println("<h1>Waiting jobs</h1>");
+			out.println("<ul>");
+			for (Job task : manager.tasks()) {
+				out.format("<li><a href=\"%s/job?id=%s\">%s</a></li>",
+						request.getServletPath(), urlEncode(task.getIdentifier()), task);
+			}
+			out.println("</ul>");
+
+			out.println("<h1>List of resources (generated)</h1>");
+			out.println("<ul>");
+			for (Resource resource : manager.resources()) {
+				if (resource.isGenerated())
+					out.format("<li>[%s] %s</li>", resource.getClass(),
+							resource);
+			}
+			out.println("</ul>");
+
+			out.println("<h1>List of resources (not generated)</h1>");
+			out.println("<ul>");
+			for (Resource resource : manager.resources()) {
+				if (!resource.isGenerated())
+					out.format("<li>[%s] %s</li>", resource.getClass(),
+							resource);
+			}
+			out.println("</ul>");
+
+			out.println("</body></html>");
+			return;
 		}
-		out.println("</ul>");
+
+		if (localPath.equals("/job")) {
+			PrintWriter out = startHTMLResponse(response);
+			String jobId = request.getParameter("id");
+
+			out.format("<html><head><title>Experimaestro - Details of job %s</title></head><body>", jobId);
+			out.format("<h1>Details of Job %s</h1>", jobId);
+			
+			
+			out.println("</body></html>");
+			return;
+		}
+
+		// Not found
+		ContentServlet.error404(request, response);
 	}
 }

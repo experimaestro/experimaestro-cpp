@@ -22,7 +22,7 @@ import bpiwowar.argparser.ListAdaptator;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class CommandLineTask extends Task {
+public class CommandLineTask extends Job {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**

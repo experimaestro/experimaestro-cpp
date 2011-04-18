@@ -60,7 +60,7 @@ public class TaskManager {
 	class TaskRunner extends Thread {
 		@Override
 		public void run() {
-			Task task;
+			Job task;
 			try {
 				while ((task = getNextTask()) != null) {
 					LOGGER.info("Starting %s", task);
@@ -95,8 +95,8 @@ public class TaskManager {
 							resource.notifyListeners();
 							
 							// Notify the task manager in the case of a task
-							if (resource instanceof Task)
-								TaskManager.this.updateState((Task) resource);
+							if (resource instanceof Job)
+								TaskManager.this.updateState((Job) resource);
 							
 							changed = true;
 						}
@@ -141,12 +141,12 @@ public class TaskManager {
 	/**
 	 * The list of jobs - with those having all dependencies fulfilled first
 	 */
-	Heap<Task> tasks = new Heap<Task>(TaskComparator.INSTANCE);
+	Heap<Job> tasks = new Heap<Job>(TaskComparator.INSTANCE);
 
 	/**
 	 * The list of tasks (to find them by id)
 	 */
-	HashSet<Task> taskSet = GenericHelper.newHashSet();
+	HashSet<Job> taskSet = GenericHelper.newHashSet();
 
 	/**
 	 * Cache for resources
@@ -205,7 +205,7 @@ public class TaskManager {
 	/**
 	 * Add a given job
 	 */
-	synchronized public void add(Task task) {
+	synchronized public void add(Job task) {
 		// --- Notify
 		LOGGER.info("Add the task %s", task);
 
@@ -223,7 +223,7 @@ public class TaskManager {
 	 * Called when something has changed for this task (in order to update the
 	 * heap)
 	 */
-	synchronized void updateState(Task task) {
+	synchronized void updateState(Job task) {
 		// Update the task and notify ourselves since we might want
 		// to run new processes
 
@@ -240,12 +240,12 @@ public class TaskManager {
 	 * @return A boolean, true if a task was started
 	 * @throws InterruptedException
 	 */
-	Task getNextTask() throws InterruptedException {
+	Job getNextTask() throws InterruptedException {
 		while (true) {
 			// Try the next task
 			synchronized (this) {
 				if (!tasks.isEmpty()) {
-					final Task task = tasks.peek();
+					final Job task = tasks.peek();
 					LOGGER.info("Checking task %s for execution [%d unsatisfied]", task, task.nbUnsatisfied);
 					if (task.nbUnsatisfied == 0)
 						return tasks.pop();
@@ -281,7 +281,7 @@ public class TaskManager {
 		};
 	}
 
-	public Iterable<Task> tasks() {
+	public Iterable<Job> tasks() {
 		return tasks;
 	}
 }

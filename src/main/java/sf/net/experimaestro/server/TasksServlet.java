@@ -2,12 +2,10 @@ package sf.net.experimaestro.server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URLEncoder;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.namespace.QName;
@@ -24,13 +22,11 @@ import sf.net.experimaestro.utils.log.Logger;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TasksServlet extends HttpServlet {
-	/** Output encoding */
-	private static final String ENCODING = "UTF-8";
-
+public class TasksServlet extends XPMServlet {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	private static final long serialVersionUID = 1L;
+	
 	private final TaskManager manager;
 	private final TaskRepository repository;
 
@@ -61,7 +57,7 @@ public class TasksServlet extends HttpServlet {
 				out.format(
 						"<li><a href=\"%s/show?ns=%s&amp;name=%s\">%s</a></li>",
 						request.getServletPath(),
-						URLEncoder.encode(id.getNamespaceURI(), ENCODING),
+						urlEncode(id.toString()),
 						id.getLocalPart(), id);
 			}
 			out.println("</ul>");
