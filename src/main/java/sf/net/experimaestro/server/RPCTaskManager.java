@@ -14,6 +14,8 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrappedException;
 
+import com.sleepycat.je.DatabaseException;
+
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.manager.js.XPMObject;
@@ -63,8 +65,9 @@ public class RPCTaskManager {
 	 *            The locking mode
 	 * @param exists
 	 * @return
+	 * @throws DatabaseException
 	 */
-	public boolean addData(String id, String mode, boolean exists) {
+	public boolean addData(String id, String mode, boolean exists) throws DatabaseException {
 		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
 		taskManager.add(new SimpleData(taskManager, id, LockMode.valueOf(mode),
 				exists));
@@ -202,10 +205,11 @@ public class RPCTaskManager {
 
 	/**
 	 * Add a command line job
+	 * @throws DatabaseException 
 	 */
 	public boolean runCommand(String name, int priority, Object[] command,
 			Object[] envArray, String workingDirectory, Object[] depends,
-			Object[] readLocks, Object[] writeLocks) {
+			Object[] readLocks, Object[] writeLocks) throws DatabaseException {
 		Map<String, String> env = arrayToMap(envArray);
 		LOGGER.info(
 				"Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",

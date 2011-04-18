@@ -8,16 +8,16 @@ import java.util.Comparator;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskComparator implements Comparator<Job> {
+public class JobComparator implements Comparator<Job> {
 	/**
 	 * A public instance
 	 */
-	public static final Comparator<Job> INSTANCE = new TaskComparator();
+	public static final Comparator<Job> INSTANCE = new JobComparator();
 
 	/**
 	 * Private since the public instance should be used in all cases
 	 */
-	private TaskComparator() {
+	private JobComparator() {
 	}
 
 	/*

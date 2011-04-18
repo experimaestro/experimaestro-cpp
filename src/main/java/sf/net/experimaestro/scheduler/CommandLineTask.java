@@ -4,7 +4,6 @@ import static java.lang.String.format;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -12,16 +11,18 @@ import java.util.Arrays;
 import java.util.Map;
 
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.Output;
-
+import sf.net.experimaestro.utils.log.Logger;
 import bpiwowar.argparser.ListAdaptator;
+
+import com.sleepycat.persist.model.Persistent;
 
 /**
  * A command line task (executed with the default shell)
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent
 public class CommandLineTask extends Job {
 	final static private Logger LOGGER = Logger.getLogger();
 
@@ -38,6 +39,9 @@ public class CommandLineTask extends Job {
 	private String[] envp = null;
 
 	private File workingDirectory;
+
+	protected CommandLineTask() {
+	}
 
 	/**
 	 * Constructs the command line

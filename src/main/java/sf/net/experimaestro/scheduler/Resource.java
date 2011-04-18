@@ -15,10 +15,13 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.PID;
-
+import sf.net.experimaestro.utils.log.Logger;
 import bpiwowar.argparser.utils.ReadLineIterator;
+
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.persist.model.Entity;
+import com.sleepycat.persist.model.PrimaryKey;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -26,13 +29,35 @@ import bpiwowar.argparser.utils.ReadLineIterator;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+/**
+ * 
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * 
+ */
+@Entity
 public abstract class Resource implements Comparable<Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
+	 * The task identifier
+	 */
+	@PrimaryKey
+	String identifier;
+
+	/**
+	 * True when the resource has been generated
+	 */
+	protected ResourceState state;
+
+	/**
+	 * The access mode
+	 */
+	private LockMode lockmode;
+
+	/**
 	 * Task manager
 	 */
-	transient final Scheduler taskManager;
+	transient Scheduler scheduler;
 
 	/**
 	 * Our set of listeners (resources that are listening to changes in the
@@ -41,26 +66,12 @@ public abstract class Resource implements Comparable<Resource> {
 	transient Set<Job> listeners = new HashSet<Job>();
 
 	/**
-	 * File based identifier
-	 */
-	String identifier;
-
-	/**
-	 * True when the resource has been generated (or run for a task).
-	 */
-	protected boolean generated = false;
-
-	/**
 	 * If the resource is currently locked
 	 */
-	boolean locked;
+	transient boolean locked;
 
-	
-	/**
-	 * The access mode
-	 */
-	private LockMode lockmode;
-
+	protected Resource() {
+	}
 
 	/**
 	 * Constructs a resource
@@ -70,11 +81,10 @@ public abstract class Resource implements Comparable<Resource> {
 	 * @param mode
 	 */
 	public Resource(Scheduler taskManager, String identifier, LockMode mode) {
-		this.taskManager = taskManager;
+		this.scheduler = taskManager;
 		this.identifier = identifier;
 		this.lockmode = mode;
 		lockfile = new File(identifier + ".lock");
-		statusFile = new File(identifier + ".status");
 	}
 
 	/**
@@ -123,10 +133,14 @@ public abstract class Resource implements Comparable<Resource> {
 	boolean updateStatus() {
 		boolean updated = update();
 
-		boolean generated = new File(identifier + ".done").exists();
-		updated |= generated != this.generated;
-		this.generated = generated;
-		
+		// Check if the resource was generated
+		if (new File(identifier + ".done").exists()
+				&& this.getState() != ResourceState.DONE) {
+			updated = true;
+			this.state = ResourceState.DONE;
+		}
+
+		// Check if the resource is locked
 		boolean locked = new File(identifier + ".lock").exists();
 		updated |= locked != this.locked;
 		this.locked = locked;
@@ -135,10 +149,28 @@ public abstract class Resource implements Comparable<Resource> {
 	}
 
 	static public enum DependencyStatus {
-		OK_STATUS, OK_LOCK, GO, WAIT, ERROR;
+		/**
+		 * The resource can be used as is
+		 */
+		OK,
+
+		/**
+		 * The resouce can be used when properly locked
+		 */
+		OK_LOCK,
+
+		/**
+		 * The resource is not ready yet
+		 */
+		WAIT,
+
+		/**
+		 * The resource will not be ready given the current state
+		 */
+		ERROR;
 
 		public boolean isOK() {
-			return this == OK_LOCK || this == GO;
+			return this == OK_LOCK || this == OK;
 		}
 	}
 
@@ -152,11 +184,12 @@ public abstract class Resource implements Comparable<Resource> {
 	 */
 	DependencyStatus accept(LockType locktype) {
 		LOGGER.info("Checking lock %s for resource %s (generated %b)",
-				locktype, this, generated);
+				locktype, this, getState());
 
 		switch (locktype) {
 		case GENERATED:
-			return generated ? DependencyStatus.GO : DependencyStatus.WAIT;
+			return getState() == ResourceState.DONE ? DependencyStatus.OK
+					: DependencyStatus.WAIT;
 
 		case EXCLUSIVE_ACCESS:
 			return writers == 0 && readers == 0 ? DependencyStatus.OK_LOCK
@@ -166,13 +199,14 @@ public abstract class Resource implements Comparable<Resource> {
 			switch (lockmode) {
 			case EXCLUSIVE_WRITER:
 			case SINGLE_WRITER:
-				return writers == 0 ? DependencyStatus.OK_STATUS
+				return writers == 0 ? DependencyStatus.OK
 						: DependencyStatus.WAIT;
 
 			case MULTIPLE_WRITER:
-				return DependencyStatus.GO;
+				return DependencyStatus.OK;
 			case READ_ONLY:
-				return generated ? DependencyStatus.GO : DependencyStatus.WAIT;
+				return getState() == ResourceState.DONE ? DependencyStatus.OK
+						: DependencyStatus.WAIT;
 			}
 			break;
 
@@ -183,7 +217,7 @@ public abstract class Resource implements Comparable<Resource> {
 				return writers == 0 && readers == 0 ? DependencyStatus.OK_LOCK
 						: DependencyStatus.WAIT;
 			case MULTIPLE_WRITER:
-				return DependencyStatus.GO;
+				return DependencyStatus.OK;
 			case READ_ONLY:
 				return DependencyStatus.ERROR;
 			case SINGLE_WRITER:
@@ -215,10 +249,9 @@ public abstract class Resource implements Comparable<Resource> {
 		case OK_LOCK:
 			return new FileLock(lockfile);
 
-		case OK_STATUS:
+		case OK:
 			return new StatusLock(PID.getPID(),
 					dependency == LockType.WRITE_ACCESS);
-		case GO:
 
 		}
 
@@ -230,14 +263,14 @@ public abstract class Resource implements Comparable<Resource> {
 	 * @return the generated
 	 */
 	public boolean isGenerated() {
-		return generated;
+		return getState() == ResourceState.DONE;
 	}
 
 	/** Useful files */
 	transient File lockfile, statusFile;
 
 	/** Number of readers and writers */
-	int writers = -1, readers = -1;
+	int writers = 0, readers = 0;
 
 	/** Last check of the status file */
 	long lastUpdate = 0;
@@ -253,6 +286,18 @@ public abstract class Resource implements Comparable<Resource> {
 		return writers;
 	}
 
+	File getStatusFile() {
+		if (statusFile == null)
+			statusFile = new File(identifier + ".status");
+		return statusFile;
+	}
+
+	File getLockFile() {
+		if (lockfile == null)
+			lockfile = new File(identifier + ".lock");
+		return lockfile;
+	}
+
 	/**
 	 * Update the status of the resource
 	 * 
@@ -266,7 +311,8 @@ public abstract class Resource implements Comparable<Resource> {
 	 */
 	public boolean update() {
 		boolean updated = writers > 0 || readers > 0;
-		if (!statusFile.exists()) {
+
+		if (!getStatusFile().exists()) {
 			writers = readers = 0;
 			return updated;
 		} else {
@@ -319,7 +365,7 @@ public abstract class Resource implements Comparable<Resource> {
 	void updateStatusFile(int pidFrom, int pidTo, boolean writeAccess)
 			throws UnlockableException {
 		// --- Lock the resource
-		FileLock fileLock = new FileLock(lockfile);
+		FileLock fileLock = new FileLock(getLockFile());
 
 		try {
 			// --- Read the resource status
@@ -423,19 +469,61 @@ public abstract class Resource implements Comparable<Resource> {
 		}
 	}
 
-	
 	/**
 	 * Get the task identifier
+	 * 
 	 * @return The task unique identifier
 	 */
 	public String getIdentifier() {
 		return identifier;
 	}
-	
+
 	/**
 	 * Is the resource locked?
 	 */
 	public boolean isLocked() {
 		return locked;
+	}
+
+	/**
+	 * Get the state of the resource
+	 * 
+	 * @return
+	 */
+	public ResourceState getState() {
+		return state;
+	}
+
+	/**
+	 * Checks whether a resource should be kept in main memory (e.g.,
+	 * running/waiting jobs & monitored resources)
+	 * 
+	 * When overriding this method, use
+	 * <code>super.isActive() || condition</code>
+	 * 
+	 * @return
+	 */
+	protected boolean isActive() {
+		return !listeners.isEmpty();
+	}
+
+	/**
+	 * Returns the list of listeners
+	 */
+	public Set<Job> getListeners() {
+		return listeners;
+	}
+
+	/**
+	 * Update the database after a change in state
+	 */
+	void updateDb() {
+		try {
+			scheduler.store(this);
+		} catch (DatabaseException e) {
+			LOGGER.error(
+					"Could not update the information in the database for %s",
+					this);
+		}
 	}
 }

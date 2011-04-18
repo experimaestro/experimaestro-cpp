@@ -5,17 +5,18 @@ import static java.lang.String.format;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Map.Entry;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.PID;
+import sf.net.experimaestro.utils.log.Logger;
 
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.persist.model.Persistent;
 
 /**
  * A job is a resource that can be run - that starts and ends (which
@@ -23,8 +24,12 @@ import sf.net.experimaestro.utils.PID;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent()
 public class Job extends Resource implements HeapElement<Job>, Runnable {
 	final static private Logger LOGGER = Logger.getLogger();
+
+	protected Job() {
+	}
 
 	/**
 	 * Initialisation of a task
@@ -45,40 +50,26 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	long timestamp = System.currentTimeMillis();
 
-	/**
-	 * What is the status of a dependency This class stores the previous status
-	 * (satisfied or not) in order to update the number of blocking resources
-	 */
-	static public class DependencyStatusCache {
-		LockType type = null;
-		boolean isSatisfied = false;
-
-		public DependencyStatusCache(LockType type, boolean isSatisfied) {
-			super();
-			this.type = type;
-			this.isSatisfied = isSatisfied;
-		}
-		
-		public LockType getType() {
-			return type;
-		}
+	@Override
+	protected boolean isActive() {
+		return super.isActive() || state == ResourceState.WAITING
+				|| state == ResourceState.RUNNING;
 	}
 
 	/**
 	 * The dependencies for this job (dependencies are on any resource)
 	 */
-	private SortedMap<Resource, DependencyStatusCache> dependencies = new TreeMap<Resource, DependencyStatusCache>();
+	private TreeMap<String, Dependency> dependencies = new TreeMap<String, Dependency>();
 
 	/**
 	 * Number of unsatisfied dependencies
 	 */
 	int nbUnsatisfied;
 
-	
-	public SortedMap<Resource, DependencyStatusCache> getDependencies() {
+	public TreeMap<String, Dependency> getDependencies() {
 		return dependencies;
 	}
-	
+
 	/**
 	 * Add a dependency
 	 * 
@@ -101,14 +92,16 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		synchronized (this) {
 			if (!ready)
 				nbUnsatisfied++;
-			dependencies.put(resource, new DependencyStatusCache(type, ready));
+			dependencies.put(resource.getIdentifier(), new Dependency(type,
+					ready));
 		}
 	}
 
 	@Override
 	protected void finalize() throws Throwable {
-		for (Resource resource : dependencies.keySet())
-			resource.unregister(this);
+		for (String id : dependencies.keySet()) {
+			scheduler.getResource(id).unregister(this);
+		}
 	}
 
 	/**
@@ -192,9 +185,10 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				int pid = PID.getPID();
 
 				// Now, tries to lock all the resources
-				for (Entry<Resource, DependencyStatusCache> dependency : dependencies
+				for (Entry<String, Dependency> dependency : dependencies
 						.entrySet()) {
-					Resource rsrc = dependency.getKey();
+					String id = dependency.getKey();
+					Resource rsrc = scheduler.getResource(id);
 					final Lock lock = rsrc
 							.lock(pid, dependency.getValue().type);
 					if (lock != null)
@@ -205,24 +199,30 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				LOGGER.info("Running task %s", identifier);
 				try {
 					// Run the task
+					state = ResourceState.RUNNING;
 					int code = doRun(locks);
 
 					if (code != 0)
 						throw new RuntimeException(String.format(
 								"Error while running the task (code %d)", code));
 
-					// Create the "done" file
+					// Create the "done" file, update the status and notify
 					LOGGER.info("Done");
 					doneFile.createNewFile();
-					generated = true;
+					state = ResourceState.DONE;
+					updateDb();
 					notifyListeners();
+
 				} catch (Throwable e) {
 					LOGGER.warn("Error while running: %s", e);
+					state = ResourceState.ERROR;
 				}
 
 				break;
 			}
 		} catch (UnlockableException e) {
+			throw new RuntimeException(e);
+		} catch (DatabaseException e) {
 			throw new RuntimeException(e);
 		} finally {
 			// Dispose of all locks
@@ -242,20 +242,25 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	synchronized public void notify(Resource resource, Object... objects) {
 		// Get the cached status
-		DependencyStatusCache status = dependencies.get(resource);
-		
+		Dependency status = dependencies.get(resource);
+
+		// Is this resource in a state that is good for us?
 		int k = resource.accept(status.type).isOK() ? 1 : 0;
-		
+
+		// Computes the difference with the previous status to update the number
+		// of
+		// unsatisfied resources states
 		final int diff = (status.isSatisfied ? 1 : 0) - k;
 
-		LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this, resource, k, status.type, diff);
+		LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
+				resource, k, status.type, diff);
 
 		// Update
 		nbUnsatisfied += diff;
 		if (k == 1)
 			status.isSatisfied = true;
 		if (diff != 0)
-			taskManager.updateState(this);
+			scheduler.updateState(this);
 	}
 
 	// ----- Heap part (do not touch) -----
@@ -269,4 +274,6 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	public void setIndex(int index) {
 		this.index = index;
 	}
+
+	// ----- [/Heap part] -----
 }

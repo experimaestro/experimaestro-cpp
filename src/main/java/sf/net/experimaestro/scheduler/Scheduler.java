@@ -1,41 +1,37 @@
 package sf.net.experimaestro.scheduler;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import org.apache.log4j.Level;
 
-import sf.net.experimaestro.utils.log.Logger;
-import sf.net.experimaestro.utils.GenericHelper;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
+import sf.net.experimaestro.utils.je.FileProxy;
+import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
-import com.thoughtworks.xstream.XStream;
+import com.sleepycat.persist.EntityStore;
+import com.sleepycat.persist.StoreConfig;
+import com.sleepycat.persist.model.AnnotationModel;
+import com.sleepycat.persist.model.EntityModel;
 
 /**
  * Thread manager for running commands - it has a pool of runs
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+/**
+ * 
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * 
+ */
 public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
-
-	/**
-	 * Extension for the serialised version of the task
-	 */
-	private static final String EXT_INFO = ".info";
 
 	/**
 	 * Main directory for the task manager. One database subfolder will be
@@ -54,6 +50,27 @@ public class Scheduler {
 	ThreadCount counter = new ThreadCount();
 
 	/**
+	 * The list of jobs organised in a heap - with those having all dependencies
+	 * fulfilled first
+	 */
+	Heap<Job> waitingJobs = new Heap<Job>(JobComparator.INSTANCE);
+
+	/**
+	 * All the resources
+	 */
+	Resources resources;
+
+	/**
+	 * The database store
+	 */
+	private EntityStore dbStore;
+
+	/**
+	 * The database environement
+	 */
+	private Environment dbEnvironment;
+
+	/**
 	 * This task runner takes a new task each time
 	 */
 	class TaskRunner extends Thread {
@@ -61,13 +78,13 @@ public class Scheduler {
 		public void run() {
 			Job task;
 			try {
-				while ((task = getNextTask()) != null) {
+				while ((task = getNextWaitingJob()) != null) {
 					LOGGER.info("Starting %s", task);
 					try {
 						task.run();
 						LOGGER.info("Finished %s", task);
 					} catch (Throwable t) {
-						LOGGER.warn("Houston, we had a problem: %s", t);
+						LOGGER.warn("Houston, we got a problem: %s", t);
 					}
 				}
 			} catch (InterruptedException e) {
@@ -86,10 +103,10 @@ public class Scheduler {
 		public void run() {
 			synchronized (Scheduler.this) {
 				boolean changed = false;
-				// Update resources status
-				for (WeakReference<Resource> wr : resources.values()) {
-					Resource resource = wr.get();
-					if (resource != null) {
+
+				for (Resource resource : resources.actives()) {
+					// Update resources status
+					if (!resource.getListeners().isEmpty())
 						if (resource.updateStatus()) {
 							resource.notifyListeners();
 
@@ -97,9 +114,17 @@ public class Scheduler {
 							if (resource instanceof Job)
 								Scheduler.this.updateState((Job) resource);
 
+							// Update DB
+							try {
+								Scheduler.this.store(resource);
+							} catch (DatabaseException e) {
+								LOGGER.error(
+										"Could not update resource %s in database",
+										resource);
+							}
+
 							changed = true;
 						}
-					}
 				}
 				LOGGER.log(changed ? Level.INFO : Level.DEBUG,
 						"Checked resources (changes=%b)", changed);
@@ -123,6 +148,31 @@ public class Scheduler {
 		this.baseDirectory = baseDirectory;
 		this.nbThreads = nbThreads;
 
+		// Initialise the JE database
+		LOGGER.info("Initialising JE database in directory %s", baseDirectory);
+		EnvironmentConfig myEnvConfig = new EnvironmentConfig();
+		StoreConfig storeConfig = new StoreConfig();
+
+		myEnvConfig.setAllowCreate(true);
+		storeConfig.setAllowCreate(true);
+		dbEnvironment = new Environment(baseDirectory, myEnvConfig);
+
+		EntityModel model = new AnnotationModel();
+		model.registerClass(FileProxy.class);
+		storeConfig.setModel(model);
+		dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
+
+		// Add a shutdown hook
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Scheduler.this.close();
+			}
+		}));
+
+		// Initialise the store
+		resources = new Resources(dbStore);
+
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
 		for (int i = 0; i < nbThreads; i++) {
@@ -135,24 +185,29 @@ public class Scheduler {
 		timer.schedule(new ResourceChecker(), 10000, 10000);
 
 		LOGGER.info("Done - ready to work now");
-
 	}
 
-	/**
-	 * The list of jobs - with those having all dependencies fulfilled first
-	 */
-	Heap<Job> tasks = new Heap<Job>(TaskComparator.INSTANCE);
+	public void close() {
+		if (dbStore != null) {
+			try {
+				dbStore.close();
+				LOGGER.info("Closed the database store");
+			} catch (DatabaseException dbe) {
+				LOGGER.error("Error closing MyDbEnv: " + dbe.toString());
+				return;
+			}
+		}
 
-	/**
-	 * The list of tasks (to find them by id)
-	 */
-	HashSet<Job> taskSet = GenericHelper.newHashSet();
-
-	/**
-	 * Cache for resources
-	 */
-	Map<String, WeakReference<Resource>> resources = Collections
-			.synchronizedMap(new HashMap<String, WeakReference<Resource>>());
+		if (dbEnvironment != null) {
+			try {
+				// Finally, close environment.
+				dbEnvironment.close();
+				LOGGER.info("Closed the database environment");
+			} catch (DatabaseException dbe) {
+				LOGGER.error("Error closing MyDbEnv: " + dbe.toString());
+			}
+		}
+	}
 
 	// ----
 	// ---- Task related methods
@@ -164,56 +219,39 @@ public class Scheduler {
 	 * First checks if the resource is in the list of tasks to be run. If not,
 	 * we look directly on disk to get back information on the resource.
 	 * 
+	 * @throws DatabaseException
+	 * 
 	 */
-	synchronized public Resource getResource(String id) {
-		WeakReference<Resource> ref = resources.get(id);
-		Resource resource = ref != null ? ref.get() : null;
-
-		if (resource == null) {
-			// Try to get it from disk
-			File file = new File(id + EXT_INFO);
-
-			final XStream xstream = new XStream();
-			xstream.processAnnotations(Resource.class);
-			if (file.exists()) {
-				try {
-					FileInputStream is = new FileInputStream(file);
-					resource = (Resource) new XStream().fromXML(is);
-					is.close();
-					resources.put(resource.identifier,
-							new WeakReference<Resource>(resource));
-				} catch (IOException e) {
-					resource = null;
-					LOGGER.error("Could not load resource %s", id);
-				}
-
-			}
-		}
-
+	synchronized public Resource getResource(String id)
+			throws DatabaseException {
+		Resource resource = resources.get(id);
 		return resource;
 	}
 
 	/**
 	 * Add a given resource
+	 * 
+	 * @throws DatabaseException
 	 */
-	synchronized public void add(Resource task) {
+	synchronized public void add(Resource task) throws DatabaseException {
 		// --- Notify
 		LOGGER.info("Add the resource %s", task);
-		resources.put(task.identifier, new WeakReference<Resource>(task));
+		resources.put(task);
 	}
 
 	/**
 	 * Add a given job
+	 * 
+	 * @throws DatabaseException
 	 */
-	synchronized public void add(Job task) {
+	synchronized public void add(Job task) throws DatabaseException {
 		// --- Notify
 		LOGGER.info("Add the task %s", task);
 
-		tasks.add(task);
-		taskSet.add(task);
+		waitingJobs.add(task);
 
 		// Also adds it as a resource
-		resources.put(task.identifier, new WeakReference<Resource>(task));
+		resources.put(task);
 
 		// --- Notify if a task runner is waiting for a fresh new task
 		notify();
@@ -223,34 +261,35 @@ public class Scheduler {
 	 * Called when something has changed for this task (in order to update the
 	 * heap)
 	 */
-	synchronized void updateState(Job task) {
+	synchronized void updateState(Job job) {
 		// Update the task and notify ourselves since we might want
 		// to run new processes
 
 		// Update the heap
-		tasks.update(task);
+		waitingJobs.update(job);
 
 		// Notify
 		notify();
 	}
 
 	/**
-	 * Execute the next available job
+	 * Get the next waiting job
 	 * 
 	 * @return A boolean, true if a task was started
 	 * @throws InterruptedException
 	 */
-	Job getNextTask() throws InterruptedException {
+	Job getNextWaitingJob() throws InterruptedException {
 		while (true) {
 			// Try the next task
 			synchronized (this) {
-				if (!tasks.isEmpty()) {
-					final Job task = tasks.peek();
+				if (!waitingJobs.isEmpty()) {
+					final Job task = waitingJobs.peek();
 					LOGGER.info(
 							"Checking task %s for execution [%d unsatisfied]",
 							task, task.nbUnsatisfied);
-					if (task.nbUnsatisfied == 0)
-						return tasks.pop();
+					if (task.nbUnsatisfied == 0) {
+						return waitingJobs.pop();
+					}
 				}
 
 				// ... and wait if we were not lucky (or there were no tasks)
@@ -264,26 +303,14 @@ public class Scheduler {
 	 * Iterator on resources
 	 */
 	synchronized public Iterable<Resource> resources() {
-		return new Iterable<Resource>() {
-			public Iterator<Resource> iterator() {
-				return new AbstractIterator<Resource>() {
-					Iterator<WeakReference<Resource>> iterator = resources
-							.values().iterator();
-
-					@Override
-					protected boolean storeNext() {
-						while (iterator.hasNext()) {
-							if ((value = iterator.next().get()) != null)
-								return true;
-						}
-						return false;
-					}
-				};
-			}
-		};
+		return resources;
 	}
 
 	public Iterable<Job> tasks() {
-		return tasks;
+		return waitingJobs;
+	}
+
+	protected void store(Resource resource) throws DatabaseException {
+		resources.put(resource);
 	}
 }

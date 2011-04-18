@@ -2,17 +2,22 @@ package sf.net.experimaestro.server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Map.Entry;
-import java.util.SortedMap;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Job.DependencyStatusCache;
 import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.arrays.ListAdaptator;
+
+import com.sleepycat.je.DatabaseException;
 
 /**
  * Gives the current task status
@@ -35,34 +40,24 @@ public class StatusServlet extends XPMServlet {
 
 		if (localPath.equals("")) {
 			final PrintWriter out = startHTMLResponse(response);
-			out.println("<html><head><title>Experimaestro - Jobs</title></head><body>");
+			out.println("<html><head><title>Experimaestro - Resources</title></head><body>");
 
-			out.println("<h1>Waiting jobs</h1>");
-			out.println("<ul>");
-			for (Job task : scheduler.tasks()) {
-				out.format("<li><a href=\"%s/resource?id=%s\">%s</a></li>",
-						request.getServletPath(),
-						urlEncode(task.getIdentifier()), task.getIdentifier());
+			ArrayList<ResourceState> values = new ArrayList<ResourceState>(
+					ListAdaptator.create(ResourceState.values()));
+			values.add(null);
+			for (ResourceState state : values) {
+				out.format("<h1>Resources in state %s</h1>", state);
+				out.println("<ul>");
+				for (Resource resource : scheduler.resources()) {
+					if (resource.getState() == state)
+						out.format(
+								"<li><a href=\"%s/resource?id=%s\">%s</a></li>",
+								request.getServletPath(),
+								urlEncode(resource.getIdentifier()),
+								resource.getIdentifier());
+				}
+				out.println("</ul>");
 			}
-			out.println("</ul>");
-
-			out.println("<h1>List of resources (generated)</h1>");
-			out.println("<ul>");
-			for (Resource resource : scheduler.resources()) {
-				if (resource.isGenerated())
-					out.format("<li>[%s] %s</li>", resource.getClass(),
-							resource);
-			}
-			out.println("</ul>");
-
-			out.println("<h1>List of resources (not generated)</h1>");
-			out.println("<ul>");
-			for (Resource resource : scheduler.resources()) {
-				if (!resource.isGenerated())
-					out.format("<li>[%s] %s</li>", resource.getClass(),
-							resource);
-			}
-			out.println("</ul>");
 
 			out.println("</body></html>");
 			return;
@@ -76,28 +71,34 @@ public class StatusServlet extends XPMServlet {
 					"<html><head><title>Experimaestro - Details of resource %s</title></head><body>",
 					jobId);
 
-			Resource resource = scheduler.getResource(jobId);
+			Resource resource;
+			try {
+				resource = scheduler.getResource(jobId);
+			} catch (DatabaseException e) {
+				throw new IOException(e);
+			}
 
 			if (resource instanceof Job) {
 				Job job = (Job) resource;
 				out.format("<h1>Details of job <code>%s</code></h1>", jobId);
-				out.format("<div><b>Status</b>: %s</div>",
-						job.isGenerated() ? "Generated" : "Not generated");
+				out.format("<div><b>Status</b>: %s</div>", job.getState());
 				out.format("<div><b>Lock</b>: %s</div>",
 						job.isLocked() ? "Locked" : "Not locked");
+				out.format("<div>%d writer(s) and %d reader(s)</div>",
+						job.getReaders(), job.getWriters());
 
-				SortedMap<Resource, DependencyStatusCache> dependencies = job
+				TreeMap<String, Dependency> dependencies = job
 						.getDependencies();
 				if (!dependencies.isEmpty()) {
 					out.format("<h2>Dependencies</h2><ul>");
-					for (Entry<Resource, DependencyStatusCache> entry : dependencies
+					for (Entry<String, Dependency> entry : dependencies
 							.entrySet()) {
-						Resource dependency = entry.getKey();
-						DependencyStatusCache status = entry.getValue();
-						out.format("<li><a href=\"%s/resource?id=%s\">%s</a>: %s</li>",
+						String dependency = entry.getKey();
+						Dependency status = entry.getValue();
+						out.format(
+								"<li><a href=\"%s/resource?id=%s\">%s</a>: %s</li>",
 								request.getServletPath(),
-								urlEncode(dependency.getIdentifier()),
-								dependency.getIdentifier(),
+								urlEncode(dependency), dependency,
 								status.getType());
 					}
 					out.println("</ul>");

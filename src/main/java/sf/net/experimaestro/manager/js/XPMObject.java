@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
@@ -26,11 +27,13 @@ import sf.net.experimaestro.manager.TaskRepository;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import com.sleepycat.je.DatabaseException;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -127,6 +130,19 @@ public class XPMObject {
 		return environment.get(ENV_SCRIPTPATH);
 	}
 
+	static public void flattenArray(NativeArray array, List<String> list) {
+		int length = (int) array.getLength();
+
+		for (int i = 0; i < length; i++) {
+			Object el = array.get(i, array);
+			if (el instanceof NativeArray) {
+				flattenArray(array, list);
+			} else
+				list.add(toString(el));
+		}
+
+	}
+
 	/**
 	 * Run a command line experiment
 	 * 
@@ -135,21 +151,22 @@ public class XPMObject {
 	 * @param a
 	 *            E4X object
 	 * @return
+	 * @throws DatabaseException
 	 */
 	public void addCommandLineJob(String identifier, Object jsargs,
-			Object jsresources) {
+			Object jsresources) throws DatabaseException {
 		// --- Process arguments: convert the javascript array into a Java array
 		// of String
 		LOGGER.debug("Adding command line job");
 		final String[] args;
 		if (jsargs instanceof NativeArray) {
 			NativeArray array = ((NativeArray) jsargs);
-			int length = (int) array.getLength();
-			args = new String[length];
-			for (int i = 0; i < length; i++) {
-				Object el = array.get(i, array);
-				args[i] = toString(el);
-				LOGGER.debug("arg %d: [%s] %s", i, el.getClass(), args[i]);
+			List<String> list = new ArrayList<String>();
+			flattenArray(array, list);
+			args = new String[list.size()];
+			for (int i = 0; i < list.size(); i++) {
+				args[i] = toString(args);
+				LOGGER.debug("arg %d: %s", i, args[i]);
 			}
 		} else
 			throw new RuntimeException(format(
@@ -165,7 +182,8 @@ public class XPMObject {
 			Resource resource = manager.getResource(toString(array
 					.get(0, array)));
 			LockType lockType = LockType.valueOf(toString(array.get(1, array)));
-			LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource, lockType);
+			LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource,
+					lockType);
 			task.addDependency(resource, lockType);
 		}
 
@@ -179,7 +197,7 @@ public class XPMObject {
 		return object.toString();
 	}
 
-	public String addData(String identifier) {
+	public String addData(String identifier) throws DatabaseException {
 		LockMode mode = LockMode.SINGLE_WRITER;
 		SimpleData resource = new SimpleData(manager, identifier, mode, false);
 		manager.add(resource);
