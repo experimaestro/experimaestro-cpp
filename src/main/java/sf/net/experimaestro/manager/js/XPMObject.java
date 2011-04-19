@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -130,6 +131,11 @@ public class XPMObject {
 		return environment.get(ENV_SCRIPTPATH);
 	}
 
+	/**
+	 * Recursive flattening of an array
+	 * @param array The array to flatten
+	 * @param list A list of strings that will be filled
+	 */
 	static public void flattenArray(NativeArray array, List<String> list) {
 		int length = (int) array.getLength();
 
@@ -164,10 +170,7 @@ public class XPMObject {
 			List<String> list = new ArrayList<String>();
 			flattenArray(array, list);
 			args = new String[list.size()];
-			for (int i = 0; i < list.size(); i++) {
-				args[i] = toString(args);
-				LOGGER.debug("arg %d: %s", i, args[i]);
-			}
+			list.toArray(args);
 		} else
 			throw new RuntimeException(format(
 					"Cannot handle an array of type %s", jsargs.getClass()));

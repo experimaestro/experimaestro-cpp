@@ -2,7 +2,9 @@ package sf.net.experimaestro.server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -15,6 +17,7 @@ import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
 import com.sleepycat.je.DatabaseException;
@@ -27,6 +30,8 @@ import com.sleepycat.je.DatabaseException;
 public class StatusServlet extends XPMServlet {
 	private static final long serialVersionUID = 1L;
 	private final Scheduler scheduler;
+	static DateFormat longDateFormat = DateFormat.getDateTimeInstance(
+			DateFormat.FULL, DateFormat.FULL);
 
 	public StatusServlet(Scheduler manager) {
 		this.scheduler = manager;
@@ -86,6 +91,22 @@ public class StatusServlet extends XPMServlet {
 						job.isLocked() ? "Locked" : "Not locked");
 				out.format("<div>%d writer(s) and %d reader(s)</div>",
 						job.getReaders(), job.getWriters());
+
+				if (job.getState() == ResourceState.DONE
+						|| job.getState() == ResourceState.ERROR
+						|| job.getState() == ResourceState.RUNNING) {
+					long start = job.getStartTimestamp();
+					long end = job.getState() == ResourceState.RUNNING ? System
+							.currentTimeMillis() : job.getEndTimestamp();
+
+					out.format("<div>Started: %s</div>",
+							longDateFormat.format(new Date(start)));
+					if (job.getState() != ResourceState.RUNNING)
+						out.format("<div>Ended: %s</div>",
+								longDateFormat.format(new Date(end)));
+					out.format("<div>Duration: %s</div>",
+							Time.formatTimeInMilliseconds(end - start));
+				}
 
 				TreeMap<String, Dependency> dependencies = job
 						.getDependencies();

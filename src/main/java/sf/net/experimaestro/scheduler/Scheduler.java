@@ -34,6 +34,11 @@ public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
+	 * Used for atomic series of locks
+	 */
+	public static String LockSync = "I am just a placeholder";
+
+	/**
 	 * Main directory for the task manager. One database subfolder will be
 	 * created
 	 */

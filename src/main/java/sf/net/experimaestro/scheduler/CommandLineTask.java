@@ -75,6 +75,9 @@ public class CommandLineTask extends Job {
 						" ", ListAdaptator.create(commandArgs),
 						new Output.Formatter<String>() {
 							public String format(String t) {
+								if (t.equals(""))
+									return "\"\"";
+								
 								StringBuilder sb = new StringBuilder();
 								for (int i = 0; i < t.length(); i++) {
 									final char c = t.charAt(i);

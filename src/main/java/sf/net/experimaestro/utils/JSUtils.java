@@ -29,6 +29,8 @@ import sf.net.experimaestro.utils.log.Logger;
 
 public class JSUtils {
 	final static private Logger LOGGER = Logger.getLogger();
+	private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory
+			.newInstance();;
 
 	/**
 	 * Get an object from a scriptable
@@ -90,31 +92,17 @@ public class JSUtils {
 			// Use Rhino implementation for XML objects
 			if (className.equals("XML")) {
 				// FIXME: this stripts all whitespaces!
-				return XMLLibImpl.toDomNode(object);
-//				DocumentBuilderFactory builderFactory = DocumentBuilderFactory
-//						.newInstance();
-//				Document document;
-//				try {
-//					DocumentBuilder builder = builderFactory
-//							.newDocumentBuilder();
-//					document = builder.parse(new InputSource(new StringReader(
-//							"<root>" + object.toString() + "</root>")));
-//				} catch (SAXException e) {
-//					LOGGER.error(object.toString());
-//					throw new RuntimeException(e);
-//				} catch (IOException e) {
-//					throw new RuntimeException(e);
-//				} catch (ParserConfigurationException e) {
-//					throw new RuntimeException(e);
-//				}
-//				Element el = document.getDocumentElement();
-//				NodeList nodes = el.getChildNodes();
-//				if (nodes.getLength() == 1)
-//					return nodes.item(0);
-//				DocumentFragment fragment = document.createDocumentFragment();
-//				for (int i = 0; i < nodes.getLength(); i++)
-//					fragment.appendChild(nodes.item(i));
-//				return fragment;
+				return  XMLLibImpl.toDomNode(object).cloneNode(true);
+
+				// Element el = document.getDocumentElement();
+				// NodeList nodes = el.getChildNodes();
+				// if (nodes.getLength() == 1)
+				// return nodes.item(0);
+				// DocumentFragment fragment =
+				// document.createDocumentFragment();
+				// for (int i = 0; i < nodes.getLength(); i++)
+				// fragment.appendChild(nodes.item(i));
+				// return fragment;
 
 			}
 

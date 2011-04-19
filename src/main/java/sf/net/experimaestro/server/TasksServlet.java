@@ -26,7 +26,7 @@ public class TasksServlet extends XPMServlet {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	private static final long serialVersionUID = 1L;
-	
+
 	private final Scheduler manager;
 	private final TaskRepository repository;
 
@@ -57,8 +57,7 @@ public class TasksServlet extends XPMServlet {
 				out.format(
 						"<li><a href=\"%s/show?ns=%s&amp;name=%s\">%s</a></li>",
 						request.getServletPath(),
-						urlEncode(id.toString()),
-						id.getLocalPart(), id);
+						urlEncode(id.getNamespaceURI()), id.getLocalPart(), id);
 			}
 			out.println("</ul>");
 
@@ -115,7 +114,8 @@ public class TasksServlet extends XPMServlet {
 		Map<String, TaskFactory> subtasks = factory.getSubtasks();
 		if (subtasks != null)
 			for (Entry<String, TaskFactory> entry : subtasks.entrySet()) {
-				out.format("<h3>%s</h3><div style='left-margin: 1em'>", entry.getKey());
+				out.format("<h3>%s</h3><div style='left-margin: 1em'>",
+						entry.getKey());
 				printParameters(out, entry.getValue());
 				out.println("</div>");
 			}

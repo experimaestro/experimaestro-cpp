@@ -186,6 +186,15 @@ public abstract class Resource implements Comparable<Resource> {
 		LOGGER.info("Checking lock %s for resource %s (generated %b)",
 				locktype, this, getState());
 
+		// Handle simple cases 
+		if (state == ResourceState.ERROR)
+			return DependencyStatus.ERROR;
+		
+		if (state == ResourceState.WAITING)
+			return DependencyStatus.WAIT;
+		
+		
+		// OK, we have to get a look into it
 		switch (locktype) {
 		case GENERATED:
 			return getState() == ResourceState.DONE ? DependencyStatus.OK

@@ -38,6 +38,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	public Job(Scheduler taskManager, String identifier) {
 		super(taskManager, identifier, LockMode.EXCLUSIVE_WRITER);
+		state = ResourceState.WAITING;
 	}
 
 	/**
@@ -49,6 +50,13 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 * When was the job submitted (in case the priority is not enough)
 	 */
 	long timestamp = System.currentTimeMillis();
+
+	/**
+	 * When did the job start and stop
+	 */
+	private long startTimestamp;
+
+	long endTimestamp;
 
 	@Override
 	protected boolean isActive() {
@@ -185,14 +193,18 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				int pid = PID.getPID();
 
 				// Now, tries to lock all the resources
-				for (Entry<String, Dependency> dependency : dependencies
-						.entrySet()) {
-					String id = dependency.getKey();
-					Resource rsrc = scheduler.getResource(id);
-					final Lock lock = rsrc
-							.lock(pid, dependency.getValue().type);
-					if (lock != null)
-						locks.add(lock);
+				// in order to avoid race issues, we sync with
+				// the task manager
+				synchronized (Scheduler.LockSync) {
+					for (Entry<String, Dependency> dependency : dependencies
+							.entrySet()) {
+						String id = dependency.getKey();
+						Resource rsrc = scheduler.getResource(id);
+						final Lock lock = rsrc.lock(pid,
+								dependency.getValue().type);
+						if (lock != null)
+							locks.add(lock);
+					}
 				}
 
 				// And run!
@@ -200,6 +212,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				try {
 					// Run the task
 					state = ResourceState.RUNNING;
+					startTimestamp = System.currentTimeMillis();
 					int code = doRun(locks);
 
 					if (code != 0)
@@ -207,15 +220,16 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 								"Error while running the task (code %d)", code));
 
 					// Create the "done" file, update the status and notify
-					LOGGER.info("Done");
 					doneFile.createNewFile();
 					state = ResourceState.DONE;
-					updateDb();
-					notifyListeners();
-
+					LOGGER.info("Done");
 				} catch (Throwable e) {
 					LOGGER.warn("Error while running: %s", e);
 					state = ResourceState.ERROR;
+				} finally {
+					updateDb();
+					endTimestamp = System.currentTimeMillis();
+					notifyListeners();
 				}
 
 				break;
@@ -242,18 +256,28 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	synchronized public void notify(Resource resource, Object... objects) {
 		// Get the cached status
-		Dependency status = dependencies.get(resource);
+		Dependency status = dependencies.get(resource.getIdentifier());
 
 		// Is this resource in a state that is good for us?
 		int k = resource.accept(status.type).isOK() ? 1 : 0;
 
 		// Computes the difference with the previous status to update the number
-		// of
-		// unsatisfied resources states
+		// of unsatisfied resources states
 		final int diff = (status.isSatisfied ? 1 : 0) - k;
 
 		LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
 				resource, k, status.type, diff);
+
+		// If the resource has an error / hold state, change our state to
+		// "on hold"
+		// FIXME: should get an "on hold" counter
+		if (resource.getState() == ResourceState.ERROR
+				|| resource.getState() == ResourceState.ON_HOLD) {
+			if (state != ResourceState.ON_HOLD) {
+				state = ResourceState.ON_HOLD;
+				scheduler.updateState(this);
+			}
+		}
 
 		// Update
 		nbUnsatisfied += diff;
@@ -276,4 +300,12 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	}
 
 	// ----- [/Heap part] -----
+
+	public long getStartTimestamp() {
+		return startTimestamp;
+	}
+
+	public long getEndTimestamp() {
+		return endTimestamp;
+	}
 }
