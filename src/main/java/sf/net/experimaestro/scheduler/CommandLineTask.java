@@ -146,4 +146,12 @@ public class CommandLineTask extends Job {
 			}
 		}
 	}
+	
+	@Override
+	public void printHTML(PrintWriter out, PrintConfig config) {
+		super.printHTML(out, config);
+		out.format("<div><b>Command</b>: %s</div>", command[2]);
+		out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
+		out.format("<div><b>Environment</b>: %s</div>", Arrays.toString(envp));
+	}
 }

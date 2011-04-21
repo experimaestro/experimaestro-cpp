@@ -7,7 +7,6 @@ import java.io.File;
 
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.handler.HandlerList;
 import org.mortbay.jetty.security.Constraint;
 import org.mortbay.jetty.security.ConstraintMapping;
 import org.mortbay.jetty.security.HashUserRealm;
@@ -15,14 +14,13 @@ import org.mortbay.jetty.security.SecurityHandler;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.server.XPMXMLRpcServlet;
 import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
-import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentClass;
@@ -62,7 +60,7 @@ public class ServerTask extends AbstractTask {
 		final Scheduler taskManager = new Scheduler(taskmanagerDirectory,
 				nbThreads);
 
-		final TaskRepository repository = new TaskRepository();
+		final Repository repository = new Repository();
 
 		// Set up the server
 		Server server = new Server(port);

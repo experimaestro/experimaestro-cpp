@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -186,14 +187,13 @@ public abstract class Resource implements Comparable<Resource> {
 		LOGGER.info("Checking lock %s for resource %s (generated %b)",
 				locktype, this, getState());
 
-		// Handle simple cases 
+		// Handle simple cases
 		if (state == ResourceState.ERROR)
 			return DependencyStatus.ERROR;
-		
+
 		if (state == ResourceState.WAITING)
 			return DependencyStatus.WAIT;
-		
-		
+
 		// OK, we have to get a look into it
 		switch (locktype) {
 		case GENERATED:
@@ -534,5 +534,21 @@ public abstract class Resource implements Comparable<Resource> {
 					"Could not update the information in the database for %s",
 					this);
 		}
+	}
+
+	static public class PrintConfig {
+		public String detailURL;
+	}
+
+	/**
+	 * Writes an HTML description of the resource
+	 * 
+	 * @param out
+	 * @param detailURL
+	 */
+	public void printHTML(PrintWriter out, PrintConfig config) {
+		out.format("<div><b>Resource id</b>: %s</h2>", identifier);
+		out.format("<div><b>Status</b>: %s</div>", state);
+
 	}
 }

@@ -15,7 +15,7 @@ import org.apache.xmlrpc.server.RequestProcessorFactoryFactory;
 import org.apache.xmlrpc.server.XmlRpcHandlerMapping;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
@@ -30,7 +30,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
  *
  */
 public final class XPMXMLRpcServlet extends XmlRpcServlet {
-	private final TaskRepository repository;
+	private final Repository repository;
 	private final Scheduler taskManager;
 	private static final long serialVersionUID = 1L;
 	
@@ -68,7 +68,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	
 	
 
-	public XPMXMLRpcServlet(TaskRepository repository,
+	public XPMXMLRpcServlet(Repository repository,
 			Scheduler taskManager) {
 		this.repository = repository;
 		this.taskManager = taskManager;

@@ -1,55 +1,21 @@
 package sf.net.experimaestro.manager;
 
-import java.util.Set;
-import java.util.TreeSet;
+import javax.xml.namespace.QName;
 
-/**
- * A value type
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-public class Type implements Comparable<Type> {
-	final public static Type INTEGER = new Type("java.lang.Integer"),
-			DOUBLE = new Type("java.lang.Double");
+public class Type {
+	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Supertypes (each type can be linked to other types)
+	 * The qualified name of this type
 	 */
-	Set<Type> supertypes = new TreeSet<Type>();
+	private final QName qName;
 
-	/**
-	 * Identifier for this type
-	 */
-	String id;
-
-	/**
-	 * The view for this type (for example, it can be a given type can be either
-	 * given as a String or as a File that contains the string)
-	 */
-	String view;
-
-	/**
-	 * Version of the type
-	 */
-	int version = 1;
-
-	/**
-	 * Format version
-	 */
-	int formatVersion = 1;
-
-	/**
-	 * Creates a new type
-	 */
-	public Type(String id) {
-		this.id = id;
+	public Type(QName qName) {
+		this.qName = qName;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Comparable#compareTo(java.lang.Object)
-	 */
-	public int compareTo(Type o) {
-		return this.id.compareTo(o.id);
+	public QName getQName() {
+		return qName;
 	}
 
 }

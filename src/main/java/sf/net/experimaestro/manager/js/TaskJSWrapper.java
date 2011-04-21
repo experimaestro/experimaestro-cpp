@@ -1,19 +1,17 @@
 package sf.net.experimaestro.manager.js;
 
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import com.sun.org.apache.xml.internal.security.utils.XMLUtils;
 
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.utils.Converter;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Maps;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -43,11 +41,7 @@ public class TaskJSWrapper extends ScriptableObject {
 	// ---- JavaScript functions ----
 
 	public Scriptable jsFunction_run() {
-		if (task instanceof JSTask) {
-			LOGGER.info("Running JS task %s", task.getFactory().getId());
-			return ((JSTask) task).jsrun();
-		}
-		return (Scriptable) task.run();
+		return	JSUtils.domToE4X(task.run(), Context.getCurrentContext(), this);
 	}
 
 	/**
@@ -58,14 +52,14 @@ public class TaskJSWrapper extends ScriptableObject {
 	 */
 	public void jsFunction_setParameter(String _id, Scriptable value) {
 		DotName id = DotName.parse(_id);
-		LOGGER.info("Setting input [%s] to [%s]", _id, value);
+		LOGGER.info("Setting input [%s] to [%s] of type %s", _id, value, value.getClass());
 
 		if (value == Scriptable.NOT_FOUND)
-			task.setParameter(id, (Node) null);
-		else if (value instanceof Node)
-			task.setParameter(id, (Node) value);
+			task.setParameter(id, (Element) null);
+		else if (value instanceof Element)
+			task.setParameter(id, (Element) value);
 		else if (JSUtils.isXML(value)) {
-			task.setParameter(id, JSUtils.toDOM(value));
+			task.setParameter(id, (Element)JSUtils.toDOM(value));
 		} else {
 			task.setParameter(id, (String) value.toString());
 		}

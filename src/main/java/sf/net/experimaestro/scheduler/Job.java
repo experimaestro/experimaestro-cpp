@@ -3,7 +3,10 @@ package sf.net.experimaestro.scheduler;
 import static java.lang.String.format;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -11,8 +14,10 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.server.XPMServlet;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.PID;
+import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
@@ -308,4 +313,45 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	public long getEndTimestamp() {
 		return endTimestamp;
 	}
+
+	final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
+
+	@Override
+	public void printHTML(PrintWriter out, PrintConfig config) {
+		super.printHTML(out, config);
+		out.format("<div><b>Lock</b>: %s</div>", isLocked() ? "Locked"
+				: "Not locked");
+		out.format("<div>%d writer(s) and %d reader(s)</div>", getReaders(),
+				getWriters());
+
+		if (getState() == ResourceState.DONE
+				|| getState() == ResourceState.ERROR
+				|| getState() == ResourceState.RUNNING) {
+			long start = getStartTimestamp();
+			long end = getState() == ResourceState.RUNNING ? System
+					.currentTimeMillis() : getEndTimestamp();
+
+			out.format("<div>Started: %s</div>",
+					longDateFormat.format(new Date(start)));
+			if (getState() != ResourceState.RUNNING)
+				out.format("<div>Ended: %s</div>",
+						longDateFormat.format(new Date(end)));
+			out.format("<div>Duration: %s</div>",
+					Time.formatTimeInMilliseconds(end - start));
+		}
+
+		TreeMap<String, Dependency> dependencies = getDependencies();
+		if (!dependencies.isEmpty()) {
+			out.format("<h2>Dependencies</h2><ul>");
+			for (Entry<String, Dependency> entry : dependencies.entrySet()) {
+				String dependency = entry.getKey();
+				Dependency status = entry.getValue();
+				out.format("<li><a href=\"%s/resource?id=%s\">%s</a>: %s</li>",
+						config.detailURL, XPMServlet.urlEncode(dependency),
+						dependency, status.getType());
+			}
+			out.println("</ul>");
+		}
+	}
+
 }

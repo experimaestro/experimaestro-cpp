@@ -3,6 +3,7 @@ package sf.net.experimaestro.manager;
 import static java.lang.String.format;
 
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.xml.namespace.QName;
 
@@ -28,17 +29,31 @@ public abstract class TaskFactory {
 	String group;
 
 	/**
+	 * The repository
+	 */
+	private final Repository repository;
+
+	/**
 	 * Initialise a task
-	 * @param id The id of the task
+	 * @param repository 
+	 * 
+	 * @param id
+	 *            The id of the task
 	 * @param version
 	 * @param group
 	 */
-	public TaskFactory(QName id, String version, String group) {
+	public TaskFactory(Repository repository, QName id, String version, String group) {
+		this.repository = repository;
 		this.id = id;
 		this.version = version;
 		this.group = group;
 	}
 
+	
+	public Repository getRepository() {
+		return repository;
+	}
+	
 	/**
 	 * Documentation in XHTML format
 	 */
@@ -52,7 +67,15 @@ public abstract class TaskFactory {
 	 * @return a map of mappings from a qualified name to a named parameter or
 	 *         null if non existent
 	 */
-	abstract public Map<DotName, NamedParameter> getInputs();
+	abstract public Map<DotName, Input> getInputs();
+
+	/**
+	 * Get the list of (potential) parameters
+	 * 
+	 * @return a map of mappings from a qualified name to a named parameter or
+	 *         null if non existent
+	 */
+	abstract public Map<String, QName> getOutputs();
 
 	/**
 	 * Creates a new experiment
@@ -71,10 +94,23 @@ public abstract class TaskFactory {
 	}
 
 	/**
-	 * Get the list of subtasks
+	 * Sub-tasks
+	 */
+	protected Map<String, TaskFactory> subtasks = new TreeMap<String, TaskFactory>();
+
+	/**
+	 * Get the list of sub-task factories
+	 * 
 	 * @return
 	 */
 	public Map<String, TaskFactory> getSubtasks() {
-		return null;
+		return subtasks;
+	}
+
+	/**
+	 * Finish the initialisation of the factory
+	 */
+	protected void init() {
+
 	}
 }

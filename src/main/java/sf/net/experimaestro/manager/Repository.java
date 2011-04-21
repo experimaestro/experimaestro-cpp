@@ -7,25 +7,29 @@ import javax.xml.namespace.QName;
 
 import sf.net.experimaestro.utils.log.Logger;
 
-
 /**
  * Repository for all possible tasks
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskRepository {
+public class Repository {
 	final static private Logger LOGGER = Logger.getLogger();
-	
+
 	/**
-	 * The list of available experiments
+	 * The list of available task factories
 	 */
-	Map<QName, TaskFactory> experiments = new HashMap<QName, TaskFactory>();
-	
+	Map<QName, TaskFactory> taskFactories = new HashMap<QName, TaskFactory>();
+
+	/**
+	 * The list of of input types
+	 */
+	Map<QName, Type> types = new HashMap<QName, Type>();
+
 	/**
 	 * @return
 	 */
 	public Iterable<TaskFactory> tasks() {
-		return experiments.values();
+		return taskFactories.values();
 	}
 
 	/**
@@ -34,8 +38,12 @@ public class TaskRepository {
 	 * @param name
 	 * @return
 	 */
-	public TaskFactory get(QName name) {
-		return experiments.get(name);
+	public TaskFactory getFactory(QName name) {
+		return taskFactories.get(name);
+	}
+
+	public Type getType(QName name) {
+		return types.get(name);
 	}
 
 	/**
@@ -45,7 +53,13 @@ public class TaskRepository {
 	 */
 	public void register(TaskFactory information) {
 		LOGGER.info("Registering experiment %s", information.id);
-		experiments.put(information.id, information);
+		taskFactories.put(information.id, information);
 	}
 
+	public void addType(Type type) {
+		Type old = types.put(type.getQName(), type);
+		if (old != null)
+			LOGGER.warn("Redefining type %s", type.getQName());
+
+	}
 }

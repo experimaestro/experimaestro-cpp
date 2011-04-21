@@ -11,9 +11,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.namespace.QName;
 
 import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.NamedParameter;
+import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -28,9 +28,9 @@ public class TasksServlet extends XPMServlet {
 	private static final long serialVersionUID = 1L;
 
 	private final Scheduler manager;
-	private final TaskRepository repository;
+	private final Repository repository;
 
-	public TasksServlet(TaskRepository repository, Scheduler manager) {
+	public TasksServlet(Repository repository, Scheduler manager) {
 		this.repository = repository;
 		this.manager = manager;
 	}
@@ -73,7 +73,7 @@ public class TasksServlet extends XPMServlet {
 
 			String name = request.getParameter("name");
 			String ns = request.getParameter("ns");
-			TaskFactory factory = repository.get(new QName(ns, name));
+			TaskFactory factory = repository.getFactory(new QName(ns, name));
 			out.format(
 					"<html><head><title>Experimaestro - Task browser (task {%s}%s)</title></head><body>",
 					ns, name);
@@ -102,7 +102,7 @@ public class TasksServlet extends XPMServlet {
 	private void printParameters(final PrintWriter out, TaskFactory factory) {
 		out.println("<dl>");
 
-		for (Entry<DotName, NamedParameter> input : factory.getInputs()
+		for (Entry<DotName, Input> input : factory.getInputs()
 				.entrySet()) {
 			out.format("<dt>%s (%s)%s</dt><dd>%s</dd>", input.getKey(), input
 					.getValue().getType(),

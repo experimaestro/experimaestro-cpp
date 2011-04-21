@@ -2,6 +2,7 @@ package sf.net.experimaestro.manager.js;
 
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import javax.xml.namespace.QName;
 
@@ -12,9 +13,11 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.org.mozilla.javascript.internal.UniqueTag;
@@ -29,10 +32,6 @@ import sun.org.mozilla.javascript.internal.UniqueTag;
 public class JSJointTaskFactory extends JSTaskFactory {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	/**
-	 * Sub-tasks
-	 */
-	private Map<String, TaskFactory> subtasks = new TreeMap<String, TaskFactory>();
 
 	/**
 	 * Creates a new task information from a javascript object
@@ -44,9 +43,9 @@ public class JSJointTaskFactory extends JSTaskFactory {
 	 * @param jsObject
 	 *            The object
 	 */
-	public JSJointTaskFactory(TaskRepository repository, Context context,
-			Scriptable scope, NativeObject jsObject) {
-		super(context, scope, jsObject);
+	public JSJointTaskFactory(Repository repository, Scriptable scope,
+			NativeObject jsObject) {
+		super(scope, jsObject, repository);
 
 		// Get the list of sub-tasks
 		NativeObject jsTasks = JSUtils.get(scope, "tasks", jsObject);
@@ -54,11 +53,9 @@ public class JSJointTaskFactory extends JSTaskFactory {
 			String id = (String) _id;
 			NativeJavaObject taskId = (NativeJavaObject) JSUtils.get(scope, id,
 					jsTasks);
-			TaskFactory subTask = repository.get((QName) taskId.unwrap());
+			TaskFactory subTask = repository.getFactory((QName) taskId.unwrap());
 			getSubtasks().put(id, subTask);
 		}
-		
-		
 
 		// --- Now, connects
 
@@ -81,8 +78,8 @@ public class JSJointTaskFactory extends JSTaskFactory {
 			String fromPath = (String) jsConnection.get(1, jsConnections);
 			String to = (String) jsConnection.get(2, jsConnections);
 			String toSlot = (String) jsConnection.get(3, jsConnections);
-			LOGGER.info("Task %s : connects %s [%s] to %s [%s]", this.getId(), from,
-					fromPath, to, toSlot);
+			LOGGER.info("Task %s : connects %s [%s] to %s [%s]", this.getId(),
+					from, fromPath, to, toSlot);
 		}
 
 	}
@@ -91,7 +88,6 @@ public class JSJointTaskFactory extends JSTaskFactory {
 	public String getDocumentation() {
 		return JSUtils.get(jsScope, "description", jsObject).toString();
 	}
-
 
 	@Override
 	public Task create() {
@@ -103,6 +99,7 @@ public class JSJointTaskFactory extends JSTaskFactory {
 
 		// Call it
 		Function f = (Function) fObj;
+		Context jsContext = Context.getCurrentContext();
 		Object result = f.call(jsContext, jsScope, jsScope, new Object[] {});
 
 		if (result == UniqueTag.NOT_FOUND)
@@ -111,11 +108,29 @@ public class JSJointTaskFactory extends JSTaskFactory {
 		LOGGER.info("Created a new experiment: %s (%s)", result,
 				result.getClass());
 
-		return new JSJointTasks(this, jsContext, jsScope, (NativeObject) result);
+		JSJointTasks jsJointTasks = new JSJointTasks(this, jsContext, jsScope, (NativeObject) result);
+		jsJointTasks.init();
+		return jsJointTasks;
 	}
 
+	@Override
+	public Map<DotName, Input> getInputs() {
+		// Combine the inputs
+		Map<DotName, Input> map = new TreeMap<DotName, Input>();
+		for (Entry<String, TaskFactory> outer : subtasks.entrySet()) {
+			for (Entry<DotName, Input> inner : outer.getValue().getInputs()
+					.entrySet()) {
+				map.put(new DotName(outer.getKey(), inner.getKey()),
+						inner.getValue());
+			}
+		}
 
-	public Map<String, TaskFactory> getSubtasks() {
-		return subtasks;
+		return map;
+	}
+
+	@Override
+	public Map<String, QName> getOutputs() {
+		Map<String, QName> map = new TreeMap<String, QName>();
+		return map;
 	}
 }

@@ -14,18 +14,19 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrappedException;
 
-import com.sleepycat.je.DatabaseException;
-
 import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
+
+import com.sleepycat.je.DatabaseException;
 
 /**
  * Our RPC handler for experimaestro
@@ -43,7 +44,7 @@ public class RPCTaskManager {
 	/**
 	 * Repository
 	 */
-	TaskRepository repository;
+	Repository repository;
 
 	/**
 	 * Set the task server
@@ -51,7 +52,7 @@ public class RPCTaskManager {
 	 * @param taskManager
 	 * @param repository
 	 */
-	void setTaskServer(Scheduler taskManager, TaskRepository repository) {
+	public void setTaskServer(Scheduler taskManager, Repository repository) {
 		this.taskManager = taskManager;
 		this.repository = repository;
 	}
@@ -67,7 +68,8 @@ public class RPCTaskManager {
 	 * @return
 	 * @throws DatabaseException
 	 */
-	public boolean addData(String id, String mode, boolean exists) throws DatabaseException {
+	public boolean addData(String id, String mode, boolean exists)
+			throws DatabaseException {
 		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
 		taskManager.add(new SimpleData(taskManager, id, LockMode.valueOf(mode),
 				exists));
@@ -123,15 +125,15 @@ public class RPCTaskManager {
 		// Creates and enters a Context. The Context stores information
 		// about the execution environment of a script.
 		try {
-			org.mozilla.javascript.Context cx = org.mozilla.javascript.Context
+			org.mozilla.javascript.Context jsContext = org.mozilla.javascript.Context
 					.enter();
 
 			// Initialize the standard objects (Object, Function, etc.)
 			// This must be done before scripts can be executed. Returns
 			// a scope object that we use in later calls.
-			Scriptable scope = cx.initStandardObjects();
+			Scriptable scope = jsContext.initStandardObjects();
 
-			LOGGER.info("Environment is: %s", Output.toString(", ",
+			LOGGER.debug("Environment is: %s", Output.toString(", ",
 					environment.entrySet(),
 					new Output.Formatter<Map.Entry<String, String>>() {
 						@Override
@@ -147,18 +149,23 @@ public class RPCTaskManager {
 
 			ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
 					environment), 0);
-			jsXPM = new XPMObject(cx, environment, scope, repository,
+			jsXPM = new XPMObject(jsContext, environment, scope, repository,
 					taskManager);
 			XPMObject.getLog().clear();
 
+			// --- Define the different properties available from the script
 			ScriptableObject.defineProperty(scope, "xpm", jsXPM, 0);
+			ScriptableObject.defineProperty(scope, "xp", jsContext.newObject(
+					scope, "Namespace",
+					new Object[] { "xp", Manager.EXPERIMAESTRO_NS }), 0);
 
 			final Object result;
 			if (isFile)
-				result = cx.evaluateReader(scope, new FileReader(content),
-						content, 1, null);
+				result = jsContext.evaluateReader(scope,
+						new FileReader(content), content, 1, null);
 			else
-				result = cx.evaluateString(scope, content, "stdin", 1, null);
+				result = jsContext.evaluateString(scope, content, "stdin", 1,
+						null);
 
 			if (result != null)
 				LOGGER.info(result.toString());
@@ -205,7 +212,8 @@ public class RPCTaskManager {
 
 	/**
 	 * Add a command line job
-	 * @throws DatabaseException 
+	 * 
+	 * @throws DatabaseException
 	 */
 	public boolean runCommand(String name, int priority, Object[] command,
 			Object[] envArray, String workingDirectory, Object[] depends,

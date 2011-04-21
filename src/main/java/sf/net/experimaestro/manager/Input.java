@@ -7,39 +7,45 @@ import javax.xml.namespace.QName;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class NamedParameter {
+public class Input {
 	/**
 	 * Defines an optional parameter
 	 */
 	boolean optional;
-	
+
 	/**
 	 * The type of the parameter
 	 */
-	String type;
+	QName type;
 
 	/**
 	 * Documentation for this parameter
 	 */
 	String documentation;
-	
+
 	public boolean isOptional() {
 		return optional;
 	}
-	
+
 	public String getDocumentation() {
 		return documentation;
 	}
-	
-	public String getType() {
+
+	public QName getType() {
 		return type;
 	}
 
-	public NamedParameter(String type, boolean optional, String documentation) {
+	/**
+	 * New input type
+	 * 
+	 * @param type
+	 * @param optional
+	 * @param documentation
+	 */
+	public Input(QName type, boolean optional, String documentation) {
 		this.type = type;
 		this.optional = optional;
 		this.documentation = documentation;
 	}
-	
-	
+
 }

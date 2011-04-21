@@ -95,11 +95,6 @@ public class DotName implements Comparable<DotName> {
 
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -108,26 +103,20 @@ public class DotName implements Comparable<DotName> {
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) {
+		if (this == obj)
 			return true;
-		}
-		if (obj == null) {
+		
+		// If comparing to a string, implicit conversion 
+		if (obj instanceof String)
+			return array.length == 1 && array[0].equals(obj);
+		
+		if (obj == null || getClass() != obj.getClass())
 			return false;
-		}
-		if (getClass() != obj.getClass()) {
-			return false;
-		}
 		DotName other = (DotName) obj;
-		if (!Arrays.equals(array, other.array)) {
+		if (!Arrays.equals(array, other.array))
 			return false;
-		}
 		return true;
 	}
 
@@ -171,4 +160,8 @@ public class DotName implements Comparable<DotName> {
 		return new DotName(name.split("\\."));
 	}
 
+	public boolean isQualified() {
+		return array.length > 1;
+	}
+	
 }

@@ -1,29 +1,42 @@
 package sf.net.experimaestro.utils;
 
 import java.io.StringWriter;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
+import javax.xml.namespace.QName;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.log.Logger;
 
+/**
+ * 
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * 
+ */
 public class XMLUtils {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	static public final String toString(Node node) {
 		try {
-			DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
+			DOMImplementationRegistry registry = DOMImplementationRegistry
+					.newInstance();
 
-			DOMImplementationLS impl = 
-			    (DOMImplementationLS)registry.getDOMImplementation("LS");
+			DOMImplementationLS impl = (DOMImplementationLS) registry
+					.getDOMImplementation("LS");
 
 			LSSerializer writer = impl.createLSSerializer();
 			return writer.writeToString(node);
@@ -53,5 +66,78 @@ public class XMLUtils {
 		} catch (Exception e) {
 			return e.toString();
 		}
+	}
+
+	final static Pattern qnamePattern;
+	static {
+		try {
+			// (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
+			qnamePattern = Pattern
+					.compile("(?:\\{(\\w[\\w\\.:]+)\\}|(\\w+):)?([\\w-\\.]+)");
+		} catch (PatternSyntaxException e) {
+			LOGGER.error("Could not initialise the pattern: %s", e);
+			throw e;
+		}
+	}
+
+	/**
+	 * Parse a QName from a string following this format:
+	 * <ul>
+	 * <li>localName</li>
+	 * <li>{namespace}name</li>
+	 * <li>prefix:name</li>
+	 * </ul>
+	 * 
+	 * @param qname
+	 * @return
+	 */
+	public static QName parseQName(String qname, Element context,
+			Map<String, String> prefixes) {
+		Matcher matcher = qnamePattern.matcher(qname);
+		if (!matcher.matches())
+			throw new ExperimaestroException("Type [%s] is not a valid type",
+					qname);
+
+		String url = matcher.group(1);
+		String prefix = matcher.group(2);
+		if (prefix != null) {
+			url = context.lookupNamespaceURI(prefix);
+			if (url == null && prefixes != null)
+				url = prefixes.get(prefix);
+			if (url == null)
+				throw new ExperimaestroException(
+						"Type [%s] is not a valid type: namespace prefix [%s] not bound",
+						qname, prefix);
+		}
+		
+		String name = matcher.group(3);
+		return new QName(url, name);
+
+	}
+
+	/**
+	 * Finds a child with a given qualified name
+	 * 
+	 * @param element
+	 * @param qName
+	 * @return
+	 */
+	public static Node getChild(Element element, QName qName) {
+		NodeList list = element.getChildNodes();
+		Element candidate = null;
+		String ns = qName.getNamespaceURI();
+		String name = qName.getLocalPart();
+		for (int i = 0; i < list.getLength(); i++) {
+			Node node = list.item(i);
+			String nodeNS = node.getNamespaceURI();
+			if (node instanceof Element && node.getLocalName().equals(name)
+					&& ((ns == null && nodeNS == null) || (ns.equals(nodeNS)))) {
+				if (candidate != null)
+					throw new ExperimaestroException(
+							"Two children with the same name [%s]", qName);
+				candidate = (Element) node;
+			}
+		}
+		return candidate;
 	}
 }

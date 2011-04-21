@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -22,9 +21,13 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Node;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
+import sf.net.experimaestro.manager.AlternativeType;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.TaskRepository;
+import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
@@ -44,8 +47,6 @@ import com.sleepycat.je.DatabaseException;
  */
 public class XPMObject {
 
-	private static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
-
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -56,7 +57,7 @@ public class XPMObject {
 	/**
 	 * The experiment repository
 	 */
-	private final TaskRepository repository;
+	private final Repository repository;
 
 	/**
 	 * Our scope (global among javascripts)
@@ -79,9 +80,9 @@ public class XPMObject {
 	};
 
 	public XPMObject(Context cx, Map<String, String> environment,
-			Scriptable scope, TaskRepository repository, Scheduler manager)
+			Scriptable scope, Repository repository, Scheduler manager)
 			throws IllegalAccessException, InstantiationException,
-			InvocationTargetException {
+			InvocationTargetException, SecurityException, NoSuchMethodException {
 		this.context = cx;
 		this.environment = environment;
 		this.scope = scope;
@@ -90,25 +91,33 @@ public class XPMObject {
 
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
+
 	}
 
 	/**
 	 * Add an experiment
 	 * 
 	 * @param object
+	 * @return 
 	 */
-	public void addTaskFactory(NativeObject object) {
-		repository.register(new JSTaskFactory(context, scope, object));
+	public Scriptable addTaskFactory(NativeObject object) {
+		JSTaskFactory f = new JSTaskFactory(scope, object, repository);
+		repository.register(f);
+		return context.newObject(scope, "XPMTaskFactory",
+				new Object[] { Context.javaToJS(f, scope) });
 	}
 
 	/**
 	 * Add an experiment
 	 * 
 	 * @param object
+	 * @return 
 	 */
-	public void addJointTaskFactory(NativeObject object) {
-		repository.register(new JSJointTaskFactory(repository, context, scope,
-				object));
+	public Scriptable addJointTaskFactory(NativeObject object) {
+		JSJointTaskFactory f = new JSJointTaskFactory(repository, scope, object);
+		repository.register(f);
+		return context.newObject(scope, "XPMTaskFactory",
+				new Object[] { Context.javaToJS(f, scope) });
 	}
 
 	/**
@@ -117,11 +126,28 @@ public class XPMObject {
 	 * @param id
 	 * @return
 	 */
-	public Scriptable getExperiment(String namespace, String id) {
-		TaskFactory factory = repository.get(new QName(namespace, id));
-		LOGGER.info("Information %s", factory);
+	public Scriptable getTaskFactory(String namespace, String id) {
+		TaskFactory factory = repository.getFactory(new QName(namespace, id));
+		LOGGER.info("Creating a new JS task factory %s", factory);
 		return context.newObject(scope, "XPMTaskFactory",
 				new Object[] { Context.javaToJS(factory, scope) });
+	}
+
+	/**
+	 * Get the information about a given task
+	 * 
+	 * @param localPart
+	 * @return
+	 */
+	public Scriptable getTask(String namespace, String localPart) {
+		return getTask(new QName(namespace, localPart));
+	}
+	
+	public Scriptable getTask(QName qname) {
+		TaskFactory factory = repository.getFactory(qname);
+		LOGGER.info("Creating a new JS task %s", factory);
+		return context.newObject(scope, "XPMTask",
+				new Object[] { Context.javaToJS(factory.create(), scope) });
 	}
 
 	/**
@@ -133,8 +159,11 @@ public class XPMObject {
 
 	/**
 	 * Recursive flattening of an array
-	 * @param array The array to flatten
-	 * @param list A list of strings that will be filled
+	 * 
+	 * @param array
+	 *            The array to flatten
+	 * @param list
+	 *            A list of strings that will be filled
 	 */
 	static public void flattenArray(NativeArray array, List<String> list) {
 		int length = (int) array.getLength();
@@ -277,7 +306,7 @@ public class XPMObject {
 	 * Get experimaestro namespace
 	 */
 	public String ns() {
-		return EXPERIMAESTRO_NS;
+		return Manager.EXPERIMAESTRO_NS;
 	}
 
 	// XML Utilities
@@ -298,6 +327,38 @@ public class XPMObject {
 		for (String name : names)
 			file = new File(file, name);
 		return file;
+	}
+
+	/** Declare an alternative */
+	public void declareAlternative(QName qname) {
+		AlternativeType type = new AlternativeType(qname);
+		repository.addType(type);
+	}
+
+	/**
+	 * Add alternative
+	 * 
+	 * @param object
+	 *            The object should be a task factory with only one output
+	 */
+	public void addAlternative(Object object) {
+		if (object instanceof TaskFactoryJSWrapper) {
+			TaskFactory factory = ((TaskFactoryJSWrapper)object).factory;
+			Map<String, QName> outputs = factory.getOutputs();
+			if (outputs.size() != 1)
+				throw new ExperimaestroException("Wrong number of outputs (%d)", outputs.size());
+			QName qname = outputs.values().iterator().next();
+			
+			Type type = repository.getType(qname);
+			if (type == null || !(type instanceof AlternativeType))
+				throw new ExperimaestroException("Type %s is not an alternative", qname == null ? "null" : qname.toString());
+			
+			((AlternativeType)type).add(factory.getId(), factory);
+			return;
+		}
+		
+		throw new ExperimaestroException("Cannot handle object of class %s", object.getClass().toString());
+
 	}
 
 }
