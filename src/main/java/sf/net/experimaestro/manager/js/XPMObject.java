@@ -107,18 +107,6 @@ public class XPMObject {
 				new Object[] { Context.javaToJS(f, scope) });
 	}
 
-	/**
-	 * Add an experiment
-	 * 
-	 * @param object
-	 * @return 
-	 */
-	public Scriptable addJointTaskFactory(NativeObject object) {
-		JSJointTaskFactory f = new JSJointTaskFactory(repository, scope, object);
-		repository.register(f);
-		return context.newObject(scope, "XPMTaskFactory",
-				new Object[] { Context.javaToJS(f, scope) });
-	}
 
 	/**
 	 * Get the information about a given task
@@ -311,7 +299,7 @@ public class XPMObject {
 
 	// XML Utilities
 
-	public Scriptable domToE4X(Node node) {
+	public Object domToE4X(Node node) {
 		return JSUtils.domToE4X(node, context, scope);
 	}
 

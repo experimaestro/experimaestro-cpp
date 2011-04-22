@@ -13,16 +13,20 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.manager.AlternativeInput;
+import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.TaskInput;
+import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -48,7 +52,7 @@ public class JSTaskFactory extends TaskFactory {
 	/**
 	 * The inputs
 	 */
-	protected Map<DotName, Input> inputs;
+	protected Map<String, Input> inputs;
 
 	/**
 	 * The outputs
@@ -67,14 +71,14 @@ public class JSTaskFactory extends TaskFactory {
 	 */
 	public JSTaskFactory(Scriptable scope, NativeObject jsObject,
 			Repository repository) {
-		super(repository, getQName(scope, jsObject), JSUtils.get(scope, "version",
-				jsObject, "1.0"), null);
+		super(repository, getQName(scope, jsObject), JSUtils.get(scope,
+				"version", jsObject, "1.0"), null);
 		this.jsScope = scope;
 		this.jsObject = jsObject;
 
 		// --- Get the task inputs
-		Object input = JSUtils.get(scope, "input", jsObject);
-		inputs = new TreeMap<DotName, Input>();
+		Object input = JSUtils.get(scope, "inputs", jsObject);
+		inputs = new TreeMap<String, Input>();
 		if (!JSUtils.isXML(input))
 			throw new RuntimeException(format(
 					"Property input is not in XML format in %s (%s)", this.id,
@@ -87,14 +91,12 @@ public class JSTaskFactory extends TaskFactory {
 			Node item = list.item(i);
 			if (item.getNodeType() != Node.ELEMENT_NODE)
 				continue;
-			NamedNodeMap attributes = item.getAttributes();
 
 			Element el = (Element) item;
-			Node idNode = attributes.getNamedItem("id");
-			if (idNode == null)
+			String idAtt = el.getAttribute("id");
+			if (idAtt == null)
 				throw new RuntimeException(format("Input without id in %s",
 						this.id));
-			String idAtt = idNode.getTextContent();
 			LOGGER.info("New attribute %s for task %s", idAtt, this.id);
 
 			QName typeName = XMLUtils.parseQName(el.getAttribute("type"), el,
@@ -115,12 +117,13 @@ public class JSTaskFactory extends TaskFactory {
 					documentation = XMLUtils.toString(child);
 			}
 
-			inputs.put(new DotName(idAtt), new Input(typeName, isOptional,
-					documentation));
+			// Add this to the list of inputs
+			addInput(el, repository, idAtt, typeName, isOptional, documentation);
+
 		}
 
 		// --- Get the task outputs
-		Object output = JSUtils.get(scope, "output", jsObject);
+		Object output = JSUtils.get(scope, "outputs", jsObject);
 		outputs = new TreeMap<String, QName>();
 		if (!JSUtils.isXML(output))
 			throw new RuntimeException(format(
@@ -146,6 +149,64 @@ public class JSTaskFactory extends TaskFactory {
 
 	}
 
+	/**
+	 * Add an input
+	 * 
+	 * @param el
+	 * 
+	 * @param repository
+	 *            The repository
+	 * @param id
+	 *            The id of the input
+	 * @param typeName
+	 *            The name of the type
+	 * @param isOptional
+	 *            Is this type optional?
+	 * @param documentation
+	 *            Type documentation
+	 */
+	private void addInput(Element el, Repository repository, String id,
+			QName typeName, boolean isOptional, String documentation) {
+		LOGGER.info("Looking at [%s] of type [%s]", id, typeName);
+		Type type = repository.getType(typeName);
+		if (type instanceof AlternativeType) {
+			LOGGER.info(
+					"Detected an alternative type configuration for input [%s] of type [%s]",
+					id, typeName);
+			inputs.put(id, new AlternativeInput(typeName, isOptional,
+					documentation, (AlternativeType) type));
+		} else if (el.getNodeName().equals("task")) {
+			// The input is a task
+			TaskFactory factory = repository.getFactory(typeName);
+			if (factory == null)
+				throw new ExperimaestroException(
+						"Could not find task factory with type [%s]", typeName);
+
+			inputs.put(id, new TaskInput(factory, typeName, isOptional,
+					documentation));
+
+		} else {
+			// The input is just XML
+			inputs.put(id, new Input(typeName, isOptional, documentation));
+		}
+
+		// --- Check connections
+		for (Element connect : XMLUtils.childIterator(el, new QName(
+				Manager.EXPERIMAESTRO_NS, "connect"))) {
+			final String from = connect.getAttribute("from");
+			final String path = connect.getAttribute("path");
+			final DotName to = new DotName(id, DotName.parse(connect.getAttribute("to")));
+			LOGGER.info("Found connection between [%s in %s] and [%s]", path,
+					from, to);
+			Input input = inputs.get(from);
+			if (input == null)
+				throw new ExperimaestroException(
+						"Could not find input [%s] in [%s]", from, this.id);
+			
+			input.addConnection(path, to, connect);
+		}
+	}
+
 	private static QName getQName(Scriptable scope, NativeObject jsObject) {
 		NativeJavaObject object = (NativeJavaObject) JSUtils.get(scope, "id",
 				jsObject);
@@ -162,14 +223,17 @@ public class JSTaskFactory extends TaskFactory {
 		// Get the "create" method
 		Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
+		// If we don't have one, then it might be a "direct" task, i.e.
+		// not implying any object creation
 		if (!(function instanceof Function)) {
 			// Case of a configuration object
-			function = JSUtils.get(jsScope, "get", jsObject, null);
+			function = JSUtils.get(jsScope, "run", jsObject, null);
 			if (!(function instanceof Function))
 				throw new RuntimeException(
-						"Could not find the get or create functions.");
-			
-			JSConfigurationTask jsConfigurationTask = new JSConfigurationTask(this, jsScope, jsObject, (Function)function);
+						"Could not find the create or run functions.");
+
+			JSDirectTask jsConfigurationTask = new JSDirectTask(this, jsScope,
+					jsObject, (Function) function);
 			jsConfigurationTask.init();
 			return jsConfigurationTask;
 		}
@@ -180,13 +244,14 @@ public class JSTaskFactory extends TaskFactory {
 		Object result = f.call(jsContext, jsScope, jsScope, new Object[] {});
 		LOGGER.info("Created a new experiment: %s (%s)", result,
 				result.getClass());
-		JSAbstractTask jsTask = new JSTask(this, jsContext, jsScope, (NativeObject) result);
+		JSAbstractTask jsTask = new JSTask(this, jsContext, jsScope,
+				(NativeObject) result);
 		jsTask.init();
 		return jsTask;
 	}
 
 	@Override
-	public Map<DotName, Input> getInputs() {
+	public Map<String, Input> getInputs() {
 		return inputs;
 	}
 

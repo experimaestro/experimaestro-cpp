@@ -2,35 +2,28 @@ package sf.net.experimaestro.utils;
 
 import static java.lang.String.format;
 
-import java.io.IOException;
-import java.io.StringReader;
-
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.IdScriptableObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.utils.log.Logger;
 
 public class JSUtils {
 	final static private Logger LOGGER = Logger.getLogger();
-	private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory
-			.newInstance();;
 
 	/**
 	 * Get an object from a scriptable
@@ -70,7 +63,18 @@ public class JSUtils {
 	 * @param scope
 	 * @return
 	 */
-	public static Scriptable domToE4X(Node node, Context cx, Scriptable scope) {
+	public static Object domToE4X(Node node, Context cx, Scriptable scope) {
+		if (node == null) {
+			LOGGER.info("XML is null");
+			return Context.getUndefinedValue();
+		}
+		if (node instanceof Document)
+			node = ((Document) node).getDocumentElement();
+		
+		
+		LOGGER.info("XML is of type %s [%s]; %s", node.getClass(),
+				XMLUtils.toString(node),
+				node.getUserData("org.mozilla.javascript.xmlimpl.XmlNode"));
 		return cx.newObject(scope, "XML", new Node[] { node });
 	}
 
@@ -81,6 +85,10 @@ public class JSUtils {
 	 * @return
 	 */
 	public static Node toDOM(Object object) {
+		// Unwrap if needed
+		if (object instanceof Wrapper)
+			object = ((Wrapper) object).unwrap();
+
 		// It is already a DOM node
 		if (object instanceof Node)
 			return (Node) object;
@@ -91,19 +99,10 @@ public class JSUtils {
 
 			// Use Rhino implementation for XML objects
 			if (className.equals("XML")) {
-				// FIXME: this stripts all whitespaces!
-				return  XMLLibImpl.toDomNode(object).cloneNode(true);
-
-				// Element el = document.getDocumentElement();
-				// NodeList nodes = el.getChildNodes();
-				// if (nodes.getLength() == 1)
-				// return nodes.item(0);
-				// DocumentFragment fragment =
-				// document.createDocumentFragment();
-				// for (int i = 0; i < nodes.getLength(); i++)
-				// fragment.appendChild(nodes.item(i));
-				// return fragment;
-
+				// FIXME: this strips all whitespaces!
+				Node node = XMLLibImpl.toDomNode(object);
+ 				LOGGER.info("Cloned node [%s / %s] from [%s]", node.getClass(), XMLUtils.toStringObject(node), object.toString());
+				return node;
 			}
 
 			// Should be an XMLList

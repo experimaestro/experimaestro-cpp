@@ -10,16 +10,15 @@ var configuration_alt_1 = {
 	id: xpm.qName("a.b.c", "alt-1"),
 	documentation: <p>Configuration of a possible alternative</p>,
 	
-	input: <inputs>
+	inputs: <inputs>
 		<input id="size" type="xs:integer" help="The parameter"/>
 	</inputs>,
 	
-	output: <outputs>
+	outputs: <outputs>
 		<output type="{a.b.c}alt"/>
 	</outputs>,
 
-	get: function(inputs) {
-		xpm.log("Value of size is %s", inputs.size.@xp::value);
+	run: function(inputs) {
 		return <alt xmlns="a.b.c">
 				{inputs.size}
 			</alt>;
@@ -33,15 +32,11 @@ xpm.addAlternative(xpm.addTaskFactory(configuration_alt_1));
 var task_factory = {
 	id: xpm.qName("a.b.c", "task"),
 	version: "1.0",
-	input: <><input type="{a.b.c}alt" id="p"/></>,
-	output: <></>,
+	inputs: <><input type="{a.b.c}alt" id="p"/></>,
+	outputs: <></>,
 	
-	create: function() {
-		this.run = function(inputs) {
-			return <outputs>{inputs.p}</outputs>;
-		}
-		
-		return this;
+	run: function(inputs) {
+		return <outputs>{inputs.p}</outputs>;
 	}
 };
 
@@ -53,6 +48,7 @@ var task = xpm.getTask(task_factory.id);
 task.setParameter("p", "{a.b.c}alt-1");
 task.setParameter("p.size", "10");
 var r = task.run();
+xpm.log("Value of p.size is %s", r.abc::alt.xp::value.@value);
 
 v = r.abc::alt.xp::value.@value;
 if (v == undefined || v != 10)

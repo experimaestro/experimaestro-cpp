@@ -102,22 +102,14 @@ public class TasksServlet extends XPMServlet {
 	private void printParameters(final PrintWriter out, TaskFactory factory) {
 		out.println("<dl>");
 
-		for (Entry<DotName, Input> input : factory.getInputs()
-				.entrySet()) {
-			out.format("<dt>%s (%s)%s</dt><dd>%s</dd>", input.getKey(), input
-					.getValue().getType(),
-					input.getValue().isOptional() ? " - optional" : "", input
-							.getValue().getDocumentation());
+		for (Entry<String, Input> entry : factory.getInputs().entrySet()) {
+			Input input = entry.getValue();
+			out.format("<dt class='%s'>%s (%s)%s</dt><dd>",
+					input.isOptional() ? "optional" : "required");
+			input.printHTML(out);
+			out.println("</dd>");
 		}
 		out.println("</dl>");
 
-		Map<String, TaskFactory> subtasks = factory.getSubtasks();
-		if (subtasks != null)
-			for (Entry<String, TaskFactory> entry : subtasks.entrySet()) {
-				out.format("<h3>%s</h3><div style='left-margin: 1em'>",
-						entry.getKey());
-				printParameters(out, entry.getValue());
-				out.println("</div>");
-			}
 	}
 }

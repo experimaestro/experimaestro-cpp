@@ -2,14 +2,11 @@ package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Element;
 
-import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -61,28 +58,6 @@ public class JSTask extends JSAbstractTask {
 
 	}
 
-	@Override
-	public boolean setParameter(DotName id, Element element, boolean direct) {
-		if (super.setParameter(id, element, direct))
-			return true;
-
-		// If we have more than one level we don't know how to handle this
-		if (id.size() != 1)
-			return false;
-
-		// Let's go
-		LOGGER.debug("[set] parameter %s to %s", id, element);
-
-		final String name = id.getName();
-
-		Scriptable jsInput = toE4X(element);
-
-		Scriptable jsInputs = (Scriptable) jsObject.get("inputs", jsObject);
-		jsInputs.put(name, jsInputs, jsInput);
-
-		LOGGER.debug("[/set] parameter %s (task %s)", name, factory.getId());
-		return true;
-	}
 
 	public Scriptable jsrun() {
 		LOGGER.info("[Running] task: %s", factory.getId());

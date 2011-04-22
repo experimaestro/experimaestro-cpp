@@ -5,13 +5,13 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 public abstract class Task {
@@ -28,7 +28,7 @@ public abstract class Task {
 	/**
 	 * List of sub-tasks
 	 */
-	protected Map<String, Task> tasks = new TreeMap<String, Task>();
+	protected Map<String, Value> values = new TreeMap<String, Value>();
 
 	/**
 	 * Construct a new task from a {@link TaskFactory}
@@ -53,7 +53,7 @@ public abstract class Task {
 	/**
 	 * Get the list of parameters
 	 */
-	public Map<DotName, Input> getInputs() {
+	public Map<String, Input> getInputs() {
 		return factory.getInputs();
 	}
 
@@ -69,18 +69,8 @@ public abstract class Task {
 	 * 
 	 * @return A map or null
 	 */
-	public Map<String, Task> getSubTasks() {
-		return tasks;
-	}
-
-	/**
-	 * Get a sub task
-	 * 
-	 * @param id
-	 * @return
-	 */
-	Task getTask(String id) {
-		return tasks.get(id);
+	public Map<String, Value> getValues() {
+		return values;
 	}
 
 	/**
@@ -98,23 +88,21 @@ public abstract class Task {
 	 */
 	final public Document run() {
 		LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
-		for (Entry<String, Task> entry : tasks.entrySet()) {
-			// If a subtask has the same name has an input parameter,
-			// substitute its output
-			final String key = entry.getKey();
-			Input input = getInput(key);
-			if (input != null) {
-				LOGGER.info("Task with the same name as an input [%s]: running it", key);
-				Task subtask = entry.getValue();
-				setParameter(new DotName(key), subtask.run()
-						.getDocumentElement(), true);
-			}
+
+		// (1) Order the values to avoid dependencies
+		Value[] array = values.values().toArray(new Value[values.size()]);
+		// TODO
+		
+		// (2) Do some post-processing on values
+		for (Value value : values.values()) {
+			value.process();
+			value.processConnections(this);
 		}
+
 		// Do the real-run
 		return doRun();
 	}
 
-
 	/**
 	 * Set a parameter
 	 * 
@@ -124,36 +112,18 @@ public abstract class Task {
 	 *            The value to be set (this should be an XML fragment)
 	 * @return True if the parameter was set and false otherwise
 	 */
-	final public boolean setParameter(DotName id, Element value) {
-		return setParameter(id, value, false);
-
-	}
-
-	/**
-	 * Set a parameter
-	 * 
-	 * @param id
-	 *            The identifier for this parameter (dot names)
-	 * @param value
-	 *            The value to be set (this should be an XML fragment)
-	 * @return True if the parameter was set and false otherwise
-	 */
-	public boolean setParameter(DotName id, Element value, boolean direct) {
-		if (direct)
-			return false;
-		
+	public final void setParameter(DotName id, Document value) {
 		String name = id.get(0);
 
-		// If the first name is a task name
-		Task task = tasks.get(name);
-		if (task != null)
-			return task.setParameter(id.offset(1), value);
+		Value inputValue = values.get(name);
+		if (inputValue == null)
+			throw new ExperimaestroException("Task %s has no input [%s]",
+					factory.id, name);
 
-		// Could not handle it
-		return false;
+		inputValue.set(id.offset(1), value);
+
 	}
 
-	
 	/**
 	 * Set a parameter.
 	 * 
@@ -163,40 +133,25 @@ public abstract class Task {
 	 * @param value
 	 */
 	public void setParameter(DotName id, String value) {
-		try {
-			DocumentBuilder docBuilder = dbFactory.newDocumentBuilder();
-			Element element = docBuilder.newDocument().createElementNS(
-					Manager.EXPERIMAESTRO_NS, "value");
-			element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "value", value);
-			setParameter(id, element);
-		} catch (ParserConfigurationException e) {
-			throw new RuntimeException(e);
-		}
+		final Document doc = XMLUtils.newDocument();
+		Element element = doc
+				.createElementNS(Manager.EXPERIMAESTRO_NS, "value");
+		element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "value", value);
+		doc.appendChild(element);
+		setParameter(id, doc);
 	}
 
 	/**
 	 * Initialise the task
 	 */
 	public void init() {
-		Repository repository = getFactory().getRepository();
-
-		for (Entry<DotName, Input> entry : getInputs().entrySet()) {
-			DotName key = entry.getKey();
-			if (key.isQualified())
-				continue;
-			QName typeName = entry.getValue().type;
-			LOGGER.info("Looking at [%s] of type [%s]", key, typeName);
-			Type type = repository.getType(typeName);
-
-			if (type instanceof AlternativeType) {
-				LOGGER.info(
-						"Detected an alternative type configuration for input [%s] of type [%s]",
-						key, typeName);
-				AlternativeTask task = new AlternativeTask(
-						(AlternativeType) type);
-				tasks.put(key.getName(), task);
-			}
+		// Create values for each input
+		for (Entry<String, Input> entry : getInputs().entrySet()) {
+			String key = entry.getKey();
+			final Value value = entry.getValue().newValue();
+			values.put(key, value);
 		}
+
 	}
 
 }

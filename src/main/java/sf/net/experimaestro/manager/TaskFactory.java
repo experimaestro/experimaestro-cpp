@@ -3,7 +3,6 @@ package sf.net.experimaestro.manager;
 import static java.lang.String.format;
 
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.xml.namespace.QName;
 
@@ -67,7 +66,7 @@ public abstract class TaskFactory {
 	 * @return a map of mappings from a qualified name to a named parameter or
 	 *         null if non existent
 	 */
-	abstract public Map<DotName, Input> getInputs();
+	abstract public Map<String, Input> getInputs();
 
 	/**
 	 * Get the list of (potential) parameters
@@ -91,20 +90,6 @@ public abstract class TaskFactory {
 
 	public Object getVersion() {
 		return version;
-	}
-
-	/**
-	 * Sub-tasks
-	 */
-	protected Map<String, TaskFactory> subtasks = new TreeMap<String, TaskFactory>();
-
-	/**
-	 * Get the list of sub-task factories
-	 * 
-	 * @return
-	 */
-	public Map<String, TaskFactory> getSubtasks() {
-		return subtasks;
 	}
 
 	/**

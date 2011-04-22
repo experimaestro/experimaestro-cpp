@@ -1,11 +1,14 @@
 package sf.net.experimaestro.manager.js;
 
+import java.util.Map.Entry;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Wrapper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -13,9 +16,14 @@ import org.w3c.dom.NodeList;
 
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 public abstract class JSAbstractTask extends Task {
+	final static private Logger LOGGER = Logger.getLogger();
+	
 	final protected Scriptable jsScope;
 
 	public JSAbstractTask(TaskFactory information, Scriptable jsScope) {
@@ -23,16 +31,22 @@ public abstract class JSAbstractTask extends Task {
 		this.jsScope = jsScope;
 	}
 
-	protected Scriptable toE4X(Element value) {
+	
+	/**
+	 * Convert a DOM element into a E4X value
+	 * @param value
+	 * @return
+	 */
+	protected Object toE4X(Element value) {
 		int nodeType = value.getNodeType();
-		Scriptable jsInput = null;
+		Object jsInput = null;
 		Context jsContext = Context.getCurrentContext();
 		if (nodeType == Node.ELEMENT_NODE) {
 			jsInput = JSUtils.domToE4X(value, jsContext, jsScope);
 		} else if (nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
 			// Embed in a list
 			NodeList childNodes = value.getChildNodes();
-			Scriptable[] nodes = new Scriptable[childNodes.getLength()];
+			Object[] nodes = new Scriptable[childNodes.getLength()];
 			for (int i = 0; i < nodes.length; i++)
 				nodes[i] = JSUtils.domToE4X(childNodes.item(i), jsContext,
 						jsScope);
@@ -44,8 +58,10 @@ public abstract class JSAbstractTask extends Task {
 		return jsInput;
 	}
 
-	protected Document getDocument(Scriptable result) {
+	protected Document getDocument(Object result) {
+		// Get node
 		Node node = JSUtils.toDOM(result);
+		
 		if (node instanceof Document)
 			return (Document) node;
 	
@@ -76,5 +92,18 @@ public abstract class JSAbstractTask extends Task {
 	}
 
 	abstract protected Scriptable jsrun();
+	
+	protected Scriptable getJSInputs() {
+		Context cx = Context.getCurrentContext();
+		Scriptable jsInputs = cx.newObject(jsScope,
+				"Object", new Object[] {});
+		for (Entry<String, Value> entry : values.entrySet()) {
+			String id = entry.getKey();
+			Value value = entry.getValue();
+			final Object e4x = JSUtils.domToE4X(value.get(), cx, jsScope);
+			jsInputs.put(id, jsInputs, e4x);
+		}
+		return jsInputs;
+	}
 
 }
