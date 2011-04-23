@@ -1,8 +1,11 @@
 package sf.net.experimaestro.manager;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -11,6 +14,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -89,18 +93,83 @@ public abstract class Task {
 	final public Document run() {
 		LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
 
-		// (1) Order the values to avoid dependencies
-		Value[] array = values.values().toArray(new Value[values.size()]);
-		// TODO
-		
+		// (1) Get the inputs so that dependent ones are evaluated latter
+		ArrayList<String> list = getOrderedInputs();
+
 		// (2) Do some post-processing on values
-		for (Value value : values.values()) {
+		for (String key : list) {
+			Value value = values.get(key);
 			value.process();
 			value.processConnections(this);
 		}
 
 		// Do the real-run
 		return doRun();
+	}
+
+	/**
+	 * Order the inputs in topological order in order to evaluate them when
+	 * dependencies due to connections are satisfied
+	 */
+	private ArrayList<String> getOrderedInputs() {
+		// (1) Order the values to avoid dependencies
+		// See http://en.wikipedia.org/wiki/Topological_sorting
+		ArrayList<String> list = new ArrayList<String>();
+		ArrayList<String> graph = new ArrayList<String>(values.keySet());
+
+		Map<String, TreeSet<String>> forward_edges = new TreeMap<String, TreeSet<String>>();
+		Map<String, TreeSet<String>> backwards_edges = new TreeMap<String, TreeSet<String>>();
+
+		// Build the edge maps
+		for (Entry<String, Value> entry : values.entrySet())
+			for (Connection c : entry.getValue().input.connections) {
+				final String from = entry.getKey();
+				final String to = c.to.get(0);
+				LOGGER.debug("[build] Adding edge from %s to %s", from, to);
+				addEdge(forward_edges, from, to);
+				addEdge(backwards_edges, to, from);
+			}
+
+		// Get the free nodes
+		boolean done = false;
+		while (!done) {
+			done = true;
+			Iterator<String> iterator = graph.iterator();
+			while (iterator.hasNext()) {
+				String n1 = iterator.next();
+				final TreeSet<String> inSet = backwards_edges.get(n1);
+				LOGGER.debug("Node %s has %d incoming edges", n1,
+						inSet == null ? 0 : inSet.size());
+				if (inSet == null || inSet.isEmpty()) {
+					LOGGER.debug("Removing node %s", n1);
+					done = false;
+					list.add(n1);
+					iterator.remove();
+
+					// Remove the edges from n1
+					final TreeSet<String> nodes = forward_edges.get(n1);
+					if (nodes != null)
+						for (String n2 : nodes) {
+							LOGGER.debug("Removing edge from %s to %s", n1, n2);
+							backwards_edges.get(n2).remove(n1);
+						}
+				}
+			}
+		}
+
+		if (!graph.isEmpty())
+			throw new ExperimaestroException("Loop in the graph for task [%s]",
+					factory.id);
+		
+		return list;
+	}
+
+	static private void addEdge(Map<String, TreeSet<String>> edges,
+			String from, String to) {
+		TreeSet<String> inSet = edges.get(from);
+		if (inSet == null)
+			edges.put(from, inSet = new TreeSet<String>());
+		inSet.add(to);
 	}
 
 	/**
@@ -133,12 +202,23 @@ public abstract class Task {
 	 * @param value
 	 */
 	public void setParameter(DotName id, String value) {
+		final Document doc = wrapValue(value);
+		setParameter(id, doc);
+	}
+
+	/**
+	 * Wrap a value into an XML document
+	 * 
+	 * @param value
+	 * @return An XML document representing the value
+	 */
+	static public Document wrapValue(String value) {
 		final Document doc = XMLUtils.newDocument();
 		Element element = doc
 				.createElementNS(Manager.EXPERIMAESTRO_NS, "value");
 		element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "value", value);
 		doc.appendChild(element);
-		setParameter(id, doc);
+		return doc;
 	}
 
 	/**

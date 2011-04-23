@@ -16,9 +16,8 @@ public class AlternativeInput extends Input {
 	
 	private AlternativeType alternativeType;
 
-	public AlternativeInput(QName type, boolean optional, String documentation,
-			AlternativeType alternativeType) {
-		super(type, optional, documentation);
+	public AlternativeInput(QName type, AlternativeType alternativeType) {
+		super(type);
 		this.alternativeType = alternativeType;
 	}
 
@@ -73,6 +72,10 @@ public class AlternativeInput extends Input {
 
 		@Override
 		public void process() {
+			// If the task has not been set, try to use default value
+			if (task == null && input.defaultValue != null)
+				set(DotName.EMPTY, input.defaultValue);
+			
 			if (task == null)
 				throw new ExperimaestroException(
 						"Alternative task has not been set");

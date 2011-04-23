@@ -52,7 +52,7 @@ public class TasksServlet extends XPMServlet {
 			out.println("<h1>Available tasks</h1>");
 			out.println("<ul>");
 
-			for (TaskFactory task : repository.tasks()) {
+			for (TaskFactory task : repository.factories()) {
 				QName id = task.getId();
 				out.format(
 						"<li><a href=\"%s/show?ns=%s&amp;name=%s\">%s</a></li>",

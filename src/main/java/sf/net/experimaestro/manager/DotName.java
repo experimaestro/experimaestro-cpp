@@ -11,6 +11,11 @@ import bpiwowar.argparser.utils.Output;
  */
 public class DotName implements Comparable<DotName> {
 	/**
+	 * Empty dot name
+	 */
+	public static final DotName EMPTY = new DotName(new String[] {});
+	
+	/**
 	 * The qualified name
 	 */
 	private String[] array;
@@ -39,8 +44,11 @@ public class DotName implements Comparable<DotName> {
 
 	/**
 	 * Creates a qualified name with a new prefix
-	 * @param prefix The prefix
-	 * @param qName The qualified name that is used as a base
+	 * 
+	 * @param prefix
+	 *            The prefix
+	 * @param qName
+	 *            The qualified name that is used as a base
 	 */
 	public DotName(String prefix, DotName qName) {
 		this.array = new String[1 + qName.size()];
@@ -107,11 +115,11 @@ public class DotName implements Comparable<DotName> {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		
-		// If comparing to a string, implicit conversion 
+
+		// If comparing to a string, implicit conversion
 		if (obj instanceof String)
 			return array.length == 1 && array[0].equals(obj);
-		
+
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		DotName other = (DotName) obj;
@@ -150,10 +158,10 @@ public class DotName implements Comparable<DotName> {
 	}
 
 	/**
-	 * Creates a DotName from an unparsed string identifier containing
-	 * dots.
+	 * Creates a DotName from an unparsed string identifier containing dots.
 	 * 
-	 * @param name The full identifier to be parsed
+	 * @param name
+	 *            The full identifier to be parsed
 	 * @return
 	 */
 	public static DotName parse(String name) {
@@ -163,5 +171,5 @@ public class DotName implements Comparable<DotName> {
 	public boolean isQualified() {
 		return array.length > 1;
 	}
-	
+
 }

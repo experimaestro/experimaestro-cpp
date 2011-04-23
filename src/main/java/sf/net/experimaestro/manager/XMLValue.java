@@ -23,8 +23,14 @@ public class XMLValue extends Value {
 	
 	@Override
 	public void process() {
+		// If there is no value, takes the default
+		if (value == null && input.defaultValue != null) {
+			LOGGER.info("Setting default value [%s]", XMLUtils.toStringObject(input.defaultValue));
+			value = (Document) input.defaultValue.cloneNode(true);
+		}
 	}
 
+	
 	@Override
 	public void set(DotName id, Document value) {
 		if (id.size() != 0)

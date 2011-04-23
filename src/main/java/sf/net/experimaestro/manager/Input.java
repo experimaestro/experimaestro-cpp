@@ -7,6 +7,7 @@ import java.util.Iterator;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
@@ -17,7 +18,7 @@ import sf.net.experimaestro.utils.log.Logger;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Input {
+public abstract class Input {
 	final static private Logger LOGGER = Logger.getLogger();
 	
 	/**
@@ -34,11 +35,24 @@ public class Input {
 	 * Documentation for this parameter
 	 */
 	String documentation;
+	
+	/**
+	 * Default value
+	 */
+	Document defaultValue;
 
+	/**
+	 * Returns whether the input is optional or not
+	 * @return
+	 */
 	public boolean isOptional() {
 		return optional;
 	}
 
+	/**
+	 * Get the documentation
+	 * @return A string in XHTML 
+	 */
 	public String getDocumentation() {
 		return documentation;
 	}
@@ -54,20 +68,29 @@ public class Input {
 	 * @param optional
 	 * @param documentation
 	 */
-	public Input(QName type, boolean optional, String documentation) {
+	public Input(QName type) {
 		this.type = type;
+	}
+
+	
+	public void setOptional(boolean optional) {
 		this.optional = optional;
+	}
+	
+	public void setDocumentation(String documentation) {
 		this.documentation = documentation;
 	}
-
-	Value newValue() {
-		return new XMLValue(this);
-	}
-
+	
+	abstract Value newValue();
+	
 	public void printHTML(PrintWriter out) {
 		out.println(documentation);
 	}
 
+	public void setDefaultValue(Document defaultValue) {
+		this.defaultValue = defaultValue;
+	}
+	
 	/**
 	 * Defines a connection to the
 	 * 

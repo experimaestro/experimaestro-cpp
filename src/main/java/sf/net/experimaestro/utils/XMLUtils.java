@@ -25,6 +25,7 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -215,4 +216,6 @@ public class XMLUtils {
 	public static Document newDocument() {
 		return documentBuilder.newDocument();
 	}
+
+
 }

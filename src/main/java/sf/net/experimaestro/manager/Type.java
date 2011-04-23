@@ -14,7 +14,7 @@ public class Type {
 		this.qName = qName;
 	}
 
-	public QName getQName() {
+	public QName getId() {
 		return qName;
 	}
 

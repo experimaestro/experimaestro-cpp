@@ -12,6 +12,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -27,6 +28,7 @@ import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskInput;
 import sf.net.experimaestro.manager.Type;
+import sf.net.experimaestro.manager.XMLInput;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -93,33 +95,37 @@ public class JSTaskFactory extends TaskFactory {
 				continue;
 
 			Element el = (Element) item;
-			String idAtt = el.getAttribute("id");
-			if (idAtt == null)
-				throw new RuntimeException(format("Input without id in %s",
-						this.id));
-			LOGGER.info("New attribute %s for task %s", idAtt, this.id);
 
-			QName typeName = XMLUtils.parseQName(el.getAttribute("type"), el,
-					Manager.PREDEFINED_PREFIXES);
+			addInput(el, repository);
 
-			String optional = el.getAttribute("optional");
-			boolean isOptional = optional != null && optional.equals("true") ? true
-					: false;
+		}
 
-			// Get the documentation
-			String documentation = "";
-			if (el.hasAttribute("help"))
-				documentation = el.getAttribute("help");
-			else {
-				Node child = XMLUtils.getChild(el, new QName(
-						Manager.EXPERIMAESTRO_NS, "help"));
-				if (child != null)
-					documentation = XMLUtils.toString(child);
-			}
+		// --- Process connections
+		for (int i = 0; i < list.getLength(); i++) {
+			Node item = list.item(i);
+			if (item.getNodeType() != Node.ELEMENT_NODE)
+				continue;
+			Element el = (Element) item;
+			final String inputToId = el.getAttribute("id");
+			if (inputs.get(inputToId) == null)
+				throw new AssertionError();
 
 			// Add this to the list of inputs
-			addInput(el, repository, idAtt, typeName, isOptional, documentation);
+			for (Element connect : XMLUtils.childIterator(el, new QName(
+					Manager.EXPERIMAESTRO_NS, "connect"))) {
+				final String from = connect.getAttribute("from");
+				final String path = connect.getAttribute("path");
+				final DotName to = new DotName(inputToId, DotName.parse(connect
+						.getAttribute("to")));
+				LOGGER.info("Found connection between [%s in %s] and [%s]",
+						path, from, to);
+				Input inputFrom = inputs.get(from);
+				if (input == null)
+					throw new ExperimaestroException(
+							"Could not find input [%s] in [%s]", from, this.id);
 
+				inputFrom.addConnection(path, to, connect);
+			}
 		}
 
 		// --- Get the task outputs
@@ -156,25 +162,33 @@ public class JSTaskFactory extends TaskFactory {
 	 * 
 	 * @param repository
 	 *            The repository
-	 * @param id
-	 *            The id of the input
-	 * @param typeName
-	 *            The name of the type
-	 * @param isOptional
-	 *            Is this type optional?
-	 * @param documentation
-	 *            Type documentation
 	 */
-	private void addInput(Element el, Repository repository, String id,
-			QName typeName, boolean isOptional, String documentation) {
-		LOGGER.info("Looking at [%s] of type [%s]", id, typeName);
+	private void addInput(Element el, Repository repository) {
+		// Get the id
+		String id = el.getAttribute("id");
+		if (id == null)
+			throw new RuntimeException(
+					format("Input without id in %s", this.id));
+
+		LOGGER.debug("New input [%s] for task [%s]", id, this.id);
+
+		final String typeAtt = el.getAttribute("type");
+		QName typeName = !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
+				Manager.PREDEFINED_PREFIXES)
+				: new QName(Manager.EXPERIMAESTRO_NS, "xml");
+
+		// Choose the appropriate input type
+		LOGGER.debug("Looking at [%s] of type [%s]", id, typeName);
+		final Input input;
+
 		Type type = repository.getType(typeName);
+
 		if (type instanceof AlternativeType) {
-			LOGGER.info(
+			LOGGER.debug(
 					"Detected an alternative type configuration for input [%s] of type [%s]",
 					id, typeName);
-			inputs.put(id, new AlternativeInput(typeName, isOptional,
-					documentation, (AlternativeType) type));
+			inputs.put(id, input = new AlternativeInput(typeName,
+					(AlternativeType) type));
 		} else if (el.getNodeName().equals("task")) {
 			// The input is a task
 			TaskFactory factory = repository.getFactory(typeName);
@@ -182,29 +196,46 @@ public class JSTaskFactory extends TaskFactory {
 				throw new ExperimaestroException(
 						"Could not find task factory with type [%s]", typeName);
 
-			inputs.put(id, new TaskInput(factory, typeName, isOptional,
-					documentation));
+			inputs.put(id, input = new TaskInput(factory, typeName));
 
 		} else {
 			// The input is just XML
-			inputs.put(id, new Input(typeName, isOptional, documentation));
+			inputs.put(id, input = new XMLInput(typeName));
 		}
 
-		// --- Check connections
-		for (Element connect : XMLUtils.childIterator(el, new QName(
-				Manager.EXPERIMAESTRO_NS, "connect"))) {
-			final String from = connect.getAttribute("from");
-			final String path = connect.getAttribute("path");
-			final DotName to = new DotName(id, DotName.parse(connect.getAttribute("to")));
-			LOGGER.info("Found connection between [%s in %s] and [%s]", path,
-					from, to);
-			Input input = inputs.get(from);
-			if (input == null)
-				throw new ExperimaestroException(
-						"Could not find input [%s] in [%s]", from, this.id);
-			
-			input.addConnection(path, to, connect);
+		// Set the optional flag
+		String optional = el.getAttribute("optional");
+		boolean isOptional = optional != null && optional.equals("true") ? true
+				: false;
+		input.setOptional(isOptional);
+
+		// Set the documentation
+		if (el.hasAttribute("help"))
+			input.setDocumentation(el.getAttribute("help"));
+		else {
+			Node child = XMLUtils.getChild(el, new QName(
+					Manager.EXPERIMAESTRO_NS, "help"));
+			if (child != null)
+				input.setDocumentation(XMLUtils.toString(child));
 		}
+
+		// Set the default value
+		if (el.hasAttribute("default")) {
+			input.setDefaultValue(Task.wrapValue(el.getAttribute("default")));
+		} else {
+			Node child = XMLUtils.getChild(el, new QName(
+					Manager.EXPERIMAESTRO_NS, "default"));
+			if (child != null) {
+				Document document = XMLUtils.newDocument();
+				child = child.cloneNode(true);
+				document.adoptNode(child);
+				NodeList childNodes = child.getChildNodes();
+				for(int i = 0; i < childNodes.getLength(); i++)
+					document.appendChild(childNodes.item(i));
+				input.setDefaultValue(document);
+			}
+		}
+
 	}
 
 	private static QName getQName(Scriptable scope, NativeObject jsObject) {
