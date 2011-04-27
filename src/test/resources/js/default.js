@@ -1,6 +1,5 @@
-
+// START SNIPPET: main
 var abc = new Namespace("a.b.c");
-
 
 var task = {
 	id: xpm.qName("a.b.c", "task"),
@@ -20,10 +19,10 @@ var task = {
 
 xpm.addTaskFactory(task);
 
-/** Run and check */
-
 var task = xpm.getTask(task.id);
 var r = task.run();
+xpm.log("Output is %s", r);
+// END SNIPPET: main
 
 a = r.xp::value[0].@value;
 if (a == undefined || a != 10)

@@ -1,3 +1,4 @@
+// START SNIPPET: main
 /*
  * Example of a composed task
  *
@@ -59,6 +60,8 @@ xpm.addTaskFactory(task);
 var task = xpm.getTask(task.id);
 task.setParameter("t1.x", "10");
 var r = task.run();
+
+// END SNIPPET: task
 
 v = r.xp::value.@value;
 if (v == undefined || v != 10)

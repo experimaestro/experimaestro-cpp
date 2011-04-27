@@ -4,17 +4,28 @@
 	name="Experimaestro experiment manager">
 
 	<body>
-		<menu name="ArgJ">
+		<menu name="Experimaestro">
 			<item name="Introduction" href="index.html" />
 			<item name="@Sourceforge" href="http://sourceforge.net/projects/experimaestro/" />
 		</menu>
 
+		<menu name="Scheduler">
+			<item name="Introduction" href="scheduler/index.html"/>
+		</menu>
+
+		<menu name="Manager">
+			<item name="Introduction" href="manager/index.html"/>
+			<item name="Input/output" href="manager/xml.html"/>
+			<item name="Tasks" href="manager/tasks.html"/>
+			<item name="JavaScript scripts" href="manager/javascript.html"/>
+		</menu>
 		<menu ref="reports" />
 	</body>
 
-	<!--
-		<skin> <groupId>org.apache.maven.skins</groupId>
-		<artifactId>maven-stylus-skin</artifactId> <version>1.0</version>
-		</skin>
-	-->
+	<skin>
+		<groupId>com.anasoft.os</groupId>
+		<artifactId>m2st-stylus-ext-skin</artifactId>
+		<version>2.0</version>
+	</skin>
+
 </project>

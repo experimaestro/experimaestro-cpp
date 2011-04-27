@@ -1,0 +1,69 @@
+  ------
+  Manager
+  ------
+  Benjamin Piwowarski
+  ------
+  2011-04-08
+  ------
+
+Goals
+
+  The goals of the experimaestro manager are:
+
+  * Decompose experiments into a set of parametrised tasks
+  
+  * Standardise the way to run experiments for easier reproduction of experimental results
+    in computing science
+     
+  * To build a documentation for each task
+  
+  * Uses the scheduler to run jobs
+  
+  * Provides multiple way to write tasks. Currently, only JavaScript is supported but this could be extend to Python.
+
+  * (<<<Not implemented>>>) To handle easy to read & write experimental plans. For example,
+    "<<<collection.id=trec.1/adhoc,trec.2/adhoc * qir.weighting-scheme=tf-idf,tf>>>" 
+    will run four experiments where the different parameters (id and weighting shemes) are varied
+
+  * (<<<Not implemented>>>) To manage data produced by the tasks
+  
+
+Main concepts
+
+  The main concepts of the manager are:
+
+  * Each input or output is an XML document. 
+  
+  * Tasks are the unit on which experiments are built, corresponding roughly to the execution of a process.
+  
+
+* Input/output
+ 
+  Each input or output can be characterised by a XML qualified name (namespace and local name).
+  This allows for a lot of flexibility: input/outputs can be any valid XML document, but can
+  also typed using the same mechanism than in XML Schema. In that case, validation can be used to ensure the input or output
+  is as expected.
+    
+  This qualified name is important to distinguish the different data types.
+  For example,
+
+%{code-snippet|brush=xml|file=src/site/code/manager_1.xml}
+
+  is an output with the name <<<example>>> within the namespace <<<http://my.ns>>>.
+  It is further identified by the <<<id>>> of value <<<abc1>>>.
+  
+  Input/output are discussed further in {{{manager/xml.html}this document}}
+  
+* Tasks
+ 
+  Each <<task>> is produced by a <<task factory>>. A task factory has a set of named inputs, a set of named outputs, and a creation method.
+  
+  Tasks are the units that are used to build up experiments.
+
+  Tasks and task factories are described further {{{manager/tasks.html}this document}}
+ 
+
+
+
+  
+ 

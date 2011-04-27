@@ -1,0 +1,79 @@
+  ------
+  Javascript for Manager
+  ------
+  Benjamin Piwowarski
+  ------
+  2011-04-08
+  ------
+
+  <<Table of contents>>
+
+%{toc|fromDepth=1|toDepth=3}
+  
+Example
+
+  Example to illustrate how to create a task and run it.
+  
+  The following creates a simple task factory
+   
+%{code-snippet|brush=javascript|id=task|file=src/test/resources/js/directtask.js}
+ 
+  A task can be run
+  
+%{code-snippet|brush=javascript|id=run|file=src/test/resources/js/directtask.js}
+
+  And the output will be
+  
++------------------------------------------+
+The task returned
+<outputs>
+  <value xmlns="http://experimaestro.sf.net" value="10"/>
+</outputs>
++------------------------------------------+
+
+Task factories
+
+  In this section, we give various examples of the different options available while writing a task factory.
+  
+* {Default values}
+
+  There are two different ways to define defaults values:
+  
+  1. Using the <<<default>>> attribute in the input definition
+  
+  1. Using the <<<default>>> element
+  
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/default.js}
+
+* {Alternatives}
+
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/alternatives.js}
+
+* {Subtasks}
+
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/subtasks.js}
+
+* {Composing tasks}
+ 
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/subtasks.js}
+ 
+{Predefined functions}
+ 
+   When running a script, the following variables are set:
+   
+   *  <<<xp>>> is a Namespace object that represents the experimaestro namespace
+   
+   *  <<<xpm>>> is an object containing useful functions and properties
+   
+* {<<<xpm>>> object}
+
+** Properties
+
+** Functions
+
+  * <<<addTaskFactory(task)>>> Adds a task factory to the manager
+  
+  * <<<log(format, object, [object ...])>>> Returns a message
+  
+   
+   

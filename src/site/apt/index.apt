@@ -1,0 +1,18 @@
+  ------
+  Experimaestro project
+  ------
+  Benjamin Piwowarski
+  ------
+  2011-04-08
+  ------
+
+	
+  
+
+  There are two parts in this software
+
+    * {{{scheduler/index.html}The job scheduler (status: beta)}}
+    
+    * {{{manager/index.html}The experiment manager (status: beta)}}
+
+  Both modules can be used independently
