@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,25 +20,32 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Wrapper;
 import org.w3c.dom.Node;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.AlternativeType;
+import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Type;
+import sf.net.experimaestro.plan.ParseException;
+import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
+import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -98,7 +106,7 @@ public class XPMObject {
 	 * Add an experiment
 	 * 
 	 * @param object
-	 * @return 
+	 * @return
 	 */
 	public Scriptable addTaskFactory(NativeObject object) {
 		JSTaskFactory f = new JSTaskFactory(scope, object, repository);
@@ -106,7 +114,6 @@ public class XPMObject {
 		return context.newObject(scope, "XPMTaskFactory",
 				new Object[] { Context.javaToJS(f, scope) });
 	}
-
 
 	/**
 	 * Get the information about a given task
@@ -130,7 +137,7 @@ public class XPMObject {
 	public Scriptable getTask(String namespace, String localPart) {
 		return getTask(new QName(namespace, localPart));
 	}
-	
+
 	public Scriptable getTask(QName qname) {
 		TaskFactory factory = repository.getFactory(qname);
 		LOGGER.info("Creating a new JS task %s", factory);
@@ -331,22 +338,60 @@ public class XPMObject {
 	 */
 	public void addAlternative(Object object) {
 		if (object instanceof TaskFactoryJSWrapper) {
-			TaskFactory factory = ((TaskFactoryJSWrapper)object).factory;
+			TaskFactory factory = ((TaskFactoryJSWrapper) object).factory;
 			Map<String, QName> outputs = factory.getOutputs();
 			if (outputs.size() != 1)
-				throw new ExperimaestroException("Wrong number of outputs (%d)", outputs.size());
+				throw new ExperimaestroException(
+						"Wrong number of outputs (%d)", outputs.size());
 			QName qname = outputs.values().iterator().next();
-			
+
 			Type type = repository.getType(qname);
 			if (type == null || !(type instanceof AlternativeType))
-				throw new ExperimaestroException("Type %s is not an alternative", qname == null ? "null" : qname.toString());
-			
-			((AlternativeType)type).add(factory.getId(), factory);
+				throw new ExperimaestroException(
+						"Type %s is not an alternative", qname == null ? "null"
+								: qname.toString());
+
+			((AlternativeType) type).add(factory.getId(), factory);
 			return;
 		}
-		
-		throw new ExperimaestroException("Cannot handle object of class %s", object.getClass().toString());
 
+		throw new ExperimaestroException("Cannot handle object of class %s",
+				object.getClass().toString());
 	}
 
+	/**
+	 * Execute an experimental plan
+	 * 
+	 * @throws ParseException
+	 *             If the plan is not readable
+	 */
+	public Object run_plan(Object _taskFactory, String planString)
+			throws ParseException {
+		// Get the task
+		if (_taskFactory instanceof Wrapper)
+			_taskFactory = ((Wrapper) _taskFactory).unwrap();
+
+		TaskFactory taskFactory;
+		if (_taskFactory instanceof TaskFactory)
+			taskFactory = (TaskFactory) _taskFactory;
+		else if (_taskFactory instanceof TaskJSWrapper)
+			taskFactory = ((TaskFactoryJSWrapper) _taskFactory).getFactory();
+		else
+			throw new ExperimaestroException();
+
+		// Parse the plan
+		PlanParser planParser = new PlanParser(new StringReader(planString));
+		sf.net.experimaestro.plan.Node plans = planParser.plan();
+		for (Map<String, String> plan : plans) {
+			// Run a plan
+			LOGGER.info("Running plan: %s",
+					Output.toString(" * ", plan.entrySet()));
+			Task task = taskFactory.create();
+			for (Map.Entry<String, String> kv : plan.entrySet())
+				task.setParameter(DotName.parse(kv.getKey()), kv.getValue());
+			task.run();
+		}
+		return null;
+
+	}
 }

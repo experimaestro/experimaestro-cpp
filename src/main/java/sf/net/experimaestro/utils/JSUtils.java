@@ -101,13 +101,13 @@ public class JSUtils {
 			if (className.equals("XML")) {
 				// FIXME: this strips all whitespaces!
 				Node node = XMLLibImpl.toDomNode(object);
- 				LOGGER.info("Cloned node [%s / %s] from [%s]", node.getClass(), XMLUtils.toStringObject(node), object.toString());
+ 				LOGGER.debug("Cloned node [%s / %s] from [%s]", node.getClass(), XMLUtils.toStringObject(node), object.toString());
 				return node;
 			}
 
 			// Should be an XMLList
 			if (className.equals("XMLList")) {
-				LOGGER.info("Transforming from XMLList [%s]", object);
+				LOGGER.debug("Transforming from XMLList [%s]", object);
 				IdScriptableObject xmlList = (IdScriptableObject) xmlObject;
 				DocumentBuilder docBuilder;
 				try {

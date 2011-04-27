@@ -1,0 +1,68 @@
+/*
+	Experiment plan language
+	
+	(c) B. Piwowarski
+*/options{  static = false;}PARSER_BEGIN(PlanParser)
+package sf.net.experimaestro.plan;import java.util.ArrayList;
+import java.util.TreeMap;
+import java.util.Map;
+import java.util.Iterator;
+import sf.net.experimaestro.utils.Output;
+
+
+@SuppressWarnings({  "all" })
+public class PlanParser{
+}PARSER_END(PlanParser)SKIP :{  " "}SKIP :{  "\n"| "\r"| "\r\n"| "\t"}TOKEN :{  < MULT : "*" >
+| < EQUAL : "=" >
+| < LPAREN : "(" >| < RPAREN : ")" >| < COMMA : "," >| < OR : "|" >| < VARNAME : < LETTER > (< LETTERDIGITEXTRAS >)* >
+| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":"] | "\\,")+ >| < #LETTER : [ "a"-"z", "A"-"Z" ] >| < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "_" ] >}
+
+Node plan() : {
+	   Node n;
+}
+{
+	    n=orExpr() <EOF> { return n; }
+}
+
+Node orExpr() : {
+	   Node n1, n2;
+}
+{
+				     n1=multExpr() (<OR> n2=multExpr() { n1 = new Op(OpType.OR, n1, n2); } )* 
+			   { return n1; }
+}
+
+Node multExpr() : { Node n1, n2; }
+{
+	     n1=parenExpr() (<MULT> n2=parenExpr() { n1 = new Op(OpType.MULT, n1, n2); } )*
+			   { return n1; }
+	}
+	
+	Node parenExpr() : { Node n = Node.EMPTY;}
+{
+	   (
+	     (<LPAREN> (n=orExpr())? <RPAREN> ) 
+	     | 
+	     n=varExpr()
+	   )
+		   { return n; }
+}
+	
+
+Var varExpr() : {Token t; String v; Var var = new Var(); }
+{
+	   t=<VARNAME> { var.name = t.toString(); } <EQUAL> v=value() { var.values.add(v); } (<COMMA> v=value() { var.values.add(v); })*
+		   { return var; }
+}
+
+String value() : {Token t = null;}
+{
+		    (t=<VARNAME> | t=<VALUE>)?
+		    {
+		    if (t == null) return "";
+		    return t.toString().replaceAll("\\\\,",",");
+		    }
+}
+
+ 
+

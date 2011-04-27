@@ -47,6 +47,10 @@ public class TaskFactoryJSWrapper extends ScriptableObject {
 				new Object[] { task });
 	}
 
+	public TaskFactory getFactory() {
+		return factory;
+	}
+
 
 	
 }

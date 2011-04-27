@@ -7,10 +7,18 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<description>Experiment manager framework</description>
 
+  <properties>
+    <m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
+    <m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js</m2st-syntaxHighlighter-brushFiles>
+    <m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
+    <m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false</m2st-syntaxHighlighter-config>
+  </properties>
+
+
 	<build>
 		<plugins>
 
-			<!--  Java version -->
+			<!-- Java version -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -20,7 +28,7 @@
 				</configuration>
 			</plugin>
 
-			<!--  Build an assembly -->
+			<!-- Build an assembly -->
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
@@ -30,8 +38,36 @@
 				</configuration>
 			</plugin>
 
+			<!-- JavaCC plugin  -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>javacc-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>javacc</id>
+						<goals>
+							<goal>javacc</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
-			<!--  Jar manager -->
+
+			<!-- site tools from http://code.google.com/p/m2-site-tools -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>com.anasoft.os</groupId>
+						<artifactId>m2st-doxia-macros</artifactId>
+						<version>2.0</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+
+			<!-- Jar manager -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -114,15 +150,24 @@
 			<type>jar</type>
 			<scope>test</scope>
 		</dependency>
+
+<!--
+		<dependency>
+			<groupId>com.anasoft.os</groupId>
+			<artifactId>m2st-doxia-macros</artifactId>
+			<version>2.0</version>
+		</dependency>
+-->
 	</dependencies>
-	
-	
-	<!--  Sourceforge information -->
-		<!-- Source forge information -->
+
+
+	<!-- Sourceforge information -->
+	<!-- Source forge information -->
 	<distributionManagement>
 		<site>
 			<id>experimaestro.sf.net</id>
 			<name>experimaestro Website</name>
+			<url>http://experimaestro.sourceforget.net</url>
 		</site>
 	</distributionManagement>
 
@@ -182,5 +227,6 @@
 			</properties>
 		</developer>
 	</developers>
-	
+
+
 </project>

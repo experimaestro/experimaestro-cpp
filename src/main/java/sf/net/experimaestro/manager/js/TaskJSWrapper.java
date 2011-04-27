@@ -30,7 +30,7 @@ public class TaskJSWrapper extends ScriptableObject {
 
 	public void jsConstructor(Scriptable task) {
 		if (task != null)
-			this.task = (Task) ((NativeJavaObject) task).unwrap();
+			this.task = ((Task) ((NativeJavaObject) task).unwrap());
 	}
 
 	@Override
@@ -41,7 +41,7 @@ public class TaskJSWrapper extends ScriptableObject {
 	// ---- JavaScript functions ----
 
 	public Object jsFunction_run() {
-		return JSUtils.domToE4X(task.run(), Context.getCurrentContext(), this);
+		return JSUtils.domToE4X(getTask().run(), Context.getCurrentContext(), this);
 	}
 
 	/**
@@ -56,24 +56,28 @@ public class TaskJSWrapper extends ScriptableObject {
 				value.getClass());
 
 		if (value == Scriptable.NOT_FOUND)
-			task.setParameter(id, (Document) null);
+			getTask().setParameter(id, (Document) null);
 		else if (value instanceof Element) {
 			LOGGER.info("Value is an XML element");
 			Document document = XMLUtils.newDocument();
 			Node node = ((Element) value).cloneNode(true);
 			document.adoptNode(node);
 			document.appendChild(node);
-			task.setParameter(id, document);
+			getTask().setParameter(id, document);
 		} else if (JSUtils.isXML(value)) {
 			LOGGER.info("Value is XML");
 			Document document = XMLUtils.newDocument();
 			Node node = ((Element) JSUtils.toDOM(value)).cloneNode(true);
 			document.adoptNode(node);
 			document.appendChild(node);
-			task.setParameter(id, document);
+			getTask().setParameter(id, document);
 		} else {
 			LOGGER.info("Value will be converted to string [%s/%s]", value.getClassName(), value.getClass());
-			task.setParameter(id, (String) value.toString());
+			getTask().setParameter(id, (String) value.toString());
 		}
+	}
+
+	public Task getTask() {
+		return task;
 	}
 }
