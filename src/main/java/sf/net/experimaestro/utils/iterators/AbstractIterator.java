@@ -1,13 +1,8 @@
 package sf.net.experimaestro.utils.iterators;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
-/**
- * Deprecated: use {@see AbstractIterator}
- * @author bpiwowar
- *
- * @param <E>
- */
 abstract public class AbstractIterator<E> implements Iterator<E> {
 	@SuppressWarnings("serial")
 	static class EndOfStream extends Throwable {
@@ -23,15 +18,22 @@ abstract public class AbstractIterator<E> implements Iterator<E> {
 	 */
 	protected abstract boolean storeNext();
 
+	final protected void store(E e) {
+		this.value = e;
+	}
+	
 	final public boolean hasNext() {
 		if (status == -1)
 			status = (byte) (storeNext() ? 1 : 0);
 		return status == 1;
 	}
 
+	@Override
 	final public E next() {
+		if (!hasNext())
+			throw new NoSuchElementException();
 		E next = value;
-		status = (byte) (storeNext() ? 1 : 0);
+		status = -1;
 		return next;
 	}
 

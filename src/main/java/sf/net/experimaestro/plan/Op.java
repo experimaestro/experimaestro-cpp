@@ -33,7 +33,7 @@ public class Op extends Node {
 		}
 		
 		case MULT: {
-			@SuppressWarnings("unchecked")
+			@SuppressWarnings({ "unchecked", "rawtypes" })
 			final CartesianProduct<Map<String, String>> p = new CartesianProduct(
 					Map.class, true, n1, n2);
 			return new AbstractIterator<Map<String, String>>() {

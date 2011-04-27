@@ -21,7 +21,7 @@ Goals
   
   * Provides multiple way to write tasks. Currently, only JavaScript is supported but this could be extend to Python.
 
-  * (<<<Not implemented>>>) To handle easy to read & write experimental plans. For example,
+  * To handle easy to read & write experimental plans. For example,
     "<<<collection.id=trec.1/adhoc,trec.2/adhoc * qir.weighting-scheme=tf-idf,tf>>>" 
     will run four experiments where the different parameters (id and weighting shemes) are varied
 

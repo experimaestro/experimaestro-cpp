@@ -13,7 +13,7 @@ public class Var extends Node {
 	ArrayList<String> values = new ArrayList<String>();
 
 	public String toString() {
-		return String.format("%s=%s", name, Output.toString(",", values));
+		return String.format("%s=[%s]", name, Output.toString("],[", values));
 	}
 
 	@Override

@@ -15,7 +15,7 @@ public class PlanParser{
 }PARSER_END(PlanParser)SKIP :{  " "}SKIP :{  "\n"| "\r"| "\r\n"| "\t"}TOKEN :{  < MULT : "*" >
 | < EQUAL : "=" >
 | < LPAREN : "(" >| < RPAREN : ")" >| < COMMA : "," >| < OR : "|" >| < VARNAME : < LETTER > (< LETTERDIGITEXTRAS >)* >
-| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":"] | "\\,")+ >| < #LETTER : [ "a"-"z", "A"-"Z" ] >| < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "_" ] >}
+| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":"] | "\\,")+ >| < #LETTER : [ "a"-"z", "A"-"Z" ] >| < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "_", "." ] >}
 
 Node plan() : {
 	   Node n;
@@ -38,7 +38,8 @@ Node multExpr() : { Node n1, n2; }
 			   { return n1; }
 	}
 	
-	Node parenExpr() : { Node n = Node.EMPTY;}
+
+Node parenExpr() : { Node n = Node.EMPTY;}
 {
 	   (
 	     (<LPAREN> (n=orExpr())? <RPAREN> ) 

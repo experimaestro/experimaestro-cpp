@@ -4,6 +4,8 @@ import static java.lang.String.format;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -15,11 +17,13 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.FunctionObject;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.Wrapper;
 import org.w3c.dom.Node;
 
@@ -45,13 +49,17 @@ import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
-import com.sun.corba.se.impl.encoding.OSFCodeSetRegistry.Entry;
 
 /**
  * This class contains both utility static methods and functions that can be
  * called from javascript
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ */
+/**
+ * 
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * 
  */
 public class XPMObject {
 
@@ -100,6 +108,51 @@ public class XPMObject {
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
 
+		addFunction(scope, "qname",
+				new Class<?>[] { Object.class, String.class });
+		addFunction(scope, "include", new Class<?>[] { String.class });
+	}
+
+	/**
+	 * Add a new javascript function to the scope
+	 * 
+	 * @param scope
+	 * @param fname
+	 * @param prototype
+	 * @throws NoSuchMethodException
+	 */
+	static private void addFunction(Scriptable scope, final String fname,
+			final Class<?>[] prototype) throws NoSuchMethodException {
+		final FunctionObject f = new FunctionObject(fname,
+				XPMObject.class.getMethod("js_" + fname, prototype), scope);
+		ScriptableObject.putProperty(scope, fname, f);
+	}
+
+	/**
+	 * Returns a QName object
+	 * 
+	 * @param ns
+	 *            The namespace: can be the URI string, or a javascript
+	 *            Namespace object
+	 * @param localName
+	 *            the localname
+	 * @return a QName object
+	 */
+	static public Object js_qname(Object ns, String localName) {
+		if (ns instanceof Wrapper)
+			ns = ((Wrapper) ns).unwrap();
+		if (ns instanceof ScriptableObject) {
+			ScriptableObject scriptableObject = (ScriptableObject) ns;
+			if (scriptableObject.getClassName().equals("Namespace")) {
+				Object object = scriptableObject.get("uri", null);
+				return new QName(object.toString(), localName);
+			}
+		}
+
+		if (ns instanceof String)
+			return new QName((String) ns, localName);
+
+		throw new ExperimaestroException("Not implemented (%s)", ns.getClass());
 	}
 
 	/**
@@ -113,6 +166,47 @@ public class XPMObject {
 		repository.register(f);
 		return context.newObject(scope, "XPMTaskFactory",
 				new Object[] { Context.javaToJS(f, scope) });
+	}
+
+	/**
+	 * Include a javascript
+	 * 
+	 * @param path
+	 * @throws IOException 
+	 * @throws FileNotFoundException 
+	 */
+	public void js_include(String path) throws FileNotFoundException, IOException {
+		File file = new File(path);
+		String scriptPath = null;
+		if (!file.isAbsolute()) {
+			scriptPath = environment.get(ENV_SCRIPTPATH);
+			if (scriptPath == null)
+				throw new ExperimaestroException(
+						"Cannot include file [%s] since the including file is not defined",
+						path);
+			file = new File(new File(path).getParentFile(), path);
+		}
+		
+		LOGGER.debug("Including file [%s]", file);
+		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
+		
+		// Run JS
+		Context.getCurrentContext().evaluateReader(scope,
+				new FileReader(file), file.getAbsolutePath(), 1, null);
+
+		if (scriptPath != null)
+			environment.put(ENV_SCRIPTPATH, scriptPath);
+	}
+
+	public static Object get(Scriptable scope, final String name) {
+		Object object = scope.get(name, scope);
+		if (object == null && object == Undefined.instance)
+			object = null;
+		else
+
+		if (object instanceof Wrapper)
+			object = ((Wrapper) object).unwrap();
+		return object;
 	}
 
 	/**
@@ -331,6 +425,13 @@ public class XPMObject {
 	}
 
 	/**
+	 * Add a module
+	 */
+	void addModule(Scriptable object) {
+		
+	}
+	
+	/**
 	 * Add alternative
 	 * 
 	 * @param object
@@ -365,23 +466,19 @@ public class XPMObject {
 	 * @throws ParseException
 	 *             If the plan is not readable
 	 */
-	public Object run_plan(Object _taskFactory, String planString)
+	public Object experiment(QName qname, String planString)
 			throws ParseException {
 		// Get the task
-		if (_taskFactory instanceof Wrapper)
-			_taskFactory = ((Wrapper) _taskFactory).unwrap();
-
-		TaskFactory taskFactory;
-		if (_taskFactory instanceof TaskFactory)
-			taskFactory = (TaskFactory) _taskFactory;
-		else if (_taskFactory instanceof TaskJSWrapper)
-			taskFactory = ((TaskFactoryJSWrapper) _taskFactory).getFactory();
-		else
-			throw new ExperimaestroException();
+		TaskFactory taskFactory = repository.getFactory(qname);
+		if (taskFactory == null)
+			throw new ExperimaestroException("No task factory with id [%s]",
+					qname);
 
 		// Parse the plan
+		
 		PlanParser planParser = new PlanParser(new StringReader(planString));
 		sf.net.experimaestro.plan.Node plans = planParser.plan();
+		LOGGER.info("Plan is %s", plans.toString());
 		for (Map<String, String> plan : plans) {
 			// Run a plan
 			LOGGER.info("Running plan: %s",
