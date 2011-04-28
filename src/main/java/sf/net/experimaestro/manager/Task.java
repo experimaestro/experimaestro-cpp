@@ -14,6 +14,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -21,7 +22,6 @@ import sf.net.experimaestro.utils.log.Logger;
 public abstract class Task {
 	public final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
 			.newInstance();
-	@SuppressWarnings("unused")
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -33,6 +33,11 @@ public abstract class Task {
 	 * List of sub-tasks
 	 */
 	protected Map<String, Value> values = new TreeMap<String, Value>();
+
+	/**
+	 * Sub-tasks without name
+	 */
+	protected ArrayList<Value> notNamedValues = new ArrayList<Value>();
 
 	/**
 	 * Construct a new task from a {@link TaskFactory}
@@ -160,7 +165,7 @@ public abstract class Task {
 		if (!graph.isEmpty())
 			throw new ExperimaestroException("Loop in the graph for task [%s]",
 					factory.id);
-		
+
 		return list;
 	}
 
@@ -184,10 +189,21 @@ public abstract class Task {
 	public final void setParameter(DotName id, Document value) {
 		String name = id.get(0);
 
+		if (!notNamedValues.isEmpty()) {
+			for (Value v : notNamedValues) {
+				try {
+					v.set(id, value);
+					return;
+				} catch (NoSuchParameter e) {
+				}
+			}
+
+		}
+
 		Value inputValue = values.get(name);
 		if (inputValue == null)
-			throw new ExperimaestroException("Task %s has no input [%s]",
-					factory.id, name);
+			throw new NoSuchParameter("Task %s has no input [%s]", factory.id,
+					name);
 
 		inputValue.set(id.offset(1), value);
 
@@ -230,6 +246,8 @@ public abstract class Task {
 			String key = entry.getKey();
 			final Value value = entry.getValue().newValue();
 			values.put(key, value);
+			if (entry.getValue().isUnnamed()) 
+				notNamedValues.add(value);
 		}
 
 	}

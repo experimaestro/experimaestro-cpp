@@ -40,7 +40,7 @@ public class JSTask extends JSAbstractTask {
 	 */
 	public JSTask(TaskFactory taskFactory, Context jsContext,
 			Scriptable jsScope, NativeObject jsObject) {
-		super(taskFactory, jsScope);
+		super(taskFactory, jsScope, jsObject);
 
 		this.jsObject = jsObject;
 
@@ -59,7 +59,7 @@ public class JSTask extends JSAbstractTask {
 	}
 
 
-	public Scriptable jsrun() {
+	public Scriptable jsrun(boolean convertToE4X) {
 		LOGGER.info("[Running] task: %s", factory.getId());
 		Scriptable result = (Scriptable) runFunction.call(Context.getCurrentContext(), jsScope,
 				jsObject, new Object[] { (Scriptable) jsObject.get("inputs", jsObject) });

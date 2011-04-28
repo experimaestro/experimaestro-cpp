@@ -7,12 +7,42 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<description>Experiment manager framework</description>
 
-  <properties>
-    <m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
-    <m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js</m2st-syntaxHighlighter-brushFiles>
-    <m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
-    <m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false</m2st-syntaxHighlighter-config>
-  </properties>
+	<properties>
+		<m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
+		<m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js</m2st-syntaxHighlighter-brushFiles>
+		<m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
+		<m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false</m2st-syntaxHighlighter-config>
+	</properties>
+
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>com.anasoft.os.repository.releases</id>
+			<name>ANASOFT OpenSource releases</name>
+			<url>http://anasoft-os-repo.googlecode.com/svn/repository/releases</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<repositories>
+		<repository>
+			<id>com.anasoft.os.repository.releases</id>
+			<name>ANASOFT OpenSource releases</name>
+			<url>http://anasoft-os-repo.googlecode.com/svn/repository/releases</url>
+		</repository>
+		
+		<!--  ArgJ -->
+		<repository>
+			<id>bpiwowar-dcs</id>
+			<name>Benjamin's repository in DCS</name>
+			<url>http://ir.dcs.gla.ac.uk/~bpiwowar/maven</url>
+			<snapshots>
+				<!-- set this to true to use snapshot builds of GATE -->
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+
+	</repositories>
+
 
 
 	<build>
@@ -38,7 +68,7 @@
 				</configuration>
 			</plugin>
 
-			<!-- JavaCC plugin  -->
+			<!-- JavaCC plugin -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>javacc-maven-plugin</artifactId>
@@ -151,13 +181,8 @@
 			<scope>test</scope>
 		</dependency>
 
-<!--
-		<dependency>
-			<groupId>com.anasoft.os</groupId>
-			<artifactId>m2st-doxia-macros</artifactId>
-			<version>2.0</version>
-		</dependency>
--->
+		<!-- <dependency> <groupId>com.anasoft.os</groupId> <artifactId>m2st-doxia-macros</artifactId> 
+			<version>2.0</version> </dependency> -->
 	</dependencies>
 
 

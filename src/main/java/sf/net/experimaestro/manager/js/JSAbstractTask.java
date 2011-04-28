@@ -17,21 +17,19 @@ import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
 
 public abstract class JSAbstractTask extends Task {
-	final static private Logger LOGGER = Logger.getLogger();
-	
 	final protected Scriptable jsScope;
 
-	public JSAbstractTask(TaskFactory information, Scriptable jsScope) {
+	public JSAbstractTask(TaskFactory information, Scriptable jsScope,
+			Object jsObject) {
 		super(information);
 		this.jsScope = jsScope;
 	}
 
-	
 	/**
 	 * Convert a DOM element into a E4X value
+	 * 
 	 * @param value
 	 * @return
 	 */
@@ -50,7 +48,7 @@ public abstract class JSAbstractTask extends Task {
 						jsScope);
 			jsInput = jsContext.newObject(jsScope, "XMLList", nodes);
 		}
-	
+
 		if (jsInput == null)
 			throw new RuntimeException("Cannot handle type " + nodeType);
 		return jsInput;
@@ -59,12 +57,12 @@ public abstract class JSAbstractTask extends Task {
 	protected Document getDocument(Object result) {
 		// Get node
 		Node node = JSUtils.toDOM(result);
-		
+
 		if (node instanceof Document)
 			return (Document) node;
-	
+
 		// Just a node - convert do document
-	
+
 		// first of all we request out
 		// DOM-implementation:
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -75,7 +73,7 @@ public abstract class JSAbstractTask extends Task {
 		} catch (ParserConfigurationException e) {
 			throw new RuntimeException();
 		}
-	
+
 		// creating a new DOM-document...
 		Document document = loader.newDocument();
 		node = node.cloneNode(true);
@@ -86,15 +84,14 @@ public abstract class JSAbstractTask extends Task {
 
 	@Override
 	public Document doRun() {
-		return getDocument(jsrun());
+		return getDocument(jsrun(false));
 	}
 
-	abstract protected Scriptable jsrun();
-	
+	abstract protected Object jsrun(boolean convertToE4X);
+
 	protected Scriptable getJSInputs() {
 		Context cx = Context.getCurrentContext();
-		Scriptable jsInputs = cx.newObject(jsScope,
-				"Object", new Object[] {});
+		Scriptable jsInputs = cx.newObject(jsScope, "Object", new Object[] {});
 		for (Entry<String, Value> entry : values.entrySet()) {
 			String id = entry.getKey();
 			Value value = entry.getValue();

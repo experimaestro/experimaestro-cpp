@@ -35,7 +35,6 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.CommandLineTask;
@@ -111,6 +110,13 @@ public class XPMObject {
 		addFunction(scope, "qname",
 				new Class<?>[] { Object.class, String.class });
 		addFunction(scope, "include", new Class<?>[] { String.class });
+
+		ScriptableObject.defineProperty(scope, "xpm", this, 0);
+		ScriptableObject.defineProperty(
+				scope,
+				"xp",
+				cx.newObject(scope, "Namespace", new Object[] { "xp",
+						Manager.EXPERIMAESTRO_NS }), 0);
 	}
 
 	/**
@@ -163,7 +169,7 @@ public class XPMObject {
 	 */
 	public Scriptable addTaskFactory(NativeObject object) {
 		JSTaskFactory f = new JSTaskFactory(scope, object, repository);
-		repository.register(f);
+		repository.addFactory(f);
 		return context.newObject(scope, "XPMTaskFactory",
 				new Object[] { Context.javaToJS(f, scope) });
 	}
@@ -172,10 +178,11 @@ public class XPMObject {
 	 * Include a javascript
 	 * 
 	 * @param path
-	 * @throws IOException 
-	 * @throws FileNotFoundException 
+	 * @throws IOException
+	 * @throws FileNotFoundException
 	 */
-	public void js_include(String path) throws FileNotFoundException, IOException {
+	public void js_include(String path) throws FileNotFoundException,
+			IOException {
 		File file = new File(path);
 		String scriptPath = null;
 		if (!file.isAbsolute()) {
@@ -186,13 +193,13 @@ public class XPMObject {
 						path);
 			file = new File(new File(path).getParentFile(), path);
 		}
-		
+
 		LOGGER.debug("Including file [%s]", file);
 		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
-		
+
 		// Run JS
-		Context.getCurrentContext().evaluateReader(scope,
-				new FileReader(file), file.getAbsolutePath(), 1, null);
+		Context.getCurrentContext().evaluateReader(scope, new FileReader(file),
+				file.getAbsolutePath(), 1, null);
 
 		if (scriptPath != null)
 			environment.put(ENV_SCRIPTPATH, scriptPath);
@@ -427,37 +434,10 @@ public class XPMObject {
 	/**
 	 * Add a module
 	 */
-	void addModule(Scriptable object) {
-		
-	}
-	
-	/**
-	 * Add alternative
-	 * 
-	 * @param object
-	 *            The object should be a task factory with only one output
-	 */
-	public void addAlternative(Object object) {
-		if (object instanceof TaskFactoryJSWrapper) {
-			TaskFactory factory = ((TaskFactoryJSWrapper) object).factory;
-			Map<String, QName> outputs = factory.getOutputs();
-			if (outputs.size() != 1)
-				throw new ExperimaestroException(
-						"Wrong number of outputs (%d)", outputs.size());
-			QName qname = outputs.values().iterator().next();
-
-			Type type = repository.getType(qname);
-			if (type == null || !(type instanceof AlternativeType))
-				throw new ExperimaestroException(
-						"Type %s is not an alternative", qname == null ? "null"
-								: qname.toString());
-
-			((AlternativeType) type).add(factory.getId(), factory);
-			return;
-		}
-
-		throw new ExperimaestroException("Cannot handle object of class %s",
-				object.getClass().toString());
+	public void addModule(Object object) {
+		JSModule module = new JSModule(repository, scope, (NativeObject) object);
+		LOGGER.debug("Adding module [%s]", module.getId());
+		repository.addModule(module);
 	}
 
 	/**
@@ -475,7 +455,7 @@ public class XPMObject {
 					qname);
 
 		// Parse the plan
-		
+
 		PlanParser planParser = new PlanParser(new StringReader(planString));
 		sf.net.experimaestro.plan.Node plans = planParser.plan();
 		LOGGER.info("Plan is %s", plans.toString());
@@ -489,6 +469,6 @@ public class XPMObject {
 			task.run();
 		}
 		return null;
-
 	}
+	
 }

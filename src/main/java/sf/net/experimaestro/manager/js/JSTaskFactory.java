@@ -9,7 +9,6 @@ import javax.xml.namespace.QName;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
@@ -23,6 +22,7 @@ import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -78,6 +78,12 @@ public class JSTaskFactory extends TaskFactory {
 		this.jsScope = scope;
 		this.jsObject = jsObject;
 
+		// --- Look up the module
+		Module module = JSModule.getModule(repository,
+				JSUtils.get(jsScope, "module", (NativeObject) jsObject, null));
+		if (module != null)
+			setModule(module);
+
 		// --- Get the task inputs
 		Object input = JSUtils.get(scope, "inputs", jsObject);
 		inputs = new TreeMap<String, Input>();
@@ -93,9 +99,7 @@ public class JSTaskFactory extends TaskFactory {
 			Node item = list.item(i);
 			if (item.getNodeType() != Node.ELEMENT_NODE)
 				continue;
-
 			Element el = (Element) item;
-
 			addInput(el, repository);
 
 		}
@@ -120,7 +124,8 @@ public class JSTaskFactory extends TaskFactory {
 				LOGGER.info("Found connection between [%s in %s] and [%s]",
 						path, from, to);
 				Input inputFrom = inputs.get(from);
-				if (input == null)
+
+				if (inputFrom == null)
 					throw new ExperimaestroException(
 							"Could not find input [%s] in [%s]", from, this.id);
 
@@ -151,6 +156,26 @@ public class JSTaskFactory extends TaskFactory {
 			outputs.put(id, typeName);
 		}
 
+		// --- Are we an alternative?
+		
+		QName altType = JSUtils.get(jsScope, "alternative", jsObject, null);
+		if (altType != null) {
+			if (outputs.size() != 1)
+				throw new ExperimaestroException(
+						"Wrong number of outputs (%d) to be an alternative",
+						outputs.size());
+			QName qname = outputs.values().iterator().next();
+
+			Type type = repository.getType(qname);
+			if (type == null || !(type instanceof AlternativeType))
+				throw new ExperimaestroException(
+						"Type %s is not an alternative", qname == null ? "null"
+								: qname.toString());
+
+			((AlternativeType) type).add(id, this);
+			return;
+		}
+
 		init();
 
 	}
@@ -174,8 +199,8 @@ public class JSTaskFactory extends TaskFactory {
 
 		final String typeAtt = el.getAttribute("type");
 		QName typeName = !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
-				Manager.PREDEFINED_PREFIXES)
-				: new QName(Manager.EXPERIMAESTRO_NS, "xml");
+				Manager.PREDEFINED_PREFIXES) : new QName(
+				Manager.EXPERIMAESTRO_NS, "xml");
 
 		// Choose the appropriate input type
 		LOGGER.debug("Looking at [%s] of type [%s]", id, typeName);
@@ -187,8 +212,7 @@ public class JSTaskFactory extends TaskFactory {
 			LOGGER.debug(
 					"Detected an alternative type configuration for input [%s] of type [%s]",
 					id, typeName);
-			inputs.put(id, input = new AlternativeInput(typeName,
-					(AlternativeType) type));
+			input = new AlternativeInput(typeName, (AlternativeType) type);
 		} else if (el.getNodeName().equals("task")) {
 			// The input is a task
 			TaskFactory factory = repository.getFactory(typeName);
@@ -196,12 +220,17 @@ public class JSTaskFactory extends TaskFactory {
 				throw new ExperimaestroException(
 						"Could not find task factory with type [%s]", typeName);
 
-			inputs.put(id, input = new TaskInput(factory, typeName));
+			input = new TaskInput(factory, typeName);
 
 		} else {
 			// The input is just XML
-			inputs.put(id, input = new XMLInput(typeName));
+			input = new XMLInput(typeName);
 		}
+
+		if ("false".equals(el.getAttribute("named")))
+			input.setUnnamed(true);
+
+		inputs.put(id, input);
 
 		// Set the optional flag
 		String optional = el.getAttribute("optional");
@@ -230,7 +259,7 @@ public class JSTaskFactory extends TaskFactory {
 				child = child.cloneNode(true);
 				document.adoptNode(child);
 				NodeList childNodes = child.getChildNodes();
-				for(int i = 0; i < childNodes.getLength(); i++)
+				for (int i = 0; i < childNodes.getLength(); i++)
 					document.appendChild(childNodes.item(i));
 				input.setDefaultValue(document);
 			}
@@ -239,14 +268,16 @@ public class JSTaskFactory extends TaskFactory {
 	}
 
 	private static QName getQName(Scriptable scope, NativeObject jsObject) {
-		NativeJavaObject object = (NativeJavaObject) JSUtils.get(scope, "id",
-				jsObject);
-		return (QName) object.unwrap();
+		return (QName) JSUtils.get(scope, "id", jsObject);
 	}
 
 	@Override
 	public String getDocumentation() {
-		return JSUtils.get(jsScope, "description", jsObject).toString();
+		final Object object = JSUtils.get(jsScope, "description", jsObject,
+				null);
+		if (object != null)
+			return object.toString();
+		return "";
 	}
 
 	@Override
@@ -259,7 +290,7 @@ public class JSTaskFactory extends TaskFactory {
 		if (!(function instanceof Function)) {
 			// Case of a configuration object
 			function = JSUtils.get(jsScope, "run", jsObject, null);
-			if (!(function instanceof Function))
+			if (function != null && !(function instanceof Function))
 				throw new RuntimeException(
 						"Could not find the create or run functions.");
 

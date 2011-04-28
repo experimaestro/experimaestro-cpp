@@ -24,8 +24,6 @@ var task = {
 
 // Add the task to the list of available factories
 xpm.addTaskFactory(task);
-// END SNIPPET: task
-
 
 /** Run and check */
 

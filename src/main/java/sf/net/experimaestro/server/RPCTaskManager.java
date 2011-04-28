@@ -153,11 +153,6 @@ public class RPCTaskManager {
 					taskManager);
 			XPMObject.getLog().clear();
 
-			// --- Define the different properties available from the script
-			ScriptableObject.defineProperty(scope, "xpm", jsXPM, 0);
-			ScriptableObject.defineProperty(scope, "xp", jsContext.newObject(
-					scope, "Namespace",
-					new Object[] { "xp", Manager.EXPERIMAESTRO_NS }), 0);
 
 			final Object result;
 			if (isFile)

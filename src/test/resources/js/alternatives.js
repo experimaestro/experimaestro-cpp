@@ -1,5 +1,7 @@
+// START SNIPPET: main
+
 // Declares the alternative
-var altName = xpm.qName("a.b.c", "alt");
+var altName = qname("a.b.c", "alt");
 var abc = new Namespace("a.b.c");
 
 xpm.declareAlternative(altName);
@@ -9,6 +11,7 @@ xpm.declareAlternative(altName);
 var configuration_alt_1 = {
 	id: xpm.qName("a.b.c", "alt-1"),
 	documentation: <p>Configuration of a possible alternative</p>,
+	alternative: altName,
 	
 	inputs: <inputs>
 		<input id="size" type="xs:integer" help="The parameter"/>
@@ -25,7 +28,7 @@ var configuration_alt_1 = {
 	}
 };
 
-xpm.addAlternative(xpm.addTaskFactory(configuration_alt_1));
+xpm.addTaskFactory(configuration_alt_1);
 
 /** Task */
 
@@ -42,7 +45,7 @@ var task_factory = {
 
 xpm.addTaskFactory(task_factory);
 
-/** Run and check */
+/** Run and output */
 
 var task = xpm.getTask(task_factory.id);
 task.setParameter("p", "{a.b.c}alt-1");
@@ -50,8 +53,12 @@ task.setParameter("p.size", "10");
 var r = task.run();
 xpm.log("Value of p.size is %s", r.abc::alt.xp::value.@value);
 
-v = r.abc::alt.xp::value.@value;
-if (v == undefined || v != 10)
-	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
+// END SNIPPET: main
+
+function test_value() {
+    v = r.abc::alt.xp::value.@value;
+    if (v == undefined || v != 10)
+    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
+}
 	
 	

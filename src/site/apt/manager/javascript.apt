@@ -75,5 +75,8 @@ Task factories
   
   * <<<log(format, object, [object ...])>>> Returns a message
   
-   
-   
+{XPath handling}
+	
+* {XPath Functions}
+
+  * <<<parentPath(String)>>> returns the parent path

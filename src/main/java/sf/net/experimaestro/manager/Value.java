@@ -5,6 +5,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathFunctionResolver;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -71,22 +72,27 @@ public abstract class Value {
 	 * @param task
 	 */
 	void processConnections(Task task) {
+		// Do not process if we do not have connections...
 		if (input.connections.isEmpty())
 			return;
 		
+		// ... or if the output is null
 		Document document = get();
 		if (document == null) {
 			LOGGER.warn("Cannot set the value of connections since we have a null value");
 			return;
 		}
 
-		LOGGER.info("Before processing connections, document is [%s]", XMLUtils.toStringObject(document));
+		LOGGER.debug("Before processing connections, document is [%s]", XMLUtils.toStringObject(document));
 		for(Connection connection: input.connections) {
 		    try {
-		    	LOGGER.info("Processing connection [%s, %s]", connection.path, connection.to);
+		    	LOGGER.debug("Processing connection [%s, %s]", connection.path, connection.to);
 		    	
 		    	XPath xpath = XPathFactory.newInstance().newXPath();
 		    	xpath.setNamespaceContext(connection);
+		    	XPathFunctionResolver old = xpath.getXPathFunctionResolver();
+		    	xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
+		    	
 		    	XPathExpression expression = xpath.compile(connection.path);
 				NodeList list = (NodeList) expression.evaluate(document.getDocumentElement(), XPathConstants.NODESET);
 				

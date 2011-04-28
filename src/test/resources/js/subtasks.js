@@ -1,4 +1,4 @@
-// Declares the alternative
+// START SNIPPET: main
 var altName = xpm.qName("a.b.c", "alt");
 var abc = new Namespace("a.b.c");
 
@@ -34,6 +34,8 @@ xpm.addTaskFactory(task_2);
 var task = xpm.getTask(task_2.id);
 task.setParameter("t1.p", "10");
 var r = task.run();
+
+// END SNIPPET: main
 
 v = r.xp::value.@value;
 if (v == undefined || v != 10)

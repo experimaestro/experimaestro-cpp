@@ -40,6 +40,11 @@ public abstract class Input {
 	 * Default value
 	 */
 	Document defaultValue;
+	
+	/**
+	 * Unnamed option
+	 */
+	boolean unnamed;
 
 	/**
 	 * Returns whether the input is optional or not
@@ -135,6 +140,14 @@ public abstract class Input {
 
 	public void addConnection(String path, DotName to, Element element) {
 		connections.add(new Connection(path, to, element));
+	}
+
+	public boolean isUnnamed() {
+		return unnamed;
+	}
+	
+	public void setUnnamed(boolean unnamed) {
+		this.unnamed = unnamed;
 	}
 
 }

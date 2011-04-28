@@ -2,6 +2,7 @@ package sf.net.experimaestro.utils;
 
 import static java.lang.String.format;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -9,15 +10,14 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.IdScriptableObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.utils.log.Logger;
@@ -37,7 +37,13 @@ public class JSUtils {
 		if (_value == UniqueTag.NOT_FOUND)
 			throw new RuntimeException(format("Could not find property '%s'",
 					name));
-		return (T) _value;
+		return (T) unwrap(_value);
+	}
+
+	private static Object unwrap(Object object) {
+		if (object instanceof Wrapper)
+			object = ((Wrapper) object).unwrap();
+		return object;
 	}
 
 	/**
@@ -52,7 +58,7 @@ public class JSUtils {
 		final Object _value = object.get(name, scope);
 		if (_value == UniqueTag.NOT_FOUND)
 			return defaultValue;
-		return (T) _value;
+		return (T) unwrap(_value);
 	}
 
 	/**
@@ -70,8 +76,7 @@ public class JSUtils {
 		}
 		if (node instanceof Document)
 			node = ((Document) node).getDocumentElement();
-		
-		
+
 		LOGGER.info("XML is of type %s [%s]; %s", node.getClass(),
 				XMLUtils.toString(node),
 				node.getUserData("org.mozilla.javascript.xmlimpl.XmlNode"));
@@ -101,7 +106,9 @@ public class JSUtils {
 			if (className.equals("XML")) {
 				// FIXME: this strips all whitespaces!
 				Node node = XMLLibImpl.toDomNode(object);
- 				LOGGER.debug("Cloned node [%s / %s] from [%s]", node.getClass(), XMLUtils.toStringObject(node), object.toString());
+				LOGGER.debug("Cloned node [%s / %s] from [%s]",
+						node.getClass(), XMLUtils.toStringObject(node),
+						object.toString());
 				return node;
 			}
 
@@ -143,5 +150,47 @@ public class JSUtils {
 	 */
 	public static boolean isXML(Object input) {
 		return input instanceof XMLObject;
+	}
+
+	/**
+	 * Converts a JavaScript object into an XML document
+	 * 
+	 * @param object
+	 * @param wrapName
+	 *            If the object is not already a document and has more than one
+	 *            element child (or zero), use this to wrap the elements
+	 * @return
+	 */
+	public static Document toDocument(Object object, QName wrapName) {
+		Node dom = toDOM(object);
+
+		if (dom instanceof Document)
+			return (Document) dom;
+
+		Document document = XMLUtils.newDocument();
+
+		// Add a new root element if needed
+		NodeList childNodes = dom.getChildNodes();
+		int elementCount = 0;
+		for (int i = 0; i < childNodes.getLength(); i++)
+			if (childNodes.item(i).getNodeType() == Node.ELEMENT_NODE)
+				elementCount++;
+
+		Node root = document;
+		if (elementCount != 1) {
+			root = document.createElementNS(wrapName.getNamespaceURI(),
+					wrapName.getLocalPart());
+			document.appendChild(root);
+		}
+
+		// Copy back in the DOM
+		for (int i = 0; i < childNodes.getLength(); i++) {
+			Node node = childNodes.item(i);
+			node = node.cloneNode(true);
+			document.adoptNode(node);
+			root.appendChild(node);
+		}
+
+		return document;
 	}
 }
