@@ -15,6 +15,12 @@ import java.util.List;
 import java.util.Map;
 
 import javax.xml.namespace.QName;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathFunctionResolver;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.FunctionObject;
@@ -25,6 +31,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.Wrapper;
+import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
@@ -32,9 +39,11 @@ import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.NSContext;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.CommandLineTask;
@@ -470,5 +479,27 @@ public class XPMObject {
 		}
 		return null;
 	}
-	
+
+	/**
+	 * Runs an XPath
+	 * 
+	 * @param path
+	 * @param xml
+	 * @return
+	 * @throws XPathExpressionException
+	 */
+	public Object xpath(String path, Object xml)
+			throws XPathExpressionException {
+		Node dom = JSUtils.toDOM(xml);
+		XPath xpath = XPathFactory.newInstance().newXPath();
+		xpath.setNamespaceContext(new NSContext(dom));
+		XPathFunctionResolver old = xpath.getXPathFunctionResolver();
+		xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
+
+		XPathExpression expression = xpath.compile(path);
+		String list = (String) expression
+				.evaluate(dom instanceof Document ? ((Document)dom).getDocumentElement() : dom, XPathConstants.STRING);
+		return list;
+	}
+
 }

@@ -1,5 +1,7 @@
 package sf.net.experimaestro.manager;
 
+import static java.lang.String.format;
+
 import java.io.File;
 import java.util.List;
 
@@ -64,6 +66,6 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 			return node.getTextContent();
 		}
 
-		throw new XPathFunctionException("Could not convert argument type");
+		throw new XPathFunctionException(format("Could not convert argument type", arg == null ? "null" : arg.getClass()));
 	}
 }

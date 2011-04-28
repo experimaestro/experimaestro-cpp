@@ -47,7 +47,7 @@ public class JSDirectTask extends JSAbstractTask {
 			Scriptable jsInputs = getJSInputs();
 			final Object returned = runFunction.call(cx, jsScope, jsObject,
 					new Object[] { jsInputs });
-			LOGGER.info("Returned %s", returned);
+			LOGGER.debug("Returned %s", returned);
 			if (returned == Undefined.instance)
 				throw new ExperimaestroException(
 						"Undefined returned by the function run");

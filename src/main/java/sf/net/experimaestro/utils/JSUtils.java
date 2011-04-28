@@ -77,8 +77,8 @@ public class JSUtils {
 		if (node instanceof Document)
 			node = ((Document) node).getDocumentElement();
 
-		LOGGER.info("XML is of type %s [%s]; %s", node.getClass(),
-				XMLUtils.toString(node),
+		LOGGER.debug("XML is of type %s [%s]; %s", node.getClass(),
+				XMLUtils.toStringObject(node),
 				node.getUserData("org.mozilla.javascript.xmlimpl.XmlNode"));
 		return cx.newObject(scope, "XML", new Node[] { node });
 	}

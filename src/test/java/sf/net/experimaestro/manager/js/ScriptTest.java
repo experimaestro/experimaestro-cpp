@@ -2,7 +2,6 @@ package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -10,7 +9,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,7 +20,6 @@ import org.apache.commons.vfs.FileSystemManager;
 import org.apache.commons.vfs.VFS;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -31,7 +28,6 @@ import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
 import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.server.RPCTaskManager;
 
 public class ScriptTest {
 	private static final String JS_SCRIPT_PATH = "/js";
@@ -50,6 +46,11 @@ public class ScriptTest {
 			this.content = getFileContent(file);
 		}
 
+		@Override
+		public String toString() {
+			return format("JavaScript for [%s]", file);
+		}
+		
 		@DataProvider
 		public Object[][] jsProvider() throws FileSystemException, IOException {
 			Pattern pattern = Pattern
@@ -83,7 +84,6 @@ public class ScriptTest {
 				IOException, SecurityException, IllegalAccessException,
 				InstantiationException, InvocationTargetException,
 				NoSuchMethodException {
-			System.err.format("Here function is %s%n", functionName);
 			if (functionName == null) {
 				Map<String, String> environment = System.getenv();
 				XPMObject jsXPM = new XPMObject(context, environment, scope,

@@ -2,15 +2,12 @@ package sf.net.experimaestro.manager;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 
-import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -19,8 +16,8 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class Input {
-	final static private Logger LOGGER = Logger.getLogger();
-	
+	final static Logger LOGGER = Logger.getLogger();
+
 	/**
 	 * Defines an optional parameter
 	 */
@@ -35,12 +32,12 @@ public abstract class Input {
 	 * Documentation for this parameter
 	 */
 	String documentation;
-	
+
 	/**
 	 * Default value
 	 */
 	Document defaultValue;
-	
+
 	/**
 	 * Unnamed option
 	 */
@@ -48,6 +45,7 @@ public abstract class Input {
 
 	/**
 	 * Returns whether the input is optional or not
+	 * 
 	 * @return
 	 */
 	public boolean isOptional() {
@@ -56,7 +54,8 @@ public abstract class Input {
 
 	/**
 	 * Get the documentation
-	 * @return A string in XHTML 
+	 * 
+	 * @return A string in XHTML
 	 */
 	public String getDocumentation() {
 		return documentation;
@@ -77,17 +76,16 @@ public abstract class Input {
 		this.type = type;
 	}
 
-	
 	public void setOptional(boolean optional) {
 		this.optional = optional;
 	}
-	
+
 	public void setDocumentation(String documentation) {
 		this.documentation = documentation;
 	}
-	
+
 	abstract Value newValue();
-	
+
 	public void printHTML(PrintWriter out) {
 		out.println(documentation);
 	}
@@ -95,43 +93,25 @@ public abstract class Input {
 	public void setDefaultValue(Document defaultValue) {
 		this.defaultValue = defaultValue;
 	}
-	
+
 	/**
 	 * Defines a connection to the
 	 * 
 	 * @author B. Piwowarski <benjamin@bpiwowar.net>
 	 */
-	static public class Connection implements NamespaceContext {
+	static public class Connection {
 		final String path;
 		final DotName to;
-		private Element element;
+		private NSContext context;
 
 		public Connection(String path, DotName to, Element element) {
 			this.path = path;
 			this.to = to;
-			// FIXME: would be good to take the map and leave the element
-			this.element = element;
+			this.context = new NSContext(element);
 		}
 
-		@Override
-		public String getNamespaceURI(String prefix) {
-			String uri = element.lookupNamespaceURI(prefix);
-			if (uri == null)
-				uri = Manager.PREDEFINED_PREFIXES.get(prefix);
-			if (uri == null)
-				throw new ExperimaestroException("Prefix %s not bound", prefix);
-			LOGGER.info("Prefix %s maps to %s", prefix, uri);
-			return uri;
-		}
-
-		@Override
-		public String getPrefix(String arg0) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public Iterator<?> getPrefixes(String arg0) {
-			throw new UnsupportedOperationException();
+		public NSContext getContext() {
+			return context;
 		}
 
 	}
@@ -145,7 +125,7 @@ public abstract class Input {
 	public boolean isUnnamed() {
 		return unnamed;
 	}
-	
+
 	public void setUnnamed(boolean unnamed) {
 		this.unnamed = unnamed;
 	}

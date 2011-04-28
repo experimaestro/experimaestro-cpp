@@ -89,7 +89,7 @@ public abstract class Value {
 		    	LOGGER.debug("Processing connection [%s, %s]", connection.path, connection.to);
 		    	
 		    	XPath xpath = XPathFactory.newInstance().newXPath();
-		    	xpath.setNamespaceContext(connection);
+		    	xpath.setNamespaceContext(connection.getContext());
 		    	XPathFunctionResolver old = xpath.getXPathFunctionResolver();
 		    	xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
 		    	
