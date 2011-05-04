@@ -25,15 +25,29 @@ var task = {
 // Add the task to the list of available factories
 xpm.addTaskFactory(task);
 
-/** Run and check */
-
-xpm.experiment(qname("a.b.c", "task"), "x=1,2 * y=5,7");
-xpm.log("The task returned\n%s", results.toSource());
-
 // END SNIPPET: main
 
-var expected = [5, 10, 7, 14];
-for(var i = 0; i < expected.length; i++)
-    if (expected[i] != results[i])
-        throw new java.lang.String.format("Expected %s and got %s at %d", expected[i], results[i], i);
+/** Run and check */
 
+function test_plan_1() {
+    results =  [];
+    xpm.experiment(qname("a.b.c", "task"), "x=1,2 * y=5,7");
+    xpm.log("The task returned\n%s", results.toSource());
+    check();
+}
+
+
+function test_plan_1() {
+    results =  [];
+    var task = xpm.getTask(qname("a.b.c", "task"));
+    task.run_plan("x=1,2 * y=5,7");
+    xpm.log("The task returned\n%s", results.toSource());
+    check();
+}
+
+function check() {    
+    var expected = [5, 10, 7, 14];
+    for(var i = 0; i < expected.length; i++)
+        if (expected[i] != results[i])
+            throw new java.lang.String.format("Expected %s and got %s at %d", expected[i], results[i], i);
+}

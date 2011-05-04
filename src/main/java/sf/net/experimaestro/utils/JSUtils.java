@@ -116,13 +116,7 @@ public class JSUtils {
 			if (className.equals("XMLList")) {
 				LOGGER.debug("Transforming from XMLList [%s]", object);
 				IdScriptableObject xmlList = (IdScriptableObject) xmlObject;
-				DocumentBuilder docBuilder;
-				try {
-					docBuilder = Task.dbFactory.newDocumentBuilder();
-				} catch (ParserConfigurationException e) {
-					throw new RuntimeException(e);
-				}
-				Document doc = docBuilder.newDocument();
+				Document doc = XMLUtils.newDocument();
 				DocumentFragment fragment = doc.createDocumentFragment();
 
 				for (Object _id : xmlList.getIds()) {

@@ -19,12 +19,20 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
 
 public abstract class JSAbstractTask extends Task {
-	final protected Scriptable jsScope;
+	protected Scriptable jsScope;
 
-	public JSAbstractTask(TaskFactory information, Scriptable jsScope,
-			Object jsObject) {
+	public JSAbstractTask(TaskFactory information, Scriptable jsScope) {
 		super(information);
 		this.jsScope = jsScope;
+	}
+	
+	protected JSAbstractTask() {
+	}
+	
+	@Override
+	protected void init(Task other) {
+		super.init(other);
+		jsScope = ((JSAbstractTask)other).jsScope;
 	}
 
 	/**

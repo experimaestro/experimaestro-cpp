@@ -13,6 +13,8 @@ import javax.xml.xpath.XPathFunctionResolver;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import sf.net.experimaestro.manager.js.XPMObject;
+
 /**
  * 
  * Adds some handy functions.
@@ -34,19 +36,52 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 			final String name = functionName.getLocalPart();
 			if ("parentPath".equals(name) && arity == 1)
 				return ParentPath_1;
+			if ("joinPaths".equals(name) && arity > 1)
+				return JoinPath;
 		}
 
 		return resolver == null ? null : resolver.resolveFunction(functionName,
 				arity);
 	}
 
+	/**
+	 * Returns the parentpath
+	 */
 	private static final XPathFunction ParentPath_1 = new XPathFunction() {
 		@Override
-		public Object evaluate(List args) throws XPathFunctionException {
+		public Object evaluate(@SuppressWarnings("rawtypes") List args)
+				throws XPathFunctionException {
 			return new File(argToString(args.get(0))).getParentFile();
 		}
 	};
 
+	/**
+	 * Returns the parentpath
+	 */
+	private static final XPathFunction JoinPath = new XPathFunction() {
+		@Override
+		public Object evaluate(@SuppressWarnings("rawtypes") List args)
+				throws XPathFunctionException {
+			File file = null;
+			for (int i = 0; i < args.size(); i++) {
+				String name = argToString(args.get(i));
+				if (file == null)
+					file = new File(name);
+				else
+					file = new File(file, name);
+			}
+			return file.getAbsolutePath();
+		}
+	};
+
+	/**
+	 * Converts whatever XML object into a string
+	 * 
+	 * @param arg
+	 *            an XML object
+	 * @return
+	 * @throws XPathFunctionException
+	 */
 	static private String argToString(Object arg) throws XPathFunctionException {
 		if (arg instanceof String)
 			return (String) arg;
@@ -66,6 +101,8 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 			return node.getTextContent();
 		}
 
-		throw new XPathFunctionException(format("Could not convert argument type", arg == null ? "null" : arg.getClass()));
+		throw new XPathFunctionException(format(
+				"Could not convert argument type",
+				arg == null ? "null" : arg.getClass()));
 	}
 }

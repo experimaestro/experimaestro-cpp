@@ -1,14 +1,16 @@
 package sf.net.experimaestro.manager;
 
+import java.io.StringReader;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -16,12 +18,13 @@ import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.Input.Connection;
+import sf.net.experimaestro.plan.ParseException;
+import sf.net.experimaestro.plan.PlanParser;
+import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 public abstract class Task {
-	public final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
-			.newInstance();
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -35,9 +38,12 @@ public abstract class Task {
 	protected Map<String, Value> values = new TreeMap<String, Value>();
 
 	/**
-	 * Sub-tasks without name
+	 * Sub-tasks without name (subset of the map {@link #values}).
 	 */
-	protected ArrayList<Value> notNamedValues = new ArrayList<Value>();
+	protected Set<String> notNamedValues = new TreeSet<String>();
+
+	protected Task() {
+	}
 
 	/**
 	 * Construct a new task from a {@link TaskFactory}
@@ -55,12 +61,18 @@ public abstract class Task {
 		return factory;
 	}
 
+	/**
+	 * Get a specific input
+	 * 
+	 * @param key
+	 * @return
+	 */
 	protected Input getInput(String key) {
 		return getInputs().get(new DotName(key));
 	}
 
 	/**
-	 * Get the list of parameters
+	 * Get the list of inputs
 	 */
 	public Map<String, Input> getInputs() {
 		return factory.getInputs();
@@ -74,7 +86,7 @@ public abstract class Task {
 	}
 
 	/**
-	 * Get the list of sub tasks
+	 * Get the list of set values
 	 * 
 	 * @return A map or null
 	 */
@@ -190,8 +202,9 @@ public abstract class Task {
 		String name = id.get(0);
 
 		if (!notNamedValues.isEmpty()) {
-			for (Value v : notNamedValues) {
+			for (String vname : notNamedValues) {
 				try {
+					Value v = values.get(vname);
 					v.set(id, value);
 					return;
 				} catch (NoSuchParameter e) {
@@ -246,10 +259,79 @@ public abstract class Task {
 			String key = entry.getKey();
 			final Value value = entry.getValue().newValue();
 			values.put(key, value);
-			if (entry.getValue().isUnnamed()) 
-				notNamedValues.add(value);
+
+			// Add to the unnamed options
+			if (entry.getValue().isUnnamed())
+				notNamedValues.add(entry.getKey());
 		}
 
 	}
 
+	/**
+	 * Returns a deep copy of this task
+	 * 
+	 * @return A new Task
+	 */
+	final public Task copy() {
+		try {
+			Constructor<? extends Task> constructor = this.getClass()
+					.getConstructor(new Class<?>[] {});
+			Task copy = constructor.newInstance(new Object[] {});
+			copy.init(this);
+			return copy;
+		} catch (RuntimeException e) {
+			throw e;
+		} catch (Throwable t) {
+			throw new ExperimaestroException(t);
+		}
+	}
+
+	/**
+	 * Initialise the Task from another one
+	 * 
+	 * This method is called right after object creation in {@link #copy()}
+	 * 
+	 * @param other
+	 *            The task to copy data from
+	 */
+	protected void init(Task other) {
+		// Copy the factory
+		factory = other.factory;
+
+		// shallow copy for this field, since it won't change
+		notNamedValues = other.notNamedValues;
+
+		// Deep copy
+		for (Entry<String, Value> entry : other.values.entrySet()) {
+			values.put(entry.getKey(), entry.getValue().copy());
+		}
+	}
+
+	/**
+	 * Run an experimental plan
+	 * 
+	 * @param plan
+	 *            The plan string
+	 * @throws ParseException
+	 */
+	public void runPlan(String planString) throws ParseException {
+		PlanParser planParser = new PlanParser(new StringReader(planString));
+		sf.net.experimaestro.plan.Node plans = planParser.plan();
+
+		LOGGER.info("Plan is %s", plans.toString());
+		for (Map<String, String> plan : plans) {
+			// Run a plan
+			LOGGER.info("Running plan: %s",
+					Output.toString(" * ", plan.entrySet()));
+			// First, get a copy of the task
+			Task task = copy();
+
+			// Set the parameters
+			for (Map.Entry<String, String> kv : plan.entrySet())
+				task.setParameter(DotName.parse(kv.getKey()), kv.getValue());
+
+			// and run
+			task.run();
+		}
+	}
 }

@@ -1,6 +1,9 @@
 package sf.net.experimaestro.manager;
 
 import java.util.Arrays;
+import java.util.Iterator;
+
+import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
 import bpiwowar.argparser.utils.Output;
 
@@ -9,12 +12,12 @@ import bpiwowar.argparser.utils.Output;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class DotName implements Comparable<DotName> {
+public class DotName implements Comparable<DotName>, Iterable<String> {
 	/**
 	 * Empty dot name
 	 */
 	public static final DotName EMPTY = new DotName(new String[] {});
-	
+
 	/**
 	 * The qualified name
 	 */
@@ -170,6 +173,11 @@ public class DotName implements Comparable<DotName> {
 
 	public boolean isQualified() {
 		return array.length > 1;
+	}
+
+	@Override
+	public Iterator<String> iterator() {
+		return new ListAdaptator<String>(array).iterator();
 	}
 
 }

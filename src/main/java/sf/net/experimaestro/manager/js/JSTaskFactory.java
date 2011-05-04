@@ -117,19 +117,19 @@ public class JSTaskFactory extends TaskFactory {
 			// Add this to the list of inputs
 			for (Element connect : XMLUtils.childIterator(el, new QName(
 					Manager.EXPERIMAESTRO_NS, "connect"))) {
-				final String from = connect.getAttribute("from");
+				final DotName from = DotName.parse(connect.getAttribute("from"));
 				final String path = connect.getAttribute("path");
 				final DotName to = new DotName(inputToId, DotName.parse(connect
 						.getAttribute("to")));
 				LOGGER.info("Found connection between [%s in %s] and [%s]",
 						path, from, to);
-				Input inputFrom = inputs.get(from);
+				Input inputFrom = inputs.get(from.get(0));
 
 				if (inputFrom == null)
 					throw new ExperimaestroException(
-							"Could not find input [%s] in [%s]", from, this.id);
+							"Could not find input [%s] in [%s]", from.get(0), this.id);
 
-				inputFrom.addConnection(path, to, connect);
+				inputFrom.addConnection(from.offset(1), path, to, connect);
 			}
 		}
 

@@ -218,6 +218,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 					// Run the task
 					state = ResourceState.RUNNING;
 					startTimestamp = System.currentTimeMillis();
+					updateDb();
 					int code = doRun(locks);
 
 					if (code != 0)

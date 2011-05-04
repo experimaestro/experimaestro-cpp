@@ -10,6 +10,7 @@ import org.w3c.dom.Node;
 
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -40,8 +41,32 @@ public class TaskJSWrapper extends ScriptableObject {
 
 	// ---- JavaScript functions ----
 
+	/**
+	 * Run
+	 */
 	public Object jsFunction_run() {
-		return JSUtils.domToE4X(getTask().run(), Context.getCurrentContext(), this);
+		return JSUtils.domToE4X(getTask().run(), Context.getCurrentContext(),
+				this);
+	}
+
+	/**
+	 * Just a short hand for setParameter
+	 * 
+	 * @param _id
+	 * @param value
+	 */
+	public void jsFunction_set(String _id, Scriptable value) {
+		jsFunction_setParameter(_id, value);
+	}
+
+	/**
+	 * Run an experimental plan
+	 * 
+	 * @param plan
+	 * @throws ParseException
+	 */
+	public void jsFunction_run_plan(String plan) throws ParseException {
+		task.runPlan(plan);
 	}
 
 	/**
@@ -72,7 +97,8 @@ public class TaskJSWrapper extends ScriptableObject {
 			document.appendChild(node);
 			getTask().setParameter(id, document);
 		} else {
-			LOGGER.info("Value will be converted to string [%s/%s]", value.getClassName(), value.getClass());
+			LOGGER.info("Value will be converted to string [%s/%s]",
+					value.getClassName(), value.getClass());
 			getTask().setParameter(id, (String) value.toString());
 		}
 	}

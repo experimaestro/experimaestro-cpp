@@ -100,11 +100,13 @@ public abstract class Input {
 	 * @author B. Piwowarski <benjamin@bpiwowar.net>
 	 */
 	static public class Connection {
+		final DotName from;
 		final String path;
 		final DotName to;
 		private NSContext context;
 
-		public Connection(String path, DotName to, Element element) {
+		public Connection(DotName from, String path, DotName to, Element element) {
+			this.from = from;
 			this.path = path;
 			this.to = to;
 			this.context = new NSContext(element);
@@ -118,8 +120,8 @@ public abstract class Input {
 
 	ArrayList<Connection> connections = new ArrayList<Input.Connection>();
 
-	public void addConnection(String path, DotName to, Element element) {
-		connections.add(new Connection(path, to, element));
+	public void addConnection(DotName from, String path, DotName to, Element element) {
+		connections.add(new Connection(from, path, to, element));
 	}
 
 	public boolean isUnnamed() {

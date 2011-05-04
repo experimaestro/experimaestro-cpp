@@ -276,7 +276,7 @@ public class XPMObject {
 		for (int i = 0; i < length; i++) {
 			Object el = array.get(i, array);
 			if (el instanceof NativeArray) {
-				flattenArray(array, list);
+				flattenArray((NativeArray) el, list);
 			} else
 				list.add(toString(el));
 		}
@@ -426,6 +426,13 @@ public class XPMObject {
 
 	public static void resetLog() {
 		log.set(new ArrayList<String>());
+	}
+	
+	public File filepath(String filepath, String... names) {
+		File file = new File(filepath);
+		for (String name : names)
+			file = new File(file, name);
+		return file;
 	}
 
 	public File filepath(File file, String... names) {

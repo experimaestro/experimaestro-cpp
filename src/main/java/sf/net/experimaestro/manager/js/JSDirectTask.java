@@ -9,11 +9,11 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -22,13 +22,23 @@ import sf.net.experimaestro.utils.log.Logger;
 public class JSDirectTask extends JSAbstractTask {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	private final Function runFunction;
-	private final NativeObject jsObject;
+	/**
+	 * The run function
+	 */
+	private Function runFunction;
+
+	/**
+	 * The object?
+	 */
+	private NativeObject jsFactory;
+
+	public JSDirectTask() {
+	}
 
 	public JSDirectTask(JSTaskFactory jsTaskFactory, Scriptable jsScope,
-			NativeObject jsObject, Function runFunction) {
-		super(jsTaskFactory, jsScope, jsObject);
-		this.jsObject = jsObject;
+			NativeObject jsFactory, Function runFunction) {
+		super(jsTaskFactory, jsScope);
+		this.jsFactory = jsFactory;
 		this.runFunction = runFunction;
 
 	}
@@ -45,7 +55,7 @@ public class JSDirectTask extends JSAbstractTask {
 		if (runFunction != null) {
 			// We have a run function
 			Scriptable jsInputs = getJSInputs();
-			final Object returned = runFunction.call(cx, jsScope, jsObject,
+			final Object returned = runFunction.call(cx, jsScope, jsFactory,
 					new Object[] { jsInputs });
 			LOGGER.debug("Returned %s", returned);
 			if (returned == Undefined.instance)
@@ -68,16 +78,24 @@ public class JSDirectTask extends JSAbstractTask {
 				if (value != null) {
 					Element outputs = document.createElementNS(
 							Manager.EXPERIMAESTRO_NS, "outputs");
-					outputs.setIdAttributeNS(Manager.EXPERIMAESTRO_NS, "name", false);
 					root.appendChild(outputs);
-					
+					outputs.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
+							entry.getKey());
+
 					Element returnRoot = (Element) value.get()
 							.getDocumentElement().cloneNode(true);
 					document.adoptNode(returnRoot);
-					NodeList nodes = returnRoot.getChildNodes();
-					for (int i = 0; i < nodes.getLength(); i++) {
-						outputs.appendChild(nodes.item(i));
-					}
+
+					final String rootURI = returnRoot.getNamespaceURI();
+					if (rootURI != null && rootURI.equals(
+							Manager.EXPERIMAESTRO_NS)
+							&& returnRoot.getLocalName().equals("outputs")) {
+						NodeList nodes = returnRoot.getChildNodes();
+						for (int i = 0; i < nodes.getLength(); i++) {
+							outputs.appendChild(nodes.item(i));
+						}
+					} else
+						outputs.appendChild(returnRoot);
 				}
 			}
 
@@ -90,4 +108,11 @@ public class JSDirectTask extends JSAbstractTask {
 		return result;
 	}
 
+	@Override
+	protected void init(Task _other) {
+		JSDirectTask other = (JSDirectTask) _other;
+		super.init(other);
+		jsFactory = other.jsFactory;
+		runFunction = other.runFunction;
+	}
 }
