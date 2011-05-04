@@ -8,31 +8,33 @@
 
 Goals
 
-  The goals of the experimaestro manager are:
+  Tired of bash, python, ... scripts to manage your experiments? Experimaestro manager
+  gives you a systematic way to write and run experiments where parameters varies.
+  The goals of the experimaestro manager are to:
 
   * Decompose experiments into a set of parametrised tasks
   
   * Standardise the way to run experiments for easier reproduction of experimental results
     in computing science
      
-  * To build a documentation for each task
+  * Build a documentation for each task
   
   * Uses the scheduler to run jobs
   
-  * Provides multiple way to write tasks. Currently, only JavaScript is supported but this could be extend to Python.
+  * Provide multiple way to write tasks. Currently, only JavaScript is supported but this could be extend to Python.
 
-  * To handle easy to read & write experimental plans. For example,
+  * Handle easy to read & write experimental plans. For example,
     "<<<collection.id=trec.1/adhoc,trec.2/adhoc * qir.weighting-scheme=tf-idf,tf>>>" 
     will run four experiments where the different parameters (id and weighting shemes) are varied
 
-  * (<<<Not implemented>>>) To manage data produced by the tasks
+  * (<<<Not implemented>>>) Manage data produced by the tasks
   
 
 Main concepts
 
   The main concepts of the manager are:
 
-  * Each input or output is an XML document. 
+  * All messages between tasks are valid XML documents.
   
   * Tasks are the unit on which experiments are built, corresponding roughly to the execution of a process.
   
