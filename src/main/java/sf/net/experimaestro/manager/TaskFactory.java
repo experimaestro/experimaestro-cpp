@@ -4,7 +4,6 @@ import static java.lang.String.format;
 
 import java.util.Map;
 
-import javax.xml.namespace.QName;
 
 /**
  * Information about an experiment

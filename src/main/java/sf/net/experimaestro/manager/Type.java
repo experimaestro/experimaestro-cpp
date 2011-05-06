@@ -1,6 +1,5 @@
 package sf.net.experimaestro.manager;
 
-import javax.xml.namespace.QName;
 
 public class Type {
 	private static final long serialVersionUID = 1L;

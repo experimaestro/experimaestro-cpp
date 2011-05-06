@@ -4,8 +4,13 @@ import java.io.File;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.commons.vfs.FileObject;
+import org.apache.commons.vfs.FileSystemException;
+import org.apache.commons.vfs.FileSystemManager;
+import org.apache.commons.vfs.VFS;
 import org.apache.log4j.Level;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.je.FileProxy;
@@ -32,6 +37,15 @@ import com.sleepycat.persist.model.EntityModel;
  */
 public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
+
+	public static FileSystemManager fsManager;
+	static {
+		try {
+			fsManager = VFS.getManager();
+		} catch (FileSystemException e) {
+			throw new ExperimaestroException("Cannot start the VFS manager", e);
+		}
+	}
 
 	/**
 	 * Used for atomic series of locks
@@ -109,11 +123,18 @@ public class Scheduler {
 			synchronized (Scheduler.this) {
 				boolean changed = false;
 
-				for (Resource resource : resources.actives()) {
+				for (Resource resource : resources) {
 					// Update resources status
 					if (!resource.getListeners().isEmpty())
 						if (resource.updateStatus()) {
-							resource.notifyListeners();
+							try {
+								resource.notifyListeners();
+							} catch (DatabaseException e) {
+								LOGGER.warn(
+										"Could not notify all the listeners for [%s]",
+										resource.getIdentifier());
+								LOGGER.warn("Trace:", e);
+							}
 
 							// Notify the task manager in the case of a task
 							if (resource instanceof Job)
@@ -156,6 +177,7 @@ public class Scheduler {
 		// Initialise the JE database
 		LOGGER.info("Initialising JE database in directory %s", baseDirectory);
 		EnvironmentConfig myEnvConfig = new EnvironmentConfig();
+		myEnvConfig.setTransactional(false);
 		StoreConfig storeConfig = new StoreConfig();
 
 		myEnvConfig.setAllowCreate(true);
@@ -171,12 +193,13 @@ public class Scheduler {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			@Override
 			public void run() {
+				LOGGER.info("Stopping the scheduler");
 				Scheduler.this.close();
 			}
 		}));
 
 		// Initialise the store
-		resources = new Resources(dbStore);
+		resources = new Resources(this, dbStore);
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
@@ -196,6 +219,7 @@ public class Scheduler {
 		if (dbStore != null) {
 			try {
 				dbStore.close();
+				dbStore = null;
 				LOGGER.info("Closed the database store");
 			} catch (DatabaseException dbe) {
 				LOGGER.error("Error closing MyDbEnv: " + dbe.toString());
@@ -207,6 +231,7 @@ public class Scheduler {
 			try {
 				// Finally, close environment.
 				dbEnvironment.close();
+				dbEnvironment = null;
 				LOGGER.info("Closed the database environment");
 			} catch (DatabaseException dbe) {
 				LOGGER.error("Error closing MyDbEnv: " + dbe.toString());
@@ -234,31 +259,29 @@ public class Scheduler {
 	}
 
 	/**
-	 * Add a given resource
+	 * Add resources
 	 * 
 	 * @throws DatabaseException
 	 */
-	synchronized public void add(Resource task) throws DatabaseException {
-		// --- Notify
-		LOGGER.info("Add the resource %s", task);
-		resources.put(task);
-	}
+	synchronized public void add(Resource... list) throws DatabaseException {
+		// Loop over the new jobs
+		for (Resource resource : list) {
+			LOGGER.info("Adding the resource [%s]", resource);
 
-	/**
-	 * Add a given job
-	 * 
-	 * @throws DatabaseException
-	 */
-	synchronized public void add(Job task) throws DatabaseException {
-		// --- Notify
-		LOGGER.info("Add the task %s", task);
+			// First, add the job as a new resource
+			resources.put(resource);
 
-		waitingJobs.add(task);
+			if (resource instanceof Job) {
+				Job job = (Job)resource;
+				// Add to the list of waiting jobs
+				waitingJobs.add(job);
 
-		// Also adds it as a resource
-		resources.put(task);
+				// Notify the job that it has been added
+				job.notify(null);
+			}
+		}
 
-		// --- Notify if a task runner is waiting for a fresh new task
+		// Notify if a task runner is waiting for fresh new task(s)
 		notify();
 	}
 
@@ -317,5 +340,13 @@ public class Scheduler {
 
 	protected void store(Resource resource) throws DatabaseException {
 		resources.put(resource);
+	}
+
+	public static FileObject resolveFile(String path) {
+		try {
+			return fsManager.resolveFile(path);
+		} catch (FileSystemException e) {
+			throw new ExperimaestroException(e, "Cannot resolve path %s", path);
+		}
 	}
 }

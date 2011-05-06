@@ -1,9 +1,14 @@
 package sf.net.experimaestro.scheduler;
 
+import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
+import java.util.Timer;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
+import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
@@ -14,39 +19,69 @@ import com.sleepycat.persist.PrimaryIndex;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+/**
+ * 
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * 
+ */
 public class Resources implements Iterable<Resource> {
-	PrimaryIndex<String, Resource> primaryKey;
+	final static private Logger LOGGER = Logger.getLogger();
+
+	/** The index */
+	private PrimaryIndex<String, Resource> index;
 
 	/**
-	 * Set of active resources (waiting or monitored)
+	 * A cache to get track of resources in memory
 	 */
-	TreeMap<String, Resource> actives = new TreeMap<String, Resource>();
+	private WeakHashMap<String, WeakReference<Resource>> cache = new WeakHashMap<String, WeakReference<Resource>>();
+
+	/**
+	 * The associated scheduler
+	 */
+	private final Scheduler scheduler;
 
 	/**
 	 * Initialise the set of resources
+	 * 
 	 * @param dbStore
 	 * @throws DatabaseException
 	 */
-	public Resources(EntityStore dbStore) throws DatabaseException {
-		primaryKey = dbStore.getPrimaryIndex(String.class, Resource.class);
+	public Resources(Scheduler scheduler, EntityStore dbStore)
+			throws DatabaseException {
+		this.scheduler = scheduler;
+		index = dbStore.getPrimaryIndex(String.class, Resource.class);
 	}
 
 	/**
 	 * Store the resource in the database - called when an entity has changed
 	 * 
+	 * 
 	 * @param resource
+	 *            The resource to add
+	 * @return True if the insertion was successful, or false if the resource
+	 *         was not updated (e.g. because it is a running job)
 	 * @throws DatabaseException
+	 *             If an error occurs while putting the resource in the database
 	 */
-	public void put(Resource resource) throws DatabaseException {
-		// Add or remove from the active list
-		if (resource.isActive()) {
-			actives.put(resource.getIdentifier(), resource);
-		} else {
-			actives.remove(resource.getIdentifier());
+	synchronized public boolean put(Resource resource) throws DatabaseException {
+		// Check if overriding a running resource (unless it is the same object)
+		Resource old = get(resource.getIdentifier());
+
+		if (old != null) {
+			// Don't override a running task
+			if (old.state == ResourceState.RUNNING && resource != old) {
+				LOGGER.warn("Cannot override a running task [%s]");
+				return false;
+			}
+			// FIXME: should do something
 		}
 
-		// Store in database
-		primaryKey.put(resource);
+		// Store in database and in cache
+		index.put(resource);
+		cache.put(resource.identifier, new WeakReference<Resource>(resource));
+
+		// OK, we did update
+		return true;
 	}
 
 	/**
@@ -56,40 +91,65 @@ public class Resources implements Iterable<Resource> {
 	 * @return The resource or null if no such entities exist
 	 * @throws DatabaseException
 	 */
-	public Resource get(String id) throws DatabaseException {
-		Resource resource = actives.get(id);
+	synchronized public Resource get(String id) throws DatabaseException {
+		Resource resource = getFromCache(id);
 		if (resource != null)
 			return resource;
-		return primaryKey.get(id);
+
+		// Get from the database
+		resource = index.get(id);
+		if (resource != null) {
+			resource.scheduler = scheduler;
+		}
+		return resource;
 	}
 
-	/**
-	 * Get an iterator on active resources
-	 */
-	Iterable<Resource> actives() {
-		return actives.values();
+	private Resource getFromCache(String id) {
+		// Try to get from cache first
+		WeakReference<Resource> reference = cache.get(id);
+		if (reference != null) {
+			Resource resource = reference.get();
+			if (resource != null)
+				return resource;
+		}
+		return null;
 	}
 
 	@Override
 	public Iterator<Resource> iterator() {
 		try {
 			return new AbstractIterator<Resource>() {
-				EntityCursor<Resource> iterator = primaryKey.entities();
+				EntityCursor<String> iterator = index.keys();
+
+				@Override
+				protected void finalize() throws Throwable {
+					super.finalize();
+					if (iterator != null)
+						iterator.close();
+				}
 
 				@Override
 				protected boolean storeNext() {
 					try {
-						value = iterator.next();
-						if (value != null) {
-							// Override with active resource
-							Resource resource = actives.get(value.identifier);
-							if (resource != null)
-								value = resource;
+						String id = iterator.next();
+						if (id != null) {
+							value = get(id);
+							return true;
 						}
 					} catch (DatabaseException e) {
 						throw new RuntimeException(e);
 					}
-					return value != null;
+
+					if (iterator != null) {
+						try {
+							iterator.close();
+						} catch (DatabaseException e) {
+							LOGGER.error(e, "Could not close the cursor on resources");
+						}
+
+					}
+
+					return false;
 				}
 			};
 		} catch (DatabaseException e) {

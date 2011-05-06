@@ -2,10 +2,6 @@ package sf.net.experimaestro.utils;
 
 import static java.lang.String.format;
 
-import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.IdScriptableObject;
 import org.mozilla.javascript.NativeObject;
@@ -19,7 +15,7 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.log.Logger;
 
 public class JSUtils {

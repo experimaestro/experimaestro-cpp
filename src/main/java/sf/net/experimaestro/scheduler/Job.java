@@ -43,7 +43,11 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	public Job(Scheduler taskManager, String identifier) {
 		super(taskManager, identifier, LockMode.EXCLUSIVE_WRITER);
-		state = ResourceState.WAITING;
+		state = isDone() ? ResourceState.DONE : ResourceState.WAITING;
+	}
+
+	private boolean isDone() {
+		return new File(identifier + ".done").exists();
 	}
 
 	/**
@@ -57,10 +61,13 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	long timestamp = System.currentTimeMillis();
 
 	/**
-	 * When did the job start and stop
+	 * When did the job start (0 if not started)
 	 */
 	private long startTimestamp;
 
+	/**
+	 * When did the job stop (0 when it did not stop yet)
+	 */
 	long endTimestamp;
 
 	@Override
@@ -79,6 +86,11 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	int nbUnsatisfied;
 
+	/**
+	 * The set of dependencies for this object
+	 * 
+	 * @return
+	 */
 	public TreeMap<String, Dependency> getDependencies() {
 		return dependencies;
 	}
@@ -90,7 +102,6 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 *            The data we depend upon
 	 */
 	public void addDependency(Resource resource, LockType type) {
-
 		LOGGER.info("Adding dependency %s to %s for %s", type, resource, this);
 		final DependencyStatus accept = resource.accept(type);
 		if (accept == DependencyStatus.ERROR)
@@ -105,8 +116,8 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		synchronized (this) {
 			if (!ready)
 				nbUnsatisfied++;
-			dependencies.put(resource.getIdentifier(), new Dependency(type,
-					ready));
+			dependencies.put(new String(resource.getIdentifier()),
+					new Dependency(type, ready));
 		}
 	}
 
@@ -176,6 +187,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				try {
 					locks.add(new FileLock(lockfile, true));
 				} catch (UnlockableException e) {
+					LOGGER.info("Could not lock job [%s]", identifier);
 					synchronized (this) {
 						try {
 							// Wait five seconds before looking again
@@ -194,7 +206,6 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 					return;
 				}
 
-				lockfile.deleteOnExit();
 				int pid = PID.getPID();
 
 				// Now, tries to lock all the resources
@@ -257,10 +268,15 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 * Called when a resource status has changed
 	 * 
 	 * @param resource
-	 *            The resource has changed
+	 *            The resource has changed (or null if itself)
 	 * @param objects
+	 *            Optional parameters
 	 */
 	synchronized public void notify(Resource resource, Object... objects) {
+		// Self-notification: discard
+		if (resource == null)
+			return;
+
 		// Get the cached status
 		Dependency status = dependencies.get(resource.getIdentifier());
 
@@ -344,12 +360,21 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		TreeMap<String, Dependency> dependencies = getDependencies();
 		if (!dependencies.isEmpty()) {
 			out.format("<h2>Dependencies</h2><ul>");
+			out.format("<div>%d unsatisfied dependencie(s)</div>",
+					nbUnsatisfied);
 			for (Entry<String, Dependency> entry : dependencies.entrySet()) {
 				String dependency = entry.getKey();
 				Dependency status = entry.getValue();
-				out.format("<li><a href=\"%s/resource?id=%s\">%s</a>: %s</li>",
+				Resource resource = null;
+				try {
+					resource = scheduler.getResource(entry.getKey());
+				} catch (DatabaseException e) {
+				}
+				out.format(
+						"<li><a href=\"%s/resource?id=%s\">%s</a>: %s [%b]</li>",
 						config.detailURL, XPMServlet.urlEncode(dependency),
-						dependency, status.getType());
+						dependency, status.getType(), resource == null ? false
+								: resource.accept(status.type).isOK());
 			}
 			out.println("</ul>");
 		}

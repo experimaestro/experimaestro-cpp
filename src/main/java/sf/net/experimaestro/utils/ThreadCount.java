@@ -2,7 +2,7 @@ package sf.net.experimaestro.utils;
 
 import org.apache.log4j.Level;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 
 
 /**
@@ -14,6 +14,11 @@ public class ThreadCount {
 	final static Logger logger = Logger.getLogger();
 	volatile int counter;
 
+
+	public final synchronized void add(int i) {
+		counter += i;
+	}
+	
 	public synchronized void add() {
 		counter++;
 	}
@@ -52,4 +57,5 @@ public class ThreadCount {
 				}
 			}
 	}
+
 }

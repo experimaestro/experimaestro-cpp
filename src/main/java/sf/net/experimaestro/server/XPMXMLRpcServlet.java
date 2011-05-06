@@ -14,6 +14,7 @@ import org.apache.xmlrpc.server.PropertyHandlerMapping;
 import org.apache.xmlrpc.server.RequestProcessorFactoryFactory;
 import org.apache.xmlrpc.server.XmlRpcHandlerMapping;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
+import org.mortbay.jetty.Server;
 
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -32,6 +33,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
 public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	private final Repository repository;
 	private final Scheduler taskManager;
+	private Server server;
 	private static final long serialVersionUID = 1L;
 	
 	static public final class Config implements ServletConfig {
@@ -68,10 +70,16 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	
 	
 
-	public XPMXMLRpcServlet(Repository repository,
+	/**
+	 * Initialise the servlet
+	 * @param repository
+	 * @param taskManager
+	 */
+	public XPMXMLRpcServlet(Server server, Repository repository,
 			Scheduler taskManager) {
 		this.repository = repository;
 		this.taskManager = taskManager;
+		this.server = server;
 	}
 	
 
@@ -89,9 +97,9 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 							throws XmlRpcException {
 						try {
 							Object object = pClass.newInstance();
-							if (object instanceof RPCTaskManager) {
-								((RPCTaskManager) object).setTaskServer(
-										taskManager, repository);
+							if (object instanceof RPCServer) {
+								((RPCServer) object).setTaskServer(
+										server, taskManager, repository);
 							}
 							return object;
 						} catch (InstantiationException e) {
@@ -105,7 +113,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 		};
 
 		mapping.setRequestProcessorFactoryFactory(factory);
-		mapping.addHandler("TaskManager", RPCTaskManager.class);
+		mapping.addHandler("Server", RPCServer.class);
 
 		return mapping;
 	}

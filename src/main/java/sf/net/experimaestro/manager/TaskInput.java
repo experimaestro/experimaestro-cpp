@@ -1,6 +1,5 @@
 package sf.net.experimaestro.manager;
 
-import javax.xml.namespace.QName;
 
 import org.w3c.dom.Document;
 

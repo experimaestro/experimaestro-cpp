@@ -1,13 +1,12 @@
 package sf.net.experimaestro.manager.js;
 
-import javax.xml.namespace.QName;
-
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.utils.JSUtils;
 
@@ -50,6 +49,7 @@ public class JSModule extends Module {
 						parent);
 			return module;
 		}
+		
 
 		throw new ExperimaestroException(
 				"Cannot search for module with type %s [%s]",

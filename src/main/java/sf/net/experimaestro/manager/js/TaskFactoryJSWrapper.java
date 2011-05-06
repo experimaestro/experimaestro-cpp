@@ -28,7 +28,6 @@ public class TaskFactoryJSWrapper extends ScriptableObject {
 
 	public void jsConstructor(Scriptable information) {
 		if (information != null) {
-			LOGGER.info(information.toString());
 			this.factory = (TaskFactory) ((NativeJavaObject) information)
 					.unwrap();
 		}

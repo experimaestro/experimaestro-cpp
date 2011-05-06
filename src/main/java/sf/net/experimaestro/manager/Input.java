@@ -3,8 +3,6 @@ package sf.net.experimaestro.manager;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-import javax.xml.namespace.QName;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 

@@ -45,7 +45,7 @@ public class JSDirectTask extends JSAbstractTask {
 
 	@Override
 	public Object jsrun(boolean convertToE4X) {
-		LOGGER.info("[Running] task: %s", factory.getId());
+		LOGGER.debug("[Running] task: %s", factory.getId());
 
 		final Context cx = Context.getCurrentContext();
 
@@ -103,7 +103,7 @@ public class JSDirectTask extends JSAbstractTask {
 				result = JSUtils.domToE4X(document, cx, jsScope);
 		}
 
-		LOGGER.info("[/Running] task: %s", factory.getId());
+		LOGGER.debug("[/Running] task: %s", factory.getId());
 
 		return result;
 	}

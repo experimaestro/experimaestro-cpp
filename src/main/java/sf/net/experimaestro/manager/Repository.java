@@ -2,15 +2,24 @@ package sf.net.experimaestro.manager;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.xml.namespace.QName;
+import java.util.TreeMap;
 
 import sf.net.experimaestro.utils.log.Logger;
+
+import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
+import com.sun.org.apache.xerces.internal.xs.XSConstants;
+import com.sun.org.apache.xerces.internal.xs.XSModel;
+import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
 
 /**
  * Repository for all possible tasks
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ */
+/**
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ *
  */
 public class Repository {
 	final static private Logger LOGGER = Logger.getLogger();
@@ -18,7 +27,7 @@ public class Repository {
 	/**
 	 * The list of available task factories
 	 */
-	private Map<QName, TaskFactory> factories = new HashMap<QName, TaskFactory>();
+	private Map<QName, TaskFactory> factories = new TreeMap<QName, TaskFactory>();
 
 	/**
 	 * The list of of input types
@@ -29,7 +38,12 @@ public class Repository {
 	 * The list of of input types
 	 */
 	Map<QName, Module> modules = new HashMap<QName, Module>();
-
+	
+	/**
+	 * List of XML types
+	 */
+	Map<QName, XSElementDecl> xmlElements = new TreeMap<QName, XSElementDecl>();
+	
 	/**
 	 * @return
 	 */
@@ -100,6 +114,38 @@ public class Repository {
 
 	public Module getMainModule() {
 		return mainModule;
+	}
+
+	
+	/**
+	 * Add a new XML Schema declaration
+	 * 
+	 * @param module
+	 * @param xsModel
+	 */
+	public void addSchema(Module module, XSModel xsModel) {
+		// Add the schema to the module
+		module.addSchema(xsModel);
+		
+		// Add the different elements
+		XSNamedMap components = xsModel
+		.getComponents(XSConstants.ELEMENT_DECLARATION);
+		for (int i = 0; i < components.getLength(); i++) {
+			final XSElementDecl item = (XSElementDecl) components.item(i);
+			QName qName = new QName(item.getNamespace(), item.getName());
+			LOGGER.debug("New XML element [%s]", qName);
+			xmlElements.put(qName, item);
+		}
+	}
+
+	public XSElementDecl getXMLElement(QName type) {
+		return xmlElements.get(type);
+	}
+
+	/**
+	 * Close the repository 
+	 */
+	public void close() {
 	}
 
 }

@@ -78,11 +78,11 @@ public class StatusServlet extends XPMServlet {
 				throw new IOException(e);
 			}
 
-			
-			PrintConfig config = new PrintConfig();
-			config.detailURL = request.getServletPath();
-			resource.printHTML(out, config );
-
+			if (resource != null) {
+				PrintConfig config = new PrintConfig();
+				config.detailURL = request.getServletPath();
+				resource.printHTML(out, config);
+			}
 			out.println("</body></html>");
 			return;
 		}

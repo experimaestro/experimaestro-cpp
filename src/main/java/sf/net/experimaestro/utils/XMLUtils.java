@@ -7,7 +7,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -25,7 +24,7 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**

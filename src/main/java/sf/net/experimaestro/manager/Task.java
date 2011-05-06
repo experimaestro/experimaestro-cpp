@@ -10,8 +10,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import javax.xml.namespace.QName;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 

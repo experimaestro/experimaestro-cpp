@@ -9,13 +9,13 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import org.apache.log4j.Level;
+import org.mortbay.jetty.Server;
 import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrappedException;
 
 import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.CommandLineTask;
@@ -33,13 +33,13 @@ import com.sleepycat.je.DatabaseException;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class RPCTaskManager {
+public class RPCServer {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
 	 * The task manager
 	 */
-	private Scheduler taskManager;
+	private Scheduler scheduler;
 
 	/**
 	 * Repository
@@ -47,14 +47,50 @@ public class RPCTaskManager {
 	Repository repository;
 
 	/**
+	 * Server
+	 */
+	private Server server;
+
+	/**
 	 * Set the task server
 	 * 
-	 * @param taskManager
+	 * @param scheduler
 	 * @param repository
 	 */
-	public void setTaskServer(Scheduler taskManager, Repository repository) {
-		this.taskManager = taskManager;
+	public void setTaskServer(Server server, Scheduler scheduler,
+			Repository repository) {
+		this.server = server;
+		this.scheduler = scheduler;
 		this.repository = repository;
+	}
+
+	/**
+	 * Shutdown the server
+	 */
+	public boolean shutdown() {
+		// Shutdown jetty
+		server.setGracefulShutdown(1000);
+		boolean stopped = false;
+		try {
+			server.stop();
+			stopped = true;
+		} catch (Exception e) {
+			LOGGER.error(e, "Could not stop properly jetty");
+		}
+
+		// Close the repository
+		repository.close();
+
+		// Close the scheduler
+		scheduler.close();
+
+		
+		// If not OK, do force
+		if (!stopped)
+			System.exit(1);
+		
+		// Everything's OK
+		return true;
 	}
 
 	/**
@@ -71,7 +107,7 @@ public class RPCTaskManager {
 	public boolean addData(String id, String mode, boolean exists)
 			throws DatabaseException {
 		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
-		taskManager.add(new SimpleData(taskManager, id, LockMode.valueOf(mode),
+		scheduler.add(new SimpleData(scheduler, id, LockMode.valueOf(mode),
 				exists));
 		return true;
 	}
@@ -150,9 +186,8 @@ public class RPCTaskManager {
 			ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
 					environment), 0);
 			jsXPM = new XPMObject(jsContext, environment, scope, repository,
-					taskManager);
+					scheduler);
 			XPMObject.getLog().clear();
-
 
 			final Object result;
 			if (isFile)
@@ -224,12 +259,12 @@ public class RPCTaskManager {
 		for (int i = command.length; --i >= 0;)
 			commandArgs[i] = command[i].toString();
 
-		CommandLineTask job = new CommandLineTask(taskManager, name,
-				commandArgs, env, new File(workingDirectory));
+		CommandLineTask job = new CommandLineTask(scheduler, name, commandArgs,
+				env, new File(workingDirectory));
 
 		// Process locks
 		for (Object depend : depends) {
-			Resource resource = taskManager.getResource((String) depend);
+			Resource resource = scheduler.getResource((String) depend);
 			if (resource == null)
 				throw new RuntimeException("Resource " + depend
 						+ " was not found");
@@ -238,7 +273,7 @@ public class RPCTaskManager {
 
 		// We have to wait for read lock resources to be generated
 		for (Object readLock : readLocks) {
-			Resource resource = taskManager.getResource((String) readLock);
+			Resource resource = scheduler.getResource((String) readLock);
 			if (resource == null)
 				throw new RuntimeException("Resource " + readLock
 						+ " was not found");
@@ -248,16 +283,16 @@ public class RPCTaskManager {
 		// Write locks
 		for (Object writeLock : writeLocks) {
 			final String id = (String) writeLock;
-			Resource resource = taskManager.getResource(id);
+			Resource resource = scheduler.getResource(id);
 			if (resource == null) {
-				resource = new SimpleData(taskManager, id,
+				resource = new SimpleData(scheduler, id,
 						LockMode.EXCLUSIVE_WRITER, false);
 				resource.register(job);
 			}
 			job.addDependency(resource, LockType.WRITE_ACCESS);
 		}
 
-		taskManager.add(job);
+		scheduler.add(job);
 		return true;
 	}
 

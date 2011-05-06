@@ -46,15 +46,15 @@ public class CommandLineTask extends Job {
 	/**
 	 * Constructs the command line
 	 * 
-	 * @param taskManager
+	 * @param scheduler
 	 * @param identifier
 	 * @param command
 	 * @throws FileNotFoundException
 	 */
-	public CommandLineTask(Scheduler taskManager, String identifier,
+	public CommandLineTask(Scheduler scheduler, String identifier,
 			String[] commandArgs, Map<String, String> env, File workingDirectory) {
 
-		super(taskManager, identifier);
+		super(scheduler, identifier);
 
 		LOGGER.info("Command is %s", Arrays.toString(commandArgs));
 
@@ -95,9 +95,9 @@ public class CommandLineTask extends Job {
 
 	}
 
-	public CommandLineTask(Scheduler taskManager, String identifier,
+	public CommandLineTask(Scheduler scheduler, String identifier,
 			String[] command) {
-		this(taskManager, identifier, command, null, null);
+		this(scheduler, identifier, command, null, null);
 	}
 
 	@Override

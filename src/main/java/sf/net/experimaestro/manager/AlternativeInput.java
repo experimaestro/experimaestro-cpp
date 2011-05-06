@@ -1,9 +1,6 @@
 package sf.net.experimaestro.manager;
 
 
-import javax.xml.namespace.QName;
-
-
 import sf.net.experimaestro.utils.log.Logger;
 
 public class AlternativeInput extends Input {

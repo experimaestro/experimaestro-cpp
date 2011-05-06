@@ -2,16 +2,16 @@ package sf.net.experimaestro.manager;
 
 import java.util.ArrayList;
 
-import javax.xml.namespace.QName;
-
 import org.w3c.dom.Document;
+
+import com.sun.org.apache.xerces.internal.xs.XSModel;
 
 /**
  * A module groups tasks
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Module {
+public class Module implements Comparable<Module> {
 	/**
 	 * Module unique identifier
 	 */
@@ -42,6 +42,11 @@ public class Module {
 	 */
 	ArrayList<TaskFactory> factories = new ArrayList<TaskFactory>();
 
+	/**
+	 * List of XML Schemas
+	 */
+	ArrayList<XSModel> xsModels = new ArrayList<XSModel>();
+	
 	public Module() {
 	}
 	
@@ -80,5 +85,14 @@ public class Module {
 
 	public void remove(TaskFactory oldFactory) {
 		factories.remove(oldFactory);
+	}
+
+	@Override
+	public int compareTo(Module other) {
+		return id.compareTo(other.id);
+	}
+
+	public void addSchema(XSModel xsModel) {
+		xsModels.add(xsModel);
 	}
 }

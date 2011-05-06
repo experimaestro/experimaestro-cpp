@@ -10,7 +10,14 @@ import com.sleepycat.persist.model.Persistent;
  */
 @Persistent
 public class Dependency {
+	/**
+	 * Type of lock that we request on the dependency 
+	 */
 	LockType type = null;
+	
+	/**
+	 * Was this dependency satisfied when we last checked?
+	 */
 	boolean isSatisfied = false;
 
 	protected Dependency() {

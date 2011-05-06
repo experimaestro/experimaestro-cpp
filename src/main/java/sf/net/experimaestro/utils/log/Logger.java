@@ -53,6 +53,15 @@ public final class Logger extends org.apache.log4j.Logger {
 			forcedLog(FQCN, Level.WARN, String.format(format, values), null);
 	}
 
+	public void error(Throwable t, String format, Object... values) {
+		if (repository.isDisabled(Level.ERROR_INT))
+			return;
+
+		if (isEnabledFor(Level.ERROR))
+			forcedLog(FQCN, Level.ERROR, String.format(format, values), t);
+	}
+	
+	
 	public void error(String format, Object... values) {
 		if (repository.isDisabled(Level.ERROR_INT))
 			return;

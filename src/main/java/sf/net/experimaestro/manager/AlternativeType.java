@@ -3,8 +3,6 @@ package sf.net.experimaestro.manager;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.xml.namespace.QName;
-
 public class AlternativeType extends Type {
 	private static final long serialVersionUID = 1L;
 

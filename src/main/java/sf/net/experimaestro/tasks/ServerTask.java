@@ -46,6 +46,7 @@ public class ServerTask extends AbstractTask {
 	@Argument(name = "nb-threads", help = "Number of threads")
 	int nbThreads = 10;
 
+	private Server server;
 
 	/**
 	 * Server thread
@@ -62,9 +63,7 @@ public class ServerTask extends AbstractTask {
 
 		final Repository repository = new Repository();
 
-		// Set up the server
-		Server server = new Server(port);
-
+		server = new Server(port);
 
 		Context context = new Context(server, "/");
 
@@ -95,8 +94,8 @@ public class ServerTask extends AbstractTask {
 
 		// --- Add the XML RPC servlet
 
-		final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(repository,
-				taskManager);
+		final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(server,
+				repository, taskManager);
 		xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
 		final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);
@@ -107,13 +106,11 @@ public class ServerTask extends AbstractTask {
 		context.addServlet(new ServletHolder(new StatusServlet(taskManager)),
 				"/status/*");
 
-		
 		// --- Add the status servlet
 
-		context.addServlet(new ServletHolder(new TasksServlet(repository, taskManager)),
-				"/tasks/*");
+		context.addServlet(new ServletHolder(new TasksServlet(repository,
+				taskManager)), "/tasks/*");
 
-		
 		// --- Add the default servlet
 
 		context.addServlet(new ServletHolder(new ContentServlet()), "/*");
@@ -127,11 +124,11 @@ public class ServerTask extends AbstractTask {
 
 		server.start();
 		server.join();
-
 		return 0;
 	}
 
-	
-
+	void stop() throws Exception {
+		server.stop();
+	}
 
 }

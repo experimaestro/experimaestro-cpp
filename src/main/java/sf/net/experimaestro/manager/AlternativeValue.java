@@ -2,8 +2,6 @@ package sf.net.experimaestro.manager;
 
 import java.util.Map;
 
-import javax.xml.namespace.QName;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 

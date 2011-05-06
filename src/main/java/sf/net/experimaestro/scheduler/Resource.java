@@ -7,10 +7,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
@@ -23,6 +23,8 @@ import bpiwowar.argparser.utils.ReadLineIterator;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
+import com.sleepycat.persist.model.Relationship;
+import com.sleepycat.persist.model.SecondaryKey;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -46,6 +48,12 @@ public abstract class Resource implements Comparable<Resource> {
 	String identifier;
 
 	/**
+	 * Groups this resource belongs to
+	 */
+	@SecondaryKey(name = "groups", relate = Relationship.MANY_TO_MANY)
+	Set<String> groups = new TreeSet<String>();
+
+	/**
 	 * True when the resource has been generated
 	 */
 	protected ResourceState state;
@@ -64,12 +72,13 @@ public abstract class Resource implements Comparable<Resource> {
 	 * Our set of listeners (resources that are listening to changes in the
 	 * state of this resource)
 	 */
-	transient Set<Job> listeners = new HashSet<Job>();
+	@SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY)
+	Set<String> listeners = new TreeSet<String>();
 
 	/**
 	 * If the resource is currently locked
 	 */
-	transient boolean locked;
+	boolean locked;
 
 	protected Resource() {
 	}
@@ -91,8 +100,9 @@ public abstract class Resource implements Comparable<Resource> {
 	/**
 	 * Register a task that waits for our output
 	 */
-	synchronized public void register(Job task) {
-		listeners.add(task);
+	synchronized public void register(Job job) {
+		// Copy the string to avoid holding the objects to notify in memory
+		listeners.add(new String(job.getIdentifier()));
 	}
 
 	/**
@@ -105,10 +115,13 @@ public abstract class Resource implements Comparable<Resource> {
 	/**
 	 * Called when we have generated the resources (either by running it or
 	 * producing it)
+	 * @throws DatabaseException 
 	 */
-	void notifyListeners(Object... objects) {
-		for (Job task : listeners)
-			task.notify(this, objects);
+	void notifyListeners(Object... objects) throws DatabaseException {
+		for (String id : listeners) {
+			Job resource = (Job) scheduler.getResource(id);
+			resource.notify(this, objects);
+		}
 	}
 
 	/**
@@ -184,7 +197,7 @@ public abstract class Resource implements Comparable<Resource> {
 	 *         {@link DependencyStatus#ERROR} if it cannot be satisfied
 	 */
 	DependencyStatus accept(LockType locktype) {
-		LOGGER.info("Checking lock %s for resource %s (generated %b)",
+		LOGGER.debug("Checking lock %s for resource %s (generated %b)",
 				locktype, this, getState());
 
 		// Handle simple cases
@@ -519,7 +532,7 @@ public abstract class Resource implements Comparable<Resource> {
 	/**
 	 * Returns the list of listeners
 	 */
-	public Set<Job> getListeners() {
+	public Set<String> getListeners() {
 		return listeners;
 	}
 

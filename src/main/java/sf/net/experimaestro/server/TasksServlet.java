@@ -8,10 +8,13 @@ import java.util.Map.Entry;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.namespace.QName;
+
+import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
+import com.sun.org.apache.xerces.internal.xs.XSComplexTypeDefinition;
 
 import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Module;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -60,6 +63,31 @@ public class TasksServlet extends XPMServlet {
 			return;
 		}
 
+		if (localPath.equals("/type")) {
+			final PrintWriter out = startHTMLResponse(response);
+
+			String name = request.getParameter("name");
+			String ns = request.getParameter("ns");
+			out.format(
+					"<html><head><title>Experimaestro - Type browser (type {%s}%s)</title></head><body>",
+					ns, name);
+			out.format("<h1> Type %s (%s)</h1>", name, ns);
+
+			XSElementDecl xmlElement = repository.getXMLElement(new QName(ns, name));
+			if (xmlElement != null) {
+				out.println(xmlElement.getTypeDefinition());
+				XSComplexTypeDefinition definition = xmlElement.getEnclosingCTDefinition();
+				if (definition != null) {
+					out.println(definition.toString());
+				}
+			} else {
+				out.println("<div style='text-color: red'>Unknown type</div>");
+			}
+			out.println("</body></html>");
+
+			return;
+		}
+		
 		if (localPath.equals("/show")) {
 			final PrintWriter out = startHTMLResponse(response);
 
@@ -77,7 +105,7 @@ public class TasksServlet extends XPMServlet {
 				out.format("<div><b>Version:</b> %s</div>%n",
 						factory.getVersion());
 				out.println("<h2>Input</h2>");
-				printParameters(out, factory);
+				printParameters(request, out, factory);
 
 				out.println("<h2>Output</h2>");
 				out.println("<h2>Documentation</h2>");
@@ -111,8 +139,7 @@ public class TasksServlet extends XPMServlet {
 		for (Module module : modules) {
 			if (module.getParent() != null) {
 				QName id = module.getId();
-				out.format(
-						"<li><a href=\"%s?ns=%s&amp;name=%s\">%s</a></li>",
+				out.format("<li><a href=\"%s?ns=%s&amp;name=%s\">%s</a></li>",
 						request.getServletPath(),
 						urlEncode(id.getNamespaceURI()), id.getLocalPart(), id);
 			}
@@ -120,15 +147,32 @@ public class TasksServlet extends XPMServlet {
 		out.println("</ul>");
 	}
 
-	private void printParameters(final PrintWriter out, TaskFactory factory) {
+	/**
+	 * Print the input of a TaskFactory
+	 * 
+	 * @param out
+	 * @param factory
+	 */
+	private void printParameters(HttpServletRequest request,
+			final PrintWriter out, TaskFactory factory) {
 		out.println("<dl>");
 
 		for (Entry<String, Input> entry : factory.getInputs().entrySet()) {
 			Input input = entry.getValue();
-			out.format("<dt class='%s'>%s (%s)</dt><dd>",
-					input.isOptional() ? "optional" : "required", input
-							.getType().getLocalPart(), input.getType()
-							.getNamespaceURI());
+			final QName type = input.getType();
+			XSElementDecl declaration = repository.getXMLElement(type);
+			if (declaration == null)
+				out.format("<dt class='%s'>%s (%s)</dt><dd>",
+						input.isOptional() ? "optional" : "required",
+						type.getLocalPart(), type.getNamespaceURI());
+			else
+				out.format(
+						"<dt class='%s'><a href=\"%s/type?ns=%s&amp;name=%s\">%s (%s)</a></dt><dd>",
+						input.isOptional() ? "optional" : "required",
+						request.getServletPath(),
+						urlEncode(type.getNamespaceURI()), type.getLocalPart(),
+						type.getLocalPart(), type.getNamespaceURI());
+
 			input.printHTML(out);
 			out.println("</dd>");
 		}

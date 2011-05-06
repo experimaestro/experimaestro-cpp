@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.namespace.QName;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
@@ -35,20 +34,18 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.NSContext;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
-import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.LockMode;
-import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.utils.JSUtils;
@@ -57,6 +54,8 @@ import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
+import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
+import com.sun.org.apache.xerces.internal.xs.XSModel;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -93,7 +92,7 @@ public class XPMObject {
 	 */
 	private Context context;
 
-	private final Scheduler manager;
+	private final Scheduler scheduler;
 
 	private final Map<String, String> environment;
 
@@ -104,28 +103,40 @@ public class XPMObject {
 	};
 
 	public XPMObject(Context cx, Map<String, String> environment,
-			Scriptable scope, Repository repository, Scheduler manager)
+			Scriptable scope, Repository repository, Scheduler scheduler)
 			throws IllegalAccessException, InstantiationException,
 			InvocationTargetException, SecurityException, NoSuchMethodException {
 		this.context = cx;
 		this.environment = environment;
 		this.scope = scope;
 		this.repository = repository;
-		this.manager = manager;
+		this.scheduler = scheduler;
 
+		// Define the new classes
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
+		ScriptableObject.defineClass(scope, JSScheduler.class);
 
+		// Add functions
 		addFunction(scope, "qname",
 				new Class<?>[] { Object.class, String.class });
 		addFunction(scope, "include", new Class<?>[] { String.class });
 
+		// Add this object
 		ScriptableObject.defineProperty(scope, "xpm", this, 0);
-		ScriptableObject.defineProperty(
-				scope,
-				"xp",
-				cx.newObject(scope, "Namespace", new Object[] { "xp",
-						Manager.EXPERIMAESTRO_NS }), 0);
+
+		// Add new objects
+		addNewObject(cx, scope, "xp", "Namespace", new Object[] { "xp",
+				Manager.EXPERIMAESTRO_NS });
+		addNewObject(cx, scope, "scheduler", "Scheduler",
+				new Object[] { scheduler });
+	}
+
+	static private void addNewObject(Context cx, Scriptable scope,
+			final String objectName, final String className,
+			final Object[] params) {
+		ScriptableObject.defineProperty(scope, objectName,
+				cx.newObject(scope, className, params), 0);
 	}
 
 	/**
@@ -192,16 +203,7 @@ public class XPMObject {
 	 */
 	public void js_include(String path) throws FileNotFoundException,
 			IOException {
-		File file = new File(path);
-		String scriptPath = null;
-		if (!file.isAbsolute()) {
-			scriptPath = environment.get(ENV_SCRIPTPATH);
-			if (scriptPath == null)
-				throw new ExperimaestroException(
-						"Cannot include file [%s] since the including file is not defined",
-						path);
-			file = new File(new File(path).getParentFile(), path);
-		}
+		File file = getAbsoluteFile(path);
 
 		LOGGER.debug("Including file [%s]", file);
 		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
@@ -210,8 +212,28 @@ public class XPMObject {
 		Context.getCurrentContext().evaluateReader(scope, new FileReader(file),
 				file.getAbsolutePath(), 1, null);
 
-		if (scriptPath != null)
-			environment.put(ENV_SCRIPTPATH, scriptPath);
+		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
+	}
+
+	/**
+	 * Get an absolute path from a possibly relative path
+	 * 
+	 * @param path
+	 *            The relative or absolute path
+	 * @return An absolute path
+	 */
+	private File getAbsoluteFile(String path) {
+		File file = new File(path);
+		String scriptPath = null;
+		if (!file.isAbsolute()) {
+			scriptPath = environment.get(ENV_SCRIPTPATH);
+			if (scriptPath == null)
+				throw new ExperimaestroException(
+						"Cannot include file [%s] since the including file is not defined",
+						path);
+			file = new File(new File(scriptPath).getParentFile(), path);
+		}
+		return file;
 	}
 
 	public static Object get(Scriptable scope, final String name) {
@@ -283,52 +305,7 @@ public class XPMObject {
 
 	}
 
-	/**
-	 * Run a command line experiment
-	 * 
-	 * @param jsargs
-	 *            a native array
-	 * @param a
-	 *            E4X object
-	 * @return
-	 * @throws DatabaseException
-	 */
-	public void addCommandLineJob(String identifier, Object jsargs,
-			Object jsresources) throws DatabaseException {
-		// --- Process arguments: convert the javascript array into a Java array
-		// of String
-		LOGGER.debug("Adding command line job");
-		final String[] args;
-		if (jsargs instanceof NativeArray) {
-			NativeArray array = ((NativeArray) jsargs);
-			List<String> list = new ArrayList<String>();
-			flattenArray(array, list);
-			args = new String[list.size()];
-			list.toArray(args);
-		} else
-			throw new RuntimeException(format(
-					"Cannot handle an array of type %s", jsargs.getClass()));
-
-		CommandLineTask task = new CommandLineTask(manager, identifier, args);
-
-		// --- Resources
-		NativeArray resources = ((NativeArray) jsresources);
-		for (int i = (int) resources.getLength(); --i >= 0;) {
-			NativeArray array = (NativeArray) resources.get(i, resources);
-			assert array.getLength() == 2;
-			Resource resource = manager.getResource(toString(array
-					.get(0, array)));
-			LockType lockType = LockType.valueOf(toString(array.get(1, array)));
-			LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource,
-					lockType);
-			task.addDependency(resource, lockType);
-		}
-
-		// --- Add it
-		manager.add(task);
-	}
-
-	static private String toString(Object object) {
+	static String toString(Object object) {
 		if (object instanceof NativeJavaObject)
 			return ((NativeJavaObject) object).unwrap().toString();
 		return object.toString();
@@ -336,8 +313,8 @@ public class XPMObject {
 
 	public String addData(String identifier) throws DatabaseException {
 		LockMode mode = LockMode.SINGLE_WRITER;
-		SimpleData resource = new SimpleData(manager, identifier, mode, false);
-		manager.add(resource);
+		SimpleData resource = new SimpleData(scheduler, identifier, mode, false);
+		scheduler.add(resource);
 		return identifier;
 	}
 
@@ -427,7 +404,7 @@ public class XPMObject {
 	public static void resetLog() {
 		log.set(new ArrayList<String>());
 	}
-	
+
 	public File filepath(String filepath, String... names) {
 		File file = new File(filepath);
 		for (String name : names)
@@ -504,9 +481,27 @@ public class XPMObject {
 		xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
 
 		XPathExpression expression = xpath.compile(path);
-		String list = (String) expression
-				.evaluate(dom instanceof Document ? ((Document)dom).getDocumentElement() : dom, XPathConstants.STRING);
+		String list = (String) expression.evaluate(
+				dom instanceof Document ? ((Document) dom).getDocumentElement()
+						: dom, XPathConstants.STRING);
 		return list;
+	}
+
+	/**
+	 * Add an XML Schema declaration
+	 * 
+	 * @param module
+	 * @param path
+	 */
+	public void addSchema(Object module, String path) {
+		LOGGER.info("Loading XSD file [%s], with script path [%s]", path,
+				getScriptPath());
+		File file = getAbsoluteFile(path);
+		XSLoaderImpl xsLoader = new XSLoaderImpl();
+		XSModel xsModel = xsLoader.loadURI(file.toURI().toString());
+
+		// Add to the repository
+		repository.addSchema(JSModule.getModule(repository, module), xsModel);
 	}
 
 }

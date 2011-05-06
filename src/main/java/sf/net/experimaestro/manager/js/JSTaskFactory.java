@@ -5,7 +5,6 @@ import static java.lang.String.format;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.xml.namespace.QName;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -23,6 +22,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
