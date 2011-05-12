@@ -4,19 +4,25 @@ import static java.lang.String.format;
 
 import java.lang.reflect.Constructor;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-import javax.xml.xpath.XPathFunctionResolver;
+import javax.xml.xquery.XQConnection;
+import javax.xml.xquery.XQConstants;
+import javax.xml.xquery.XQException;
+import javax.xml.xquery.XQExpression;
+import javax.xml.xquery.XQItem;
+import javax.xml.xquery.XQItemType;
+import javax.xml.xquery.XQSequence;
+import javax.xml.xquery.XQStaticContext;
+
+import net.sf.saxon.xqj.SaxonXQDataSource;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Input.Connection;
+import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -93,71 +99,105 @@ public abstract class Value {
 		LOGGER.debug("Before processing connections, document is [%s]",
 				XMLUtils.toStringObject(document));
 		for (Connection connection : input.connections) {
+
+			// Construct the from expression
 			String expr = connection.path;
-			String exprFrom = null;
-			for (int i = connection.from.size(); --i >= 0;) {
-				String step = format("xp:outputs[@xp:name='%s']",
-						connection.from.get(i));
-				if (exprFrom == null)
-					exprFrom = step;
-				else
-					exprFrom = step + "/" + exprFrom;
-			}
+			
 			try {
-				LOGGER.debug("Processing connection [%s, %s, %s]", exprFrom, expr,
-						connection.to);
-
-				XPath xpath = XPathFactory.newInstance().newXPath();
-				xpath.setNamespaceContext(connection.getContext());
-				XPathFunctionResolver old = xpath.getXPathFunctionResolver();
-				xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
-
+				SaxonXQDataSource xqjd = new SaxonXQDataSource();
+				xqjd.registerExtensionFunction(new ParentPath());
+				XQConnection xqjc = xqjd.getConnection();
+				XQStaticContext xqsc = xqjc.getStaticContext();
 				Node item = document.getDocumentElement();
-				if (exprFrom != null) {
-					XPathExpression expressionFrom = xpath.compile(exprFrom);
-					NodeList list = (NodeList) expressionFrom.evaluate(item,
-							XPathConstants.NODESET);
-					if (list.getLength() > 1)
-						throw new ExperimaestroException(
-								"Too much answers (%d) for XPath [%s]",
-								list.getLength(), exprFrom);
-					if (list.getLength() == 0) {
-						LOGGER.warn("No answer for XPath [%s]", exprFrom);
-						continue;
+				connection.setNamespaces(xqsc);
+		
+
+				// --- If we need to dig into the output
+				if (connection.from.size() > 0) {
+					String exprFrom = null;
+					for (int i = connection.from.size(); --i >= 0;) {
+						String step = format("xp:outputs[@xp:name='%s']",
+								connection.from.get(i));
+						if (exprFrom == null)
+							exprFrom = step;
+						else
+							exprFrom = step + "/" + exprFrom;
 					}
-					item = list.item(0);
+					LOGGER.debug("Processing connection [%s, %s, %s]", exprFrom,
+							expr, connection.to);
+
+					XQItem xqItem = evaluateSingletonExpression(xqjc, document,
+							exprFrom);
+					LOGGER.info("Item type is %s", xqItem.getItemType()
+							.toString());
+					item = xqItem.getNode();
+					xqjc.close();
+
 				}
 
-				XPathExpression expression = xpath.compile(expr);
-				NodeList list = (NodeList) expression.evaluate(item,
-						XPathConstants.NODESET);
-
-				if (list.getLength() > 1)
-					throw new ExperimaestroException(
-							"Too much answers (%d) for XPath [%s]",
-							list.getLength(), expr);
-				if (list.getLength() != 1) {
-					LOGGER.warn("No answer for XPath [%s]", expr);
+				// --- Now get the value
+				XQExpression xqje = xqjc.createExpression();
+				xqje.bindNode(XQConstants.CONTEXT_ITEM, item, null);
+				XQItem xqItem = evaluateSingletonExpression(xqjc, item, expr);
+				if (xqItem == null)
 					continue;
+				
+				switch (xqItem.getItemType().getItemKind()) {
+				case XQItemType.XQITEMKIND_ATOMIC:
+					item = Task.wrapValue(xqItem.getAtomicValue());
+					break;
+				case XQItemType.XQITEMKIND_ELEMENT:
+					item = xqItem.getNode();
+					break;
+				default:
+					throw new ExperimaestroException(
+							"Cannot handle XQuery type [%s]", item);
 				}
-				item = list.item(0);
 
+				// --- Now connects
+				
 				LOGGER.debug("Answer is [%s of type %d]",
 						XMLUtils.toStringObject(item), item.getNodeType());
 				Document newDoc = XMLUtils.newDocument();
-				item = item.cloneNode(true);
 				if (item instanceof Document)
 					item = ((Document) item).getDocumentElement();
 				newDoc.adoptNode(item);
 				newDoc.appendChild(item);
 				task.setParameter(connection.to, newDoc);
 
-			} catch (XPathExpressionException e) {
+			} catch (XQException e) {
 				throw new ExperimaestroException(e,
-						"Cannot evaluate XPath [%s]", expr);
+						"Cannot evaluate XPath [%s] when connecting to [%s]",
+						expr, connection.to);
 			}
 
 		}
+	}
+
+	/**
+	 * Evaluate an XQuery expression that should return a single item
+	 * 
+	 * @param xqjc
+	 * @throws XQException
+	 */
+	static XQItem evaluateSingletonExpression(XQConnection xqjc,
+			Node contextItem, String query) throws XQException {
+		XQExpression xqje = xqjc.createExpression();
+		xqje.bindNode(XQConstants.CONTEXT_ITEM, contextItem, null);
+
+		XQSequence result = xqje.executeQuery(query);
+
+		if (!result.next()) {
+			LOGGER.warn("No answer for XQuery [%s]", query);
+			return null;
+		}
+
+		XQItem xqItem = result.getItem();
+		if (result.next())
+			throw new ExperimaestroException(
+					"Too many answers (%d) for XPath [%s]", query);
+
+		return xqItem;
 	}
 
 	final public Value copy() {

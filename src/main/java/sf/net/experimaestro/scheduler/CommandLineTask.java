@@ -75,26 +75,19 @@ public class CommandLineTask extends Job {
 						" ", ListAdaptator.create(commandArgs),
 						new Output.Formatter<String>() {
 							public String format(String t) {
-								if (t.equals(""))
-									return "\"\"";
-								
-								StringBuilder sb = new StringBuilder();
-								for (int i = 0; i < t.length(); i++) {
-									final char c = t.charAt(i);
-									switch (c) {
-									case ' ':
-										sb.append("\\ ");
-										break;
-									default:
-										sb.append(c);
-									}
-								}
-								return sb.toString();
+								return bashQuotes(t);
 							}
 						}), identifier, identifier) };
 
 	}
 
+	/**
+	 * New command line task
+	 * 
+	 * @param scheduler
+	 * @param identifier
+	 * @param command
+	 */
 	public CommandLineTask(Scheduler scheduler, String identifier,
 			String[] command) {
 		this(scheduler, identifier, command, null, null);
@@ -131,10 +124,18 @@ public class CommandLineTask extends Job {
 
 			synchronized (p) {
 				LOGGER.info("Waiting for the process (PID %d) to end", pid);
-				int code = p.waitFor();
+				int code = -1;
+				try {
+					code = p.waitFor();
+				} catch(InterruptedException e) {
+					LOGGER.warn("Task has been interrupted");
+				}
+				
 				if (code != 0)
 					throw new RuntimeException(
 							"Process ended with errors (code " + code + ")");
+
+				// Everything went well
 				LOGGER.info("Process (PID %d) ended without error", pid);
 				return code;
 			}
@@ -146,12 +147,36 @@ public class CommandLineTask extends Job {
 			}
 		}
 	}
-	
+
 	@Override
 	public void printHTML(PrintWriter out, PrintConfig config) {
 		super.printHTML(out, config);
 		out.format("<div><b>Command</b>: %s</div>", command[2]);
 		out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
 		out.format("<div><b>Environment</b>: %s</div>", Arrays.toString(envp));
+	}
+
+	/**
+	 * Process one argument, adding quotes if necessary to protect special
+	 * characters
+	 * 
+	 * @param string
+	 * @return
+	 */
+	static public String bashQuotes(String string) {
+		if (string.equals(""))
+			return "\"\"";
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < string.length(); i++) {
+			final char c = string.charAt(i);
+			switch (c) {
+			case ' ':
+				sb.append("\\ ");
+				break;
+			default:
+				sb.append(c);
+			}
+		}
+		return sb.toString();
 	}
 }

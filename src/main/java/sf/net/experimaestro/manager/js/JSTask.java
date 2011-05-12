@@ -2,6 +2,8 @@ package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
+import javax.xml.xquery.XQDataSource;
+
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
@@ -62,7 +64,6 @@ public class JSTask extends JSAbstractTask {
 		Scriptable jsInputs = Context.getCurrentContext().newObject(jsScope,
 				"Object", new Object[] {});
 		jsObject.put("inputs", jsObject, jsInputs);
-
 	}
 
 	public Scriptable jsrun(boolean convertToE4X) {

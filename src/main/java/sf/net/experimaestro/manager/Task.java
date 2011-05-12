@@ -115,7 +115,12 @@ public abstract class Task {
 		for (String key : list) {
 			Value value = values.get(key);
 			value.process();
-			value.processConnections(this);
+			try {
+				value.processConnections(this);
+			} catch(ExperimaestroException e) {
+				e.addContext("While connecting from [%s] in task [%s]", key, factory.id);
+				throw e;
+			}
 		}
 
 		// Do the real-run

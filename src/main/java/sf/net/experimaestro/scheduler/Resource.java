@@ -72,7 +72,7 @@ public abstract class Resource implements Comparable<Resource> {
 	 * Our set of listeners (resources that are listening to changes in the
 	 * state of this resource)
 	 */
-	@SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY)
+	@SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY, relatedEntity = Resource.class)
 	Set<String> listeners = new TreeSet<String>();
 
 	/**

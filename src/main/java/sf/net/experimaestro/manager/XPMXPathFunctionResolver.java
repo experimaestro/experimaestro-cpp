@@ -51,7 +51,7 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 		@Override
 		public Object evaluate(@SuppressWarnings("rawtypes") List args)
 				throws XPathFunctionException {
-			return new File(argToString(args.get(0))).getParentFile();
+			return new File(argToString(args.get(0))).getParentFile().toString();
 		}
 	};
 
@@ -102,7 +102,7 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 		}
 
 		throw new XPathFunctionException(format(
-				"Could not convert argument type",
+				"Could not convert argument type [%s]",
 				arg == null ? "null" : arg.getClass()));
 	}
 }

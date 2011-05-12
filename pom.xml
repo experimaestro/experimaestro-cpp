@@ -15,22 +15,7 @@
 	</properties>
 
 
-	<pluginRepositories>
-		<pluginRepository>
-			<id>com.anasoft.os.repository.releases</id>
-			<name>ANASOFT OpenSource releases</name>
-			<url>http://anasoft-os-repo.googlecode.com/svn/repository/releases</url>
-		</pluginRepository>
-	</pluginRepositories>
-
 	<repositories>
-		<repository>
-			<id>com.anasoft.os.repository.releases</id>
-			<name>ANASOFT OpenSource releases</name>
-			<url>http://anasoft-os-repo.googlecode.com/svn/repository/releases</url>
-		</repository>
-		
-		<!--  ArgJ -->
 		<repository>
 			<id>bpiwowar-dcs</id>
 			<name>Benjamin's repository in DCS</name>
@@ -40,10 +25,7 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
-
 	</repositories>
-
-
 
 	<build>
 		<plugins>
@@ -83,11 +65,12 @@
 			</plugin>
 
 
-			<!-- site tools from http://code.google.com/p/m2-site-tools -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-site-plugin</artifactId>
+				<version>3.0-beta-3</version>
 				<dependencies>
+					<!-- site tools from http://code.google.com/p/m2-site-tools -->
 					<dependency>
 						<groupId>com.anasoft.os</groupId>
 						<artifactId>m2st-doxia-macros</artifactId>
@@ -95,7 +78,6 @@
 					</dependency>
 				</dependencies>
 			</plugin>
-
 
 			<!-- Jar manager -->
 			<plugin>
@@ -245,7 +227,8 @@
 			<email>benjamin.piwowarski@gmail.com</email>
 			<url>http://www.bpiwowar.net/</url>
 			<roles>
-				<role>Developer</role>
+				<role>architect</role>
+				<role>developer</role>
 			</roles>
 			<timezone>0</timezone>
 			<properties>

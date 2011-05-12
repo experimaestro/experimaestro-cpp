@@ -1,6 +1,7 @@
 package sf.net.experimaestro.scheduler;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -92,22 +93,22 @@ public class Scheduler {
 	/**
 	 * This task runner takes a new task each time
 	 */
-	class TaskRunner extends Thread {
+	class JobRunner extends Thread {
 		@Override
 		public void run() {
-			Job task;
+			Job job;
 			try {
-				while ((task = getNextWaitingJob()) != null) {
-					LOGGER.info("Starting %s", task);
+				while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
+					LOGGER.info("Starting %s", job);
 					try {
-						task.run();
-						LOGGER.info("Finished %s", task);
+						job.run();
+						LOGGER.info("Finished %s", job);
 					} catch (Throwable t) {
 						LOGGER.warn("Houston, we got a problem: %s", t);
 					}
 				}
 			} catch (InterruptedException e) {
-				LOGGER.warn("We were interrupted %s", e);
+				LOGGER.warn("Shutting down job runner", e);
 			}
 
 			counter.del();
@@ -193,7 +194,6 @@ public class Scheduler {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			@Override
 			public void run() {
-				LOGGER.info("Stopping the scheduler");
 				Scheduler.this.close();
 			}
 		}));
@@ -205,17 +205,42 @@ public class Scheduler {
 		LOGGER.info("Starting %d threads", nbThreads);
 		for (int i = 0; i < nbThreads; i++) {
 			counter.add();
-			new TaskRunner().start();
+			final JobRunner runner = new JobRunner();
+			threads.add(runner);
+			runner.start();
 		}
 
-		// Add a timer thread for checking resources (every ten seconds)
-		Timer timer = new Timer("check-rsrc");
-		timer.schedule(new ResourceChecker(), 10000, 10000);
-
+		resourceCheckTimer = new Timer("check-rsrc");
+		resourceCheckTimer.schedule(new ResourceChecker(), 10000, 10000);
 		LOGGER.info("Done - ready to work now");
 	}
 
+	boolean stopping = false;
+	protected boolean isStopping() {
+		return stopping;
+	}
+
+	// List of threads we started
+	ArrayList<Thread> threads = new ArrayList<Thread>();
+
+	private Timer resourceCheckTimer;
+	
+	/**
+	 * Shutdown the scheduler
+	 */
 	public void close() {
+		// Stop the checker
+		if (resourceCheckTimer != null) {
+			resourceCheckTimer.cancel();	
+			resourceCheckTimer = null;
+		}
+		
+		// Stop the threads
+		for(Thread thread: threads) {
+			thread.interrupt();
+		}
+		threads.clear();
+		
 		if (dbStore != null) {
 			try {
 				dbStore.close();

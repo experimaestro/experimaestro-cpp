@@ -3,6 +3,8 @@ package sf.net.experimaestro.utils;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -15,8 +17,10 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
@@ -200,7 +204,7 @@ public class XMLUtils {
 	static {
 		try {
 			dbFactory.setNamespaceAware(true);
-		    documentBuilder = dbFactory.newDocumentBuilder();
+			documentBuilder = dbFactory.newDocumentBuilder();
 		} catch (ParserConfigurationException e) {
 			throw new ExperimaestroException(
 					"Could not build a document builder", e);
@@ -216,5 +220,33 @@ public class XMLUtils {
 		return documentBuilder.newDocument();
 	}
 
+	/**
+	 * Gather all the namespaces defined on a node
+	 * 
+	 * @return
+	 */
+	public static Iterable<Entry<String, String>> getNamespaces(Element element) {
+		TreeMap<String, String> map = new TreeMap<String, String>();
+		do {
+			NamedNodeMap attributes = element.getAttributes();
+			for (int i = 0; i < attributes.getLength(); i++) {
+				Attr attr = (Attr) attributes.item(i);
+				final String name = attr.getLocalName();
+
+				if (attr.getPrefix() != null) {
+					if ("xmlns".equals(attr.getPrefix()))
+						if (!map.containsKey(name))
+							map.put(name, attr.getValue());
+				} else if ("xmlns".equals(name)) {
+					if (!map.containsKey(""))
+						map.put("", attr.getValue());
+				}
+			}
+			if (element.getParentNode() == null || element.getParentNode().getNodeType() != Node.ELEMENT_NODE)
+				break;
+			element = (Element) element.getParentNode();
+		} while (true);
+		return map.entrySet();
+	}
 
 }

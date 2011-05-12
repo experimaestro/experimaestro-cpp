@@ -1,7 +1,13 @@
 package sf.net.experimaestro.exceptions;
 
+import static java.lang.String.format;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class ExperimaestroException extends RuntimeException {
 	private static final long serialVersionUID = 1L;
+	ArrayList<String> context = new ArrayList<String>();
 
 	public ExperimaestroException() {
 		super();
@@ -25,6 +31,14 @@ public class ExperimaestroException extends RuntimeException {
 
 	public ExperimaestroException(Throwable t) {
 		super(t);
+	}
+
+	public void addContext(String string, Object... values) {
+		context.add(format(string, values));
+	}
+
+	public List<String> getContext() {
+		return context;
 	}
 
 }

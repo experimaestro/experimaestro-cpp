@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.TimerTask;
 import java.util.Map.Entry;
+import java.util.Timer;
 import java.util.TreeMap;
 
 import org.apache.log4j.Level;
@@ -15,6 +18,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrappedException;
 
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
@@ -68,27 +72,38 @@ public class RPCServer {
 	 * Shutdown the server
 	 */
 	public boolean shutdown() {
-		// Shutdown jetty
-		server.setGracefulShutdown(1000);
-		boolean stopped = false;
-		try {
-			server.stop();
-			stopped = true;
-		} catch (Exception e) {
-			LOGGER.error(e, "Could not stop properly jetty");
-		}
-
 		// Close the repository
 		repository.close();
 
 		// Close the scheduler
 		scheduler.close();
 
-		
-		// If not OK, do force
-		if (!stopped)
-			System.exit(1);
-		
+		// Shutdown jetty (after 1s to allow this thread to finish)
+		Timer timer = new Timer();
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				server.setGracefulShutdown(1000);
+				boolean stopped = false;
+				try {
+					server.stop();
+					stopped = true;
+				} catch (Exception e) {
+					LOGGER.error(e, "Could not stop properly jetty");
+				}
+				if (!stopped)
+					synchronized (this) {
+						try {
+							wait(10000);
+						} catch (InterruptedException e) {
+						}
+						System.exit(1);
+
+					}
+			}
+		}, 2000);
+
 		// Everything's OK
 		return true;
 	}
@@ -213,8 +228,21 @@ public class RPCServer {
 
 		} catch (WrappedException e) {
 			LOGGER.printException(Level.INFO, e.getCause());
+
 			error = 2;
-			errorMsg = e.getCause().toString() + "\n[in] " + e.toString();
+			errorMsg = e.getCause().toString();
+
+			if (e.getCause() instanceof ExperimaestroException) {
+				ExperimaestroException ee = (ExperimaestroException) e
+						.getCause();
+				List<String> context = ee.getContext();
+				if (!context.isEmpty()) {
+					errorMsg += "\n[context]\n";
+					for (String s : ee.getContext()) {
+						errorMsg += s + "\n";
+					}
+				}
+			}
 			errorMsg += "\n" + e.getScriptStackTrace();
 		} catch (JavaScriptException e) {
 			LOGGER.printException(Level.INFO, e);

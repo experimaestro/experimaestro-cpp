@@ -2,6 +2,11 @@ package sf.net.experimaestro.manager;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.xml.xquery.XQException;
+import javax.xml.xquery.XQStaticContext;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -102,23 +107,34 @@ public abstract class Input {
 		final String path;
 		final DotName to;
 		private NSContext context;
+		private Map<String, String> namespaces;
 
 		public Connection(DotName from, String path, DotName to, Element element) {
 			this.from = from;
 			this.path = path;
 			this.to = to;
 			this.context = new NSContext(element);
+			namespaces = Manager.getNamespaces(element);
 		}
 
 		public NSContext getContext() {
 			return context;
 		}
 
+		public void setNamespaces(XQStaticContext xqsc) throws XQException {
+			for (Entry<String, String> mapping : namespaces.entrySet()) {
+				LOGGER.info("Setting default namespace mapping [%s] to [%s]",
+						mapping.getKey(), mapping.getValue());
+				xqsc.declareNamespace(mapping.getKey(), mapping.getValue());
+			}
+		}
+
 	}
 
 	ArrayList<Connection> connections = new ArrayList<Input.Connection>();
 
-	public void addConnection(DotName from, String path, DotName to, Element element) {
+	public void addConnection(DotName from, String path, DotName to,
+			Element element) {
 		connections.add(new Connection(from, path, to, element));
 	}
 

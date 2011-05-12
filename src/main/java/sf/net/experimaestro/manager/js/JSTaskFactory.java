@@ -5,7 +5,6 @@ import static java.lang.String.format;
 import java.util.Map;
 import java.util.TreeMap;
 
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
@@ -117,8 +116,12 @@ public class JSTaskFactory extends TaskFactory {
 			// Add this to the list of inputs
 			for (Element connect : XMLUtils.childIterator(el, new QName(
 					Manager.EXPERIMAESTRO_NS, "connect"))) {
-				final DotName from = DotName.parse(connect.getAttribute("from"));
+				final DotName from = DotName
+						.parse(connect.getAttribute("from"));
 				final String path = connect.getAttribute("path");
+				if ("".equals(path))
+					throw new ExperimaestroException(
+							"Attribute path has to be defined (and not at the same time)");
 				final DotName to = new DotName(inputToId, DotName.parse(connect
 						.getAttribute("to")));
 				LOGGER.info("Found connection between [%s in %s] and [%s]",
@@ -127,7 +130,8 @@ public class JSTaskFactory extends TaskFactory {
 
 				if (inputFrom == null)
 					throw new ExperimaestroException(
-							"Could not find input [%s] in [%s]", from.get(0), this.id);
+							"Could not find input [%s] in [%s]", from.get(0),
+							this.id);
 
 				inputFrom.addConnection(from.offset(1), path, to, connect);
 			}
@@ -157,7 +161,7 @@ public class JSTaskFactory extends TaskFactory {
 		}
 
 		// --- Are we an alternative?
-		
+
 		QName altType = JSUtils.get(jsScope, "alternative", jsObject, null);
 		if (altType != null) {
 			if (outputs.size() != 1)
