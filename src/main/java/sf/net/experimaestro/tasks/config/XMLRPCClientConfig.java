@@ -11,8 +11,7 @@ import java.util.Properties;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 
-import sf.net.experimaestro.log.Logger;
-
+import sf.net.experimaestro.utils.log.Logger;
 import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentPostProcessor;
 

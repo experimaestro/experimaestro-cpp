@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import sf.net.experimaestro.log.Logger;
+import sf.net.experimaestro.utils.log.Logger;
 
 
 /**
