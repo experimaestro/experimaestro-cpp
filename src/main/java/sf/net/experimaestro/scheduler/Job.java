@@ -241,7 +241,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 					state = ResourceState.DONE;
 					LOGGER.info("Done");
 				} catch (Throwable e) {
-					LOGGER.warn("Error while running: %s", e);
+					LOGGER.warn(format("Error while running: %s", this), e);
 					state = ResourceState.ERROR;
 				} finally {
 					updateDb();
