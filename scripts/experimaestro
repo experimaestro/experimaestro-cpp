@@ -2,12 +2,15 @@
 
 # To start the server
 
+for READLINK in /opt/local/bin/greadlink /usr/bin/greadlink /opt/local/bin/readlink /usr/bin/readlink; do
+	test -x "$READLINK" && break
+done
 
 # --- Check paths
 
 version=0.0.1-SNAPSHOT
 name=experimaestro-$version.jar
-dir="$(dirname "$(readlink -f  "$0")")"
+dir="$(dirname "$($READLINK -f  "$0")")"
 
 JAR=""
 for f in "$dir/$name" "$dir/../target/experimaestro-$version-bin.dir/$name"; do
