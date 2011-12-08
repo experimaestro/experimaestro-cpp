@@ -1,240 +1,244 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>net.bpiwowar</groupId>
-	<artifactId>experimaestro</artifactId>
-	<name>experimaestro</name>
-	<version>0.0.1-SNAPSHOT</version>
-	<description>Experiment manager framework</description>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.bpiwowar</groupId>
+    <artifactId>experimaestro</artifactId>
+    <name>experimaestro</name>
+    <version>0.0.1-SNAPSHOT</version>
+    <description>Experiment manager framework</description>
 
-	<properties>
-		<m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
-		<m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js</m2st-syntaxHighlighter-brushFiles>
-		<m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
-		<m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false</m2st-syntaxHighlighter-config>
-	</properties>
-
-
-	<repositories>
-		<repository>
-			<id>bpiwowar-dcs</id>
-			<name>Benjamin's repository in DCS</name>
-			<url>http://ir.dcs.gla.ac.uk/~bpiwowar/maven</url>
-			<snapshots>
-				<!-- set this to true to use snapshot builds of GATE -->
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
-
-	<build>
-		<plugins>
-
-			<!-- Java version -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
-
-			<!-- Build an assembly -->
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<descriptors>
-						<descriptor>src/assemble/bin.xml</descriptor>
-					</descriptors>
-				</configuration>
-			</plugin>
-
-			<!-- JavaCC plugin -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>javacc-maven-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>javacc</id>
-						<goals>
-							<goal>javacc</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+    <properties>
+        <m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
+        <m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js
+        </m2st-syntaxHighlighter-brushFiles>
+        <m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
+        <m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false
+        </m2st-syntaxHighlighter-config>
+    </properties>
 
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-site-plugin</artifactId>
-				<version>3.0-beta-3</version>
-				<dependencies>
-					<!-- site tools from http://code.google.com/p/m2-site-tools -->
-					<dependency>
-						<groupId>com.anasoft.os</groupId>
-						<artifactId>m2st-doxia-macros</artifactId>
-						<version>2.0</version>
-					</dependency>
-				</dependencies>
-			</plugin>
+    <repositories>
+        <repository>
+            <id>bpiwowar-dcs</id>
+            <name>Benjamin's repository in DCS</name>
+            <url>http://ir.dcs.gla.ac.uk/~bpiwowar/maven</url>
+            <snapshots>
+                <!-- set this to true to use snapshot builds of GATE -->
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
-			<!-- Jar manager -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-							<mainClass>bpiwowar.experiments.Run</mainClass>
-							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-		</plugins>
+    <build>
+        <plugins>
 
-	</build>
+            <!-- Java version -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
 
-	<dependencies>
-		<dependency>
-			<groupId>net.sf.saxon</groupId>
-			<artifactId>saxon</artifactId>
-			<version>[9.2.0,)</version>
-		</dependency>
-		<dependency>
-			<groupId>rhino</groupId>
-			<artifactId>js</artifactId>
-			<version>1.7R2</version>
-		</dependency>
-		<dependency>
-			<groupId>berkeleydb</groupId>
-			<artifactId>je</artifactId>
-			<version>[3.2,)</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.xmlrpc</groupId>
-			<artifactId>xmlrpc-server</artifactId>
-			<version>[3.1,3.2)</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.xmlrpc</groupId>
-			<artifactId>xmlrpc-client</artifactId>
-			<version>[3.1,3.2)</version>
-			<type>jar</type>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>commons-vfs</groupId>
-			<artifactId>commons-vfs</artifactId>
-			<version>1.0</version>
-		</dependency>
-		<dependency>
-			<groupId>net.bpiwowar</groupId>
-			<artifactId>argj</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-		<dependency>
-			<groupId>berkeleydb</groupId>
-			<artifactId>berkeleydb</artifactId>
-			<version>1.5.1</version>
-			<type>jar</type>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.mortbay.jetty</groupId>
-			<artifactId>jetty-html</artifactId>
-			<version>6.1.26</version>
-			<type>jar</type>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.testng</groupId>
-			<artifactId>testng</artifactId>
-			<version>6.0.1</version>
-			<type>jar</type>
-			<scope>test</scope>
-		</dependency>
+            <!-- Build an assembly -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/assemble/bin.xml</descriptor>
+                    </descriptors>
+                </configuration>
+            </plugin>
 
-		<!-- <dependency> <groupId>com.anasoft.os</groupId> <artifactId>m2st-doxia-macros</artifactId> 
-			<version>2.0</version> </dependency> -->
-		<dependency>
-			<groupId>org.mortbay.jetty</groupId>
-			<artifactId>jetty-embedded</artifactId>
-			<version>6.1.26</version>
-		</dependency>
-	</dependencies>
+            <!-- JavaCC plugin -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>javacc-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>javacc</id>
+                        <goals>
+                            <goal>javacc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
 
-	<!-- Sourceforge information -->
-	<!-- Source forge information -->
-	<distributionManagement>
-		<site>
-			<id>experimaestro.sf.net</id>
-			<name>experimaestro Website</name>
-			<url>http://experimaestro.sourceforget.net</url>
-		</site>
-	</distributionManagement>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.0-beta-3</version>
+                <dependencies>
+                    <!-- site tools from http://code.google.com/p/m2-site-tools -->
+                    <dependency>
+                        <groupId>com.anasoft.os</groupId>
+                        <artifactId>m2st-doxia-macros</artifactId>
+                        <version>2.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
 
-	<mailingLists>
-		<mailingList>
-			<name>experimaestro Development Mailing list</name>
-			<subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
-			</subscribe>
-			<unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
-			</unsubscribe>
-			<archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40831
-			</archive>
-			<post>experimaestro-development@lists.sourceforge.net</post>
-		</mailingList>
-		<mailingList>
-			<name>experimaestro User Mailing list</name>
-			<subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
-			</subscribe>
-			<unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
-			</unsubscribe>
-			<archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40830
-			</archive>
-			<post>experimaestro-users@lists.sourceforge.net</post>
-		</mailingList>
-	</mailingLists>
+            <!-- Jar manager -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>bpiwowar.experiments.Run</mainClass>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
 
-	<issueManagement>
-		<system>sourceforge</system><!--don't care -->
-		<url>http://sourceforge.net/tracker/?group_id=299634</url>
-	</issueManagement>
+    </build>
 
-	<licenses>
-		<license>
-			<name>GNU Lesser General Public License version 3</name>
-			<url>http://www.gnu.org/licenses/lgpl.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
+    <dependencies>
+        <dependency>
+            <groupId>net.sf.saxon</groupId>
+            <artifactId>saxon</artifactId>
+            <version>[9.2.0,)</version>
+        </dependency>
+        <dependency>
+            <groupId>rhino</groupId>
+            <artifactId>js</artifactId>
+            <version>1.7R2</version>
+        </dependency>
+        <dependency>
+            <groupId>berkeleydb</groupId>
+            <artifactId>je</artifactId>
+            <version>[3.2,)</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlrpc</groupId>
+            <artifactId>xmlrpc-server</artifactId>
+            <version>[3.1,3.2)</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlrpc</groupId>
+            <artifactId>xmlrpc-client</artifactId>
+            <version>[3.1,3.2)</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-vfs</groupId>
+            <artifactId>commons-vfs</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.bpiwowar</groupId>
+            <artifactId>argj</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>berkeleydb</groupId>
+            <artifactId>berkeleydb</artifactId>
+            <version>1.5.1</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-html</artifactId>
+            <version>6.1.26</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.0.1</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
 
-	<scm>
-		<url>https://experimaestro.svn.sourceforge.net/svnroot/experimaestro</url>
-		<connection>scm:svn:https://experimaestro.svn.sourceforge.net/svnroot/experimaestro</connection>
-	</scm>
+
+        <!-- <dependency> <groupId>com.anasoft.os</groupId> <artifactId>m2st-doxia-macros</artifactId>
+              <version>2.0</version> </dependency> -->
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-embedded</artifactId>
+            <version>6.1.26</version>
+        </dependency>
+    </dependencies>
 
 
-	<developers>
-		<developer>
-			<id>bpiwowar</id>
-			<name>Benjamin Piwowarski</name>
-			<email>benjamin.piwowarski@gmail.com</email>
-			<url>http://www.bpiwowar.net/</url>
-			<roles>
-				<role>architect</role>
-				<role>developer</role>
-			</roles>
-			<timezone>0</timezone>
-			<properties>
-			</properties>
-		</developer>
-	</developers>
+    <!-- Sourceforge information -->
+    <!-- Source forge information -->
+    <distributionManagement>
+        <site>
+            <id>experimaestro.sf.net</id>
+            <name>experimaestro Website</name>
+            <url>http://experimaestro.sourceforget.net</url>
+        </site>
+    </distributionManagement>
+
+    <mailingLists>
+        <mailingList>
+            <name>experimaestro Development Mailing list</name>
+            <subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
+            </subscribe>
+            <unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
+            </unsubscribe>
+            <archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40831
+            </archive>
+            <post>experimaestro-development@lists.sourceforge.net</post>
+        </mailingList>
+        <mailingList>
+            <name>experimaestro User Mailing list</name>
+            <subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
+            </subscribe>
+            <unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
+            </unsubscribe>
+            <archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40830
+            </archive>
+            <post>experimaestro-users@lists.sourceforge.net</post>
+        </mailingList>
+    </mailingLists>
+
+    <issueManagement>
+        <system>sourceforge</system>
+        <!--don't care -->
+        <url>http://sourceforge.net/tracker/?group_id=299634</url>
+    </issueManagement>
+
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License version 3</name>
+            <url>http://www.gnu.org/licenses/lgpl.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://experimaestro.svn.sourceforge.net/svnroot/experimaestro</url>
+        <connection>scm:svn:https://experimaestro.svn.sourceforge.net/svnroot/experimaestro</connection>
+    </scm>
+
+
+    <developers>
+        <developer>
+            <id>bpiwowar</id>
+            <name>Benjamin Piwowarski</name>
+            <email>benjamin.piwowarski@gmail.com</email>
+            <url>http://www.bpiwowar.net/</url>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+            <timezone>0</timezone>
+            <properties>
+            </properties>
+        </developer>
+    </developers>
 
 
 </project>

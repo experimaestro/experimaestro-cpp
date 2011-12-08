@@ -3,8 +3,12 @@ var abc = new Namespace("a.b.c");
 
 var task = {
 	id: xpm.qName("a.b.c", "task"),
+
 	inputs: <inputs xmlns={xp.uri}>
+	            <!-- a has a default value of 10 -->
                 <input type="xs:integer" id="a" default="10"/>
+
+                <!-- b has a default value given by the contained XML -->
                 <input id="b">
                     <default><value value="20"/></default>
                 </input>

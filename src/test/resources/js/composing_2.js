@@ -1,5 +1,5 @@
 /*
- * Example of a composed task (with merge)
+ * Example of a composed task (with parameter sharing)
  *
  * (c) B. Piwowarski, 2010
  */
@@ -9,6 +9,7 @@
 
 var abc = new Namespace("a.b.c");
 
+// First task
 var task_1 = {
 	id: xpm.qName("a.b.c", "task-1"),
 	inputs: <inputs><input type="xs:integer" id="x"/></inputs>,
@@ -20,6 +21,7 @@ var task_1 = {
 		
 };
 
+// Second task
 var task_2 = {
 	id: xpm.qName("a.b.c", "task-2"),
 	inputs: <inputs><input type="xs:integer" id="x"/></inputs>,
@@ -31,9 +33,13 @@ var task_2 = {
 		
 };
 
+// Third task
 var task = {
 	id: xpm.qName("a.b.c", "task"),
-	inputs: 
+	/*
+	    Connects the value returned by t1 to the input of x for t2
+	*/
+	inputs:
         <inputs xmlns:abc="a.b.c" xmlns:xp={xp.uri} xmlns={xp.uri}>
             <task type="abc:task-2" id="t2">
                 <connect from="t1" path="xp:value" to="x"/>

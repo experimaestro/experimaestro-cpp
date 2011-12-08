@@ -1,21 +1,19 @@
 package sf.net.experimaestro.scheduler;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeMap;
-
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.EnvironmentLockedException;
+import com.sleepycat.persist.model.Persistent;
 import org.testng.annotations.Test;
-
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 import sf.net.experimaestro.utils.ThreadCount;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.EnvironmentLockedException;
-import com.sleepycat.persist.model.Persistent;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class SchedulerTest {
 
@@ -93,8 +91,11 @@ public class SchedulerTest {
 		TemporaryDirectory directory = null;
 		try {
 			directory = new TemporaryDirectory("scheduler-tests", "dir");
-			Scheduler scheduler = new Scheduler(new File(directory.getFile(),
-					"db"), 5);
+
+            final File dbFile = new File(directory.getFile(),
+                    "db");
+            dbFile.mkdir();
+            Scheduler scheduler = new Scheduler(dbFile, 5);
 			File jobDirectory = new File(directory.getFile(), "jobs");
 			
 			// Create two jobs: job1, and job2 that depends on job1

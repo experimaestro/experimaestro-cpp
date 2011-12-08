@@ -16,7 +16,9 @@ var task = {
 	
     // The function that will be called when the task is run
 	run: function(inputs) {
+	    // Record the order of execution
         results.push(inputs.x.@xp::value * inputs.y.@xp::value);
+        // Returns something
 		return <outputs>{inputs.x}{inputs.y}</outputs>;
 	}
 		
@@ -33,20 +35,12 @@ function test_plan_1() {
     results =  [];
     xpm.experiment(qname("a.b.c", "task"), "x=1,2 * y=5,7");
     xpm.log("The task returned\n%s", results.toSource());
-    check();
+    check([5, 10, 7, 14]);
 }
 
 
-function test_plan_1() {
-    results =  [];
-    var task = xpm.getTask(qname("a.b.c", "task"));
-    task.run_plan("x=1,2 * y=5,7");
-    xpm.log("The task returned\n%s", results.toSource());
-    check();
-}
-
-function check() {    
-    var expected = [5, 10, 7, 14];
+function check(expected) {
+    var expected = ;
     for(var i = 0; i < expected.length; i++)
         if (expected[i] != results[i])
             throw new java.lang.String.format("Expected %s and got %s at %d", expected[i], results[i], i);
