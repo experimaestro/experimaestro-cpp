@@ -20,30 +20,30 @@
 
 package sf.net.experimaestro.scheduler;
 
-import static java.lang.String.format;
+import bpiwowar.argparser.ListAdaptator;
+import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.log.Logger;
-import bpiwowar.argparser.ListAdaptator;
-
-import com.sleepycat.persist.model.Persistent;
+import static java.lang.String.format;
 
 /**
- * A command line task (executed with the default shell)
- * 
+ * A command line task.
+ *
+ * This class handles jobs run with OAR, optionally using a ssh tunnel
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
-public class CommandLineTask extends Job {
+public class OARCommandLineTask extends Job {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -60,19 +60,19 @@ public class CommandLineTask extends Job {
 
 	private File workingDirectory;
 
-	protected CommandLineTask() {
+	protected OARCommandLineTask() {
 	}
 
 	/**
 	 * Constructs the command line
-	 * 
+	 *
 	 * @param scheduler
 	 * @param identifier
 	 * @param command
-	 * @throws FileNotFoundException
+	 * @throws java.io.FileNotFoundException
 	 */
-	public CommandLineTask(Scheduler scheduler, String identifier,
-			String[] commandArgs, Map<String, String> env, File workingDirectory) {
+	public OARCommandLineTask(Scheduler scheduler, String identifier,
+                              String[] commandArgs, Map<String, String> env, File workingDirectory) {
 
 		super(scheduler, identifier);
 
@@ -103,13 +103,13 @@ public class CommandLineTask extends Job {
 
 	/**
 	 * New command line task
-	 * 
+	 *
 	 * @param scheduler
 	 * @param identifier
 	 * @param command
 	 */
-	public CommandLineTask(Scheduler scheduler, String identifier,
-			String[] command) {
+	public OARCommandLineTask(Scheduler scheduler, String identifier,
+                              String[] command) {
 		this(scheduler, identifier, command, null, null);
 	}
 
