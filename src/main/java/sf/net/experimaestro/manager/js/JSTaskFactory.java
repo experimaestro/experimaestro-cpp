@@ -251,7 +251,8 @@ public class JSTaskFactory extends TaskFactory {
 			input = new XMLInput(typeName);
 		}
 
-		if ("false".equals(el.getAttribute("named")))
+        // Should we merge all the parameters?
+		if ("true".equals(el.getAttribute("merge")))
 			input.setUnnamed(true);
 
 		inputs.put(id, input);

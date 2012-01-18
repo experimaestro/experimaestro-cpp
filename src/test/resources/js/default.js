@@ -5,13 +5,14 @@ var task = {
 	id: xpm.qName("a.b.c", "task"),
 
 	inputs: <inputs xmlns={xp.uri}>
-	            <!-- a has a default value of 10 -->
+	        <!-- a has a default value of 10 -->
                 <input type="xs:integer" id="a" default="10"/>
 
                 <!-- b has a default value given by the contained XML -->
                 <input id="b">
                     <default><value value="20"/></default>
                 </input>
+
             </inputs>,
 	outputs: <outputs><output id="a" type="xs:integer"/><output id="b" type="xs:integer"/></outputs>,
 	

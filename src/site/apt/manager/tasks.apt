@@ -1,65 +1,27 @@
   ------
-  Manager
+  Tasks
   ------
   Benjamin Piwowarski
   ------
-  2011-04-08
+  2011-11-08
   ------
 
-Goals
+  <<Table of contents>>
 
-The goals of the experimaestro manager are:
+%{toc|fromDepth=1|toDepth=3}
 
-  * Decompose experiments into a set of parametrised tasks
-  
-  * Standardise the way to run experiments for easier reproduction of experimental results
-    in computing science
-  
-  * To handle easy to read & write experimental plans. For example,
-    "<<<collection.id=trec.1/adhoc,trec.2/adhoc * qir.weighting-scheme=tf-idf,tf>>>" 
-    will run four experiments where the different parameters (id and weighting shemes) are varied
-   
-  * To build a documentation for each task
-  
-  * Uses the scheduler to run jobs
-  
-  * Provides multiple way to write tasks. Currently, only JavaScript is supported but this could be extend to Python.
+  Tasks are simple objects that can be configured and run. Specific behaviours depend
+  on the underlying language that can include different ways to define tasks, but the underlying
+  mechanism, which remains the same, is described in this document.
 
-  * (<<<Not implemented>>>) To manage data produced by the tasks
-  
+  A task is characterised by the following:
 
-Main concepts
+  [[1]] It is uniquely identified by a qualified name (URI + name) and a group name;
 
-The main concepts of the manager are:
+  [[1]] It is configured by a set of XML documents, each associated to a given name and,
+        optionally, to a given XML type;
 
-  * Each input or output is an XML document. This allows for a lot of flexibility: input/outputs can be any valid XML document, but can
-    also typed using the same mechanism than in XML Schema.
-  
-  * Each <<task>> is produced by a <<task factory>>. A task factory has a set of named inputs, a set of named outputs, and a creation method.
-  
-  * 
-
-* XML format for input or output
- 
-  Each output is characterised by a XML qualified name (namespace and local name). For example,
-
-+------------------------------------------+
-	<example xmlns="http://my.ns" xmlns:xp="sf.net.experimaestro">
-		<xp:value id="id" value="abc1"/>
-		<xp:resource version="1.0">id-of-resource</xp:resource>
-		
-		<file>/my/path/to/a/file</file>
-		<result>3</result>
-		
-	</example>
-+------------------------------------------+
-
-  is an output with the name <<<example>>> within the namespace <<<http://my.ns>>>.
-  It is further identified by the <<<id>>> of value <<<abc1>>>.
-  
-* Tasks
- 
-
+  [[1]] It can be run and its output is valid XML document
 
 
   

@@ -37,15 +37,20 @@ Task factories
   
 * {Default values}
 
+  Default values can be used to set a task parameter to a default value.
   There are two different ways to define defaults values:
   
-  1. Using the <<<default>>> attribute in the input definition
+  [[1]] Using the <<<default>>> attribute in the input definition
   
-  1. Using the <<<default>>> element
+  [[1]] Using the <<<default>>> element
   
 %{code-snippet|brush=javascript||id=main|file=src/test/resources/js/default.js}
 
 * {Alternatives}
+
+  Alternatives can be used in order to use different tasks, that can be chosen through setting
+  a parameter to the qualified namespace. In the following example, the parameter of type
+
 
 %{code-snippet|brush=javascript||id=main|file=src/test/resources/js/alternatives.js}
 
@@ -55,8 +60,25 @@ Task factories
 
 * {Composing tasks}
  
-%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/subtasks.js}
- 
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/composing.js}
+
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/composing_2.js}
+
+
+{Experimental plans}
+
+We use as an example a task that multiply its two inputs <<<x>>> and <<<y>>>:
+
+%{code-snippet|brush=javascript||id=main|file=src/test/resources/js/plan.js}
+
+The following code runs an experimental plan where the values of <<<x>>> can be either 1 and 2, and
+the values of <<<y>>> are 5 and 7.
+
+%{code-snippet|brush=javascript||id=check|file=src/test/resources/js/plan.js}
+
+The values in are <<<results>>> the values 5, 10, 7 and 14.
+
+
 {Predefined functions}
  
    When running a script, the following variables are set:
@@ -64,6 +86,8 @@ Task factories
    *  <<<xp>>> is a Namespace object that represents the experimaestro namespace
    
    *  <<<xpm>>> is an object containing useful functions and properties
+
+   * <<<qname(uri, name)>>> returns a qualified name
    
 * {<<<xpm>>> object}
 
@@ -72,11 +96,21 @@ Task factories
 ** Functions
 
   * <<<addTaskFactory(task)>>> Adds a task factory to the manager
+
+  * <<<getTask(namespace, id)>>> Get a new instance of task given the namespace and the id
   
-  * <<<log(format, object, [object ...])>>> Returns a message
-  
+  * <<<log(format, object, [object ...])>>> Returns a message using the format static method from String.
+
+  * <<<include(path)>>> includes another javascript file (path is relative to the current file)
+
+  * <<<xpath(query, xml)>>> runs an XPath query on an XML document or fragment. See {{XPath handling}} for
+    a description of how XPath are handled within experimaestro.
+
 {XPath handling}
+
+  XPath are evaluated with the current node corresponding to the <<root element>> of the XML document.
 	
 * {XPath Functions}
 
-  * <<<parentPath(String)>>> returns the parent path
+  * <<<parentPath(String)>>> returns the parent path. For example,
+    <<<xpm.xpath("xp:parentPath(path)", <a><path>/a/b/c</path></a>)>>> returns <<<a/b>>>.

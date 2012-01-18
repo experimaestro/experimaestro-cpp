@@ -21,6 +21,7 @@
 package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.ListAdaptator;
+import com.jcraft.jsch.*;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.Output;
@@ -66,9 +67,9 @@ public class OARCommandLineTask extends Job {
 	/**
 	 * Constructs the command line
 	 *
-	 * @param scheduler
-	 * @param identifier
-	 * @param command
+	 * @param scheduler The command scheduler
+	 * @param identifier The identifier for this task
+	 * @param commandArgs The command arguments
 	 * @throws java.io.FileNotFoundException
 	 */
 	public OARCommandLineTask(Scheduler scheduler, String identifier,
@@ -115,11 +116,17 @@ public class OARCommandLineTask extends Job {
 
 	@Override
 	protected int doRun(ArrayList<Lock> locks) throws IOException,
-			InterruptedException {
+            InterruptedException, JSchException {
 		// Runs the command
 		LOGGER.info("Evaluating command [%s] %s with environment %s",
 				workingDirectory, Arrays.toString(command),
 				Arrays.toString(envp));
+
+        // SSH session
+        JSch jsch=new JSch();
+        Session session = jsch.getSession("bpiwowar", "big.lip6.fr", 22);
+        Channel channel=session.openChannel("exec");
+        ((ChannelExec)channel).setCommand(command.toString());
 
 		// Write command
 		PrintWriter writer = new PrintWriter(new File(String.format("%s.run",

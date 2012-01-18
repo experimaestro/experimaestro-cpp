@@ -13,7 +13,7 @@ name=experimaestro-$version.jar
 dir="$(dirname "$($READLINK -f  "$0")")"
 
 JAR=""
-for f in "$dir/$name" "$dir/../target/experimaestro-$version-bin.dir/$name"; do
+for f in "$dir/$name" "$dir/../target/experimaestro-$version-bin/$name"; do
 	if test -f "$f";  then
 		JAR="$f"		
 		break

@@ -42,6 +42,9 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+/**
+ * The abstract Task object
+ */
 public abstract class Task {
 	final static private Logger LOGGER = Logger.getLogger();
 

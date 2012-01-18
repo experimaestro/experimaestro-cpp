@@ -84,9 +84,9 @@ import com.sun.org.apache.xerces.internal.xs.XSModel;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 /**
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * 
+ *
  */
 public class XPMObject {
 
@@ -140,7 +140,9 @@ public class XPMObject {
 		// Add functions
 		addFunction(scope, "qname",
 				new Class<?>[] { Object.class, String.class });
-		addFunction(scope, "include", new Class<?>[] { String.class });
+
+        // TODO: would be good to have this at a global level
+		//addFunction(scope, "include", new Class<?>[] { String.class });
 
 		// Add this object
 		ScriptableObject.defineProperty(scope, "xpm", this, 0);
@@ -221,9 +223,12 @@ public class XPMObject {
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	public void js_include(String path) throws FileNotFoundException,
+	public void include(String path) throws FileNotFoundException,
 			IOException {
-		File file = getAbsoluteFile(path);
+
+        String oldPath = environment.get(ENV_SCRIPTPATH);
+        
+        File file = getAbsoluteFile(path);
 
 		LOGGER.debug("Including file [%s]", file);
 		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
@@ -232,7 +237,7 @@ public class XPMObject {
 		Context.getCurrentContext().evaluateReader(scope, new FileReader(file),
 				file.getAbsolutePath(), 1, null);
 
-		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
+		environment.put(ENV_SCRIPTPATH, oldPath);
 	}
 
 	/**

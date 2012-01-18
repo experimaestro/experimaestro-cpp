@@ -6,7 +6,6 @@
 
 // START SNIPPET: main
 
-
 var abc = new Namespace("a.b.c");
 
 // First task
@@ -44,7 +43,8 @@ var task = {
             <task type="abc:task-2" id="t2">
                 <connect from="t1" path="xp:value" to="x"/>
             </task>
-            <task type="abc:task-1" id="t1" named="false"/>
+            <!-- Here, the all the parameters from task-1 -->
+            <task type="abc:task-1" id="t1" merge="true"/>
         </inputs>,
 	outputs: <outputs><output type="xs:integer"/></outputs>,
 	

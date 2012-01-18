@@ -2,8 +2,16 @@
 	Experiment plan language
 	
 	(c) B. Piwowarski
-*/options{  static = false;}PARSER_BEGIN(PlanParser)
-package sf.net.experimaestro.plan;import java.util.ArrayList;
+*/
+options
+{
+  static = false;
+}
+
+PARSER_BEGIN(PlanParser)
+
+package sf.net.experimaestro.plan;
+import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.Map;
 import java.util.Iterator;
@@ -11,11 +19,38 @@ import sf.net.experimaestro.utils.Output;
 
 
 @SuppressWarnings({  "all" })
-public class PlanParser{
-}PARSER_END(PlanParser)SKIP :{  " "}SKIP :{  "\n"| "\r"| "\r\n"| "\t"}TOKEN :{  < MULT : "*" >
+public class PlanParser
+{
+}
+
+PARSER_END(PlanParser)
+
+SKIP :
+{
+  " "
+}
+
+SKIP :
+{
+  "\n"
+| "\r"
+| "\r\n"
+| "\t"
+}
+
+TOKEN :
+{
+  < MULT : "*" >
 | < EQUAL : "=" >
-| < LPAREN : "(" >| < RPAREN : ")" >| < COMMA : "," >| < OR : "|" >| < VARNAME : < LETTER > (< LETTERDIGITEXTRAS >)* >
-| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":", "/", "{", "}", "[", "]" ] | "\\,")+ >| < #LETTER : [ "a"-"z", "A"-"Z" ] >| < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "_", "." ] >}
+| < LPAREN : "(" >
+| < RPAREN : ")" >
+| < COMMA : "," >
+| < OR : "|" >
+| < VARNAME : < LETTER > (< LETTERDIGITEXTRAS >)* >
+| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":", "/", "{", "}", "[", "]" ] | "\\,")+ >
+| < #LETTER : [ "a"-"z", "A"-"Z" ] >
+| < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "-", "_", "." ] >
+}
 
 Node plan() : {
 	   Node n;
@@ -66,4 +101,5 @@ String value() : {Token t = null;}
 }
 
  
-
+
+

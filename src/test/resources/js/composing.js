@@ -1,9 +1,10 @@
-// START SNIPPET: main
 /*
  * Example of a composed task
  *
  * (c) B. Piwowarski, 2010
  */
+
+// START SNIPPET: main
 
 var abc = new Namespace("a.b.c");
 

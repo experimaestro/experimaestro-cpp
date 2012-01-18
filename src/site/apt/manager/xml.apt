@@ -1,0 +1,15 @@
+  ------
+  XML Format
+  ------
+  Benjamin Piwowarski
+  ------
+  2011-11-08
+  ------
+
+  <<Table of contents>>
+
+%{toc|fromDepth=1|toDepth=3}
+
+  This document describes the XML format used by tasks to communicate.
+
+
