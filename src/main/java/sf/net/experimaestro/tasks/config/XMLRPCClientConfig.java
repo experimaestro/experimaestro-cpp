@@ -45,13 +45,21 @@ public class XMLRPCClientConfig {
 
 	
 	@ArgumentPostProcessor()
-	public void init() throws FileNotFoundException, IOException {
+	public void init() throws IOException {
 		LOGGER.info("Loading properies from file %s", xmlrpcfile);
 		xmlrpcConfig = new Properties();
 		xmlrpcConfig.load(new FileInputStream(xmlrpcfile));
 	}
-	
-	/**
+
+    public XMLRPCClientConfig(File xmlrpcfile) throws IOException {
+        this.xmlrpcfile = xmlrpcfile;
+        init();
+    }
+
+    public XMLRPCClientConfig() {
+    }
+
+    /**
 	 * 
 	 * Get a property defined in the file
 	 * @param key

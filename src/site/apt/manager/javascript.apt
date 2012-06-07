@@ -79,7 +79,7 @@ the values of <<<y>>> are 5 and 7.
 The values in are <<<results>>> the values 5, 10, 7 and 14.
 
 
-{Predefined functions}
+{Predefined functions and objects}
  
    When running a script, the following variables are set:
    
@@ -105,6 +105,19 @@ The values in are <<<results>>> the values 5, 10, 7 and 14.
 
   * <<<xpath(query, xml)>>> runs an XPath query on an XML document or fragment. See {{XPath handling}} for
     a description of how XPath are handled within experimaestro.
+
+
+* {<<<scheduler>>> object}
+
+The scheduler object can be used to run jobs asynchronously.
+
+* Functions
+
+  * <<<addCommandLineJobs(jobId, commandLine, resources)>>> where <<<jobId>>> is a valid task identifier, <<<commandLine>>> is
+   the command line to be executed, and <<<resources>>> are the resources to be locked before
+    executing the command line.   <<<commandLine>>> can be either
+      1. An array (command line followed by arguments)
+      2. An associative array with the entries "command" (required), "environment" (associative array describing the environment)
 
 {XPath handling}
 

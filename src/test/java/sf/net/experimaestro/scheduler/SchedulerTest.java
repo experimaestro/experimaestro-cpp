@@ -105,7 +105,7 @@ public class SchedulerTest {
 		}
 	}
 
-	@Test(timeOut = 1000, description = "Run two jobs - one depend on the other to start")
+	@Test(timeOut = 1000, description = "Run two jobs - one depend on the other to start", enabled = false)
 	public void test_simple_dependency() throws EnvironmentLockedException,
 			DatabaseException, IOException, InterruptedException {
 		TemporaryDirectory directory = null;
@@ -115,7 +115,7 @@ public class SchedulerTest {
             final File dbFile = new File(directory.getFile(),
                     "db");
             dbFile.mkdir();
-            Scheduler scheduler = new Scheduler(dbFile, 5);
+            Scheduler scheduler = new Scheduler(dbFile);
 			File jobDirectory = new File(directory.getFile(), "jobs");
 			
 			// Create two jobs: job1, and job2 that depends on job1

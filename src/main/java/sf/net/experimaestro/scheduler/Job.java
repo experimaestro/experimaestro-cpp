@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import com.jcraft.jsch.JSchException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
@@ -53,7 +54,20 @@ import com.sleepycat.persist.model.Persistent;
 public class Job extends Resource implements HeapElement<Job>, Runnable {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	protected Job() {
+    /**
+     * Our connector to the host
+     */
+    Connector connector;
+
+    {
+        try {
+            connector = new SSHConnector();
+        } catch (JSchException e) {
+            connector = new LocalhostConnector();
+        }
+    }
+
+    protected Job() {
 	}
 
 	/**
@@ -116,10 +130,10 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	}
 
 	/**
-	 * Add a dependency
-	 * 
-	 * @param data
-	 *            The data we depend upon
+	 * Add a dependency to another resource
+	 *
+     * @param resource The resource to lock
+	 * @param type The type of lock that is asked
 	 */
 	public void addDependency(Resource resource, LockType type) {
 		LOGGER.info("Adding dependency %s to %s for %s", type, resource, this);

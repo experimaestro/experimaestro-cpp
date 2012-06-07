@@ -176,6 +176,7 @@ public class XPMObject {
 		ScriptableObject.putProperty(scope, fname, f);
 	}
 
+
 	/**
 	 * Returns a QName object
 	 * 

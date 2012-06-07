@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.commons.configuration.INIConfiguration;
 import org.apache.commons.vfs.FileObject;
 import org.apache.commons.vfs.FileSystemException;
 import org.apache.commons.vfs.FileSystemManager;
@@ -184,16 +185,18 @@ public class Scheduler {
 	/**
 	 * Initialise the task manager
 	 * 
-	 * @param baseDirectory
-	 * @param nbThreads
-	 * @throws EnvironmentLockedException
+	 *
+     * @param baseDirectory
+     * @throws EnvironmentLockedException
 	 * @throws DatabaseException
 	 */
-	public Scheduler(File baseDirectory, int nbThreads)
+	public Scheduler(File baseDirectory)
 			throws EnvironmentLockedException, DatabaseException {
 		// Get the parameters
 		this.baseDirectory = baseDirectory;
-		this.nbThreads = nbThreads;
+		this.nbThreads = 10;
+
+        INIConfiguration ini;
 
 		// Initialise the JE database
 		LOGGER.info("Initialising JE database in directory %s", baseDirectory);
