@@ -63,6 +63,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
         try {
             connector = new SSHConnector();
         } catch (JSchException e) {
+            LOGGER.warn("Could not create an SSH connector: %s", e);
             connector = new LocalhostConnector();
         }
     }

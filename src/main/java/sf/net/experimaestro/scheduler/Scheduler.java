@@ -20,24 +20,6 @@
 
 package sf.net.experimaestro.scheduler;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import org.apache.commons.configuration.INIConfiguration;
-import org.apache.commons.vfs.FileObject;
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemManager;
-import org.apache.commons.vfs.VFS;
-import org.apache.log4j.Level;
-
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.utils.Heap;
-import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.je.FileProxy;
-import sf.net.experimaestro.utils.log.Logger;
-
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
@@ -46,6 +28,21 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
+import org.apache.commons.vfs.FileObject;
+import org.apache.commons.vfs.FileSystemException;
+import org.apache.commons.vfs.FileSystemManager;
+import org.apache.commons.vfs.VFS;
+import org.apache.log4j.Level;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.utils.Heap;
+import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.je.FileProxy;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Thread manager for running commands - it has a pool of runs
@@ -196,7 +193,6 @@ public class Scheduler {
 		this.baseDirectory = baseDirectory;
 		this.nbThreads = 10;
 
-        INIConfiguration ini;
 
 		// Initialise the JE database
 		LOGGER.info("Initialising JE database in directory %s", baseDirectory);

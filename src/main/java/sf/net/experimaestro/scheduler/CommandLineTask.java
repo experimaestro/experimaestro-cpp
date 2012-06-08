@@ -69,7 +69,7 @@ public class CommandLineTask extends Job {
      *
      * @param scheduler  The scheduler for this command
      * @param identifier The identifier of the command (this will be used for the path of the files)
-     * @param command
+     * @param commandArgs The command with arguments
      * @throws FileNotFoundException
      */
     public CommandLineTask(Scheduler scheduler, String identifier,
@@ -89,16 +89,10 @@ public class CommandLineTask extends Job {
         this.workingDirectory = workingDirectory;
 
         // Construct command
-        this.command = new String[]{
-                shellCommand,
-                "-c",
-                String.format("( %s ) > %s.out 2> %2$s.err", Output.toString(
-                        " ", ListAdaptator.create(commandArgs),
-                        new Output.Formatter<String>() {
-                            public String format(String t) {
-                                return bashQuotes(t);
-                            }
-                        }), identifier, identifier)};
+        this.command = commandArgs;
+
+
+
 
     }
 
@@ -124,13 +118,13 @@ public class CommandLineTask extends Job {
         // Write command
         PrintWriter writer = connector.printWriter(String.format("%s.run",
                 identifier));
-        writer.format("%nCommand:%s%n", command[2]);
+        writer.format("%nCommand:%s%n", Output.toString("", ListAdaptator.create(command)));
         writer.format("Working directory %s%n", workingDirectory);
         writer.format("Environment:%n%s%n%n", Arrays.toString(envp));
         writer.close();
 
         // --- Execute command and return error code
-        return connector.exec(command, envp, workingDirectory, locks);
+        return connector.exec(identifier, command, envp, workingDirectory, locks);
     }
 
     @Override
@@ -148,20 +142,15 @@ public class CommandLineTask extends Job {
      * @param string
      * @return
      */
-    static public String bashQuotes(String string) {
+    static public String bashQuotes(String string, String special) {
         if (string.equals(""))
             return "\"\"";
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < string.length(); i++) {
             final char c = string.charAt(i);
-            switch (c) {
-                case ' ':
-                case '(':
-                case ')':
-                    sb.append("\\");
-                default:
-                    sb.append(c);
-            }
+            if (special.indexOf(c) != -1)
+                sb.append("\\");
+            sb.append(c);
         }
         return sb.toString();
     }

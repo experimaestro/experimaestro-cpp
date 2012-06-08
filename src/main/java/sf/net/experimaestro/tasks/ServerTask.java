@@ -120,7 +120,7 @@ public class ServerTask extends AbstractTask {
             String user = keys.next();
             final String[] fields = passwords.getString(user).split("\\s*,\\s*");
 
-            LOGGER.info("Adding user %s [%s]", user, Arrays.toString(fields));
+            LOGGER.info("Adding user %s", user);
             userRealm.put(user, new Password(fields[0]));
             for (int i = 1; i < fields.length; i++)
                 userRealm.addUserToRole(user, fields[i]);

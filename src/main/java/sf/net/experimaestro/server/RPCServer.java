@@ -233,7 +233,7 @@ public class RPCServer {
 						null);
 
 			if (result != null)
-				LOGGER.info(result.toString());
+				LOGGER.info("Returns %s", result.toString());
 			else
 				LOGGER.info("Null result");
 

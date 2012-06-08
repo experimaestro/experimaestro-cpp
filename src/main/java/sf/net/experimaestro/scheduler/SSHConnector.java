@@ -21,16 +21,25 @@
 package sf.net.experimaestro.scheduler;
 
 import com.jcraft.jsch.*;
+import com.jcraft.jsch.agentproxy.AgentProxyException;
+import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
+import com.jcraft.jsch.agentproxy.USocketFactory;
+import com.jcraft.jsch.agentproxy.connector.PageantConnector;
+import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
+import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.Timer;
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.TimerTask;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -40,8 +49,15 @@ import java.util.ArrayList;
 public class SSHConnector implements Connector {
 
     static final private Logger LOGGER = Logger.getLogger();
-    // SSH session
+
+    /**
+     * sh shell command
+     */
+    private String shellCommand = "/bin/bash";
+
+    // SSH session: FIXME: temporary
     static transient private Session session;
+
 
     @Override
     public PrintWriter printWriter(String identifier) throws JSchException, IOException {
@@ -50,9 +66,7 @@ public class SSHConnector implements Connector {
         final Channel channel = session.openChannel("exec");
         ((ChannelExec) channel).setCommand(command);
         OutputStream out = channel.getOutputStream();
-
-        return new PrintWriter(out)
-        {
+        return new PrintWriter(out) {
             @Override
             public void close() {
                 channel.disconnect();
@@ -67,6 +81,23 @@ public class SSHConnector implements Connector {
 
     private void init() throws JSchException {
         JSch jsch = new JSch();
+
+
+        try {
+            com.jcraft.jsch.agentproxy.Connector con = null;
+            if (SSHAgentConnector.isConnectorAvailable()) {
+                USocketFactory usf = new JNAUSocketFactory();
+                con = new SSHAgentConnector(usf);
+                if (PageantConnector.isConnectorAvailable())
+                    con = new PageantConnector();
+                IdentityRepository irepo = new RemoteIdentityRepository(con);
+                jsch.setIdentityRepository(irepo);
+                jsch.setConfig("PreferredAuthentications", "publickey");
+            }
+        } catch (AgentProxyException e) {
+            LOGGER.warn("Could not create ssh-agent proxy: %s", e);
+        }
+
         session = jsch.getSession("bpiwowar", "big.lip6.fr", 22);
         jsch.setKnownHosts(new File(new File(System.getProperty("user.home"), ".ssh"), "known_hosts").getAbsolutePath());
         UserInfo ui = new MyUserInfo();
@@ -75,43 +106,37 @@ public class SSHConnector implements Connector {
     }
 
     @Override
-    public int exec(String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
-        ChannelExec channel = (ChannelExec) session.openChannel("exec");
+    public int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
+        final ChannelExec channel = (ChannelExec) session.openChannel("exec");
 
-        final String s = Output.toString(" ", ListAdaptator.create(command), new Output.Formatter<String>() {
+        final String command0 = Output.toString(" ", ListAdaptator.create(command), new Output.Formatter<String>() {
             public String format(String t) {
-                return CommandLineTask.bashQuotes(t);
+                return CommandLineTask.bashQuotes(t, " ");
             }
         });
+        final String s = String.format("%s -c \"( %s )\" > %s.out 2> %3$s.err ", shellCommand,
+                CommandLineTask.bashQuotes(command0, "\""), identifier);
+
         channel.setCommand(s);
         channel.setInputStream(null);
-        ((ChannelExec)channel).setErrStream(System.err);
-        channel.setOutputStream(System.out);
+        channel.setErrStream(System.err, true);
+        channel.setOutputStream(System.out, true);
         LOGGER.info("Starting the task [%s]", s);
         channel.connect();
-        InputStream in = channel.getInputStream();
-        byte[] tmp = new byte[1024];
 
-        while (true) {
-            while (in.available() > 0) {
-                int i = in.read(tmp, 0, 1024);
-                if (i < 0) break;
-                System.out.print(new String(tmp, 0, i));
-            }
-            if (channel.isClosed()) {
-                LOGGER.info("SSH exit-status: " + channel.getExitStatus());
-                break;
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                LOGGER.error(e);
-                return 1;
-            } finally {
-                channel.disconnect();
-            }
+        LOGGER.info("Waiting for task to finish");
+        while (!channel.isClosed()) {
+            Thread.sleep(1000);
         }
-        return 0;
+
+
+        int code = channel.getExitStatus();
+        LOGGER.info("Task finished [code %d]", code);
+
+        channel.getInputStream().close();
+        channel.disconnect();
+        LOGGER.info("Disconnected");
+        return code;
     }
 
     public static class MyUserInfo implements UserInfo, UIKeyboardInteractive {

@@ -20,8 +20,10 @@
 
 package sf.net.experimaestro.scheduler;
 
+import bpiwowar.argparser.ListAdaptator;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 @Persistent
 public class LocalhostConnector implements Connector {
     static final private Logger LOGGER = Logger.getLogger();
+    private String shellCommand = "/bin/bash";
 
     @Override
     public PrintWriter printWriter(String identifier) throws Exception {
@@ -42,11 +45,21 @@ public class LocalhostConnector implements Connector {
     }
 
     @Override
-    public int exec(String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
+    public int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
         Process p = null;
         try {
+            String[] fullCommand = new String[]{
+                    shellCommand,
+                    "-c",
+                    String.format("( %s ) > %s.out 2> %2$s.err", Output.toString(
+                            " ", ListAdaptator.create(command),
+                            new Output.Formatter<String>() {
+                                public String format(String t) {
+                                    return CommandLineTask.bashQuotes(t);
+                                }
+                            }), identifier, identifier)};
 
-            p = Runtime.getRuntime().exec(command, envp, workingDirectory);
+            p = Runtime.getRuntime().exec(fullCommand, envp, workingDirectory);
 
             // Changing the ownership of the different logs
             final int pid = sf.net.experimaestro.utils.PID.getPID(p);

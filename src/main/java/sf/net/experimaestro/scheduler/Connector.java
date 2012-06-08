@@ -42,5 +42,5 @@ public interface Connector {
      */
     PrintWriter printWriter(String identifier) throws Exception;
 
-    int exec(String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception;
+    int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception;
 }
