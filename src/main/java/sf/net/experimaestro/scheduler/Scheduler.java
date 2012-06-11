@@ -145,32 +145,36 @@ public class Scheduler {
 				for (Resource resource : resources) {
 					// Update resources status
 					if (!resource.getListeners().isEmpty())
-						if (resource.updateStatus()) {
-							try {
-								resource.notifyListeners();
-							} catch (DatabaseException e) {
-								LOGGER.warn(
-										"Could not notify all the listeners for [%s]",
-										resource.getIdentifier());
-								LOGGER.warn("Trace:", e);
-							}
+                        try {
+                            if (resource.updateStatus()) {
+                                try {
+                                    resource.notifyListeners();
+                                } catch (DatabaseException e) {
+                                    LOGGER.warn(
+                                            "Could not notify all the listeners for [%s]",
+                                            resource.getIdentifier());
+                                    LOGGER.warn("Trace:", e);
+                                }
 
-							// Notify the task manager in the case of a task
-							if (resource instanceof Job)
-								Scheduler.this.updateState((Job) resource);
+                                // Notify the task manager in the case of a task
+                                if (resource instanceof Job)
+                                    Scheduler.this.updateState((Job) resource);
 
-							// Update DB
-							try {
-								Scheduler.this.store(resource);
-							} catch (DatabaseException e) {
-								LOGGER.error(
-										"Could not update resource %s in database",
-										resource);
-							}
+                                // Update DB
+                                try {
+                                    Scheduler.this.store(resource);
+                                } catch (DatabaseException e) {
+                                    LOGGER.error(
+                                            "Could not update resource %s in database",
+                                            resource);
+                                }
 
-							changed = true;
-						}
-				}
+                                changed = true;
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                }
 				LOGGER.log(changed ? Level.INFO : Level.DEBUG,
 						"Checked resources (changes=%b)", changed);
 				if (changed)

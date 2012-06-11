@@ -65,6 +65,9 @@ public class FileLock implements Lock {
 		this(lockFile, true);
 	}
 
+    public FileLock(String lockFile) throws UnlockableException {
+        this(new File(lockFile), true);
+    }
 	/*
 	 * (non-Javadoc)
 	 * 

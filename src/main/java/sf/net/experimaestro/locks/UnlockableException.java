@@ -32,4 +32,7 @@ public class UnlockableException extends Exception {
 
 	private static final long serialVersionUID = 1L;
 
+    public UnlockableException(Exception e) {
+        super(e);
+    }
 }

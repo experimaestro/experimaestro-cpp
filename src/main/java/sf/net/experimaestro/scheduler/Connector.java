@@ -22,9 +22,9 @@ package sf.net.experimaestro.scheduler;
 
 import com.jcraft.jsch.JSchException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
 
-import java.io.File;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -43,4 +43,16 @@ public interface Connector {
     PrintWriter printWriter(String identifier) throws Exception;
 
     int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception;
+
+    Lock createLockFile(String lockIdentifier) throws UnlockableException;
+
+    void touchFile(String identifier) throws Exception;
+
+    boolean fileExists(String identifier) throws Exception;
+
+    long getLastModifiedTime(String identifier) throws Exception;
+
+    InputStream getInputStream(String identifier) throws Exception;
+
+    void renameFile(String from, String to) throws Exception;
 }

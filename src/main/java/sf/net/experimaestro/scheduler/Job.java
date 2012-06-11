@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.jcraft.jsch.JSchException;
-import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -53,20 +52,8 @@ import com.sleepycat.persist.model.Persistent;
 @Persistent()
 public class Job extends Resource implements HeapElement<Job>, Runnable {
 	final static private Logger LOGGER = Logger.getLogger();
+    private static final String DONE_EXTENSION = ".done";
 
-    /**
-     * Our connector to the host
-     */
-    Connector connector;
-
-    {
-        try {
-            connector = new SSHConnector();
-        } catch (JSchException e) {
-            LOGGER.warn("Could not create an SSH connector: %s", e);
-            connector = new LocalhostConnector();
-        }
-    }
 
     protected Job() {
 	}
@@ -200,27 +187,28 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 */
 	final public void run() {
 		// Check if the task has already been done
-		File doneFile = new File(identifier + ".done");
-		if (doneFile.exists()) {
-			LOGGER.info("Task %s is already done", identifier);
-			return;
-		}
+        try {
+            if (connector.fileExists(identifier + DONE_EXTENSION))
+                return;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
-		// Our locks
+
+        // Our locks
 		ArrayList<Lock> locks = new ArrayList<Lock>();
 
 		try {
 			while (true) {
 				// Check if not done
-				if (doneFile.exists()) {
+				if (connector.fileExists(identifier + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
-					lockfile.delete();
 					return;
 				}
 
 				// Try to lock, otherwise wait
 				try {
-					locks.add(new FileLock(lockfile, true));
+					locks.add(connector.createLockFile(identifier + LOCK_EXTENSION));
 				} catch (UnlockableException e) {
 					LOGGER.info("Could not lock job [%s]", identifier);
 					synchronized (this) {
@@ -235,9 +223,8 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 
 				// Check if not done (again, but now we have a lock so we
 				// will be sure of the result)
-				if (doneFile.exists()) {
+				if (connector.fileExists(identifier + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
-					lockfile.delete();
 					return;
 				}
 
@@ -272,7 +259,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 								"Error while running the task (code %d)", code));
 
 					// Create the "done" file, update the status and notify
-					doneFile.createNewFile();
+                    connector.touchFile(identifier + ".done");
 					state = ResourceState.DONE;
 					LOGGER.info("Done");
 				} catch (Throwable e) {
@@ -290,9 +277,11 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 			throw new RuntimeException(e);
 		} catch (DatabaseException e) {
 			throw new RuntimeException(e);
-		} finally {
+		} catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
 			// Dispose of all locks
-			LOGGER.info("Dispose of locks for %s", this);
+			LOGGER.info("Disposing of locks for %s", this);
 			for (Lock lock : locks)
 				lock.dispose();
 		}

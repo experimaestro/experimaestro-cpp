@@ -22,12 +22,13 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.ListAdaptator;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.File;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -51,11 +52,11 @@ public class LocalhostConnector implements Connector {
             String[] fullCommand = new String[]{
                     shellCommand,
                     "-c",
-                    String.format("( %s ) > %s.out 2> %2$s.err", Output.toString(
+                    String.format("\"( %s )\" > %s.out 2> %2$s.err", Output.toString(
                             " ", ListAdaptator.create(command),
                             new Output.Formatter<String>() {
                                 public String format(String t) {
-                                    return CommandLineTask.bashQuotes(t);
+                                    return CommandLineTask.bashQuotes(t, "\"");
                                 }
                             }), identifier, identifier)};
 
@@ -72,7 +73,7 @@ public class LocalhostConnector implements Connector {
                 int code = -1;
                 try {
                     code = p.waitFor();
-                } catch(InterruptedException e) {
+                } catch (InterruptedException e) {
                     LOGGER.warn("Task has been interrupted");
                 }
 
@@ -91,5 +92,36 @@ public class LocalhostConnector implements Connector {
                 p.getErrorStream().close();
             }
         }
+    }
+
+
+    @Override
+    public Lock createLockFile(String lockIdentifier) throws UnlockableException {
+        return new FileLock(lockIdentifier);
+    }
+
+    @Override
+    public void touchFile(String identifier) throws IOException {
+        new File(identifier).createNewFile();
+    }
+
+    @Override
+    public boolean fileExists(String identifier) {
+        return new File(identifier).exists();
+    }
+
+    @Override
+    public long getLastModifiedTime(String identifier) {
+        return new File(identifier).lastModified();
+    }
+
+    @Override
+    public InputStream getInputStream(String identifier) throws IOException {
+        return new FileInputStream(identifier);
+    }
+
+    @Override
+    public void renameFile(String from, String to) {
+        new File(from).renameTo(new File(to));
     }
 }

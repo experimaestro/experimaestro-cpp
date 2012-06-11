@@ -28,18 +28,15 @@ import com.jcraft.jsch.agentproxy.connector.PageantConnector;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.util.Timer;
 import javax.swing.*;
-import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.TimerTask;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -139,28 +136,134 @@ public class SSHConnector implements Connector {
         return code;
     }
 
+
+    @Override
+    public Lock createLockFile(final String lockIdentifier) throws UnlockableException {
+        try {
+            ChannelExec channel = (ChannelExec) session.openChannel("exec");
+            LOGGER.info("Creating SSH lock [%s]", lockIdentifier);
+            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.bashQuotes(lockIdentifier, "\"")));
+            channel.setInputStream(null);
+            channel.setErrStream(System.err, true);
+            channel.setOutputStream(System.out, true);
+            channel.connect();
+            LOGGER.info("Waiting for task to finish");
+            while (!channel.isClosed()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    LOGGER.error(e);
+                }
+            }
+            channel.disconnect();
+        } catch (JSchException e) {
+            throw new UnlockableException(e);
+        }
+
+        return new Lock() {
+            @Override
+            public boolean dispose() {
+                final ChannelExec channel;
+                try {
+                    ChannelSftp sftp = (ChannelSftp) session.openChannel("stfp");
+                    LOGGER.info("Disposing of SSH lock [%s] / %s", lockIdentifier, sftp);
+                    sftp.connect();
+                    sftp.chmod(644, lockIdentifier);
+                    sftp.rm(lockIdentifier);
+                    sftp.disconnect();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    new RuntimeException(e);
+                }
+
+                return false;
+            }
+
+            @Override
+            public void changeOwnership(int pid) {
+            }
+        };
+    }
+
+    @Override
+    public void touchFile(String identifier) throws IOException, JSchException {
+        final ChannelExec channel = (ChannelExec) session.openChannel("exec");
+        channel.setCommand(String.format("touch \"%s\"", CommandLineTask.bashQuotes(identifier, "\"")));
+        channel.setInputStream(null);
+        channel.setErrStream(System.err, true);
+        channel.setOutputStream(System.out, true);
+        channel.disconnect();
+    }
+
+    @Override
+    public boolean fileExists(String identifier) throws JSchException {
+        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        try {
+            final SftpATTRS stat = channel.stat(identifier);
+        } catch (SftpException e) {
+            return false;
+        } finally {
+            channel.disconnect();
+        }
+
+
+        return true;
+    }
+
+    @Override
+    public long getLastModifiedTime(String identifier) throws JSchException, SftpException {
+        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        channel.connect();
+        try {
+            final SftpATTRS stat = channel.stat(identifier);
+            return stat.getMTime();
+        } finally {
+            channel.disconnect();
+        }
+
+    }
+
+    @Override
+    public InputStream getInputStream(String identifier) throws IOException, JSchException {
+        String command = "scp  -f " + identifier;
+        final Channel channel = session.openChannel("exec");
+
+        OutputStream out = channel.getOutputStream();
+        final InputStream in = channel.getInputStream();
+        channel.connect();
+
+        return new BufferedInputStream(in) {
+            @Override
+            public void close() throws IOException {
+                channel.disconnect();
+                super.close();
+            }
+        };
+    }
+
+    @Override
+    public void renameFile(String from, String to) throws JSchException, SftpException {
+        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        channel.rename(from, to);
+        channel.connect();
+        channel.disconnect();
+    }
+
+
     public static class MyUserInfo implements UserInfo, UIKeyboardInteractive {
         String passwd;
         JTextField passwordField = (JTextField) new JPasswordField(20);
 
         MyUserInfo() {
-            LOGGER.info("Created a user info");
         }
 
         public String getPassword() {
-            LOGGER.info("Calling password");
             return passwd;
         }
 
         public boolean promptYesNo(String str) {
-            Object[] options = {"yes", "no"};
-            int foo = JOptionPane.showOptionDialog(null,
-                    str,
-                    "Warning",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.WARNING_MESSAGE,
-                    null, options, options[0]);
-            return foo == 0;
+            return false;
         }
 
 
@@ -173,77 +276,19 @@ public class SSHConnector implements Connector {
         }
 
         public boolean promptPassword(String message) {
-            Object[] ob = {passwordField};
-            int result =
-                    JOptionPane.showConfirmDialog(null, ob, message,
-                            JOptionPane.OK_CANCEL_OPTION);
-            if (result == JOptionPane.OK_OPTION) {
-                passwd = passwordField.getText();
-                return true;
-            } else {
-                return false;
-            }
+            return false;
         }
 
         public void showMessage(String message) {
-            JOptionPane.showMessageDialog(null, message);
         }
 
-        final GridBagConstraints gbc =
-                new GridBagConstraints(0, 0, 1, 1, 1, 1,
-                        GridBagConstraints.NORTHWEST,
-                        GridBagConstraints.NONE,
-                        new Insets(0, 0, 0, 0), 0, 0);
-        private Container panel;
 
         public String[] promptKeyboardInteractive(String destination,
                                                   String name,
                                                   String instruction,
                                                   String[] prompt,
                                                   boolean[] echo) {
-            panel = new JPanel();
-            panel.setLayout(new GridBagLayout());
-
-            gbc.weightx = 1.0;
-            gbc.gridwidth = GridBagConstraints.REMAINDER;
-            gbc.gridx = 0;
-            panel.add(new JLabel(instruction), gbc);
-            gbc.gridy++;
-
-            gbc.gridwidth = GridBagConstraints.RELATIVE;
-
-            JTextField[] texts = new JTextField[prompt.length];
-            for (int i = 0; i < prompt.length; i++) {
-                gbc.fill = GridBagConstraints.NONE;
-                gbc.gridx = 0;
-                gbc.weightx = 1;
-                panel.add(new JLabel(prompt[i]), gbc);
-
-                gbc.gridx = 1;
-                gbc.fill = GridBagConstraints.HORIZONTAL;
-                gbc.weighty = 1;
-                if (echo[i]) {
-                    texts[i] = new JTextField(20);
-                } else {
-                    texts[i] = new JPasswordField(20);
-                }
-                panel.add(texts[i], gbc);
-                gbc.gridy++;
-            }
-
-            if (JOptionPane.showConfirmDialog(null, panel,
-                    destination + ": " + name,
-                    JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE)
-                    == JOptionPane.OK_OPTION) {
-                String[] response = new String[prompt.length];
-                for (int i = 0; i < prompt.length; i++) {
-                    response[i] = texts[i].getText();
-                }
-                return response;
-            } else {
-                return null;  // cancel
-            }
+            return null;
         }
     }
 
