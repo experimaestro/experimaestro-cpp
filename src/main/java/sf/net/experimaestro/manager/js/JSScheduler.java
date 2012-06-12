@@ -76,7 +76,7 @@ public class JSScheduler extends ScriptableObject {
      * @throws DatabaseException
      */
     public void jsFunction_addCommandLineJob(String identifier, Object jsargs,
-                                             Object jsresources, Object jsrunner) throws DatabaseException {
+                                             Object jsresources, Object jsoptions) throws DatabaseException {
         // --- Process arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
@@ -107,6 +107,29 @@ public class JSScheduler extends ScriptableObject {
                         lockType);
                 task.addDependency(resource, lockType);
             }
+        }
+
+        // --- Optional arguments
+        if (!(jsoptions instanceof Undefined)) {
+            NativeObject options = (NativeObject) jsoptions;
+
+            if (options.has("connector", options)) {
+                final Object connector = options.get("connector", options);
+                System.err.println(connector.getClass().toString());
+                if (connector != null)
+                    task.setConnector(((JSConnector) connector).getConnector());
+            }
+
+            if (options.has("launcher", options)) {
+                final Object launcher = options.get("launcher", options);
+                System.err.println(launcher.getClass().toString());
+                if (launcher != null && !(launcher instanceof UniqueTag))
+                    task.setLauncher(((JSLauncher) launcher).getLauncher());
+            }
+            final Object stdout = options.get("stdout", options);
+
+            final Object stderr = options.get("stderr", options);
+
         }
 
         // --- Add it

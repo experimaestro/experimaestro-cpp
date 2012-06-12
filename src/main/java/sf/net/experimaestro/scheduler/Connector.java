@@ -42,7 +42,7 @@ public interface Connector {
      */
     PrintWriter printWriter(String identifier) throws Exception;
 
-    int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception;
+    int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception;
 
     Lock createLockFile(String lockIdentifier) throws UnlockableException;
 
@@ -55,4 +55,6 @@ public interface Connector {
     InputStream getInputStream(String identifier) throws Exception;
 
     void renameFile(String from, String to) throws Exception;
+
+    void setExecutable(String path, boolean flag) throws Exception;
 }

@@ -55,7 +55,7 @@ Main concepts
   is an output with the name <<<example>>> within the namespace <<<http://my.ns>>>.
   It is further identified by the <<<id>>> of value <<<abc1>>>.
   
-  Input/output are discussed further in {{{./manager/xml.html}this document}}
+  Input/output are discussed further in {{{./xml.html}this document}}
   
 * Tasks
  
@@ -63,7 +63,7 @@ Main concepts
   
   Tasks are the units that are used to build up experiments.
 
-  Tasks and task factories are described further {{{./manager/tasks.html}this document}}
+  Tasks and task factories are described further {{{./tasks.html}this document}}
  
 
 

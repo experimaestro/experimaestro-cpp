@@ -308,7 +308,7 @@ public class RPCServer {
 			commandArgs[i] = command[i].toString();
 
 		CommandLineTask job = new CommandLineTask(scheduler, name, commandArgs,
-				env, new File(workingDirectory));
+				env, new File(workingDirectory).getAbsolutePath());
 
 		// Process locks
 		for (Object depend : depends) {

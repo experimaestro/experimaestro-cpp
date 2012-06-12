@@ -30,6 +30,7 @@ import com.sleepycat.persist.model.SecondaryKey;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.manager.js.JSLauncher;
 import sf.net.experimaestro.utils.PID;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -62,18 +63,9 @@ public abstract class Resource implements Comparable<Resource> {
     public static final String STATUS_EXTENSION = ".status";
 
     /**
-     * Our connector to the host
+     * Our connector to the host where the resource is located
      */
-    transient Connector connector;
-
-    {
-        try {
-            connector = new SSHConnector();
-        } catch (JSchException e) {
-            LOGGER.warn("Could not create an SSH connector: %s", e);
-            connector = new LocalhostConnector();
-        }
-    }
+    Connector connector = new LocalhostConnector();
 
     /**
      * The task identifier
@@ -200,6 +192,8 @@ public abstract class Resource implements Comparable<Resource> {
 
         return updated;
     }
+
+
 
     static public enum DependencyStatus {
         /**

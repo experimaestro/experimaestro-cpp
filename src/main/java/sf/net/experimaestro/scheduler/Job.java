@@ -404,4 +404,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		}
 	}
 
+    public void setConnector(Connector connector) {
+        this.connector = connector;
+    }
 }

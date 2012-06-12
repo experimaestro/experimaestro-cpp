@@ -34,9 +34,9 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.swing.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -47,21 +47,31 @@ public class SSHConnector implements Connector {
 
     static final private Logger LOGGER = Logger.getLogger();
 
-    /**
-     * sh shell command
-     */
-    private String shellCommand = "/bin/bash";
+    /** Username */
+    String username;
 
-    // SSH session: FIXME: temporary
-    static transient private Session session;
+    /** Hostname to connect to */
+    String hostname;
 
+    /** Port */
+    int port = 22;
+
+    /** Used for serialization */
+    public SSHConnector() {
+
+    }
+
+    public SSHConnector(String username, String hostname) {
+        this.username = username;
+        this.hostname = hostname;
+    }
 
     @Override
     public PrintWriter printWriter(String identifier) throws JSchException, IOException {
         boolean ptimestamp = true;
         String command = "scp " + (ptimestamp ? "-p" : "") + " -t " + identifier;
-        final Channel channel = session.openChannel("exec");
-        ((ChannelExec) channel).setCommand(command);
+        final ChannelExec channel = newExecChannel();
+        channel.setCommand(command);
         OutputStream out = channel.getOutputStream();
         return new PrintWriter(out) {
             @Override
@@ -72,53 +82,17 @@ public class SSHConnector implements Connector {
         };
     }
 
-    public SSHConnector() throws JSchException {
-        if (session == null) init();
-    }
 
-    private void init() throws JSchException {
-        JSch jsch = new JSch();
-
-
-        try {
-            com.jcraft.jsch.agentproxy.Connector con = null;
-            if (SSHAgentConnector.isConnectorAvailable()) {
-                USocketFactory usf = new JNAUSocketFactory();
-                con = new SSHAgentConnector(usf);
-                if (PageantConnector.isConnectorAvailable())
-                    con = new PageantConnector();
-                IdentityRepository irepo = new RemoteIdentityRepository(con);
-                jsch.setIdentityRepository(irepo);
-                jsch.setConfig("PreferredAuthentications", "publickey");
-            }
-        } catch (AgentProxyException e) {
-            LOGGER.warn("Could not create ssh-agent proxy: %s", e);
-        }
-
-        session = jsch.getSession("bpiwowar", "big.lip6.fr", 22);
-        jsch.setKnownHosts(new File(new File(System.getProperty("user.home"), ".ssh"), "known_hosts").getAbsolutePath());
-        UserInfo ui = new MyUserInfo();
-        session.setUserInfo(ui);
-        session.connect();
-    }
 
     @Override
-    public int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
-        final ChannelExec channel = (ChannelExec) session.openChannel("exec");
-
-        final String command0 = Output.toString(" ", ListAdaptator.create(command), new Output.Formatter<String>() {
-            public String format(String t) {
-                return CommandLineTask.bashQuotes(t, " ");
-            }
-        });
-        final String s = String.format("%s -c \"( %s )\" > %s.out 2> %3$s.err ", shellCommand,
-                CommandLineTask.bashQuotes(command0, "\""), identifier);
-
-        channel.setCommand(s);
+    public int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception {
+        final ChannelExec channel = newExecChannel();
+        channel.setCommand(command);
         channel.setInputStream(null);
         channel.setErrStream(System.err, true);
         channel.setOutputStream(System.out, true);
-        LOGGER.info("Starting the task [%s]", s);
+
+        LOGGER.info("Starting the task [%s]", identifier);
         channel.connect();
 
         LOGGER.info("Waiting for task to finish");
@@ -140,9 +114,9 @@ public class SSHConnector implements Connector {
     @Override
     public Lock createLockFile(final String lockIdentifier) throws UnlockableException {
         try {
-            ChannelExec channel = (ChannelExec) session.openChannel("exec");
+            ChannelExec channel = newExecChannel();
             LOGGER.info("Creating SSH lock [%s]", lockIdentifier);
-            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.bashQuotes(lockIdentifier, "\"")));
+            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.protect(lockIdentifier, "\"")));
             channel.setInputStream(null);
             channel.setErrStream(System.err, true);
             channel.setOutputStream(System.out, true);
@@ -165,7 +139,7 @@ public class SSHConnector implements Connector {
             public boolean dispose() {
                 final ChannelExec channel;
                 try {
-                    ChannelSftp sftp = (ChannelSftp) session.openChannel("stfp");
+                    ChannelSftp sftp = newSftpChannel();
                     LOGGER.info("Disposing of SSH lock [%s] / %s", lockIdentifier, sftp);
                     sftp.connect();
                     sftp.chmod(644, lockIdentifier);
@@ -188,8 +162,8 @@ public class SSHConnector implements Connector {
 
     @Override
     public void touchFile(String identifier) throws IOException, JSchException {
-        final ChannelExec channel = (ChannelExec) session.openChannel("exec");
-        channel.setCommand(String.format("touch \"%s\"", CommandLineTask.bashQuotes(identifier, "\"")));
+        final ChannelExec channel = newExecChannel();
+        channel.setCommand(String.format("touch \"%s\"", CommandLineTask.protect(identifier, "\"")));
         channel.setInputStream(null);
         channel.setErrStream(System.err, true);
         channel.setOutputStream(System.out, true);
@@ -198,7 +172,7 @@ public class SSHConnector implements Connector {
 
     @Override
     public boolean fileExists(String identifier) throws JSchException {
-        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        ChannelSftp channel = newSftpChannel();
         try {
             final SftpATTRS stat = channel.stat(identifier);
         } catch (SftpException e) {
@@ -213,7 +187,7 @@ public class SSHConnector implements Connector {
 
     @Override
     public long getLastModifiedTime(String identifier) throws JSchException, SftpException {
-        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        ChannelSftp channel = newSftpChannel();
         channel.connect();
         try {
             final SftpATTRS stat = channel.stat(identifier);
@@ -227,7 +201,7 @@ public class SSHConnector implements Connector {
     @Override
     public InputStream getInputStream(String identifier) throws IOException, JSchException {
         String command = "scp  -f " + identifier;
-        final Channel channel = session.openChannel("exec");
+        final ChannelExec channel = newExecChannel();
 
         OutputStream out = channel.getOutputStream();
         final InputStream in = channel.getInputStream();
@@ -244,52 +218,136 @@ public class SSHConnector implements Connector {
 
     @Override
     public void renameFile(String from, String to) throws JSchException, SftpException {
-        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        ChannelSftp channel = newSftpChannel();
         channel.rename(from, to);
         channel.connect();
         channel.disconnect();
     }
 
+    static final int S_IXUSR = 00100; // execute/search by owner
 
-    public static class MyUserInfo implements UserInfo, UIKeyboardInteractive {
-        String passwd;
-        JTextField passwordField = (JTextField) new JPasswordField(20);
+    @Override
+    public void setExecutable(String path, boolean flag) throws JSchException, SftpException {
+        ChannelSftp channel = newSftpChannel();
+        final SftpATTRS attr = channel.stat(path);
+        if (flag)
+            attr.setPERMISSIONS(attr.getPermissions() | S_IXUSR);
+        else
+            attr.setPERMISSIONS(attr.getPermissions() & ~S_IXUSR);
 
-        MyUserInfo() {
+        channel.setStat(path, attr);
+        channel.connect();
+        channel.disconnect();
+    }
+
+
+//    public static class MyUserInfo implements UserInfo, UIKeyboardInteractive {
+//        String passwd;
+//        JTextField passwordField = (JTextField) new JPasswordField(20);
+//
+//        MyUserInfo() {
+//        }
+//
+//        public String getPassword() {
+//            return passwd;
+//        }
+//
+//        public boolean promptYesNo(String str) {
+//            return false;
+//        }
+//
+//
+//        public String getPassphrase() {
+//            return null;
+//        }
+//
+//        public boolean promptPassphrase(String message) {
+//            return true;
+//        }
+//
+//        public boolean promptPassword(String message) {
+//            return false;
+//        }
+//
+//        public void showMessage(String message) {
+//        }
+//
+//
+//        public String[] promptKeyboardInteractive(String destination,
+//                                                  String name,
+//                                                  String instruction,
+//                                                  String[] prompt,
+//                                                  boolean[] echo) {
+//            return null;
+//        }
+//    }
+
+
+
+    class SSHSession {
+        public Session session;
+
+        SSHSession() throws JSchException {
+            init();
         }
 
-        public String getPassword() {
-            return passwd;
-        }
+        void init() throws JSchException {
+            JSch jsch = new JSch();
 
-        public boolean promptYesNo(String str) {
-            return false;
-        }
+            try {
+                com.jcraft.jsch.agentproxy.Connector con = null;
+                if (SSHAgentConnector.isConnectorAvailable()) {
+                    USocketFactory usf = new JNAUSocketFactory();
+                    con = new SSHAgentConnector(usf);
+                    if (PageantConnector.isConnectorAvailable())
+                        con = new PageantConnector();
+                    IdentityRepository irepo = new RemoteIdentityRepository(con);
+                    jsch.setIdentityRepository(irepo);
+                    jsch.setConfig("PreferredAuthentications", "publickey");
+                }
+            } catch (AgentProxyException e) {
+                LOGGER.warn("Could not create ssh-agent proxy: %s", e);
+            }
 
-
-        public String getPassphrase() {
-            return null;
-        }
-
-        public boolean promptPassphrase(String message) {
-            return true;
-        }
-
-        public boolean promptPassword(String message) {
-            return false;
-        }
-
-        public void showMessage(String message) {
-        }
-
-
-        public String[] promptKeyboardInteractive(String destination,
-                                                  String name,
-                                                  String instruction,
-                                                  String[] prompt,
-                                                  boolean[] echo) {
-            return null;
+            session = jsch.getSession(username, hostname, 22);
+            jsch.setKnownHosts(new File(new File(System.getProperty("user.home"), ".ssh"), "known_hosts").getAbsolutePath());
+            session.connect();
         }
     }
+
+    ChannelSftp newSftpChannel() throws JSchException {
+        return (ChannelSftp) getSession().openChannel("sftp");
+    }
+
+    ChannelExec newExecChannel() throws JSchException {
+        return (ChannelExec) getSession().openChannel("exec");
+    }
+
+    /** Get the session (creates it if necessary) */
+    private Session getSession() throws JSchException {
+        if (_session == null) {
+            _session = sessions.get(this);
+            if (_session == null) {
+                sessions.put(this, _session = new SSHSession());
+            }
+        }
+
+        // If we are not connected, do it now
+        if (!_session.session.isConnected())
+            _session.session.connect();
+
+        // Returns
+        return _session.session;
+    }
+
+    /** Static map to sessions
+     * This is necessary since the SSHConnector object can be serialized (within a resource)
+     */
+    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<SSHConnector, SSHSession>();
+
+    /**
+     * Cached SSH session
+     */
+    static transient private SSHSession _session;
 
 }

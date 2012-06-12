@@ -50,6 +50,15 @@
     </repositories>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>1.0</version>
+            </extension>
+        </extensions>
+
+
         <plugins>
 
             <!-- Java version -->
@@ -230,7 +239,7 @@
         <site>
             <id>experimaestro.sf.net</id>
             <name>experimaestro Website</name>
-            <url>http://experimaestro.sourceforget.net</url>
+            <url>scp://shell.sourceforge.net/home/project-web/experimaestro/htdocs</url>
         </site>
     </distributionManagement>
 

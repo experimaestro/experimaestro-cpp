@@ -38,7 +38,6 @@ import java.util.ArrayList;
 @Persistent
 public class LocalhostConnector implements Connector {
     static final private Logger LOGGER = Logger.getLogger();
-    private String shellCommand = "/bin/bash";
 
     @Override
     public PrintWriter printWriter(String identifier) throws Exception {
@@ -46,21 +45,30 @@ public class LocalhostConnector implements Connector {
     }
 
     @Override
-    public int exec(String identifier, String[] command, String[] envp, File workingDirectory, ArrayList<Lock> locks) throws Exception {
+    public int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception {
         Process p = null;
         try {
-            String[] fullCommand = new String[]{
-                    shellCommand,
-                    "-c",
-                    String.format("\"( %s )\" > %s.out 2> %2$s.err", Output.toString(
-                            " ", ListAdaptator.create(command),
-                            new Output.Formatter<String>() {
-                                public String format(String t) {
-                                    return CommandLineTask.bashQuotes(t, "\"");
-                                }
-                            }), identifier, identifier)};
+            LOGGER.info("Running command [%s]", command);
+            p = Runtime.getRuntime().exec(new String[] {
+                    "/bin/bash", "-c", command
+            }
+            );
 
-            p = Runtime.getRuntime().exec(fullCommand, envp, workingDirectory);
+            final Process finalP = p;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    final BufferedReader reader = new BufferedReader(new InputStreamReader(finalP.getErrorStream()));
+                    String s;
+                    try {
+                        while ((s = reader.readLine()) != null) {
+                            LOGGER.error("[stderr] %s", s);
+                        }
+                    } catch (IOException e) {
+                        LOGGER.error("[stderr/exception] %s", e.toString());
+                    }
+                }
+            }).run();
 
             // Changing the ownership of the different logs
             final int pid = sf.net.experimaestro.utils.PID.getPID(p);
@@ -123,5 +131,10 @@ public class LocalhostConnector implements Connector {
     @Override
     public void renameFile(String from, String to) {
         new File(from).renameTo(new File(to));
+    }
+
+    @Override
+    public void setExecutable(String path, boolean flag) {
+        new File(path).setExecutable(flag);
     }
 }

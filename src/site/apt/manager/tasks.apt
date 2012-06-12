@@ -26,4 +26,20 @@
 
 
   
- 
+Connectors
+
+  Connectors are used to connect to a specific computer in order to execute a command. 
+  Here is the list of connectors:
+  
+  * LocalhostConnector: executes a command on the host where the server is running
+  
+  * SSSHConnector: executes a command via SSH
+  
+Launcher
+
+  Launchers are used to define how a command is executed. 
+  Here is the list of available launchers:
+  
+  * ShLauncher: runs commands using sh
+  
+  * OARLauncher: runs commands using {{{http://oar.imag.fr/}OAR}}

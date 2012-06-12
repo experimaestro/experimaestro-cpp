@@ -24,16 +24,17 @@ import static java.lang.String.format;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
+import bpiwowar.argparser.utils.Formatter;
+import bpiwowar.argparser.utils.Output;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.manager.js.JSLauncher;
+import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
-import bpiwowar.argparser.ListAdaptator;
 
 import com.sleepycat.persist.model.Persistent;
 
@@ -46,20 +47,19 @@ import com.sleepycat.persist.model.Persistent;
 public class CommandLineTask extends Job {
     final static private Logger LOGGER = Logger.getLogger();
 
+    /**
+     * Our command line launcher
+     */
+    Launcher launcher = new ShLauncher();
 
     /**
      * The command to execute
      */
     private String[] command;
 
-    /**
-     * The shell command used
-     */
-    final String shellCommand = "/bin/bash";
-
     private String[] envp = null;
 
-    private File workingDirectory;
+    private String workingDirectory;
 
     protected CommandLineTask() {
     }
@@ -69,31 +69,26 @@ public class CommandLineTask extends Job {
      *
      * @param scheduler  The scheduler for this command
      * @param identifier The identifier of the command (this will be used for the path of the files)
-     * @param commandArgs The command with arguments
-     * @throws FileNotFoundException
+     * @param command    The command with arguments
      */
     public CommandLineTask(Scheduler scheduler, String identifier,
-                           String[] commandArgs, Map<String, String> env, File workingDirectory) {
+                           String[] command, Map<String, String> environment, String workingDirectory) {
 
         super(scheduler, identifier);
 
-        LOGGER.info("Command is %s", Arrays.toString(commandArgs));
+        LOGGER.info("Command is %s", Arrays.toString(command));
 
         // Copy the environment
-        if (env != null) {
-            envp = new String[env.size()];
+        if (environment != null) {
+            envp = new String[environment.size()];
             int i = 0;
-            for (Map.Entry<String, String> entry : env.entrySet())
+            for (Map.Entry<String, String> entry : environment.entrySet())
                 envp[i++] = format("%s=%s", entry.getKey(), entry.getValue());
         }
         this.workingDirectory = workingDirectory;
 
         // Construct command
-        this.command = commandArgs;
-
-
-
-
+        this.command = command;
     }
 
     /**
@@ -110,21 +105,33 @@ public class CommandLineTask extends Job {
 
     @Override
     protected int doRun(ArrayList<Lock> locks) throws Exception {
-        // Runs the command
-        LOGGER.info("Evaluating command [%s] %s with environment %s",
-                workingDirectory, Arrays.toString(command),
-                Arrays.toString(envp));
+
 
         // Write command
-        PrintWriter writer = connector.printWriter(String.format("%s.run",
-                identifier));
-        writer.format("%nCommand:%s%n", Output.toString("", ListAdaptator.create(command)));
-        writer.format("Working directory %s%n", workingDirectory);
-        writer.format("Environment:%n%s%n%n", Arrays.toString(envp));
+        final String runId = String.format("%s.run",
+                identifier);
+        PrintWriter writer = connector.printWriter(runId);
+
+
+        writer.format("# Experimaestro generated task: %s%n", identifier);
+        writer.println();
+        if (envp != null) {
+            for (String env : envp)
+                writer.println(env);
+            writer.println();
+        }
+        if (workingDirectory != null)
+            writer.format("cd \"%s\"%n%n", protect(workingDirectory, "\""));
+
+        writer.println(Output.toString(" ", ListAdaptator.create(command), new Formatter<String>() {
+            public String format(String t) {
+                return CommandLineTask.protect(t, " \"'");
+            }
+        }));
         writer.close();
 
         // --- Execute command and return error code
-        return connector.exec(identifier, command, envp, workingDirectory, locks);
+        return connector.exec(identifier, launcher.getCommand(identifier), locks);
     }
 
     @Override
@@ -136,13 +143,13 @@ public class CommandLineTask extends Job {
     }
 
     /**
-     * Process one argument, adding quotes if necessary to protect special
-     * characters
+     * Process one argument, adding backslash if necessary to protect special
+     * characters.
      *
      * @param string
      * @return
      */
-    static public String bashQuotes(String string, String special) {
+    static public String protect(String string, String special) {
         if (string.equals(""))
             return "\"\"";
         StringBuilder sb = new StringBuilder();
@@ -153,5 +160,9 @@ public class CommandLineTask extends Job {
             sb.append(c);
         }
         return sb.toString();
+    }
+
+    public void setLauncher(Launcher launcher) {
+        this.launcher = launcher;
     }
 }

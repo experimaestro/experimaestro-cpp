@@ -135,9 +135,11 @@ public class XPMObject {
 		// Define the new classes
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
-		ScriptableObject.defineClass(scope, JSScheduler.class);
+        ScriptableObject.defineClass(scope, JSScheduler.class);
+        ScriptableObject.defineClass(scope, JSOARLauncher.class);
+        ScriptableObject.defineClass(scope, JSSSHConnector.class);
 
-		// Add functions
+        // Add functions
 		addFunction(scope, "qname",
 				new Class<?>[] { Object.class, String.class });
 
