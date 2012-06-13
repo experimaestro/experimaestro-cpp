@@ -31,13 +31,17 @@ import sf.net.experimaestro.utils.log.Logger;
 public class SimpleData extends Data {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	public SimpleData(Scheduler taskManager, String identifier, LockMode mode,
+	public SimpleData(Scheduler taskManager, Connector connector, String identifier, LockMode mode,
 			boolean generated) {
-		super(taskManager, identifier, mode);
+		super(taskManager, connector, identifier, mode);
 		LOGGER.info(
 				"New resource: simple data (%s) with mode %s (generated = %b)",
 				identifier, mode, generated);
 		this.state = generated ? ResourceState.DONE : ResourceState.WAITING;
 	}
 
+    public SimpleData(Scheduler scheduler, Identifier identifier, LockMode lockMode, boolean generated) {
+        super(scheduler, identifier, lockMode, generated);
+        this.state = generated ? ResourceState.DONE : ResourceState.WAITING;
+    }
 }

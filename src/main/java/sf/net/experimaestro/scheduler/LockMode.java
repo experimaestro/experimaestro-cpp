@@ -23,7 +23,15 @@ package sf.net.experimaestro.scheduler;
 import bpiwowar.argparser.EnumValue;
 
 /**
- * Locking mode
+ * Locking mode.
+ *
+ * Defines how a resource can be accessed. For the moment,
+ * <ul>
+ *     <li>Read-only</li>
+ *     <li>Exclusive writer</li>
+ *     <li>Single writer with concurrent multiple reader</li>
+ *     <li>Multiple writer</li>
+ * </ul>
  */
 public enum LockMode {
 	@EnumValue(value = "read-only", help = "Creates a resource that can only be read")

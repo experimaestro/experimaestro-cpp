@@ -20,22 +20,33 @@
 
 package sf.net.experimaestro.scheduler;
 
-import bpiwowar.argparser.utils.Formatter;
-import bpiwowar.argparser.utils.Output;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import sf.net.experimaestro.locks.Lock;
+
+import java.util.ArrayList;
 
 /**
+ * Runs a command using *SH (bash, sh)
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 12/6/12
  */
 @Persistent
-public class ShLauncher extends Launcher {
+public class ShLauncher extends UnixShellLauncher {
+    /**
+     * Path to the shell
+     */
     String shellCommand = "/bin/bash";
 
     @Override
-    public String getCommand(String identifier) {
-        return String.format("%s %s.run > %s.out 2> %3$s.err",
-                shellCommand, CommandLineTask.protect(identifier, " "), identifier);
+    public void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+        generateRunFile(task);
+
+        final String path = task.identifier.path;
+        final String command = String.format("%s %s.run > %2s.out 2> %2$s.err",
+                shellCommand, CommandLineTask.protect(path, " "));
+        task.getConnector().exec(command, locks);
     }
+
+
 }

@@ -20,11 +20,8 @@
 
 package sf.net.experimaestro.scheduler;
 
-import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.Iterator;
-import java.util.Timer;
-import java.util.TreeMap;
 import java.util.WeakHashMap;
 
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
@@ -48,12 +45,12 @@ public class Resources implements Iterable<Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/** The index */
-	private PrimaryIndex<String, Resource> index;
+	private PrimaryIndex<Identifier, Resource> index;
 
 	/**
 	 * A cache to get track of resources in memory
 	 */
-	private WeakHashMap<String, WeakReference<Resource>> cache = new WeakHashMap<String, WeakReference<Resource>>();
+	private WeakHashMap<Identifier, WeakReference<Resource>> cache = new WeakHashMap<Identifier, WeakReference<Resource>>();
 
 	/**
 	 * The associated scheduler
@@ -69,7 +66,7 @@ public class Resources implements Iterable<Resource> {
 	public Resources(Scheduler scheduler, EntityStore dbStore)
 			throws DatabaseException {
 		this.scheduler = scheduler;
-		index = dbStore.getPrimaryIndex(String.class, Resource.class);
+		index = dbStore.getPrimaryIndex(Identifier.class, Resource.class);
 	}
 
 	/**
@@ -85,7 +82,7 @@ public class Resources implements Iterable<Resource> {
 	 */
 	synchronized public boolean put(Resource resource) throws DatabaseException {
 		// Check if overriding a running resource (unless it is the same object)
-		Resource old = get(resource.getIdentifier());
+		Resource old = get(resource.identifier);
 
 		if (old != null) {
 			// Don't override a running task
@@ -111,7 +108,7 @@ public class Resources implements Iterable<Resource> {
 	 * @return The resource or null if no such entities exist
 	 * @throws DatabaseException
 	 */
-	synchronized public Resource get(String id) throws DatabaseException {
+	synchronized public Resource get(Identifier id) throws DatabaseException {
 		Resource resource = getFromCache(id);
 		if (resource != null)
 			return resource;
@@ -124,7 +121,7 @@ public class Resources implements Iterable<Resource> {
 		return resource;
 	}
 
-	private Resource getFromCache(String id) {
+	private Resource getFromCache(Identifier id) {
 		// Try to get from cache first
 		WeakReference<Resource> reference = cache.get(id);
 		if (reference != null) {
@@ -139,7 +136,7 @@ public class Resources implements Iterable<Resource> {
 	public Iterator<Resource> iterator() {
 		try {
 			return new AbstractIterator<Resource>() {
-				EntityCursor<String> iterator = index.keys();
+				EntityCursor<Identifier> iterator = index.keys();
 
 				@Override
 				protected void finalize() throws Throwable {
@@ -151,7 +148,7 @@ public class Resources implements Iterable<Resource> {
 				@Override
 				protected boolean storeNext() {
 					try {
-						String id = iterator.next();
+						Identifier id = iterator.next();
 						if (id != null) {
 							value = get(id);
 							return true;

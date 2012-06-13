@@ -20,25 +20,33 @@
 
 package sf.net.experimaestro.scheduler;
 
-import bpiwowar.argparser.utils.Formatter;
-import bpiwowar.argparser.utils.Output;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import sf.net.experimaestro.locks.Lock;
+
+import java.util.ArrayList;
 
 /**
  * A command line launcher with OAR
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
-public class OARLauncher extends Launcher {
+public class OARLauncher extends UnixShellLauncher {
 
     private Object oarCommand = "oarsub";
 
+    @Override
+    public void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+        generateRunFile(task);
+
+        final String path = task.identifier.path;
+        final String id = CommandLineTask.protect(path, "\"");
+        String command = String.format("%s --stdout=\"%s.out\" --stderr=\"%2$s.err\" \"%2s.run\" ",
+                oarCommand, id);
+        task.getConnector().exec(command, locks);
+    }
 
     @Override
-    public String getCommand(String identifier) {
-        final String id = CommandLineTask.protect(identifier, "\"");
-        return String.format("%s --stdout=\"%s.out\" --stderr=\"%2$s.err\" \"%2s.run\" ",
-                oarCommand, id);
+    public ResourceState getState(CommandLineTask task) {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 }

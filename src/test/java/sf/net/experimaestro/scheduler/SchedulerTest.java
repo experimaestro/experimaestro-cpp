@@ -76,9 +76,9 @@ public class SchedulerTest {
 		public SimpleJob() {
 		}
 
-		public SimpleJob(String id, Scheduler scheduler, String fullId, String waitId,
+		public SimpleJob(String id, Scheduler scheduler, Connector connector, String fullId, String waitId,
 				String setId) {
-			super(scheduler, fullId);
+			super(scheduler, connector, fullId);
 			this.id = id;
 			this.waitId = waitId;
 			counter.add(1);
@@ -141,7 +141,7 @@ public class SchedulerTest {
 	static SimpleJob simpleJob(Scheduler scheduler, File jobDirectory,
 			final String id, boolean set, String waitId)
 			throws DatabaseException {
-		final SimpleJob job = new SimpleJob(id, scheduler, new File(jobDirectory,
+		final SimpleJob job = new SimpleJob(id, scheduler,  LocalhostConnector.getInstance(), new File(jobDirectory,
 				id).getAbsolutePath(), set ? id : null, waitId);
 		return job;
 	}

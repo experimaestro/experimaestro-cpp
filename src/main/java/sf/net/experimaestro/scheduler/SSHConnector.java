@@ -30,11 +30,11 @@ import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -67,17 +67,19 @@ public class SSHConnector implements Connector {
     }
 
     @Override
-    public PrintWriter printWriter(String identifier) throws JSchException, IOException {
-        boolean ptimestamp = true;
-        String command = "scp " + (ptimestamp ? "-p" : "") + " -t " + identifier;
+    public PrintWriter printWriter(final String path) throws JSchException, IOException {
+        LOGGER.info("Creating a SSH file [%s]", path);
+        String command = String.format("cat > \"%s\"", CommandLineTask.protect(path,"\""));
         final ChannelExec channel = newExecChannel();
         channel.setCommand(command);
+        channel.connect();
         OutputStream out = channel.getOutputStream();
         return new PrintWriter(out) {
             @Override
             public void close() {
-                channel.disconnect();
+                LOGGER.info("Closing SSH file [%s]", path);
                 super.close();
+                channel.disconnect();
             }
         };
     }
@@ -85,21 +87,19 @@ public class SSHConnector implements Connector {
 
 
     @Override
-    public int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception {
+    public int exec(String command, ArrayList<Lock> locks) throws Exception {
         final ChannelExec channel = newExecChannel();
         channel.setCommand(command);
         channel.setInputStream(null);
         channel.setErrStream(System.err, true);
         channel.setOutputStream(System.out, true);
 
-        LOGGER.info("Starting the task [%s]", identifier);
         channel.connect();
 
         LOGGER.info("Waiting for task to finish");
         while (!channel.isClosed()) {
             Thread.sleep(1000);
         }
-
 
         int code = channel.getExitStatus();
         LOGGER.info("Task finished [code %d]", code);
@@ -112,16 +112,15 @@ public class SSHConnector implements Connector {
 
 
     @Override
-    public Lock createLockFile(final String lockIdentifier) throws UnlockableException {
+    public Lock createLockFile(final String path) throws UnlockableException {
         try {
             ChannelExec channel = newExecChannel();
-            LOGGER.info("Creating SSH lock [%s]", lockIdentifier);
-            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.protect(lockIdentifier, "\"")));
+            LOGGER.info("Creating SSH lock [%s]", path);
+            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.protect(path, "\"")));
             channel.setInputStream(null);
             channel.setErrStream(System.err, true);
             channel.setOutputStream(System.out, true);
             channel.connect();
-            LOGGER.info("Waiting for task to finish");
             while (!channel.isClosed()) {
                 try {
                     Thread.sleep(1000);
@@ -140,10 +139,10 @@ public class SSHConnector implements Connector {
                 final ChannelExec channel;
                 try {
                     ChannelSftp sftp = newSftpChannel();
-                    LOGGER.info("Disposing of SSH lock [%s] / %s", lockIdentifier, sftp);
+                    LOGGER.info("Disposing of SSH lock [%s]", path);
                     sftp.connect();
-                    sftp.chmod(644, lockIdentifier);
-                    sftp.rm(lockIdentifier);
+                    sftp.chmod(644, path);
+                    sftp.rm(path);
                     sftp.disconnect();
                 } catch (RuntimeException e) {
                     throw e;
@@ -163,18 +162,31 @@ public class SSHConnector implements Connector {
     @Override
     public void touchFile(String identifier) throws IOException, JSchException {
         final ChannelExec channel = newExecChannel();
-        channel.setCommand(String.format("touch \"%s\"", CommandLineTask.protect(identifier, "\"")));
+        String command = String.format("touch \"%s\"", CommandLineTask.protect(identifier, "\""));
+        LOGGER.info("Executing command [%s]", command);
+        channel.setCommand(command);
         channel.setInputStream(null);
         channel.setErrStream(System.err, true);
         channel.setOutputStream(System.out, true);
+        channel.connect();
+        while (!channel.isClosed()) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                LOGGER.error(e);
+            }
+        }
+
         channel.disconnect();
     }
 
     @Override
-    public boolean fileExists(String identifier) throws JSchException {
+    public boolean fileExists(String path) throws JSchException {
         ChannelSftp channel = newSftpChannel();
+        channel.connect();
         try {
-            final SftpATTRS stat = channel.stat(identifier);
+            LOGGER.info("Testing if [%s%s] exists", getIdentifier(), path);
+            final SftpATTRS stat = channel.stat(path);
         } catch (SftpException e) {
             return false;
         } finally {
@@ -186,11 +198,11 @@ public class SSHConnector implements Connector {
     }
 
     @Override
-    public long getLastModifiedTime(String identifier) throws JSchException, SftpException {
+    public long getLastModifiedTime(String path) throws JSchException, SftpException {
         ChannelSftp channel = newSftpChannel();
         channel.connect();
         try {
-            final SftpATTRS stat = channel.stat(identifier);
+            final SftpATTRS stat = channel.stat(path);
             return stat.getMTime();
         } finally {
             channel.disconnect();
@@ -199,8 +211,8 @@ public class SSHConnector implements Connector {
     }
 
     @Override
-    public InputStream getInputStream(String identifier) throws IOException, JSchException {
-        String command = "scp  -f " + identifier;
+    public InputStream getInputStream(String path) throws IOException, JSchException {
+        String command = "scp  -f " + path;
         final ChannelExec channel = newExecChannel();
 
         OutputStream out = channel.getOutputStream();
@@ -238,6 +250,15 @@ public class SSHConnector implements Connector {
         channel.setStat(path, attr);
         channel.connect();
         channel.disconnect();
+    }
+
+    @Override
+    public String getIdentifier() {
+        return String.format("ssh://%s@%s", username, hostname);
+    }
+
+    public static Identifier getIdentifier(URI uri) {
+        return new Identifier(new SSHConnector(uri.getUserInfo(), uri.getHost()), uri.getPath());
     }
 
 

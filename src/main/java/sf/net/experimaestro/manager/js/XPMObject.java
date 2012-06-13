@@ -65,6 +65,7 @@ import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
+import sf.net.experimaestro.scheduler.Connector;
 import sf.net.experimaestro.scheduler.LockMode;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleData;
@@ -339,9 +340,9 @@ public class XPMObject {
 		return object.toString();
 	}
 
-	public String addData(String identifier) throws DatabaseException {
+	public String addData(Connector connector, String identifier) throws DatabaseException {
 		LockMode mode = LockMode.SINGLE_WRITER;
-		SimpleData resource = new SimpleData(scheduler, identifier, mode, false);
+		SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
 		scheduler.add(resource);
 		return identifier;
 	}

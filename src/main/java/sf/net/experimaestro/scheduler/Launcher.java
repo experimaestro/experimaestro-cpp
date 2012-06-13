@@ -21,6 +21,9 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.locks.Lock;
+
+import java.util.ArrayList;
 
 /**
  * Defines how to run a command line and to monitor changes in
@@ -29,5 +32,9 @@ import com.sleepycat.persist.model.Persistent;
  */
 @Persistent
 public abstract class Launcher {
-    public abstract String getCommand(String identifier);
+    /** Launch the task */
+    public abstract void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
+
+    /** Get the state */
+    public abstract ResourceState getState(CommandLineTask task) throws Exception;
 }

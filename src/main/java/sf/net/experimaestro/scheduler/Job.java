@@ -30,7 +30,6 @@ import java.util.Date;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import com.jcraft.jsch.JSchException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -52,7 +51,7 @@ import com.sleepycat.persist.model.Persistent;
 @Persistent()
 public class Job extends Resource implements HeapElement<Job>, Runnable {
 	final static private Logger LOGGER = Logger.getLogger();
-    private static final String DONE_EXTENSION = ".done";
+    static final String DONE_EXTENSION = ".done";
 
 
     protected Job() {
@@ -61,16 +60,21 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	/**
 	 * Initialisation of a task
 	 * 
-	 * @param taskManager
+	 * @param scheduler The job scheduler
 	 */
-	public Job(Scheduler taskManager, String identifier) {
-		super(taskManager, identifier, LockMode.EXCLUSIVE_WRITER);
+	public Job(Scheduler scheduler, Connector connector, String identifier) {
+		super(scheduler, connector, identifier, LockMode.EXCLUSIVE_WRITER);
 		state = isDone() ? ResourceState.DONE : ResourceState.WAITING;
 	}
 
 	private boolean isDone() {
-		return new File(identifier + ".done").exists();
-	}
+        try {
+            return connector.fileExists(identifier.path + ".done");
+        } catch (Exception e) {
+            LOGGER.error("Error while checking if " + identifier + ".done exists");
+            return false;
+        }
+    }
 
 	/**
 	 * The priority of the job (the higher, the more urgent)
@@ -101,7 +105,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	/**
 	 * The dependencies for this job (dependencies are on any resource)
 	 */
-	private TreeMap<String, Dependency> dependencies = new TreeMap<String, Dependency>();
+	private TreeMap<Identifier, Dependency> dependencies = new TreeMap<Identifier, Dependency>();
 
 	/**
 	 * Number of unsatisfied dependencies
@@ -113,7 +117,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 * 
 	 * @return
 	 */
-	public TreeMap<String, Dependency> getDependencies() {
+	public TreeMap<Identifier, Dependency> getDependencies() {
 		return dependencies;
 	}
 
@@ -138,14 +142,14 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		synchronized (this) {
 			if (!ready)
 				nbUnsatisfied++;
-			dependencies.put(new String(resource.getIdentifier()),
+			dependencies.put(new Identifier(resource.identifier),
 					new Dependency(type, ready));
 		}
 	}
 
 	@Override
 	protected void finalize() throws Throwable {
-		for (String id : dependencies.keySet()) {
+		for (Identifier id : dependencies.keySet()) {
 			scheduler.getResource(id).unregister(this);
 		}
 	}
@@ -188,8 +192,10 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	final public void run() {
 		// Check if the task has already been done
         try {
-            if (connector.fileExists(identifier + DONE_EXTENSION))
+            if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
+                LOGGER.info("Task %s is already done", identifier);
                 return;
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -201,14 +207,14 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		try {
 			while (true) {
 				// Check if not done
-				if (connector.fileExists(identifier + DONE_EXTENSION)) {
+				if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
 					return;
 				}
 
 				// Try to lock, otherwise wait
 				try {
-					locks.add(connector.createLockFile(identifier + LOCK_EXTENSION));
+					locks.add(connector.createLockFile(identifier.path + LOCK_EXTENSION));
 				} catch (UnlockableException e) {
 					LOGGER.info("Could not lock job [%s]", identifier);
 					synchronized (this) {
@@ -223,7 +229,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 
 				// Check if not done (again, but now we have a lock so we
 				// will be sure of the result)
-				if (connector.fileExists(identifier + DONE_EXTENSION)) {
+				if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
 					return;
 				}
@@ -234,9 +240,9 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				// in order to avoid race issues, we sync with
 				// the task manager
 				synchronized (Scheduler.LockSync) {
-					for (Entry<String, Dependency> dependency : dependencies
+					for (Entry<Identifier, Dependency> dependency : dependencies
 							.entrySet()) {
-						String id = dependency.getKey();
+						Identifier id = dependency.getKey();
 						Resource rsrc = scheduler.getResource(id);
 						final Lock lock = rsrc.lock(pid,
 								dependency.getValue().type);
@@ -259,15 +265,15 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 								"Error while running the task (code %d)", code));
 
 					// Create the "done" file, update the status and notify
-                    connector.touchFile(identifier + ".done");
+                    connector.touchFile(identifier.path + ".done");
 					state = ResourceState.DONE;
 					LOGGER.info("Done");
 				} catch (Throwable e) {
 					LOGGER.warn(format("Error while running: %s", this), e);
 					state = ResourceState.ERROR;
 				} finally {
-					updateDb();
-					endTimestamp = System.currentTimeMillis();
+                    endTimestamp = System.currentTimeMillis();
+                    updateDb();
 					notifyListeners();
 				}
 
@@ -381,13 +387,13 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 					Time.formatTimeInMilliseconds(end - start));
 		}
 
-		TreeMap<String, Dependency> dependencies = getDependencies();
+		TreeMap<Identifier, Dependency> dependencies = getDependencies();
 		if (!dependencies.isEmpty()) {
 			out.format("<h2>Dependencies</h2><ul>");
 			out.format("<div>%d unsatisfied dependencie(s)</div>",
 					nbUnsatisfied);
-			for (Entry<String, Dependency> entry : dependencies.entrySet()) {
-				String dependency = entry.getKey();
+			for (Entry<Identifier, Dependency> entry : dependencies.entrySet()) {
+				Identifier dependency = entry.getKey();
 				Dependency status = entry.getValue();
 				Resource resource = null;
 				try {
@@ -396,7 +402,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				}
 				out.format(
 						"<li><a href=\"%s/resource?id=%s\">%s</a>: %s [%b]</li>",
-						config.detailURL, XPMServlet.urlEncode(dependency),
+						config.detailURL, XPMServlet.urlEncode(dependency.toString()),
 						dependency, status.getType(), resource == null ? false
 								: resource.accept(status.type).isOK());
 			}
@@ -404,7 +410,4 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		}
 	}
 
-    public void setConnector(Connector connector) {
-        this.connector = connector;
-    }
 }

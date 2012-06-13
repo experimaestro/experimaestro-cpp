@@ -42,11 +42,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.LockMode;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleData;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -142,7 +138,10 @@ public class RPCServer {
 	public boolean addData(String id, String mode, boolean exists)
 			throws DatabaseException {
 		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
-		scheduler.add(new SimpleData(scheduler, id, LockMode.valueOf(mode),
+
+
+        Identifier identifier = Identifier.decode(id);
+		scheduler.add(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
 				exists));
 		return true;
 	}
@@ -307,12 +306,13 @@ public class RPCServer {
 		for (int i = command.length; --i >= 0;)
 			commandArgs[i] = command[i].toString();
 
-		CommandLineTask job = new CommandLineTask(scheduler, name, commandArgs,
+        Connector connector = LocalhostConnector.getInstance();
+		CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
 				env, new File(workingDirectory).getAbsolutePath());
 
 		// Process locks
 		for (Object depend : depends) {
-			Resource resource = scheduler.getResource((String) depend);
+			Resource resource = scheduler.getResource(Identifier.decode((String) depend));
 			if (resource == null)
 				throw new RuntimeException("Resource " + depend
 						+ " was not found");
@@ -321,7 +321,7 @@ public class RPCServer {
 
 		// We have to wait for read lock resources to be generated
 		for (Object readLock : readLocks) {
-			Resource resource = scheduler.getResource((String) readLock);
+			Resource resource = scheduler.getResource(Identifier.decode((String) readLock));
 			if (resource == null)
 				throw new RuntimeException("Resource " + readLock
 						+ " was not found");
@@ -333,7 +333,7 @@ public class RPCServer {
 			final String id = (String) writeLock;
 			Resource resource = scheduler.getResource(id);
 			if (resource == null) {
-				resource = new SimpleData(scheduler, id,
+				resource = new SimpleData(scheduler, connector, id,
 						LockMode.EXCLUSIVE_WRITER, false);
 				resource.register(job);
 			}

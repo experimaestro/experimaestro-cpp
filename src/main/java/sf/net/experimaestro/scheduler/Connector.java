@@ -42,19 +42,22 @@ public interface Connector {
      */
     PrintWriter printWriter(String identifier) throws Exception;
 
-    int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception;
+    int exec(String command, ArrayList<Lock> locks) throws Exception;
 
-    Lock createLockFile(String lockIdentifier) throws UnlockableException;
+    Lock createLockFile(String path) throws UnlockableException;
 
     void touchFile(String identifier) throws Exception;
 
     boolean fileExists(String identifier) throws Exception;
 
-    long getLastModifiedTime(String identifier) throws Exception;
+    long getLastModifiedTime(String path) throws Exception;
 
-    InputStream getInputStream(String identifier) throws Exception;
+    InputStream getInputStream(String path) throws Exception;
 
     void renameFile(String from, String to) throws Exception;
 
     void setExecutable(String path, boolean flag) throws Exception;
+
+    /** Returns the connectorId identifier */
+    String getIdentifier();
 }

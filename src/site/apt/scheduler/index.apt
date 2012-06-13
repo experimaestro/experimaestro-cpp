@@ -13,11 +13,12 @@ Main concepts
   
   * Resources
   
-  Any object is a resource, whether it is data, a job, or a server.
+  Any object is a resource, whether it is data, a job, or a server. Resources are located on different hosts
+  that can be specified by a URL. For the moment `local`  and `ssh` are the only supported schemes.
   
   * Job state
   
-  A job can be in the state: RUNNING, WAITING, HOLD, CANCELLED, ERROR 
+  A job can be in the state: HOLD (waiting a user action), WAITING (waiting for a slot to run), RUNNING, DONE, ERROR
   
   * Groups
 
@@ -54,45 +55,68 @@ General architecture
 
 * Status
 
-  Every resource (see below) has a unique ID which is a path to a directory containing information about the resource
+  Every resource (see below) has a unique ID which is a path to a directory containing information about the resource on the
+  host.
 
-  Based on the file <<<${FILE}>>>, several paths are defined (not that not all files might be present)
+  Based on the file <<<${FILE}>>>, several paths are defined (note that not all files might be present)
   
-  * <<<${FILE}.lock>>>     locks the write access to the status (can also be used as an exclusive lock to the resource)
+  * <<<${FILE}.lock>>>   locks the write access to the status (can also be used as an exclusive lock to the resource)
+    This file is used whenever an exclusive access is needed.
   
-  * <<<${FILE}.status>>>   (optional) contains the PID of the running process (two columns PID MODE separated by space) where MODE is r, w
+  * <<<${FILE}.status>>>  contains the PID of the running process (two columns PID MODE separated by space) where MODE is r, w.
+    This file is used when the resource can be accessed by a single writer and multiple readers
   
-  * <<<${FILE}.done>>>     created when the job was successfully executed or the data successfully generated
+  * <<<${FILE}.run>>>  corresponds to the script that are needed to execute the job
+
+  * <<<${FILE}.code>>>  corresponds to the error code at the end of the execution of the job
+
+  * <<<${FILE}.done>>> created when the job was successfully executed or the data successfully generated
   
   * <<<${FILE}.err>>>  contains the error log output (jobs only)
   
-  * <<<${FILE}.std>>>  contains the standard log output (jobs only)
+  * <<<${FILE}.out>>>  contains the standard log output (jobs only)
 
 
 The job scheduler
 
 * Configuration
 
-  The server is configured by a simple property file
+  The server and clients are configured by a simple property file
 
 +------------------------------------------+
-  url = http://localhost:8080/xmlrpc/
-  login = USER_NAME
-  password = PASSWORD
+[server]
+; Port for the Web server (and the XML-RPC server)
+port = 12345
+; Experimaestro will store its data in this folder
+database = /path/to/a/valid/folder
+
+[passwords]
+
+USERNAME = PASSWORD, GROUP
+
+[client]
+
+url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
+
 +------------------------------------------+
 
-  In the following, <<<$XPJAR>>> should be replaced by the full path to the JAR file
+  All the commands are started by
++------------------------------------------+
+  experimaestro [--configuration PATH] command [COMMAND OPTIONS]
++------------------------------------------+
+
+  We now describe the different commands
 
 * Starting the server
 
 +------------------------------------------+
-  jar -jar $XPJAR server --configuration $CONFFILE --nb-threads <max. number of threads>
+  server
 +------------------------------------------+
 
 * Adding data
 
 +------------------------------------------+
-  create-data --id '''ID''' --mode '''MODE''' --xmlrpc-file $CONFFILE
+  create-data --id '''ID''' --mode '''MODE'''
 +------------------------------------------+
 
   where
@@ -104,7 +128,7 @@ The job scheduler
 * Adding a job
 
 +------------------------------------------+
-  add-job --xmlrpc-file $CONFFILE --basename '''ID''' '''CMD'''
+  add-job --basename '''ID''' '''CMD'''
 +------------------------------------------+
 
   where:
@@ -112,3 +136,8 @@ The job scheduler
   * <<<ID>>>: the base name of the job to be added
   
   * <<<CMD>>>: the command line to execute
+
+
+* Running a script
+
+

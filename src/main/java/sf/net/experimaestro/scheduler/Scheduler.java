@@ -57,15 +57,6 @@ import java.util.TimerTask;
 public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	public static FileSystemManager fsManager;
-	static {
-		try {
-			fsManager = VFS.getManager();
-		} catch (FileSystemException e) {
-			throw new ExperimaestroException("Cannot start the VFS manager", e);
-		}
-	}
-
 	/**
 	 * Used for atomic series of locks
 	 */
@@ -75,28 +66,28 @@ public class Scheduler {
 	 * Main directory for the task manager. One database subfolder will be
 	 * created
 	 */
-	File baseDirectory;
+    private File baseDirectory;
 
 	/**
 	 * Number of threads running concurrently (excluding any server)
 	 */
-	int nbThreads = 5;
+    private int nbThreads = 5;
 
 	/**
 	 * Number of running threads
 	 */
-	ThreadCount counter = new ThreadCount();
+    private ThreadCount counter = new ThreadCount();
 
 	/**
 	 * The list of jobs organised in a heap - with those having all dependencies
 	 * fulfilled first
 	 */
-	Heap<Job> waitingJobs = new Heap<Job>(JobComparator.INSTANCE);
+	private Heap<Job> waitingJobs = new Heap<Job>(JobComparator.INSTANCE);
 
 	/**
 	 * All the resources
 	 */
-	Resources resources;
+    private Resources resources;
 
 	/**
 	 * The database store
@@ -300,13 +291,28 @@ public class Scheduler {
 	 * @throws DatabaseException
 	 * 
 	 */
-	synchronized public Resource getResource(String id)
+	synchronized public Resource getResource(Identifier id)
 			throws DatabaseException {
 		Resource resource = resources.get(id);
 		return resource;
 	}
 
-	/**
+    /**
+     * Get a resource by identifier
+     *
+     * First checks if the resource is in the list of tasks to be run. If not,
+     * we look directly on disk to get back information on the resource.
+     *
+     * @throws DatabaseException
+     *
+     */
+    synchronized public Resource getResource(String id)
+            throws DatabaseException {
+        return getResource(Identifier.decode(id));
+    }
+
+
+    /**
 	 * Add resources
 	 * 
 	 * @throws DatabaseException
@@ -390,11 +396,4 @@ public class Scheduler {
 		resources.put(resource);
 	}
 
-	public static FileObject resolveFile(String path) {
-		try {
-			return fsManager.resolveFile(path);
-		} catch (FileSystemException e) {
-			throw new ExperimaestroException(e, "Cannot resolve path %s", path);
-		}
-	}
 }

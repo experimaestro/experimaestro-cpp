@@ -28,9 +28,7 @@ import java.util.List;
 import org.mozilla.javascript.*;
 
 import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.je.DatabaseException;
@@ -91,7 +89,33 @@ public class JSScheduler extends ScriptableObject {
             throw new RuntimeException(format(
                     "Cannot handle an array of type %s", jsargs.getClass()));
 
-        CommandLineTask task = new CommandLineTask(scheduler, identifier, args);
+        NativeObject options = jsoptions instanceof Undefined ? null : (NativeObject) jsoptions;
+
+        // --- Create the task
+        final Connector connector;
+
+        if (options != null && options.has("connector", options)) {
+            connector = ((JSConnector)options.get("connector", options)).getConnector();
+        } else
+            connector = new LocalhostConnector();
+
+        CommandLineTask task = new CommandLineTask(scheduler, connector, identifier, args);
+
+
+        // --- Options
+        if (!(jsoptions instanceof Undefined)) {
+            if (options.has("launcher", options)) {
+                final Object launcher = options.get("launcher", options);
+                System.err.println(launcher.getClass().toString());
+                if (launcher != null && !(launcher instanceof UniqueTag))
+                    task.setLauncher(((JSLauncher) launcher).getLauncher());
+            }
+            final Object stdout = options.get("stdout", options);
+
+            final Object stderr = options.get("stderr", options);
+
+        }
+
 
         // --- Resources
         if (!(jsresources instanceof Undefined)) {
@@ -109,28 +133,6 @@ public class JSScheduler extends ScriptableObject {
             }
         }
 
-        // --- Optional arguments
-        if (!(jsoptions instanceof Undefined)) {
-            NativeObject options = (NativeObject) jsoptions;
-
-            if (options.has("connector", options)) {
-                final Object connector = options.get("connector", options);
-                System.err.println(connector.getClass().toString());
-                if (connector != null)
-                    task.setConnector(((JSConnector) connector).getConnector());
-            }
-
-            if (options.has("launcher", options)) {
-                final Object launcher = options.get("launcher", options);
-                System.err.println(launcher.getClass().toString());
-                if (launcher != null && !(launcher instanceof UniqueTag))
-                    task.setLauncher(((JSLauncher) launcher).getLauncher());
-            }
-            final Object stdout = options.get("stdout", options);
-
-            final Object stderr = options.get("stderr", options);
-
-        }
 
         // --- Add it
         scheduler.add(task);

@@ -30,8 +30,8 @@ import com.sleepycat.persist.model.Entity;
 @Entity
 public abstract class Data extends Resource {
 
-	public Data(Scheduler taskManager, String identifier, LockMode mode) {
-		super(taskManager, identifier, mode);
+	public Data(Scheduler taskManager, Connector connector, String path, LockMode mode) {
+		super(taskManager, connector, path, mode);
 	}
 
 	/**
@@ -39,4 +39,8 @@ public abstract class Data extends Resource {
 	 */
 	transient Job generatingJob = null;
 
+    public Data(Scheduler scheduler, Identifier identifier, LockMode lockMode, boolean exists) {
+        super(scheduler, identifier, lockMode);
+
+    }
 }

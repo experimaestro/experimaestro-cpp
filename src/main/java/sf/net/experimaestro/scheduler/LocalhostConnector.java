@@ -20,15 +20,14 @@
 
 package sf.net.experimaestro.scheduler;
 
-import bpiwowar.argparser.ListAdaptator;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
+import java.net.URI;
 import java.util.ArrayList;
 
 /**
@@ -45,7 +44,7 @@ public class LocalhostConnector implements Connector {
     }
 
     @Override
-    public int exec(String identifier, String command, ArrayList<Lock> locks) throws Exception {
+    public int exec(String command, ArrayList<Lock> locks) throws Exception {
         Process p = null;
         try {
             LOGGER.info("Running command [%s]", command);
@@ -104,8 +103,8 @@ public class LocalhostConnector implements Connector {
 
 
     @Override
-    public Lock createLockFile(String lockIdentifier) throws UnlockableException {
-        return new FileLock(lockIdentifier);
+    public Lock createLockFile(String path) throws UnlockableException {
+        return new FileLock(path);
     }
 
     @Override
@@ -119,13 +118,13 @@ public class LocalhostConnector implements Connector {
     }
 
     @Override
-    public long getLastModifiedTime(String identifier) {
-        return new File(identifier).lastModified();
+    public long getLastModifiedTime(String path) {
+        return new File(path).lastModified();
     }
 
     @Override
-    public InputStream getInputStream(String identifier) throws IOException {
-        return new FileInputStream(identifier);
+    public InputStream getInputStream(String path) throws IOException {
+        return new FileInputStream(path);
     }
 
     @Override
@@ -136,5 +135,20 @@ public class LocalhostConnector implements Connector {
     @Override
     public void setExecutable(String path, boolean flag) {
         new File(path).setExecutable(flag);
+    }
+
+    @Override
+    public String getIdentifier() {
+        return "local:";
+    }
+
+    public static Connector getInstance() {
+        return singleton;
+    }
+
+    static private Connector singleton = new LocalhostConnector();
+
+    public static Identifier getIdentifier(URI uri) {
+        return new Identifier(singleton, uri.getPath());
     }
 }

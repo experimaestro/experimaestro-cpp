@@ -55,11 +55,11 @@ public class CommandLineTask extends Job {
     /**
      * The command to execute
      */
-    private String[] command;
+    String[] command;
 
-    private String[] envp = null;
+    String[] envp = null;
 
-    private String workingDirectory;
+    String workingDirectory;
 
     protected CommandLineTask() {
     }
@@ -71,10 +71,10 @@ public class CommandLineTask extends Job {
      * @param identifier The identifier of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
-    public CommandLineTask(Scheduler scheduler, String identifier,
+    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
                            String[] command, Map<String, String> environment, String workingDirectory) {
 
-        super(scheduler, identifier);
+        super(scheduler, connector, identifier);
 
         LOGGER.info("Command is %s", Arrays.toString(command));
 
@@ -98,40 +98,26 @@ public class CommandLineTask extends Job {
      * @param identifier
      * @param command
      */
-    public CommandLineTask(Scheduler scheduler, String identifier,
+    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
                            String[] command) {
-        this(scheduler, identifier, command, null, null);
+        this(scheduler, connector, identifier, command, null, null);
     }
 
     @Override
     protected int doRun(ArrayList<Lock> locks) throws Exception {
+        launcher.launch(this, locks);
+        ResourceState newState = ResourceState.RUNNING;
 
-
-        // Write command
-        final String runId = String.format("%s.run",
-                identifier);
-        PrintWriter writer = connector.printWriter(runId);
-
-
-        writer.format("# Experimaestro generated task: %s%n", identifier);
-        writer.println();
-        if (envp != null) {
-            for (String env : envp)
-                writer.println(env);
-            writer.println();
-        }
-        if (workingDirectory != null)
-            writer.format("cd \"%s\"%n%n", protect(workingDirectory, "\""));
-
-        writer.println(Output.toString(" ", ListAdaptator.create(command), new Formatter<String>() {
-            public String format(String t) {
-                return CommandLineTask.protect(t, " \"'");
+        while (newState == ResourceState.RUNNING) {
+            newState = launcher.getState(this);
+            try {
+                Thread.sleep(1000);
+            } catch(InterruptedException e) {
+                LOGGER.error(e);
             }
-        }));
-        writer.close();
+        }
 
-        // --- Execute command and return error code
-        return connector.exec(identifier, launcher.getCommand(identifier), locks);
+        return newState != ResourceState.DONE ? -1 : 0;
     }
 
     @Override
