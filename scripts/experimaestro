@@ -1,38 +1,35 @@
-#!/bin/sh
+#!/usr/bin/python
 
-# To start the server
+import os.path
+import sys
+import subprocess
 
-for READLINK in /opt/local/bin/greadlink /usr/bin/greadlink /opt/local/bin/readlink /usr/bin/readlink; do
-	test -x "$READLINK" && break
-done
+# --- Set some variables
+
+dir=os.path.dirname(os.path.abspath(__file__))
+version="0.0.1-SNAPSHOT"
+jarname="experimaestro-%s.jar" % version
 
 # --- Check paths
 
-version=0.0.1-SNAPSHOT
-name=experimaestro-$version.jar
-dir="$(dirname "$($READLINK -f  "$0")")"
+def jarpaths():
+    yield os.path.join(dir, jarname)
+    yield os.path.join(os.path.dirname(dir), "target", "experimaestro-%s-bin" % version, jarname)
 
-JAR=""
-for f in "$dir/$name" "$dir/../target/experimaestro-$version-bin/$name"; do
-	if test -f "$f";  then
-		JAR="$f"		
-		break
-	fi
-done
+jarpath = None
+for f in jarpaths():
+    print "Trying %s" % f
+    if os.path.isfile(f):
+        jarpath = f
+        break
 
+if jarpath is None: raise Exception("Could not find experimaestro jar file")
 
-if test -z "$JAR"; then
-	echo "Could not find experimaestro jar file" 1>&2
-	exit 1
-fi
+# --- Run command
 
-# --- Run commands
+command = sys.argv.pop(0)
 
-case "$1" in
-
-server) java -Xmx1g -jar $JAR "$@";;
-
-add-job) shift; python "$dir/add-job.py" "$@";; 
-
-*) echo "Unkown command '$1'"; exit 1;;
-esac
+if command == "server":
+    subprocess.call(["java","-Xmx1g","-jar",jarpath] + sys.argv[1:])
+else:
+    raise Exception("Unknown command %s", command)

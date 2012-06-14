@@ -21,6 +21,8 @@
 package sf.net.experimaestro.scheduler;
 
 import com.jcraft.jsch.JSchException;
+import com.sleepycat.persist.model.Entity;
+import com.sleepycat.persist.model.PrimaryKey;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 
@@ -32,32 +34,47 @@ import java.util.ArrayList;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/6/12
  */
-public interface Connector {
+@Entity
+public abstract class Connector implements Comparable<Connector> {
+    @PrimaryKey
+    String identifier;
+
+    protected Connector() {
+    }
+
+    protected Connector(String identifier) {
+        this.identifier = identifier;
+    }
+
     /**
      * Creates a writer stream for a given identifier
      *
      *
-     * @param identifier
+     * @param path
      * @return A valid object
      */
-    PrintWriter printWriter(String identifier) throws Exception;
+    abstract PrintWriter printWriter(String path) throws Exception;
 
-    int exec(String command, ArrayList<Lock> locks) throws Exception;
+    /** Execute a command */
+    abstract JobMonitor exec(Job job, String command, ArrayList<Lock> locks) throws Exception;
 
-    Lock createLockFile(String path) throws UnlockableException;
+    abstract Lock createLockFile(String path) throws UnlockableException;
 
-    void touchFile(String identifier) throws Exception;
+    abstract void touchFile(String path) throws Exception;
 
-    boolean fileExists(String identifier) throws Exception;
+    abstract boolean fileExists(String path) throws Exception;
 
-    long getLastModifiedTime(String path) throws Exception;
+    abstract long getLastModifiedTime(String path) throws Exception;
 
-    InputStream getInputStream(String path) throws Exception;
+    abstract InputStream getInputStream(String path) throws Exception;
 
-    void renameFile(String from, String to) throws Exception;
+    abstract void renameFile(String from, String to) throws Exception;
 
-    void setExecutable(String path, boolean flag) throws Exception;
+    abstract void setExecutable(String path, boolean flag) throws Exception;
 
     /** Returns the connectorId identifier */
-    String getIdentifier();
+    final String getIdentifier() {
+        return identifier;
+    }
+
 }

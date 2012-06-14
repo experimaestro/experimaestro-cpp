@@ -39,13 +39,15 @@ public class ShLauncher extends UnixShellLauncher {
     String shellCommand = "/bin/bash";
 
     @Override
-    public void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
-        generateRunFile(task);
+    public JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+        // First generate the script file
+        generateRunFile(task, locks);
 
+        // Run the command
         final String path = task.identifier.path;
-        final String command = String.format("%s %s.run > %2s.out 2> %2$s.err",
+        final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
                 shellCommand, CommandLineTask.protect(path, " "));
-        task.getConnector().exec(command, locks);
+        return task.getConnector().exec(task, command, locks);
     }
 
 

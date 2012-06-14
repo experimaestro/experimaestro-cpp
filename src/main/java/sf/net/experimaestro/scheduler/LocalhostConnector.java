@@ -24,6 +24,7 @@ import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
@@ -35,23 +36,26 @@ import java.util.ArrayList;
  * @date 7/6/12
  */
 @Persistent
-public class LocalhostConnector implements Connector {
+public class LocalhostConnector extends Connector {
     static final private Logger LOGGER = Logger.getLogger();
+
+
+    public LocalhostConnector() {
+        super("local");
+    }
 
     @Override
     public PrintWriter printWriter(String identifier) throws Exception {
         return new PrintWriter(new File(identifier));
     }
 
+
+
     @Override
-    public int exec(String command, ArrayList<Lock> locks) throws Exception {
+    public JobMonitor exec(Job job, String command, ArrayList<Lock> locks) throws Exception {
         Process p = null;
-        try {
             LOGGER.info("Running command [%s]", command);
-            p = Runtime.getRuntime().exec(new String[] {
-                    "/bin/bash", "-c", command
-            }
-            );
+            p = Runtime.getRuntime().exec(new String[] { command });
 
             final Process finalP = p;
             new Thread(new Runnable() {
@@ -69,36 +73,33 @@ public class LocalhostConnector implements Connector {
                 }
             }).run();
 
-            // Changing the ownership of the different logs
-            final int pid = sf.net.experimaestro.utils.PID.getPID(p);
-            for (Lock lock : locks) {
-                lock.changeOwnership(pid);
-            }
+            return new LocalhostJobMonitor(job, p);
 
-            synchronized (p) {
-                LOGGER.info("Waiting for the process (PID %d) to end", pid);
-                int code = -1;
-                try {
-                    code = p.waitFor();
-                } catch (InterruptedException e) {
-                    LOGGER.warn("Task has been interrupted");
-                }
 
-                if (code != 0)
-                    throw new RuntimeException(
-                            "Process ended with errors (code " + code + ")");
-
-                // Everything went well
-                LOGGER.info("Process (PID %d) ended without error", pid);
-                return code;
-            }
-        } finally {
-            if (p != null) {
-                p.getInputStream().close();
-                p.getOutputStream().close();
-                p.getErrorStream().close();
-            }
-        }
+//            synchronized (p) {
+//                LOGGER.info("Waiting for the process (PID %d) to end", pid);
+//                int code = -1;
+//                try {
+//                    code = p.waitFor();
+//                } catch (InterruptedException e) {
+//                    LOGGER.warn("Task has been interrupted");
+//                }
+//
+//                if (code != 0)
+//                    throw new RuntimeException(
+//                            "Process ended with errors (code " + code + ")");
+//
+//                // Everything went well
+//                LOGGER.info("Process (PID %d) ended without error", pid);
+//                return code;
+//            }
+//        } finally {
+//            if (p != null) {
+//                p.getInputStream().close();
+//                p.getOutputStream().close();
+//                p.getErrorStream().close();
+//            }
+//        }
     }
 
 
@@ -137,9 +138,13 @@ public class LocalhostConnector implements Connector {
         new File(path).setExecutable(flag);
     }
 
+
     @Override
-    public String getIdentifier() {
-        return "local:";
+    public int compareTo(Connector connector) {
+        if (connector instanceof LocalhostConnector)
+            return 0;
+
+        return LocalhostConnector.class.getName().compareTo(connector.getClass().getName());
     }
 
     public static Connector getInstance() {
@@ -150,5 +155,46 @@ public class LocalhostConnector implements Connector {
 
     public static Identifier getIdentifier(URI uri) {
         return new Identifier(singleton, uri.getPath());
+    }
+
+
+
+    @Persistent
+    private class LocalhostJobMonitor extends JobMonitor {
+
+        transient private Process process;
+
+        public LocalhostJobMonitor() {}
+
+        // Check on Windows:
+        // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
+
+        public LocalhostJobMonitor(Job job, Process p) {
+            super(String.valueOf(ProcessUtils.getPID(p)), job);
+            this.process = p;
+        }
+
+        @Override
+        public int waitFor() throws Exception {
+            if (process == null)
+                return super.waitFor();
+            return process.waitFor();
+        }
+
+        @Override
+        boolean isRunning() throws Exception {
+            if (process != null)
+                return ProcessUtils.isRunning(process);
+
+            return singleton.fileExists(job.identifier.path + Job.LOCK_EXTENSION);
+        }
+
+        @Override
+        int getCode() throws Exception {
+            if (singleton.fileExists(job.identifier.path + Job.DONE_EXTENSION))
+                return -1;
+
+            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
     }
 }

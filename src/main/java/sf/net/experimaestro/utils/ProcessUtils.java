@@ -26,8 +26,16 @@ import java.lang.reflect.Field;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PID {
+public class ProcessUtils {
 
+    public static boolean isRunning(java.lang.Process process) {
+        try {
+            process.exitValue();
+            return false;
+        } catch(IllegalThreadStateException e) {
+            return true;
+        }
+    }
 	/**
 	 * Get the PID of a process
 	 * 
@@ -44,16 +52,16 @@ public class PID {
 			field.setAccessible(false);
 			return pid;
 		} catch (SecurityException e) {
-			throw new RuntimeException("Could not get the PID of the process",
+			throw new RuntimeException("Could not get the Process of the process",
 					e);
 		} catch (NoSuchFieldException e) {
-			throw new RuntimeException("Could not get the PID of the process",
+			throw new RuntimeException("Could not get the Process of the process",
 					e);
 		} catch (IllegalArgumentException e) {
-			throw new RuntimeException("Could not get the PID of the process",
+			throw new RuntimeException("Could not get the Process of the process",
 					e);
 		} catch (IllegalAccessException e) {
-			throw new RuntimeException("Could not get the PID of the process",
+			throw new RuntimeException("Could not get the Process of the process",
 					e);
 		}
 	}

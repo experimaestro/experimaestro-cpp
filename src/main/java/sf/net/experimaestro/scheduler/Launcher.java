@@ -33,8 +33,6 @@ import java.util.ArrayList;
 @Persistent
 public abstract class Launcher {
     /** Launch the task */
-    public abstract void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
+    public abstract JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
 
-    /** Get the state */
-    public abstract ResourceState getState(CommandLineTask task) throws Exception;
 }

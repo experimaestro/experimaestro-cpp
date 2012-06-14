@@ -36,11 +36,6 @@ import com.sleepycat.persist.PrimaryIndex;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-/**
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * 
- */
 public class Resources implements Iterable<Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
@@ -116,7 +111,7 @@ public class Resources implements Iterable<Resource> {
 		// Get from the database
 		resource = index.get(id);
 		if (resource != null) {
-			resource.scheduler = scheduler;
+            resource.init(scheduler);
 		}
 		return resource;
 	}

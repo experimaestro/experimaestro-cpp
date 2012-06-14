@@ -92,7 +92,7 @@ public class FileLock implements Lock {
 		dispose();
 	}
 
-	public void changeOwnership(int pid) {
+	public void changeOwnership(String pid) {
 		// TODO Auto-generated method stub
 
 	}

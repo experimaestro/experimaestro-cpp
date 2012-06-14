@@ -34,7 +34,6 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -43,7 +42,7 @@ import java.util.HashMap;
  * @date 7/6/12
  */
 @Persistent
-public class SSHConnector implements Connector {
+public class SSHConnector extends Connector {
 
     static final private Logger LOGGER = Logger.getLogger();
 
@@ -62,6 +61,7 @@ public class SSHConnector implements Connector {
     }
 
     public SSHConnector(String username, String hostname) {
+        super(String.format("ssh://%s@%s", username, hostname));
         this.username = username;
         this.hostname = hostname;
     }
@@ -87,7 +87,7 @@ public class SSHConnector implements Connector {
 
 
     @Override
-    public int exec(String command, ArrayList<Lock> locks) throws Exception {
+    public JobMonitor exec(Job job, String command, ArrayList<Lock> locks) throws Exception {
         final ChannelExec channel = newExecChannel();
         channel.setCommand(command);
         channel.setInputStream(null);
@@ -107,7 +107,7 @@ public class SSHConnector implements Connector {
         channel.getInputStream().close();
         channel.disconnect();
         LOGGER.info("Disconnected");
-        return code;
+        return new SSHJobMonitor();
     }
 
 
@@ -154,7 +154,7 @@ public class SSHConnector implements Connector {
             }
 
             @Override
-            public void changeOwnership(int pid) {
+            public void changeOwnership(String pid) {
             }
         };
     }
@@ -252,15 +252,28 @@ public class SSHConnector implements Connector {
         channel.disconnect();
     }
 
-    @Override
-    public String getIdentifier() {
-        return String.format("ssh://%s@%s", username, hostname);
-    }
 
     public static Identifier getIdentifier(URI uri) {
         return new Identifier(new SSHConnector(uri.getUserInfo(), uri.getHost()), uri.getPath());
     }
 
+    @Override
+    public int compareTo(Connector other) {
+        if (other instanceof SSHConnector) {
+            SSHConnector otherSSH = (SSHConnector) other;
+            int z;
+
+            z = username.compareTo(otherSSH.username);
+            if (z != 0) return z;
+
+            z = hostname.compareTo(otherSSH.hostname);
+            if (z != 0) return z;
+
+            z = Integer.signum(port - otherSSH.port);
+            return z;
+        }
+        return SSHConnector.class.getName().compareTo(other.getClass().getName());
+    }
 
 //    public static class MyUserInfo implements UserInfo, UIKeyboardInteractive {
 //        String passwd;
@@ -371,4 +384,20 @@ public class SSHConnector implements Connector {
      */
     static transient private SSHSession _session;
 
+    static private class SSHJobMonitor extends JobMonitor {
+        @Override
+        public int waitFor() {
+            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        boolean isRunning() throws Exception {
+            return false;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        int getCode() throws Exception {
+            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+    }
 }

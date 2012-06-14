@@ -33,10 +33,7 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Level;
 import org.mortbay.jetty.Server;
-import org.mozilla.javascript.JavaScriptException;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.WrappedException;
+import org.mozilla.javascript.*;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
@@ -61,10 +58,6 @@ public class RPCServer {
 	 */
 	private Scheduler scheduler;
 
-	/**
-	 * Repository
-	 */
-	Repository repository;
 
 	/**
 	 * Server
@@ -75,22 +68,16 @@ public class RPCServer {
 	 * Set the task server
 	 * 
 	 * @param scheduler
-	 * @param repository
 	 */
-	public void setTaskServer(Server server, Scheduler scheduler,
-			Repository repository) {
+	public void setTaskServer(Server server, Scheduler scheduler) {
 		this.server = server;
 		this.scheduler = scheduler;
-		this.repository = repository;
 	}
 
 	/**
 	 * Shutdown the server
 	 */
 	public boolean shutdown() {
-		// Close the repository
-		repository.close();
-
 		// Close the scheduler
 		scheduler.close();
 
@@ -195,7 +182,7 @@ public class RPCServer {
 		// Creates and enters a Context. The Context stores information
 		// about the execution environment of a script.
 		try {
-			org.mozilla.javascript.Context jsContext = org.mozilla.javascript.Context
+			Context jsContext = Context
 					.enter();
 
 			// Initialize the standard objects (Object, Function, etc.)
@@ -205,7 +192,7 @@ public class RPCServer {
 
 			LOGGER.debug("Environment is: %s", Output.toString(", ",
 					environment.entrySet(),
-					new Output.Formatter<Map.Entry<String, String>>() {
+					new Output.Formatter<Entry<String, String>>() {
 						@Override
 						public String format(Entry<String, String> t) {
 							return String.format("%s: %s", t.getKey(),
@@ -219,7 +206,7 @@ public class RPCServer {
 
 			ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
 					environment), 0);
-			jsXPM = new XPMObject(jsContext, environment, scope, repository,
+			jsXPM = new XPMObject(jsContext, environment, scope, scheduler.getRepository(),
 					scheduler);
 			XPMObject.getLog().clear();
 
@@ -274,7 +261,7 @@ public class RPCServer {
 			errorMsg = e.toString();
 		} finally {
 			// Exit context
-			org.mozilla.javascript.Context.exit();
+			Context.exit();
 		}
 
 		ArrayList<Object> list = new ArrayList<Object>();

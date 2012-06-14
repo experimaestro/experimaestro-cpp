@@ -22,18 +22,12 @@ package sf.net.experimaestro.scheduler;
 
 import static java.lang.String.format;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import bpiwowar.argparser.utils.Formatter;
-import bpiwowar.argparser.utils.Output;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.js.JSLauncher;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sleepycat.persist.model.Persistent;
@@ -104,20 +98,8 @@ public class CommandLineTask extends Job {
     }
 
     @Override
-    protected int doRun(ArrayList<Lock> locks) throws Exception {
-        launcher.launch(this, locks);
-        ResourceState newState = ResourceState.RUNNING;
-
-        while (newState == ResourceState.RUNNING) {
-            newState = launcher.getState(this);
-            try {
-                Thread.sleep(1000);
-            } catch(InterruptedException e) {
-                LOGGER.error(e);
-            }
-        }
-
-        return newState != ResourceState.DONE ? -1 : 0;
+    protected JobMonitor startJob(ArrayList<Lock> locks) throws Exception {
+        return launcher.launch(this, locks);
     }
 
     @Override

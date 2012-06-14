@@ -29,7 +29,6 @@ import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.XMLUtils;
 
 /**
- *
  * Handles alternatives
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -70,7 +69,7 @@ public class AlternativeValue extends Value {
 	 * Creates an alternative task object
 	 * @param alternativeInput TODO
 	 * 
-	 * @param information
+	 * @param type The type of the alternative
 	 */
 	protected AlternativeValue(AlternativeInput alternativeInput, AlternativeType type) {
 		super(alternativeInput);

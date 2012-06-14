@@ -37,9 +37,9 @@ public interface Lock {
 
 	/**
 	 * Change ownership
-	 * 
-	 * @param pid
-	 *            The new owner PID
-	 */
-	void changeOwnership(int pid);
+	 *
+     * @param pid
+     *            The new owner PID
+     */
+	void changeOwnership(String pid);
 }

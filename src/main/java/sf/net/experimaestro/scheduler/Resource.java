@@ -29,7 +29,7 @@ import com.sleepycat.persist.model.SecondaryKey;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.PID;
+import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
@@ -59,11 +59,6 @@ public abstract class Resource implements Comparable<Resource> {
     public static final String LOCK_EXTENSION = ".lock";
     public static final String STATUS_EXTENSION = ".status";
     private static final String DONE_EXTENSION = ".done";
-
-    /**
-     * Our connectorId to the host where the resource is located
-     */
-    Connector connector = new LocalhostConnector();
 
     /**
      * The task identifier
@@ -117,8 +112,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
         this.scheduler = scheduler;
-        this.connector = connector;
-        this.identifier = new Identifier(connector.getIdentifier(), path);
+        this.identifier = new Identifier(connector, path);
         this.lockmode = mode;
     }
 
@@ -126,7 +120,6 @@ public abstract class Resource implements Comparable<Resource> {
         this.scheduler = scheduler;
         this.identifier = identifier;
         this.lockmode = lockMode;
-        this.connector = connector;
     }
 
     /**
@@ -181,14 +174,14 @@ public abstract class Resource implements Comparable<Resource> {
         boolean updated = update();
 
         // Check if the resource was generated
-        if (connector.fileExists(identifier + DONE_EXTENSION)
+        if (getConnector().fileExists(identifier + DONE_EXTENSION)
                 && this.getState() != ResourceState.DONE) {
             updated = true;
             this.state = ResourceState.DONE;
         }
 
         // Check if the resource is locked
-        boolean locked = connector.fileExists(identifier + LOCK_EXTENSION);
+        boolean locked = getConnector().fileExists(identifier + LOCK_EXTENSION);
         updated |= locked != this.locked;
         this.locked = locked;
 
@@ -196,7 +189,12 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     public Connector getConnector() {
-        return identifier.getConnector();
+        return identifier.getConnector(scheduler);
+    }
+
+    /** Initialise a resource when retrieved from database */
+    public void init(Scheduler scheduler) {
+        this.scheduler = scheduler;
     }
 
 
@@ -295,7 +293,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @param dependency
      * @throws UnlockableException
      */
-    public Lock lock(int pid, LockType dependency) throws UnlockableException {
+    public Lock lock(String pid, LockType dependency) throws UnlockableException {
         // Check the dependency status
         switch (accept(dependency)) {
             case WAIT:
@@ -307,11 +305,10 @@ public abstract class Resource implements Comparable<Resource> {
                         format("Resource %s cannot accept dependency %s", this,
                                 dependency));
             case OK_LOCK:
-                return connector.createLockFile(identifier + ".LOCK");
+                return getConnector().createLockFile(identifier + ".LOCK");
 
             case OK:
-                return new StatusLock(PID.getPID(),
-                        dependency == LockType.WRITE_ACCESS);
+                return new StatusLock(pid, dependency == LockType.WRITE_ACCESS);
 
         }
 
@@ -339,7 +336,7 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Current list
      */
-    transient TreeMap<Integer, Boolean> processMap = new TreeMap<Integer, Boolean>();
+    transient TreeMap<String, Boolean> processMap = new TreeMap<String, Boolean>();
 
     public int getReaders() {
         return readers;
@@ -358,19 +355,19 @@ public abstract class Resource implements Comparable<Resource> {
     public boolean update() throws Exception {
         boolean updated = writers > 0 || readers > 0;
 
-        if (!connector.fileExists(identifier.path + STATUS_EXTENSION)) {
+        if (!getConnector().fileExists(identifier.path + STATUS_EXTENSION)) {
             writers = readers = 0;
             return updated;
         } else {
             // Check if we need to read the file
-            long lastModified = connector.getLastModifiedTime(identifier.path + STATUS_EXTENSION);
+            long lastModified = getConnector().getLastModifiedTime(identifier.path + STATUS_EXTENSION);
             if (lastUpdate >= lastModified)
                 return false;
 
             lastUpdate = lastModified;
 
             try {
-                for (String line : new ReadLineIterator(connector.getInputStream(identifier.path + STATUS_EXTENSION))) {
+                for (String line : new ReadLineIterator(getConnector().getInputStream(identifier.path + STATUS_EXTENSION))) {
                     String[] fields = line.split("\\s+");
                     if (fields.length != 2)
                         LOGGER.error(
@@ -386,8 +383,7 @@ public abstract class Resource implements Comparable<Resource> {
                                     fields[1]);
 
                         if (processMap != null)
-                            processMap.put(Integer.parseInt(fields[0]),
-                                    fields[1].equals("w"));
+                            processMap.put(fields[0], fields[1].equals("w"));
                     }
                 }
             } catch (IOException e) {
@@ -399,36 +395,38 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
+     *
+     *
      * @param pidFrom     The old PID (or 0 if none)
      * @param pidTo       The new PID (or 0 if none)
      * @param writeAccess True if we need the write access
      * @throws UnlockableException
      */
-    void updateStatusFile(int pidFrom, int pidTo, boolean writeAccess)
+    void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws UnlockableException {
         // --- Lock the resource
-        Lock fileLock = connector.createLockFile(identifier.path + LOCK_EXTENSION);
+        Lock fileLock = getConnector().createLockFile(identifier.path + LOCK_EXTENSION);
 
         try {
             // --- Read the resource status
             update();
 
-            if (pidFrom <= 0) {
+            if (pidFrom == null) {
                 // We are adding a new entry
-                PrintWriter out = connector.printWriter(identifier.path + STATUS_EXTENSION);
+                PrintWriter out = getConnector().printWriter(identifier.path + STATUS_EXTENSION);
                 out.format("%d %s%n", pidTo, writeAccess ? "w" : "r");
                 out.close();
             } else {
                 // We are modifying an entry: rewrite the file
-                PrintWriter out = connector.printWriter(identifier.path + STATUS_EXTENSION + ".tmp");
+                PrintWriter out = getConnector().printWriter(identifier.path + STATUS_EXTENSION + ".tmp");
                 processMap.remove(pidFrom);
-                if (pidTo > 0)
+                if (pidTo != null)
                     processMap.put(pidTo, writeAccess);
-                for (Entry<Integer, Boolean> x : processMap.entrySet())
+                for (Entry<String, Boolean> x : processMap.entrySet())
                     out.format("%d %s%n", x.getKey(), x.getValue() ? "w" : "r");
                 out.close();
 
-                connector.renameFile(identifier.path + STATUS_EXTENSION + ".tmp", identifier.path + STATUS_EXTENSION);
+                getConnector().renameFile(identifier.path + STATUS_EXTENSION + ".tmp", identifier.path + STATUS_EXTENSION);
             }
 
         } catch (Exception e) {
@@ -447,19 +445,19 @@ public abstract class Resource implements Comparable<Resource> {
      * @author B. Piwowarski <benjamin@bpiwowar.net>
      */
     public class StatusLock implements Lock {
-        private int pid;
+        private String pid;
         private final boolean writeAccess;
 
-        public StatusLock(int pid, final boolean writeAccess)
+        public StatusLock(String pid, final boolean writeAccess)
                 throws UnlockableException {
             this.pid = pid;
             this.writeAccess = writeAccess;
-            updateStatusFile(-1, pid, writeAccess);
+            updateStatusFile(null, pid, writeAccess);
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 @Override
                 public void run() {
                     try {
-                        updateStatusFile(StatusLock.this.pid, -1, writeAccess);
+                        updateStatusFile(StatusLock.this.pid, null, writeAccess);
                     } catch (UnlockableException e) {
                         LOGGER.warn(
                                 "Unable to change status file %s (tried to remove pid %d)",
@@ -474,7 +472,7 @@ public abstract class Resource implements Comparable<Resource> {
          *
          * @throws UnlockableException
          */
-        public void changePID(int pid) throws UnlockableException {
+        public void changePID(String pid) throws UnlockableException {
             updateStatusFile(this.pid, pid, writeAccess);
             this.pid = pid;
         }
@@ -486,7 +484,7 @@ public abstract class Resource implements Comparable<Resource> {
            */
         public boolean dispose() {
             try {
-                updateStatusFile(pid, -1, writeAccess);
+                updateStatusFile(pid, null, writeAccess);
             } catch (UnlockableException e) {
                 return false;
             }
@@ -498,7 +496,7 @@ public abstract class Resource implements Comparable<Resource> {
            *
            * @see bpiwowar.expmanager.locks.Lock#changeOwnership(int)
            */
-        public void changeOwnership(int pid) {
+        public void changeOwnership(String pid) {
             try {
                 updateStatusFile(this.pid, pid, writeAccess);
             } catch (UnlockableException e) {

@@ -34,6 +34,7 @@ import org.apache.commons.vfs.FileSystemManager;
 import org.apache.commons.vfs.VFS;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.je.FileProxy;
@@ -45,7 +46,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Thread manager for running commands - it has a pool of runs
+ * The scheduler
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -89,7 +90,18 @@ public class Scheduler {
 	 */
     private Resources resources;
 
-	/**
+    /**
+     * All the connectors
+     */
+    private Connectors connectors;
+
+    /**
+     * Repository
+     */
+    Repository repository;
+
+
+    /**
 	 * The database store
 	 */
 	private EntityStore dbStore;
@@ -99,7 +111,15 @@ public class Scheduler {
 	 */
 	private Environment dbEnvironment;
 
-	/**
+    public Connector getConnector(String id) throws DatabaseException {
+        return connectors.get(id);
+    }
+
+    public void put(Connector connector) throws DatabaseException {
+        connectors.put(connector);
+    }
+
+    /**
 	 * This task runner takes a new task each time
 	 */
 	class JobRunner extends Thread {
@@ -214,6 +234,8 @@ public class Scheduler {
 
 		// Initialise the store
 		resources = new Resources(this, dbStore);
+        connectors = new Connectors(this, dbStore);
+        repository = new Repository(this, dbStore);
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
@@ -381,7 +403,11 @@ public class Scheduler {
 		}
 	}
 
-	/**
+    public Repository getRepository() {
+        return repository;
+    }
+
+    /**
 	 * Iterator on resources
 	 */
 	synchronized public Iterable<Resource> resources() {

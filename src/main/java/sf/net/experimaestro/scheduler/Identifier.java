@@ -20,6 +20,7 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
 
@@ -34,10 +35,11 @@ import java.net.URISyntaxException;
 public class Identifier implements Comparable<Identifier> {
     @KeyField(value = 1)
     String connectorId;
+
     @KeyField(value = 2)
     String path;
 
-    /** Connector to the  */
+    /** Connector  */
     transient Connector _connector;
 
     public Identifier() {
@@ -88,7 +90,14 @@ public class Identifier implements Comparable<Identifier> {
         throw new RuntimeException(String.format("Unknown scheme [%s] in URL [%s]", uri.getScheme(), idString));
     }
 
-    public Connector getConnector() {
+    public Connector getConnector(Scheduler scheduler) {
+        if (_connector == null) {
+            try {
+                _connector = scheduler.getConnector(connectorId);
+            } catch (DatabaseException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return _connector;
     }
 }

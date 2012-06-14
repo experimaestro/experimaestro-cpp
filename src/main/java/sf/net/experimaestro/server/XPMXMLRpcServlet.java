@@ -52,7 +52,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
  */
 public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	private final Repository repository;
-	private final Scheduler taskManager;
+	private final Scheduler scheduler;
 	private Server server;
 	private static final long serialVersionUID = 1L;
 	
@@ -98,7 +98,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	public XPMXMLRpcServlet(Server server, Repository repository,
 			Scheduler taskManager) {
 		this.repository = repository;
-		this.taskManager = taskManager;
+		this.scheduler = taskManager;
 		this.server = server;
 	}
 	
@@ -119,7 +119,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 							Object object = pClass.newInstance();
 							if (object instanceof RPCServer) {
 								((RPCServer) object).setTaskServer(
-										server, taskManager, repository);
+										server, scheduler);
 							}
 							return object;
 						} catch (InstantiationException e) {

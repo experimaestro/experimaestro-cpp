@@ -99,6 +99,9 @@ public class JSScheduler extends ScriptableObject {
         } else
             connector = new LocalhostConnector();
 
+        // Store connector in database
+        scheduler.put(connector);
+
         CommandLineTask task = new CommandLineTask(scheduler, connector, identifier, args);
 
 

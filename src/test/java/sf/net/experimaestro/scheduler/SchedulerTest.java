@@ -93,7 +93,7 @@ public class SchedulerTest {
 			}
 		}
 		@Override
-		protected int doRun(ArrayList<Lock> locks) throws Throwable {
+		protected JobMonitor startJob(ArrayList<Lock> locks) throws Throwable {
 			// Wait that this task has been added to the queue
 			counters.resume(waitId);
 			
@@ -101,7 +101,7 @@ public class SchedulerTest {
 				sequence.add(id);
 			}
 			counter.del();
-			return 0;
+			return null;
 		}
 	}
 

@@ -23,9 +23,12 @@ package sf.net.experimaestro.scheduler;
 import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.locks.FileLock;
+import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 /**
  * Base class for all the launchers that are based on unix shell (sh) scripts
@@ -35,14 +38,16 @@ import java.io.PrintWriter;
  */
 @Persistent
 public abstract class UnixShellLauncher extends Launcher {
+    private String shPath = "/bin/bash";
 
     /**
      * Generates a run file for a given command line task
+     *
      * @param task The task at hand
      * @return
      * @throws Exception
      */
-    protected void generateRunFile(CommandLineTask task) throws Exception {
+    protected void generateRunFile(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
         // Write command
         Connector connector = task.getConnector();
         final String path = task.identifier.path;
@@ -50,6 +55,7 @@ public abstract class UnixShellLauncher extends Launcher {
         final String runId = String.format("%s.run", path);
         PrintWriter writer = connector.printWriter(runId);
 
+        writer.format("#!%s%n", shPath);
 
         writer.format("# Experimaestro generated task: %s%n", path);
         writer.println();
@@ -62,8 +68,11 @@ public abstract class UnixShellLauncher extends Launcher {
             writer.format("cd %s%n", quotedPath);
         }
 
-        writer.println("trap cleanup EXIT");
-        writer.format("cleanup() { rm -f %s.lock; }%n%n", quotedPath);
+        writer.format("%n# Set traps to remove locks when exiting%n%n");
+        writer.format("trap cleanup EXIT%n");
+        writer.format("cleanup() {%n");
+        writer.format("  rm -f %s.lock;%n", quotedPath);
+        writer.format("}%n%n");
 
 
         // Write the command
@@ -72,29 +81,19 @@ public abstract class UnixShellLauncher extends Launcher {
                 return CommandLineTask.protect(t, " \"'");
             }
         }));
+        writer.format("%n%n");
 
-        writer.format("test $? -eq 0 && touch %s.done", quotedPath);
+        writer.format("# Creates a output files %n");
+        writer.format("code=$?%n", quotedPath);
+        writer.format("echo $code > %s.code%n", quotedPath);
+        writer.format("test $code -eq 0 && touch %s.done%n", quotedPath);
 
         writer.close();
+
+        // Set the file as executable
+        connector.setExecutable(runId, true);
     }
 
 
-
-    @Override
-    public ResourceState getState(CommandLineTask task) throws Exception {
-        final String path = task.identifier.path;
-        final Connector connector = task.getConnector();
-
-        // First, is it running?
-        if (connector.fileExists(path + Job.LOCK_EXTENSION))
-            return ResourceState.RUNNING;
-
-        // Then, is it done?
-        if (connector.fileExists(path + Job.DONE_EXTENSION))
-            return ResourceState.DONE;
-
-        // Hmm, we don't know
-        return null;
-    }
 
 }

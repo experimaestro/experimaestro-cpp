@@ -22,7 +22,6 @@ package sf.net.experimaestro.scheduler;
 
 import static java.lang.String.format;
 
-import java.io.File;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -35,7 +34,7 @@ import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.server.XPMServlet;
 import sf.net.experimaestro.utils.HeapElement;
-import sf.net.experimaestro.utils.PID;
+import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -49,7 +48,7 @@ import com.sleepycat.persist.model.Persistent;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent()
-public class Job extends Resource implements HeapElement<Job>, Runnable {
+public abstract class Job extends Resource implements HeapElement<Job>, Runnable {
 	final static private Logger LOGGER = Logger.getLogger();
     static final String DONE_EXTENSION = ".done";
 
@@ -69,7 +68,7 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 
 	private boolean isDone() {
         try {
-            return connector.fileExists(identifier.path + ".done");
+            return getConnector().fileExists(identifier.path + ".done");
         } catch (Exception e) {
             LOGGER.error("Error while checking if " + identifier + ".done exists");
             return false;
@@ -95,6 +94,11 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	 * When did the job stop (0 when it did not stop yet)
 	 */
 	long endTimestamp;
+
+    /**
+     * Our job monitor
+     */
+    JobMonitor jobMonitor;
 
 	@Override
 	protected boolean isActive() {
@@ -174,25 +178,31 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 	/**
 	 * This is where the real job gets done
 	 * 
-	 * @param locks
-	 *            The set of locks that were taken
-	 * 
-	 * @return The error code (0 if everything went fine)
+	 *
+     * @param locks
+     *            The set of locks that were taken
+     *
+     * @return The error code (0 if everything went fine)
 	 * @throws Throwable
 	 */
-	protected int doRun(ArrayList<Lock> locks) throws Throwable {
-		return 1;
-	}
+	abstract protected JobMonitor startJob(ArrayList<Lock> locks) throws Throwable;
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Runnable#run()
-	 */
+    @Override
+    public void init(Scheduler scheduler) {
+        super.init(scheduler);
+        if (jobMonitor != null)
+            jobMonitor.setJob(this);
+    }
+
+    /*
+      * (non-Javadoc)
+      *
+      * @see java.lang.Runnable#run()
+      */
 	final public void run() {
 		// Check if the task has already been done
         try {
-            if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
+            if (getConnector().fileExists(identifier.path + DONE_EXTENSION)) {
                 LOGGER.info("Task %s is already done", identifier);
                 return;
             }
@@ -207,14 +217,14 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 		try {
 			while (true) {
 				// Check if not done
-				if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
+				if (getConnector().fileExists(identifier.path + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
 					return;
 				}
 
 				// Try to lock, otherwise wait
 				try {
-					locks.add(connector.createLockFile(identifier.path + LOCK_EXTENSION));
+					locks.add(getConnector().createLockFile(identifier.path + LOCK_EXTENSION));
 				} catch (UnlockableException e) {
 					LOGGER.info("Could not lock job [%s]", identifier);
 					synchronized (this) {
@@ -229,12 +239,12 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 
 				// Check if not done (again, but now we have a lock so we
 				// will be sure of the result)
-				if (connector.fileExists(identifier.path + DONE_EXTENSION)) {
+				if (getConnector().fileExists(identifier.path + DONE_EXTENSION)) {
 					LOGGER.info("Task %s is already done", identifier);
 					return;
 				}
 
-				int pid = PID.getPID();
+				String pid = String.valueOf(ProcessUtils.getPID());
 
 				// Now, tries to lock all the resources
 				// in order to avoid race issues, we sync with
@@ -254,18 +264,22 @@ public class Job extends Resource implements HeapElement<Job>, Runnable {
 				// And run!
 				LOGGER.info("Running task %s", identifier);
 				try {
-					// Run the task
+					// Change the state
 					state = ResourceState.RUNNING;
 					startTimestamp = System.currentTimeMillis();
 					updateDb();
-					int code = doRun(locks);
+
+                    // Start the task and transfer locking handling to those
+                    JobMonitor monitor = startJob(locks);
+                    locks.clear();
+                    int code = monitor.waitFor();
 
 					if (code != 0)
 						throw new RuntimeException(String.format(
 								"Error while running the task (code %d)", code));
 
 					// Create the "done" file, update the status and notify
-                    connector.touchFile(identifier.path + ".done");
+                    getConnector().touchFile(identifier.path + ".done");
 					state = ResourceState.DONE;
 					LOGGER.info("Done");
 				} catch (Throwable e) {

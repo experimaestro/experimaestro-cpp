@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.sleepycat.persist.EntityStore;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
@@ -35,11 +37,6 @@ import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
  * Repository for all possible tasks
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-/**
- *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- *
  */
 public class Repository {
 	final static private Logger LOGGER = Logger.getLogger();
@@ -63,8 +60,12 @@ public class Repository {
 	 * List of XML types
 	 */
 	Map<QName, XSElementDecl> xmlElements = new TreeMap<QName, XSElementDecl>();
-	
-	/**
+
+    public Repository(Scheduler scheduler, EntityStore dbStore) {
+        // TODO: start storing tasks
+    }
+
+    /**
 	 * @return
 	 */
 	public Iterable<TaskFactory> factories() {

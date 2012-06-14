@@ -35,18 +35,33 @@ public class OARLauncher extends UnixShellLauncher {
     private Object oarCommand = "oarsub";
 
     @Override
-    public void launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
-        generateRunFile(task);
+    public JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+        generateRunFile(task, locks);
 
         final String path = task.identifier.path;
         final String id = CommandLineTask.protect(path, "\"");
         String command = String.format("%s --stdout=\"%s.out\" --stderr=\"%2$s.err\" \"%2s.run\" ",
                 oarCommand, id);
-        task.getConnector().exec(command, locks);
+        return new OARJobMonitor(task.getConnector().exec(task, command, locks));
     }
 
-    @Override
-    public ResourceState getState(CommandLineTask task) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+
+    /**
+     * Monitors a OAR process
+     */
+    private class OARJobMonitor extends JobMonitor {
+        public OARJobMonitor(JobMonitor exec) {
+            super();
+        }
+
+        @Override
+        boolean isRunning() {
+            return false;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        int getCode() {
+            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
     }
 }
