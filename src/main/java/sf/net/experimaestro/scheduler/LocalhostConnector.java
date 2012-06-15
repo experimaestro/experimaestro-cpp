@@ -41,7 +41,7 @@ public class LocalhostConnector extends Connector {
 
 
     public LocalhostConnector() {
-        super("local");
+        super("local:");
     }
 
     @Override
@@ -153,8 +153,8 @@ public class LocalhostConnector extends Connector {
 
     static private Connector singleton = new LocalhostConnector();
 
-    public static Identifier getIdentifier(URI uri) {
-        return new Identifier(singleton, uri.getPath());
+    public static Locator getIdentifier(URI uri) {
+        return new Locator(singleton, uri.getPath());
     }
 
 

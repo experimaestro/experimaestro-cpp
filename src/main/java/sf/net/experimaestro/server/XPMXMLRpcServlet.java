@@ -40,11 +40,6 @@ import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
- * The XML-RPC servlet
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-/**
  * The XML-RPC servlet for experimaestro
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -92,13 +87,14 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 
 	/**
 	 * Initialise the servlet
-	 * @param repository
-	 * @param taskManager
+     *
+	 * @param repository The main repository
+	 * @param scheduler The job scheduler
 	 */
 	public XPMXMLRpcServlet(Server server, Repository repository,
-			Scheduler taskManager) {
+			Scheduler scheduler) {
 		this.repository = repository;
-		this.scheduler = taskManager;
+		this.scheduler = scheduler;
 		this.server = server;
 	}
 	
@@ -119,7 +115,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 							Object object = pClass.newInstance();
 							if (object instanceof RPCServer) {
 								((RPCServer) object).setTaskServer(
-										server, scheduler);
+										server, scheduler, repository);
 							}
 							return object;
 						} catch (InstantiationException e) {

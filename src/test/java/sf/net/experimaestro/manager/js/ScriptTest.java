@@ -48,6 +48,7 @@ import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.scheduler.Locator;
 
 public class ScriptTest {
 	private static final String JS_SCRIPT_PATH = "/js";
@@ -90,7 +91,7 @@ public class ScriptTest {
 		public void enter() {
 			context = Context.enter();
 			scope = context.initStandardObjects();
-			repository = new Repository();
+			repository = new Repository(new Locator());
 
 		}
 
@@ -106,7 +107,7 @@ public class ScriptTest {
 				NoSuchMethodException {
 			if (functionName == null) {
 				Map<String, String> environment = System.getenv();
-				XPMObject jsXPM = new XPMObject(context, environment, scope,
+				XPMObject jsXPM = new XPMObject(new Locator(), context, environment, scope,
 						repository, null);
 				context.evaluateReader(scope, new StringReader(content),
 						file.toString(), 1, null);

@@ -109,7 +109,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 	/**
 	 * The dependencies for this job (dependencies are on any resource)
 	 */
-	private TreeMap<Identifier, Dependency> dependencies = new TreeMap<Identifier, Dependency>();
+	private TreeMap<Locator, Dependency> dependencies = new TreeMap<Locator, Dependency>();
 
 	/**
 	 * Number of unsatisfied dependencies
@@ -121,7 +121,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 	 * 
 	 * @return
 	 */
-	public TreeMap<Identifier, Dependency> getDependencies() {
+	public TreeMap<Locator, Dependency> getDependencies() {
 		return dependencies;
 	}
 
@@ -146,14 +146,14 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 		synchronized (this) {
 			if (!ready)
 				nbUnsatisfied++;
-			dependencies.put(new Identifier(resource.identifier),
+			dependencies.put(new Locator(resource.identifier),
 					new Dependency(type, ready));
 		}
 	}
 
 	@Override
 	protected void finalize() throws Throwable {
-		for (Identifier id : dependencies.keySet()) {
+		for (Locator id : dependencies.keySet()) {
 			scheduler.getResource(id).unregister(this);
 		}
 	}
@@ -250,9 +250,9 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 				// in order to avoid race issues, we sync with
 				// the task manager
 				synchronized (Scheduler.LockSync) {
-					for (Entry<Identifier, Dependency> dependency : dependencies
+					for (Entry<Locator, Dependency> dependency : dependencies
 							.entrySet()) {
-						Identifier id = dependency.getKey();
+						Locator id = dependency.getKey();
 						Resource rsrc = scheduler.getResource(id);
 						final Lock lock = rsrc.lock(pid,
 								dependency.getValue().type);
@@ -401,13 +401,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 					Time.formatTimeInMilliseconds(end - start));
 		}
 
-		TreeMap<Identifier, Dependency> dependencies = getDependencies();
+		TreeMap<Locator, Dependency> dependencies = getDependencies();
 		if (!dependencies.isEmpty()) {
 			out.format("<h2>Dependencies</h2><ul>");
 			out.format("<div>%d unsatisfied dependencie(s)</div>",
 					nbUnsatisfied);
-			for (Entry<Identifier, Dependency> entry : dependencies.entrySet()) {
-				Identifier dependency = entry.getKey();
+			for (Entry<Locator, Dependency> entry : dependencies.entrySet()) {
+				Locator dependency = entry.getKey();
 				Dependency status = entry.getValue();
 				Resource resource = null;
 				try {

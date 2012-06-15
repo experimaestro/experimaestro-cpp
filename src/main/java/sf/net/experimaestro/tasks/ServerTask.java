@@ -33,7 +33,8 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.*;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
-import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.Repositories;
+import sf.net.experimaestro.scheduler.Locator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.StatusServlet;
@@ -42,7 +43,6 @@ import sf.net.experimaestro.server.XPMXMLRpcServlet;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -57,9 +57,7 @@ public class ServerTask extends AbstractTask {
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
     HierarchicalINIConfiguration configuration;
 
-//	@Argument(name = "base", help = "Base directory for the task manager", required = true, checkers = IOChecker.ValidDirectory.class)
-//	File taskmanagerDirectory;
-
+    /** Our server */
     private Server server;
 
     /**
@@ -85,7 +83,7 @@ public class ServerTask extends AbstractTask {
         File taskmanagerDirectory = new File(property);
         final Scheduler taskManager = new Scheduler(taskmanagerDirectory);
 
-        final Repository repository = new Repository();
+        final Repositories repositories = new Repositories(new Locator("__XPM__", "__SERVER__"));
 
         server = new Server(port);
 
@@ -134,7 +132,7 @@ public class ServerTask extends AbstractTask {
         // --- Add the XML RPC servlet
 
         final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(server,
-                repository, taskManager);
+                repositories, taskManager);
         xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
         final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);
@@ -147,7 +145,7 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new TasksServlet(repository,
+        context.addServlet(new ServletHolder(new TasksServlet(repositories,
                 taskManager)), "/tasks/*");
 
         // --- Add the default servlet

@@ -23,46 +23,63 @@ package sf.net.experimaestro.scheduler;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 13/6/12
-*/
+ * Identifies a resource on the network
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 13/6/12
+ */
 @Persistent
-public class Identifier implements Comparable<Identifier> {
+public class Locator implements Comparable<Locator> {
     @KeyField(value = 1)
     String connectorId;
 
     @KeyField(value = 2)
     String path;
 
-    /** Connector  */
+    // TODO: we should use FileObject from Apache commons
+
+    /**
+     * Connector
+     */
     transient Connector _connector;
 
-    public Identifier() {
+    public Locator() {
     }
 
-    public Identifier(String connector, String path) {
+    public Locator(String connector, String path) {
         this.connectorId = connector;
         this.path = path;
     }
 
-    public Identifier(Identifier identifier) {
+    public Locator(Locator identifier) {
         this.connectorId = identifier.connectorId;
         this.path = identifier.path;
     }
 
-    public Identifier(Connector connector, String path) {
+    void init(Scheduler scheduler) throws DatabaseException {
+        _connector = scheduler.getConnector(connectorId);
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public Locator(Connector connector, String path) {
         this.connectorId = connector.getIdentifier();
         this.path = path;
         this._connector = connector;
     }
 
     @Override
-    public int compareTo(Identifier other) {
+    public int compareTo(Locator other) {
         int z = connectorId.compareTo(other.connectorId);
         if (z != 0) return z;
         return path.compareTo(path);
@@ -73,7 +90,7 @@ public class Identifier implements Comparable<Identifier> {
         return String.format("%s%s", connectorId, path);
     }
 
-    public static Identifier decode(String idString)  {
+    public static Locator decode(String idString) {
         URI uri = null;
         try {
             uri = new URI(idString);
@@ -90,14 +107,22 @@ public class Identifier implements Comparable<Identifier> {
         throw new RuntimeException(String.format("Unknown scheme [%s] in URL [%s]", uri.getScheme(), idString));
     }
 
-    public Connector getConnector(Scheduler scheduler) {
-        if (_connector == null) {
-            try {
-                _connector = scheduler.getConnector(connectorId);
-            } catch (DatabaseException e) {
-                throw new RuntimeException(e);
-            }
-        }
+
+    public Connector getConnector() {
+        if (_connector == null)
+            throw new ExperimaestroException("The identifier has not been properly initialized");
+
         return _connector;
+    }
+
+    /**
+     * Resolve a path relative to possibly relative to the identifier
+     */
+    public Locator resolvePath(String path, boolean parent) throws IOException {
+        return new Locator(_connector, getConnector().resolvePath(this.path, path, parent));
+    }
+
+    public InputStream getInputStream() throws Exception {
+        return getConnector().getInputStream(path);
     }
 }

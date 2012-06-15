@@ -29,7 +29,6 @@ import com.sleepycat.persist.model.SecondaryKey;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
@@ -64,7 +63,7 @@ public abstract class Resource implements Comparable<Resource> {
      * The task identifier
      */
     @PrimaryKey
-    Identifier identifier;
+    Locator identifier;
 
     /**
      * Groups this resource belongs to
@@ -92,7 +91,7 @@ public abstract class Resource implements Comparable<Resource> {
      * state of this resource)
      */
     @SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY, relatedEntity = Resource.class)
-    Set<Identifier> listeners = new TreeSet<Identifier>();
+    Set<Locator> listeners = new TreeSet<Locator>();
 
     /**
      * If the resource is currently locked
@@ -112,11 +111,11 @@ public abstract class Resource implements Comparable<Resource> {
      */
     public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
         this.scheduler = scheduler;
-        this.identifier = new Identifier(connector, path);
+        this.identifier = new Locator(connector, path);
         this.lockmode = mode;
     }
 
-    public Resource(Scheduler scheduler, Identifier identifier, LockMode lockMode) {
+    public Resource(Scheduler scheduler, Locator identifier, LockMode lockMode) {
         this.scheduler = scheduler;
         this.identifier = identifier;
         this.lockmode = lockMode;
@@ -127,7 +126,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     synchronized public void register(Job job) {
         // Copy the string to avoid holding the objects to notify in memory
-        listeners.add(new Identifier(job.identifier));
+        listeners.add(new Locator(job.identifier));
     }
 
     /**
@@ -144,7 +143,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @throws DatabaseException
      */
     void notifyListeners(Object... objects) throws DatabaseException {
-        for (Identifier id : listeners) {
+        for (Locator id : listeners) {
             Job resource = (Job) scheduler.getResource(id);
             resource.notify(this, objects);
         }
@@ -189,7 +188,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     public Connector getConnector() {
-        return identifier.getConnector(scheduler);
+        return identifier.getConnector();
     }
 
     /** Initialise a resource when retrieved from database */
@@ -548,7 +547,7 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Returns the list of listeners
      */
-    public Set<Identifier> getListeners() {
+    public Set<Locator> getListeners() {
         return listeners;
     }
 

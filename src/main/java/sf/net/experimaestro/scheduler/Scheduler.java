@@ -28,12 +28,7 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
-import org.apache.commons.vfs.FileObject;
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemManager;
-import org.apache.commons.vfs.VFS;
 import org.apache.log4j.Level;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -235,7 +230,6 @@ public class Scheduler {
 		// Initialise the store
 		resources = new Resources(this, dbStore);
         connectors = new Connectors(this, dbStore);
-        repository = new Repository(this, dbStore);
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
@@ -313,7 +307,7 @@ public class Scheduler {
 	 * @throws DatabaseException
 	 * 
 	 */
-	synchronized public Resource getResource(Identifier id)
+	synchronized public Resource getResource(Locator id)
 			throws DatabaseException {
 		Resource resource = resources.get(id);
 		return resource;
@@ -330,7 +324,7 @@ public class Scheduler {
      */
     synchronized public Resource getResource(String id)
             throws DatabaseException {
-        return getResource(Identifier.decode(id));
+        return getResource(Locator.decode(id));
     }
 
 
@@ -403,9 +397,6 @@ public class Scheduler {
 		}
 	}
 
-    public Repository getRepository() {
-        return repository;
-    }
 
     /**
 	 * Iterator on resources

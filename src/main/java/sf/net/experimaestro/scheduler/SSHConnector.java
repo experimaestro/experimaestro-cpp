@@ -253,8 +253,8 @@ public class SSHConnector extends Connector {
     }
 
 
-    public static Identifier getIdentifier(URI uri) {
-        return new Identifier(new SSHConnector(uri.getUserInfo(), uri.getHost()), uri.getPath());
+    public static Locator getIdentifier(URI uri) {
+        return new Locator(new SSHConnector(uri.getUserInfo(), uri.getHost()), uri.getPath());
     }
 
     @Override

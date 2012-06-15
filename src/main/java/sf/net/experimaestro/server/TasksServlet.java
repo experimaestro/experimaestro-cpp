@@ -71,7 +71,7 @@ public class TasksServlet extends XPMServlet {
 			String name = request.getParameter("name");
 			String ns = request.getParameter("ns");
 			Module module = name == null || ns == null ? repository
-					.getMainModule() : repository
+					.getDefaultModule() : repository
 					.getModule(new QName(ns, name));
 
 			out.println("<html><head><title>Experimaestro - Task browser</title></head><body>");

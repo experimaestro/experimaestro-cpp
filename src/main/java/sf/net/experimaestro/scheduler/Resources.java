@@ -40,12 +40,12 @@ public class Resources implements Iterable<Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/** The index */
-	private PrimaryIndex<Identifier, Resource> index;
+	private PrimaryIndex<Locator, Resource> index;
 
 	/**
 	 * A cache to get track of resources in memory
 	 */
-	private WeakHashMap<Identifier, WeakReference<Resource>> cache = new WeakHashMap<Identifier, WeakReference<Resource>>();
+	private WeakHashMap<Locator, WeakReference<Resource>> cache = new WeakHashMap<Locator, WeakReference<Resource>>();
 
 	/**
 	 * The associated scheduler
@@ -61,7 +61,7 @@ public class Resources implements Iterable<Resource> {
 	public Resources(Scheduler scheduler, EntityStore dbStore)
 			throws DatabaseException {
 		this.scheduler = scheduler;
-		index = dbStore.getPrimaryIndex(Identifier.class, Resource.class);
+		index = dbStore.getPrimaryIndex(Locator.class, Resource.class);
 	}
 
 	/**
@@ -103,7 +103,7 @@ public class Resources implements Iterable<Resource> {
 	 * @return The resource or null if no such entities exist
 	 * @throws DatabaseException
 	 */
-	synchronized public Resource get(Identifier id) throws DatabaseException {
+	synchronized public Resource get(Locator id) throws DatabaseException {
 		Resource resource = getFromCache(id);
 		if (resource != null)
 			return resource;
@@ -116,7 +116,7 @@ public class Resources implements Iterable<Resource> {
 		return resource;
 	}
 
-	private Resource getFromCache(Identifier id) {
+	private Resource getFromCache(Locator id) {
 		// Try to get from cache first
 		WeakReference<Resource> reference = cache.get(id);
 		if (reference != null) {
@@ -131,7 +131,7 @@ public class Resources implements Iterable<Resource> {
 	public Iterator<Resource> iterator() {
 		try {
 			return new AbstractIterator<Resource>() {
-				EntityCursor<Identifier> iterator = index.keys();
+				EntityCursor<Locator> iterator = index.keys();
 
 				@Override
 				protected void finalize() throws Throwable {
@@ -143,7 +143,7 @@ public class Resources implements Iterable<Resource> {
 				@Override
 				protected boolean storeNext() {
 					try {
-						Identifier id = iterator.next();
+						Locator id = iterator.next();
 						if (id != null) {
 							value = get(id);
 							return true;

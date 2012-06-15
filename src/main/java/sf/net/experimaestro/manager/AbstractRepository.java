@@ -1,7 +1,7 @@
 /*
  *
  *  This file is part of experimaestro.
- *  Copyright (c) 2011 B. Piwowarski <benjamin@bpiwowar.net>
+ *  Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
  *  experimaestro is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,29 +18,30 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.manager;
 
-import com.sleepycat.persist.model.Entity;
+import sf.net.experimaestro.scheduler.Locator;
 
 /**
- * Represents some data that can be produced by a given job
- * 
+ * A repository for tasks, types and modules
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 15/6/12
  */
-@Entity
-public abstract class Data extends Resource {
+abstract public class AbstractRepository {
 
-	public Data(Scheduler taskManager, Connector connector, String path, LockMode mode) {
-		super(taskManager, connector, path, mode);
-	}
+    /**
+     * Our repository identifier (i.e. the script identifier)
+     */
+    Locator identifier;
 
-	/**
-	 * The job that can or has generated this data (if any)
-	 */
-	transient Job generatingJob = null;
-
-    public Data(Scheduler scheduler, Locator identifier, LockMode lockMode, boolean exists) {
-        super(scheduler, identifier, lockMode);
-
+    public AbstractRepository(Locator identifier) {
+        this.identifier = identifier;
     }
+
+    /** Get a task factory given a qualified name */
+    public abstract TaskFactory getFactory(QName name);
+
+    /** Get a type definition given a qualified name */
+    public abstract Type getType(QName name);
 }

@@ -20,12 +20,12 @@
 
 package sf.net.experimaestro.manager;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.sleepycat.persist.EntityStore;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.Locator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
@@ -38,8 +38,13 @@ import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Repository {
+public class Repository extends AbstractRepository {
 	final static private Logger LOGGER = Logger.getLogger();
+
+    /**
+     * Dependencies
+     */
+    ArrayList<Locator> sources = new ArrayList<Locator>();
 
 	/**
 	 * The list of available task factories
@@ -61,8 +66,13 @@ public class Repository {
 	 */
 	Map<QName, XSElementDecl> xmlElements = new TreeMap<QName, XSElementDecl>();
 
-    public Repository(Scheduler scheduler, EntityStore dbStore) {
-        // TODO: start storing tasks
+    /**
+     * The experimaestro default module
+     */
+    Module defaultModule = new Module(new QName(Manager.EXPERIMAESTRO_NS, "main"));
+
+    public Repository(Locator identifier) {
+        super(identifier);
     }
 
     /**
@@ -72,17 +82,20 @@ public class Repository {
 		return factories.values();
 	}
 
-	/**
-	 * Return information about an experiment
-	 * 
-	 * @param name
-	 * @return
-	 */
-	public TaskFactory getFactory(QName name) {
+
+    /**
+     * Returns a task factory
+     *
+     * @param name The qualified name of the factory
+     * @return A TaskFactory object or null if not found
+     */
+    @Override
+    public TaskFactory getFactory(QName name) {
 		return factories.get(name);
 	}
 
-	public Type getType(QName name) {
+	@Override
+    public Type getType(QName name) {
 		return types.get(name);
 	}
 
@@ -101,7 +114,7 @@ public class Repository {
 
 		Module module = factory.getModule();
 		if (module == null)
-			factory.setModule(mainModule);
+			factory.setModule(defaultModule);
 	}
 
 	public void addType(Type type) {
@@ -122,19 +135,18 @@ public class Repository {
 
 		// Add to the main module if no parent
 		if (module.getParent() == null)
-			module.setParent(mainModule);
+			module.setParent(defaultModule);
 	}
 
-	Module mainModule = new Module(new QName(Manager.EXPERIMAESTRO_NS, "main"));
 
 	public Module getModule(QName qName) {
 		if (qName == null)
-			return mainModule;
+			return defaultModule;
 		return modules.get(qName);
 	}
 
-	public Module getMainModule() {
-		return mainModule;
+	public Module getDefaultModule() {
+		return defaultModule;
 	}
 
 	

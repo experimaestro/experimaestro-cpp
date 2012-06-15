@@ -37,6 +37,7 @@ import org.mozilla.javascript.*;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
+import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.*;
@@ -64,14 +65,20 @@ public class RPCServer {
 	 */
 	private Server server;
 
-	/**
+    /**
+     * The repository
+     */
+    private Repository repository;
+
+    /**
 	 * Set the task server
 	 * 
 	 * @param scheduler
 	 */
-	public void setTaskServer(Server server, Scheduler scheduler) {
+	public void setTaskServer(Server server, Scheduler scheduler, Repository repository) {
 		this.server = server;
 		this.scheduler = scheduler;
+        this.repository = repository;
 	}
 
 	/**
@@ -127,7 +134,7 @@ public class RPCServer {
 		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
 
 
-        Identifier identifier = Identifier.decode(id);
+        Locator identifier = Locator.decode(id);
 		scheduler.add(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
 				exists));
 		return true;
@@ -200,13 +207,16 @@ public class RPCServer {
 						}
 					}));
 
-			if (isFile) {
-				environment.put(XPMObject.ENV_SCRIPTPATH, content);
-			}
+
+            Locator locator = new Locator(LocalhostConnector.getInstance(), isFile ? content : null);
+            LOGGER.info("Script is %s", locator);
+
+            Repositories repositories = new Repositories(new Locator("rpc", ""));
+            repositories.add(repository, 0);
 
 			ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
 					environment), 0);
-			jsXPM = new XPMObject(jsContext, environment, scope, scheduler.getRepository(),
+			jsXPM = new XPMObject(locator, jsContext, environment, scope, repositories,
 					scheduler);
 			XPMObject.getLog().clear();
 
@@ -299,7 +309,7 @@ public class RPCServer {
 
 		// Process locks
 		for (Object depend : depends) {
-			Resource resource = scheduler.getResource(Identifier.decode((String) depend));
+			Resource resource = scheduler.getResource(Locator.decode((String) depend));
 			if (resource == null)
 				throw new RuntimeException("Resource " + depend
 						+ " was not found");
@@ -308,7 +318,7 @@ public class RPCServer {
 
 		// We have to wait for read lock resources to be generated
 		for (Object readLock : readLocks) {
-			Resource resource = scheduler.getResource(Identifier.decode((String) readLock));
+			Resource resource = scheduler.getResource(Locator.decode((String) readLock));
 			if (resource == null)
 				throw new RuntimeException("Resource " + readLock
 						+ " was not found");

@@ -23,6 +23,7 @@ package sf.net.experimaestro.scheduler;
 import com.jcraft.jsch.JSchException;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 
 /**
  * This class represents any layer that can get between a host where a command is executed
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/6/12
  */
@@ -49,13 +51,14 @@ public abstract class Connector implements Comparable<Connector> {
     /**
      * Creates a writer stream for a given identifier
      *
-     *
      * @param path
      * @return A valid object
      */
     abstract PrintWriter printWriter(String path) throws Exception;
 
-    /** Execute a command */
+    /**
+     * Execute a command
+     */
     abstract JobMonitor exec(Job job, String command, ArrayList<Lock> locks) throws Exception;
 
     abstract Lock createLockFile(String path) throws UnlockableException;
@@ -66,15 +69,41 @@ public abstract class Connector implements Comparable<Connector> {
 
     abstract long getLastModifiedTime(String path) throws Exception;
 
-    abstract InputStream getInputStream(String path) throws Exception;
+    public abstract InputStream getInputStream(String path) throws Exception;
 
     abstract void renameFile(String from, String to) throws Exception;
 
     abstract void setExecutable(String path, boolean flag) throws Exception;
 
-    /** Returns the connectorId identifier */
+    /**
+     * Returns the connectorId identifier
+     */
     final String getIdentifier() {
         return identifier;
     }
 
+    /**
+     * Resolve a path relatively to another one (used in file inclusion).
+     * <p/>
+     * If the path is not absolute, then the reference path is used. If the latter is null
+     * an exception is thrown. If it not null, it returns the path relative to the reference path.
+     *
+     *
+     * @param referencePath The reference path
+     * @param path The path of the file
+     * @param parent
+     * @throws IOException If the reference path is null and the path is not absolute
+     * @return An absolute path
+     */
+    public String resolvePath(String referencePath, String path, boolean parent) throws IOException {
+        File file = new File(path);
+        if (!file.isAbsolute()) {
+            if (referencePath == null)
+                throw new IOException(String.format(
+                        "Cannot include file [%s] since the including file is not defined",
+                        path));
+            file = new File(parent ? new File(referencePath).getParentFile() : new File(referencePath), path);
+        }
+        return file.getAbsolutePath();
+    }
 }

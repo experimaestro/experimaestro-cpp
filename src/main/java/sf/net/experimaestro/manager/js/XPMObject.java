@@ -22,17 +22,12 @@ package sf.net.experimaestro.manager.js;
 
 import static java.lang.String.format;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringReader;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -41,6 +36,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPathFunctionResolver;
 
+import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.FunctionObject;
 import org.mozilla.javascript.NativeArray;
@@ -53,6 +49,7 @@ import org.mozilla.javascript.Wrapper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.DotName;
@@ -65,10 +62,7 @@ import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
-import sf.net.experimaestro.scheduler.Connector;
-import sf.net.experimaestro.scheduler.LockMode;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleData;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -94,11 +88,6 @@ public class XPMObject {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
-	 * The environment variable that contains the script path
-	 */
-	public static final String ENV_SCRIPTPATH = "XPM_JS_SCRIPTPATH";
-
-	/**
 	 * The experiment repository
 	 */
 	private final Repository repository;
@@ -113,9 +102,20 @@ public class XPMObject {
 	 */
 	private Context context;
 
+    /**
+     * The task scheduler
+     */
 	private final Scheduler scheduler;
 
+    /**
+     * The environment
+     */
 	private final Map<String, String> environment;
+
+    /**
+     * The connector for default inclusion
+     */
+    Locator currentScript;
 
 	private static ThreadLocal<ArrayList<String>> log = new ThreadLocal<ArrayList<String>>() {
 		protected synchronized ArrayList<String> initialValue() {
@@ -123,10 +123,13 @@ public class XPMObject {
 		}
 	};
 
-	public XPMObject(Context cx, Map<String, String> environment,
+
+    public XPMObject(Locator currentScript, Context cx, Map<String, String> environment,
 			Scriptable scope, Repository repository, Scheduler scheduler)
 			throws IllegalAccessException, InstantiationException,
 			InvocationTargetException, SecurityException, NoSuchMethodException {
+        LOGGER.info("Current script is %s", currentScript);
+        this.currentScript = currentScript;
 		this.context = cx;
 		this.environment = environment;
 		this.scope = scope;
@@ -140,9 +143,11 @@ public class XPMObject {
         ScriptableObject.defineClass(scope, JSOARLauncher.class);
         ScriptableObject.defineClass(scope, JSSSHConnector.class);
 
-        // Add functions
+        // Add qname function
 		addFunction(scope, "qname",
 				new Class<?>[] { Object.class, String.class });
+        addFunction(scope, "includeRepository", null);
+
 
         // TODO: would be good to have this at a global level
 		//addFunction(scope, "include", new Class<?>[] { String.class });
@@ -173,26 +178,82 @@ public class XPMObject {
 	 * @throws NoSuchMethodException
 	 */
 	static private void addFunction(Scriptable scope, final String fname,
-			final Class<?>[] prototype) throws NoSuchMethodException {
+			Class<?>[] prototype) throws NoSuchMethodException {
+        if (prototype == null)
+            prototype = new Class[] {Context.class, Scriptable.class, Object[].class,  Function.class  };
 		final FunctionObject f = new FunctionObject(fname,
 				XPMObject.class.getMethod("js_" + fname, prototype), scope);
 		ScriptableObject.putProperty(scope, fname, f);
 	}
 
 
-	/**
-	 * Returns a QName object
-	 * 
-	 * @param ns
-	 *            The namespace: can be the URI string, or a javascript
-	 *            Namespace object
-	 * @param localName
-	 *            the localname
-	 * @return a QName object
-	 */
+
+    /**
+     * Includes a repository
+     * @param _connector
+     * @param path
+     * @return
+     */
+    public void includeRepository(Object _connector, String path) throws Exception, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        // Get the connector
+        if (_connector instanceof Wrapper)
+            _connector = ((Wrapper) _connector).unwrap();
+
+        Connector connector;
+        if (_connector instanceof JSConnector)
+            connector =  ((JSConnector)_connector).getConnector();
+        else
+            connector = (Connector)_connector;
+
+        includeRepository(new Locator(connector, path));
+    }
+
+    public void includeRepository(String path) throws Exception, IllegalAccessException, InstantiationException {
+      Locator scriptpath = currentScript.resolvePath(path, true);
+        LOGGER.debug("Including repository file [%s]", scriptpath);
+        includeRepository(scriptpath);
+    }
+
+    private void includeRepository(Locator scriptpath) throws Exception {
+        // Run the script in a new environment
+        final ScriptableObject newScope = context.initStandardObjects();
+        final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
+
+        final XPMObject xpmObject = new XPMObject(scriptpath, context, newEnvironment, newScope, repository, scheduler);
+
+        Context.getCurrentContext().evaluateReader(newScope, new InputStreamReader(scriptpath.getInputStream()), scriptpath.toString(), 1, null);
+    }
+
+    static public void js_includeRepository(Context cx, Scriptable thisObj, Object[] args,  Function funObj) throws Exception {
+        // Get the XPM object
+        XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
+
+        if (args.length == 1)
+            xpm.includeRepository((String) FunctionObject.convertArg(cx, thisObj, args[0], FunctionObject.JAVA_STRING_TYPE));
+        else if (args.length == 2)
+            xpm.includeRepository(args[0], (String) FunctionObject.convertArg(cx, thisObj, args[1], FunctionObject.JAVA_STRING_TYPE));
+        else
+            throw new IllegalArgumentException("includeRepository expects one or two arguments");
+    }
+
+
+
+    /**
+       * Returns a QName object
+       *
+       * @param ns
+       *            The namespace: can be the URI string, or a javascript
+       *            Namespace object
+       * @param localName
+       *            the localname
+       * @return a QName object
+       */
 	static public Object js_qname(Object ns, String localName) {
+        // First unwrap the object
 		if (ns instanceof Wrapper)
 			ns = ((Wrapper) ns).unwrap();
+
+        // If ns is a javascript Namespace object
 		if (ns instanceof ScriptableObject) {
 			ScriptableObject scriptableObject = (ScriptableObject) ns;
 			if (scriptableObject.getClassName().equals("Namespace")) {
@@ -201,6 +262,7 @@ public class XPMObject {
 			}
 		}
 
+        // If ns is a string
 		if (ns instanceof String)
 			return new QName((String) ns, localName);
 
@@ -227,43 +289,19 @@ public class XPMObject {
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	public void include(String path) throws FileNotFoundException,
-			IOException {
+	public void include(String path) throws Exception,
+            IOException {
 
-        String oldPath = environment.get(ENV_SCRIPTPATH);
-        
-        File file = getAbsoluteFile(path);
-
+        Locator file = currentScript.resolvePath(path, true);
 		LOGGER.debug("Including file [%s]", file);
-		environment.put(ENV_SCRIPTPATH, file.getAbsolutePath());
 
-		// Run JS
-		Context.getCurrentContext().evaluateReader(scope, new FileReader(file),
-				file.getAbsolutePath(), 1, null);
+        Locator oldWorkingDirectory = currentScript;
+		Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(file.getInputStream()), file.toString(), 1, null);
 
-		environment.put(ENV_SCRIPTPATH, oldPath);
+        currentScript = oldWorkingDirectory;
 	}
 
-	/**
-	 * Get an absolute path from a possibly relative path
-	 * 
-	 * @param path
-	 *            The relative or absolute path
-	 * @return An absolute path
-	 */
-	private File getAbsoluteFile(String path) {
-		File file = new File(path);
-		String scriptPath = null;
-		if (!file.isAbsolute()) {
-			scriptPath = environment.get(ENV_SCRIPTPATH);
-			if (scriptPath == null)
-				throw new ExperimaestroException(
-						"Cannot include file [%s] since the including file is not defined",
-						path);
-			file = new File(new File(scriptPath).getParentFile(), path);
-		}
-		return file;
-	}
+
 
 	public static Object get(Scriptable scope, final String name) {
 		Object object = scope.get(name, scope);
@@ -278,8 +316,9 @@ public class XPMObject {
 
 	/**
 	 * Get the information about a given task
-	 * 
-	 * @param id
+	 *
+     * @param namespace The namespace
+	 * @param id The ID within the namespace
 	 * @return
 	 */
 	public Scriptable getTaskFactory(String namespace, String id) {
@@ -310,7 +349,7 @@ public class XPMObject {
 	 * Returns the script path if available
 	 */
 	public String getScriptPath() {
-		return environment.get(ENV_SCRIPTPATH);
+		return currentScript.getPath();
 	}
 
 	/**
@@ -522,14 +561,99 @@ public class XPMObject {
 	 * @param module
 	 * @param path
 	 */
-	public void addSchema(Object module, String path) {
-		LOGGER.info("Loading XSD file [%s], with script path [%s]", path,
-				getScriptPath());
-		File file = getAbsoluteFile(path);
+	public void addSchema(Object module, final String path) throws IOException {
+		LOGGER.info("Loading XSD file [%s], with script path [%s]", path, currentScript.toString());
+		Locator file = currentScript.resolvePath(path, true);
 		XSLoaderImpl xsLoader = new XSLoaderImpl();
-		XSModel xsModel = xsLoader.loadURI(file.toURI().toString());
+        XSModel xsModel = null;
 
-		// Add to the repository
+        xsModel = xsLoader.load(new LSInput() {
+            @Override
+            public Reader getCharacterStream() {
+                return null;
+            }
+
+            @Override
+            public void setCharacterStream(Reader reader) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public InputStream getByteStream() {
+                try {
+                    return currentScript.resolvePath(path, true).getInputStream();
+                } catch (Exception e) {
+                    throw new ExperimaestroException(e);
+                }
+            }
+
+            @Override
+            public void setByteStream(InputStream inputStream) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public String getStringData() {
+                return null;
+            }
+
+            @Override
+            public void setStringData(String s) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public String getSystemId() {
+                return null;
+            }
+
+            @Override
+            public void setSystemId(String s) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public String getPublicId() {
+                return null;
+            }
+
+            @Override
+            public void setPublicId(String s) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public String getBaseURI() {
+                return null;
+            }
+
+            @Override
+            public void setBaseURI(String s) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public String getEncoding() {
+                return null;
+            }
+
+            @Override
+            public void setEncoding(String s) {
+                throw new AssertionError("Should not be called");
+            }
+
+            @Override
+            public boolean getCertifiedText() {
+                return false;
+            }
+
+            @Override
+            public void setCertifiedText(boolean b) {
+                throw new AssertionError("Should not be called");
+            }
+        });
+
+        // Add to the repository
 		repository.addSchema(JSModule.getModule(repository, module), xsModel);
 	}
 
