@@ -20,35 +20,15 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.locks.Lock;
-
-import java.util.ArrayList;
-
 /**
- * Runs a command using *SH (bash, sh)
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 12/6/12
+ * @date 19/6/12
  */
-@Persistent
-public class ShLauncher extends UnixShellLauncher {
-    /**
-     * Path to the shell
-     */
-    String shellCommand = "/bin/bash";
+abstract public class Process extends java.lang.Process {
+    /** Get the process ID */
+    public abstract String getPID();
 
-    @Override
-    public JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
-        // First generate the script file
-        generateRunFile(task, locks);
-
-        // Run the command
-        final String path = task.identifier.path;
-        final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
-                shellCommand, CommandLineTask.protect(path, " "));
-        return task.getConnector().exec(task, command, locks);
-    }
-
+    /** Returns true if the process is a running process */
+    public abstract boolean isRunning();
 
 }

@@ -20,10 +20,10 @@
 
 package sf.net.experimaestro.plan;
 
+import sf.net.experimaestro.utils.EmptyIterator;
+
 import java.util.Iterator;
 import java.util.Map;
-
-import sf.net.experimaestro.utils.EmptyIterator;
 
 abstract public class Node implements Iterable<Map<String, String>> {
 	static final public Node EMPTY = new Node() {

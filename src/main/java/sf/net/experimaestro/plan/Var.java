@@ -20,13 +20,13 @@
 
 package sf.net.experimaestro.plan;
 
+import bpiwowar.argparser.GenericHelper;
+import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
-
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import bpiwowar.argparser.GenericHelper;
 
 public class Var extends Node {
 	String name;

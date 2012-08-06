@@ -20,12 +20,11 @@
 
 package sf.net.experimaestro.scheduler;
 
-import bpiwowar.argparser.utils.Formatter;
-import bpiwowar.argparser.utils.Output;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.locks.FileLock;
+import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -40,6 +39,10 @@ import java.util.ArrayList;
 public abstract class UnixShellLauncher extends Launcher {
     private String shPath = "/bin/bash";
 
+    public UnixShellLauncher(Connector connector) {
+        super(connector);
+    }
+
     /**
      * Generates a run file for a given command line task
      *
@@ -50,10 +53,11 @@ public abstract class UnixShellLauncher extends Launcher {
     protected void generateRunFile(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
         // Write command
         Connector connector = task.getConnector();
-        final String path = task.identifier.path;
+        final String path = task.locator.path;
         final String quotedPath = "\"" + CommandLineTask.protect(path, "\"") + "\"";
         final String runId = String.format("%s.run", path);
-        PrintWriter writer = connector.printWriter(runId);
+        final FileObject runFile = connector.resolveFile(runId);
+        PrintWriter writer = new PrintWriter(runFile.getContent().getOutputStream());
 
         writer.format("#!%s%n", shPath);
 
@@ -76,11 +80,7 @@ public abstract class UnixShellLauncher extends Launcher {
 
 
         // Write the command
-        writer.println(Output.toString(" ", ListAdaptator.create(task.command), new Formatter<String>() {
-            public String format(String t) {
-                return CommandLineTask.protect(t, " \"'");
-            }
-        }));
+        writer.println(CommandLineTask.getCommandLine(task.command));
         writer.format("%n%n");
 
         writer.format("# Creates a output files %n");
@@ -91,7 +91,7 @@ public abstract class UnixShellLauncher extends Launcher {
         writer.close();
 
         // Set the file as executable
-        connector.setExecutable(runId, true);
+        runFile.setExecutable(true);
     }
 
 

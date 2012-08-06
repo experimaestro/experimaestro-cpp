@@ -20,6 +20,7 @@
 
 package sf.net.experimaestro.scheduler;
 
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**

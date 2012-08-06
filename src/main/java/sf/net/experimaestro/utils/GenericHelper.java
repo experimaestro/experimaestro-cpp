@@ -20,15 +20,11 @@
 
 package sf.net.experimaestro.utils;
 
+import sf.net.experimaestro.utils.log.Logger;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
-import sf.net.experimaestro.utils.log.Logger;
+import java.util.*;
 
 
 /**

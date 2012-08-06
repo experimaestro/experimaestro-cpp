@@ -20,9 +20,9 @@
 
 package sf.net.experimaestro.manager;
 
-import static java.lang.String.format;
-
 import java.util.Map;
+
+import static java.lang.String.format;
 
 
 /**

@@ -24,10 +24,10 @@ package sf.net.experimaestro.utils.io;
  */
 
 
-import java.io.PrintStream;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import java.io.PrintStream;
 
 /**
  * @author bpiwowar

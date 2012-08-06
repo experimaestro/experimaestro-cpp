@@ -20,11 +20,11 @@
 
 package sf.net.experimaestro.utils;
 
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
+
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Iterator;
-
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 
 
 /**

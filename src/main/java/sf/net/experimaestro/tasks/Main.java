@@ -20,9 +20,9 @@
 
 package sf.net.experimaestro.tasks;
 
-import java.util.Arrays;
-import java.util.List;
-
+import bpiwowar.argparser.ArgParseException;
+import bpiwowar.argparser.ArgParser;
+import bpiwowar.argparser.ArgParserOption;
 import net.sf.saxon.Configuration;
 import net.sf.saxon.expr.XPathContext;
 import net.sf.saxon.functions.ExtensionFunctionCall;
@@ -37,15 +37,13 @@ import net.sf.saxon.tinytree.TinyElementImpl;
 import net.sf.saxon.trans.XPathException;
 import net.sf.saxon.value.BooleanValue;
 import net.sf.saxon.value.SequenceType;
-
 import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-
 import sf.net.experimaestro.utils.log.Logger;
-import bpiwowar.argparser.ArgParseException;
-import bpiwowar.argparser.ArgParser;
-import bpiwowar.argparser.ArgParserOption;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class Main {
 

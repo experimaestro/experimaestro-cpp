@@ -20,19 +20,17 @@
 
 package sf.net.experimaestro.tasks;
 
-import java.io.File;
-import java.util.ArrayList;
-
-import org.apache.xmlrpc.client.XmlRpcClient;
-
-import sf.net.experimaestro.scheduler.LockMode;
-import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
-import sf.net.experimaestro.utils.GenericHelper;
-
 import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
+import org.apache.xmlrpc.client.XmlRpcClient;
+import sf.net.experimaestro.scheduler.LockMode;
+import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
+import sf.net.experimaestro.utils.GenericHelper;
+
+import java.io.File;
+import java.util.ArrayList;
 
 /**
  * Create a simple data resource

@@ -20,11 +20,13 @@
 
 package sf.net.experimaestro.locks;
 
-import java.io.File;
-import java.io.IOException;
-
+import com.sleepycat.je.DatabaseException;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.WatchFileMonitor;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.File;
+import java.io.IOException;
 
 
 /**
@@ -96,5 +98,9 @@ public class FileLock implements Lock {
 		// TODO Auto-generated method stub
 
 	}
+
+    @Override
+    public void init(Scheduler scheduler) throws DatabaseException {
+    }
 
 }

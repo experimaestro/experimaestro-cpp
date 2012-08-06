@@ -21,11 +21,11 @@
 package sf.net.experimaestro.utils.io;
 
 
-import java.io.IOException;
-import java.io.OutputStream;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * An OutputStream that flushes out to a Category.

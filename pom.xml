@@ -24,17 +24,10 @@
     <groupId>net.bpiwowar</groupId>
     <artifactId>experimaestro</artifactId>
     <name>experimaestro</name>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <description>Experiment manager framework</description>
 
-    <properties>
-        <m2st-syntaxHighlighter-urlBase>syntaxhighlighter</m2st-syntaxHighlighter-urlBase>
-        <m2st-syntaxHighlighter-brushFiles>shBrushPlain.js,shBrushXml.js,shBrushJScript.js
-        </m2st-syntaxHighlighter-brushFiles>
-        <m2st-syntaxHighlighter-themeCssFile>shThemeDefault.css</m2st-syntaxHighlighter-themeCssFile>
-        <m2st-syntaxHighlighter-config>config.clipboardSwf='%ROOT%/scripts/clipboard.swf',defaults['gutter']=false
-        </m2st-syntaxHighlighter-config>
-    </properties>
+
 
 
     <repositories>
@@ -67,7 +60,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.4</version>
                 <configuration>
-                    <source>1.6</source>
+                    <source>1.7</source>
                     <target>1.6</target>
                 </configuration>
             </plugin>
@@ -110,20 +103,28 @@
                 <artifactId>maven-site-plugin</artifactId>
                 <version>3.1</version>
                 <dependencies>
-                    <!-- site tools from http://code.google.com/p/m2-site-tools -->
+                    <!-- Syntax highlighting
+                    TODO: remove when no more APT pages
+                    -->
                     <dependency>
                         <groupId>com.anasoft.os</groupId>
                         <artifactId>m2st-doxia-macros</artifactId>
                         <version>2.0</version>
                     </dependency>
 
-                    <!-- Use confluence markup -->
+                    <!-- Use markdown -->
                     <dependency>
-                        <groupId>org.apache.maven.doxia</groupId>
-                        <artifactId>doxia-module-confluence</artifactId>
+                        <groupId>net.bpiwowar</groupId>
+                        <artifactId>doxia-module-markdown</artifactId>
                         <version>1.3</version>
                     </dependency>
                 </dependencies>
+
+                <configuration>
+                    <inputEncoding>UTF-8</inputEncoding>
+                    <outputEncoding>UTF-8</outputEncoding>
+                </configuration>
+
             </plugin>
 
             <!-- Jar manager -->
@@ -155,7 +156,7 @@
         <dependency>
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
-            <version>1.7R3</version>
+            <version>1.7R4</version>
         </dependency>
         <dependency>
             <groupId>berkeleydb</groupId>
@@ -174,10 +175,11 @@
             <type>jar</type>
             <scope>compile</scope>
         </dependency>
+        <!-- TODO: change this back to a release version when 2.1 is available -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-vfs2</artifactId>
-            <version>2.0</version>
+            <version>2.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>net.bpiwowar</groupId>
@@ -219,6 +221,7 @@
             <artifactId>jetty-embedded</artifactId>
             <version>6.1.26</version>
         </dependency>
+
         <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>
@@ -233,8 +236,31 @@
     </dependencies>
 
 
+    <!-- Reports for site -->
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>2.4</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <!--<report>dependencies</report>-->
+                            <report>project-team</report>
+                            <report>mailing-list</report>
+                            <!--<report>cim</report>-->
+                            <report>issue-tracking</report>
+                            <report>license</report>
+                            <report>scm</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
+
     <!-- Sourceforge information -->
-    <!-- Source forge information -->
     <distributionManagement>
         <site>
             <id>experimaestro.sf.net</id>
@@ -243,32 +269,9 @@
         </site>
     </distributionManagement>
 
-    <mailingLists>
-        <mailingList>
-            <name>experimaestro Development Mailing list</name>
-            <subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
-            </subscribe>
-            <unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-development
-            </unsubscribe>
-            <archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40831
-            </archive>
-            <post>experimaestro-development@lists.sourceforge.net</post>
-        </mailingList>
-        <mailingList>
-            <name>experimaestro User Mailing list</name>
-            <subscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
-            </subscribe>
-            <unsubscribe>http://lists.sourceforge.net/mailman/listinfo/experimaestro-users
-            </unsubscribe>
-            <archive>http://sourceforge.net/mailarchive/forum.php?forum_id=40830
-            </archive>
-            <post>experimaestro-users@lists.sourceforge.net</post>
-        </mailingList>
-    </mailingLists>
 
     <issueManagement>
         <system>sourceforge</system>
-        <!--don't care -->
         <url>http://sourceforge.net/tracker/?group_id=299634</url>
     </issueManagement>
 
@@ -285,7 +288,6 @@
         <connection>scm:svn:https://experimaestro.svn.sourceforge.net/svnroot/experimaestro</connection>
     </scm>
 
-
     <developers>
         <developer>
             <id>bpiwowar</id>
@@ -301,6 +303,7 @@
             </properties>
         </developer>
     </developers>
+
 
 
 </project>

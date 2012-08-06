@@ -20,21 +20,14 @@
 
 package sf.net.experimaestro.server;
 
-import java.io.File;
-import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.TimerTask;
-import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TreeMap;
-
+import com.sleepycat.je.DatabaseException;
 import org.apache.log4j.Level;
+import org.apache.xmlrpc.XmlRpcRequest;
+import org.apache.xmlrpc.server.XmlRpcStreamServer;
 import org.mortbay.jetty.Server;
 import org.mozilla.javascript.*;
-
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repositories;
@@ -44,14 +37,17 @@ import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
-import com.sleepycat.je.DatabaseException;
+import java.io.File;
+import java.io.FileReader;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Our RPC handler for experimaestro
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class RPCServer {
+public class RPCHandler {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
@@ -60,7 +56,8 @@ public class RPCServer {
 	private Scheduler scheduler;
 
 
-	/**
+    private XmlRpcRequest pRequest;
+    /**
 	 * Server
 	 */
 	private Server server;
@@ -72,11 +69,13 @@ public class RPCServer {
 
     /**
 	 * Set the task server
-	 * 
-	 * @param scheduler
-	 */
-	public void setTaskServer(Server server, Scheduler scheduler, Repository repository) {
-		this.server = server;
+	 *
+     * @param pRequest
+     * @param scheduler
+     */
+	public void setTaskServer(XmlRpcRequest pRequest, Server server, Scheduler scheduler, Repository repository) {
+        this.pRequest = pRequest;
+        this.server = server;
 		this.scheduler = scheduler;
         this.repository = repository;
 	}
@@ -165,7 +164,14 @@ public class RPCServer {
 
 	}
 
-	/**
+    private volatile int index = 1;
+    public void echo(String msg) {
+        System.out.println(index+": "+msg);
+        index++;
+    }
+
+
+    /**
 	 * Run a javascript script (either the file or a string)
 	 * 
 	 * This version is called from python scripts where maps would be marshalled
@@ -182,6 +188,10 @@ public class RPCServer {
 	 */
 	public ArrayList<Object> runJSScript(boolean isFile, String content,
 			Map<String, String> environment) {
+        if (pRequest instanceof XmlRpcStreamServer) {
+            final XmlRpcStreamServer request =  (XmlRpcStreamServer) pRequest.getConfig();
+            LOGGER.info("HERE I AM !!!!");
+        }
 		int error = 0;
 		String errorMsg = "";
 		XPMObject jsXPM = null;

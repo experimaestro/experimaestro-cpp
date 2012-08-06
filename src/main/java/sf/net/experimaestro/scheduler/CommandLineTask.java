@@ -20,17 +20,22 @@
 
 package sf.net.experimaestro.scheduler;
 
-import static java.lang.String.format;
+import bpiwowar.argparser.utils.Formatter;
+import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.JobMonitor;
+import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.ShLauncher;
+import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.log.Logger;
-
-import com.sleepycat.persist.model.Persistent;
+import static java.lang.String.format;
 
 /**
  * A command line task (executed with the default shell)
@@ -62,7 +67,7 @@ public class CommandLineTask extends Job {
      * Constructs the command line
      *
      * @param scheduler  The scheduler for this command
-     * @param identifier The identifier of the command (this will be used for the path of the files)
+     * @param identifier The locator of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
@@ -95,6 +100,14 @@ public class CommandLineTask extends Job {
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
                            String[] command) {
         this(scheduler, connector, identifier, command, null, null);
+    }
+
+    public static String getCommandLine(String[] args) {
+        return bpiwowar.argparser.utils.Output.toString(" ", ListAdaptator.create(args), new Formatter<String>() {
+            public String format(String t) {
+                return protect(t, " \"'");
+            }
+        });
     }
 
     @Override

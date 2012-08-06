@@ -20,10 +20,10 @@
 
 package sf.net.experimaestro.exceptions;
 
-import static java.lang.String.format;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.String.format;
 
 public class ExperimaestroException extends RuntimeException {
 	private static final long serialVersionUID = 1L;

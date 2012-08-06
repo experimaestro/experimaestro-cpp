@@ -20,18 +20,17 @@
 
 package sf.net.experimaestro.manager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
-
-import sf.net.experimaestro.scheduler.Locator;
-import sf.net.experimaestro.utils.log.Logger;
-
 import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
 import com.sun.org.apache.xerces.internal.xs.XSConstants;
 import com.sun.org.apache.xerces.internal.xs.XSModel;
 import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
+import sf.net.experimaestro.scheduler.Locator;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Repository for all possible tasks

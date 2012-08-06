@@ -50,4 +50,8 @@ public enum ResourceState {
 	 * Completed (for a job) or generated (for a data resource) 
 	 */
 	DONE;
+
+    public boolean isBlocking() {
+        return this == ON_HOLD || this == ERROR;
+    }
 }

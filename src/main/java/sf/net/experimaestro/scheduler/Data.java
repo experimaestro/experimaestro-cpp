@@ -21,6 +21,7 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Entity;
+import sf.net.experimaestro.connectors.Connector;
 
 /**
  * Represents some data that can be produced by a given job

@@ -20,20 +20,17 @@
 
 package sf.net.experimaestro.manager;
 
-import static java.lang.String.format;
-
-import java.io.File;
-import java.util.List;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import javax.xml.namespace.QName;
 import javax.xml.xpath.XPathFunction;
 import javax.xml.xpath.XPathFunctionException;
 import javax.xml.xpath.XPathFunctionResolver;
+import java.io.File;
+import java.util.List;
 
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import sf.net.experimaestro.manager.js.XPMObject;
+import static java.lang.String.format;
 
 /**
  * 

@@ -20,22 +20,20 @@
 
 package sf.net.experimaestro.server;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.text.DateFormat;
-import java.util.ArrayList;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.sleepycat.je.DatabaseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
-import com.sleepycat.je.DatabaseException;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.util.ArrayList;
 
 /**
  * Gives the current task status
@@ -73,8 +71,8 @@ public class StatusServlet extends XPMServlet {
 						out.format(
 								"<li><a href=\"%s/resource?id=%s\">%s</a></li>",
 								request.getServletPath(),
-								urlEncode(resource.getIdentifier()),
-								resource.getIdentifier());
+								urlEncode(resource.getLocator()),
+								resource.getLocator());
 				}
 				out.println("</ul>");
 			}

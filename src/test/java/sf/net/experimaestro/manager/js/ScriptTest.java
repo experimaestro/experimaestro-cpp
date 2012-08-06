@@ -20,7 +20,12 @@
 
 package sf.net.experimaestro.manager.js;
 
-import static java.lang.String.format;
+import org.apache.commons.vfs2.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptableObject;
+import org.testng.annotations.*;
+import sf.net.experimaestro.manager.Repository;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,23 +37,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.vfs.FileObject;
-import org.apache.commons.vfs.FileSelectInfo;
-import org.apache.commons.vfs.FileSelector;
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemManager;
-import org.apache.commons.vfs.VFS;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ScriptableObject;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Factory;
-import org.testng.annotations.Test;
-
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.scheduler.Locator;
+import static java.lang.String.format;
 
 public class ScriptTest {
 	private static final String JS_SCRIPT_PATH = "/js";
@@ -73,7 +62,7 @@ public class ScriptTest {
 		}
 		
 		@DataProvider
-		public Object[][] jsProvider() throws FileSystemException, IOException {
+		public Object[][] jsProvider() throws IOException {
 			Pattern pattern = Pattern
 					.compile("function\\s+(test_[\\w]+)\\s*\\(");
 			Matcher matcher = pattern.matcher(content);

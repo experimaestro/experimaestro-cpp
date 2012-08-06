@@ -29,7 +29,8 @@ import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
 import org.apache.log4j.Level;
-import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.JobMonitor;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.je.FileProxy;
@@ -39,6 +40,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The scheduler
@@ -90,11 +95,6 @@ public class Scheduler {
      */
     private Connectors connectors;
 
-    /**
-     * Repository
-     */
-    Repository repository;
-
 
     /**
 	 * The database store
@@ -106,12 +106,31 @@ public class Scheduler {
 	 */
 	private Environment dbEnvironment;
 
+    /**
+     * Scheduler
+     */
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     public Connector getConnector(String id) throws DatabaseException {
         return connectors.get(id);
     }
 
     public void put(Connector connector) throws DatabaseException {
         connectors.put(connector);
+    }
+
+    public ScheduledFuture<?> schedule(final JobMonitor jobMonitor, int rate, TimeUnit units) {
+        return scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    jobMonitor.check();
+                } catch (Exception e) {
+                    LOGGER.error("Error while checking job [%s]: %s", jobMonitor.job, e);
+                }
+            }
+        }, 0, rate, units);
+
     }
 
     /**
@@ -158,7 +177,7 @@ public class Scheduler {
                                 } catch (DatabaseException e) {
                                     LOGGER.warn(
                                             "Could not notify all the listeners for [%s]",
-                                            resource.getIdentifier());
+                                            resource.getLocator());
                                     LOGGER.warn("Trace:", e);
                                 }
 
@@ -299,7 +318,7 @@ public class Scheduler {
 	// ----
 
 	/**
-	 * Get a resource by identifier
+	 * Get a resource by locator
 	 * 
 	 * First checks if the resource is in the list of tasks to be run. If not,
 	 * we look directly on disk to get back information on the resource.
@@ -314,7 +333,7 @@ public class Scheduler {
 	}
 
     /**
-     * Get a resource by identifier
+     * Get a resource by locator
      *
      * First checks if the resource is in the list of tasks to be run. If not,
      * we look directly on disk to get back information on the resource.

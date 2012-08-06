@@ -20,6 +20,12 @@
 
 package sf.net.experimaestro.tasks.config;
 
+import bpiwowar.argparser.Argument;
+import bpiwowar.argparser.ArgumentPostProcessor;
+import org.apache.xmlrpc.client.XmlRpcClient;
+import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
+import sf.net.experimaestro.utils.log.Logger;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -27,13 +33,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
-
-import org.apache.xmlrpc.client.XmlRpcClient;
-import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
-
-import sf.net.experimaestro.utils.log.Logger;
-import bpiwowar.argparser.Argument;
-import bpiwowar.argparser.ArgumentPostProcessor;
 
 public class XMLRPCClientConfig {
 	final static private Logger LOGGER = Logger.getLogger();

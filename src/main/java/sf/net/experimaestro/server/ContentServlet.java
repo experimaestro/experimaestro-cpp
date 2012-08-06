@@ -20,24 +20,23 @@
 
 package sf.net.experimaestro.server;
 
-import static java.lang.String.format;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemManager;
+import org.apache.commons.vfs2.FileType;
+import org.apache.commons.vfs2.VFS;
+import sf.net.experimaestro.utils.log.Logger;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.FileType;
-import org.apache.commons.vfs2.VFS;
-import sf.net.experimaestro.utils.log.Logger;
+import static java.lang.String.format;
 
 public class ContentServlet extends HttpServlet {
 	final static private Logger LOGGER = Logger.getLogger();

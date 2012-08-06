@@ -20,14 +20,6 @@
 
 package sf.net.experimaestro.server;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.NoSuchElementException;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.PropertyHandlerMapping;
@@ -35,9 +27,16 @@ import org.apache.xmlrpc.server.RequestProcessorFactoryFactory;
 import org.apache.xmlrpc.server.XmlRpcHandlerMapping;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
-
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.log.Logger;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Enumeration;
+import java.util.NoSuchElementException;
 
 /**
  * The XML-RPC servlet for experimaestro
@@ -46,6 +45,8 @@ import sf.net.experimaestro.scheduler.Scheduler;
  *
  */
 public final class XPMXMLRpcServlet extends XmlRpcServlet {
+    static private final Logger LOGGER = Logger.getLogger();
+
 	private final Repository repository;
 	private final Scheduler scheduler;
 	private Server server;
@@ -109,13 +110,15 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 					@SuppressWarnings("rawtypes") final Class pClass) throws XmlRpcException {
 				return new RequestProcessorFactory() {
 
+                    // TODO: Try to exploit streaming
 					public Object getRequestProcessor(XmlRpcRequest pRequest)
 							throws XmlRpcException {
 						try {
+                            LOGGER.info("XML-RPC request is class is %s", pRequest == null ? "null" : pRequest.getClass().getCanonicalName());
+                            // Create a new instance for the class pClass
 							Object object = pClass.newInstance();
-							if (object instanceof RPCServer) {
-								((RPCServer) object).setTaskServer(
-										server, scheduler, repository);
+							if (object instanceof RPCHandler) {
+								((RPCHandler) object).setTaskServer(pRequest, server, scheduler, repository);
 							}
 							return object;
 						} catch (InstantiationException e) {
@@ -129,7 +132,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 		};
 
 		mapping.setRequestProcessorFactoryFactory(factory);
-		mapping.addHandler("Server", RPCServer.class);
+		mapping.addHandler("Server", RPCHandler.class);
 
 		return mapping;
 	}

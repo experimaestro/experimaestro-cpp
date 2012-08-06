@@ -22,7 +22,6 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;

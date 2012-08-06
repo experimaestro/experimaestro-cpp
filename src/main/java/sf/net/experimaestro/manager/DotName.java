@@ -20,12 +20,11 @@
 
 package sf.net.experimaestro.manager;
 
-import java.util.Arrays;
-import java.util.Iterator;
-
+import bpiwowar.argparser.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
-import bpiwowar.argparser.utils.Output;
+import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * A variable name with various levels separated by dots

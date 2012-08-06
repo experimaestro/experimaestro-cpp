@@ -27,7 +27,6 @@ import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.plan.ParseException;

@@ -21,7 +21,6 @@
 package sf.net.experimaestro.utils;
 
 import org.apache.log4j.Level;
-
 import sf.net.experimaestro.utils.log.Logger;
 
 

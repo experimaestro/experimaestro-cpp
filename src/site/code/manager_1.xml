@@ -1,8 +1,11 @@
-	<example xmlns="http://my.ns" xmlns:xp="sf.net.experimaestro">
-		<xp:value id="id" value="abc1"/>
-		<xp:resource version="1.0">id-of-resource</xp:resource>
-		
-		<file>/my/path/to/a/file</file>
-		<result>3</result>
-		
-	</example>
+<example xmlns="http://my.ns" xmlns:xp="sf.net.experimaestro" xp:resource="file:///home/xpm/output">
+    <!-- A simple typed value -->
+	<xp:value id="id" value="abc1" type="xs:string"/>
+
+    <!-- Another value -->
+    <alpha xp:type="xs:integer">3</alpha>
+
+    <!-- The format of the resource, ignored when comparing two messages -->
+    <format xp:ignore="yes">2</format>
+
+</example>

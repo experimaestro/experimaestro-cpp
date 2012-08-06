@@ -18,12 +18,14 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Process;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -50,56 +52,10 @@ public class LocalhostConnector extends Connector {
     }
 
 
-
     @Override
-    public JobMonitor exec(Job job, String command, ArrayList<Lock> locks) throws Exception {
-        Process p = null;
-            LOGGER.info("Running command [%s]", command);
-            p = Runtime.getRuntime().exec(new String[] { command });
-
-            final Process finalP = p;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final BufferedReader reader = new BufferedReader(new InputStreamReader(finalP.getErrorStream()));
-                    String s;
-                    try {
-                        while ((s = reader.readLine()) != null) {
-                            LOGGER.error("[stderr] %s", s);
-                        }
-                    } catch (IOException e) {
-                        LOGGER.error("[stderr/exception] %s", e.toString());
-                    }
-                }
-            }).run();
-
-            return new LocalhostJobMonitor(job, p);
-
-
-//            synchronized (p) {
-//                LOGGER.info("Waiting for the process (PID %d) to end", pid);
-//                int code = -1;
-//                try {
-//                    code = p.waitFor();
-//                } catch (InterruptedException e) {
-//                    LOGGER.warn("Task has been interrupted");
-//                }
-//
-//                if (code != 0)
-//                    throw new RuntimeException(
-//                            "Process ended with errors (code " + code + ")");
-//
-//                // Everything went well
-//                LOGGER.info("Process (PID %d) ended without error", pid);
-//                return code;
-//            }
-//        } finally {
-//            if (p != null) {
-//                p.getInputStream().close();
-//                p.getOutputStream().close();
-//                p.getErrorStream().close();
-//            }
-//        }
+    public sf.net.experimaestro.scheduler.Process exec(final Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
+        LOGGER.info("Running command [%s]", command);
+        return new LocalProcess(Runtime.getRuntime().exec(new String[]{command}), detach);
     }
 
 
@@ -138,15 +94,6 @@ public class LocalhostConnector extends Connector {
         new File(path).setExecutable(flag);
     }
 
-
-    @Override
-    public int compareTo(Connector connector) {
-        if (connector instanceof LocalhostConnector)
-            return 0;
-
-        return LocalhostConnector.class.getName().compareTo(connector.getClass().getName());
-    }
-
     public static Connector getInstance() {
         return singleton;
     }
@@ -158,31 +105,88 @@ public class LocalhostConnector extends Connector {
     }
 
 
+    /**
+     * A local process
+     */
+    private static class LocalProcess extends Process {
+        private final java.lang.Process process;
 
-    @Persistent
-    private class LocalhostJobMonitor extends JobMonitor {
-
-        transient private Process process;
-
-        public LocalhostJobMonitor() {}
-
-        // Check on Windows:
-        // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
-
-        public LocalhostJobMonitor(Job job, Process p) {
-            super(String.valueOf(ProcessUtils.getPID(p)), job);
-            this.process = p;
+        public LocalProcess(java.lang.Process process, boolean detach) {
+            this.process = process;
         }
 
         @Override
-        public int waitFor() throws Exception {
-            if (process == null)
-                return super.waitFor();
+        public OutputStream getOutputStream() {
+            return process.getOutputStream();
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return process.getInputStream();
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return process.getErrorStream();
+        }
+
+        @Override
+        public int waitFor() throws InterruptedException {
             return process.waitFor();
         }
 
         @Override
-        boolean isRunning() throws Exception {
+        public int exitValue() {
+            return process.exitValue();
+        }
+
+        @Override
+        public void destroy() {
+            process.destroy();
+        }
+
+        protected void finalize() {
+            destroy();
+        }
+
+        @Override
+        public String getPID() {
+            return String.valueOf(ProcessUtils.getPID(process));
+        }
+
+        @Override
+        public boolean isRunning() {
+            try {
+                process.exitValue();
+                return true;
+            } catch (IllegalThreadStateException e) {
+                return false;
+            }
+        }
+    }
+
+
+    @Persistent
+    private class LocalhostJobMonitor extends JobMonitor {
+        /**
+         * The running process: if we have it, easier to monitor
+         */
+        transient private Process process;
+
+        public LocalhostJobMonitor() {
+        }
+
+        // Check on Windows:
+        // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
+
+        public LocalhostJobMonitor(Job job, Process process) {
+            super(job, process, true);
+            this.process = process;
+        }
+
+
+        @Override
+        public boolean isRunning() throws Exception {
             if (process != null)
                 return ProcessUtils.isRunning(process);
 
@@ -194,7 +198,7 @@ public class LocalhostConnector extends Connector {
             if (singleton.fileExists(job.identifier.path + Job.DONE_EXTENSION))
                 return -1;
 
-            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+            return 0;
         }
     }
 }

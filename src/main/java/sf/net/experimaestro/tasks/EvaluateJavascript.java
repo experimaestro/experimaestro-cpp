@@ -20,16 +20,15 @@
 
 package sf.net.experimaestro.tasks;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.InputStreamReader;
-
-import org.mozilla.javascript.Scriptable;
-
-import sf.net.experimaestro.utils.log.Logger;
 import bpiwowar.argparser.Argument;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
+import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.InputStreamReader;
 
 @TaskDescription(name = "evaluate-javascript", project = { "xpmanager" }, description = "Evaluate locally some javascript (debug purposes)")
 public class EvaluateJavascript extends AbstractTask {

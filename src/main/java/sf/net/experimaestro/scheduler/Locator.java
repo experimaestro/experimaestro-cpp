@@ -23,6 +23,9 @@ package sf.net.experimaestro.scheduler;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.SSHConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 
 import java.io.IOException;
@@ -101,6 +104,10 @@ public class Locator implements Comparable<Locator> {
         if ("local".equals(uri.getScheme()))
             return LocalhostConnector.getIdentifier(uri);
 
+        if ("xpm".equals(uri.getScheme())) {
+            throw new IllegalArgumentException("xpm URI scheme is not supported yet");
+        }
+
         if ("ssh".equals(uri.getScheme()))
             return SSHConnector.getIdentifier(uri);
 
@@ -110,13 +117,13 @@ public class Locator implements Comparable<Locator> {
 
     public Connector getConnector() {
         if (_connector == null)
-            throw new ExperimaestroException("The identifier has not been properly initialized");
+            throw new ExperimaestroException("The locator has not been properly initialized");
 
         return _connector;
     }
 
     /**
-     * Resolve a path relative to possibly relative to the identifier
+     * Resolve a path relative to possibly relative to the locator
      */
     public Locator resolvePath(String path, boolean parent) throws IOException {
         return new Locator(_connector, getConnector().resolvePath(this.path, path, parent));

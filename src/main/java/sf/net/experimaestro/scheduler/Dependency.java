@@ -20,9 +20,8 @@
 
 package sf.net.experimaestro.scheduler;
 
-import sf.net.experimaestro.locks.LockType;
-
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.locks.LockType;
 
 /**
  * What is the status of a dependency This class stores the previous status
@@ -40,13 +39,19 @@ public class Dependency {
 	 */
 	boolean isSatisfied = false;
 
+    /**
+     * Previous state
+     */
+    ResourceState state;
+
 	protected Dependency() {
 	}
 
-	public Dependency(LockType type, boolean isSatisfied) {
+	public Dependency(LockType type, boolean isSatisfied, ResourceState state) {
 		this.type = type;
 		this.isSatisfied = isSatisfied;
-	}
+        this.state = state;
+    }
 
 	public LockType getType() {
 		return type;

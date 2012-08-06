@@ -58,6 +58,12 @@ public enum LockMode {
 	 * mode, no lock mechanism is used
 	 */
 	@EnumValue(value = "multiple-writer", help = "Creates a resource that can be read and written by many")
-	MULTIPLE_WRITER;
+	MULTIPLE_WRITER,
+
+
+    /**
+     * Custom mode: the locking mechanism is managed by the resource itself
+     */
+    CUSTOM;
 
 }

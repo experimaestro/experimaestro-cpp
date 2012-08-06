@@ -20,23 +20,21 @@
 
 package sf.net.experimaestro.manager.js;
 
-import java.util.Map.Entry;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.util.Map.Entry;
 
 public abstract class JSAbstractTask extends Task {
 	protected Scriptable jsScope;

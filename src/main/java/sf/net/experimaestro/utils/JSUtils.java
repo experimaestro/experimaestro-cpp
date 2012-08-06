@@ -20,23 +20,17 @@
 
 package sf.net.experimaestro.utils;
 
-import static java.lang.String.format;
-
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.IdScriptableObject;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.UniqueTag;
-import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.log.Logger;
+
+import static java.lang.String.format;
 
 public class JSUtils {
 	final static private Logger LOGGER = Logger.getLogger();

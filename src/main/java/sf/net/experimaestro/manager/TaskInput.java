@@ -22,7 +22,6 @@ package sf.net.experimaestro.manager;
 
 
 import org.w3c.dom.Document;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 
 public class TaskInput extends Input {

@@ -20,19 +20,16 @@
 
 package sf.net.experimaestro.manager.js;
 
-import static java.lang.String.format;
-
-import javax.xml.xquery.XQDataSource;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import static java.lang.String.format;
 
 /**
  * Task as implemented by a javascript object

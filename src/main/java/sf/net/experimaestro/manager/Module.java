@@ -20,11 +20,10 @@
 
 package sf.net.experimaestro.manager;
 
-import java.util.ArrayList;
-
+import com.sun.org.apache.xerces.internal.xs.XSModel;
 import org.w3c.dom.Document;
 
-import com.sun.org.apache.xerces.internal.xs.XSModel;
+import java.util.ArrayList;
 
 /**
  * A module groups tasks

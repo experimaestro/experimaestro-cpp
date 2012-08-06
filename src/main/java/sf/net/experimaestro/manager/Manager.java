@@ -20,15 +20,13 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Element;
+import sf.net.experimaestro.utils.XMLUtils;
+
+import javax.xml.xquery.XQException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-
-import javax.xml.xquery.XQException;
-
-import org.w3c.dom.Element;
-
-import sf.net.experimaestro.utils.XMLUtils;
 
 /**
  * Container for global definitions

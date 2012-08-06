@@ -20,14 +20,12 @@
 
 package sf.net.experimaestro.manager;
 
-import java.util.Iterator;
-
-import javax.xml.namespace.NamespaceContext;
-
 import org.w3c.dom.Node;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.log.Logger;
+
+import javax.xml.namespace.NamespaceContext;
+import java.util.Iterator;
 
 public class NSContext implements NamespaceContext {
 	final static private Logger LOGGER = Logger.getLogger();

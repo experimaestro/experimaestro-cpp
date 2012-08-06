@@ -26,6 +26,9 @@ import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import com.sleepycat.persist.model.Relationship;
 import com.sleepycat.persist.model.SecondaryKey;
+import org.apache.commons.configuration.AbstractFileConfiguration;
+import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -33,6 +36,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -60,10 +64,10 @@ public abstract class Resource implements Comparable<Resource> {
     private static final String DONE_EXTENSION = ".done";
 
     /**
-     * The task identifier
+     * The task locator
      */
     @PrimaryKey
-    Locator identifier;
+    Locator locator;
 
     /**
      * Groups this resource belongs to
@@ -111,13 +115,13 @@ public abstract class Resource implements Comparable<Resource> {
      */
     public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
         this.scheduler = scheduler;
-        this.identifier = new Locator(connector, path);
+        this.locator = new Locator(connector, path);
         this.lockmode = mode;
     }
 
     public Resource(Scheduler scheduler, Locator identifier, LockMode lockMode) {
         this.scheduler = scheduler;
-        this.identifier = identifier;
+        this.locator = identifier;
         this.lockmode = lockMode;
     }
 
@@ -126,7 +130,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     synchronized public void register(Job job) {
         // Copy the string to avoid holding the objects to notify in memory
-        listeners.add(new Locator(job.identifier));
+        listeners.add(new Locator(job.locator));
     }
 
     /**
@@ -150,20 +154,20 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
-     * Compares to another resource (based on the identifier)
+     * Compares to another resource (based on the locator)
      */
     public int compareTo(Resource o) {
-        return identifier.compareTo(o.identifier);
+        return locator.compareTo(o.locator);
     }
 
     @Override
     public int hashCode() {
-        return identifier.hashCode();
+        return locator.hashCode();
     }
 
     @Override
     public String toString() {
-        return identifier.toString();
+        return locator.toString();
     }
 
     /**
@@ -173,14 +177,14 @@ public abstract class Resource implements Comparable<Resource> {
         boolean updated = update();
 
         // Check if the resource was generated
-        if (getConnector().fileExists(identifier + DONE_EXTENSION)
+        if (getConnector().resolveFile(locator + DONE_EXTENSION).exists()
                 && this.getState() != ResourceState.DONE) {
             updated = true;
             this.state = ResourceState.DONE;
         }
 
         // Check if the resource is locked
-        boolean locked = getConnector().fileExists(identifier + LOCK_EXTENSION);
+        boolean locked = getConnector().resolveFile(locator + LOCK_EXTENSION).exists();
         updated |= locked != this.locked;
         this.locked = locked;
 
@@ -188,11 +192,11 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     public Connector getConnector() {
-        return identifier.getConnector();
+        return locator.getConnector();
     }
 
     /** Initialise a resource when retrieved from database */
-    public void init(Scheduler scheduler) {
+    public void init(Scheduler scheduler) throws DatabaseException {
         this.scheduler = scheduler;
     }
 
@@ -304,7 +308,7 @@ public abstract class Resource implements Comparable<Resource> {
                         format("Resource %s cannot accept dependency %s", this,
                                 dependency));
             case OK_LOCK:
-                return getConnector().createLockFile(identifier + ".LOCK");
+                return getConnector().createLockFile(locator + ".LOCK");
 
             case OK:
                 return new StatusLock(pid, dependency == LockType.WRITE_ACCESS);
@@ -354,19 +358,21 @@ public abstract class Resource implements Comparable<Resource> {
     public boolean update() throws Exception {
         boolean updated = writers > 0 || readers > 0;
 
-        if (!getConnector().fileExists(identifier.path + STATUS_EXTENSION)) {
+        final FileObject statusFile = getConnector().resolveFile(locator.path + STATUS_EXTENSION);
+
+        if (!statusFile.exists()) {
             writers = readers = 0;
             return updated;
         } else {
             // Check if we need to read the file
-            long lastModified = getConnector().getLastModifiedTime(identifier.path + STATUS_EXTENSION);
+            long lastModified = statusFile.getContent().getLastModifiedTime();
             if (lastUpdate >= lastModified)
                 return false;
 
             lastUpdate = lastModified;
 
             try {
-                for (String line : new ReadLineIterator(getConnector().getInputStream(identifier.path + STATUS_EXTENSION))) {
+                for (String line : new ReadLineIterator(statusFile.getContent().getInputStream())) {
                     String[] fields = line.split("\\s+");
                     if (fields.length != 2)
                         LOGGER.error(
@@ -394,8 +400,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
-     *
-     *
+     * Update the status file
      * @param pidFrom     The old PID (or 0 if none)
      * @param pidTo       The new PID (or 0 if none)
      * @param writeAccess True if we need the write access
@@ -404,33 +409,31 @@ public abstract class Resource implements Comparable<Resource> {
     void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws UnlockableException {
         // --- Lock the resource
-        Lock fileLock = getConnector().createLockFile(identifier.path + LOCK_EXTENSION);
+        Lock fileLock = getConnector().createLockFile(locator.path + LOCK_EXTENSION);
 
         try {
             // --- Read the resource status
             update();
 
+            final FileObject tmpFile = getConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
+            PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
             if (pidFrom == null) {
                 // We are adding a new entry
-                PrintWriter out = getConnector().printWriter(identifier.path + STATUS_EXTENSION);
-                out.format("%d %s%n", pidTo, writeAccess ? "w" : "r");
-                out.close();
+                out.format("%s %s%n", pidTo, writeAccess ? "w" : "r");
             } else {
                 // We are modifying an entry: rewrite the file
-                PrintWriter out = getConnector().printWriter(identifier.path + STATUS_EXTENSION + ".tmp");
                 processMap.remove(pidFrom);
                 if (pidTo != null)
                     processMap.put(pidTo, writeAccess);
                 for (Entry<String, Boolean> x : processMap.entrySet())
-                    out.format("%d %s%n", x.getKey(), x.getValue() ? "w" : "r");
-                out.close();
-
-                getConnector().renameFile(identifier.path + STATUS_EXTENSION + ".tmp", identifier.path + STATUS_EXTENSION);
+                    out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
             }
 
+            out.close();
+            tmpFile.moveTo(getConnector().resolveFile(locator.path + STATUS_EXTENSION));
         } catch (Exception e) {
             throw new UnlockableException(
-                    "Status file '%s' could not be created", identifier.path + STATUS_EXTENSION);
+                    "Status file '%s' could not be created", locator.path + STATUS_EXTENSION);
         } finally {
             if (fileLock != null)
                 fileLock.dispose();
@@ -460,7 +463,7 @@ public abstract class Resource implements Comparable<Resource> {
                     } catch (UnlockableException e) {
                         LOGGER.warn(
                                 "Unable to change status file %s (tried to remove pid %d)",
-                                identifier.path + STATUS_EXTENSION, StatusLock.this.pid);
+                                locator.path + STATUS_EXTENSION, StatusLock.this.pid);
                     }
                 }
             });
@@ -504,17 +507,24 @@ public abstract class Resource implements Comparable<Resource> {
 
             this.pid = pid;
         }
+
+        @Override
+        public void init(Scheduler scheduler) throws DatabaseException {
+        }
     }
 
     /**
-     * Get the task identifier
+     * Get the task locator
      *
-     * @return The task unique identifier
+     * @return The task unique locator
      */
-    public String getIdentifier() {
-        return identifier.toString();
+    public Locator getLocator() {
+        return locator;
     }
 
+    String getIdentifier() {
+        return locator.toString();
+    }
     /**
      * Is the resource locked?
      */
@@ -578,7 +588,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @param config The configuration for printing
      */
     public void printHTML(PrintWriter out, PrintConfig config) {
-        out.format("<div><b>Resource id</b>: %s</h2>", identifier);
+        out.format("<div><b>Resource id</b>: %s</h2>", locator);
         out.format("<div><b>Status</b>: %s</div>", state);
 
     }

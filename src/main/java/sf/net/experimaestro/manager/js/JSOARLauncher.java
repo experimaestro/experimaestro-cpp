@@ -20,13 +20,10 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.scheduler.Launcher;
-import sf.net.experimaestro.scheduler.OARLauncher;
-import sf.net.experimaestro.scheduler.Scheduler;
+import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.OARLauncher;
 import sf.net.experimaestro.utils.log.Logger;
-
-import static java.lang.String.format;
 
 /**
  * Scheduler as seen by JavaScript

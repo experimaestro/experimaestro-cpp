@@ -20,21 +20,19 @@
 
 package sf.net.experimaestro.tasks;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeSet;
-
-import org.apache.xmlrpc.client.XmlRpcClient;
-
-import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
-import sf.net.experimaestro.utils.GenericHelper;
-
 import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.argparser.ArgumentRegexp;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
+import org.apache.xmlrpc.client.XmlRpcClient;
+import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
+import sf.net.experimaestro.utils.GenericHelper;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeSet;
 
 /**
  * Add a job to the list of jobs to be executed - if the job has already been

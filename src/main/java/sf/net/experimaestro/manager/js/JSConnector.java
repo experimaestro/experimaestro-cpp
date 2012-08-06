@@ -20,12 +20,32 @@
 
 package sf.net.experimaestro.manager.js;
 
-import sf.net.experimaestro.scheduler.Connector;
+import com.jcraft.jsch.JSchException;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.ConnectorOptions;
+import sun.org.mozilla.javascript.internal.ScriptableObject;
+
+import java.net.URISyntaxException;
 
 /**
+ * Simple JavaScript interface to a connector object
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 12/6/12
  */
-public interface JSConnector {
-    Connector getConnector();
+public class JSConnector extends ScriptableObject {
+    private Connector connector;
+
+    Connector getConnector() {
+        return connector;
+    }
+
+    public void jsConstructor(String uri, ConnectorOptions options) throws JSchException, URISyntaxException {
+        connector = Connector.create(uri, options);
+    }
+
+    @Override
+    public String getClassName() {
+        return "Connector";
+    }
+
 }

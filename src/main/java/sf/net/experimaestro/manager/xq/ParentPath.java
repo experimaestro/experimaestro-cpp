@@ -20,8 +20,6 @@
 
 package sf.net.experimaestro.manager.xq;
 
-import java.io.File;
-
 import net.sf.saxon.expr.XPathContext;
 import net.sf.saxon.functions.ExtensionFunctionCall;
 import net.sf.saxon.functions.ExtensionFunctionDefinition;
@@ -31,6 +29,8 @@ import net.sf.saxon.om.StructuredQName;
 import net.sf.saxon.trans.XPathException;
 import net.sf.saxon.value.SequenceType;
 import sf.net.experimaestro.manager.Manager;
+
+import java.io.File;
 
 public class ParentPath extends ExtensionFunctionDefinition {
 	private static final StructuredQName NAME = new StructuredQName(Manager.EXPERIMAESTRO_PREFIX, Manager.EXPERIMAESTRO_NS, "parentPath");

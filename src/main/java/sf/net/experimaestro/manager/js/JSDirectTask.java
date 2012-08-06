@@ -20,17 +20,10 @@
 
 package sf.net.experimaestro.manager.js;
 
-import java.util.Map.Entry;
-
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
@@ -38,6 +31,8 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.Map.Entry;
 
 public class JSDirectTask extends JSAbstractTask {
 	final static private Logger LOGGER = Logger.getLogger();

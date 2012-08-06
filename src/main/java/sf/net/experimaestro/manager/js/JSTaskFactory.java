@@ -20,11 +20,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import static java.lang.String.format;
-
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
@@ -33,24 +28,16 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.manager.AlternativeInput;
-import sf.net.experimaestro.manager.AlternativeType;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.Module;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.TaskInput;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.XMLInput;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.Map;
+import java.util.TreeMap;
+
+import static java.lang.String.format;
 
 /**
  * A task factory as defined by a JavaScript object

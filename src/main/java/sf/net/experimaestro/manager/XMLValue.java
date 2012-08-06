@@ -21,7 +21,6 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;

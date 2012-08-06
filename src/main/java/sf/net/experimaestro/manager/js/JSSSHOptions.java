@@ -20,51 +20,30 @@
 
 package sf.net.experimaestro.manager.js;
 
-import com.jcraft.jsch.JSchException;
 import com.sleepycat.je.DatabaseException;
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.log.Logger;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.lang.String.format;
+import org.apache.commons.vfs2.FileSystemException;
+import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.connectors.SSHOptions;
+import sun.org.mozilla.javascript.internal.ScriptableObject;
 
 /**
- * Scheduler as seen by JavaScript
+ * JavaScript wrapper for SSH options
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 25/6/12
  */
-public class JSSSHConnector extends ScriptableObject implements JSConnector {
-    final static private Logger LOGGER = Logger.getLogger();
-
-    private static final long serialVersionUID = 1L;
-
-    public static final String CLASSNAME = "SSHConnector";
-
-    Connector connector;
-
-    public JSSSHConnector() {
-    }
-
-    public void jsConstructor(String username, String hostname) throws JSchException {
-        this.connector = new SSHConnector(username, hostname);
-    }
+public class JSSSHOptions extends ScriptableObject {
+    SSHOptions options = new SSHOptions();
 
     @Override
     public String getClassName() {
-        return CLASSNAME;
+        return "SSHOptions";
     }
 
-    @Override
-    public Connector getConnector() {
-        return connector;
+    // --- JavaScript methods
+
+    public void jsFunction_setUseAgent(boolean use) throws FileSystemException {
+        options.setUseSSHAgent(use);
     }
-
-    // ---- JavaScript functions ----
-
-
 
 }

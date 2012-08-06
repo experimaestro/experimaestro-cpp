@@ -20,7 +20,7 @@
 
 package sf.net.experimaestro.manager.js;
 
-import sf.net.experimaestro.scheduler.Launcher;
+import sf.net.experimaestro.connectors.Launcher;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

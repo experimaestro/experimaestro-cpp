@@ -20,10 +20,10 @@
 
 package sf.net.experimaestro.utils;
 
+import org.apache.log4j.Logger;
+
 import java.io.File;
 import java.io.IOException;
-
-import org.apache.log4j.Logger;
 
 /**
  * A temporary directory that is automatically deleted when the JVM stops (or on

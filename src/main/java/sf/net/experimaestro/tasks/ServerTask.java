@@ -113,9 +113,9 @@ public class ServerTask extends AbstractTask {
 
         // Read passwords
         final SubnodeConfiguration passwords = configuration.getSection("passwords");
-        final Iterator<String> keys = passwords.getKeys();
+        final Iterator keys = passwords.getKeys();
         while (keys.hasNext()) {
-            String user = keys.next();
+            String user = (String) keys.next();
             final String[] fields = passwords.getString(user).split("\\s*,\\s*");
 
             LOGGER.info("Adding user %s", user);
@@ -164,8 +164,5 @@ public class ServerTask extends AbstractTask {
         return 0;
     }
 
-    void stop() throws Exception {
-        server.stop();
-    }
 
 }

@@ -20,25 +20,19 @@
 
 package sf.net.experimaestro.server;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.Map.Entry;
+import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
+import com.sun.org.apache.xerces.internal.xs.XSComplexTypeDefinition;
+import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
-import com.sun.org.apache.xerces.internal.xs.XSComplexTypeDefinition;
-
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.Module;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.log.Logger;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Collection;
+import java.util.Map.Entry;
 
 /**
  * Servlet to browse the list of tasks

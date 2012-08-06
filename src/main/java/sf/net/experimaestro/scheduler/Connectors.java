@@ -24,6 +24,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
 

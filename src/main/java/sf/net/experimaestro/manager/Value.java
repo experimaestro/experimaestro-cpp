@@ -20,31 +20,19 @@
 
 package sf.net.experimaestro.manager;
 
-import static java.lang.String.format;
-
-import java.lang.reflect.Constructor;
-
-import javax.xml.xquery.XQConnection;
-import javax.xml.xquery.XQConstants;
-import javax.xml.xquery.XQException;
-import javax.xml.xquery.XQExpression;
-import javax.xml.xquery.XQItem;
-import javax.xml.xquery.XQItemType;
-import javax.xml.xquery.XQSequence;
-import javax.xml.xquery.XQStaticContext;
-
 import net.sf.saxon.xqj.SaxonXQDataSource;
-
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import javax.xml.xquery.*;
+import java.lang.reflect.Constructor;
+
+import static java.lang.String.format;
 
 /**
  * Represents a value that can be set

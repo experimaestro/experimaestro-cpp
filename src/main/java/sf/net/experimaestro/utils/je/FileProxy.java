@@ -20,10 +20,10 @@
 
 package sf.net.experimaestro.utils.je;
 
-import java.io.File;
-
 import com.sleepycat.persist.model.Persistent;
 import com.sleepycat.persist.model.PersistentProxy;
+
+import java.io.File;
 
 @Persistent(proxyFor = File.class)
 public class FileProxy implements PersistentProxy<File> {

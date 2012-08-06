@@ -20,11 +20,11 @@
 
 package sf.net.experimaestro.utils;
 
+import org.apache.log4j.Logger;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.util.regex.Pattern;
-
-import org.apache.log4j.Logger;
 
 /**
  * 

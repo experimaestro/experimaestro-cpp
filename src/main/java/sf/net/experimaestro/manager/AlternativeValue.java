@@ -20,13 +20,12 @@
 
 package sf.net.experimaestro.manager;
 
-import java.util.Map;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.utils.XMLUtils;
+
+import java.util.Map;
 
 /**
  * Handles alternatives

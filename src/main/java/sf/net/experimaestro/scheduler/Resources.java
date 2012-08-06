@@ -20,17 +20,16 @@
 
 package sf.net.experimaestro.scheduler;
 
-import java.lang.ref.WeakReference;
-import java.util.Iterator;
-import java.util.WeakHashMap;
-
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import sf.net.experimaestro.utils.log.Logger;
-
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.lang.ref.WeakReference;
+import java.util.Iterator;
+import java.util.WeakHashMap;
 
 /**
  * 
@@ -77,7 +76,7 @@ public class Resources implements Iterable<Resource> {
 	 */
 	synchronized public boolean put(Resource resource) throws DatabaseException {
 		// Check if overriding a running resource (unless it is the same object)
-		Resource old = get(resource.identifier);
+		Resource old = get(resource.locator);
 
 		if (old != null) {
 			// Don't override a running task
@@ -90,7 +89,7 @@ public class Resources implements Iterable<Resource> {
 
 		// Store in database and in cache
 		index.put(resource);
-		cache.put(resource.identifier, new WeakReference<Resource>(resource));
+		cache.put(resource.locator, new WeakReference<Resource>(resource));
 
 		// OK, we did update
 		return true;

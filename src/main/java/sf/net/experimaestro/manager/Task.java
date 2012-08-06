@@ -20,19 +20,8 @@
 
 package sf.net.experimaestro.manager;
 
-import java.io.StringReader;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.Input.Connection;
@@ -41,6 +30,11 @@ import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.StringReader;
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * The abstract Task object

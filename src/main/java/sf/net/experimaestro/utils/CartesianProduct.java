@@ -23,10 +23,10 @@
  */
 package sf.net.experimaestro.utils;
 
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
+
 import java.lang.reflect.Array;
 import java.util.Iterator;
-
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 
 /**
  * This produces a cartesian product over all the possible combinations

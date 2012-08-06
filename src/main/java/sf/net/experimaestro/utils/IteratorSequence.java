@@ -20,9 +20,9 @@
 
 package sf.net.experimaestro.utils;
 
-import java.util.Iterator;
-
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
+
+import java.util.Iterator;
 
 /**
  * Glue a series of iterators together to form an iterator over the whole

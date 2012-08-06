@@ -20,13 +20,13 @@
 
 package sf.net.experimaestro.plan;
 
-import java.util.Iterator;
-import java.util.Map;
-
+import bpiwowar.argparser.GenericHelper;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.IteratorSequence;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import bpiwowar.argparser.GenericHelper;
+
+import java.util.Iterator;
+import java.util.Map;
 
 public class Op extends Node {
 	Node n1, n2;

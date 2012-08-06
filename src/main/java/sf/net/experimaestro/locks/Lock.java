@@ -20,6 +20,9 @@
 
 package sf.net.experimaestro.locks;
 
+import com.sleepycat.je.DatabaseException;
+import sf.net.experimaestro.scheduler.Scheduler;
+
 /**
  * A lock that can be removed.
  * 
@@ -42,4 +45,7 @@ public interface Lock {
      *            The new owner PID
      */
 	void changeOwnership(String pid);
+
+    /** Initialize the lock when restored from database */
+    void init(Scheduler scheduler) throws DatabaseException;
 }

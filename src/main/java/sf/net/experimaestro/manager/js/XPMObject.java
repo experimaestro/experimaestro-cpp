@@ -20,46 +20,16 @@
 
 package sf.net.experimaestro.manager.js;
 
-import static java.lang.String.format;
-
-import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-import javax.xml.xpath.XPathFunctionResolver;
-
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.FunctionObject;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
-import org.mozilla.javascript.Wrapper;
+import com.sleepycat.je.DatabaseException;
+import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
+import com.sun.org.apache.xerces.internal.xs.XSModel;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import org.w3c.dom.ls.LSInput;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.manager.AlternativeType;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.NSContext;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.*;
@@ -68,9 +38,16 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import com.sleepycat.je.DatabaseException;
-import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
-import com.sun.org.apache.xerces.internal.xs.XSModel;
+import javax.xml.xpath.*;
+import java.io.*;
+import java.lang.Process;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static java.lang.String.format;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -136,16 +113,20 @@ public class XPMObject {
 		this.repository = repository;
 		this.scheduler = scheduler;
 
+        // --- Define functions and classes
+
 		// Define the new classes
 		ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
 		ScriptableObject.defineClass(scope, TaskJSWrapper.class);
         ScriptableObject.defineClass(scope, JSScheduler.class);
-        ScriptableObject.defineClass(scope, JSOARLauncher.class);
-        ScriptableObject.defineClass(scope, JSSSHConnector.class);
 
-        // Add qname function
-		addFunction(scope, "qname",
-				new Class<?>[] { Object.class, String.class });
+        // Launchers
+        ScriptableObject.defineClass(scope, JSOARLauncher.class);
+
+        // Connectors
+
+        // Add functions
+		addFunction(scope, "qname", new Class<?>[] { Object.class, String.class });
         addFunction(scope, "includeRepository", null);
 
 
@@ -155,7 +136,8 @@ public class XPMObject {
 		// Add this object
 		ScriptableObject.defineProperty(scope, "xpm", this, 0);
 
-		// Add new objects
+        // --- Add new objects
+
 		addNewObject(cx, scope, "xp", "Namespace", new Object[] { "xp",
 				Manager.EXPERIMAESTRO_NS });
 		addNewObject(cx, scope, "scheduler", "Scheduler",
@@ -340,6 +322,8 @@ public class XPMObject {
 
 	public Scriptable getTask(QName qname) {
 		TaskFactory factory = repository.getFactory(qname);
+        if (factory == null)
+            throw new ExperimaestroException("Could not find a task with name [%s]", qname);
 		LOGGER.info("Creating a new JS task %s", factory);
 		return context.newObject(scope, "XPMTask",
 				new Object[] { Context.javaToJS(factory.create(), scope) });
@@ -393,8 +377,8 @@ public class XPMObject {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	public NativeArray evaluate(Object jsargs) throws IOException,
-			InterruptedException {
+	public NativeArray evaluate(Object jsargs) throws Exception,
+            InterruptedException {
 		final String[] args;
 		if (jsargs instanceof NativeArray) {
 			NativeArray array = ((NativeArray) jsargs);
@@ -412,7 +396,8 @@ public class XPMObject {
 					"Cannot handle an array of type %s", jsargs.getClass()));
 
 		// Run the process and captures the output
-		Process p = Runtime.getRuntime().exec(args);
+        String command = CommandLineTask.getCommandLine(args);
+        Process p = currentScript.getConnector().exec(null, command, null, false, null, null);
 		BufferedReader input = new BufferedReader(new InputStreamReader(
 				p.getInputStream()));
 
@@ -427,7 +412,7 @@ public class XPMObject {
 		return new NativeArray(new Object[] { error, sb.toString() });
 	}
 
-	/**
+    /**
 	 * Log a message to be returned to the client
 	 */
 	public void log(String format, Object... objects) {

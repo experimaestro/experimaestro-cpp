@@ -20,18 +20,18 @@
 
 package sf.net.experimaestro.manager.js;
 
-import static java.lang.String.format;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import com.sleepycat.je.DatabaseException;
 import org.mozilla.javascript.*;
-
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.log.Logger;
 
-import com.sleepycat.je.DatabaseException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.lang.String.format;
 
 /**
  * Scheduler as seen by JavaScript
@@ -52,7 +52,6 @@ public class JSScheduler extends ScriptableObject {
 
     public void jsConstructor(Scriptable scheduler) {
         if (scheduler != null) {
-            LOGGER.info(scheduler.toString());
             this.scheduler = (Scheduler) ((NativeJavaObject) scheduler)
                     .unwrap();
         }
@@ -69,12 +68,10 @@ public class JSScheduler extends ScriptableObject {
      * Run a command line experiment
      *
      * @param jsargs      a native array
-     * @param jsresources E4X object
      * @return
      * @throws DatabaseException
      */
-    public void jsFunction_addCommandLineJob(String identifier, Object jsargs,
-                                             Object jsresources, Object jsoptions) throws DatabaseException {
+    public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
         // --- Process arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
@@ -106,34 +103,38 @@ public class JSScheduler extends ScriptableObject {
 
 
         // --- Options
+
         if (!(jsoptions instanceof Undefined)) {
+            // --- Process launcher
             if (options.has("launcher", options)) {
                 final Object launcher = options.get("launcher", options);
-                System.err.println(launcher.getClass().toString());
                 if (launcher != null && !(launcher instanceof UniqueTag))
                     task.setLauncher(((JSLauncher) launcher).getLauncher());
             }
+
+
+            // --- Resources to lock
+            if (options.has("lock", options)) {
+                NativeArray resources = (NativeArray) options.get("launcher", options);
+                for (int i = (int) resources.getLength(); --i >= 0; ) {
+                    NativeArray array = (NativeArray) resources.get(i, resources);
+                    assert array.getLength() == 2;
+                    Resource resource = scheduler.getResource(XPMObject.toString(array
+                            .get(0, array)));
+                    LockType lockType = LockType.valueOf(XPMObject.toString(array.get(
+                            1, array)));
+                    LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource,
+                            lockType);
+                    task.addDependency(resource, lockType);
+                }
+
+            }
+
+            // --- Redirect standard output
             final Object stdout = options.get("stdout", options);
 
+            // --- Redirect standard error
             final Object stderr = options.get("stderr", options);
-
-        }
-
-
-        // --- Resources
-        if (!(jsresources instanceof Undefined)) {
-            NativeArray resources = ((NativeArray) jsresources);
-            for (int i = (int) resources.getLength(); --i >= 0; ) {
-                NativeArray array = (NativeArray) resources.get(i, resources);
-                assert array.getLength() == 2;
-                Resource resource = scheduler.getResource(XPMObject.toString(array
-                        .get(0, array)));
-                LockType lockType = LockType.valueOf(XPMObject.toString(array.get(
-                        1, array)));
-                LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource,
-                        lockType);
-                task.addDependency(resource, lockType);
-            }
         }
 
 

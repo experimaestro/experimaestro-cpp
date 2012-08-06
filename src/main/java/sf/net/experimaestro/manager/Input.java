@@ -20,18 +20,16 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import sf.net.experimaestro.utils.log.Logger;
+
+import javax.xml.xquery.XQException;
+import javax.xml.xquery.XQStaticContext;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.xml.xquery.XQException;
-import javax.xml.xquery.XQStaticContext;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * A parameter definition in a task factory / task

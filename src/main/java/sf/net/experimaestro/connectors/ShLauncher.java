@@ -18,21 +18,44 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.UnixShellLauncher;
 
 import java.util.ArrayList;
 
 /**
- * Defines how to run a command line and to monitor changes in
- * execution state.
+ * Runs a command using *SH (bash, sh)
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 12/6/12
  */
 @Persistent
-public abstract class Launcher {
-    /** Launch the task */
-    public abstract JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
+public class ShLauncher extends UnixShellLauncher {
+    /**
+     * Path to the shell
+     */
+    String shellCommand = "/bin/bash";
+
+    public ShLauncher(Connector connector) {
+        super(connector);
+    }
+
+    @Override
+    public JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+        // First generate the script file
+        generateRunFile(task, locks);
+
+        // Run the command
+        final String path = task.getLocator().getPath();
+        final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
+                shellCommand, CommandLineTask.protect(path, " "));
+        return new JobMonitor(task, task.getConnector().exec(task, command, locks, true, null, null), true);
+
+    }
+
 
 }
