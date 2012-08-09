@@ -25,7 +25,7 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.persist.model.Persistent;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.JobMonitor;
+import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
@@ -96,7 +96,7 @@ public class SchedulerTest {
 			}
 		}
 		@Override
-		protected JobMonitor startJob(ArrayList<Lock> locks) throws Throwable {
+		protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
 			// Wait that this task has been added to the queue
 			counters.resume(waitId);
 			

@@ -24,8 +24,10 @@ import com.sleepycat.persist.model.Persistent;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Process;
+import sf.net.experimaestro.scheduler.UnixShellLauncher;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -46,15 +48,19 @@ import java.util.ArrayList;
 public class OARLauncher extends UnixShellLauncher {
     static private final Logger LOGGER = Logger.getLogger();
 
+    // Command to start
     private Object oarCommand = "oarsub";
+
+    // Prefix for the PID of the job
     private final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
-    public OARLauncher(Connector connector) {
+    /** Construction from a connector */
+    public OARLauncher(ComputationalResource connector) {
         super(connector);
     }
 
     @Override
-    public JobMonitor launch(CommandLineTask job, ArrayList<Lock> locks) throws Exception {
+    public XPMProcess launch(CommandLineTask job, ArrayList<Lock> locks) throws Exception {
         generateRunFile(job, locks);
 
         final String path = job.getLocator().getPath();
@@ -106,7 +112,7 @@ public class OARLauncher extends UnixShellLauncher {
      * Monitors a OAR process
      */
     @Persistent
-    private class OARJobMonitor extends JobMonitor {
+    private class OARJobMonitor extends XPMProcess {
         public OARJobMonitor() {
         }
 

@@ -26,7 +26,7 @@ import sf.net.experimaestro.connectors.OARLauncher;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
- * Scheduler as seen by JavaScript
+ * OAR launcher
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */

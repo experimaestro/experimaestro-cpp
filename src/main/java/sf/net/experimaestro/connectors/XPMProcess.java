@@ -36,16 +36,19 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Monitor the execution of a job.
- * <p/>
- * A job monitor task is to monitor the execution of a job.
- * It is returned when a job starts and contains informations about the running job.
+ * A process monitor.
+ *
+ * <p>
+ * A job monitor task is to... monitor the execution of a job, wherever
+ * the job is running (remote, local, etc.).
+ * It is returned when a job starts, contains information (ID, state, etc.) and control methods (stop)
+ * </p>
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 14/6/12
+ * @date June 2012
  */
 @Persistent
-public class JobMonitor {
+public class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -81,7 +84,7 @@ public class JobMonitor {
      * @param notify  If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
      *                Otherwise, it is the caller job to set it up.
      */
-    protected JobMonitor(final Job job, final Process process, boolean notify) {
+    protected XPMProcess(final Job job, final Process process, boolean notify) {
         this.pid = process.getPID();
         this.process = process;
         this.job = job;
@@ -108,14 +111,14 @@ public class JobMonitor {
         }
     }
 
-    /** Constructs a JobMonitor without an underlying process */
-    protected JobMonitor(final Job job, String pid) {
+    /** Constructs a XPMProcess without an underlying process */
+    protected XPMProcess(final Job job, String pid) {
         this.job = job;
         this.pid = pid;
     }
 
 
-    protected JobMonitor() {
+    protected XPMProcess() {
     }
 
     /**
@@ -188,7 +191,7 @@ public class JobMonitor {
     }
 
     /**
-     * Error code
+     * Returns the error code
      */
     int getCode() throws Exception {
         // Use the process value
@@ -216,6 +219,10 @@ public class JobMonitor {
 
     }
 
+    /**
+     * Add a lock to release after this job has completed
+     * @param lock
+     */
     public void addLock(Lock lock) {
         locks.add(lock);
     }
@@ -223,7 +230,7 @@ public class JobMonitor {
     /**
      * Asynchronous check the state of the job monitor
      */
-    void check() throws Exception {
+    public void check() throws Exception {
         if (!isRunning()) {
             // We are not running: send a message
             job.notify(null, new EndOfJobMessage(getCode()));

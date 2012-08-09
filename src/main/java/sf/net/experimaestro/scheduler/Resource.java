@@ -26,7 +26,6 @@ import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import com.sleepycat.persist.model.Relationship;
 import com.sleepycat.persist.model.SecondaryKey;
-import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.locks.Lock;
@@ -36,7 +35,6 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -113,7 +111,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @param path The path to the resource
      * @param mode The locking mode
      */
-    public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
+    public Resource(Scheduler scheduler, ComputationalResource connector, String path, LockMode mode) {
         this.scheduler = scheduler;
         this.locator = new Locator(connector, path);
         this.lockmode = mode;

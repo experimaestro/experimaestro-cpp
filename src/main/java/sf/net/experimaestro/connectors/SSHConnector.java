@@ -44,7 +44,7 @@ import java.util.HashMap;
  * @date 7/6/12
  */
 @Persistent
-public class SSHConnector extends Connector {
+public class SSHConnector extends SingleHostConnector {
 
     static final private Logger LOGGER = Logger.getLogger();
 
@@ -198,6 +198,7 @@ public class SSHConnector extends Connector {
 
         @Override
         public String getPID() {
+            // TODO: get the PID
             return null;  //To change body of implemented methods use File | Settings | File Templates.
         }
 

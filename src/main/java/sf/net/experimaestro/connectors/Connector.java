@@ -22,12 +22,9 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Job;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,27 +32,40 @@ import java.util.ArrayList;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
- * and possibly where a command can be executed
+ * and possibly where a command can be executed.
+ *
+ * Connectors are stored in the database so that they can be used
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/6/12
  */
 @Entity
 public abstract class Connector implements Comparable<Connector> {
-    @PrimaryKey
-    String identifier;
+    /**
+     * Each connector has a unique integer ID
+     */
+    @PrimaryKey(sequence = "identifier")
+    long identifier;
 
-    /** Underlying filesystem */
-    private FileSystem filesystem;
+    /**
+     * Retrieves a connector with some requirements
+     * @return A valid connector or null if no connector meet the requirements
+     */
+    public abstract Connector getConnector(ComputationalRequirements requirements);
+
+    /**
+     * Returns the main connector for this group
+     * @return A valid single host connector
+     */
+    public abstract SingleHostConnector getMainConnector();
+
 
     protected Connector() {
     }
 
-    protected Connector(String identifier) {
-        this.identifier = identifier;
-    }
-
-    /** Returns true if the connector can execute commands */
+    /**
+     * Returns true if the connector can execute commands
+     */
     public boolean canExecute() {
         return false;
     }
@@ -63,64 +73,57 @@ public abstract class Connector implements Comparable<Connector> {
     /**
      * Returns the connectorId identifier
      */
-    final String getIdentifier() {
+    public final long getIdentifier() {
         return identifier;
     }
 
 
     /**
      * Create a file with a thread safe mechanism
+     *
      * @param path
-     * @return
+     * @return A lock object
      * @throws UnlockableException
      */
     public abstract Lock createLockFile(String path) throws UnlockableException;
 
 
-    /** Get the underlying filesystem */
-    protected abstract FileSystem doGetFileSystem() throws FileSystemException;
-    public FileSystem getFileSystem() throws FileSystemException {
-        if (filesystem == null)
-            return filesystem = doGetFileSystem();
-        return filesystem;
-    }
-
-    public FileObject resolveFile(String name) throws FileSystemException {
-        return getFileSystem().resolveFile(name);
-    }
 
 
     /**
      * Execute a script or a command
      *
-     *
-     * @param job The job that will be notified when the process finishes (can be null)
-     * @param command The command to execute
-     * @param locks A set of locks that were taken before the process
-     * @param detach Should we detach the process or not
+     * @param job        The job that will be notified when the process finishes (can be null)
+     * @param command    The command to execute
+     * @param locks      A set of locks that were taken before the process
+     * @param detach     Should we detach the process or not
      * @param stdoutPath If not null, the standard output will be redirected to this file path
      * @param stderrPath If not null, the standard error will be redirected to this file path
      * @return A job monitor to control the execution of the command
      */
-    public abstract sf.net.experimaestro.scheduler.Process exec(Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception;
+    public abstract sf.net.experimaestro.scheduler.Process
+    exec(Job job, String command, ArrayList<Lock> locks, boolean detach,
+         String stdoutPath, String stderrPath) throws Exception;
 
 
     @Override
     final public int compareTo(Connector connector) {
-        return identifier.compareTo(identifier);
+        return Long.compare(identifier, connector.identifier);
     }
 
     public ConnectorDelegator delegate() {
         return new ConnectorDelegator(this);
     }
 
-    /** Return a new connector from an URI*/
+    /**
+     * Return a new connector from an URI
+     */
     public static Connector create(String uriString, ConnectorOptions options) throws URISyntaxException {
         return create(new URI(uriString), options);
     }
 
     public static Connector create(URI uri, ConnectorOptions options) {
-        switch(uri.getScheme()) {
+        switch (uri.getScheme()) {
             case "ssh":
                 return new SSHConnector(uri, options);
             case "local":

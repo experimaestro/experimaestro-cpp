@@ -98,14 +98,14 @@ public final class Logger extends org.apache.log4j.Logger {
 	}
 
 	/**
-	 * Shorthand for <code>getLogger(clazz.getName())</code>.
+	 * Shorthand for <code>GetXPMLogger(clazz.getName())</code>.
 	 * 
 	 * @param clazz
 	 *            The name of <code>clazz</code> will be used as the name of the
 	 *            logger to retrieve. See {@link #getLogger(String)} for more
 	 *            detailed information.
 	 */
-	static public Logger getLogger(Class<?> clazz) {
+	static public Logger GetXPMLogger(Class<?> clazz) {
 		return (Logger) getLogger(clazz.getName());
 	}
 

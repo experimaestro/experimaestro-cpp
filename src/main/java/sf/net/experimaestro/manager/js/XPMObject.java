@@ -101,6 +101,20 @@ public class XPMObject {
 	};
 
 
+    /**
+     * Initialise a new XPM object
+     * @param currentScript The path to the current script
+     * @param cx
+     * @param environment
+     * @param scope
+     * @param repository
+     * @param scheduler
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     * @throws InvocationTargetException
+     * @throws SecurityException
+     * @throws NoSuchMethodException
+     */
     public XPMObject(Locator currentScript, Context cx, Map<String, String> environment,
 			Scriptable scope, Repository repository, Scheduler scheduler)
 			throws IllegalAccessException, InstantiationException,
@@ -123,7 +137,7 @@ public class XPMObject {
         // Launchers
         ScriptableObject.defineClass(scope, JSOARLauncher.class);
 
-        // Connectors
+        // ComputationalResources
 
         // Add functions
 		addFunction(scope, "qname", new Class<?>[] { Object.class, String.class });

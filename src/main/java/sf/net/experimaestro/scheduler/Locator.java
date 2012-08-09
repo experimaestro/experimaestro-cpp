@@ -42,15 +42,13 @@ import java.net.URISyntaxException;
 @Persistent
 public class Locator implements Comparable<Locator> {
     @KeyField(value = 1)
-    String connectorId;
+    int connectorId;
 
     @KeyField(value = 2)
     String path;
 
-    // TODO: we should use FileObject from Apache commons
-
     /**
-     * Connector
+     * Connector corresponding to the ID
      */
     transient Connector _connector;
 
@@ -102,14 +100,14 @@ public class Locator implements Comparable<Locator> {
         }
 
         if ("local".equals(uri.getScheme()))
-            return LocalhostConnector.getIdentifier(uri);
+            return LocalhostConnector.getLocator(uri);
+
+        if ("ssh".equals(uri.getScheme()))
+            return SSHConnector.getIdentifier(uri);
 
         if ("xpm".equals(uri.getScheme())) {
             throw new IllegalArgumentException("xpm URI scheme is not supported yet");
         }
-
-        if ("ssh".equals(uri.getScheme()))
-            return SSHConnector.getIdentifier(uri);
 
         throw new RuntimeException(String.format("Unknown scheme [%s] in URL [%s]", uri.getScheme(), idString));
     }

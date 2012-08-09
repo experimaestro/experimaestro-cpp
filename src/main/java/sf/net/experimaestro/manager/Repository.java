@@ -66,7 +66,7 @@ public class Repository extends AbstractRepository {
 	Map<QName, XSElementDecl> xmlElements = new TreeMap<QName, XSElementDecl>();
 
     /**
-     * The experimaestro default module
+     * The Experimaestro default module
      */
     Module defaultModule = new Module(new QName(Manager.EXPERIMAESTRO_NS, "main"));
 

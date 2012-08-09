@@ -28,9 +28,12 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileSystemManager;
+import org.apache.commons.vfs2.VFS;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.JobMonitor;
+import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.je.FileProxy;
@@ -93,7 +96,7 @@ public class Scheduler {
     /**
      * All the connectors
      */
-    private Connectors connectors;
+    private ComputationalResources connectors;
 
 
     /**
@@ -111,6 +114,24 @@ public class Scheduler {
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
+    /**
+     * The file manager
+     */
+    private static FileSystemManager fsManager;
+
+    static {
+        try {
+            fsManager = VFS.getManager();
+        } catch (FileSystemException e) {
+            LOGGER.error("Cannot initialize the file system manager: " + e);
+            System.exit(-1);
+        }
+    }
+
+    public static FileSystemManager getVFSManager() {
+        return fsManager;
+    }
+
     public Connector getConnector(String id) throws DatabaseException {
         return connectors.get(id);
     }
@@ -119,14 +140,14 @@ public class Scheduler {
         connectors.put(connector);
     }
 
-    public ScheduledFuture<?> schedule(final JobMonitor jobMonitor, int rate, TimeUnit units) {
+    public ScheduledFuture<?> schedule(final XPMProcess XPMProcess, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    jobMonitor.check();
+                    XPMProcess.check();
                 } catch (Exception e) {
-                    LOGGER.error("Error while checking job [%s]: %s", jobMonitor.job, e);
+                    LOGGER.error("Error while checking job [%s]: %s", XPMProcess.job, e);
                 }
             }
         }, 0, rate, units);
@@ -248,7 +269,7 @@ public class Scheduler {
 
 		// Initialise the store
 		resources = new Resources(this, dbStore);
-        connectors = new Connectors(this, dbStore);
+        connectors = new ComputationalResources(this, dbStore);
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
@@ -291,15 +312,10 @@ public class Scheduler {
 		threads.clear();
 		
 		if (dbStore != null) {
-			try {
-				dbStore.close();
-				dbStore = null;
-				LOGGER.info("Closed the database store");
-			} catch (DatabaseException dbe) {
-				LOGGER.error("Error closing MyDbEnv: " + dbe.toString());
-				return;
-			}
-		}
+            dbStore.close();
+            dbStore = null;
+            LOGGER.info("Closed the database store");
+        }
 
 		if (dbEnvironment != null) {
 			try {

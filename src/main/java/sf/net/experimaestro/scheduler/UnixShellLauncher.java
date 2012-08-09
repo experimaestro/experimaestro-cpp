@@ -24,6 +24,7 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.locks.Lock;
 
 import java.io.PrintWriter;
@@ -39,8 +40,8 @@ import java.util.ArrayList;
 public abstract class UnixShellLauncher extends Launcher {
     private String shPath = "/bin/bash";
 
-    public UnixShellLauncher(Connector connector) {
-        super(connector);
+    public UnixShellLauncher(SingleHostConnector resource) {
+        super(resource);
     }
 
     /**

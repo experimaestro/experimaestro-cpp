@@ -28,12 +28,11 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.scheduler.*;
 
-import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 
 /**
  * A connector delegator, for ease of use of connectors
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/6/12
  */

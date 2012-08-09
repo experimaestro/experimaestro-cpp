@@ -37,11 +37,11 @@ import java.util.WeakHashMap;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Connectors implements Iterable<Connector> {
+public class ComputationalResources implements Iterable<Connector> {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/** The index */
-	private PrimaryIndex<String, Connector> index;
+	private PrimaryIndex<String, ComputationalResource> index;
 
 	/**
 	 * A cache to get track of connectors in memory
@@ -59,30 +59,30 @@ public class Connectors implements Iterable<Connector> {
 	 * @param dbStore
 	 * @throws com.sleepycat.je.DatabaseException
 	 */
-	public Connectors(Scheduler scheduler, EntityStore dbStore)
+	public ComputationalResources(Scheduler scheduler, EntityStore dbStore)
 			throws DatabaseException {
 		this.scheduler = scheduler;
-		index = dbStore.getPrimaryIndex(String.class, Connector.class);
+		index = dbStore.getPrimaryIndex(String.class, ComputationalResource.class);
 	}
 
 	/**
-	 * Store the connector in the database - called when an entity has changed
+	 * Store the resource in the database - called when an entity has changed
 	 *
 	 *
-	 * @param connector
-	 *            The connector to add
-	 * @return True if the insertion was successful, or false if the connector
+	 * @param resource
+	 *            The resource to add
+	 * @return True if the insertion was successful, or false if the resource
 	 *         was not updated (e.g. because it is a running job)
 	 * @throws com.sleepycat.je.DatabaseException
-	 *             If an error occurs while putting the connector in the database
+	 *             If an error occurs while putting the resource in the database
 	 */
-	synchronized public boolean put(Connector connector) throws DatabaseException {
-		// Check if overriding a running connector (unless it is the same object)
-		Connector old = get(connector.getIdentifier());
+	synchronized public boolean put(ComputationalResource resource) throws DatabaseException {
+		// Check if overriding a running resource (unless it is the same object)
+		Connector old = get(resource.getIdentifier());
 
 		// Store in database and in cache
-		index.put(connector);
-		cache.put(connector.getIdentifier(), new WeakReference<Connector>(connector));
+		index.put(resource);
+		cache.put(resource.getIdentifier(), new WeakReference<Connector>(resource));
 
 		// OK, we did update
 		return true;

@@ -22,6 +22,7 @@ package sf.net.experimaestro.server;
 
 import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
 import com.sun.org.apache.xerces.internal.xs.XSComplexTypeDefinition;
+import com.sun.org.apache.xerces.internal.xs.XSElementDeclaration;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
@@ -87,7 +88,7 @@ public class TasksServlet extends XPMServlet {
 					ns, name);
 			out.format("<h1> Type %s (%s)</h1>", name, ns);
 
-			XSElementDecl xmlElement = repository.getXMLElement(new QName(ns, name));
+            XSElementDeclaration xmlElement = repository.getXMLElement(new QName(ns, name));
 			if (xmlElement != null) {
 				out.println(xmlElement.getTypeDefinition());
 				XSComplexTypeDefinition definition = xmlElement.getEnclosingCTDefinition();

@@ -40,12 +40,12 @@ public class ShLauncher extends UnixShellLauncher {
      */
     String shellCommand = "/bin/bash";
 
-    public ShLauncher(Connector connector) {
+    public ShLauncher(SingleHostConnector connector) {
         super(connector);
     }
 
     @Override
-    public JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
+    public XPMProcess launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
         // First generate the script file
         generateRunFile(task, locks);
 
@@ -53,7 +53,7 @@ public class ShLauncher extends UnixShellLauncher {
         final String path = task.getLocator().getPath();
         final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
                 shellCommand, CommandLineTask.protect(path, " "));
-        return new JobMonitor(task, task.getConnector().exec(task, command, locks, true, null, null), true);
+        return new XPMProcess(task, task.getConnector().exec(task, command, locks, true, null, null), true);
 
     }
 

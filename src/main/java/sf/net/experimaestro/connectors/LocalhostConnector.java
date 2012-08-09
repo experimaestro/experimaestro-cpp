@@ -21,6 +21,7 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.*;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -34,23 +35,18 @@ import java.net.URI;
 import java.util.ArrayList;
 
 /**
+ * A local host connector provides access to the current machine
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/6/12
+ * @date June 2012
  */
 @Persistent
 public class LocalhostConnector extends Connector {
     static final private Logger LOGGER = Logger.getLogger();
 
-
     public LocalhostConnector() {
         super("local:");
     }
-
-    @Override
-    public PrintWriter printWriter(String identifier) throws Exception {
-        return new PrintWriter(new File(identifier));
-    }
-
 
     @Override
     public sf.net.experimaestro.scheduler.Process exec(final Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
@@ -65,42 +61,17 @@ public class LocalhostConnector extends Connector {
     }
 
     @Override
-    public void touchFile(String identifier) throws IOException {
-        new File(identifier).createNewFile();
-    }
-
-    @Override
-    public boolean fileExists(String identifier) {
-        return new File(identifier).exists();
-    }
-
-    @Override
-    public long getLastModifiedTime(String path) {
-        return new File(path).lastModified();
-    }
-
-    @Override
-    public InputStream getInputStream(String path) throws IOException {
-        return new FileInputStream(path);
-    }
-
-    @Override
-    public void renameFile(String from, String to) {
-        new File(from).renameTo(new File(to));
-    }
-
-    @Override
-    public void setExecutable(String path, boolean flag) {
-        new File(path).setExecutable(flag);
+    protected FileSystem doGetFileSystem() throws FileSystemException {
+        return Scheduler.getVFSManager().resolveFile("file://").getFileSystem();
     }
 
     public static Connector getInstance() {
         return singleton;
     }
 
-    static private Connector singleton = new LocalhostConnector();
+    static private LocalhostConnector singleton = new LocalhostConnector();
 
-    public static Locator getIdentifier(URI uri) {
+    public static Locator getLocator(URI uri) {
         return new Locator(singleton, uri.getPath());
     }
 
@@ -168,7 +139,7 @@ public class LocalhostConnector extends Connector {
 
 
     @Persistent
-    private class LocalhostJobMonitor extends JobMonitor {
+    private class LocalhostJobMonitor extends XPMProcess {
         /**
          * The running process: if we have it, easier to monitor
          */
@@ -191,12 +162,17 @@ public class LocalhostConnector extends Connector {
             if (process != null)
                 return ProcessUtils.isRunning(process);
 
-            return singleton.fileExists(job.identifier.path + Job.LOCK_EXTENSION);
+            return singleton.resolveFile(job.getLocator().getPath() + Job.LOCK_EXTENSION).exists();
         }
 
         @Override
         int getCode() throws Exception {
-            if (singleton.fileExists(job.identifier.path + Job.DONE_EXTENSION))
+            // Try the easy way
+            if (process != null)
+            return process.exitValue();
+
+            // If not done, returns -1
+            if (singleton.resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
                 return -1;
 
             return 0;

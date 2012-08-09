@@ -23,9 +23,8 @@ package sf.net.experimaestro.scheduler;
 import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.JobMonitor;
+import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.ShLauncher;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -49,13 +48,16 @@ public class CommandLineTask extends Job {
     /**
      * Our command line launcher
      */
-    Launcher launcher = new ShLauncher();
+    Launcher launcher;
 
     /**
      * The command to execute
      */
     String[] command;
 
+    /**
+     * The environement
+     */
     String[] envp = null;
 
     String workingDirectory;
@@ -70,10 +72,10 @@ public class CommandLineTask extends Job {
      * @param identifier The locator of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
-    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
+    public CommandLineTask(Scheduler scheduler, ComputationalResource resource, String identifier,
                            String[] command, Map<String, String> environment, String workingDirectory) {
 
-        super(scheduler, connector, identifier);
+        super(scheduler, resource, identifier);
 
         LOGGER.info("Command is %s", Arrays.toString(command));
 
@@ -111,7 +113,7 @@ public class CommandLineTask extends Job {
     }
 
     @Override
-    protected JobMonitor startJob(ArrayList<Lock> locks) throws Exception {
+    protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
         return launcher.launch(this, locks);
     }
 

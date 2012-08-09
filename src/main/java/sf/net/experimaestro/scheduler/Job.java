@@ -22,8 +22,7 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.JobMonitor;
+import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -64,7 +63,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      *
      * @param scheduler The job scheduler
      */
-    public Job(Scheduler scheduler, Connector connector, String identifier) {
+    public Job(Scheduler scheduler, ComputationalResource connector, String identifier) {
         super(scheduler, connector, identifier, LockMode.EXCLUSIVE_WRITER);
         state = isDone() ? ResourceState.DONE : ResourceState.WAITING;
     }
@@ -101,7 +100,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     /**
      * Our job monitor
      */
-    JobMonitor jobMonitor;
+    XPMProcess XPMProcess;
 
     @Override
     protected boolean isActive() {
@@ -192,13 +191,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      * @throws Throwable
      * @param locks
      */
-    abstract protected JobMonitor startJob(ArrayList<Lock> locks) throws Throwable;
+    abstract protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable;
 
     @Override
     public void init(Scheduler scheduler) throws DatabaseException {
         super.init(scheduler);
-        if (jobMonitor != null)
-            jobMonitor.init(this);
+        if (XPMProcess != null)
+            XPMProcess.init(this);
     }
 
     /*
@@ -264,8 +263,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                     startTimestamp = System.currentTimeMillis();
 
                     // Start the task and transfer locking handling to those
-                    jobMonitor = startJob(locks);
-                    jobMonitor.adopt(locks);
+                    XPMProcess = startJob(locks);
+                    XPMProcess.adopt(locks);
                     locks = null;
                     updateDb();
 
@@ -293,10 +292,10 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             for(Lock lock: locks)
                 lock.dispose();
             try {
-                if (jobMonitor != null && !jobMonitor.isRunning())
-                    jobMonitor.dispose();
+                if (XPMProcess != null && !XPMProcess.isRunning())
+                    XPMProcess.dispose();
             } catch (Exception e) {
-                LOGGER.error("Error while disposing of locks of JobMonitor: %s", e);
+                LOGGER.error("Error while disposing of locks of XPMProcess: %s", e);
             }
         }
 
@@ -320,8 +319,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 state = message.code == 0 ? ResourceState.DONE : ResourceState.ERROR;
 
                 // Dispose of the job monitor
-                jobMonitor.dispose();
-                jobMonitor = null;
+                XPMProcess.dispose();
+                XPMProcess = null;
             } else {
                 LOGGER.error("Received unknown self-message: %s", Arrays.toString(objects));
             }

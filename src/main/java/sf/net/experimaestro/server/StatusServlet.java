@@ -71,7 +71,7 @@ public class StatusServlet extends XPMServlet {
 						out.format(
 								"<li><a href=\"%s/resource?id=%s\">%s</a></li>",
 								request.getServletPath(),
-								urlEncode(resource.getLocator()),
+								urlEncode(resource.getLocator().toString()),
 								resource.getLocator());
 				}
 				out.println("</ul>");

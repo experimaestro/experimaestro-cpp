@@ -29,24 +29,30 @@ import java.util.ArrayList;
 /**
  * Defines how to run a command line and to monitor changes in
  * execution state.
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
 public abstract class Launcher {
-    /** Connector */
-    private final Connector connector;
+    /** The computational resource that should be used to launch the process */
+    private final SingleHostConnector resource;
 
-    public Launcher(Connector connector) {
-        this.connector = connector;
-        if (!connector.canExecute())
-            throw new IllegalArgumentException(String.format("Connector %s cannot be used to execute commands", connector.getIdentifier()));
+    /** Construction of the launcher */
+    public Launcher(SingleHostConnector resource) {
+        this.resource = resource;
     }
 
     /** Launch the task */
-    public abstract JobMonitor launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
+    public abstract XPMProcess launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
 
-
-    static public Launcher create(String identifier, Connector connector) {
+    /** Create a new launcher given an identifier
+     *
+     * @param identifier The launcher identifier
+     * @param connector The resource to use
+     * @return The launcher
+     * @throws IllegalArgumentException If the launcher with the given identifier does not exist
+     */
+    static public Launcher create(String identifier, SingleHostConnector connector) throws IllegalArgumentException {
         switch (identifier) {
             case "sh":
                 return new ShLauncher(connector);
