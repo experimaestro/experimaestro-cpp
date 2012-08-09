@@ -246,8 +246,7 @@ public class JSTaskFactory extends TaskFactory {
 
 		// Set the optional flag
 		String optional = el.getAttribute("optional");
-		boolean isOptional = optional != null && optional.equals("true") ? true
-				: false;
+		boolean isOptional = optional != null && optional.equals("true");
 		input.setOptional(isOptional);
 
 		// Set the documentation

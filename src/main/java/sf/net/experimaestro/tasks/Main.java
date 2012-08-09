@@ -47,9 +47,9 @@ import java.util.List;
 
 public class Main {
 
-	final static private Logger logger = Logger.getLogger();;
+	final static private Logger logger = Logger.getLogger();
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 		try {
 			new Main().run(args);
 		} catch (Throwable e) {

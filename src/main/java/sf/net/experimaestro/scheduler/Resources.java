@@ -166,6 +166,6 @@ public class Resources implements Iterable<Resource> {
 		} catch (DatabaseException e) {
 			throw new RuntimeException(e);
 		}
-	};
+	}
 
 }

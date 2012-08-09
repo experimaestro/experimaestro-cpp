@@ -64,6 +64,6 @@ public enum LockMode {
     /**
      * Custom mode: the locking mechanism is managed by the resource itself
      */
-    CUSTOM;
+    CUSTOM
 
 }

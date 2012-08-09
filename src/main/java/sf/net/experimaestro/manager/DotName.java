@@ -60,8 +60,7 @@ public class DotName implements Comparable<DotName>, Iterable<String> {
 	 */
 	public DotName(DotName key, int length) {
 		array = new String[length];
-		for (int i = 0; i < length; i++)
-			array[i] = key.array[i];
+        System.arraycopy(key.array, 0, array, 0, length);
 	}
 
 	/**
@@ -75,8 +74,7 @@ public class DotName implements Comparable<DotName>, Iterable<String> {
 	public DotName(String prefix, DotName qName) {
 		this.array = new String[1 + qName.size()];
 		this.array[0] = prefix;
-		for (int i = 0; i < qName.size(); i++)
-			this.array[i + 1] = qName.array[i];
+        System.arraycopy(qName.array, 0, this.array, 1, qName.size());
 	}
 
 	/**
@@ -94,8 +92,7 @@ public class DotName implements Comparable<DotName>, Iterable<String> {
 	 */
 	public DotName offset(int offset) {
 		String[] name = new String[array.length - offset];
-		for (int i = offset; i < array.length; i++)
-			name[i - offset] = array[i];
+        System.arraycopy(array, offset, name, 0, array.length - offset);
 		return new DotName(name);
 	}
 
@@ -145,10 +142,8 @@ public class DotName implements Comparable<DotName>, Iterable<String> {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		DotName other = (DotName) obj;
-		if (!Arrays.equals(array, other.array))
-			return false;
-		return true;
-	}
+        return Arrays.equals(array, other.array);
+    }
 
 	@Override
 	public int compareTo(DotName o) {

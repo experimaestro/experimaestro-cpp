@@ -135,5 +135,6 @@ public class JEDictionary {
 	@Override
 	protected void finalize() throws Throwable {
 		shutdown();
+        super.finalize();
 	}
 }

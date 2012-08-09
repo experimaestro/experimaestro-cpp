@@ -92,6 +92,7 @@ public class FileLock implements Lock {
 	@Override
 	protected void finalize() throws Throwable {
 		dispose();
+        super.finalize();
 	}
 
 	public void changeOwnership(String pid) {

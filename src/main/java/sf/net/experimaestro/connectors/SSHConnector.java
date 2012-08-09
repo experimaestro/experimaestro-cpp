@@ -191,8 +191,9 @@ public class SSHConnector extends Connector {
             }
         }
 
-        protected void finalize() {
+        protected void finalize() throws Throwable {
             destroy();
+            super.finalize();
         }
 
         @Override

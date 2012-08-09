@@ -106,10 +106,12 @@ public class JSScheduler extends ScriptableObject {
 
         if (!(jsoptions instanceof Undefined)) {
             // --- Process launcher
-            if (options.has("launcher", options)) {
-                final Object launcher = options.get("launcher", options);
-                if (launcher != null && !(launcher instanceof UniqueTag))
-                    task.setLauncher(((JSLauncher) launcher).getLauncher());
+            if (options != null) {
+                if (options.has("launcher", options)) {
+                    final Object launcher = options.get("launcher", options);
+                    if (launcher != null && !(launcher instanceof UniqueTag))
+                        task.setLauncher(((JSLauncher) launcher).getLauncher());
+                }
             }
 
 

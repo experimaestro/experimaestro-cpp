@@ -311,12 +311,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     synchronized public void notify(Resource resource, Object... objects) {
         // Self-notification: discard
         if (resource == null) {
+            // Notified of an end of job
             if (objects.length == 1 && objects[0] instanceof EndOfJobMessage) {
                 EndOfJobMessage message = (EndOfJobMessage) objects[0];
                 LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), message.code);
 
                 // Update state
-                resource.state = message.code == 0 ? ResourceState.DONE : ResourceState.ERROR;
+                state = message.code == 0 ? ResourceState.DONE : ResourceState.ERROR;
 
                 // Dispose of the job monitor
                 jobMonitor.dispose();
@@ -434,8 +435,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 out.format(
                         "<li><a href=\"%s/resource?id=%s\">%s</a>: %s [%b]</li>",
                         config.detailURL, XPMServlet.urlEncode(dependency.toString()),
-                        dependency, status.getType(), resource == null ? false
-                        : resource.accept(status.type).isOK());
+                        dependency, status.getType(), resource != null && resource.accept(status.type).isOK());
             }
             out.println("</ul>");
         }

@@ -35,8 +35,8 @@ public class ListAdaptator<T> extends AbstractList<T> {
 	public ListAdaptator(Object array) {
 		this.array = array;
 		this.from = 0;
-		this.size = Array.getLength(array);;
-	}
+		this.size = Array.getLength(array);
+    }
 
 	public ListAdaptator(Object array, int from, int size) {
 		this.array = array;
@@ -60,9 +60,9 @@ public class ListAdaptator<T> extends AbstractList<T> {
 		T t = (T) Array.get(array, index);
 		Array.set(array, index, value);
 		return t;
-	};
+	}
 
-	public static ListAdaptator<Double> get(double[] array) {
+    public static ListAdaptator<Double> get(double[] array) {
 		return new ListAdaptator<Double>(array);
 	}
 	public static ListAdaptator<Integer> get(int[] array) {

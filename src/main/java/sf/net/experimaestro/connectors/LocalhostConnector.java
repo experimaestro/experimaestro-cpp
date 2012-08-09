@@ -145,8 +145,9 @@ public class LocalhostConnector extends Connector {
             process.destroy();
         }
 
-        protected void finalize() {
+        protected void finalize() throws Throwable {
             destroy();
+            super.finalize();
         }
 
         @Override

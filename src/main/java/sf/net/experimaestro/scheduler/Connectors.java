@@ -156,6 +156,6 @@ public class Connectors implements Iterable<Connector> {
 		} catch (DatabaseException e) {
 			throw new RuntimeException(e);
 		}
-	};
+	}
 
 }

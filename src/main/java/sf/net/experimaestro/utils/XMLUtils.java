@@ -120,7 +120,7 @@ public class XMLUtils {
 		try {
 			// (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
 			qnamePattern = Pattern
-					.compile("(?:\\{(\\w[\\w\\.:]+)\\}|(\\w+):)?([\\w-\\.]+)");
+					.compile("(?:\\{(\\w[\\w\\.:]+)\\}|(\\w+):)?((?:\\w[-\\.])+)");
 		} catch (PatternSyntaxException e) {
 			LOGGER.error("Could not initialise the pattern: %s", e);
 			throw e;
