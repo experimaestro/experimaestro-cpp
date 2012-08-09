@@ -73,7 +73,7 @@ public abstract class Value {
 	public abstract void set(DotName id, Document value);
 
 	/**
-	 * Process the value before it can be accessed by a task to run
+	 * XPMProcess the value before it can be accessed by a task to run
 	 */
 	public abstract void process();
 

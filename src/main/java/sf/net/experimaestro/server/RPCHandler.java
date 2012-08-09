@@ -117,27 +117,27 @@ public class RPCHandler {
 		return true;
 	}
 
-	/**
-	 * Add a data resource
-	 * 
-	 * @param id
-	 *            The data ID
-	 * @param mode
-	 *            The locking mode
-	 * @param exists
-	 * @return
-	 * @throws DatabaseException
-	 */
-	public boolean addData(String id, String mode, boolean exists)
-			throws DatabaseException {
-		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
-
-
-        Locator identifier = Locator.decode(id);
-		scheduler.add(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
-				exists));
-		return true;
-	}
+//	/**
+//	 * Add a data resource
+//	 *
+//	 * @param id
+//	 *            The data ID
+//	 * @param mode
+//	 *            The locking mode
+//	 * @param exists
+//	 * @return
+//	 * @throws DatabaseException
+//	 */
+//	public boolean addData(String id, String mode, boolean exists)
+//			throws DatabaseException {
+//		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
+//
+//
+//        ResourceLocator identifier = ResourceLocator.decode(id);
+//		scheduler.add(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
+//				exists));
+//		return true;
+//	}
 
 	/**
 	 * A class that is used to control the environment in scripts
@@ -218,10 +218,11 @@ public class RPCHandler {
 					}));
 
 
-            Locator locator = new Locator(LocalhostConnector.getInstance(), isFile ? content : null);
+            ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? content : null);
             LOGGER.info("Script is %s", locator);
 
-            Repositories repositories = new Repositories(new Locator("rpc", ""));
+            // TODO: should be a one shot repository - ugly
+            Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
             repositories.add(repository, 0);
 
 			ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
@@ -317,9 +318,9 @@ public class RPCHandler {
 		CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
 				env, new File(workingDirectory).getAbsolutePath());
 
-		// Process locks
+		// XPMProcess locks
 		for (Object depend : depends) {
-			Resource resource = scheduler.getResource(Locator.decode((String) depend));
+			Resource resource = scheduler.getResource(depend.toString());
 			if (resource == null)
 				throw new RuntimeException("Resource " + depend
 						+ " was not found");
@@ -328,7 +329,7 @@ public class RPCHandler {
 
 		// We have to wait for read lock resources to be generated
 		for (Object readLock : readLocks) {
-			Resource resource = scheduler.getResource(Locator.decode((String) readLock));
+			Resource resource = scheduler.getResource(readLock.toString());
 			if (resource == null)
 				throw new RuntimeException("Resource " + readLock
 						+ " was not found");

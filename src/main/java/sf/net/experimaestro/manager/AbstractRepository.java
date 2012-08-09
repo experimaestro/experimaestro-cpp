@@ -20,7 +20,7 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.scheduler.Locator;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 
 /**
  * A repository for tasks, types and modules
@@ -33,9 +33,9 @@ abstract public class AbstractRepository {
     /**
      * Our repository identifier (i.e. the script identifier)
      */
-    Locator identifier;
+    ResourceLocator identifier;
 
-    public AbstractRepository(Locator identifier) {
+    public AbstractRepository(ResourceLocator identifier) {
         this.identifier = identifier;
     }
 

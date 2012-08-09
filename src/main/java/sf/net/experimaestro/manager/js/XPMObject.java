@@ -92,7 +92,7 @@ public class XPMObject {
     /**
      * The connector for default inclusion
      */
-    Locator currentScript;
+    ResourceLocator currentScript;
 
 	private static ThreadLocal<ArrayList<String>> log = new ThreadLocal<ArrayList<String>>() {
 		protected synchronized ArrayList<String> initialValue() {
@@ -115,7 +115,7 @@ public class XPMObject {
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    public XPMObject(Locator currentScript, Context cx, Map<String, String> environment,
+    public XPMObject(ResourceLocator currentScript, Context cx, Map<String, String> environment,
 			Scriptable scope, Repository repository, Scheduler scheduler)
 			throws IllegalAccessException, InstantiationException,
 			InvocationTargetException, SecurityException, NoSuchMethodException {
@@ -201,16 +201,16 @@ public class XPMObject {
         else
             connector = (Connector)_connector;
 
-        includeRepository(new Locator(connector, path));
+        includeRepository(new ResourceLocator(connector, path));
     }
 
     public void includeRepository(String path) throws Exception, IllegalAccessException, InstantiationException {
-      Locator scriptpath = currentScript.resolvePath(path, true);
+      ResourceLocator scriptpath = currentScript.resolvePath(path, true);
         LOGGER.debug("Including repository file [%s]", scriptpath);
         includeRepository(scriptpath);
     }
 
-    private void includeRepository(Locator scriptpath) throws Exception {
+    private void includeRepository(ResourceLocator scriptpath) throws Exception {
         // Run the script in a new environment
         final ScriptableObject newScope = context.initStandardObjects();
         final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
@@ -288,10 +288,10 @@ public class XPMObject {
 	public void include(String path) throws Exception,
             IOException {
 
-        Locator file = currentScript.resolvePath(path, true);
+        ResourceLocator file = currentScript.resolvePath(path, true);
 		LOGGER.debug("Including file [%s]", file);
 
-        Locator oldWorkingDirectory = currentScript;
+        ResourceLocator oldWorkingDirectory = currentScript;
 		Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(file.getInputStream()), file.toString(), 1, null);
 
         currentScript = oldWorkingDirectory;
@@ -562,7 +562,7 @@ public class XPMObject {
 	 */
 	public void addSchema(Object module, final String path) throws IOException {
 		LOGGER.info("Loading XSD file [%s], with script path [%s]", path, currentScript.toString());
-		Locator file = currentScript.resolvePath(path, true);
+		ResourceLocator file = currentScript.resolvePath(path, true);
 		XSLoaderImpl xsLoader = new XSLoaderImpl();
         XSModel xsModel = null;
 

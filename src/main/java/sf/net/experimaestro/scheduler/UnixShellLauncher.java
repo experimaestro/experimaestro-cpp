@@ -22,7 +22,6 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.locks.Lock;
@@ -53,7 +52,7 @@ public abstract class UnixShellLauncher extends Launcher {
      */
     protected void generateRunFile(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
         // Write command
-        Connector connector = task.getConnector();
+        SingleHostConnector connector = task.getTaskConnector();
         final String path = task.locator.path;
         final String quotedPath = "\"" + CommandLineTask.protect(path, "\"") + "\"";
         final String runId = String.format("%s.run", path);
@@ -92,7 +91,7 @@ public abstract class UnixShellLauncher extends Launcher {
         writer.close();
 
         // Set the file as executable
-        runFile.setExecutable(true);
+        runFile.setExecutable(true, false);
     }
 
 

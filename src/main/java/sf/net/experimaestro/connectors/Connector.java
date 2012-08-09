@@ -22,13 +22,11 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.scheduler.Job;
+import com.sleepycat.persist.model.Relationship;
+import com.sleepycat.persist.model.SecondaryKey;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -44,14 +42,25 @@ public abstract class Connector implements Comparable<Connector> {
     /**
      * Each connector has a unique integer ID
      */
-    @PrimaryKey(sequence = "identifier")
-    long identifier;
+    @PrimaryKey(sequence = "key")
+    long key;
+
+
+    /**
+     * A URL type secondary identifier in order to find matching connectors.
+     */
+    @SecondaryKey(relate = Relationship.ONE_TO_MANY)
+    private String identifier;
+
+    public Connector(String identifier) {
+        this.identifier = identifier;
+    }
 
     /**
      * Retrieves a connector with some requirements
      * @return A valid connector or null if no connector meet the requirements
      */
-    public abstract Connector getConnector(ComputationalRequirements requirements);
+    public abstract SingleHostConnector getConnector(ComputationalRequirements requirements);
 
     /**
      * Returns the main connector for this group
@@ -71,44 +80,27 @@ public abstract class Connector implements Comparable<Connector> {
     }
 
     /**
-     * Returns the connectorId identifier
+     * Returns the connectorId key
      */
-    public final long getIdentifier() {
-        return identifier;
+    public final long getKey() {
+        return key;
     }
 
 
-    /**
-     * Create a file with a thread safe mechanism
-     *
-     * @param path
-     * @return A lock object
-     * @throws UnlockableException
-     */
-    public abstract Lock createLockFile(String path) throws UnlockableException;
-
-
-
-
-    /**
-     * Execute a script or a command
-     *
-     * @param job        The job that will be notified when the process finishes (can be null)
-     * @param command    The command to execute
-     * @param locks      A set of locks that were taken before the process
-     * @param detach     Should we detach the process or not
-     * @param stdoutPath If not null, the standard output will be redirected to this file path
-     * @param stderrPath If not null, the standard error will be redirected to this file path
-     * @return A job monitor to control the execution of the command
-     */
-    public abstract sf.net.experimaestro.scheduler.Process
-    exec(Job job, String command, ArrayList<Lock> locks, boolean detach,
-         String stdoutPath, String stderrPath) throws Exception;
+//    /**
+//     * Create a file with a thread safe mechanism
+//     *
+//     * @param path
+//     * @return A lock object
+//     * @throws UnlockableException
+//     */
+//    public abstract Lock createLockFile(String path) throws UnlockableException;
+//
 
 
     @Override
     final public int compareTo(Connector connector) {
-        return Long.compare(identifier, connector.identifier);
+        return Long.compare(key, connector.key);
     }
 
     public ConnectorDelegator delegate() {

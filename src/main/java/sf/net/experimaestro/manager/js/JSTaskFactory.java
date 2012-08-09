@@ -110,7 +110,7 @@ public class JSTaskFactory extends TaskFactory {
 
 		}
 
-		// --- Process connections
+		// --- XPMProcess connections
 		for (int i = 0; i < list.getLength(); i++) {
 			Node item = list.item(i);
 			if (item.getNodeType() != Node.ELEMENT_NODE)

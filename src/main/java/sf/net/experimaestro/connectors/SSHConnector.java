@@ -31,12 +31,10 @@ import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.scheduler.Process;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -62,10 +60,30 @@ public class SSHConnector extends SingleHostConnector {
 
     /** Used for serialization */
     public SSHConnector() {
-
     }
 
     @Override
+    protected XPMProcessBuilder processBuilder() {
+        return new SSHProcessBuilder();
+    }
+
+    /**
+     * Construct from a username, hostname, port triplet
+     * @param username
+     * @param hostname
+     * @param port
+     */
+    public SSHConnector(String username, String hostname, int port) {
+        super(String.format("ssh://%s@%s:%d", username, port, hostname));
+        this.username = username;
+        this.hostname = hostname;
+        this.port = port;
+    }
+
+    public SSHConnector(String username, String hostname) {
+        this(username, hostname, 22);
+    }
+
     public Lock createLockFile(final String path) throws UnlockableException {
         try {
             ChannelExec channel = newExecChannel();
@@ -108,28 +126,6 @@ public class SSHConnector extends SingleHostConnector {
         this(uri.getUserInfo(), uri.getHost(), options);
     }
 
-
-    @Override
-    public sf.net.experimaestro.scheduler.Process exec(Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
-        final ChannelExec channel = newExecChannel();
-//        command = String.format("/bin/sh %s", command);
-
-        if (stdoutPath != null)
-            command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stdoutPath, "\""));
-        if (stderrPath != null)
-            command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stderrPath, "\""));
-
-        LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
-        channel.setCommand(command);
-        channel.setInputStream(null);
-        channel.setErrStream(System.err, true);
-        channel.setOutputStream(System.out, true);
-        channel.setPty(!detach);
-
-        channel.connect();
-
-        return new SSHProcess(channel);
-    }
 
 
     /**
@@ -307,6 +303,32 @@ public class SSHConnector extends SingleHostConnector {
         @Override
         public void init(Scheduler scheduler) throws DatabaseException {
             connector.init(scheduler);
+        }
+    }
+
+    static public class SSHProcessBuilder extends XPMProcessBuilder {
+        @Override
+        public sf.net.experimaestro.connectors.XPMProcess start() {
+            final ChannelExec channel = newExecChannel();
+//        command = String.format("/bin/sh %s", command);
+
+
+            if (stdoutPath != null)
+                command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stdoutPath, "\""));
+            if (stderrPath != null)
+                command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stderrPath, "\""));
+
+            LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
+            channel.setCommand(command);
+            channel.setInputStream(null);
+            channel.setErrStream(System.err, true);
+            channel.setOutputStream(System.out, true);
+            channel.setPty(!detach);
+
+            channel.connect();
+
+            return new SSHProcess(channel);
+            throw new NotImplementedYetException();
         }
     }
 }

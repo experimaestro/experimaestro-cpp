@@ -26,7 +26,6 @@ import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Process;
 import sf.net.experimaestro.scheduler.UnixShellLauncher;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -55,12 +54,12 @@ public class OARLauncher extends UnixShellLauncher {
     private final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     /** Construction from a connector */
-    public OARLauncher(ComputationalResource connector) {
+    public OARLauncher(SingleHostConnector connector) {
         super(connector);
     }
 
     @Override
-    public XPMProcess launch(CommandLineTask job, ArrayList<Lock> locks) throws Exception {
+    public sf.net.experimaestro.connectors.XPMProcess launch(CommandLineTask job, ArrayList<Lock> locks) throws Exception {
         generateRunFile(job, locks);
 
         final String path = job.getLocator().getPath();
@@ -70,7 +69,7 @@ public class OARLauncher extends UnixShellLauncher {
 
         LOGGER.info("Running OAR with [%s]", command);
 
-        final sf.net.experimaestro.scheduler.Process process = job.getConnector().exec(job, command, locks, false, null, null);
+        final sf.net.experimaestro.scheduler.XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
         final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String s;
         String pid = null;
@@ -90,7 +89,7 @@ public class OARLauncher extends UnixShellLauncher {
     private static Document exec(Job job, ArrayList<Lock> locks, String command) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        final Process process = job.getConnector().exec(job, command, locks, false, null, null);
+        final sf.net.experimaestro.scheduler.XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
         return dBuilder.parse(process.getInputStream());
     }
 
@@ -112,7 +111,7 @@ public class OARLauncher extends UnixShellLauncher {
      * Monitors a OAR process
      */
     @Persistent
-    private class OARJobMonitor extends XPMProcess {
+    private class OARJobMonitor extends sf.net.experimaestro.connectors.XPMProcess {
         public OARJobMonitor() {
         }
 

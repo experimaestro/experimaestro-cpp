@@ -20,7 +20,7 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.scheduler.Locator;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 
 import java.util.TreeMap;
 
@@ -32,7 +32,7 @@ import java.util.TreeMap;
  */
 public class Repositories extends Repository {
     /** Our repositories */
-    TreeMap<Locator, RepositoryInformation> repositories = new TreeMap<Locator, RepositoryInformation>();
+    TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<ResourceLocator, RepositoryInformation>();
 
     /** The repository to which anything is added */
     RepositoryInformation localRepository;
@@ -40,8 +40,8 @@ public class Repositories extends Repository {
     /**
      * Creates a new set of repositories
      */
-    public Repositories(Locator identifier) {
-        super(identifier);
+    public Repositories(ResourceLocator locator) {
+        super(locator);
     }
 
     /**

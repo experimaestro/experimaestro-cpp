@@ -24,7 +24,7 @@ import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
 import com.sun.org.apache.xerces.internal.xs.XSConstants;
 import com.sun.org.apache.xerces.internal.xs.XSModel;
 import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
-import sf.net.experimaestro.scheduler.Locator;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class Repository extends AbstractRepository {
     /**
      * Dependencies
      */
-    ArrayList<Locator> sources = new ArrayList<Locator>();
+    ArrayList<ResourceLocator> sources = new ArrayList<ResourceLocator>();
 
 	/**
 	 * The list of available task factories
@@ -70,7 +70,7 @@ public class Repository extends AbstractRepository {
      */
     Module defaultModule = new Module(new QName(Manager.EXPERIMAESTRO_NS, "main"));
 
-    public Repository(Locator identifier) {
+    public Repository(ResourceLocator identifier) {
         super(identifier);
     }
 

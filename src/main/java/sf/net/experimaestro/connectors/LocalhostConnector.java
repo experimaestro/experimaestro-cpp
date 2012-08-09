@@ -21,18 +21,21 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.*;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.scheduler.Process;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
-import java.util.ArrayList;
 
 /**
  * A local host connector provides access to the current machine
@@ -41,118 +44,58 @@ import java.util.ArrayList;
  * @date June 2012
  */
 @Persistent
-public class LocalhostConnector extends Connector {
+public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
+
+    static private LocalhostConnector singleton = new LocalhostConnector();
 
     public LocalhostConnector() {
         super("local:");
     }
 
     @Override
-    public sf.net.experimaestro.scheduler.Process exec(final Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
-        LOGGER.info("Running command [%s]", command);
-        return new LocalProcess(Runtime.getRuntime().exec(new String[]{command}), detach);
+    protected XPMProcessBuilder processBuilder() {
+        return new LocalProcessBuilder();
     }
 
-
-    @Override
-    public Lock createLockFile(String path) throws UnlockableException {
-        return new FileLock(path);
-    }
 
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
         return Scheduler.getVFSManager().resolveFile("file://").getFileSystem();
     }
 
+    @Override
+    public Lock createLockFile(String path) throws UnlockableException {
+        return new FileLock(path);
+    }
+
     public static Connector getInstance() {
         return singleton;
     }
 
-    static private LocalhostConnector singleton = new LocalhostConnector();
 
-    public static Locator getLocator(URI uri) {
-        return new Locator(singleton, uri.getPath());
+    public static ResourceLocator getLocator(URI uri) {
+        return new ResourceLocator(singleton, uri.getPath());
     }
 
 
-    /**
-     * A local process
-     */
-    private static class LocalProcess extends Process {
-        private final java.lang.Process process;
-
-        public LocalProcess(java.lang.Process process, boolean detach) {
-            this.process = process;
-        }
-
-        @Override
-        public OutputStream getOutputStream() {
-            return process.getOutputStream();
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            return process.getInputStream();
-        }
-
-        @Override
-        public InputStream getErrorStream() {
-            return process.getErrorStream();
-        }
-
-        @Override
-        public int waitFor() throws InterruptedException {
-            return process.waitFor();
-        }
-
-        @Override
-        public int exitValue() {
-            return process.exitValue();
-        }
-
-        @Override
-        public void destroy() {
-            process.destroy();
-        }
-
-        protected void finalize() throws Throwable {
-            destroy();
-            super.finalize();
-        }
-
-        @Override
-        public String getPID() {
-            return String.valueOf(ProcessUtils.getPID(process));
-        }
-
-        @Override
-        public boolean isRunning() {
-            try {
-                process.exitValue();
-                return true;
-            } catch (IllegalThreadStateException e) {
-                return false;
-            }
-        }
-    }
 
 
     @Persistent
-    private class LocalhostJobMonitor extends XPMProcess {
+    private class LocalProcess extends XPMProcess {
         /**
          * The running process: if we have it, easier to monitor
          */
         transient private Process process;
 
-        public LocalhostJobMonitor() {
+        public LocalProcess() {
         }
 
         // Check on Windows:
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
-        public LocalhostJobMonitor(Job job, Process process) {
-            super(job, process, true);
+        public LocalProcess(Job job, Process process) {
+            super(String.valueOf(ProcessUtils.getPID(process)), job, true);
             this.process = process;
         }
 
@@ -166,16 +109,54 @@ public class LocalhostConnector extends Connector {
         }
 
         @Override
-        int getCode() throws Exception {
+        int exitValue() throws Exception {
             // Try the easy way
             if (process != null)
-            return process.exitValue();
+                return process.exitValue();
 
-            // If not done, returns -1
-            if (singleton.resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
-                return -1;
+            return super.exitValue();
+        }
 
-            return 0;
+
+        @Override
+        public OutputStream getOutputStream() {
+            return process == null ? null : process.getOutputStream();
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return process == null ? null : process.getInputStream();
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return process == null ? null : process.getErrorStream();
+        }
+
+        @Override
+        public int waitFor() throws InterruptedException {
+            return process.waitFor();
+        }
+
+        @Override
+        public boolean destroy() {
+            if (process != null) {
+                // TODO: send a signal first?
+                process.destroy();
+                return true;
+            }
+
+            // TODO: finish the implementation
+            throw new NotImplementedException();
+        }
+
+
+    }
+
+    private class LocalProcessBuilder extends XPMProcessBuilder {
+        @Override
+        public XPMProcess start() {
+            throw new NotImplementedException();
         }
     }
 }

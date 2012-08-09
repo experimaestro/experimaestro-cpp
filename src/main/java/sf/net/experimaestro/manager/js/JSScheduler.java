@@ -72,7 +72,7 @@ public class JSScheduler extends ScriptableObject {
      * @throws DatabaseException
      */
     public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
-        // --- Process arguments: convert the javascript array into a Java array
+        // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
         final String[] args;
@@ -105,7 +105,7 @@ public class JSScheduler extends ScriptableObject {
         // --- Options
 
         if (!(jsoptions instanceof Undefined)) {
-            // --- Process launcher
+            // --- XPMProcess launcher
             if (options != null) {
                 if (options.has("launcher", options)) {
                     final Object launcher = options.get("launcher", options);

@@ -41,7 +41,7 @@ public class SimpleData extends Data {
 		this.state = generated ? ResourceState.DONE : ResourceState.WAITING;
 	}
 
-    public SimpleData(Scheduler scheduler, Locator identifier, LockMode lockMode, boolean generated) {
+    public SimpleData(Scheduler scheduler, ResourceLocator identifier, LockMode lockMode, boolean generated) {
         super(scheduler, identifier, lockMode, generated);
         this.state = generated ? ResourceState.DONE : ResourceState.WAITING;
     }

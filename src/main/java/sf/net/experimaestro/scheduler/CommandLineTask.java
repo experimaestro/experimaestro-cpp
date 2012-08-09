@@ -56,7 +56,7 @@ public class CommandLineTask extends Job {
     String[] command;
 
     /**
-     * The environement
+     * The environment
      */
     String[] envp = null;
 
@@ -72,10 +72,10 @@ public class CommandLineTask extends Job {
      * @param identifier The locator of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
-    public CommandLineTask(Scheduler scheduler, ComputationalResource resource, String identifier,
+    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
                            String[] command, Map<String, String> environment, String workingDirectory) {
 
-        super(scheduler, resource, identifier);
+        super(scheduler, connector, identifier);
 
         LOGGER.info("Command is %s", Arrays.toString(command));
 
@@ -126,7 +126,7 @@ public class CommandLineTask extends Job {
     }
 
     /**
-     * Process one argument, adding backslash if necessary to protect special
+     * XPMProcess one argument, adding backslash if necessary to protect special
      * characters.
      *
      * @param string

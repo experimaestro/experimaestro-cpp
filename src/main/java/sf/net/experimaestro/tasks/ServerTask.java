@@ -34,7 +34,6 @@ import org.mortbay.jetty.security.*;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.scheduler.Locator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.StatusServlet;

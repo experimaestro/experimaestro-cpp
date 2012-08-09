@@ -45,12 +45,13 @@ public abstract class Launcher {
     /** Launch the task */
     public abstract XPMProcess launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception;
 
-    /** Create a new launcher given an identifier
+    /**
+     * Create a new launcher given an key
      *
-     * @param identifier The launcher identifier
+     * @param identifier The launcher key
      * @param connector The resource to use
      * @return The launcher
-     * @throws IllegalArgumentException If the launcher with the given identifier does not exist
+     * @throws IllegalArgumentException If the launcher with the given key does not exist
      */
     static public Launcher create(String identifier, SingleHostConnector connector) throws IllegalArgumentException {
         switch (identifier) {

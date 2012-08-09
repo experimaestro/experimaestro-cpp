@@ -22,6 +22,9 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.connectors.ComputationalRequirements;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
@@ -63,14 +66,14 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      *
      * @param scheduler The job scheduler
      */
-    public Job(Scheduler scheduler, ComputationalResource connector, String identifier) {
+    public Job(Scheduler scheduler, Connector connector, String identifier) {
         super(scheduler, connector, identifier, LockMode.EXCLUSIVE_WRITER);
         state = isDone() ? ResourceState.DONE : ResourceState.WAITING;
     }
 
     private boolean isDone() {
         try {
-            return getConnector().resolveFile(locator.path + DONE_EXTENSION).exists();
+            return getMainConnector().resolveFile(locator.path + DONE_EXTENSION).exists();
         } catch (Exception e) {
             LOGGER.error("Error while checking if " + locator + DONE_EXTENSION + " exists");
             return false;
@@ -102,6 +105,11 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      */
     XPMProcess XPMProcess;
 
+    /**
+     * Requirements
+     */
+    ComputationalRequirements requirements;
+
     @Override
     protected boolean isActive() {
         return super.isActive() || state == ResourceState.WAITING
@@ -111,7 +119,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     /**
      * The dependencies for this job (dependencies are on any resource)
      */
-    private TreeMap<Locator, Dependency> dependencies = new TreeMap<Locator, Dependency>();
+    private TreeMap<ResourceLocator, Dependency> dependencies = new TreeMap<ResourceLocator, Dependency>();
 
     /**
      * Number of unsatisfied dependencies
@@ -129,7 +137,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      *
      * @return
      */
-    public TreeMap<Locator, Dependency> getDependencies() {
+    public TreeMap<ResourceLocator, Dependency> getDependencies() {
         return dependencies;
     }
 
@@ -156,14 +164,14 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
         synchronized (this) {
             if (!ready)
                 nbUnsatisfied++;
-            dependencies.put(new Locator(resource.locator),
+            dependencies.put(new ResourceLocator(resource.locator),
                     new Dependency(type, ready, resourceState));
         }
     }
 
     @Override
     protected void finalize() throws Throwable {
-//		for (Locator id : dependencies.keySet()) {
+//		for (ResourceLocator id : dependencies.keySet()) {
 //			scheduler.getResource(id).unregister(this);
 //		}
     }
@@ -218,7 +226,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
                 // Try to lock, otherwise wait
                 try {
-                    locks.add(getConnector().createLockFile(locator.path + LOCK_EXTENSION));
+                    locks.add(getMainConnector().createLockFile(locator.path + LOCK_EXTENSION));
                 } catch (UnlockableException e) {
                     LOGGER.info("Could not lock job [%s]", locator);
                     synchronized (this) {
@@ -244,9 +252,9 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 // in order to avoid race issues, we sync with
                 // the task manager
                 synchronized (Scheduler.LockSync) {
-                    for (Entry<Locator, Dependency> dependency : dependencies
+                    for (Entry<ResourceLocator, Dependency> dependency : dependencies
                             .entrySet()) {
-                        Locator id = dependency.getKey();
+                        ResourceLocator id = dependency.getKey();
                         Resource rsrc = scheduler.getResource(id);
                         final Lock lock = rsrc.lock(pid,
                                 dependency.getValue().type);
@@ -418,13 +426,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                     Time.formatTimeInMilliseconds(end - start));
         }
 
-        TreeMap<Locator, Dependency> dependencies = getDependencies();
+        TreeMap<ResourceLocator, Dependency> dependencies = getDependencies();
         if (!dependencies.isEmpty()) {
             out.format("<h2>Dependencies</h2><ul>");
             out.format("<div>%d unsatisfied dependencie(s)</div>",
                     nbUnsatisfied);
-            for (Entry<Locator, Dependency> entry : dependencies.entrySet()) {
-                Locator dependency = entry.getKey();
+            for (Entry<ResourceLocator, Dependency> entry : dependencies.entrySet()) {
+                ResourceLocator dependency = entry.getKey();
                 Dependency status = entry.getValue();
                 Resource resource = null;
                 try {
@@ -442,5 +450,9 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
     public Scheduler getScheduler() {
         return scheduler;
+    }
+
+    public SingleHostConnector getTaskConnector() {
+        return getConnector().getConnector(requirements);
     }
 }

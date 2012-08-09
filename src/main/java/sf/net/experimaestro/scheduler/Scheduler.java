@@ -28,6 +28,7 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
@@ -96,7 +97,7 @@ public class Scheduler {
     /**
      * All the connectors
      */
-    private ComputationalResources connectors;
+    private Connectors connectors;
 
 
     /**
@@ -132,7 +133,7 @@ public class Scheduler {
         return fsManager;
     }
 
-    public Connector getConnector(String id) throws DatabaseException {
+    public Connector getConnector(long id) throws DatabaseException {
         return connectors.get(id);
     }
 
@@ -147,7 +148,7 @@ public class Scheduler {
                 try {
                     XPMProcess.check();
                 } catch (Exception e) {
-                    LOGGER.error("Error while checking job [%s]: %s", XPMProcess.job, e);
+                    LOGGER.error("Error while checking job [%s]: %s", XPMProcess.getJob(), e);
                 }
             }
         }, 0, rate, units);
@@ -269,7 +270,7 @@ public class Scheduler {
 
 		// Initialise the store
 		resources = new Resources(this, dbStore);
-        connectors = new ComputationalResources(this, dbStore);
+        connectors = new Connectors(this, dbStore);
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);
@@ -342,7 +343,7 @@ public class Scheduler {
 	 * @throws DatabaseException
 	 * 
 	 */
-	synchronized public Resource getResource(Locator id)
+	synchronized public Resource getResource(ResourceLocator id)
 			throws DatabaseException {
 		Resource resource = resources.get(id);
 		return resource;
@@ -359,7 +360,9 @@ public class Scheduler {
      */
     synchronized public Resource getResource(String id)
             throws DatabaseException {
-        return getResource(Locator.decode(id));
+        // TODO: Implement getting a resource by id
+        throw new NotImplementedException();
+//        return getResource(ResourceLocator.decode(id));
     }
 
 

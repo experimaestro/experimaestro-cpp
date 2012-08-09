@@ -40,7 +40,7 @@ public abstract class Data extends Resource {
 	 */
 	transient Job generatingJob = null;
 
-    public Data(Scheduler scheduler, Locator identifier, LockMode lockMode, boolean exists) {
+    public Data(Scheduler scheduler, ResourceLocator identifier, LockMode lockMode, boolean exists) {
         super(scheduler, identifier, lockMode);
 
     }

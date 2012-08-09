@@ -39,12 +39,12 @@ public class Resources implements Iterable<Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/** The index */
-	private PrimaryIndex<Locator, Resource> index;
+	private PrimaryIndex<ResourceLocator, Resource> index;
 
 	/**
 	 * A cache to get track of resources in memory
 	 */
-	private WeakHashMap<Locator, WeakReference<Resource>> cache = new WeakHashMap<Locator, WeakReference<Resource>>();
+	private WeakHashMap<ResourceLocator, WeakReference<Resource>> cache = new WeakHashMap<ResourceLocator, WeakReference<Resource>>();
 
 	/**
 	 * The associated scheduler
@@ -60,7 +60,7 @@ public class Resources implements Iterable<Resource> {
 	public Resources(Scheduler scheduler, EntityStore dbStore)
 			throws DatabaseException {
 		this.scheduler = scheduler;
-		index = dbStore.getPrimaryIndex(Locator.class, Resource.class);
+		index = dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class);
 	}
 
 	/**
@@ -102,7 +102,7 @@ public class Resources implements Iterable<Resource> {
 	 * @return The resource or null if no such entities exist
 	 * @throws DatabaseException
 	 */
-	synchronized public Resource get(Locator id) throws DatabaseException {
+	synchronized public Resource get(ResourceLocator id) throws DatabaseException {
 		Resource resource = getFromCache(id);
 		if (resource != null)
 			return resource;
@@ -115,7 +115,7 @@ public class Resources implements Iterable<Resource> {
 		return resource;
 	}
 
-	private Resource getFromCache(Locator id) {
+	private Resource getFromCache(ResourceLocator id) {
 		// Try to get from cache first
 		WeakReference<Resource> reference = cache.get(id);
 		if (reference != null) {
@@ -130,7 +130,7 @@ public class Resources implements Iterable<Resource> {
 	public Iterator<Resource> iterator() {
 		try {
 			return new AbstractIterator<Resource>() {
-				EntityCursor<Locator> iterator = index.keys();
+				EntityCursor<ResourceLocator> iterator = index.keys();
 
 				@Override
 				protected void finalize() throws Throwable {
@@ -142,7 +142,7 @@ public class Resources implements Iterable<Resource> {
 				@Override
 				protected boolean storeNext() {
 					try {
-						Locator id = iterator.next();
+						ResourceLocator id = iterator.next();
 						if (id != null) {
 							value = get(id);
 							return true;

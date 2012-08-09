@@ -25,12 +25,12 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.scheduler.Process;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  * @date June 2012
  */
 @Persistent
-public class XPMProcess {
+public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -72,21 +72,15 @@ public class XPMProcess {
     protected transient Job job;
 
     /**
-     * Our underlying process if we have any
-     */
-    protected transient sf.net.experimaestro.scheduler.Process process;
-
-    /**
      * Creates a new job monitor from a process
      *
-     * @param job     The attached job
-     * @param process The underlying process
+     * @param job The attached job
+     * @param pid The process ID
      * @param notify  If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
      *                Otherwise, it is the caller job to set it up.
      */
-    protected XPMProcess(final Job job, final Process process, boolean notify) {
-        this.pid = process.getPID();
-        this.process = process;
+    protected XPMProcess(String pid, final Job job, boolean notify) {
+        this.pid = pid;
         this.job = job;
 
         // Set up the notification thread if needed
@@ -98,7 +92,7 @@ public class XPMProcess {
 
                     while (true) {
                         try {
-                            code = process.waitFor();
+                            code = waitFor();
                             break;
                         } catch (InterruptedException e) {
                             LOGGER.error("Interrupted: %s", e);
@@ -111,6 +105,8 @@ public class XPMProcess {
         }
     }
 
+    abstract protected int waitFor() throws InterruptedException;
+
     /** Constructs a XPMProcess without an underlying process */
     protected XPMProcess(final Job job, String pid) {
         this.job = job;
@@ -119,6 +115,14 @@ public class XPMProcess {
 
 
     protected XPMProcess() {
+    }
+
+    /**
+     * Get the underlying job
+     * @return The job
+     */
+    public Job getJob() {
+        return job;
     }
 
     /**
@@ -156,8 +160,11 @@ public class XPMProcess {
     }
 
 
-    protected void finalize() {
-    }
+    /**
+     * Attempts to destroy the process
+     * @return True if the process is not running
+     */
+    abstract public boolean destroy();
 
     /**
      * Initialization of the job monitor (when restoring from database)
@@ -181,30 +188,22 @@ public class XPMProcess {
      * @throws Exception
      */
     public boolean isRunning() throws Exception {
-
-        if (process != null)
-            process.isRunning();
-
         // We have no process, check
-        return job.getConnector().resolveFile(job.getLocator().getPath()+ Job.LOCK_EXTENSION).exists();
+        return job.getMainConnector().resolveFile(job.getLocator().getPath()+ Job.LOCK_EXTENSION).exists();
 
     }
 
     /**
      * Returns the error code
      */
-    int getCode() throws Exception {
-        // Use the process value
-        if (process != null)
-            return process.exitValue();
-
+    int exitValue() throws Exception {
         // Check for done file
-        if (job.getConnector().resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
+        if (job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
             return 0;
 
         // If the job is not done, check the ".code" file to get the error code
         // and otherwise return -1
-        final FileObject codeFile = job.getConnector().resolveFile(job.getLocator().getPath() + Job.CODE_EXTENSION);
+        final FileObject codeFile = job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.CODE_EXTENSION);
         if (codeFile.exists()) {
             final InputStream stream = codeFile.getContent().getInputStream();
             final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
@@ -233,8 +232,17 @@ public class XPMProcess {
     public void check() throws Exception {
         if (!isRunning()) {
             // We are not running: send a message
-            job.notify(null, new EndOfJobMessage(getCode()));
+            job.notify(null, new EndOfJobMessage(exitValue()));
         }
     }
 
+    /**
+     * Get the output stream of the running process (if available)
+     * @return
+     */
+    public abstract OutputStream getOutputStream();
+
+    public abstract InputStream getInputStream();
+
+    public abstract InputStream getErrorStream();
 }

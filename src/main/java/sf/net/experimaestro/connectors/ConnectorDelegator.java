@@ -44,16 +44,16 @@ public class ConnectorDelegator extends Connector {
     }
 
     public ConnectorDelegator(Connector connector) {
-        super(connector.getIdentifier());
+        super(connector.getKey());
         this.connector = connector;
     }
 
     void init(Scheduler scheduler) throws DatabaseException {
-        connector = scheduler.getConnector(identifier);
+        connector = scheduler.getConnector(key);
     }
 
     @Override
-    public sf.net.experimaestro.scheduler.Process exec(Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
+    public XPMProcess exec(Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
         return connector.exec(job, command, locks, detach, stdoutPath, stderrPath);
     }
 

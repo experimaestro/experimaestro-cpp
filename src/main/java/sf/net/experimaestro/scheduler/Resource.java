@@ -28,6 +28,7 @@ import com.sleepycat.persist.model.Relationship;
 import com.sleepycat.persist.model.SecondaryKey;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -65,7 +66,7 @@ public abstract class Resource implements Comparable<Resource> {
      * The task locator
      */
     @PrimaryKey
-    Locator locator;
+    ResourceLocator locator;
 
     /**
      * Groups this resource belongs to
@@ -93,7 +94,7 @@ public abstract class Resource implements Comparable<Resource> {
      * state of this resource)
      */
     @SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY, relatedEntity = Resource.class)
-    Set<Locator> listeners = new TreeSet<Locator>();
+    Set<ResourceLocator> listeners = new TreeSet<ResourceLocator>();
 
     /**
      * If the resource is currently locked
@@ -111,13 +112,13 @@ public abstract class Resource implements Comparable<Resource> {
      * @param path The path to the resource
      * @param mode The locking mode
      */
-    public Resource(Scheduler scheduler, ComputationalResource connector, String path, LockMode mode) {
+    public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
         this.scheduler = scheduler;
-        this.locator = new Locator(connector, path);
+        this.locator = new ResourceLocator(connector, path);
         this.lockmode = mode;
     }
 
-    public Resource(Scheduler scheduler, Locator identifier, LockMode lockMode) {
+    public Resource(Scheduler scheduler, ResourceLocator identifier, LockMode lockMode) {
         this.scheduler = scheduler;
         this.locator = identifier;
         this.lockmode = lockMode;
@@ -128,7 +129,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     synchronized public void register(Job job) {
         // Copy the string to avoid holding the objects to notify in memory
-        listeners.add(new Locator(job.locator));
+        listeners.add(new ResourceLocator(job.locator));
     }
 
     /**
@@ -145,7 +146,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @throws DatabaseException
      */
     void notifyListeners(Object... objects) throws DatabaseException {
-        for (Locator id : listeners) {
+        for (ResourceLocator id : listeners) {
             Job resource = (Job) scheduler.getResource(id);
             resource.notify(this, objects);
         }
@@ -175,21 +176,25 @@ public abstract class Resource implements Comparable<Resource> {
         boolean updated = update();
 
         // Check if the resource was generated
-        if (getConnector().resolveFile(locator + DONE_EXTENSION).exists()
+        if (getMainConnector().resolveFile(locator + DONE_EXTENSION).exists()
                 && this.getState() != ResourceState.DONE) {
             updated = true;
             this.state = ResourceState.DONE;
         }
 
         // Check if the resource is locked
-        boolean locked = getConnector().resolveFile(locator + LOCK_EXTENSION).exists();
+        boolean locked = getMainConnector().resolveFile(locator + LOCK_EXTENSION).exists();
         updated |= locked != this.locked;
         this.locked = locked;
 
         return updated;
     }
 
-    public Connector getConnector() {
+    public final SingleHostConnector getMainConnector() {
+        return getConnector().getMainConnector();
+    }
+
+    final public Connector getConnector() {
         return locator.getConnector();
     }
 
@@ -306,7 +311,7 @@ public abstract class Resource implements Comparable<Resource> {
                         format("Resource %s cannot accept dependency %s", this,
                                 dependency));
             case OK_LOCK:
-                return getConnector().createLockFile(locator + ".LOCK");
+                return getMainConnector().createLockFile(locator + LOCK_EXTENSION);
 
             case OK:
                 return new StatusLock(pid, dependency == LockType.WRITE_ACCESS);
@@ -356,7 +361,7 @@ public abstract class Resource implements Comparable<Resource> {
     public boolean update() throws Exception {
         boolean updated = writers > 0 || readers > 0;
 
-        final FileObject statusFile = getConnector().resolveFile(locator.path + STATUS_EXTENSION);
+        final FileObject statusFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION);
 
         if (!statusFile.exists()) {
             writers = readers = 0;
@@ -407,13 +412,13 @@ public abstract class Resource implements Comparable<Resource> {
     void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws UnlockableException {
         // --- Lock the resource
-        Lock fileLock = getConnector().createLockFile(locator.path + LOCK_EXTENSION);
+        Lock fileLock = getMainConnector().createLockFile(locator.path + LOCK_EXTENSION);
 
         try {
             // --- Read the resource status
             update();
 
-            final FileObject tmpFile = getConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
+            final FileObject tmpFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
             PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
             if (pidFrom == null) {
                 // We are adding a new entry
@@ -428,7 +433,7 @@ public abstract class Resource implements Comparable<Resource> {
             }
 
             out.close();
-            tmpFile.moveTo(getConnector().resolveFile(locator.path + STATUS_EXTENSION));
+            tmpFile.moveTo(getMainConnector().resolveFile(locator.path + STATUS_EXTENSION));
         } catch (Exception e) {
             throw new UnlockableException(
                     "Status file '%s' could not be created", locator.path + STATUS_EXTENSION);
@@ -516,7 +521,7 @@ public abstract class Resource implements Comparable<Resource> {
      *
      * @return The task unique locator
      */
-    public Locator getLocator() {
+    public ResourceLocator getLocator() {
         return locator;
     }
 
@@ -555,7 +560,7 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Returns the list of listeners
      */
-    public Set<Locator> getListeners() {
+    public Set<ResourceLocator> getListeners() {
         return listeners;
     }
 

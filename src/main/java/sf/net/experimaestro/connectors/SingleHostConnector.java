@@ -3,6 +3,8 @@ package sf.net.experimaestro.connectors;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
 
 /**
  * A connector that corresponds to a single host.
@@ -17,9 +19,16 @@ abstract public class SingleHostConnector extends Connector {
      */
     transient private FileSystem filesystem;
 
+    public SingleHostConnector(String id) {
+        super(id);
+    }
+
+    protected SingleHostConnector() {
+    }
+
 
     @Override
-    public Connector getConnector(ComputationalRequirements requirements) {
+    public SingleHostConnector getConnector(ComputationalRequirements requirements) {
         // By default, returns ourselves - TODO: check the requirements
         return this;
     }
@@ -66,4 +75,5 @@ abstract public class SingleHostConnector extends Connector {
         return getFileSystem().resolveFile(path);
     }
 
+    public abstract Lock createLockFile(String path) throws UnlockableException;
 }

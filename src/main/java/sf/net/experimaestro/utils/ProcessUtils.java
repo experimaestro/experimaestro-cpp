@@ -52,16 +52,16 @@ public class ProcessUtils {
 			field.setAccessible(false);
 			return pid;
 		} catch (SecurityException e) {
-			throw new RuntimeException("Could not get the Process of the process",
+			throw new RuntimeException("Could not get the XPMProcess of the process",
 					e);
 		} catch (NoSuchFieldException e) {
-			throw new RuntimeException("Could not get the Process of the process",
+			throw new RuntimeException("Could not get the XPMProcess of the process",
 					e);
 		} catch (IllegalArgumentException e) {
-			throw new RuntimeException("Could not get the Process of the process",
+			throw new RuntimeException("Could not get the XPMProcess of the process",
 					e);
 		} catch (IllegalAccessException e) {
-			throw new RuntimeException("Could not get the Process of the process",
+			throw new RuntimeException("Could not get the XPMProcess of the process",
 					e);
 		}
 	}
