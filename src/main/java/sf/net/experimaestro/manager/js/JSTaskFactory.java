@@ -28,7 +28,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -127,7 +127,7 @@ public class JSTaskFactory extends TaskFactory {
 						.parse(connect.getAttribute("from"));
 				final String path = connect.getAttribute("path");
 				if ("".equals(path))
-					throw new ExperimaestroException(
+					throw new ExperimaestroRuntimeException(
 							"Attribute path has to be defined (and not at the same time)");
 				final DotName to = new DotName(inputToId, DotName.parse(connect
 						.getAttribute("to")));
@@ -136,7 +136,7 @@ public class JSTaskFactory extends TaskFactory {
 				Input inputFrom = inputs.get(from.get(0));
 
 				if (inputFrom == null)
-					throw new ExperimaestroException(
+					throw new ExperimaestroRuntimeException(
 							"Could not find input [%s] in [%s]", from.get(0),
 							this.id);
 
@@ -172,14 +172,14 @@ public class JSTaskFactory extends TaskFactory {
 		QName altType = JSUtils.get(jsScope, "alternative", jsObject, null);
 		if (altType != null) {
 			if (outputs.size() != 1)
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Wrong number of outputs (%d) to be an alternative",
 						outputs.size());
 			QName qname = outputs.values().iterator().next();
 
 			Type type = repository.getType(qname);
 			if (type == null || !(type instanceof AlternativeType))
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Type %s is not an alternative", qname == null ? "null"
 								: qname.toString());
 
@@ -228,7 +228,7 @@ public class JSTaskFactory extends TaskFactory {
 			// The input is a task
 			TaskFactory factory = repository.getFactory(typeName);
 			if (factory == null)
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Could not find task factory with type [%s]", typeName);
 
 			input = new TaskInput(factory, typeName);

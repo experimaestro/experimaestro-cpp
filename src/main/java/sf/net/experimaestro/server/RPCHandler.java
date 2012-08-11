@@ -28,7 +28,7 @@ import org.mortbay.jetty.Server;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
@@ -259,8 +259,8 @@ public class RPCHandler {
 			error = 2;
 			errorMsg = e.getCause().toString();
 
-			if (e.getCause() instanceof ExperimaestroException) {
-				ExperimaestroException ee = (ExperimaestroException) e
+			if (e.getCause() instanceof ExperimaestroRuntimeException) {
+				ExperimaestroRuntimeException ee = (ExperimaestroRuntimeException) e
 						.getCause();
 				List<String> context = ee.getContext();
 				if (!context.isEmpty()) {

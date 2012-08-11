@@ -25,31 +25,31 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-public class ExperimaestroException extends Exception {
+public class ExperimaestroRuntimeException extends RuntimeException {
 	private static final long serialVersionUID = 1L;
 	ArrayList<String> context = new ArrayList<String>();
 
-	public ExperimaestroException() {
+	public ExperimaestroRuntimeException() {
 		super();
 	}
 
-	public ExperimaestroException(String message, Throwable t) {
+	public ExperimaestroRuntimeException(String message, Throwable t) {
 		super(message, t);
 	}
 
-	public ExperimaestroException(Throwable t, String format, Object... values) {
+	public ExperimaestroRuntimeException(Throwable t, String format, Object... values) {
 		super(String.format(format, values), t);
 	}
 
-	public ExperimaestroException(String message) {
+	public ExperimaestroRuntimeException(String message) {
 		super(message);
 	}
 
-	public ExperimaestroException(String format, Object... values) {
+	public ExperimaestroRuntimeException(String format, Object... values) {
 		super(String.format(format, values));
 	}
 
-	public ExperimaestroException(Throwable t) {
+	public ExperimaestroRuntimeException(Throwable t) {
 		super(t);
 	}
 

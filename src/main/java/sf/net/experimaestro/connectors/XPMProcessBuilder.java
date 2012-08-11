@@ -1,8 +1,11 @@
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -13,15 +16,21 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 abstract public class XPMProcessBuilder {
+    /** The associated job */
+    Job job;
+
     /** The command to run */
     private List<String> command;
 
     /**  The environment */
     private Map<String, String> environment;
 
-    private Redirect input;
-    private Redirect output;
-    private Redirect error;
+    protected Redirect input;
+    protected Redirect output;
+    protected Redirect error;
+
+    /** Whether this process should be bound to the Java process */
+    private boolean detach;
 
     public XPMProcessBuilder command(List<String> command) {
         this.command = command;
@@ -61,13 +70,28 @@ abstract public class XPMProcessBuilder {
         return this;
     }
 
+    public Job job() {
+        return job;
+    }
+
+    public void job(Job job) {
+        this.job = job;
+    }
 
     public List<String> command() {
         return command;
     }
 
+    public boolean detach() {
+        return detach;
+    }
+
+    public void detach(boolean detach) {
+        this.detach = detach;
+    }
+
     /** Start the process and return an Experimaestro process */
-    abstract public XPMProcess start();
+    abstract public XPMProcess start() throws LaunchException, IOException;
 
 
     /**
@@ -76,6 +100,9 @@ abstract public class XPMProcessBuilder {
     static public class Redirect {
         private FileObject file;
         private Type type;
+
+        public static final Redirect PIPE = new Redirect(Type.PIPE, null);
+        public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
 
         private Redirect(Type type, FileObject file) {
             this.type = type;
@@ -95,7 +122,7 @@ abstract public class XPMProcessBuilder {
         }
 
         static public enum Type {
-            READ, APPEND, WRITE;
+            READ, APPEND, WRITE, PIPE, INHERIT;
 
             public boolean isReader() {
                 return this == READ;

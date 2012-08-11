@@ -27,7 +27,8 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.*;
 import org.apache.commons.vfs2.provider.sftp.SftpClientFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystem;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.scheduler.*;
@@ -46,19 +47,29 @@ public class SSHConnector extends SingleHostConnector {
 
     static final private Logger LOGGER = Logger.getLogger();
 
-    /** Username */
+    /**
+     * Username
+     */
     String username;
 
-    /** Hostname to connect to */
+    /**
+     * Hostname to connect to
+     */
     String hostname;
 
-    /** Port */
+    /**
+     * Port
+     */
     int port = 22;
 
-    /** Connection options */
+    /**
+     * Connection options
+     */
     private SSHOptions options;
 
-    /** Used for serialization */
+    /**
+     * Used for serialization
+     */
     public SSHConnector() {
     }
 
@@ -69,6 +80,7 @@ public class SSHConnector extends SingleHostConnector {
 
     /**
      * Construct from a username, hostname, port triplet
+     *
      * @param username
      * @param hostname
      * @param port
@@ -119,7 +131,7 @@ public class SSHConnector extends SingleHostConnector {
         super(String.format("ssh://%s@%s", username, hostname));
         this.username = username;
         this.hostname = hostname;
-        this.options = (SSHOptions)options;
+        this.options = (SSHOptions) options;
     }
 
     public SSHConnector(URI uri, ConnectorOptions options) {
@@ -127,15 +139,15 @@ public class SSHConnector extends SingleHostConnector {
     }
 
 
-
     /**
      * An SSH process
      */
     @Persistent
-    public static class SSHProcess extends Process {
+    public static class SSHProcess extends XPMProcess {
         private ChannelExec channel;
 
-        public SSHProcess(ChannelExec channel) {
+        public SSHProcess(Job job, ChannelExec channel) {
+            super(job, null);
             this.channel = channel;
         }
 
@@ -144,7 +156,7 @@ public class SSHConnector extends SingleHostConnector {
             try {
                 return channel.getOutputStream();
             } catch (IOException e) {
-                throw new ExperimaestroException(e);
+                throw new ExperimaestroRuntimeException(e);
             }
         }
 
@@ -153,7 +165,7 @@ public class SSHConnector extends SingleHostConnector {
             try {
                 return channel.getInputStream();
             } catch (IOException e) {
-                throw new ExperimaestroException(e);
+                throw new ExperimaestroRuntimeException(e);
             }
         }
 
@@ -162,7 +174,7 @@ public class SSHConnector extends SingleHostConnector {
             try {
                 return channel.getErrStream();
             } catch (IOException e) {
-                throw new ExperimaestroException(e);
+                throw new ExperimaestroRuntimeException(e);
             }
         }
 
@@ -192,11 +204,6 @@ public class SSHConnector extends SingleHostConnector {
             super.finalize();
         }
 
-        @Override
-        public String getPID() {
-            // TODO: get the PID
-            return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
 
         @Override
         public boolean isRunning() {
@@ -205,8 +212,9 @@ public class SSHConnector extends SingleHostConnector {
     }
 
 
-
-    /** an SSH session */
+    /**
+     * an SSH session
+     */
     class SSHSession {
         public Session session;
         public SftpFileSystem filesystem;
@@ -233,7 +241,9 @@ public class SSHConnector extends SingleHostConnector {
         return (ChannelExec) getSession().openChannel("exec");
     }
 
-    /** Get the session (creates it if necessary) */
+    /**
+     * Get the session (creates it if necessary)
+     */
     private Session getSession() throws JSchException, FileSystemException {
         if (_session == null) {
             _session = sessions.get(this);
@@ -250,7 +260,8 @@ public class SSHConnector extends SingleHostConnector {
         return _session.session;
     }
 
-    /** Static map to sessions
+    /**
+     * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
      */
     static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<SSHConnector, SSHSession>();
@@ -268,7 +279,8 @@ public class SSHConnector extends SingleHostConnector {
         private String path;
         private ConnectorDelegator connector;
 
-        public SSHLock() {}
+        public SSHLock() {
+        }
 
         public SSHLock(Connector connector, String path) {
             this.connector = connector.delegate();
@@ -306,29 +318,83 @@ public class SSHConnector extends SingleHostConnector {
         }
     }
 
-    static public class SSHProcessBuilder extends XPMProcessBuilder {
-        @Override
-        public sf.net.experimaestro.connectors.XPMProcess start() {
-            final ChannelExec channel = newExecChannel();
-//        command = String.format("/bin/sh %s", command);
+
+    private interface StreamSetter {
+        public void setStream(OutputStream out, boolean dontClose);
+        int streamNumber();
+    }
 
 
-            if (stdoutPath != null)
-                command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stdoutPath, "\""));
-            if (stderrPath != null)
-                command = String.format("%s > \"%s\"", command, CommandLineTask.protect(stderrPath, "\""));
+    public class SSHProcessBuilder extends XPMProcessBuilder {
 
-            LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
-            channel.setCommand(command);
-            channel.setInputStream(null);
-            channel.setErrStream(System.err, true);
-            channel.setOutputStream(System.out, true);
-            channel.setPty(!detach);
-
-            channel.connect();
-
-            return new SSHProcess(channel);
-            throw new NotImplementedYetException();
+        private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) {
+            switch(output.type()) {
+                case PIPE:
+                    streamSetter.setStream(null, false);
+                    break;
+                case INHERIT:
+                    streamSetter.setStream(System.err, true);
+                    break;
+                case WRITE:
+                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\""));
+                    break;
+                case APPEND:
+                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\""));
+                    break;
+            }
         }
+
+        @Override
+        public XPMProcess start() throws LaunchException {
+            final ChannelExec channel;
+            try {
+                channel = newExecChannel();
+                StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append(CommandLineTask.getCommandLine(command()));
+
+
+                setStream(commandBuilder, output, new StreamSetter() {
+                    @Override
+                    public void setStream(OutputStream out, boolean dontClose) {
+                        channel.setOutputStream(out, dontClose);
+                    }
+
+                    @Override
+                    public int streamNumber() {
+                        return 1;
+                    }
+                });
+
+                setStream(commandBuilder, error, new StreamSetter() {
+                    @Override
+                    public void setStream(OutputStream out, boolean dontClose) {
+                        channel.setOutputStream(out,  dontClose);
+                    }
+
+                    @Override
+                    public int streamNumber() {
+                        return 2;
+                    }
+                });
+
+                // TODO: manage standard input
+
+
+                String command = commandBuilder.toString();
+                LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
+                channel.setCommand(command);
+                channel.setInputStream(null);
+                channel.setOutputStream(System.out, true);
+                channel.setPty(!detach());
+
+                channel.connect();
+            } catch (JSchException | FileSystemException e) {
+                throw new LaunchException(e);
+            }
+
+            return new SSHProcess(job(), channel);
+        }
+
+
     }
 }

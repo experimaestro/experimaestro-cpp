@@ -525,7 +525,7 @@ public abstract class Resource implements Comparable<Resource> {
         return locator;
     }
 
-    String getIdentifier() {
+    public String getIdentifier() {
         return locator.toString();
     }
     /**

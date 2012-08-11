@@ -18,29 +18,28 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.CommandLineTask;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
 /**
- * Base class for all the launchers that are based on unix shell (sh) scripts
+ * Base class for all the launchers that are based on writing UNIX shell scripts
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/6/12
  */
 @Persistent
-public abstract class UnixShellLauncher extends Launcher {
+public abstract class UnixShellLauncher extends AbstractLauncher {
     private String shPath = "/bin/bash";
 
-    public UnixShellLauncher(SingleHostConnector resource) {
-        super(resource);
+    public UnixShellLauncher(SingleHostConnector connector) {
+        super(connector);
     }
 
     /**
@@ -53,7 +52,7 @@ public abstract class UnixShellLauncher extends Launcher {
     protected void generateRunFile(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
         // Write command
         SingleHostConnector connector = task.getTaskConnector();
-        final String path = task.locator.path;
+        final String path = task.getLocator().getPath();
         final String quotedPath = "\"" + CommandLineTask.protect(path, "\"") + "\"";
         final String runId = String.format("%s.run", path);
         final FileObject runFile = connector.resolveFile(runId);
@@ -95,5 +94,6 @@ public abstract class UnixShellLauncher extends Launcher {
     }
 
 
-
+    static public abstract class ProcessBuilder extends XPMProcessBuilder {
+    }
 }

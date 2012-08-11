@@ -32,7 +32,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.sftp.IdentityRepositoryFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -71,7 +71,7 @@ public class SSHOptions extends ConnectorOptions {
                 IdentityRepository irepo = new RemoteIdentityRepository(agent);
                 return new RemoteIdentityRepository(agent);
             } catch (AgentProxyException e) {
-                throw new ExperimaestroException(e);
+                throw new ExperimaestroRuntimeException(e);
             }
         }
     }

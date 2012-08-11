@@ -24,7 +24,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 /**
  * Identifies a resource on the network
@@ -119,7 +119,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
     public Connector getConnector() {
         if (connector == null)
-            throw new ExperimaestroException("The locator has not been properly initialized");
+            throw new ExperimaestroRuntimeException("The locator has not been properly initialized");
 
         return connector;
     }

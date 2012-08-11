@@ -22,8 +22,10 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -33,9 +35,13 @@ import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URL;
+import java.util.Map;
 
 /**
  * A local host connector provides access to the current machine
@@ -54,8 +60,8 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    protected XPMProcessBuilder processBuilder() {
-        return new LocalProcessBuilder();
+    public XPMProcessBuilder processBuilder() {
+        return new ProcessBuilder();
     }
 
 
@@ -82,7 +88,7 @@ public class LocalhostConnector extends SingleHostConnector {
 
 
     @Persistent
-    private class LocalProcess extends XPMProcess {
+    private static class LocalProcess extends XPMProcess {
         /**
          * The running process: if we have it, easier to monitor
          */
@@ -109,7 +115,7 @@ public class LocalhostConnector extends SingleHostConnector {
         }
 
         @Override
-        int exitValue() throws Exception {
+        public int exitValue() {
             // Try the easy way
             if (process != null)
                 return process.exitValue();
@@ -139,11 +145,10 @@ public class LocalhostConnector extends SingleHostConnector {
         }
 
         @Override
-        public boolean destroy() {
+        public void destroy() {
             if (process != null) {
                 // TODO: send a signal first?
                 process.destroy();
-                return true;
             }
 
             // TODO: finish the implementation
@@ -153,10 +158,47 @@ public class LocalhostConnector extends SingleHostConnector {
 
     }
 
-    private class LocalProcessBuilder extends XPMProcessBuilder {
+    /**
+     * Localhost process builder
+     */
+    static private class ProcessBuilder extends XPMProcessBuilder {
+        static private File convert(FileObject file) throws FileSystemException {
+            URL url = file.getURL();
+            if (url.getProtocol().contentEquals("file"))
+                return new File(url.getPath());
+            throw new FileSystemException("Cannot convert file for redirection on localhost", file);
+        }
+
+        static private java.lang.ProcessBuilder.Redirect convert(Redirect redirect) throws FileSystemException {
+            switch(redirect.type()) {
+                case PIPE:
+                    return java.lang.ProcessBuilder.Redirect.PIPE;
+                case INHERIT:
+                    return java.lang.ProcessBuilder.Redirect.INHERIT;
+                case WRITE:
+                    return java.lang.ProcessBuilder.Redirect.to(convert(redirect.file()));
+                case APPEND:
+                    return java.lang.ProcessBuilder.Redirect.appendTo(convert(redirect.file()));
+                case READ:
+                    return java.lang.ProcessBuilder.Redirect.from(convert(redirect.file()));
+            }
+            throw new AssertionError("Should not be here - enum not handled: " + redirect.type());
+        }
+
         @Override
-        public XPMProcess start() {
-            throw new NotImplementedException();
+        public XPMProcess start() throws LaunchException, IOException {
+            java.lang.ProcessBuilder builder = new java.lang.ProcessBuilder();
+
+            // Set the environment
+            Map<String,String> environment = builder.environment();
+            for(Map.Entry<String,String> entry: environment().entrySet())
+                environment.put(entry.getKey(), entry.getValue());
+
+            builder.redirectError(convert(error));
+            builder.redirectOutput(convert(output));
+            builder.redirectInput(convert(input));
+
+            return new LocalProcess(job, builder.start());
         }
     }
 }

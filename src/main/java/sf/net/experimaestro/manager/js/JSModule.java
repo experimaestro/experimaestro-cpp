@@ -22,7 +22,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.QName;
@@ -64,13 +64,13 @@ public class JSModule extends Module {
 		if (parent instanceof QName) {
 			Module module = repository.getModules().get(parent);
 			if (module == null)
-				throw new ExperimaestroException("No module of name [%s]",
+				throw new ExperimaestroRuntimeException("No module of name [%s]",
 						parent);
 			return module;
 		}
 		
 
-		throw new ExperimaestroException(
+		throw new ExperimaestroRuntimeException(
 				"Cannot search for module with type %s [%s]",
 				parent.getClass(), parent);
 	}

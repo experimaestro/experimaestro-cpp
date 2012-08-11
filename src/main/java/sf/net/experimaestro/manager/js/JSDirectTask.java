@@ -24,7 +24,7 @@ import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.Value;
@@ -74,7 +74,7 @@ public class JSDirectTask extends JSAbstractTask {
 					new Object[] { jsInputs });
 			LOGGER.debug("Returned %s", returned);
 			if (returned == Undefined.instance)
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Undefined returned by the function run");
 
 			result = (Scriptable) returned;

@@ -21,7 +21,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
@@ -43,7 +43,7 @@ public class NSContext implements NamespaceContext {
 		if (uri == null)
 			uri = Manager.PREDEFINED_PREFIXES.get(prefix);
 		if (uri == null)
-			throw new ExperimaestroException("Prefix %s not bound", prefix);
+			throw new ExperimaestroRuntimeException("Prefix %s not bound", prefix);
 		LOGGER.info("Prefix %s maps to %s", prefix, uri);
 		return uri;
 	}

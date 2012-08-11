@@ -22,7 +22,7 @@ package sf.net.experimaestro.manager;
 
 
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 public class TaskInput extends Input {
 
@@ -35,7 +35,7 @@ public class TaskInput extends Input {
 
 	@Override
 	public void setDefaultValue(Document defaultValue) {
-		throw new ExperimaestroException(
+		throw new ExperimaestroRuntimeException(
 				"Default value must not be set for task inputs");
 	}
 

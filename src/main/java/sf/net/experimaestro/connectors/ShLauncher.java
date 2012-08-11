@@ -21,9 +21,9 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.UnixShellLauncher;
 
 import java.util.ArrayList;
 
@@ -45,17 +45,24 @@ public class ShLauncher extends UnixShellLauncher {
     }
 
     @Override
-    public XPMProcess launch(CommandLineTask task, ArrayList<Lock> locks) throws Exception {
-        // First generate the script file
-        generateRunFile(task, locks);
-
-        // Run the command
-        final String path = task.getLocator().getPath();
-        final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
-                shellCommand, CommandLineTask.protect(path, " "));
-        return new XPMProcess(task, task.getConnector().exec(task, command, locks, true, null, null), true);
-
+    public XPMProcessBuilder processBuilder() {
+        return new ProcessBuilder();
     }
 
+    static public class ProcessBuilder extends UnixShellLauncher.ProcessBuilder {
+
+        @Override
+        public XPMProcess start() throws LaunchException {
+            // First generate the script file
+            generateRunFile(task, locks);
+
+            // Run the command
+            final String path = task.getLocator().getPath();
+            final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
+                    shellCommand, CommandLineTask.protect(path, " "));
+
+            return new XPMProcess(task, task.getConnector().exec(task, command, locks, true, null, null), true);
+        }
+    }
 
 }

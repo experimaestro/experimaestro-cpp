@@ -23,7 +23,7 @@ package sf.net.experimaestro.manager;
 import net.sf.saxon.xqj.SaxonXQDataSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -158,7 +158,7 @@ public abstract class Value {
 					item = xqItem.getNode();
 					break;
 				default:
-					throw new ExperimaestroException(
+					throw new ExperimaestroRuntimeException(
 							"Cannot handle XQuery type [%s]", item);
 				}
 
@@ -174,7 +174,7 @@ public abstract class Value {
 				task.setParameter(connection.to, newDoc);
 
 			} catch (XQException e) {
-				throw new ExperimaestroException(e,
+				throw new ExperimaestroRuntimeException(e,
 						"Cannot evaluate XPath [%s] when connecting to [%s]",
 						expr, connection.to);
 			}
@@ -202,7 +202,7 @@ public abstract class Value {
 
 		XQItem xqItem = result.getItem();
 		if (result.next())
-			throw new ExperimaestroException(
+			throw new ExperimaestroRuntimeException(
 					"Too many answers (%d) for XPath [%s]", query);
 
 		return xqItem;
@@ -218,7 +218,7 @@ public abstract class Value {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable t) {
-			throw new ExperimaestroException(t);
+			throw new ExperimaestroRuntimeException(t);
 		}
 	}
 

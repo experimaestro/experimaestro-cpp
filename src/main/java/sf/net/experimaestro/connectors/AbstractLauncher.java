@@ -1,7 +1,7 @@
 /*
  *
  *  This file is part of experimaestro.
- *  Copyright (c) 2011 B. Piwowarski <benjamin@bpiwowar.net>
+ *  Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
  *  experimaestro is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,33 +18,25 @@
  *
  */
 
-package sf.net.experimaestro.exceptions;
+package sf.net.experimaestro.connectors;
 
-public class NoSuchParameter extends ExperimaestroRuntimeException {
-	private static final long serialVersionUID = 1L;
+import com.sleepycat.persist.model.Persistent;
 
-	public NoSuchParameter() {
-		super();
-	}
+/**
+ * Defines how to run a command line and to monitor changes in
+ * execution state.
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ */
+@Persistent
+public abstract class AbstractLauncher implements Launcher {
+    /** The computational resource that should be used to launch the process */
+    private final SingleHostConnector resource;
 
-	public NoSuchParameter(String format, Object... values) {
-		super(format, values);
-	}
+    /** Construction of the launcher */
+    public AbstractLauncher(SingleHostConnector resource) {
+        this.resource = resource;
+    }
 
-	public NoSuchParameter(String message, Throwable t) {
-		super(message, t);
-	}
-
-	public NoSuchParameter(String message) {
-		super(message);
-	}
-
-	public NoSuchParameter(Throwable t, String format, Object... values) {
-		super(t, format, values);
-	}
-
-	public NoSuchParameter(Throwable t) {
-		super(t);
-	}
 
 }

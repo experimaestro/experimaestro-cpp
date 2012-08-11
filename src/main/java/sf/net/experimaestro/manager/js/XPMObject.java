@@ -28,7 +28,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
@@ -262,7 +262,7 @@ public class XPMObject {
 		if (ns instanceof String)
 			return new QName((String) ns, localName);
 
-		throw new ExperimaestroException("Not implemented (%s)", ns.getClass());
+		throw new ExperimaestroRuntimeException("Not implemented (%s)", ns.getClass());
 	}
 
 	/**
@@ -337,7 +337,7 @@ public class XPMObject {
 	public Scriptable getTask(QName qname) {
 		TaskFactory factory = repository.getFactory(qname);
         if (factory == null)
-            throw new ExperimaestroException("Could not find a task with name [%s]", qname);
+            throw new ExperimaestroRuntimeException("Could not find a task with name [%s]", qname);
 		LOGGER.info("Creating a new JS task %s", factory);
 		return context.newObject(scope, "XPMTask",
 				new Object[] { Context.javaToJS(factory.create(), scope) });
@@ -511,7 +511,7 @@ public class XPMObject {
 		// Get the task
 		TaskFactory taskFactory = repository.getFactory(qname);
 		if (taskFactory == null)
-			throw new ExperimaestroException("No task factory with id [%s]",
+			throw new ExperimaestroRuntimeException("No task factory with id [%s]",
 					qname);
 
 		// Parse the plan
@@ -582,7 +582,7 @@ public class XPMObject {
                 try {
                     return currentScript.resolvePath(path, true).getInputStream();
                 } catch (Exception e) {
-                    throw new ExperimaestroException(e);
+                    throw new ExperimaestroRuntimeException(e);
                 }
             }
 

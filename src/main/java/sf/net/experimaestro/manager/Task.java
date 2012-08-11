@@ -22,7 +22,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.plan.ParseException;
@@ -134,7 +134,7 @@ public abstract class Task {
 			value.process();
 			try {
 				value.processConnections(this);
-			} catch(ExperimaestroException e) {
+			} catch(ExperimaestroRuntimeException e) {
 				e.addContext("While connecting from [%s] in task [%s]", key, factory.id);
 				throw e;
 			}
@@ -195,7 +195,7 @@ public abstract class Task {
 		}
 
 		if (!graph.isEmpty())
-			throw new ExperimaestroException("Loop in the graph for task [%s]",
+			throw new ExperimaestroRuntimeException("Loop in the graph for task [%s]",
 					factory.id);
 
 		return list;
@@ -302,7 +302,7 @@ public abstract class Task {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Throwable t) {
-			throw new ExperimaestroException(t);
+			throw new ExperimaestroRuntimeException(t);
 		}
 	}
 

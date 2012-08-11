@@ -3,6 +3,7 @@ package sf.net.experimaestro.connectors;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 
@@ -13,7 +14,7 @@ import sf.net.experimaestro.locks.UnlockableException;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-abstract public class SingleHostConnector extends Connector {
+abstract public class SingleHostConnector extends Connector implements Launcher {
     /**
      * Underlying filesystem
      */
@@ -38,12 +39,6 @@ abstract public class SingleHostConnector extends Connector {
         // By default, the main connector is ourselves
         return this;
     }
-
-    /**
-     * Returns a new process builder
-     * @return A process builder
-     */
-    protected abstract XPMProcessBuilder processBuilder();
 
 
     /**
@@ -75,5 +70,21 @@ abstract public class SingleHostConnector extends Connector {
         return getFileSystem().resolveFile(path);
     }
 
+    /**
+     * Resolve a FileObject to a local path
+     */
+    public String resolve(FileObject file) {
+        try {
+            return file.getURL().getPath();
+        } catch (FileSystemException e) {
+            throw new ExperimaestroRuntimeException("Could not convert the URL [%s] to a local path for %s", file.toString(), toString());
+        }
+    }
+
+
+
     public abstract Lock createLockFile(String path) throws UnlockableException;
+
+    /** Returns the hostname */
+    public abstract String getHostName();
 }

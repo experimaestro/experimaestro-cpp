@@ -9,12 +9,9 @@
   The job scheduler goal is to run interdependent jobs (i.e. one job might need one or several outputs from other jobs)
   
   - *Resources*: Any object is a resource, whether it is data, a job, or a server. Resources are located on different hosts
-  that can be specified by a URI.
-    A subset of URIs belong to [filesystems](http://commons.apache.org/vfs/filesystems.html)  of the
-  [Apache commons VFS project](http://commons.apache.org/vfs). The configuration of each filesystem (i.e. mostly
-  credentials) can be specified for each sheme/host/username.
-
-  - *Connectors*: Connectors specify how a resource can be accessed and how program can be run. Basic connectors
+  that can be specified by a URI. For example, `file:///a/b/c` denotes a local folder or file, while `xpm:token:user@hostname.org` corresponds to a token used to limit the number of launched processes on a given computer.
+   
+  - *[Connectors](connectors.html)*: Connectors specify how a resource can be accessed and how processes can be launched. Basic connectors
   are built-in (localhost, ssh).
   
   - *Job state*:

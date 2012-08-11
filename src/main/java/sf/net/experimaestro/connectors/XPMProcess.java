@@ -24,20 +24,21 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.EndOfJobMessage;
+import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * A process monitor.
- *
+ * <p/>
  * <p>
  * A job monitor task is to... monitor the execution of a job, wherever
  * the job is running (remote, local, etc.).
@@ -48,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  * @date June 2012
  */
 @Persistent
-public abstract class XPMProcess {
+public abstract class XPMProcess extends Process {
     static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -57,7 +58,12 @@ public abstract class XPMProcess {
     String pid;
 
     /**
-     * Our locks
+     * The host where this process is running (or give an access to the process, e.g. for OAR processes)
+     */
+    SingleHostConnector connector;
+
+    /**
+     * The associated locks to release when the process has ended
      */
     private List<Lock> locks = null;
 
@@ -67,19 +73,20 @@ public abstract class XPMProcess {
     protected transient ScheduledFuture<?> checker = null;
 
     /**
-     * Our job
+     * The job to notify when finished with this
      */
     protected transient Job job;
 
     /**
      * Creates a new job monitor from a process
      *
-     * @param job The attached job
-     * @param pid The process ID
-     * @param notify  If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
-     *                Otherwise, it is the caller job to set it up.
+     * @param job    The attached job
+     * @param pid    The process ID
+     * @param notify If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
+     *               Otherwise, it is the caller job to set it up.
      */
-    protected XPMProcess(String pid, final Job job, boolean notify) {
+    protected XPMProcess(SingleHostConnector connector, String pid, final Job job, boolean notify) {
+        this.connector = connector;
         this.pid = pid;
         this.job = job;
 
@@ -105,25 +112,52 @@ public abstract class XPMProcess {
         }
     }
 
-    abstract protected int waitFor() throws InterruptedException;
-
-    /** Constructs a XPMProcess without an underlying process */
+    /**
+     * Constructs a XPMProcess without an underlying process
+     */
     protected XPMProcess(final Job job, String pid) {
         this.job = job;
         this.pid = pid;
     }
 
 
+    /**
+     * Used for serialization
+     * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
+     */
     protected XPMProcess() {
     }
 
     /**
+     * Initialization of the job monitor (when restoring from database)
+     * <p/>
+     * The method also sets up a status checker at regular intervals.
+     */
+    public void init(Job job) throws DatabaseException {
+        this.job = job;
+        // TODO: use connector & job dependent times for checking
+        checker = job.getScheduler().schedule(this, 15, TimeUnit.SECONDS);
+
+        // Init locks if needed
+        for (Lock lock : locks)
+            lock.init(job.getScheduler());
+    }
+
+
+    /**
      * Get the underlying job
+     *
      * @return The job
      */
     public Job getJob() {
         return job;
     }
+
+    public void setJob(Job job) {
+        this.job = job;
+    }
+
+
 
     /**
      * Adopt the locks
@@ -161,27 +195,6 @@ public abstract class XPMProcess {
 
 
     /**
-     * Attempts to destroy the process
-     * @return True if the process is not running
-     */
-    abstract public boolean destroy();
-
-    /**
-     * Initialization of the job monitor (when restoring from database)
-     * <p/>
-     * The method also sets up a status checker at regular intervals.
-     */
-    public void init(Job job) throws DatabaseException {
-        this.job = job;
-        // TODO: use connector & job dependent times for checking
-        checker = job.getScheduler().schedule(this, 15, TimeUnit.SECONDS);
-
-        // Init locks if needed
-        for(Lock lock: locks)
-            lock.init(job.getScheduler());
-    }
-
-    /**
      * Check if the job is running
      *
      * @return True if the job is running
@@ -189,28 +202,32 @@ public abstract class XPMProcess {
      */
     public boolean isRunning() throws Exception {
         // We have no process, check
-        return job.getMainConnector().resolveFile(job.getLocator().getPath()+ Job.LOCK_EXTENSION).exists();
+        return job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.LOCK_EXTENSION).exists();
 
     }
 
     /**
      * Returns the error code
      */
-    int exitValue() throws Exception {
+    public int exitValue() {
         // Check for done file
-        if (job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
-            return 0;
+        try {
+            if (job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
+                return 0;
 
-        // If the job is not done, check the ".code" file to get the error code
-        // and otherwise return -1
-        final FileObject codeFile = job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.CODE_EXTENSION);
-        if (codeFile.exists()) {
-            final InputStream stream = codeFile.getContent().getInputStream();
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-            String s = reader.readLine();
-            int code = s != null ? Integer.parseInt(s) : -1;
-            reader.close();
-            return code;
+            // If the job is not done, check the ".code" file to get the error code
+            // and otherwise return -1
+            final FileObject codeFile = job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.CODE_EXTENSION);
+            if (codeFile.exists()) {
+                final InputStream stream = codeFile.getContent().getInputStream();
+                final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+                String s = reader.readLine();
+                int code = s != null ? Integer.parseInt(s) : -1;
+                reader.close();
+                return code;
+            }
+        } catch (IOException e) {
+            throw new IllegalThreadStateException();
         }
 
         // The process failed, but we do not know how
@@ -220,6 +237,7 @@ public abstract class XPMProcess {
 
     /**
      * Add a lock to release after this job has completed
+     *
      * @param lock
      */
     public void addLock(Lock lock) {
@@ -235,14 +253,4 @@ public abstract class XPMProcess {
             job.notify(null, new EndOfJobMessage(exitValue()));
         }
     }
-
-    /**
-     * Get the output stream of the running process (if available)
-     * @return
-     */
-    public abstract OutputStream getOutputStream();
-
-    public abstract InputStream getInputStream();
-
-    public abstract InputStream getErrorStream();
 }

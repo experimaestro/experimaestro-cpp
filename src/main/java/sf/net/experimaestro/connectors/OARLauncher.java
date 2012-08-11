@@ -22,11 +22,11 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.UnixShellLauncher;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -35,8 +35,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -58,38 +57,13 @@ public class OARLauncher extends UnixShellLauncher {
         super(connector);
     }
 
-    @Override
-    public sf.net.experimaestro.connectors.XPMProcess launch(CommandLineTask job, ArrayList<Lock> locks) throws Exception {
-        generateRunFile(job, locks);
-
-        final String path = job.getLocator().getPath();
-        final String id = CommandLineTask.protect(path, "\"");
-        String command = String.format("%s --stdout=\"%s.out\" --stderr=\"%2$s.err\" \"%2$s.run\" ",
-                oarCommand, id);
-
-        LOGGER.info("Running OAR with [%s]", command);
-
-        final sf.net.experimaestro.scheduler.XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String s;
-        String pid = null;
-        while ((s =reader.readLine()) != null) {
-            if (s.startsWith(OARJOBID_PREFIX))
-                pid = s.substring(OARJOBID_PREFIX.length());
-        }
-
-        LOGGER.info("Started OAR job with PID %s", pid);
-
-        return new OARJobMonitor(job, pid);
-    }
-
     /**
-     * Executes a command that produces XML, and returns a DOM document from it
+     * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
     private static Document exec(Job job, ArrayList<Lock> locks, String command) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        final sf.net.experimaestro.scheduler.XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
+        final XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
         return dBuilder.parse(process.getInputStream());
     }
 
@@ -101,23 +75,100 @@ public class OARLauncher extends UnixShellLauncher {
             value = (String) xpath.evaluate(expression, document,
                     XPathConstants.STRING);
         } catch (XPathExpressionException e) {
-            throw new ExperimaestroException(e, "Cannot evaluted XPath expression [%s]", xpath);
+            throw new ExperimaestroRuntimeException(e, "Cannot evaluted XPath expression [%s]", xpath);
         }
         return value;
     }
 
+    @Override
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+        return new ProcessBuilder(connector);
+    }
+
+
+    public class ProcessBuilder extends XPMProcessBuilder {
+
+        private SingleHostConnector connector;
+
+        public ProcessBuilder(SingleHostConnector connector) {
+            this.connector = connector;
+        }
+
+        @Override
+        public XPMProcess start() throws LaunchException, IOException {
+
+            final String path = job.getLocator().getPath();
+            final String id = CommandLineTask.protect(path, "\"");
+
+            String [] command = new String[] { oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run" };
+
+            LOGGER.info("Running OAR with [%s]", command);
+
+            XPMProcessBuilder processBuilder = connector.processBuilder();
+            processBuilder.command(command);
+            processBuilder.redirectOutput(Redirect.PIPE);
+            processBuilder.redirectError(Redirect.PIPE);
+
+            // START OAR and retrieves the process ID
+            final XPMProcess process = processBuilder.start();
+
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String s;
+            String pid = null;
+            while ((s =reader.readLine()) != null) {
+                if (s.startsWith(OARJOBID_PREFIX))
+                    pid = s.substring(OARJOBID_PREFIX.length());
+            }
+
+            LOGGER.info("Started OAR job with PID %s", pid);
+
+            return new OARProcess(job, pid, connector);
+        }
+    }
+
+
 
     /**
-     * Monitors a OAR process
+     * An OAR process
      */
     @Persistent
-    private class OARJobMonitor extends sf.net.experimaestro.connectors.XPMProcess {
-        public OARJobMonitor() {
+    private class OARProcess extends XPMProcess {
+        /** Used for serialization */
+        public OARProcess() {
         }
 
-        public OARJobMonitor(Job job, String pid) {
-            super(job, pid);
+        public OARProcess(Job job, String pid, SingleHostConnector connector) {
+            super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
         }
+
+
+
+
+        @Override
+        public OutputStream getOutputStream() {
+            return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public int waitFor() throws InterruptedException {
+            return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public void destroy() {
+            //To change body of implemented methods use File | Settings | File Templates.
+        }
+
 
         @Override
         public boolean isRunning() {
@@ -128,7 +179,7 @@ public class OARLauncher extends UnixShellLauncher {
         }
 
         @Override
-        int getCode() {
+        public int exitValue() {
             final Document document = oarstat(true);
             String state = evaluateXPathToString("//item[@key = \"state\"]/text()", document);
             if ("running".equalsIgnoreCase(state))
@@ -143,12 +194,13 @@ public class OARLauncher extends UnixShellLauncher {
             return Integer.parseInt(code);
         }
 
+        /** Runs oarstat and returns the XML document */
         private Document oarstat(boolean full) {
             final Document document;
             try {
                 document = exec(job, null, String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
             } catch (Exception e) {
-                throw new ExperimaestroException(e, "Cannot parse oarstat output");
+                throw new ExperimaestroRuntimeException(e, "Cannot parse oarstat output");
             }
             return document;
         }

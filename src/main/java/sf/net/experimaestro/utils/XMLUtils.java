@@ -24,7 +24,7 @@ import org.w3c.dom.*;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -142,7 +142,7 @@ public class XMLUtils {
 			Map<String, String> prefixes) {
 		Matcher matcher = qnamePattern.matcher(qname);
 		if (!matcher.matches())
-			throw new ExperimaestroException("Type [%s] is not a valid type",
+			throw new ExperimaestroRuntimeException("Type [%s] is not a valid type",
 					qname);
 
 		String url = matcher.group(1);
@@ -152,7 +152,7 @@ public class XMLUtils {
 			if (url == null && prefixes != null)
 				url = prefixes.get(prefix);
 			if (url == null)
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Type [%s] is not a valid type: namespace prefix [%s] not bound",
 						qname, prefix);
 		}
@@ -180,7 +180,7 @@ public class XMLUtils {
 			if (node instanceof Element && node.getLocalName().equals(name)
 					&& ((ns == null && nodeNS == null) || (ns.equals(nodeNS)))) {
 				if (candidate != null)
-					throw new ExperimaestroException(
+					throw new ExperimaestroRuntimeException(
 							"Two children with the same name [%s]", qName);
 				candidate = (Element) node;
 			}
@@ -219,7 +219,7 @@ public class XMLUtils {
 			dbFactory.setNamespaceAware(true);
 			documentBuilder = dbFactory.newDocumentBuilder();
 		} catch (ParserConfigurationException e) {
-			throw new ExperimaestroException(
+			throw new ExperimaestroRuntimeException(
 					"Could not build a document builder", e);
 		}
 	}

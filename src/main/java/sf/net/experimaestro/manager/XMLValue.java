@@ -21,7 +21,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -56,7 +56,7 @@ public class XMLValue extends Value {
 	@Override
 	public void set(DotName id, Document value) {
 		if (id.size() != 0)
-			throw new ExperimaestroException(
+			throw new ExperimaestroRuntimeException(
 					"Cannot handle qualified names [%s]");
 		LOGGER.info("Value set to [%s]", XMLUtils.toString(value));
 		this.value = value;

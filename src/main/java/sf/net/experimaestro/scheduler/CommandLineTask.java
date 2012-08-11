@@ -22,9 +22,7 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -32,6 +30,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -58,9 +57,9 @@ public class CommandLineTask extends Job {
     /**
      * The environment
      */
-    String[] envp = null;
+    public String[] envp = null;
 
-    String workingDirectory;
+    public String workingDirectory;
 
     protected CommandLineTask() {
     }
@@ -76,6 +75,8 @@ public class CommandLineTask extends Job {
                            String[] command, Map<String, String> environment, String workingDirectory) {
 
         super(scheduler, connector, identifier);
+
+        launcher = new DefaultLauncher();
 
         LOGGER.info("Command is %s", Arrays.toString(command));
 
@@ -104,17 +105,35 @@ public class CommandLineTask extends Job {
         this(scheduler, connector, identifier, command, null, null);
     }
 
-    public static String getCommandLine(String[] args) {
-        return bpiwowar.argparser.utils.Output.toString(" ", ListAdaptator.create(args), new Formatter<String>() {
+    /**
+     * Get a full command line from an array of arguments
+     */
+    public static String getCommandLine(List<String> args) {
+        return bpiwowar.argparser.utils.Output.toString(" ", args, new Formatter<String>() {
             public String format(String t) {
                 return protect(t, " \"'");
             }
         });
     }
 
+    /**
+     * Helper method to call {@linkplain #getCommandLine(java.util.List)}
+     */
+    public static String getCommandLine(String[] args) {
+        return getCommandLine(ListAdaptator.create(args));
+    }
+
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
-        return launcher.launch(this, locks);
+        SingleHostConnector connector = getConnector().getConnector(null);
+        XPMProcessBuilder builder = launcher.processBuilder(connector);
+
+        builder.command(command);
+        builder.detach(true);
+
+        // TODO: redirect output & input
+
+        return builder.start();
     }
 
     @Override

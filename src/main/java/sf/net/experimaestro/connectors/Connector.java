@@ -72,6 +72,7 @@ public abstract class Connector implements Comparable<Connector> {
     protected Connector() {
     }
 
+
     /**
      * Returns true if the connector can execute commands
      */

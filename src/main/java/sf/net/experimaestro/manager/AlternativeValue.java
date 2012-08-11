@@ -22,7 +22,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import java.util.Map;
@@ -87,7 +87,7 @@ public class AlternativeValue extends Value {
 					Manager.PREDEFINED_PREFIXES);
 			TaskFactory subFactory = factories.get(qname);
 			if (subFactory == null)
-				throw new ExperimaestroException(
+				throw new ExperimaestroRuntimeException(
 						"Could not find an alternative with name [%s]", key);
 			AlternativeInput.LOGGER.info("Creating a task [%s]", subFactory.id);
 			task = subFactory.create();
@@ -104,7 +104,7 @@ public class AlternativeValue extends Value {
 			set(DotName.EMPTY, input.defaultValue);
 		
 		if (task == null)
-			throw new ExperimaestroException(
+			throw new ExperimaestroRuntimeException(
 					"Alternative task has not been set");
 		AlternativeInput.LOGGER.info("Running the alternative task [%s]",
 				task.factory != null ? "n/a" : task.factory.id);
