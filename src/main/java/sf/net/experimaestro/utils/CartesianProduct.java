@@ -64,8 +64,8 @@ public class CartesianProduct<T> implements Iterable<T[]> {
 
                 if (value == null) {
                     // Initialisation
-                    @SuppressWarnings("unchecked")
-                            value = (T[]) Array.newInstance(klass, iterables.length);
+                    // @SuppressWarnings("unchecked")
+                    value = (T[]) Array.newInstance(klass, iterables.length);
 
                     for (int i = 0; i < iterables.length; i++) {
                         iterators[i] = iterables[i].iterator();
@@ -77,8 +77,8 @@ public class CartesianProduct<T> implements Iterable<T[]> {
                     }
                 } else {
                     if (!reuse) {
-                        @SuppressWarnings("unchecked")
-                                value = (T[]) Array.newInstance(klass, iterables.length);
+                        //@SuppressWarnings("unchecked")
+                        value = (T[]) Array.newInstance(klass, iterables.length);
                     }
 
                     // Next
