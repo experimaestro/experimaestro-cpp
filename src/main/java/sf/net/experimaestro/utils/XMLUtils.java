@@ -115,13 +115,21 @@ public class XMLUtils {
 		}
 	}
 
-	final static Pattern qnamePattern;
+    /**
+     * Matches the following qualified name formats
+     * <ul>
+     * <li>localName</li>
+     * <li>{namespace}name</li>
+     * <li>prefix:name</li>
+     * </ul>
+     */
+	final static Pattern QNAME_PATTERN;
 	static {
 		try {
 			// (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
-			qnamePattern = Pattern
-					.compile("(?:\\{(\\w[\\w\\.:]+)\\}|(\\w+):)?((?:\\w[-\\.])+)");
-		} catch (PatternSyntaxException e) {
+            QNAME_PATTERN = Pattern
+                    .compile("(?:\\{(\\w(?:\\w|[\\.:])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
+        } catch (PatternSyntaxException e) {
 			LOGGER.error("Could not initialise the pattern: %s", e);
 			throw e;
 		}
@@ -135,14 +143,15 @@ public class XMLUtils {
 	 * <li>prefix:name</li>
 	 * </ul>
 	 * 
-	 * @param qname
+	 * @param qname A qualified name string
 	 * @return
 	 */
 	public static QName parseQName(String qname, Element context,
 			Map<String, String> prefixes) {
-		Matcher matcher = qnamePattern.matcher(qname);
+		Matcher matcher = QNAME_PATTERN.matcher(qname);
 		if (!matcher.matches())
-			throw new ExperimaestroRuntimeException("Type [%s] is not a valid type",
+			throw new ExperimaestroRuntimeException("Type [%s] is not a valid type: expected name, {uri}name, " +
+                    "or prefix:name",
 					qname);
 
 		String url = matcher.group(1);
@@ -158,6 +167,7 @@ public class XMLUtils {
 		}
 
 		String name = matcher.group(3);
+        LOGGER.debug("[%s] parsed as %s", qname, new QName(url, name));
 		return new QName(url, name);
 
 	}

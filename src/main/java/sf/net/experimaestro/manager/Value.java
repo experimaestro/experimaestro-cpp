@@ -135,7 +135,7 @@ public abstract class Value {
 							expr, connection.to);
 
 					XQItem xqItem = evaluateSingletonExpression(xqjc, document,
-							exprFrom);
+							exprFrom, xqsc);
 					LOGGER.info("Item type is %s", xqItem.getItemType()
 							.toString());
 					item = xqItem.getNode();
@@ -144,9 +144,9 @@ public abstract class Value {
 				}
 
 				// --- Now get the value
-				XQExpression xqje = xqjc.createExpression();
-				xqje.bindNode(XQConstants.CONTEXT_ITEM, item, null);
-				XQItem xqItem = evaluateSingletonExpression(xqjc, item, expr);
+//				XQExpression xqje = xqjc.createExpression();
+//				xqje.bindNode(XQConstants.CONTEXT_ITEM, item, null);
+				XQItem xqItem = evaluateSingletonExpression(xqjc, item, expr, xqsc);
 				if (xqItem == null)
 					continue;
 				
@@ -185,12 +185,14 @@ public abstract class Value {
 	/**
 	 * Evaluate an XQuery expression that should return a single item
 	 * 
-	 * @param xqjc
-	 * @throws XQException
+	 *
+     * @param xqjc The XQuery connection
+     * @param xqsc The static context (useful to set namespaces)
+     * @throws XQException
 	 */
 	static XQItem evaluateSingletonExpression(XQConnection xqjc,
-			Node contextItem, String query) throws XQException {
-		XQExpression xqje = xqjc.createExpression();
+                                              Node contextItem, String query, XQStaticContext xqsc) throws XQException {
+		XQExpression xqje = xqjc.createExpression(xqsc);
 		xqje.bindNode(XQConstants.CONTEXT_ITEM, contextItem, null);
 
 		XQSequence result = xqje.executeQuery(query);

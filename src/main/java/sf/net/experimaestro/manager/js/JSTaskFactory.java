@@ -208,6 +208,7 @@ public class JSTaskFactory extends TaskFactory {
 
 		LOGGER.debug("New input [%s] for task [%s]", id, this.id);
 
+        // Get the type
 		final String typeAtt = el.getAttribute("type");
 		QName typeName = !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
 				Manager.PREDEFINED_PREFIXES) : new QName(

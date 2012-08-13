@@ -36,9 +36,9 @@ import java.util.TreeMap;
 public class Manager {
 
 	public static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
-	public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<String, String>();
-	public static final String EXPERIMAESTRO_PREFIX = "xp";
-	static {
+	public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
+    public static final String EXPERIMAESTRO_PREFIX = "xp";
+    static {
 		PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
 		PREDEFINED_PREFIXES.put("xs", "http://www.w3.org/2001/XMLSchema");
 	}
