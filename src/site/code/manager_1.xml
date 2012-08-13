@@ -5,7 +5,7 @@
     <!-- Another value -->
     <alpha xp:type="xs:integer">3</alpha>
 
-    <!-- The format of the resource, ignored when comparing two messages -->
+    <!-- The format of the connector, ignored when comparing two messages -->
     <format xp:ignore="yes">2</format>
 
 </example>

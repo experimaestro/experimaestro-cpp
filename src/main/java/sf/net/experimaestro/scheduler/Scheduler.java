@@ -133,7 +133,7 @@ public class Scheduler {
         return fsManager;
     }
 
-    public Connector getConnector(long id) throws DatabaseException {
+    public Connector getConnector(String id) throws DatabaseException {
         return connectors.get(id);
     }
 
@@ -313,7 +313,11 @@ public class Scheduler {
 		threads.clear();
 		
 		if (dbStore != null) {
-            dbStore.close();
+            try {
+                dbStore.close();
+            } catch (Exception e) {
+                LOGGER.error(String.format("Error while closing the database: %s",e));
+            }
             dbStore = null;
             LOGGER.info("Closed the database store");
         }

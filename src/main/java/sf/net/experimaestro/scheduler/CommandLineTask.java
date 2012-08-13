@@ -49,10 +49,11 @@ public class CommandLineTask extends Job {
      */
     Launcher launcher;
 
+
     /**
      * The command to execute
      */
-    String[] command;
+    private String[] command;
 
     /**
      * The environment
@@ -163,6 +164,11 @@ public class CommandLineTask extends Job {
         }
         return sb.toString();
     }
+
+    public String[] getCommand() {
+        return command;
+    }
+
 
     public void setLauncher(Launcher launcher) {
         this.launcher = launcher;

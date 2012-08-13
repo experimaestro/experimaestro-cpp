@@ -75,7 +75,12 @@ public class LocalhostConnector extends SingleHostConnector {
         return new FileLock(path);
     }
 
-    public static Connector getInstance() {
+    @Override
+    public String getHostName() {
+        return "localhost";
+    }
+
+    public static LocalhostConnector getInstance() {
         return singleton;
     }
 
@@ -84,7 +89,10 @@ public class LocalhostConnector extends SingleHostConnector {
         return new ResourceLocator(singleton, uri.getPath());
     }
 
-
+    @Override
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+        return new ProcessBuilder();
+    }
 
 
     @Persistent
@@ -101,7 +109,7 @@ public class LocalhostConnector extends SingleHostConnector {
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
         public LocalProcess(Job job, Process process) {
-            super(String.valueOf(ProcessUtils.getPID(process)), job, true);
+            super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job, true);
             this.process = process;
         }
 

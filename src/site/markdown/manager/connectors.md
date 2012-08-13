@@ -2,14 +2,14 @@
   <title>Connectors</title>
 </head>
 
-Connectors describe a computational resource, as for example a single computer (*single host connector*) or a cluster. It provides
+Connectors describe a computational connector, as for example a single computer (*single host connector*) or a cluster. It provides
 information on how to access the file system and launch processes.
 
 # General description
 
 A connector defines:
 
-* The main connector used to manage the state of a resource associated with this connector;
+* The main connector used to manage the state of a connector associated with this connector;
 * A way to select a single host connector given some computational requirements (e.g. 1G memory);
 * A way to get a local path given a URL. For example, you could map a path /a/b/c` to `/d/c`
 
@@ -22,7 +22,7 @@ Here is the list of available connectors:
 
 In order to allow full flexibility, resources are described by a URI, which in most cases is a URL (e.g. `file://path/to/my/file`). In order to map back a URI to a connector, Experimaestro has a set of handlers associated with protocols (in order to deal with an URL), and custom handlers can be added.
 
-The same resource can be at different paths depending on the host (i.e. via mounts). In order to deal with that, 
+The same connector can be at different paths depending on the host (i.e. via mounts). In order to deal with that,
 
 # Available connectors
 

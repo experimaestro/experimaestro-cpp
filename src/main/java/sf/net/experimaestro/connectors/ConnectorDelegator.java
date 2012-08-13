@@ -22,13 +22,7 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.scheduler.*;
-
-import java.util.ArrayList;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
  * A connector delegator, for ease of use of connectors
@@ -38,33 +32,30 @@ import java.util.ArrayList;
  */
 @Persistent
 public class ConnectorDelegator extends Connector {
+    /** The real connector */
     transient Connector connector;
+
 
     public ConnectorDelegator() {
     }
 
     public ConnectorDelegator(Connector connector) {
-        super(connector.getKey());
+        super(connector.getIdentifier());
         this.connector = connector;
     }
 
-    void init(Scheduler scheduler) throws DatabaseException {
-        connector = scheduler.getConnector(key);
+    public void init(Scheduler scheduler) throws DatabaseException {
+        connector = scheduler.getConnector(identifier);
     }
 
     @Override
-    public XPMProcess exec(Job job, String command, ArrayList<Lock> locks, boolean detach, String stdoutPath, String stderrPath) throws Exception {
-        return connector.exec(job, command, locks, detach, stdoutPath, stderrPath);
+    public SingleHostConnector getConnector(ComputationalRequirements requirements) {
+        return connector.getConnector(requirements);
     }
 
     @Override
-    public Lock createLockFile(String path) throws UnlockableException {
-        return connector.createLockFile(path);
-    }
-
-    @Override
-    protected FileSystem doGetFileSystem() throws FileSystemException {
-        return connector.doGetFileSystem();
+    public SingleHostConnector getMainConnector() {
+        return connector.getMainConnector();
     }
 
 }

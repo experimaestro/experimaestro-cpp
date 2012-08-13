@@ -82,9 +82,20 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
     }
 
 
+    /** Returns a process builder */
+    public abstract XPMProcessBuilder processBuilder();
 
+    /** Lock a file */
     public abstract Lock createLockFile(String path) throws UnlockableException;
 
     /** Returns the hostname */
     public abstract String getHostName();
+
+    @Override
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+        if (connector != this)
+            throw new ExperimaestroRuntimeException("");
+
+        return this.processBuilder();
+    }
 }

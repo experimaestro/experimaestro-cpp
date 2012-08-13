@@ -74,7 +74,7 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    protected XPMProcessBuilder processBuilder() {
+    public XPMProcessBuilder processBuilder() {
         return new SSHProcessBuilder();
     }
 
@@ -120,6 +120,11 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         return new SSHLock(this, path);
+    }
+
+    @Override
+    public String getHostName() {
+        return hostname;
     }
 
     @Override
@@ -277,6 +282,7 @@ public class SSHConnector extends SingleHostConnector {
     @Persistent
     static public class SSHLock implements Lock {
         private String path;
+
         private ConnectorDelegator connector;
 
         public SSHLock() {
@@ -336,10 +342,10 @@ public class SSHConnector extends SingleHostConnector {
                     streamSetter.setStream(System.err, true);
                     break;
                 case WRITE:
-                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\""));
+                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\"")));
                     break;
                 case APPEND:
-                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\""));
+                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\"")));
                     break;
             }
         }

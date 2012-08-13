@@ -20,10 +20,10 @@
 
 package sf.net.experimaestro.connectors;
 
+import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
-import com.sleepycat.persist.model.Relationship;
-import com.sleepycat.persist.model.SecondaryKey;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,15 +42,9 @@ public abstract class Connector implements Comparable<Connector> {
     /**
      * Each connector has a unique integer ID
      */
-    @PrimaryKey(sequence = "key")
-    long key;
+    @PrimaryKey(sequence = "identifier")
+    String identifier;
 
-
-    /**
-     * A URL type secondary identifier in order to find matching connectors.
-     */
-    @SecondaryKey(relate = Relationship.ONE_TO_MANY)
-    private String identifier;
 
     public Connector(String identifier) {
         this.identifier = identifier;
@@ -81,10 +75,10 @@ public abstract class Connector implements Comparable<Connector> {
     }
 
     /**
-     * Returns the connectorId key
+     * Returns the connectorId identifier
      */
-    public final long getKey() {
-        return key;
+    public final String getIdentifier() {
+        return identifier;
     }
 
 
@@ -100,8 +94,8 @@ public abstract class Connector implements Comparable<Connector> {
 
 
     @Override
-    final public int compareTo(Connector connector) {
-        return Long.compare(key, connector.key);
+    final public int compareTo(Connector other) {
+        return identifier.compareTo(other.identifier);
     }
 
     public ConnectorDelegator delegate() {
@@ -126,4 +120,7 @@ public abstract class Connector implements Comparable<Connector> {
         }
     }
 
+    /** Initialize the connector after deserialization */
+    public void init(Scheduler scheduler) throws DatabaseException {
+    }
 }

@@ -26,6 +26,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -50,8 +51,8 @@ public class ScriptTest {
 		private Repository repository;
 		private ScriptableObject scope;
 
-		public JavaScriptChecker(FileObject file) throws FileSystemException,
-				IOException {
+		public JavaScriptChecker(FileObject file) throws
+                IOException {
 			this.file = file;
 			this.content = getFileContent(file);
 		}
@@ -66,7 +67,7 @@ public class ScriptTest {
 			Pattern pattern = Pattern
 					.compile("function\\s+(test_[\\w]+)\\s*\\(");
 			Matcher matcher = pattern.matcher(content);
-			ArrayList<Object[]> list = new ArrayList<Object[]>();
+			ArrayList<Object[]> list = new ArrayList<>();
 			list.add(new Object[] { null });
 
 			while (matcher.find()) {
@@ -80,7 +81,7 @@ public class ScriptTest {
 		public void enter() {
 			context = Context.enter();
 			scope = context.initStandardObjects();
-			repository = new Repository(new Locator());
+			repository = new Repository(new ResourceLocator());
 
 		}
 
@@ -96,7 +97,7 @@ public class ScriptTest {
 				NoSuchMethodException {
 			if (functionName == null) {
 				Map<String, String> environment = System.getenv();
-				XPMObject jsXPM = new XPMObject(new Locator(), context, environment, scope,
+				XPMObject jsXPM = new XPMObject(new ResourceLocator(), context, environment, scope,
 						repository, null);
 				context.evaluateReader(scope, new StringReader(content),
 						file.toString(), 1, null);
@@ -137,7 +138,7 @@ public class ScriptTest {
 	}
 
 	private static String getFileContent(FileObject file)
-			throws FileSystemException, IOException {
+			throws IOException {
 		InputStreamReader reader = new InputStreamReader(file.getContent()
 				.getInputStream());
 		char[] cbuf = new char[8192];

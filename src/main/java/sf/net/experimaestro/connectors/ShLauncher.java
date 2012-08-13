@@ -21,11 +21,8 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-
-import java.util.ArrayList;
 
 /**
  * Runs a command using *SH (bash, sh)
@@ -40,28 +37,25 @@ public class ShLauncher extends UnixShellLauncher {
      */
     String shellCommand = "/bin/bash";
 
-    public ShLauncher(SingleHostConnector connector) {
-        super(connector);
+    public ShLauncher() {
+        super();
     }
+
 
     @Override
-    public XPMProcessBuilder processBuilder() {
-        return new ProcessBuilder();
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+        return new ProcessBuilder(connector);
     }
 
-    static public class ProcessBuilder extends UnixShellLauncher.ProcessBuilder {
+    public class ProcessBuilder extends UnixShellLauncher.ProcessBuilder {
+
+        public ProcessBuilder(SingleHostConnector connector) {
+            super(connector);
+        }
 
         @Override
         public XPMProcess start() throws LaunchException {
-            // First generate the script file
-            generateRunFile(task, locks);
-
-            // Run the command
-            final String path = task.getLocator().getPath();
-            final String command = String.format("%s %s.run > %2$s.out 2> %2$s.err",
-                    shellCommand, CommandLineTask.protect(path, " "));
-
-            return new XPMProcess(task, task.getConnector().exec(task, command, locks, true, null, null), true);
+               throw new NotImplementedException();
         }
     }
 

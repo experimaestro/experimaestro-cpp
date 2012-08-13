@@ -24,9 +24,9 @@ import com.sleepycat.persist.model.Persistent;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -36,7 +36,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.*;
-import java.util.ArrayList;
 
 /**
  * A command line launcher with OAR
@@ -47,27 +46,32 @@ public class OARLauncher extends UnixShellLauncher {
     static private final Logger LOGGER = Logger.getLogger();
 
     // Command to start
-    private Object oarCommand = "oarsub";
+    private String oarCommand = "oarsub";
 
     // Prefix for the PID of the job
     private final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     /** Construction from a connector */
-    public OARLauncher(SingleHostConnector connector) {
-        super(connector);
+    public OARLauncher() {
+        super();
     }
 
     /**
      * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
-    private static Document exec(Job job, ArrayList<Lock> locks, String command) throws Exception {
+    private Document exec(SingleHostConnector connector, String command) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        final XPMProcess process = job.getConnector().exec(job, command, locks, false, null, null);
-        return dBuilder.parse(process.getInputStream());
+
+        XPMProcessBuilder builder = connector.processBuilder();
+        builder.command(command);
+        builder.detach(false);
+        return dBuilder.parse(builder.start().getInputStream());
     }
 
-    /** Evaluate an XPath to a string */
+    /**
+     * Evaluate an XPath to a string
+     */
     static private String evaluateXPathToString(String expression, Document document) {
         String value;
         XPath xpath = XPathFactory.newInstance().newXPath();
@@ -102,7 +106,7 @@ public class OARLauncher extends UnixShellLauncher {
 
             String [] command = new String[] { oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run" };
 
-            LOGGER.info("Running OAR with [%s]", command);
+            LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
 
             XPMProcessBuilder processBuilder = connector.processBuilder();
             processBuilder.command(command);
@@ -138,7 +142,7 @@ public class OARLauncher extends UnixShellLauncher {
         }
 
         public OARProcess(Job job, String pid, SingleHostConnector connector) {
-            super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
+            super(connector, String.format("oar:%s", connector.getHostName(), pid), job, true);
         }
 
 
@@ -173,7 +177,7 @@ public class OARLauncher extends UnixShellLauncher {
         @Override
         public boolean isRunning() {
             final Document document = oarstat(false);
-            String state = evaluateXPathToString("//item[@key = \"state\"]/text()", document);
+            String state = evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
             LOGGER.debug("State of OAR process %s is %s", pid, state);
             return "running".equalsIgnoreCase(state);
         }
@@ -181,11 +185,11 @@ public class OARLauncher extends UnixShellLauncher {
         @Override
         public int exitValue() {
             final Document document = oarstat(true);
-            String state = evaluateXPathToString("//item[@key = \"state\"]/text()", document);
+            String state = evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
             if ("running".equalsIgnoreCase(state))
                 throw new IllegalThreadStateException("Job is running - cannot access its exit value");
 
-            String code = evaluateXPathToString("//item[@key = \"exit_code\"]/text()", document);
+            String code = evaluateXPathToString("//item[@identifier = \"exit_code\"]/text()", document);
 
             LOGGER.debug("Exit code of OAR process %s is %s", pid, code);
 
@@ -198,7 +202,7 @@ public class OARLauncher extends UnixShellLauncher {
         private Document oarstat(boolean full) {
             final Document document;
             try {
-                document = exec(job, null, String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
+                document = exec(connector, String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
             } catch (Exception e) {
                 throw new ExperimaestroRuntimeException(e, "Cannot parse oarstat output");
             }

@@ -23,6 +23,8 @@ package sf.net.experimaestro.scheduler;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
@@ -35,12 +37,10 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 @Persistent
 public class ResourceLocator implements Comparable<ResourceLocator> {
     @KeyField(value = 1)
-    long connectorId;
+    String connectorId;
 
     @KeyField(value = 2)
     String path;
-
-    // TODO: we should use FileObject from Apache commons
 
     /**
      * Connector
@@ -54,11 +54,9 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      * Initialization with a connector id. The object needs to be initialized
      * with {@linkplain #init(Scheduler)}
      *
-     * @param connectorId The connector ID
      * @param path The path to the resource on the main connector
      */
-    public ResourceLocator(long connectorId, String path) {
-        this.connectorId = connectorId;
+    public ResourceLocator(String path) {
         this.path = path;
     }
 
@@ -77,14 +75,14 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     }
 
     public ResourceLocator(Connector connector, String path) {
-        this.connectorId = connector.getKey();
+        this.connectorId = connector.getIdentifier();
         this.path = path;
         this.connector = connector;
     }
 
     @Override
     public int compareTo(ResourceLocator other) {
-        int z = Long.compare(connectorId, other.connectorId);
+        int z = connectorId.compareTo(other.connectorId);
         if (z != 0)
             return z;
         return path.compareTo(path);
@@ -122,5 +120,22 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
             throw new ExperimaestroRuntimeException("The locator has not been properly initialized");
 
         return connector;
+    }
+
+    /**
+     * Resolve a path relative to this resource
+     * @param path The path
+     * @param parent Is the path relative to the parent?
+     * @return A new resource locator object
+     * @throws FileSystemException If something goes wrong while accessing the file system
+     */
+    public ResourceLocator resolvePath(String path, boolean parent) throws FileSystemException {
+        FileObject file = connector.getMainConnector().resolveFile(this.path);
+        FileObject target = (parent ? file.getParent() : file).resolveFile(path);
+        return new ResourceLocator(connector, file.getName().getPath());
+    }
+
+    public FileObject getFile() throws FileSystemException {
+        return connector.getMainConnector().resolveFile(path);
     }
 }
