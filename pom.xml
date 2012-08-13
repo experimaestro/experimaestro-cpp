@@ -236,6 +236,13 @@
             <version>9.4</version>
         </dependency>
 
+        <!-- SSH server for testing -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>0.7.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 
