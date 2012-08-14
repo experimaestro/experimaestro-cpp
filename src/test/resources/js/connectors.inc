@@ -16,15 +16,7 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
 
-/**
- * A group of jobs
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-public class JobGroup {
-	/**
-	 * Name of the group of jobs
-	 */
-	String name;
+var task = {
+	
 }

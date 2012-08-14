@@ -1,21 +1,19 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2011 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.manager.js;
@@ -23,6 +21,8 @@ package sf.net.experimaestro.manager.js;
 import com.sleepycat.je.DatabaseException;
 import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
 import com.sun.org.apache.xerces.internal.xs.XSModel;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -33,7 +33,10 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.LockMode;
+import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleData;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -41,7 +44,6 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.*;
 import java.io.*;
-import java.lang.Process;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -141,8 +143,9 @@ public class XPMObject {
         // ComputationalResources
 
         // Add functions
-        addFunction(scope, "qname", new Class<?>[]{Object.class, String.class});
-        addFunction(scope, "includeRepository", null);
+        JSUtils.addFunction(XPMObject.class, scope, "qname", new Class<?>[]{Object.class, String.class});
+        JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
+        JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
 
 
         // TODO: would be good to have this at a global level
@@ -164,23 +167,6 @@ public class XPMObject {
                                      final Object[] params) {
         ScriptableObject.defineProperty(scope, objectName,
                 cx.newObject(scope, className, params), 0);
-    }
-
-    /**
-     * Add a new javascript function to the scope
-     *
-     * @param scope
-     * @param fname
-     * @param prototype
-     * @throws NoSuchMethodException
-     */
-    static private void addFunction(Scriptable scope, final String fname,
-                                    Class<?>[] prototype) throws NoSuchMethodException {
-        if (prototype == null)
-            prototype = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
-        final FunctionObject f = new FunctionObject(fname,
-                XPMObject.class.getMethod("js_" + fname, prototype), scope);
-        ScriptableObject.putProperty(scope, fname, f);
     }
 
 
@@ -229,7 +215,11 @@ public class XPMObject {
         Context.getCurrentContext().evaluateReader(newScope, new InputStreamReader(inputStream), scriptpath.toString(), 1, null);
     }
 
-    static public void js_includeRepository(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws Exception {
+    /**
+     * Javascript method calling {@linkplain #includeRepository(String)}
+     */
+    static public void js_include_repository(Context cx, Scriptable thisObj, Object[] args,
+                                             Function funObj) throws Exception {
         // Get the XPM object
         XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
 
@@ -241,6 +231,19 @@ public class XPMObject {
             throw new IllegalArgumentException("includeRepository expects one or two arguments");
     }
 
+    /**
+     * Returns the current script location
+     * @todo Should return a wrapper to FileObject for enhanced security
+     */
+    static public FileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
+            throws FileSystemException {
+        if (args.length != 0)
+            throw new IllegalArgumentException("script_file() has no argument");
+
+        XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
+
+        return xpm.currentResourceLocator.getFile();
+    }
 
     /**
      * Returns a QName object

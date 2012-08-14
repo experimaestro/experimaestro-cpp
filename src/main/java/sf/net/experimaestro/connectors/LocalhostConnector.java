@@ -1,21 +1,19 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.connectors;
@@ -101,6 +99,7 @@ public class LocalhostConnector extends SingleHostConnector {
          * The running process: if we have it, easier to monitor
          */
         transient private Process process;
+        private Thread destroyThread;
 
         public LocalProcess() {
         }
@@ -108,11 +107,19 @@ public class LocalhostConnector extends SingleHostConnector {
         // Check on Windows:
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
-        public LocalProcess(Job job, Process process) {
+        public LocalProcess(Job job, Process process, boolean detach) {
             super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job, true);
             this.process = process;
+            if (detach) {
+                destroyThread = new Thread() {
+                    @Override
+                    public void run() {
+                        LocalProcess.this.destroy();
+                    }
+                };
+                Runtime.getRuntime().addShutdownHook(destroyThread);
+            }
         }
-
 
         @Override
         public boolean isRunning() throws Exception {
@@ -149,7 +156,8 @@ public class LocalhostConnector extends SingleHostConnector {
 
         @Override
         public int waitFor() throws InterruptedException {
-            return process.waitFor();
+            final int exitCode = process.waitFor();
+            return exitCode;
         }
 
         @Override
@@ -157,6 +165,9 @@ public class LocalhostConnector extends SingleHostConnector {
             if (process != null) {
                 // TODO: send a signal first?
                 process.destroy();
+                if (destroyThread != null)
+                    Runtime.getRuntime().removeShutdownHook(destroyThread);
+                process = null;
             }
 
             // TODO: finish the implementation
@@ -170,6 +181,7 @@ public class LocalhostConnector extends SingleHostConnector {
      * Localhost process builder
      */
     static private class ProcessBuilder extends XPMProcessBuilder {
+
         static private File convert(FileObject file) throws FileSystemException {
             URL url = file.getURL();
             if (url.getProtocol().contentEquals("file"))
@@ -206,7 +218,7 @@ public class LocalhostConnector extends SingleHostConnector {
             builder.redirectOutput(convert(output));
             builder.redirectInput(convert(input));
 
-            return new LocalProcess(job, builder.start());
+            return new LocalProcess(job, builder.start(), detach());
         }
     }
 }

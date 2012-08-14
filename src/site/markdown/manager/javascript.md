@@ -68,15 +68,18 @@
   The values in are `results` the values 5, 10, 7 and 14.
 
 
-# Predefined functions and objects
+# Predefined objects
  
    When running a script, the following variables are set:
    
-   *  `xp` is a Namespace object that represents the experimaestro namespace
-   
+   *  `xp` is a Namespace object that represents the experimaestro namespace  
    *  `xpm` is an object containing useful functions and properties
 
+# Predefined functions
+
    * `qname(uri, name)` returns a qualified name
+   * `script_file()` returns a FileObject
+   * `include_repository(path)` includes a repository. The difference with the `include(path)` function is that the repository can be cached. 
    
 # XPM object
 

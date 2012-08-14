@@ -1,40 +1,47 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.connectors;
 
-import com.jcraft.jsch.*;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.utilint.NotImplementedYetException;
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.*;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.VFS;
 import org.apache.commons.vfs2.provider.sftp.SftpClientFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystem;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
 
@@ -295,7 +302,7 @@ public class SSHConnector extends SingleHostConnector {
 
         @Override
         public boolean dispose() {
-            throw new NotImplementedYetException();
+            throw new NotImplementedException();
 //            final ChannelExec channel;
 //            try {
 //                ChannelSftp sftp = newSftpChannel();
@@ -315,7 +322,7 @@ public class SSHConnector extends SingleHostConnector {
 
         @Override
         public void changeOwnership(String pid) {
-            throw new NotImplementedYetException();
+            throw new NotImplementedException();
         }
 
         @Override

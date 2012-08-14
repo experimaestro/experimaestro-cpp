@@ -4,6 +4,3 @@ Experimaestro is an experiment manager, and is composed of
 2. A modular experiment description framework, that allows easy description of the various parts of an experiments.
 
 Both modules can be used independently.
-
-# This is a title
-

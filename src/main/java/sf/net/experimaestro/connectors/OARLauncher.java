@@ -1,21 +1,19 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.connectors;
@@ -49,7 +47,7 @@ public class OARLauncher extends UnixShellLauncher {
     private String oarCommand = "oarsub";
 
     // Prefix for the PID of the job
-    private final String OARJOBID_PREFIX = "OAR_JOB_ID=";
+    protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     /** Construction from a connector */
     public OARLauncher() {
@@ -59,7 +57,7 @@ public class OARLauncher extends UnixShellLauncher {
     /**
      * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
-    private Document exec(SingleHostConnector connector, String command) throws Exception {
+    static private Document exec(SingleHostConnector connector, String command) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
@@ -90,8 +88,11 @@ public class OARLauncher extends UnixShellLauncher {
     }
 
 
-    public class ProcessBuilder extends XPMProcessBuilder {
+    static public class ProcessBuilder extends XPMProcessBuilder {
+        // Command to start
+        private String oarCommand = "oarsub";
 
+        // The associated connector
         private SingleHostConnector connector;
 
         public ProcessBuilder(SingleHostConnector connector) {
@@ -136,7 +137,7 @@ public class OARLauncher extends UnixShellLauncher {
      * An OAR process
      */
     @Persistent
-    private class OARProcess extends XPMProcess {
+    static private class OARProcess extends XPMProcess {
         /** Used for serialization */
         public OARProcess() {
         }

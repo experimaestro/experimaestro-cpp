@@ -3,6 +3,10 @@
 import os.path
 import sys
 import subprocess
+import argparse
+import string
+import xmlrpclib
+
 
 # --- Set some variables
 
@@ -16,20 +20,73 @@ def jarpaths():
     yield os.path.join(dir, jarname)
     yield os.path.join(os.path.dirname(dir), "target", "experimaestro-%s-bin" % version, jarname)
 
-jarpath = None
-for f in jarpaths():
-    print "Trying %s" % f
-    if os.path.isfile(f):
-        jarpath = f
-        break
+def start_jar(args, jarargs):
+    if args.maven:
+        command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"] 
+        command.append("-Dexec.args=%s" % string.join(jarargs, " "))
 
-if jarpath is None: raise Exception("Could not find experimaestro jar file")
+    else:
+        jarpath = None
+        for f in jarpaths():
+            print "Trying %s" % f
+            if os.path.isfile(f):
+                jarpath = f
+                break
+
+        if jarpath is None: raise Exception("Could not find experimaestro jar file")
+        command = ["java","-Xmx1g","-jar",jarpath] + jarargs
+
+    print command
+    subprocess.call(command)
+
+# --- Server
+
+def command_server(args):
+    start_jar(args, ["server"])
+
+def command_run_js(args):
+    import xpm
+
+    env=[]
+    for key,value in os.environ.iteritems():
+       env.append([key,value])
+
+    # Get the command line
+    for filename in sys.argv:
+        filename=os.path.abspath(filename)
+        print "### Running JS script %s" % filename
+        try:
+            r = xmlrpc.Server.runJSScript(True, filename, env)
+            for line in r[2]:
+                print line
+            if r[0]:
+                print
+                print "### Error while running %s ###" % filename
+                print r[1]
+                sys.exit(r[0])
+                print
+        except xmlrpclib.Fault as e:
+            print e
+            sys.exit(1)
+        except Exception as e:
+            print e
+            sys.exit(1)     
 
 # --- Run command
 
-command = sys.argv.pop(0)
 
-if command == "server":
-    subprocess.call(["java","-Xmx1g","-jar",jarpath] + sys.argv[1:])
-else:
-    raise Exception("Unknown command %s", command)
+# create the top-level parser
+parser = argparse.ArgumentParser(description='experimaestro script.')
+subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+parser.set_defaults(dir=dir)
+parser.add_argument("--maven", dest="maven", action="store_true", help="Starts using maven")
+
+parser_server = subparsers.add_parser("server", help="Start the experimaestro server")
+parser_server.set_defaults(func=command_server)
+
+p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_js.set_defaults(func = command_run_js)
+p_run_js.add_argument('files', nargs='*', help='') 
+
+args = parser.parse_args()
+args.func(args)

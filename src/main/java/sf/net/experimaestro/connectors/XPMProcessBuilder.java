@@ -1,3 +1,21 @@
+/*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
@@ -11,7 +29,16 @@ import java.util.Map;
 
 /**
  * This class is used to create processes on a given host through a
- * specific connection method (e.g. direct, ssh)
+ * specific connection method (e.g. direct, ssh).
+ *
+ * This class borrows heavily from {@linkplain java.lang.ProcessBuilder},
+ * with some differences:
+ * <ol>
+ *     <li>There is a parameter to detach the process (e.g. for SSH connections)</li>
+ *     <li>A {@linkplain Job} can be associated to the process for notification</li>
+ *     <li>A path should be associated (if detached) to the process</li>
+ * </ol>
+ *
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -25,6 +52,13 @@ abstract public class XPMProcessBuilder {
     /**  The environment */
     private Map<String, String> environment;
 
+    /** Working directory */
+    String directory;
+
+    /** The path used to create process related files */
+    String path;
+
+    /** The different input/output */
     protected Redirect input;
     protected Redirect output;
     protected Redirect error;
@@ -70,6 +104,16 @@ abstract public class XPMProcessBuilder {
         return this;
     }
 
+    public XPMProcessBuilder path(String path) {
+        this.path = path;
+        return this;
+    }
+
+    public String path() {
+        return path;
+    }
+
+
     public Job job() {
         return job;
     }
@@ -90,7 +134,19 @@ abstract public class XPMProcessBuilder {
         this.detach = detach;
     }
 
-    /** Start the process and return an Experimaestro process */
+    public String directory() {
+        return directory;
+    }
+
+    public XPMProcessBuilder directory(String directory) {
+        this.directory = directory;
+        return this;
+    }
+
+    /**
+     *  Start the process and return an Experimaestro process
+     *  @return A valid {@linkplain XPMProcess}
+     */
     abstract public XPMProcess start() throws LaunchException, IOException;
 
 

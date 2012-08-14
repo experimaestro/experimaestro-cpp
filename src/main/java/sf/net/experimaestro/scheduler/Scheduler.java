@@ -1,21 +1,19 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2011 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.scheduler;
@@ -53,11 +51,6 @@ import java.util.concurrent.TimeUnit;
  * The scheduler
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-/**
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * 
  */
 public class Scheduler {
 	final static private Logger LOGGER = Logger.getLogger();
@@ -258,7 +251,6 @@ public class Scheduler {
 		EntityModel model = new AnnotationModel();
 		model.registerClass(FileProxy.class);
 		storeConfig.setModel(model);
-		dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
 
 		// Add a shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -269,7 +261,8 @@ public class Scheduler {
 		}));
 
 		// Initialise the store
-		resources = new Resources(this, dbStore);
+        dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
+        resources = new Resources(this, dbStore);
         connectors = new Connectors(this, dbStore);
 
 		// Start the threads

@@ -1,21 +1,19 @@
 /*
+ * This file is part of experimaestro.
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
- *  This file is part of experimaestro.
- *  Copyright (c) 2011 B. Piwowarski <benjamin@bpiwowar.net>
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  experimaestro is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  experimaestro is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package sf.net.experimaestro.utils;
@@ -28,6 +26,7 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.utils.log.Logger;
 
 import static java.lang.String.format;
@@ -197,4 +196,23 @@ public class JSUtils {
 
 		return document;
 	}
+
+    /**
+     * Add a new javascript function to the scope
+     *
+     * @param aClass The class where the function should be searched
+     * @param scope The scope where the function should be defined
+     * @param fname The function name
+     * @param prototype The prototype or null. If null, uses the standard Context, Scriptablem Object[], Function prototype
+     *                  used by Rhino JS
+     * @throws NoSuchMethodException If
+     */
+    public static void addFunction(Class<?> aClass, Scriptable scope, final String fname,
+                                   Class<?>[] prototype) throws NoSuchMethodException {
+        if (prototype == null)
+            prototype = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
+        final FunctionObject f = new FunctionObject(fname,
+                aClass.getMethod("js_" + fname, prototype), scope);
+        ScriptableObject.putProperty(scope, fname, f);
+    }
 }
