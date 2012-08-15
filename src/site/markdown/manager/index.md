@@ -21,6 +21,7 @@ The goals of the experimaestro manager are to:
 # Main concepts
 
 The main concepts of the manager are:
+
 * All messages between tasks are valid XML documents. This is described in [this document](xml.html).
 * Tasks are the unit on which experiments are built, and correspond roughly to either the execution of a long process,
     or to a configuration task. Tasks can be composed in various ways to allow a compact representation of

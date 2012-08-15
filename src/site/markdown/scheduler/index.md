@@ -67,11 +67,12 @@
   * `${FILE}.err`  contains the error log output (jobs only)
   * `${FILE}.out`  contains the standard log output (jobs only)
 
+# Using experimaestro
 
 
-# Configuration
+## Configuration
 
-  The server and clients are configured by a simple property file
+  The server and clients are configured by a simple property file, located in the `.experimaestro` (by default) file in the user's home directory.
 
     [server]
     ; Port for the Web server (and the XML-RPC server)
@@ -87,3 +88,10 @@
 
     url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
 
+## Starting experimaestro
+
+The `experimaestro` script can be used to start or stop the server, add jobs and resources. Type:
+
+    experimaestro --help
+
+to get some help on available commands.
