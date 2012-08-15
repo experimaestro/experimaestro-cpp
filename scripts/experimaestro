@@ -23,6 +23,7 @@ def jarpaths():
 def start_jar(args, jarargs):
     if args.maven:
         command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"] 
+        jarargs = [arg for arg in jarargs]
         command.append("-Dexec.args=%s" % string.join(jarargs, " "))
 
     else:
@@ -36,16 +37,55 @@ def start_jar(args, jarargs):
         if jarpath is None: raise Exception("Could not find experimaestro jar file")
         command = ["java","-Xmx1g","-jar",jarpath] + jarargs
 
-    print command
+    # print command
     subprocess.call(command)
+
+def getProperties(filename):
+   """Get a dictionnary from a property file
+   """
+   propFile= file(filename, "rU" )
+
+   # Set some default values
+   propDict= dict()
+   propDict["url"] = "http://localhost:8080"
+   
+   # Read the properties
+   for propLine in propFile:
+      propDef= propLine.strip()
+      if len(propDef) == 0:
+         continue
+      if propDef[0] in ( '!', '#' ):
+         continue
+      punctuation= [ propDef.find(c) for c in ':= ' ] + [ len(propDef) ]
+      found= min( [ pos for pos in punctuation if pos != -1 ] )
+      name= propDef[:found].rstrip()
+      value= propDef[found:].lstrip(":= ").rstrip()
+      propDict[name]= value
+   propFile.close()
+   return propDict
+
+
+def getServer(args):
+    # Get the configuration
+    configfile=os.path.expanduser(args.config)
+    
+    # Initialise the server
+    config = getProperties(configfile)
+    url = config["url"]
+    xmlrpc = xmlrpclib.ServerProxy(url, verbose=False)
+    return xmlrpc
 
 # --- Server
 
-def command_server(args):
+def command_server_start(args):
     start_jar(args, ["server"])
 
+def command_server_stop(args):
+    server = getServer(args)
+    server.Server.shutdown();
+
 def command_run_js(args):
-    import xpm
+    xmlrpc = getServer(args)
 
     env=[]
     for key,value in os.environ.iteritems():
@@ -55,22 +95,25 @@ def command_run_js(args):
     for filename in sys.argv:
         filename=os.path.abspath(filename)
         print "### Running JS script %s" % filename
-        try:
-            r = xmlrpc.Server.runJSScript(True, filename, env)
-            for line in r[2]:
-                print line
-            if r[0]:
-                print
-                print "### Error while running %s ###" % filename
-                print r[1]
-                sys.exit(r[0])
-                print
-        except xmlrpclib.Fault as e:
-            print e
-            sys.exit(1)
-        except Exception as e:
-            print e
-            sys.exit(1)     
+        # try:
+        r = xmlrpc.Server.runJSScript(True, filename, env)
+        if len(r) >2:
+          for line in r[2]:
+            print line
+        if r[0]:
+            print
+            print "### Error while running %s ###" % filename
+            print r[1]
+            sys.exit(r[0])
+            print
+        # except xmlrpclib.Fault as e:
+        #     print e
+        #     raise e
+        #     # sys.exit(1)
+        # except Exception as e:
+        #     print e
+        #     raise e
+        #     # sys.exit(1)     
 
 # --- Run command
 
@@ -80,9 +123,14 @@ parser = argparse.ArgumentParser(description='experimaestro script.')
 subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 parser.set_defaults(dir=dir)
 parser.add_argument("--maven", dest="maven", action="store_true", help="Starts using maven")
+parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store", \
+  help="Experimaestro configuration file")
 
-parser_server = subparsers.add_parser("server", help="Start the experimaestro server")
-parser_server.set_defaults(func=command_server)
+subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
+subparser.set_defaults(func=command_server_start)
+
+subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
+subparser.set_defaults(func=command_server_stop)
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_js.set_defaults(func = command_run_js)
