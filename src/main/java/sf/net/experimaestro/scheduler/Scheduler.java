@@ -426,7 +426,11 @@ public class Scheduler {
 				}
 
 				// ... and wait if we were not lucky (or there were no tasks)
-				wait();
+				try {
+                    wait();
+                } catch(InterruptedException e) {
+                    // The server stopped
+                }
 			}
 
 		}

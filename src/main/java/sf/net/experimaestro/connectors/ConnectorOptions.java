@@ -18,9 +18,11 @@
 
 package sf.net.experimaestro.connectors;
 
+import org.mozilla.javascript.ScriptableObject;
+
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 25/6/12
  */
-public class ConnectorOptions {
+public abstract class ConnectorOptions extends ScriptableObject {
 }

@@ -49,7 +49,12 @@ public class JSUtils {
 		return (T) unwrap(_value);
 	}
 
-	private static Object unwrap(Object object) {
+    /**
+     * Unwrap a JavaScript object (if necessary)
+     * @param object
+     * @return
+     */
+	public static Object unwrap(Object object) {
 		if (object instanceof Wrapper)
 			object = ((Wrapper) object).unwrap();
 		return object;

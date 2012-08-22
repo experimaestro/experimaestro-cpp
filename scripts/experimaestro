@@ -6,25 +6,37 @@ import subprocess
 import argparse
 import string
 import xmlrpclib
+import logging      
 
 
 # --- Set some variables
 
-dir=os.path.dirname(os.path.abspath(__file__))
+dir=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 version="0.0.1-SNAPSHOT"
 jarname="experimaestro-%s.jar" % version
+
+logging.basicConfig(level=logging.INFO)
 
 # --- Check paths
 
 def jarpaths():
+    """Returns the different paths where the JAR file can be located"""
     yield os.path.join(dir, jarname)
-    yield os.path.join(os.path.dirname(dir), "target", "experimaestro-%s-bin" % version, jarname)
+    yield os.path.join(dir, "target", "experimaestro-%s-bin" % version, jarname)
 
 def start_jar(args, jarargs):
-    if args.maven:
-        command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"] 
-        jarargs = [arg for arg in jarargs]
-        command.append("-Dexec.args=%s" % string.join(jarargs, " "))
+    # Check what if we start using maven
+    mvnFile = os.path.join(dir, "pom.xml")
+    if not os.path.exists(mvnFile): mvnFile = None
+
+    if args.maven or mvnFile is not None:
+      logging.info("Starting with maven")
+      command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"] 
+      if mvnFile is not None: 
+        command.append("--file")
+        command.append(mvnFile)
+      jarargs = [arg for arg in jarargs]
+      command.append("-Dexec.args=%s" % string.join(jarargs, " "))
 
     else:
         jarpath = None
@@ -38,6 +50,7 @@ def start_jar(args, jarargs):
         command = ["java","-Xmx1g","-jar",jarpath] + jarargs
 
     # print command
+    logging.debug('Runnig command %s' % command)
     subprocess.call(command)
 
 def getProperties(filename):
@@ -92,28 +105,26 @@ def command_run_js(args):
        env.append([key,value])
 
     # Get the command line
-    for filename in sys.argv:
+    for filename in args.files:
         filename=os.path.abspath(filename)
-        print "### Running JS script %s" % filename
-        # try:
-        r = xmlrpc.Server.runJSScript(True, filename, env)
-        if len(r) >2:
-          for line in r[2]:
-            print line
-        if r[0]:
-            print
-            print "### Error while running %s ###" % filename
-            print r[1]
-            sys.exit(r[0])
-            print
-        # except xmlrpclib.Fault as e:
-        #     print e
-        #     raise e
-        #     # sys.exit(1)
-        # except Exception as e:
-        #     print e
-        #     raise e
-        #     # sys.exit(1)     
+        logging.info("Running JS script %s" % filename)
+        try:
+          r = xmlrpc.Server.runJSScript(True, filename, env)
+          if len(r) >2:
+            for line in r[2]:
+              print line
+          if r[0]:
+              print
+              print "### Error while running %s ###" % filename
+              print r[1]
+              sys.exit(r[0])
+              print
+        except xmlrpclib.Fault as e:
+            print e
+            sys.exit(1)
+        except Exception as e:
+            print e
+            sys.exit(1)     
 
 # --- Run command
 
@@ -122,7 +133,9 @@ def command_run_js(args):
 parser = argparse.ArgumentParser(description='experimaestro script.')
 subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 parser.set_defaults(dir=dir)
-parser.add_argument("--maven", dest="maven", action="store_true", help="Starts using maven")
+parser.add_argument("--log", dest="loglevel", action="store", help="Log level", \
+  choices = ["debug", "info", "warn"], default="info")
+parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store", \
   help="Experimaestro configuration file")
 
@@ -133,8 +146,18 @@ subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro se
 subparser.set_defaults(func=command_server_stop)
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
 p_run_js.set_defaults(func = command_run_js)
 p_run_js.add_argument('files', nargs='*', help='') 
 
+# Parse arguments
 args = parser.parse_args()
-args.func(args)
+
+numeric_level = getattr(logging, args.loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+
+try: args.func(args)
+except Exception as e:
+  print e
+  sys.exit(1)

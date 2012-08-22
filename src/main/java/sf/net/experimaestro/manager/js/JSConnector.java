@@ -18,28 +18,59 @@
 
 package sf.net.experimaestro.manager.js;
 
-import com.jcraft.jsch.JSchException;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.ConnectorOptions;
-import sun.org.mozilla.javascript.internal.ScriptableObject;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.utils.JSUtils;
 
 import java.net.URISyntaxException;
 
 /**
  * Simple JavaScript interface to a connector object
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 12/6/12
  */
 public class JSConnector extends ScriptableObject {
     private Connector connector;
 
+
+    public JSConnector() {}
+
+    public JSConnector(Connector connector) {
+        this.connector = connector;
+    }
+
+
     Connector getConnector() {
         return connector;
     }
 
-    public void jsConstructor(String uri, ConnectorOptions options) throws JSchException, URISyntaxException {
-        connector = Connector.create(uri, options);
+
+    public static JSConnector jsConstructor(Context cx, Object[] args,
+                                            Function ctorObj,
+                                            boolean inNewExpr) {
+        final int nbArgs = args.length;
+        if (nbArgs < 1 || nbArgs > 2)
+            throw new IllegalArgumentException("Connector constructor takes one or two arguments");
+
+        final String uriString = Context.toString(args[0]);
+
+        ConnectorOptions options = null;
+        if (nbArgs == 2)
+            options = (ConnectorOptions) JSUtils.unwrap(args[1]);
+
+        try {
+            Connector connector = Connector.create(uriString, options);
+            return new JSConnector(connector);
+        } catch (URISyntaxException e) {
+            throw new ExperimaestroRuntimeException(e);
+        }
     }
+
 
     @Override
     public String getClassName() {

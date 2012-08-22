@@ -52,10 +52,11 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      * Initialization with a connector id. The object needs to be initialized
      * with {@linkplain #init(Scheduler)}
      *
-     * @param path The path to the resource on the main connector
+     * @param connectorId The path to the resource on the main connector
      */
-    public ResourceLocator(String path) {
-        this.path = path;
+    public ResourceLocator(String connectorId) {
+        this.connectorId = connectorId;
+        this.path = "/";
     }
 
     public ResourceLocator(ResourceLocator other) {
@@ -67,6 +68,8 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     void init(Scheduler scheduler) throws DatabaseException {
         connector = scheduler.getConnector(connectorId);
     }
+
+
 
     public String getPath() {
         return path;
@@ -128,9 +131,12 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      * @throws FileSystemException If something goes wrong while accessing the file system
      */
     public ResourceLocator resolvePath(String path, boolean parent) throws FileSystemException {
-        FileObject file = connector.getMainConnector().resolveFile(this.path);
+        // Get the current file
+        FileObject file = getFile();
+
+        // Get the target
         FileObject target = (parent ? file.getParent() : file).resolveFile(path);
-        return new ResourceLocator(connector, file.getName().getPath());
+        return new ResourceLocator(connector, target.getName().getPath());
     }
 
     public FileObject getFile() throws FileSystemException {

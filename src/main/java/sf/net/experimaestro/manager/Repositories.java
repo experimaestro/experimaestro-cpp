@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager;
 
 import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.TreeMap;
 
@@ -29,6 +30,9 @@ import java.util.TreeMap;
  * @date 15/6/12
  */
 public class Repositories extends Repository {
+    /** Our logger */
+    static final private Logger LOGGER = Logger.getLogger();
+
     /** Our repositories */
     TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<ResourceLocator, RepositoryInformation>();
 
@@ -75,6 +79,7 @@ public class Repositories extends Repository {
      * @param priority
      */
     public void add(AbstractRepository repository, int priority) {
+        LOGGER.info("Adding repository %s", repository.identifier);
         repositories.put(repository.identifier, new RepositoryInformation(repository, priority));
     }
 

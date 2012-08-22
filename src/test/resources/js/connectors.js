@@ -1,4 +1,4 @@
-/*
+	/*
  * This file is part of experimaestro.
  * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
@@ -30,7 +30,13 @@ xpm.log("Repository path is " + repository_path);
  */
 
 function test_local() {
-	include_repository("");
+	include_repository(repository_path);
+	var task = xpm.getTask("a.b.c", "task");
+	task.setParameter("x", "10");
+	var r = task.run();
+	var v = r.xp::value.@value;
+	if (v != 10) 
+		throw new java.lang.String.format("Value [%s] is different from 10", v);
 }
 
 
@@ -43,8 +49,6 @@ function test_local() {
 
 // Get the SSH port of the embedded SSH server
 
-var port = sshd_server();
-xpm.log("SSH server on port " + port);
 
 
 
@@ -52,20 +56,32 @@ xpm.log("SSH server on port " + port);
 
 
 // --- Set the SSH options
-var sshOptions = new ConnectorOptions("ssh");
-sshOptions.useSSHAgent(true);
+
+// 
+// sshOptions.useSSHAgent(true);
 
 
 // --- One SSH host
 
 function test_ssh() {
-	var big_ssh = new SSHConnector("ssh://user@localhost", sshOptions);
-	include_repository(big_ssh, script_path + ".inc");
+	var sshOptions = SSHOptions();
+	sshOptions.password = "user";
 
-	var irc = xpm.getTask(qname("test", "get-task"));
-	irc.setParameter("x", "1");
-	var result = irc.run();
+	var port = sshd_server();
+	xpm.log("SSH server on port " + port);
+
+	var big_ssh = new Connector("ssh://user@localhost" + ":" + port );
+	include_repository(big_ssh, repository_path);
+
+	var task = xpm.getTask(qname("a.b.c", "task"));
+	task.setParameter("x", "10");
+	var r = task.run();
+	var v = r.xp::value.@value;
+	if (v != 10) 
+		throw new java.lang.String.format("Value [%s] is different from 10", v);
 }
+
+test_ssh();
 
 // --- Use a group of machines
 function test_ssh_group() {
@@ -76,6 +92,6 @@ function test_ssh_group() {
 
 	// Choose (randomly) one connector in the group, and parse the repository
 	// that will be associated to all repositories
-	include_repository(group, script_path + ".inc");
+	include_repository(group, repository_path);
 
 }

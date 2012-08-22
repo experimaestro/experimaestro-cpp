@@ -79,7 +79,7 @@
 
    * `qname(uri, name)` returns a qualified name
    * `script_file()` returns a FileObject
-   * `include_repository(path)` includes a repository. The difference with the `include(path)` function is that the repository can be cached. 
+   * `include_repository([connector,] path)` includes a repository. The difference with the `include(path)` function is that the repository can be cached. An optional `connector` can be used - by default, the current script connector is used.
    
 # XPM object
 

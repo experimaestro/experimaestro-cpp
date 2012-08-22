@@ -31,6 +31,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.*;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -81,7 +82,8 @@ public class ServerTask extends AbstractTask {
         File taskmanagerDirectory = new File(property);
         final Scheduler taskManager = new Scheduler(taskmanagerDirectory);
 
-        final Repositories repositories = new Repositories(new ResourceLocator("xpm:"));
+        // Main repository
+        final Repositories repositories = new Repositories(new ResourceLocator(XPMConnector.getInstance(), ""));
 
         server = new Server(port);
 

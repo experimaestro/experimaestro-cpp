@@ -30,30 +30,65 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.sftp.IdentityRepositoryFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
+import org.mozilla.javascript.annotations.JSConstructor;
+import org.mozilla.javascript.annotations.JSSetter;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 25/6/12
  */
-public class SSHOptions extends ConnectorOptions {
-    FileSystemOptions options;
+public class SSHOptions extends ConnectorOptions  {
+    /** Password - TODO: encrypt before storing */
+    String password;
 
+    String compression;
 
-    public void setCompression(String name) throws FileSystemException {
-        SftpFileSystemConfigBuilder.getInstance().setCompression(options, name);
+    boolean useSSHAgent = true;
+
+    @JSSetter
+    public void setCompression(String compression) {
+        this.compression = compression;
     }
 
-    public void setUseSSHAgent(boolean use) throws FileSystemException {
-        if (use)
-            SftpFileSystemConfigBuilder.getInstance().setIdentityRepositoryFactory(options, new AgentRepositoryFactory());
+    @JSSetter
+    public void setUseSSHAgent(boolean useSSHAgent) {
+        this.useSSHAgent = useSSHAgent;
+
+    }
+
+    public FileSystemOptions getOptions() throws FileSystemException {
+        FileSystemOptions options = new FileSystemOptions();
+
+        final SftpFileSystemConfigBuilder builder = SftpFileSystemConfigBuilder.getInstance();
+
+        // Use root file system
+        builder.setUserDirIsRoot(options, false);
+
+        if (compression != null)
+            builder.setCompression(options, compression);
+
+        if (useSSHAgent)
+            builder.setIdentityRepositoryFactory(options, new AgentRepositoryFactory());
         else
-            SftpFileSystemConfigBuilder.getInstance().setIdentityRepositoryFactory(options, null);
+            builder.setIdentityRepositoryFactory(options, null);
 
+        return options;
     }
 
-    public FileSystemOptions getOptions() {
-        return options;
+    @JSSetter
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    @Override
+    public String getClassName() {
+        return "SSHOptions";
+    }
+
+    @JSConstructor
+    static public SSHOptions jsConstructor() {
+        return new SSHOptions();
     }
 
     /** Use the SSH agent to connect */

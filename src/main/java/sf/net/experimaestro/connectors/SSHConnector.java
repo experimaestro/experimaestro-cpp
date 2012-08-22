@@ -67,12 +67,14 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Port
      */
-    int port = 22;
+    int port = SSHD_DEFAULT_PORT;
 
     /**
      * Connection options
      */
-    private SSHOptions options;
+    private SSHOptions options = new SSHOptions();
+
+    private static final int SSHD_DEFAULT_PORT = 22;
 
     /**
      * Used for serialization
@@ -136,18 +138,29 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public FileSystem doGetFileSystem() throws FileSystemException {
-        return VFS.getManager().resolveFile(String.format("sftp://%s@%s", username, hostname)).getFileSystem();
+        final FileSystem fileSystem = VFS.getManager()
+                .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
+        return fileSystem;
     }
 
-    public SSHConnector(String username, String hostname, ConnectorOptions options) {
-        super(String.format("ssh://%s@%s", username, hostname));
+    /**
+     *
+     * @param username
+     * @param hostname
+     * @param port
+     * @param options
+     */
+    public SSHConnector(String username, String hostname, int port, ConnectorOptions options) {
+        super(String.format("ssh://%s:%d@%s", username, port, hostname));
         this.username = username;
         this.hostname = hostname;
-        this.options = (SSHOptions) options;
+        this.port = port > 0 ? port : SSHD_DEFAULT_PORT;
+        if (options != null)
+            this.options = (SSHOptions) options;
     }
 
     public SSHConnector(URI uri, ConnectorOptions options) {
-        this(uri.getUserInfo(), uri.getHost(), options);
+        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
     }
 
 

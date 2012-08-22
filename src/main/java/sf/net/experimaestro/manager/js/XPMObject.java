@@ -28,6 +28,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SSHOptions;
 import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -136,6 +137,8 @@ public class XPMObject {
         ScriptableObject.defineClass(scope, TaskFactoryJSWrapper.class);
         ScriptableObject.defineClass(scope, TaskJSWrapper.class);
         ScriptableObject.defineClass(scope, JSScheduler.class);
+        ScriptableObject.defineClass(scope, JSConnector.class);
+        ScriptableObject.defineClass(scope, SSHOptions.class);
 
         // Launchers
         ScriptableObject.defineClass(scope, JSOARLauncher.class);
@@ -147,15 +150,16 @@ public class XPMObject {
         JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
         JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
 
+        // Adds some special functions available for tests only
+        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
+
 
         // TODO: would be good to have this at a global level
         //addFunction(scope, "include", new Class<?>[] { String.class });
 
-        // Add this object
-        ScriptableObject.defineProperty(scope, "xpm", this, 0);
-
         // --- Add new objects
 
+        ScriptableObject.defineProperty(scope, "xpm", this, 0);
         addNewObject(cx, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
         addNewObject(cx, scope, "scheduler", "Scheduler",
@@ -177,7 +181,7 @@ public class XPMObject {
      * @param path
      * @return
      */
-    public void includeRepository(Object _connector, String path) throws Exception, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public void includeRepository(Object _connector, String path) throws Exception, InstantiationException, IllegalAccessException {
         // Get the connector
         if (_connector instanceof Wrapper)
             _connector = ((Wrapper) _connector).unwrap();
@@ -224,9 +228,11 @@ public class XPMObject {
         XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
 
         if (args.length == 1)
-            xpm.includeRepository((String) FunctionObject.convertArg(cx, thisObj, args[0], FunctionObject.JAVA_STRING_TYPE));
+            // Use the current connector
+            xpm.includeRepository(Context.toString(args[0]));
         else if (args.length == 2)
-            xpm.includeRepository(args[0], (String) FunctionObject.convertArg(cx, thisObj, args[1], FunctionObject.JAVA_STRING_TYPE));
+            // Use the supplied connector
+            xpm.includeRepository(args[0], Context.toString(args[1]));
         else
             throw new IllegalArgumentException("includeRepository expects one or two arguments");
     }
@@ -396,8 +402,7 @@ public class XPMObject {
      * @throws IOException
      * @throws InterruptedException
      */
-    public NativeArray evaluate(Object jsargs) throws Exception,
-            InterruptedException {
+    public NativeArray evaluate(Object jsargs) throws Exception {
         final String[] args;
         if (jsargs instanceof NativeArray) {
             NativeArray array = ((NativeArray) jsargs);

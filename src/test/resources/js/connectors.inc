@@ -16,7 +16,25 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var python_script = script_file().getParent().getName().getPath() + "/connectors.py";
 
 var task = {
+    // The id of the task is an XML qualified name 
+    id: xpm.qName("a.b.c", "task"),
+    
+    // One input of type xp:integer
+    inputs: <inputs><input type="xp:integer" id="x"/></inputs>,
+    
+    // One output of type xp:integer
+    outputs: <outputs><output type="xp:integer"/></outputs>,
 	
-}
+    // The function that will be called when the task is run
+	run: function(inputs) {
+        v = xpm.evaluate(["python", python_script]);
+		return <outputs>{inputs.x + v}</outputs>;
+	}
+		
+};
+
+// Add the task to the list of available factories
+xpm.addTaskFactory(task);
