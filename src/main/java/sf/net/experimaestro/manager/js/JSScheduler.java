@@ -20,10 +20,15 @@ package sf.net.experimaestro.manager.js;
 
 import com.sleepycat.je.DatabaseException;
 import org.mozilla.javascript.*;
+import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.ArrayList;
@@ -69,7 +74,9 @@ public class JSScheduler extends ScriptableObject {
      * @return
      * @throws DatabaseException
      */
-    public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
+    @JSFunction("command_line_job")
+    public void commandlineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
+
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
@@ -131,6 +138,12 @@ public class JSScheduler extends ScriptableObject {
             }
 
             // --- Redirect standard output
+            final Object stdin = JSUtils.unwrap(options.get("stdin", options));
+            if (stdin instanceof String) {
+               task.setInput((String)stdin);
+            } else throw new ExperimaestroRuntimeException("Unsupported stdin type", stdin.getClass());
+
+            // --- Redirect standard output
             final Object stdout = options.get("stdout", options);
 
             // --- Redirect standard error
@@ -142,4 +155,9 @@ public class JSScheduler extends ScriptableObject {
         scheduler.add(task);
     }
 
+    public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
+        commandlineJob(identifier, jsargs, jsoptions);
+    }
+
 }
+

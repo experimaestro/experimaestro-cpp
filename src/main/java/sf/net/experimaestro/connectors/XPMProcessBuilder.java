@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.connectors;
 
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
@@ -153,12 +154,19 @@ abstract public class XPMProcessBuilder {
     /**
      * Represents a process source of input or output
      */
+    @Persistent
     static public class Redirect {
         private FileObject file;
+        private String string;
+
         private Type type;
 
         public static final Redirect PIPE = new Redirect(Type.PIPE, null);
         public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
+
+        private Redirect() {
+            this.type = Type.INHERIT;
+        }
 
         private Redirect(Type type, FileObject file) {
             this.type = type;
@@ -173,6 +181,10 @@ abstract public class XPMProcessBuilder {
             return file;
         }
 
+        public String string() {
+            return string;
+        }
+
         public Type type() {
             return type;
         }
@@ -181,23 +193,23 @@ abstract public class XPMProcessBuilder {
             READ, APPEND, WRITE, PIPE, INHERIT;
 
             public boolean isReader() {
-                return this == READ;
+                return this == READ || this == INHERIT || this == PIPE;
             }
 
             public boolean isWriter() {
-                return this == APPEND || this == WRITE;
+                return this == APPEND || this == WRITE || this == PIPE || this == INHERIT;
             }
         }
 
-        static Redirect from(FileObject file) {
+        static public Redirect from(FileObject file) {
             return new Redirect(Type.READ, file);
         }
 
-        static Redirect append(FileObject file) {
+        static public Redirect append(FileObject file) {
             return new Redirect(Type.APPEND, file);
         }
 
-        static Redirect to(FileObject file) {
+        static public Redirect to(FileObject file) {
             return new Redirect(Type.WRITE, file);
         }
     }

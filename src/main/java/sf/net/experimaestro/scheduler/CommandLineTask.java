@@ -25,6 +25,7 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +60,16 @@ public class CommandLineTask extends Job {
     public String[] envp = null;
 
     public String workingDirectory;
+
+    /**
+     * The input source, if any
+     */
+    private XPMProcessBuilder.Redirect jobInput = XPMProcessBuilder.Redirect.INHERIT;
+
+    /**
+     * If the input source is a string (and jobInput is PIPE), store it in this variable
+     */
+    private String jobInputString;
 
     protected CommandLineTask() {
     }
@@ -128,11 +139,21 @@ public class CommandLineTask extends Job {
         XPMProcessBuilder builder = launcher.processBuilder(connector);
 
         builder.command(command);
+
+        builder.redirectInput(jobInput);
         builder.detach(true);
 
-        // TODO: redirect output & input
+        final XPMProcess process = builder.start();
 
-        return builder.start();
+        // Write the input if needed
+        if (jobInput == XPMProcessBuilder.Redirect.PIPE) {
+            assert(jobInputString != null);
+            final OutputStream outputStream = process.getOutputStream();
+            outputStream.write(jobInputString.getBytes());
+            outputStream.close();
+        }
+
+        return process;
     }
 
     @Override
@@ -170,5 +191,10 @@ public class CommandLineTask extends Job {
 
     public void setLauncher(Launcher launcher) {
         this.launcher = launcher;
+    }
+
+    public void setInput(String jobInput) {
+        this.jobInput = XPMProcessBuilder.Redirect.PIPE;
+        this.jobInputString = jobInput;
     }
 }

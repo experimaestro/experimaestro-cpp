@@ -95,6 +95,7 @@ public abstract class Input {
 		this.type = type;
 	}
 
+
 	public void setOptional(boolean optional) {
 		this.optional = optional;
 	}

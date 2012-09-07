@@ -72,4 +72,9 @@ public class XMLValue extends Value {
 		if (other.value != null)
 			value = (Document) other.value.cloneNode(true);
 	}
+
+    @Override
+    public boolean isSet() {
+        return value != null;
+    }
 }

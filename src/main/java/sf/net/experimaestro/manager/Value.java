@@ -226,4 +226,9 @@ public abstract class Value {
 		this.input = other.input;
 	}
 
+    /** Checks whether the value was set */
+    public boolean isSet() {
+        return get() != null;
+    }
+
 }

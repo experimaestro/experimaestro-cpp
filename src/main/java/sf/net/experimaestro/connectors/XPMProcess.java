@@ -26,10 +26,7 @@ import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +44,7 @@ import java.util.concurrent.TimeUnit;
  * @date June 2012
  */
 @Persistent
-public abstract class XPMProcess extends Process {
+public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -78,7 +75,7 @@ public abstract class XPMProcess extends Process {
     /**
      * Creates a new job monitor from a process
      *
-     * @param job    The attached job
+     * @param job    The attached job (If any)
      * @param pid    The process ID
      * @param notify If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
      *               Otherwise, it is the caller job to set it up.
@@ -89,7 +86,7 @@ public abstract class XPMProcess extends Process {
         this.job = job;
 
         // Set up the notification thread if needed
-        if (notify) {
+        if (notify && job != null) {
             new Thread(String.format("job monitor [%s]", job.getLocator())) {
                 @Override
                 public void run() {
@@ -251,4 +248,30 @@ public abstract class XPMProcess extends Process {
             job.notify(null, new EndOfJobMessage(exitValue()));
         }
     }
+
+    /**
+     * @see {@linkplain Process#getOutputStream()}
+     */
+    abstract public OutputStream getOutputStream();
+
+    /**
+     * @see {@linkplain Process#getErrorStream()}
+     */
+    abstract public InputStream getErrorStream();
+
+    /**
+     * @see {@linkplain Process#getInputStream()}
+     */
+    abstract public InputStream getInputStream();
+
+    /**
+     * @see {@linkplain Process#waitFor()}
+     */
+    abstract public int waitFor() throws InterruptedException;
+
+    /**
+     * @see {@linkplain Process#destroy()}
+     */
+    abstract public void destroy();
+
 }

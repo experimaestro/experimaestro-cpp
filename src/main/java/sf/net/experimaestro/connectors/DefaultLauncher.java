@@ -18,11 +18,14 @@
 
 package sf.net.experimaestro.connectors;
 
+import com.sleepycat.persist.model.Persistent;
+
 /**
  * sf.net.experimaestro.connectors
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent
 public class DefaultLauncher implements Launcher {
     @Override
     public XPMProcessBuilder processBuilder(SingleHostConnector connector) {

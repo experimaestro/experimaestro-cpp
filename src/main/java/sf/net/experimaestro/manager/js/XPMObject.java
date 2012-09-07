@@ -29,6 +29,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SSHOptions;
+import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -149,13 +150,12 @@ public class XPMObject {
         JSUtils.addFunction(XPMObject.class, scope, "qname", new Class<?>[]{Object.class, String.class});
         JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
         JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
-
+        JSUtils.addFunction(XPMObject.class, scope, "include", null);
         // Adds some special functions available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
 
         // TODO: would be good to have this at a global level
-        //addFunction(scope, "include", new Class<?>[] { String.class });
 
         // --- Add new objects
 
@@ -179,9 +179,11 @@ public class XPMObject {
      *
      * @param _connector
      * @param path
+     * @param repositoryMode True if we include a repository
      * @return
      */
-    public void includeRepository(Object _connector, String path) throws Exception, InstantiationException, IllegalAccessException {
+    public void include(Object _connector, String path, boolean repositoryMode)
+            throws Exception, InstantiationException, IllegalAccessException {
         // Get the connector
         if (_connector instanceof Wrapper)
             _connector = ((Wrapper) _connector).unwrap();
@@ -192,7 +194,7 @@ public class XPMObject {
         else
             connector = (Connector) _connector;
 
-        includeRepository(new ResourceLocator(connector, path));
+        include(new ResourceLocator(connector, path), repositoryMode);
     }
 
     /**
@@ -202,40 +204,72 @@ public class XPMObject {
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    public void includeRepository(String path) throws Exception, IllegalAccessException, InstantiationException {
+    public void include(String path, boolean repositoryMode) throws Exception, IllegalAccessException, InstantiationException {
         ResourceLocator scriptpath = currentResourceLocator.resolvePath(path, true);
         LOGGER.debug("Including repository file [%s]", scriptpath);
-        includeRepository(scriptpath);
-    }
-
-    private void includeRepository(ResourceLocator scriptpath) throws Exception {
-        // Run the script in a new environment
-        final ScriptableObject newScope = context.initStandardObjects();
-        final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
-
-        final XPMObject xpmObject = new XPMObject(scriptpath, context, newEnvironment, newScope, repository, scheduler);
-
-        InputStream inputStream = scriptpath.getFile().getContent().getInputStream();
-        Context.getCurrentContext().evaluateReader(newScope, new InputStreamReader(inputStream), scriptpath.toString(), 1, null);
+        include(scriptpath, repositoryMode);
     }
 
     /**
-     * Javascript method calling {@linkplain #includeRepository(String)}
+     * Final method called for inclusion of a script
+     * @param scriptpath
+     * @param repositoryMode If true, runs in a separate environement
+     * @throws Exception
      */
-    static public void js_include_repository(Context cx, Scriptable thisObj, Object[] args,
-                                             Function funObj) throws Exception {
-        // Get the XPM object
+    private void include(ResourceLocator scriptpath, boolean repositoryMode) throws Exception {
+
+        try(InputStream inputStream = scriptpath.getFile().getContent().getInputStream()) {
+            Scriptable scriptScope = scope;
+            if (repositoryMode) {
+                // Run the script in a new environment
+                scriptScope = context.initStandardObjects();
+                final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
+                final XPMObject xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler);
+
+            }
+
+            Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), scriptpath.toString(), 1, null);
+
+        }
+
+    }
+
+
+    static void include(Context cx, Scriptable thisObj, Object[] args,
+                 Function funObj, boolean repositoryMode) throws Exception {
         XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
 
         if (args.length == 1)
             // Use the current connector
-            xpm.includeRepository(Context.toString(args[0]));
+            xpm.include(Context.toString(args[0]), repositoryMode);
         else if (args.length == 2)
             // Use the supplied connector
-            xpm.includeRepository(args[0], Context.toString(args[1]));
+            xpm.include(args[0], Context.toString(args[1]), repositoryMode);
         else
             throw new IllegalArgumentException("includeRepository expects one or two arguments");
+
     }
+
+
+    /**
+     * Javascript method calling {@linkplain #include(String, boolean)}
+     */
+    static public void js_include_repository(Context cx, Scriptable thisObj, Object[] args,
+                                             Function funObj) throws Exception {
+
+        include(cx, thisObj, args, funObj, true);
+    }
+
+    /**
+     * Javascript method calling {@linkplain #include(String, boolean)}
+     */
+    static public void js_include(Context cx, Scriptable thisObj, Object[] args,
+                                             Function funObj) throws Exception {
+
+        include(cx, thisObj, args, funObj, false);
+    }
+
+
 
     /**
      * Returns the current script location
@@ -291,26 +325,6 @@ public class XPMObject {
         repository.addFactory(f);
         return context.newObject(scope, "XPMTaskFactory",
                 new Object[]{Context.javaToJS(f, scope)});
-    }
-
-    /**
-     * Include a javascript
-     *
-     * @param path
-     * @throws IOException
-     * @throws FileNotFoundException
-     */
-    public void include(String path) throws Exception,
-            IOException {
-
-        ResourceLocator file = currentResourceLocator.resolvePath(path, true);
-        LOGGER.debug("Including file [%s]", file);
-
-        ResourceLocator oldWorkingDirectory = currentResourceLocator;
-        InputStreamReader in = new InputStreamReader(file.getFile().getContent().getInputStream());
-        Context.getCurrentContext().evaluateReader(scope, in, file.toString(), 1, null);
-
-        currentResourceLocator = oldWorkingDirectory;
     }
 
 
@@ -396,7 +410,7 @@ public class XPMObject {
     }
 
     /**
-     * Simple evaluation of shell commands
+     * Simple evaluation of shell commands (does not create a job)
      *
      * @return
      * @throws IOException
@@ -423,7 +437,8 @@ public class XPMObject {
         XPMProcessBuilder builder = currentResourceLocator.getConnector().getConnector(null).processBuilder();
         builder.command(args);
         builder.detach(false);
-        Process p = builder.start();
+        builder.redirectOutput(XPMProcessBuilder.Redirect.PIPE);
+        XPMProcess p = builder.start();
         BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
         int len = 0;

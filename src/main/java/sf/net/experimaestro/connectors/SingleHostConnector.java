@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.connectors;
 
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
@@ -32,6 +33,7 @@ import sf.net.experimaestro.locks.UnlockableException;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent
 abstract public class SingleHostConnector extends Connector implements Launcher {
     /**
      * Underlying filesystem

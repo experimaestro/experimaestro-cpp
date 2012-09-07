@@ -138,6 +138,20 @@ public abstract class Task {
 			}
 		}
 
+        // (3) Check that everything has been done
+        for(Entry<String, Input> entry: factory.getInputs().entrySet()) {
+            // Check if required
+            Input input = entry.getValue();
+            if (!input.isOptional()) {
+                final String name = entry.getKey();
+                final Value value = values.get(name);
+                if (!value.isSet())
+                    throw new ExperimaestroRuntimeException("Parameter [%s] is missing in task [%s]", name, factory.id);
+            }
+
+            // TODO: check type
+        }
+
 		// Do the real-run
 		return doRun();
 	}
@@ -328,16 +342,26 @@ public abstract class Task {
 	/**
 	 * Run an experimental plan
 	 * 
-	 * @param plan
-	 *            The plan string
-	 * @throws ParseException
+	 *
+     * @param planString
+     *            The plan string
+     * @param singlePlan If the plan should be composed of only one plan
+     * @throws ParseException
 	 */
-	public void runPlan(String planString) throws ParseException {
+	public List<Document> runPlan(String planString, boolean singlePlan) throws ParseException {
 		PlanParser planParser = new PlanParser(new StringReader(planString));
 		sf.net.experimaestro.plan.Node plans = planParser.plan();
+        final Iterator<Map<String, String>> iterator = plans.iterator();
+
+        ArrayList<Document> results = new ArrayList<>();
 
 		LOGGER.info("Plan is %s", plans.toString());
-		for (Map<String, String> plan : plans) {
+		while (iterator.hasNext()) {
+            Map<String, String> plan = iterator.next();
+            if (singlePlan && iterator.hasNext()) {
+                throw new ParseException("Plan has several parameter settings");
+            }
+
 			// Run a plan
 			LOGGER.info("Running plan: %s",
 					Output.toString(" * ", plan.entrySet()));
@@ -349,7 +373,9 @@ public abstract class Task {
 				task.setParameter(DotName.parse(kv.getKey()), kv.getValue());
 
 			// and run
-			task.run();
-		}
+            results.add(task.run());
+        }
+
+        return results;
 	}
 }

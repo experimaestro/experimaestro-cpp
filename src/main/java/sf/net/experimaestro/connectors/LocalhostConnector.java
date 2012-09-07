@@ -99,7 +99,7 @@ public class LocalhostConnector extends SingleHostConnector {
          * The running process: if we have it, easier to monitor
          */
         transient private Process process;
-        private Thread destroyThread;
+        transient private Thread destroyThread;
 
         public LocalProcess() {
         }
@@ -165,8 +165,11 @@ public class LocalhostConnector extends SingleHostConnector {
             if (process != null) {
                 // TODO: send a signal first?
                 process.destroy();
+
                 if (destroyThread != null)
-                    Runtime.getRuntime().removeShutdownHook(destroyThread);
+                    try {
+                      Runtime.getRuntime().removeShutdownHook(destroyThread);
+                    } catch(IllegalStateException e) {/* Ignore */}
                 process = null;
             }
 
@@ -190,6 +193,8 @@ public class LocalhostConnector extends SingleHostConnector {
         }
 
         static private java.lang.ProcessBuilder.Redirect convert(Redirect redirect) throws FileSystemException {
+            if (redirect == null) redirect = Redirect.INHERIT;
+
             switch(redirect.type()) {
                 case PIPE:
                     return java.lang.ProcessBuilder.Redirect.PIPE;
@@ -211,14 +216,20 @@ public class LocalhostConnector extends SingleHostConnector {
 
             // Set the environment
             Map<String,String> environment = builder.environment();
-            for(Map.Entry<String,String> entry: environment().entrySet())
-                environment.put(entry.getKey(), entry.getValue());
+            if (environment() != null)
+                for(Map.Entry<String,String> entry: environment().entrySet())
+                    environment.put(entry.getKey(), entry.getValue());
 
             builder.redirectError(convert(error));
             builder.redirectOutput(convert(output));
             builder.redirectInput(convert(input));
 
-            return new LocalProcess(job, builder.start(), detach());
+            builder.command(command());
+
+            final Process process = builder.start();
+            LOGGER.info("Started local job with command [%s]", command().get(0));
+
+            return new LocalProcess(job, process, detach());
         }
     }
 }

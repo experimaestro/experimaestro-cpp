@@ -81,6 +81,11 @@ public class JSTask extends JSAbstractTask {
 		jsObject.put("inputs", jsObject, jsInputs);
 	}
 
+    /**
+     * Run a task
+     * @param convertToE4X
+     * @return
+     */
 	public Scriptable jsrun(boolean convertToE4X) {
 		LOGGER.info("[Running] task: %s", factory.getId());
 		Scriptable result = (Scriptable) runFunction.call(
