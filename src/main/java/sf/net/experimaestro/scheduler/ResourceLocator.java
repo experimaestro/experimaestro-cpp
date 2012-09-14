@@ -152,6 +152,10 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 //    }
 
 
+    public String getConnectorId() {
+        return connectorId;
+    }
+
     public Connector getConnector() {
         if (connector == null)
             throw new ExperimaestroRuntimeException("The locator has not been properly initialized");

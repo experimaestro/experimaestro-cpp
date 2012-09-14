@@ -18,8 +18,10 @@
 
 package sf.net.experimaestro.server;
 
+import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.XmlRpcRequest;
+import org.apache.xmlrpc.metadata.XmlRpcSystemImpl;
 import org.apache.xmlrpc.server.PropertyHandlerMapping;
 import org.apache.xmlrpc.server.RequestProcessorFactoryFactory;
 import org.apache.xmlrpc.server.XmlRpcHandlerMapping;
@@ -27,6 +29,7 @@ import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletConfig;
@@ -34,7 +37,6 @@ import javax.servlet.ServletContext;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Enumeration;
-import java.util.NoSuchElementException;
 
 /**
  * The XML-RPC servlet for experimaestro
@@ -51,10 +53,12 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	private static final long serialVersionUID = 1L;
 	
 	static public final class Config implements ServletConfig {
-		private final XmlRpcServlet xmlRpcServlet;
+        public static final String ENABLED_FOR_EXTENSIONS = "enabledForExtensions";
+        private final XmlRpcServlet xmlRpcServlet;
 
 		public Config(XmlRpcServlet xmlRpcServlet) {
 			this.xmlRpcServlet = xmlRpcServlet;
+
 		}
 
 		public String getServletName() {
@@ -65,26 +69,28 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 			throw new IllegalStateException("Context not available");
 		}
 
-		public String getInitParameter(String pArg0) {
+        String initParameters[] = {ENABLED_FOR_EXTENSIONS};
+
+		public String getInitParameter(String arg) {
+            switch(arg) {
+                case ENABLED_FOR_EXTENSIONS:
+                    return "true";
+
+            }
 			return null;
 		}
 
-		public Enumeration<?> getInitParameterNames() {
-			return new Enumeration<Object>() {
-				public boolean hasMoreElements() {
-					return false;
-				}
 
-				public Object nextElement() {
-					throw new NoSuchElementException();
-				}
-			};
+		public Enumeration<?> getInitParameterNames() {
+            return new IteratorEnumeration(ListAdaptator.create(initParameters).iterator());
 		}
 	}
-	
-	
 
-	/**
+
+
+
+
+    /**
 	 * Initialise the servlet
      *
 	 * @param repository The main repository
@@ -103,7 +109,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 			throws IOException, XmlRpcException {
 		PropertyHandlerMapping mapping = new PropertyHandlerMapping();
 
-		RequestProcessorFactoryFactory factory = new RequestProcessorFactoryFactory() {
+        RequestProcessorFactoryFactory factory = new RequestProcessorFactoryFactory() {
 			public RequestProcessorFactory getRequestProcessorFactory(
 					@SuppressWarnings("rawtypes") final Class pClass) throws XmlRpcException {
 				return new RequestProcessorFactory() {
@@ -112,7 +118,7 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 					public Object getRequestProcessor(XmlRpcRequest pRequest)
 							throws XmlRpcException {
 						try {
-                            LOGGER.info("XML-RPC request is class is %s", pRequest == null ? "null" : pRequest.getClass().getCanonicalName());
+                            LOGGER.debug("XML-RPC request is class is %s", pRequest == null ? "null" : pRequest.getClass().getCanonicalName());
                             // Create a new instance for the class pClass
 							Object object = pClass.newInstance();
 							if (object instanceof RPCHandler) {
@@ -132,13 +138,15 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 		mapping.setRequestProcessorFactoryFactory(factory);
 		mapping.addHandler("Server", RPCHandler.class);
 
-		return mapping;
+        // Adds introspection (system....)
+        XmlRpcSystemImpl.addSystemHandler(mapping);
+       return mapping;
 	}
 
 	@Override
 	protected XmlRpcHandlerMapping newXmlRpcHandlerMapping() {
 		try {
-			return newPropertyHandlerMapping(null);
+            return newPropertyHandlerMapping(null);
 		} catch (Throwable e) {
 			throw new RuntimeException(e);
 		}

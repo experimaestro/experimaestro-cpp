@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.scheduler;
 
+import java.util.EnumSet;
+
 /**
  * The resource state
  * 
@@ -35,7 +37,7 @@ public enum ResourceState {
 	READY,
 
 	/**
-	 * The job is currently running
+	 *  For a job only: The job is currently running
 	 */
 	RUNNING, 
 	
@@ -54,7 +56,10 @@ public enum ResourceState {
 	 */
 	DONE;
 
+
     public boolean isBlocking() {
         return this == ON_HOLD || this == ERROR;
     }
+
+    final static public EnumSet<ResourceState> ACTIVE = EnumSet.of(READY, RUNNING);
 }

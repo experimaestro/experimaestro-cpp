@@ -22,7 +22,6 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
@@ -315,7 +314,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
         // Self-notification
         if (resource == null) {
-            // Notified of an end of job
+            // Notified of the end of job
             if (objects.length == 1 && objects[0] instanceof EndOfJobMessage) {
                 EndOfJobMessage message = (EndOfJobMessage) objects[0];
                 LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), message.code);
@@ -326,7 +325,6 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 XPMProcess old = process;
                 process = null;
 
-                updateDb();
                 scheduler.updateState(this);
                 try {
                     old.dispose();
@@ -337,49 +335,56 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 LOGGER.error("Received unknown self-message: %s", Arrays.toString(objects));
             }
         } else {
-            // Get the new state of the resource
-            final ResourceState newResourceState = resource.getState();
-            final ResourceState oldState = state;
-
-            // Get the cached status
-            Dependency status = dependencies.get(resource.getLocator());
-
-            // No change here
-            if (status.state == newResourceState)
-                return;
-
-            // Is this resource in a state that is good for us?
-            int k = resource.accept(status.type).isOK() ? 1 : 0;
-
-            // Computes the difference with the previous status to update the number
-            // of unsatisfied resources states
-            final int diff = (status.isSatisfied ? 1 : 0) - k;
-
-            LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
-                    resource, k, status.type, diff);
-
-            // If the resource has an error / hold state, change our state to
-            // "on hold"
-            if (newResourceState == ResourceState.ERROR || newResourceState == ResourceState.ON_HOLD) {
-
-                if (!status.state.isBlocking())
-                    ++nbHolding;
-
-                if (state != ResourceState.ON_HOLD)
-                    state = ResourceState.ON_HOLD;
-            }
-
-            // Update
-            nbUnsatisfied += diff;
-            if (k == 1)
-                status.isSatisfied = true;
-
-            status.state = newResourceState;
+            if (checkDependency(resource))
+                scheduler.updateState(this);
         }
 
-        // Update the state in database and notify listeners
-        scheduler.updateState(this);
+    }
 
+    /**
+     * Check if a dependency changed and returns
+     * @param resource
+     * @return true if the resource changed, false otherwise
+     */
+    private boolean checkDependency(Resource resource) {
+        // Get the new state of the resource
+        final ResourceState newResourceState = resource.getState();
+
+        // Get the cached status
+        Dependency status = dependencies.get(resource.getLocator());
+
+        // No change here
+        if (status.state == newResourceState)
+            return false;
+
+        // Is this resource in a state that is good for us?
+        int k = resource.accept(status.type).isOK() ? 1 : 0;
+
+        // Computes the difference with the previous status to update the number
+        // of unsatisfied resources states
+        final int diff = (status.isSatisfied ? 1 : 0) - k;
+
+        LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
+                resource, k, status.type, diff);
+
+        // If the resource has an error / hold state, change our state to
+        // "on hold"
+        if (newResourceState == ResourceState.ERROR || newResourceState == ResourceState.ON_HOLD) {
+
+            if (!status.state.isBlocking())
+                ++nbHolding;
+
+            if (state != ResourceState.ON_HOLD)
+                state = ResourceState.ON_HOLD;
+        }
+
+        // Update
+        nbUnsatisfied += diff;
+        if (k == 1)
+            status.isSatisfied = true;
+
+        status.state = newResourceState;
+        return true;
     }
 
     // ----- Heap part (do not touch) -----
@@ -444,9 +449,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 } catch (DatabaseException e) {
                 }
                 out.format(
-                        "<li><a href=\"%s/resource?id=%s\">%s</a>: %s [%b]</li>",
-                        config.detailURL, XPMServlet.urlEncode(dependency.toString()),
-                        dependency, status.getType(), resource != null && resource.accept(status.type).isOK());
+                        "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a>: %s [%b]</li>",
+                        config.detailURL,
+                        XPMServlet.urlEncode(dependency.getConnectorId()),
+                        XPMServlet.urlEncode(dependency.getPath()),
+                        dependency,
+                        status.getType(),
+                        resource != null && resource.accept(status.type).isOK());
             }
             out.println("</ul>");
         }
@@ -456,7 +465,21 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
         return scheduler;
     }
 
-    public SingleHostConnector getTaskConnector() {
-        return getConnector().getConnector(requirements);
+    @Override
+    protected boolean doUpdateStatus() throws Exception {
+        boolean changed = super.doUpdateStatus();
+
+        // Check dependencies
+        for(ResourceLocator locator: dependencies.keySet())
+            changed |= checkDependency(scheduler.getResource(locator));
+
+        // Check if in right state
+        if (this.nbUnsatisfied == 0 && getState() == ResourceState.WAITING) {
+            changed = true;
+            state = ResourceState.READY;
+        }
+
+
+        return changed;
     }
 }

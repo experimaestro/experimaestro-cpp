@@ -133,6 +133,7 @@ public class ServerTask extends AbstractTask {
 
         final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(server,
                 repositories, taskManager);
+
         xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
         final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);

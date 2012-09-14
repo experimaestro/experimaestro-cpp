@@ -196,22 +196,31 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Update the status of this resource
      */
-    boolean updateStatus() throws Exception {
+    protected boolean doUpdateStatus() throws Exception {
         boolean updated = update();
 
         // Check if the resource was generated
-        if (getMainConnector().resolveFile(locator + DONE_EXTENSION).exists()
+        if (getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION).exists()
                 && this.getState() != ResourceState.DONE) {
             updated = true;
+            // TODO: get the end timestamp reading the done file time stamp
             this.state = ResourceState.DONE;
         }
 
         // Check if the resource is locked
-        boolean locked = getMainConnector().resolveFile(locator + LOCK_EXTENSION).exists();
+        boolean locked = getMainConnector().resolveFile(locator.getPath() + LOCK_EXTENSION).exists();
         updated |= locked != this.locked;
         this.locked = locked;
 
         return updated;
+    }
+
+    /** Update the status of the resource by checking all that could have changed externally */
+    public boolean updateStatus() throws Exception {
+        boolean changed = doUpdateStatus();
+        if (changed)
+            scheduler.updateState(this);
+        return changed;
     }
 
     public final SingleHostConnector getMainConnector() {

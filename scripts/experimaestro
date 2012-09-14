@@ -85,7 +85,7 @@ def getServer(args):
     # Initialise the server
     config = getProperties(configfile)
     url = config["url"]
-    xmlrpc = xmlrpclib.ServerProxy(url, verbose=False)
+    xmlrpc = xmlrpclib.ServerProxy(url, verbose=args.verbose)
     return xmlrpc
 
 # --- Server
@@ -93,7 +93,7 @@ def getServer(args):
 def command_server_start(args):
     start_jar(args, ["server"])
 
-def command_server_stop(args):
+def command_stop_server(args):
     server = getServer(args)
     server.Server.shutdown();
 
@@ -126,6 +126,16 @@ def command_run_js(args):
             print e
             sys.exit(1)     
 
+def command_update_jobs(args):
+  server = getServer(args)
+  print "%d updated job(s)" % server.Server.updateJobs([])
+
+
+def command_ls(args):
+  server = getServer(args)
+  for l in server.Server.listJobs([]):
+    print l
+  
 # --- Run command
 
 
@@ -136,6 +146,7 @@ parser.set_defaults(dir=dir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level", \
   choices = ["debug", "info", "warn"], default="info")
 parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
+parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
 parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store", \
   help="Experimaestro configuration file")
 
@@ -143,12 +154,15 @@ subparser = subparsers.add_parser("start-server", help="Start the experimaestro 
 subparser.set_defaults(func=command_server_start)
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
-subparser.set_defaults(func=command_server_stop)
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
 p_run_js.set_defaults(func = command_run_js)
 p_run_js.add_argument('files', nargs='*', help='') 
+
+p_update_jobs = subparsers.add_parser("update-jobs", help="Update jobs")
+
+p_update_jobs = subparsers.add_parser("ls", help="List jobs")
 
 # Parse arguments
 args = parser.parse_args()
@@ -157,7 +171,9 @@ numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
     raise ValueError('Invalid log level: %s' % loglevel)
 
-try: args.func(args)
+try: 
+  fname = "command_%s" % args.command.replace("-","_");
+  locals()[fname](args)
 except Exception as e:
   print e
   sys.exit(1)
