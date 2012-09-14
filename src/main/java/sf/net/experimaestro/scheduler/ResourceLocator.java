@@ -21,9 +21,11 @@ package sf.net.experimaestro.scheduler;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.KeyField;
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 /**
@@ -44,6 +46,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      * Connector
      */
     transient Connector connector;
+
 
     public ResourceLocator() {
     }
@@ -139,7 +142,38 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         return new ResourceLocator(connector, target.getName().getPath());
     }
 
+    public ResourceLocator resolvePath(String path) throws FileSystemException {
+        return resolvePath(path, false);
+    }
+
     public FileObject getFile() throws FileSystemException {
         return connector.getMainConnector().resolveFile(path);
     }
+
+
+    /**
+     * Returns the path of the file relative to the a given's host filesystem, adding an extension
+     * @param connector A single host connector
+     * @param extension The extension
+     * @return A file object
+     * @throws FileSystemException
+     */
+    public FileObject resolve(SingleHostConnector connector, String extension) throws FileSystemException {
+        FileObject baseFile = resolvePath(connector, this.path);
+        final FileObject child = baseFile.getParent().resolveFile(baseFile.getName() + extension);
+        return child;
+    }
+
+    /**
+     * Resolve a path relative to a given File Object
+     * @param connector
+     * @param path The path to the resource
+     * @return
+     */
+    private FileObject resolvePath(SingleHostConnector connector, String path) throws FileSystemException {
+        if (this.connector == connector)
+            return connector.resolveFile(path);
+        throw new NotImplementedException();
+    }
+
 }

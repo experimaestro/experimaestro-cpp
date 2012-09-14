@@ -35,6 +35,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.je.FileObjectProxy;
 import sf.net.experimaestro.utils.je.FileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -107,6 +108,8 @@ public class Scheduler {
      * Scheduler
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    {
+    }
 
     /**
      * The file manager
@@ -249,8 +252,9 @@ public class Scheduler {
 		dbEnvironment = new Environment(baseDirectory, myEnvConfig);
 
 		EntityModel model = new AnnotationModel();
-		model.registerClass(FileProxy.class);
-		storeConfig.setModel(model);
+        model.registerClass(FileProxy.class);
+        model.registerClass(FileObjectProxy.LocalProxy.class);
+        storeConfig.setModel(model);
 
 		// Add a shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -264,6 +268,9 @@ public class Scheduler {
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
         resources = new Resources(this, dbStore);
         connectors = new Connectors(this, dbStore);
+
+        // FIXME: use bytecode enhancement to remove public default constructors and have better performance
+        // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
 
 		// Start the threads
 		LOGGER.info("Starting %d threads", nbThreads);

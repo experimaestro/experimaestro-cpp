@@ -18,19 +18,25 @@
 
 package sf.net.experimaestro.manager;
 
+/**
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 13/9/12
+ */
+public class ValueType extends Type {
+    private static final QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "value");
+    private QName type;
 
-import sf.net.experimaestro.utils.log.Logger;
+    public ValueType(QName type) {
+        super(QNAME);
+        this.type = type;
+    }
 
-public class AlternativeInput extends Input {
-	final static Logger LOGGER = Logger.getLogger();
-	
-	public AlternativeInput(AlternativeType type) {
-		super(type);
-	}
+    public QName getValueType() {
+        return type;
+    }
 
-	@Override
-	Value newValue() {
-		return new AlternativeValue(this, (AlternativeType) type);
-	}
-
+    @Override
+    public String toString() {
+        return super.toString() + ": " + type.toString();
+    }
 }

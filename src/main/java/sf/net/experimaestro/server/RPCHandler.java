@@ -238,9 +238,9 @@ public class RPCHandler {
 						null);
 
 			if (result != null)
-				LOGGER.info("Returns %s", result.toString());
+				LOGGER.debug("Returns %s", result.toString());
 			else
-				LOGGER.info("Null result");
+				LOGGER.debug("Null result");
 
 			// Object object = scope.get("Task", null);
 			// if (object instanceof NativeFunction) {

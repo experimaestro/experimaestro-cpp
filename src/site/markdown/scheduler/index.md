@@ -16,12 +16,13 @@
   
   - *Job state*:
     A job can be in the state:
-    - HOLD (waiting a user action),
-    - WAITING (waiting for a slot to run),
+    - WAITING (waiting for dependencies to be met),
+    - READY (waiting to be run),
+    - HOLD (waiting a user action) consequently to a dependency being in the ERROR or HOLD state.
     - RUNNING,
     - DONE,
     - ERROR
-  
+
   - *Groups*:
   One should allow to set a group for a set of experiments (could even be a qualified name). For example,
   example: I run several series of experiment and call them "trec.test1", "trec.test2"
@@ -66,6 +67,7 @@
   * `${FILE}.done` created when the job was successfully executed or the data successfully generated
   * `${FILE}.err`  contains the error log output (jobs only)
   * `${FILE}.out`  contains the standard log output (jobs only)
+  * `${FILE}.input`  contains the standard input (jobs only)
 
 # Using experimaestro
 

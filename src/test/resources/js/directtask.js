@@ -37,7 +37,7 @@ var task = {
 };
 
 // Add the task to the list of available factories
-xpm.addTaskFactory(task);
+xpm.add_task_factory(task);
 // END SNIPPET: task
 
 

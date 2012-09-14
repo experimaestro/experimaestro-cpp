@@ -70,7 +70,7 @@ public class JSScheduler extends ScriptableObject {
     /**
      * Run a command line experiment
      *
-     * @param jsargs      a native array
+     * @param jsargs a native array
      * @return
      * @throws DatabaseException
      */
@@ -97,7 +97,7 @@ public class JSScheduler extends ScriptableObject {
         final Connector connector;
 
         if (options != null && options.has("connector", options)) {
-            connector = ((JSConnector)options.get("connector", options)).getConnector();
+            connector = ((JSConnector) options.get("connector", options)).getConnector();
         } else
             connector = new LocalhostConnector();
 
@@ -138,11 +138,12 @@ public class JSScheduler extends ScriptableObject {
             }
 
             // --- Redirect standard output
-            final Object stdin = JSUtils.unwrap(options.get("stdin", options));
-            if (stdin instanceof String) {
-               task.setInput((String)stdin);
-            } else throw new ExperimaestroRuntimeException("Unsupported stdin type", stdin.getClass());
-
+            if (options.has("stdin", options)) {
+                final Object stdin = JSUtils.unwrap(options.get("stdin", options));
+                if (stdin instanceof String) {
+                    task.setInput((String) stdin);
+                } else throw new ExperimaestroRuntimeException("Unsupported stdin type", stdin.getClass());
+            }
             // --- Redirect standard output
             final Object stdout = options.get("stdout", options);
 

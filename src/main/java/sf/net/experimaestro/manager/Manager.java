@@ -36,9 +36,12 @@ public class Manager {
 	public static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
 	public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
     public static final String EXPERIMAESTRO_PREFIX = "xp";
+
+    public static final String XMLSCHEMA_NS = "http://www.w3.org/2001/XMLSchema";
+
     static {
 		PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
-		PREDEFINED_PREFIXES.put("xs", "http://www.w3.org/2001/XMLSchema");
+		PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
 	}
 
 	/**

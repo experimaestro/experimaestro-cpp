@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.connectors;
 
+import org.apache.commons.vfs2.FileObject;
+
 /**
  * sf.net.experimaestro.connectors
  *
@@ -26,7 +28,13 @@ package sf.net.experimaestro.connectors;
 public interface Launcher {
     /**
      * Creates and returns a new process builder
+     *
      * @return A process builder
      */
     XPMProcessBuilder processBuilder(SingleHostConnector connector);
+
+    /**
+     * Returns a script process builder that can be run
+     */
+    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile);
 }

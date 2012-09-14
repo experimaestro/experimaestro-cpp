@@ -56,9 +56,29 @@ import static java.lang.String.format;
 public abstract class Resource implements Comparable<Resource> {
     final static private Logger LOGGER = Logger.getLogger();
 
+    /** Extension for the lock file */
     public static final String LOCK_EXTENSION = ".lock";
+
+    /** Extension for the file that describes the status of the resource */
     public static final String STATUS_EXTENSION = ".status";
-    private static final String DONE_EXTENSION = ".done";
+
+    /** Extension used to mark a produced resource */
+    public static final String DONE_EXTENSION = ".done";
+
+    /** Extension for the file containing the return code */
+    public static final String CODE_EXTENSION = ".code";
+
+    /** Extension for the file containing the script to run */
+    public static final String RUN_EXTENSION = ".run";
+
+    /** Extension for the standard output of a job */
+    public static final String OUT_EXTENSION = ".out";
+
+    /** Extension for the standard error of a job */
+    public static final String ERR_EXTENSION = ".err";
+
+    /** Extension for the standard input of a job */
+    public static final String INPUT_EXTENSION = ".input";
 
     /**
      * The task locator
@@ -199,6 +219,7 @@ public abstract class Resource implements Comparable<Resource> {
     /** Initialise a resource when retrieved from database */
     public void init(Scheduler scheduler) throws DatabaseException {
         this.scheduler = scheduler;
+        this.locator.init(scheduler);
     }
 
 
@@ -217,6 +238,11 @@ public abstract class Resource implements Comparable<Resource> {
          * The resource is not ready yet
          */
         WAIT,
+
+        /**
+         * The resource is not ready yet, and is on hold
+         */
+        HOLD,
 
         /**
          * The resource will not be ready given the current state
@@ -243,6 +269,9 @@ public abstract class Resource implements Comparable<Resource> {
         // Handle simple cases
         if (state == ResourceState.ERROR)
             return DependencyStatus.ERROR;
+
+        if (state == ResourceState.ON_HOLD)
+            return DependencyStatus.HOLD;
 
         if (state == ResourceState.WAITING)
             return DependencyStatus.WAIT;
@@ -351,7 +380,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
-     * Update the status of the resource
+     * Update the status of the resource using its status file
      *
      * @return A boolean specifying whether something was updated
      * @throws FileNotFoundException If some error occurs while reading status

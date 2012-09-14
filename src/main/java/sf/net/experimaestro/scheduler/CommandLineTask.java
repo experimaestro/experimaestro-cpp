@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
@@ -27,12 +28,9 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static java.lang.String.format;
+import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
 
 /**
  * A command line task (executed with the default shell)
@@ -57,7 +55,7 @@ public class CommandLineTask extends Job {
     /**
      * The environment
      */
-    public String[] envp = null;
+    public TreeMap<String, String> environment = null;
 
     public String workingDirectory;
 
@@ -91,12 +89,8 @@ public class CommandLineTask extends Job {
         LOGGER.info("Command is %s", Arrays.toString(command));
 
         // Copy the environment
-        if (environment != null) {
-            envp = new String[environment.size()];
-            int i = 0;
-            for (Map.Entry<String, String> entry : environment.entrySet())
-                envp[i++] = format("%s=%s", entry.getKey(), entry.getValue());
-        }
+        if (environment != null)
+            this.environment = new TreeMap<>(environment);
         this.workingDirectory = workingDirectory;
 
         // Construct command
@@ -136,22 +130,46 @@ public class CommandLineTask extends Job {
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
         SingleHostConnector connector = getConnector().getConnector(null);
-        XPMProcessBuilder builder = launcher.processBuilder(connector);
 
-        builder.command(command);
+        final FileObject runFile = locator.resolve(connector, RUN_EXTENSION);
+        LOGGER.info("Starting command with run file [%s]", runFile);
+        XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(connector, runFile);
 
-        builder.redirectInput(jobInput);
+        // Sets the command
+        builder.job(this);
+
+        // The job will be run in detached mode
         builder.detach(true);
 
-        final XPMProcess process = builder.start();
 
         // Write the input if needed
         if (jobInput == XPMProcessBuilder.Redirect.PIPE) {
             assert(jobInputString != null);
-            final OutputStream outputStream = process.getOutputStream();
+            FileObject inputFile = locator.resolve(connector, INPUT_EXTENSION);
+            final OutputStream outputStream = inputFile.getContent().getOutputStream();
             outputStream.write(jobInputString.getBytes());
             outputStream.close();
+
+            jobInput = XPMProcessBuilder.Redirect.from(inputFile);
         }
+
+        builder.redirectInput(jobInput);
+
+        // Add commands
+        builder.command(command);
+        builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
+        builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
+        builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
+        // Redirect output & error streams into corresponding files
+        builder.redirectOutput(XPMProcessBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
+        builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
+
+        // Start
+
+        final XPMProcess process = builder.start();
+
+
+
 
         return process;
     }
@@ -161,33 +179,8 @@ public class CommandLineTask extends Job {
         super.printHTML(out, config);
         out.format("<div><b>Command</b>: %s</div>", command[2]);
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
-        out.format("<div><b>Environment</b>: %s</div>", Arrays.toString(envp));
+        out.format("<div><b>Environment</b>: %s</div>", environment);
     }
-
-    /**
-     * XPMProcess one argument, adding backslash if necessary to protect special
-     * characters.
-     *
-     * @param string
-     * @return
-     */
-    static public String protect(String string, String special) {
-        if (string.equals(""))
-            return "\"\"";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < string.length(); i++) {
-            final char c = string.charAt(i);
-            if (special.indexOf(c) != -1)
-                sb.append("\\");
-            sb.append(c);
-        }
-        return sb.toString();
-    }
-
-    public String[] getCommand() {
-        return command;
-    }
-
 
     public void setLauncher(Launcher launcher) {
         this.launcher = launcher;

@@ -19,6 +19,7 @@
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.locks.Lock;
@@ -60,5 +61,10 @@ public class XPMConnector extends SingleHostConnector {
 
     public static Connector getInstance() {
         return SINGLETON;
+    }
+
+    @Override
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        throw new NotImplementedException();
     }
 }

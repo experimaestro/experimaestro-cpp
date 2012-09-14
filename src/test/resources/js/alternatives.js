@@ -47,7 +47,7 @@ var configuration_alt_1 = {
 	}
 };
 
-xpm.addTaskFactory(configuration_alt_1);
+xpm.add_task_factory(configuration_alt_1);
 
 /** Task */
 
@@ -62,7 +62,7 @@ var task_factory = {
 	}
 };
 
-xpm.addTaskFactory(task_factory);
+xpm.add_task_factory(task_factory);
 
 /** Run and output */
 

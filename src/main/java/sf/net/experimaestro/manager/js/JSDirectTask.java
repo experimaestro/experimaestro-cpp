@@ -33,99 +33,101 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.util.Map.Entry;
 
 public class JSDirectTask extends JSAbstractTask {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
-	/**
-	 * The run function
-	 */
-	private Function runFunction;
+    /**
+     * The run function
+     */
+    private Function runFunction;
 
-	/**
-	 * The object?
-	 */
-	private NativeObject jsFactory;
+    /**
+     * The object?
+     */
+    private NativeObject jsFactory;
 
-	public JSDirectTask() {
-	}
+    public JSDirectTask() {
+    }
 
-	public JSDirectTask(JSTaskFactory jsTaskFactory, Scriptable jsScope,
-			NativeObject jsFactory, Function runFunction) {
-		super(jsTaskFactory, jsScope);
-		this.jsFactory = jsFactory;
-		this.runFunction = runFunction;
+    public JSDirectTask(JSTaskFactory jsTaskFactory, Scriptable jsScope,
+                        NativeObject jsFactory, Function runFunction) {
+        super(jsTaskFactory, jsScope);
+        this.jsFactory = jsFactory;
+        this.runFunction = runFunction;
 
-	}
+    }
 
-	@Override
-	public Object jsrun(boolean convertToE4X) {
-		LOGGER.debug("[Running] task: %s", factory.getId());
+    @Override
+    public Object jsrun(boolean convertToE4X) {
+        LOGGER.debug("[Running] task: %s", factory.getId());
 
-		final Context cx = Context.getCurrentContext();
+        final Context cx = Context.getCurrentContext();
 
-		// Get the inputs
-		Object result = null;
+        // Get the inputs
+        Object result = null;
 
-		if (runFunction != null) {
-			// We have a run function
-			Scriptable jsInputs = getJSInputs();
-			final Object returned = runFunction.call(cx, jsScope, jsFactory,
-					new Object[] { jsInputs });
-			LOGGER.debug("Returned %s", returned);
-			if (returned == Undefined.instance)
-				throw new ExperimaestroRuntimeException(
-						"Undefined returned by the function run");
+        if (runFunction != null) {
+            // We have a run function
+            Scriptable jsInputs = getJSInputs();
+            final Object returned = runFunction.call(cx, jsScope, jsFactory,
+                    new Object[]{jsInputs});
+            LOGGER.debug("Returned %s", returned);
+            if (returned == Undefined.instance)
+                throw new ExperimaestroRuntimeException(
+                        "Undefined returned by the function run");
 
-			result = (Scriptable) returned;
-		} else {
-			// We just copy the inputs as an output
+            result = (Scriptable) returned;
+        } else {
+            // We just copy the inputs as an output
 
-			Document document = XMLUtils.newDocument();
-			result = document;
+            Document document = XMLUtils.newDocument();
+            result = document;
 
-			Element root = document.createElementNS(Manager.EXPERIMAESTRO_NS,
-					"outputs");
-			document.appendChild(root);
+            Element root = document.createElementNS(Manager.EXPERIMAESTRO_NS,
+                    "outputs");
+            document.appendChild(root);
 
-			for (Entry<String, Value> entry : values.entrySet()) {
-				Value value = entry.getValue();
-				if (value != null) {
-					Element outputs = document.createElementNS(
-							Manager.EXPERIMAESTRO_NS, "outputs");
-					root.appendChild(outputs);
-					outputs.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
-							entry.getKey());
+            for (Entry<String, Value> entry : values.entrySet()) {
+                Value value = entry.getValue();
+                if (value != null) {
+                    Element outputs = document.createElementNS(
+                            Manager.EXPERIMAESTRO_NS, "outputs");
+                    root.appendChild(outputs);
+                    outputs.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
+                            entry.getKey());
 
-					Element returnRoot = (Element) value.get()
-							.getDocumentElement().cloneNode(true);
-					document.adoptNode(returnRoot);
+                    final Document doc = value.get();
+                    if (doc != null) {
+                        Element returnRoot = (Element) doc
+                                .getDocumentElement().cloneNode(true);
+                        document.adoptNode(returnRoot);
+                        final String rootURI = returnRoot.getNamespaceURI();
+                        if (rootURI != null && rootURI.equals(
+                                Manager.EXPERIMAESTRO_NS)
+                                && returnRoot.getLocalName().equals("outputs")) {
+                            NodeList nodes = returnRoot.getChildNodes();
+                            for (int i = 0; i < nodes.getLength(); i++) {
+                                outputs.appendChild(nodes.item(i));
+                            }
+                        } else
+                            outputs.appendChild(returnRoot);
+                    }
+                }
+            }
 
-					final String rootURI = returnRoot.getNamespaceURI();
-					if (rootURI != null && rootURI.equals(
-							Manager.EXPERIMAESTRO_NS)
-							&& returnRoot.getLocalName().equals("outputs")) {
-						NodeList nodes = returnRoot.getChildNodes();
-						for (int i = 0; i < nodes.getLength(); i++) {
-							outputs.appendChild(nodes.item(i));
-						}
-					} else
-						outputs.appendChild(returnRoot);
-				}
-			}
+            if (convertToE4X)
+                result = JSUtils.domToE4X(document, cx, jsScope);
+        }
 
-			if (convertToE4X)
-				result = JSUtils.domToE4X(document, cx, jsScope);
-		}
+        LOGGER.debug("[/Running] task: %s", factory.getId());
 
-		LOGGER.debug("[/Running] task: %s", factory.getId());
+        return result;
+    }
 
-		return result;
-	}
-
-	@Override
-	protected void init(Task _other) {
-		JSDirectTask other = (JSDirectTask) _other;
-		super.init(other);
-		jsFactory = other.jsFactory;
-		runFunction = other.runFunction;
-	}
+    @Override
+    protected void init(Task _other) {
+        JSDirectTask other = (JSDirectTask) _other;
+        super.init(other);
+        jsFactory = other.jsFactory;
+        runFunction = other.runFunction;
+    }
 }

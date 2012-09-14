@@ -94,11 +94,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
      * Resolve a FileObject to a local path
      */
     public String resolve(FileObject file) {
-        try {
-            return file.getURL().getPath();
-        } catch (FileSystemException e) {
-            throw new ExperimaestroRuntimeException("Could not convert the URL [%s] to a local path for %s", file.toString(), toString());
-        }
+        return file.getName().getPath();
     }
 
 

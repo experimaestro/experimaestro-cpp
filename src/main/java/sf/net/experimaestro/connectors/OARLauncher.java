@@ -19,10 +19,10 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
@@ -40,7 +40,7 @@ import java.io.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
-public class OARLauncher extends UnixShellLauncher {
+public class OARLauncher implements Launcher {
     static private final Logger LOGGER = Logger.getLogger();
 
     // Command to start
@@ -84,26 +84,32 @@ public class OARLauncher extends UnixShellLauncher {
 
     @Override
     public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
-        return new ProcessBuilder(connector);
+        return new ProcessBuilder(null, connector);
+    }
+
+    @Override
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        return new ProcessBuilder(scriptFile, connector);
     }
 
 
-    static public class ProcessBuilder extends XPMProcessBuilder {
+    static public class ProcessBuilder extends UnixProcessBuilder {
         // Command to start
         private String oarCommand = "oarsub";
 
         // The associated connector
         private SingleHostConnector connector;
 
-        public ProcessBuilder(SingleHostConnector connector) {
+        public ProcessBuilder(FileObject scriptFile, SingleHostConnector connector) {
+            super(scriptFile, connector);
             this.connector = connector;
         }
 
         @Override
-        public XPMProcess start() throws LaunchException, IOException {
+        public XPMProcess doStart() throws LaunchException, IOException {
 
             final String path = job.getLocator().getPath();
-            final String id = CommandLineTask.protect(path, "\"");
+            final String id = protect(path, "\"");
 
             String [] command = new String[] { oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run" };
 

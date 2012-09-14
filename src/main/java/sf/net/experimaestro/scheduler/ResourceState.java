@@ -24,11 +24,16 @@ package sf.net.experimaestro.scheduler;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public enum ResourceState {
-	/**
-	 * Waiting state (jobs)
+    /**
+     * For a job only: the job is waiting dependencies to be met
+     */
+    WAITING,
+
+    /**
+	 * For a job only: the job is waiting for an available thread to launch it
 	 */
-	WAITING,
-	
+	READY,
+
 	/**
 	 * The job is currently running
 	 */
@@ -40,7 +45,7 @@ public enum ResourceState {
 	ON_HOLD,
 	
 	/**
-	 * The job ran but did not complete
+	 * The job ran but did not complete or the data was not generated
 	 */
 	ERROR,
 	

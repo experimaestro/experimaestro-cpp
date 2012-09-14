@@ -33,7 +33,7 @@ var task_1 = {
 		
 };
 
-xpm.addTaskFactory(task_1);
+xpm.add_task_factory(task_1);
 
 var task_2 = {
 	id: xpm.qName("a.b.c", "task-2"),
@@ -46,7 +46,7 @@ var task_2 = {
 		
 };
 
-xpm.addTaskFactory(task_2);
+xpm.add_task_factory(task_2);
 
 /** Run and check */
 

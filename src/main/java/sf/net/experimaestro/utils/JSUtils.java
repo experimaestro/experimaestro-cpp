@@ -26,7 +26,6 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.utils.log.Logger;
 
 import static java.lang.String.format;
@@ -41,13 +40,19 @@ public class JSUtils {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T get(Scriptable scope, String name, NativeObject object) {
+	public static <T> T get(Scriptable scope, String name, NativeObject object, boolean allowNull) {
 		final Object _value = object.get(name, scope);
 		if (_value == UniqueTag.NOT_FOUND)
-			throw new RuntimeException(format("Could not find property '%s'",
+            if (allowNull) return null;
+			else throw new RuntimeException(format("Could not find property '%s'",
 					name));
 		return (T) unwrap(_value);
 	}
+
+    public static <T> T get(Scriptable scope, String name, NativeObject object) {
+        return get(scope, name, object, false);
+    }
+
 
     /**
      * Unwrap a JavaScript object (if necessary)

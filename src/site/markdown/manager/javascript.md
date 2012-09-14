@@ -78,15 +78,15 @@
 # Predefined functions
 
    * `qname(uri, name)` returns a qualified name
-   * `script_file()` returns a FileObject
+   * `script_file()` returns a FileObject corresponding to the current script
    * `include_repository([connector,] path)` includes a repository. The difference with the `include(path)` function is that the repository can be cached. An optional `connector` can be used - by default, the current script connector is used.
    
 # XPM object
 
 ## Functions
 
-  * `addTaskFactory(task)` Adds a task factory to the manager
-  * `getTask(namespace, id)` Get a new instance of task given the namespace and the id
+  * `add_task_factory(task)` Adds a task factory to the manager
+  * `get_task(qualified_name)` or `get_task(namespace, id)` Get a new instance of task given the namespace and the id
   * `log(format, object, [object ...])` Returns a message using the format static method from String.
   * `include(path)` includes another javascript file (path is relative to the current file)
   * `xpath(query, xml)` runs an XPath query on an XML document or fragment. See {{XPath handling}} for

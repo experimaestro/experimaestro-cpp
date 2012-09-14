@@ -92,12 +92,9 @@ public abstract class TaskFactory {
 	abstract public Map<String, Input> getInputs();
 
 	/**
-	 * Get the list of (potential) parameters
-	 * 
-	 * @return a map of mappings from a qualified name to a named parameter or
-	 *         null if non existent
+	 * Get the ouput of a task
 	 */
-	abstract public Map<String, QName> getOutputs();
+	abstract public Type getOutput();
 
 	/**
 	 * Creates a new experiment

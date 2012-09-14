@@ -45,7 +45,7 @@ public abstract class Input {
 	/**
 	 * The type of the parameter
 	 */
-	QName type;
+	Type type;
 
 	/**
 	 * Documentation for this parameter
@@ -80,18 +80,16 @@ public abstract class Input {
 		return documentation;
 	}
 
-	public QName getType() {
+	public Type getType() {
 		return type;
 	}
 
 	/**
 	 * New input type
 	 * 
-	 * @param type
-	 * @param optional
-	 * @param documentation
+	 * @param type the type
 	 */
-	public Input(QName type) {
+	public Input(Type type) {
 		this.type = type;
 	}
 
@@ -140,7 +138,7 @@ public abstract class Input {
 
 		public void setNamespaces(XQStaticContext xqsc) throws XQException {
 			for (Entry<String, String> mapping : namespaces.entrySet()) {
-				LOGGER.info("Setting default namespace mapping [%s] to [%s]",
+				LOGGER.debug("Setting default namespace mapping [%s] to [%s]",
 						mapping.getKey(), mapping.getValue());
 				xqsc.declareNamespace(mapping.getKey(), mapping.getValue());
 			}

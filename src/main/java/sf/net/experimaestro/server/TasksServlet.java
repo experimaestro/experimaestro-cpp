@@ -172,19 +172,18 @@ public class TasksServlet extends XPMServlet {
 
 		for (Entry<String, Input> entry : factory.getInputs().entrySet()) {
 			Input input = entry.getValue();
-			final QName type = input.getType();
-			XSElementDecl declaration = repository.getXMLElement(type);
+			final Type type = input.getType();
+			XSElementDecl declaration = repository.getXMLElement(type.qname());
 			if (declaration == null)
-				out.format("<dt class='%s'>%s (%s)</dt><dd>",
+				out.format("<dt class='%s'>%s</dt><dd>",
 						input.isOptional() ? "optional" : "required",
-						type.getLocalPart(), type.getNamespaceURI());
+						type);
 			else
 				out.format(
-						"<dt class='%s'><a href=\"%s/type?ns=%s&amp;name=%s\">%s (%s)</a></dt><dd>",
+						"<dt class='%s'><a href=\"%s/type?ns=%s&amp;name=%s\">%s</a></dt><dd>",
 						input.isOptional() ? "optional" : "required",
 						request.getServletPath(),
-						urlEncode(type.getNamespaceURI()), type.getLocalPart(),
-						type.getLocalPart(), type.getNamespaceURI());
+						urlEncode(type.getNamespaceURI()), type);
 
 			input.printHTML(out);
 			out.println("</dd>");

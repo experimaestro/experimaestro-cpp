@@ -18,10 +18,32 @@
 
 package sf.net.experimaestro.connectors;
 
+import org.apache.commons.vfs2.FileObject;
+
 /**
- * Defines some computational requirements in terms of memory, etc.
+ * An abstract class that allows building scripts in different scripting languages
+ * (sh, etc.)
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 10/9/12
  */
-public interface ComputationalRequirements {
+public abstract class XPMScriptProcessBuilder extends XPMProcessBuilder {
+    protected SingleHostConnector connector;
+
+    protected FileObject scriptFile;
+
+    /** Local path to the script file */
+    protected String path;
+
+    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        this.connector = connector;
+        this.scriptFile = scriptFile;
+        this.path = connector.resolve(scriptFile);
+    }
+
+    public abstract void removeLock(FileObject lockFile);
+
+    public abstract void exitCodeFile(FileObject exitCodeFile);
+
+    public abstract void doneFile(FileObject doneFile);
 }

@@ -63,7 +63,7 @@ public abstract class Value {
 	/**
 	 * Set the value
 	 * 
-	 * @param dotName
+	 * @param id
 	 *            The name
 	 * @param value
 	 *            The value
@@ -96,7 +96,7 @@ public abstract class Value {
 			return;
 
 		// ... or if the output is null
-		Document document = get();
+		final Document document = get();
 		if (document == null) {
 			LOGGER.warn("Cannot set the value of connections since we have a null value");
 			return;
@@ -116,9 +116,8 @@ public abstract class Value {
 				XQStaticContext xqsc = xqjc.getStaticContext();
 				Node item = document.getDocumentElement();
 				connection.setNamespaces(xqsc);
-		
 
-				// --- If we need to dig into the output
+                // --- If we need to dig into the output
 				if (connection.from.size() > 0) {
 					String exprFrom = null;
 					for (int i = connection.from.size(); --i >= 0;) {
@@ -141,12 +140,14 @@ public abstract class Value {
 
 				}
 
-				// --- Now get the value
-//				XQExpression xqje = xqjc.createExpression();
-//				xqje.bindNode(XQConstants.CONTEXT_ITEM, item, null);
+                LOGGER.debug("Item is %s", XMLUtils.toStringObject(item));
+
+                // --- Now get the value
 				XQItem xqItem = evaluateSingletonExpression(xqjc, item, expr, xqsc);
-				if (xqItem == null)
-					continue;
+				if (xqItem == null) {
+                    throw new ExperimaestroRuntimeException("Could not connect [%s] to [%s] with path [%s]",
+                            connection.from, connection.to, connection.path);
+                }
 				
 				switch (xqItem.getItemType().getItemKind()) {
 				case XQItemType.XQITEMKIND_ATOMIC:
@@ -167,6 +168,8 @@ public abstract class Value {
 				Document newDoc = XMLUtils.newDocument();
 				if (item instanceof Document)
 					item = ((Document) item).getDocumentElement();
+
+                item = item.cloneNode(true);
 				newDoc.adoptNode(item);
 				newDoc.appendChild(item);
 				task.setParameter(connection.to, newDoc);

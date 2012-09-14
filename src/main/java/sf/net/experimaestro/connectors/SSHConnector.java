@@ -25,6 +25,7 @@ import com.jcraft.jsch.Session;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.VFS;
@@ -44,6 +45,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
+
+import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -109,7 +112,7 @@ public class SSHConnector extends SingleHostConnector {
         try {
             ChannelExec channel = newExecChannel();
             LOGGER.info("Creating SSH lock [%s]", path);
-            channel.setCommand(String.format("lockfile \"%s\"", CommandLineTask.protect(path, "\"")));
+            channel.setCommand(String.format("lockfile \"%s\"", protect(path, "\"")));
             channel.setInputStream(null);
             channel.setErrStream(System.err, true);
             channel.setOutputStream(System.out, true);
@@ -163,6 +166,11 @@ public class SSHConnector extends SingleHostConnector {
         this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
     }
 
+    @Override
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        return new ShLauncher.ProcessBuilder(scriptFile, connector);
+    }
+
 
     /**
      * An SSH process
@@ -171,8 +179,8 @@ public class SSHConnector extends SingleHostConnector {
     public static class SSHProcess extends XPMProcess {
         private ChannelExec channel;
 
-        public SSHProcess(Job job, ChannelExec channel) {
-            super(job, null);
+        public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
+            super(connector, job, null);
             this.channel = channel;
         }
 
@@ -362,10 +370,10 @@ public class SSHConnector extends SingleHostConnector {
                     streamSetter.setStream(System.err, true);
                     break;
                 case WRITE:
-                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\"")));
+                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
                     break;
                 case APPEND:
-                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), CommandLineTask.protect(resolve(output.file()), "\"")));
+                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
                     break;
             }
         }
@@ -418,7 +426,7 @@ public class SSHConnector extends SingleHostConnector {
                 throw new LaunchException(e);
             }
 
-            return new SSHProcess(job(), channel);
+            return new SSHProcess(SSHConnector.this, job(), channel);
         }
 
 

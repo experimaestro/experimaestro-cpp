@@ -76,7 +76,7 @@ public class AlternativeValue extends Value {
 	@Override
 	public void set(DotName id, Document value) {
 		if (id.size() == 0) {
-			final Map<QName, TaskFactory> factories = this.alternativeInput.alternativeType.factories;
+			final Map<QName, TaskFactory> factories = ((AlternativeType)this.alternativeInput.type).factories;
 			
 			final Element element = value.getDocumentElement();
 			String key = element.getAttributeNS(Manager.EXPERIMAESTRO_NS,

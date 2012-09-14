@@ -26,7 +26,7 @@ public class TaskInput extends Input {
 
 	final TaskFactory factory;
 
-	public TaskInput(TaskFactory factory, QName type) {
+	public TaskInput(TaskFactory factory, Type type) {
 		super(type);
 		this.factory = factory;
 	}

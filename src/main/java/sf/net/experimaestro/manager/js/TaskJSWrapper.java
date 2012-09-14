@@ -109,27 +109,27 @@ public class TaskJSWrapper extends ScriptableObject {
      */
     public void jsFunction_setParameter(String _id, Scriptable value) {
         DotName id = DotName.parse(_id);
-        LOGGER.info("Setting input [%s] to [%s] of type %s", _id, value,
+        LOGGER.debug("Setting input [%s] to [%s] of type %s", _id, value,
                 value.getClass());
 
         if (value == Scriptable.NOT_FOUND)
             getTask().setParameter(id, (Document) null);
         else if (value instanceof Element) {
-            LOGGER.info("Value is an XML element");
+            LOGGER.debug("Value is an XML element");
             Document document = XMLUtils.newDocument();
             Node node = ((Element) value).cloneNode(true);
             document.adoptNode(node);
             document.appendChild(node);
             getTask().setParameter(id, document);
         } else if (JSUtils.isXML(value)) {
-            LOGGER.info("Value is XML");
+            LOGGER.debug("Value is XML");
             Document document = XMLUtils.newDocument();
             Node node = ((Element) JSUtils.toDOM(value)).cloneNode(true);
             document.adoptNode(node);
             document.appendChild(node);
             getTask().setParameter(id, document);
         } else {
-            LOGGER.info("Value will be converted to string [%s/%s]",
+            LOGGER.debug("Value will be converted to string [%s/%s]",
                     value.getClassName(), value.getClass());
             getTask().setParameter(id, (String) value.toString());
         }

@@ -19,6 +19,7 @@
 package sf.net.experimaestro.locks;
 
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.WatchFileMonitor;
 import sf.net.experimaestro.utils.log.Logger;
@@ -32,13 +33,18 @@ import java.io.IOException;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent
 public class FileLock implements Lock {
+
 	final static private Logger LOGGER = Logger.getLogger();
 
 	/**
 	 * Lock
 	 */
 	File lockFile;
+
+    /** Used for (de)serialization */
+    public FileLock() {}
 
 	/**
 	 * Lock a file. If the file exists, waits for it to be deleted.

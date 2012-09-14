@@ -19,7 +19,6 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
@@ -92,6 +91,11 @@ public class LocalhostConnector extends SingleHostConnector {
         return new ProcessBuilder();
     }
 
+    @Override
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        return new ShLauncher.ProcessBuilder(scriptFile, connector);
+    }
+
 
     @Persistent
     private static class LocalProcess extends XPMProcess {
@@ -110,7 +114,7 @@ public class LocalhostConnector extends SingleHostConnector {
         public LocalProcess(Job job, Process process, boolean detach) {
             super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job, true);
             this.process = process;
-            if (detach) {
+            if (!detach) {
                 destroyThread = new Thread() {
                     @Override
                     public void run() {
@@ -157,6 +161,7 @@ public class LocalhostConnector extends SingleHostConnector {
         @Override
         public int waitFor() throws InterruptedException {
             final int exitCode = process.waitFor();
+            process = null;
             return exitCode;
         }
 
@@ -173,8 +178,8 @@ public class LocalhostConnector extends SingleHostConnector {
                 process = null;
             }
 
-            // TODO: finish the implementation
-            throw new NotImplementedException();
+            // TODO: finish the implementation ???
+//            throw new NotImplementedException();
         }
 
 

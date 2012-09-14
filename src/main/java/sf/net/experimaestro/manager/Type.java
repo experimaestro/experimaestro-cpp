@@ -19,20 +19,39 @@
 package sf.net.experimaestro.manager;
 
 
+/**
+ * An XML type defined by a qualified name
+ */
 public class Type {
 	private static final long serialVersionUID = 1L;
 
 	/**
 	 * The qualified name of this type
 	 */
-	private final QName qName;
+	private final QName qname;
 
-	public Type(QName qName) {
-		this.qName = qName;
+	public Type(QName qname) {
+		this.qname = qname;
 	}
 
 	public QName getId() {
-		return qName;
+		return qname;
 	}
 
+    public QName qname() {
+        return qname;
+    }
+
+    public String getNamespaceURI() {
+        return qname().getNamespaceURI();
+    }
+
+    public String getLocalPart() {
+        return qname.getLocalPart();
+    }
+
+    @Override
+    public String toString() {
+        return qname.toString();
+    }
 }

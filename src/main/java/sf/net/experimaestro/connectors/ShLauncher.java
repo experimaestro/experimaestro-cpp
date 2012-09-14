@@ -19,8 +19,10 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.exceptions.LaunchException;
+
+import java.io.IOException;
 
 /**
  * Runs a command using *SH (bash, sh)
@@ -29,7 +31,7 @@ import sf.net.experimaestro.exceptions.LaunchException;
  * @date 12/6/12
  */
 @Persistent
-public class ShLauncher extends UnixShellLauncher {
+public class ShLauncher implements Launcher {
     /**
      * Path to the shell
      */
@@ -42,18 +44,32 @@ public class ShLauncher extends UnixShellLauncher {
 
     @Override
     public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
-        return new ProcessBuilder(connector);
+        return new ProcessBuilder(null, connector);
     }
 
-    public class ProcessBuilder extends UnixShellLauncher.ProcessBuilder {
+    @Override
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+        return new ProcessBuilder(scriptFile, connector);
+    }
 
-        public ProcessBuilder(SingleHostConnector connector) {
-            super(connector);
+    static public class ProcessBuilder extends UnixProcessBuilder {
+
+        public ProcessBuilder(FileObject file, SingleHostConnector connector) {
+            super(file, connector);
         }
 
         @Override
-        public XPMProcess start() throws LaunchException {
-               throw new NotImplementedException();
+        public XPMProcess doStart() throws LaunchException, IOException {
+
+            // Start the process
+            final XPMProcessBuilder builder = connector.processBuilder();
+            builder.command(protect(path, SHELL_SPECIAL));
+
+            builder.detach(detach);
+            builder.redirectOutput(output);
+            builder.redirectError(error);
+
+            return builder.start();
         }
     }
 

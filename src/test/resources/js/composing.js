@@ -71,9 +71,9 @@ var task = {
 
 // Add tasks
 
-xpm.addTaskFactory(task_1);
-xpm.addTaskFactory(task_2);
-xpm.addTaskFactory(task);
+xpm.add_task_factory(task_1);
+xpm.add_task_factory(task_2);
+xpm.add_task_factory(task);
 
 // Run and check
 

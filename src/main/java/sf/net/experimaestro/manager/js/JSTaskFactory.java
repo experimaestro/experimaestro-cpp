@@ -63,13 +63,11 @@ public class JSTaskFactory extends TaskFactory {
 	/**
 	 * The outputs
 	 */
-	private TreeMap<String, QName> outputs;
+	private Type output;
 
 	/**
 	 * Creates a new task information from a javascript object
 	 * 
-	 * @param context
-	 *            The context
 	 * @param scope
 	 *            The scope
 	 * @param jsObject
@@ -77,7 +75,7 @@ public class JSTaskFactory extends TaskFactory {
 	 */
 	public JSTaskFactory(Scriptable scope, NativeObject jsObject,
 			Repository repository) {
-		super(repository, getQName(scope, jsObject), JSUtils.get(scope,
+		super(repository, getQName(scope, jsObject, "id", false), JSUtils.get(scope,
 				"version", jsObject, "1.0"), null);
 		this.jsScope = scope;
 		this.jsObject = jsObject;
@@ -143,37 +141,17 @@ public class JSTaskFactory extends TaskFactory {
 		}
 
 		// --- Get the task outputs
-		Object output = JSUtils.get(scope, "outputs", jsObject);
-		outputs = new TreeMap<String, QName>();
-		if (!JSUtils.isXML(output))
-			throw new RuntimeException(format(
-					"Property output is not in XML format in %s (%s)", this.id,
-					input.getClass()));
+		QName qname = getQName(scope, jsObject, "output", true);
+        if (qname != null)
+            output = new Type(qname);
 
-		dom = JSUtils.toDOM(output);
-		list = dom.getChildNodes();
-		for (int i = 0; i < list.getLength(); i++) {
-			Node item = list.item(i);
-			if (item.getNodeType() != Node.ELEMENT_NODE)
-				continue;
-			Element el = (Element) item;
-
-			String id = el.getAttribute("id");
-			QName typeName = XMLUtils.parseQName(el.getAttribute("type"), el,
-					Manager.PREDEFINED_PREFIXES);
-			LOGGER.info("Output [%s] is of type [%s]", id, typeName);
-			outputs.put(id, typeName);
-		}
 
 		// --- Are we an alternative?
 
-		QName altType = JSUtils.get(jsScope, "alternative", jsObject, null);
-		if (altType != null) {
-			if (outputs.size() != 1)
-				throw new ExperimaestroRuntimeException(
-						"Wrong number of outputs (%d) to be an alternative",
-						outputs.size());
-			QName qname = outputs.values().iterator().next();
+		Boolean altType = JSUtils.get(jsScope, "alternative", jsObject, null);
+		if (altType != null && altType) {
+            if (output == null)
+                throw new ExperimaestroRuntimeException("No output has been defined for an alternative");
 
 			Type type = repository.getType(qname);
 			if (type == null || !(type instanceof AlternativeType))
@@ -190,95 +168,120 @@ public class JSTaskFactory extends TaskFactory {
 	}
 
 	/**
-	 * Add an input
+	 * Add an input for this task
 	 * 
-	 * @param el
+	 * @param el The XML element to process
 	 * 
 	 * @param repository
-	 *            The repository
+	 *            The repository where the task is stored
 	 */
 	private void addInput(Element el, Repository repository) {
-		// Get the id
-		String id = el.getAttribute("id");
-		if (id == null)
-			throw new RuntimeException(
-					format("Input without id in %s", this.id));
+        // Get the id
+        String id = el.getAttribute("id");
+        if (id == null)
+            throw new RuntimeException(
+                    format("Input without id in %s", this.id));
 
-		LOGGER.debug("New input [%s] for task [%s]", id, this.id);
+        LOGGER.debug("New input [%s] for task [%s]", id, this.id);
 
-        // Get the type
-		final String typeAtt = el.getAttribute("type");
-		QName typeName = !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
-				Manager.PREDEFINED_PREFIXES) : new QName(
-				Manager.EXPERIMAESTRO_NS, "xml");
+        // --- Get the type
 
-		// Choose the appropriate input type
-		LOGGER.debug("Looking at [%s] of type [%s]", id, typeName);
-		final Input input;
+        final Input input;
+        QName inputType = getTypeQName(el, el.getAttribute("type"));
+        QName inputRef = getTypeQName(el, el.getAttribute("ref"));
 
-		Type type = repository.getType(typeName);
+        switch (el.getTagName()) {
+            case "xml": { // An XML document
+                Type type = inputType != null ? repository.getType(inputType) : null;
+                if (inputType == null)
+                    input = new XMLInput(null);
+                else if (type instanceof AlternativeType) {
+                    LOGGER.debug(
+                            "Detected an alternative type configuration for input [%s] of type [%s]",
+                            id, inputType);
+                    input = new AlternativeInput((AlternativeType) type);
+                }
+                else {
+                    // Simple type
+                    input = new XMLInput(new Type(inputType)) ;
+                }
 
-		if (type instanceof AlternativeType) {
-			LOGGER.debug(
-					"Detected an alternative type configuration for input [%s] of type [%s]",
-					id, typeName);
-			input = new AlternativeInput(typeName, (AlternativeType) type);
-		} else if (el.getNodeName().equals("task")) {
-			// The input is a task
-			TaskFactory factory = repository.getFactory(typeName);
-			if (factory == null)
-				throw new ExperimaestroRuntimeException(
-						"Could not find task factory with type [%s]", typeName);
+                break;
+            }
 
-			input = new TaskInput(factory, typeName);
+            case "task": { // A task
+                TaskFactory factory = repository.getFactory(inputRef);
+                if (factory == null)
+                    throw new ExperimaestroRuntimeException(
+                            "Could not find task factory [%s] for input [%s]", inputRef, id);
 
-		} else {
-			// The input is just XML
-			input = new XMLInput(typeName);
-		}
+                // The type of this input is either specified (inputType)
+                // or it is set to the declared output of the task
+                Type type = inputType == null ? factory.getOutput() : new Type(inputType);
+                input = new TaskInput(factory, type);
+                break;
+            }
+
+            case "value": { // Simple XPM value
+                final ValueType valueType = inputType == null ? null : new ValueType(inputType);
+                input = new XMLInput(valueType);
+                break;
+            }
+
+            default:
+                throw new IllegalArgumentException("Cannot handle input of type " + el.getTagName());
+        }
+
+
+
 
         // Should we merge all the parameters?
-		if ("true".equals(el.getAttribute("merge")))
-			input.setUnnamed(true);
+        if ("true".equals(el.getAttribute("merge")))
+            input.setUnnamed(true);
 
-		inputs.put(id, input);
+        inputs.put(id, input);
 
-		// Set the optional flag
-		String optional = el.getAttribute("optional");
-		boolean isOptional = optional != null && optional.equals("true");
-		input.setOptional(isOptional);
+        // Set the optional flag
+        String optional = el.getAttribute("optional");
+        boolean isOptional = optional != null && optional.equals("true");
+        input.setOptional(isOptional);
 
-		// Set the documentation
-		if (el.hasAttribute("help"))
-			input.setDocumentation(el.getAttribute("help"));
-		else {
-			Node child = XMLUtils.getChild(el, new QName(
-					Manager.EXPERIMAESTRO_NS, "help"));
-			if (child != null)
-				input.setDocumentation(XMLUtils.toString(child));
-		}
+        // Set the documentation
+        if (el.hasAttribute("help"))
+            input.setDocumentation(el.getAttribute("help"));
+        else {
+            Node child = XMLUtils.getChild(el, new QName(
+                    Manager.EXPERIMAESTRO_NS, "help"));
+            if (child != null)
+                input.setDocumentation(XMLUtils.toString(child));
+        }
 
-		// Set the default value
-		if (el.hasAttribute("default")) {
-			input.setDefaultValue(Task.wrapValue(el.getAttribute("default")));
-		} else {
-			Node child = XMLUtils.getChild(el, new QName(
-					Manager.EXPERIMAESTRO_NS, "default"));
-			if (child != null) {
-				Document document = XMLUtils.newDocument();
-				child = child.cloneNode(true);
-				document.adoptNode(child);
-				NodeList childNodes = child.getChildNodes();
-				for (int i = 0; i < childNodes.getLength(); i++)
-					document.appendChild(childNodes.item(i));
-				input.setDefaultValue(document);
-			}
-		}
+        // Set the default value
+        if (el.hasAttribute("default")) {
+            input.setDefaultValue(Task.wrapValue(el.getAttribute("default")));
+        } else {
+            Node child = XMLUtils.getChild(el, new QName(
+                    Manager.EXPERIMAESTRO_NS, "default"));
+            if (child != null) {
+                Document document = XMLUtils.newDocument();
+                child = child.cloneNode(true);
+                document.adoptNode(child);
+                NodeList childNodes = child.getChildNodes();
+                for (int i = 0; i < childNodes.getLength(); i++)
+                    document.appendChild(childNodes.item(i));
+                input.setDefaultValue(document);
+            }
+        }
 
-	}
+    }
 
-	private static QName getQName(Scriptable scope, NativeObject jsObject) {
-		return (QName) JSUtils.get(scope, "id", jsObject);
+    private QName getTypeQName(Element el, String typeAtt) {
+        return !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
+                Manager.PREDEFINED_PREFIXES) : null;
+    }
+
+    private static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
+		return (QName) JSUtils.get(scope, key, jsObject, allowNull);
 	}
 
 	@Override
@@ -328,8 +331,8 @@ public class JSTaskFactory extends TaskFactory {
 	}
 
 	@Override
-	public Map<String, QName> getOutputs() {
-		return outputs;
+	public Type getOutput() {
+		return output;
 	}
 
 }

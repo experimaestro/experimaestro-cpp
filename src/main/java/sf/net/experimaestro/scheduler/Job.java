@@ -52,9 +52,6 @@ import static java.lang.String.format;
 @Persistent()
 public abstract class Job extends Resource implements HeapElement<Job>, Runnable {
     final static private Logger LOGGER = Logger.getLogger();
-    public static final String DONE_EXTENSION = ".done";
-    public static final String CODE_EXTENSION = ".code";
-
 
     protected Job() {
     }
@@ -101,7 +98,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     /**
      * Our job monitor
      */
-    XPMProcess XPMProcess;
+    XPMProcess process;
 
     /**
      * Requirements
@@ -111,7 +108,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     @Override
     protected boolean isActive() {
         return super.isActive() || state == ResourceState.WAITING
-                || state == ResourceState.RUNNING;
+                || state == ResourceState.RUNNING || state == ResourceState.READY;
     }
 
     /**
@@ -193,17 +190,17 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     /**
      * This is where the real job gets done
      *
+     * @param locks
      * @return The error code (0 if everything went fine)
      * @throws Throwable
-     * @param locks
      */
     abstract protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable;
 
     @Override
     public void init(Scheduler scheduler) throws DatabaseException {
         super.init(scheduler);
-        if (XPMProcess != null)
-            XPMProcess.init(this);
+        if (process != null)
+            process.init(this);
     }
 
     /*
@@ -269,16 +266,11 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                     startTimestamp = System.currentTimeMillis();
 
                     // Start the task and transfer locking handling to those
-                    XPMProcess = startJob(locks);
-                    XPMProcess.adopt(locks);
+                    process = startJob(locks);
+                    process.adopt(locks);
                     locks = null;
                     updateDb();
 
-//
-//					// Create the "done" file, update the status and notify
-//                    getConnector().touchFile(locator.path + ".done");
-//					state = ResourceState.DONE;
-//					LOGGER.info("Done");
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
                     state = ResourceState.ERROR;
@@ -295,11 +287,16 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             throw new RuntimeException(e);
         } finally {
             // Dispose of the locks that we own
-            for(Lock lock: locks)
-                lock.dispose();
+            if (locks != null)
+                for (Lock lock : locks)
+                    try {
+                        lock.dispose();
+                    } catch (Exception e) {
+                        LOGGER.error(e);
+                    }
             try {
-                if (XPMProcess != null && !XPMProcess.isRunning())
-                    XPMProcess.dispose();
+                if (process != null && !process.isRunning())
+                    process.dispose();
             } catch (Exception e) {
                 LOGGER.error("Error while disposing of locks of XPMProcess: %s", e);
             }
@@ -314,7 +311,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      * @param objects  Optional parameters
      */
     synchronized public void notify(Resource resource, Object... objects) {
-        // Self-notification: discard
+        // Self-notification
         if (resource == null) {
             // Notified of an end of job
             if (objects.length == 1 && objects[0] instanceof EndOfJobMessage) {
@@ -323,10 +320,17 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
                 // Update state
                 state = message.code == 0 ? ResourceState.DONE : ResourceState.ERROR;
-
                 // Dispose of the job monitor
-                XPMProcess.dispose();
-                XPMProcess = null;
+                XPMProcess old = process;
+                process = null;
+
+                scheduler.updateState(this); // FIXME: not stored in DB!?
+//                scheduler.store(this);
+                try {
+                    old.dispose();
+                } catch (Exception e) {
+                    LOGGER.error("Could not dispose of the old process checker %s", e);
+                }
             } else {
                 LOGGER.error("Received unknown self-message: %s", Arrays.toString(objects));
             }

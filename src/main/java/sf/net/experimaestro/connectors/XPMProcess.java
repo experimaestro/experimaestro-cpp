@@ -24,6 +24,7 @@ import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
@@ -55,7 +56,8 @@ public abstract class XPMProcess {
     /**
      * The host where this process is running (or give an access to the process, e.g. for OAR processes)
      */
-    SingleHostConnector connector;
+    transient SingleHostConnector connector;
+    String connectorId;
 
     /**
      * The associated locks to release when the process has ended
@@ -84,6 +86,7 @@ public abstract class XPMProcess {
         this.connector = connector;
         this.pid = pid;
         this.job = job;
+        this.connectorId = connector.getIdentifier();
 
         // Set up the notification thread if needed
         if (notify && job != null) {
@@ -91,9 +94,9 @@ public abstract class XPMProcess {
                 @Override
                 public void run() {
                     int code = 0;
-
                     while (true) {
                         try {
+                            LOGGER.info("Waiting for task %s to finish", job.getIdentifier());
                             code = waitFor();
                             break;
                         } catch (InterruptedException e) {
@@ -110,7 +113,9 @@ public abstract class XPMProcess {
     /**
      * Constructs a XPMProcess without an underlying process
      */
-    protected XPMProcess(final Job job, String pid) {
+    protected XPMProcess(SingleHostConnector connector, final Job job, String pid) {
+        this.connector = connector;
+        this.connectorId = connector.getIdentifier();
         this.job = job;
         this.pid = pid;
     }
@@ -130,12 +135,16 @@ public abstract class XPMProcess {
      */
     public void init(Job job) throws DatabaseException {
         this.job = job;
+        final Scheduler scheduler = job.getScheduler();
+
         // TODO: use connector & job dependent times for checking
-        checker = job.getScheduler().schedule(this, 15, TimeUnit.SECONDS);
+        checker = scheduler.schedule(this, 15, TimeUnit.SECONDS);
+
+        connector = (SingleHostConnector) scheduler.getConnector(connectorId);
 
         // Init locks if needed
         for (Lock lock : locks)
-            lock.init(job.getScheduler());
+            lock.init(scheduler);
     }
 
 
@@ -183,6 +192,7 @@ public abstract class XPMProcess {
      */
     void close() {
         if (checker != null) {
+            LOGGER.info("Cancelling the checker for %s", this);
             checker.cancel(true);
             checker = null;
         }

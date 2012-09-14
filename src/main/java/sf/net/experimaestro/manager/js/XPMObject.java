@@ -24,6 +24,7 @@ import com.sun.org.apache.xerces.internal.xs.XSModel;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.*;
+import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
@@ -47,10 +48,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -98,12 +96,16 @@ public class XPMObject {
      */
     ResourceLocator currentResourceLocator;
 
+    /**
+     * Properties set by the script
+     */
+    Map<String, Object> properties = new HashMap<>();
+
     private static ThreadLocal<ArrayList<String>> log = new ThreadLocal<ArrayList<String>>() {
         protected synchronized ArrayList<String> initialValue() {
             return new ArrayList<String>();
         }
     };
-
 
     /**
      * Initialise a new XPM object
@@ -140,6 +142,7 @@ public class XPMObject {
         ScriptableObject.defineClass(scope, JSScheduler.class);
         ScriptableObject.defineClass(scope, JSConnector.class);
         ScriptableObject.defineClass(scope, SSHOptions.class);
+        ScriptableObject.defineClass(scope, JSObject.class);
 
         // Launchers
         ScriptableObject.defineClass(scope, JSOARLauncher.class);
@@ -151,6 +154,7 @@ public class XPMObject {
         JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
         JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
         JSUtils.addFunction(XPMObject.class, scope, "include", null);
+
         // Adds some special functions available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
@@ -159,7 +163,10 @@ public class XPMObject {
 
         // --- Add new objects
 
-        ScriptableObject.defineProperty(scope, "xpm", this, 0);
+//        ScriptableObject.defineProperty(scope, "xpm", new JSObject(this), 0);
+        addNewObject(cx, scope, "xpm", "XPM", new Object[]{});
+        ((JSObject) get(scope, "xpm")).set(this);
+
         addNewObject(cx, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
         addNewObject(cx, scope, "scheduler", "Scheduler",
@@ -182,7 +189,7 @@ public class XPMObject {
      * @param repositoryMode True if we include a repository
      * @return
      */
-    public void include(Object _connector, String path, boolean repositoryMode)
+    public XPMObject include(Object _connector, String path, boolean repositoryMode)
             throws Exception, InstantiationException, IllegalAccessException {
         // Get the connector
         if (_connector instanceof Wrapper)
@@ -194,7 +201,7 @@ public class XPMObject {
         else
             connector = (Connector) _connector;
 
-        include(new ResourceLocator(connector, path), repositoryMode);
+        return include(new ResourceLocator(connector, path), repositoryMode);
     }
 
     /**
@@ -204,47 +211,50 @@ public class XPMObject {
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    public void include(String path, boolean repositoryMode) throws Exception, IllegalAccessException, InstantiationException {
+    public XPMObject include(String path, boolean repositoryMode) throws Exception, IllegalAccessException, InstantiationException {
         ResourceLocator scriptpath = currentResourceLocator.resolvePath(path, true);
         LOGGER.debug("Including repository file [%s]", scriptpath);
-        include(scriptpath, repositoryMode);
+        return include(scriptpath, repositoryMode);
     }
 
     /**
      * Final method called for inclusion of a script
+     *
      * @param scriptpath
      * @param repositoryMode If true, runs in a separate environement
      * @throws Exception
      */
-    private void include(ResourceLocator scriptpath, boolean repositoryMode) throws Exception {
+    private XPMObject include(ResourceLocator scriptpath, boolean repositoryMode) throws Exception {
 
-        try(InputStream inputStream = scriptpath.getFile().getContent().getInputStream()) {
+        try (InputStream inputStream = scriptpath.getFile().getContent().getInputStream()) {
             Scriptable scriptScope = scope;
+            XPMObject xpmObject = this;
             if (repositoryMode) {
                 // Run the script in a new environment
                 scriptScope = context.initStandardObjects();
                 final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
-                final XPMObject xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler);
+                xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler);
 
             }
 
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), scriptpath.toString(), 1, null);
 
+            return xpmObject;
         }
 
     }
 
 
-    static void include(Context cx, Scriptable thisObj, Object[] args,
-                 Function funObj, boolean repositoryMode) throws Exception {
-        XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
+    static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
+                             Function funObj, boolean repositoryMode) throws Exception {
+        XPMObject xpm = ((JSObject) thisObj.get("xpm", thisObj)).xpm;
 
         if (args.length == 1)
             // Use the current connector
-            xpm.include(Context.toString(args[0]), repositoryMode);
+            return xpm.include(Context.toString(args[0]), repositoryMode);
         else if (args.length == 2)
             // Use the supplied connector
-            xpm.include(args[0], Context.toString(args[1]), repositoryMode);
+            return xpm.include(args[0], Context.toString(args[1]), repositoryMode);
         else
             throw new IllegalArgumentException("includeRepository expects one or two arguments");
 
@@ -254,25 +264,26 @@ public class XPMObject {
     /**
      * Javascript method calling {@linkplain #include(String, boolean)}
      */
-    static public void js_include_repository(Context cx, Scriptable thisObj, Object[] args,
-                                             Function funObj) throws Exception {
+    static public Map<String, Object> js_include_repository(Context cx, Scriptable thisObj, Object[] args,
+                                                            Function funObj) throws Exception {
 
-        include(cx, thisObj, args, funObj, true);
+        final XPMObject xpmObject = include(cx, thisObj, args, funObj, true);
+        return xpmObject.properties;
     }
 
     /**
      * Javascript method calling {@linkplain #include(String, boolean)}
      */
     static public void js_include(Context cx, Scriptable thisObj, Object[] args,
-                                             Function funObj) throws Exception {
+                                  Function funObj) throws Exception {
 
         include(cx, thisObj, args, funObj, false);
     }
 
 
-
     /**
      * Returns the current script location
+     *
      * @todo Should return a wrapper to FileObject for enhanced security
      */
     static public FileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
@@ -312,19 +323,6 @@ public class XPMObject {
             return new QName((String) ns, localName);
 
         throw new ExperimaestroRuntimeException("Not implemented (%s)", ns.getClass());
-    }
-
-    /**
-     * Add an experiment
-     *
-     * @param object
-     * @return
-     */
-    public Scriptable addTaskFactory(NativeObject object) {
-        JSTaskFactory f = new JSTaskFactory(scope, object, repository);
-        repository.addFactory(f);
-        return context.newObject(scope, "XPMTaskFactory",
-                new Object[]{Context.javaToJS(f, scope)});
     }
 
 
@@ -370,12 +368,6 @@ public class XPMObject {
                 new Object[]{Context.javaToJS(factory.create(), scope)});
     }
 
-    /**
-     * Returns the script path if available
-     */
-    public String getScriptPath() {
-        return currentResourceLocator.getPath();
-    }
 
     /**
      * Recursive flattening of an array
@@ -498,35 +490,8 @@ public class XPMObject {
         log.set(new ArrayList<String>());
     }
 
-    public File filepath(String filepath, String... names) {
-        File file = new File(filepath);
-        for (String name : names)
-            file = new File(file, name);
-        return file;
-    }
 
-    public File filepath(File file, String... names) {
-        for (String name : names)
-            file = new File(file, name);
-        return file;
-    }
 
-    /**
-     * Declare an alternative
-     */
-    public void declareAlternative(QName qname) {
-        AlternativeType type = new AlternativeType(qname);
-        repository.addType(type);
-    }
-
-    /**
-     * Add a module
-     */
-    public void addModule(Object object) {
-        JSModule module = new JSModule(repository, scope, (NativeObject) object);
-        LOGGER.debug("Adding module [%s]", module.getId());
-        repository.addModule(module);
-    }
 
     /**
      * Execute an experimental plan
@@ -683,4 +648,124 @@ public class XPMObject {
         repository.addSchema(JSModule.getModule(repository, module), xsModel);
     }
 
+
+    // --- Javascript methods
+
+    static public class JSObject extends ScriptableObject {
+        XPMObject xpm;
+
+        public JSObject() {
+            LOGGER.info("Called WITHOUT xpm");
+        }
+
+
+        protected void set(XPMObject xpm) {
+            this.xpm = xpm;
+        }
+
+        @Override
+        public String getClassName() {
+            return "XPM";
+        }
+
+        @JSFunction("set_property")
+        public void setProperty(String name, Object object) {
+            final Object x = JSUtils.unwrap(object);
+            xpm.properties.put(name, object);
+        }
+
+        @JSFunction("log")
+        static public void log(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+            if (args.length < 1)
+                throw new ExperimaestroRuntimeException("There should be at least one argument for log()");
+
+            String format = Context.toString(args[0]);
+            Object[] objects = new Object[args.length - 1];
+            for (int i = 1; i < args.length; i++)
+                objects[i - 1] = JSUtils.unwrap(args[i]);
+
+            ((JSObject) thisObj).xpm.log(format, objects);
+        }
+
+        @JSFunction("get_script_path")
+        public String getScriptPath() {
+            return xpm.currentResourceLocator.getPath();
+        }
+
+        /**
+         * Add a module
+         */
+        @JSFunction("add_module")
+        public void addModule(Object object) {
+            JSModule module = new JSModule(xpm.repository, xpm.scope, (NativeObject) object);
+            LOGGER.debug("Adding module [%s]", module.getId());
+            xpm.repository.addModule(module);
+        }
+
+        /**
+         * Add an experiment
+         *
+         * @param object
+         * @return
+         */
+        @JSFunction("add_task_factory")
+        public Scriptable add_task_factory(NativeObject object) {
+            JSTaskFactory f = new JSTaskFactory(xpm.scope, object, xpm.repository);
+            xpm.repository.addFactory(f);
+            return xpm.context.newObject(xpm.scope, "XPMTaskFactory",
+                    new Object[]{Context.javaToJS(f, xpm.scope)});
+        }
+
+
+        @JSFunction("get_task")
+        static public Scriptable getTask(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+            final XPMObject xpm = ((JSObject) thisObj).xpm;
+            if (args.length == 1)
+                return xpm.getTask((QName) JSUtils.unwrap(args[0]));
+
+            if (args.length == 2)
+                return xpm.getTask(Context.toString(args[0]), Context.toString(args[1]));
+
+            throw new IllegalArgumentException("get_task() called with the wrong number of arguments");
+        }
+
+
+        @JSFunction("evaluate")
+        public NativeArray evaluate(Object jsargs) throws Exception {
+            return xpm.evaluate(jsargs);
+        }
+
+        static public File filepath(File file, String... names) {
+            for (String name : names)
+                file = new File(file, name);
+            return file;
+        }
+
+        @JSFunction("filepath")
+        static public File filepath(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+            if (args.length < 1)
+                throw new IllegalArgumentException("filepath() called with the wrong number of arguments");
+
+            String[] names = new String[args.length - 1];
+            for (int i = 0; i < names.length; i++)
+                names[i] = Context.toString(args[i + 1]);
+
+            final Object o = JSUtils.unwrap(args[0]);
+            if (o instanceof File)
+                return filepath((File) o, names);
+
+            return filepath(new File(Context.toString(args[0])));
+        }
+
+        /**
+         * Declare an alternative
+         */
+        @JSFunction("declare_alternative")
+        public void declareAlternative(Object qname) {
+            AlternativeType type = new AlternativeType((QName)qname);
+            xpm.repository.addType(type);
+        }
+
+
+    }
 }

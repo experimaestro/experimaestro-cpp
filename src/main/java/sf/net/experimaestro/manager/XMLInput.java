@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager;
 
 public class XMLInput extends Input {
 
-	public XMLInput(QName type) {
+	public XMLInput(Type type) {
 		super(type);
 	}
 

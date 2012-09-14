@@ -40,7 +40,7 @@ var task = {
 		
 };
 
-xpm.addTaskFactory(task);
+xpm.add_task_factory(task);
 
 var task = xpm.getTask(task.id);
 var r = task.run();

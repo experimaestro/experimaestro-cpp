@@ -56,23 +56,20 @@ abstract public class XPMProcessBuilder {
     /** Working directory */
     String directory;
 
-    /** The path used to create process related files */
-    String path;
-
     /** The different input/output */
     protected Redirect input;
     protected Redirect output;
     protected Redirect error;
 
     /** Whether this process should be bound to the Java process */
-    private boolean detach;
+    boolean detach;
 
     public XPMProcessBuilder command(List<String> command) {
         this.command = command;
         return this;
     }
 
-    public XPMProcessBuilder command(String... command) {
+    final public XPMProcessBuilder command(String... command) {
         return command(ListAdaptator.create(command));
     }
 
@@ -103,15 +100,6 @@ abstract public class XPMProcessBuilder {
             throw new IllegalArgumentException();
         this.input = source;
         return this;
-    }
-
-    public XPMProcessBuilder path(String path) {
-        this.path = path;
-        return this;
-    }
-
-    public String path() {
-        return path;
     }
 
 
@@ -149,6 +137,8 @@ abstract public class XPMProcessBuilder {
      *  @return A valid {@linkplain XPMProcess}
      */
     abstract public XPMProcess start() throws LaunchException, IOException;
+
+
 
 
     /**
