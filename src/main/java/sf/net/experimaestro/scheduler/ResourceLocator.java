@@ -51,6 +51,26 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     public ResourceLocator() {
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ResourceLocator that = (ResourceLocator) o;
+
+        if (!connectorId.equals(that.connectorId)) return false;
+        if (!path.equals(that.path)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = connectorId.hashCode();
+        result = 31 * result + path.hashCode();
+        return result;
+    }
+
     /**
      * Initialization with a connector id. The object needs to be initialized
      * with {@linkplain #init(Scheduler)}
@@ -84,12 +104,25 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         this.connector = connector;
     }
 
-    @Override
+    /**
+     * Init from a pair of strings
+     *
+     * <b>Note</b> that the object needs to be initialized if used for something else
+     * than retrieving a record
+     * @param connectorId
+     * @param path
+     */
+    public ResourceLocator(String connectorId, String path) {
+        this.connectorId = connectorId;
+        this.path = path;
+    }
+
+        @Override
     public int compareTo(ResourceLocator other) {
         int z = connectorId.compareTo(other.connectorId);
         if (z != 0)
             return z;
-        return path.compareTo(path);
+        return path.compareTo(other.path);
     }
 
     @Override

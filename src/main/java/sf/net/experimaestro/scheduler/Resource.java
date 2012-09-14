@@ -35,6 +35,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.EnumSet;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -106,6 +107,11 @@ public abstract class Resource implements Comparable<Resource> {
      * Task manager
      */
     transient Scheduler scheduler;
+
+    @Override
+    protected void finalize() {
+      LOGGER.debug("Finalizing resource %s", this.hashCode());
+    }
 
     /**
      * Our set of listeners (resources that are listening to changes in the
@@ -220,6 +226,24 @@ public abstract class Resource implements Comparable<Resource> {
     public void init(Scheduler scheduler) throws DatabaseException {
         this.scheduler = scheduler;
         this.locator.init(scheduler);
+    }
+
+
+    final static EnumSet<ResourceState> UPDATABLE_STATES
+            = EnumSet.of(ResourceState.READY, ResourceState.ERROR, ResourceState.WAITING);
+    public boolean replace(Resource old) {
+        synchronized (old) {
+            assert old.locator.equals(locator) : "locators do not match";
+
+            if (UPDATABLE_STATES.contains(old.state)) {
+                // Transfer dependencies
+                this.listeners = old.getListeners();
+                updateDb();
+                return true;
+            }
+            return false;
+        }
+
     }
 
 
@@ -599,8 +623,8 @@ public abstract class Resource implements Comparable<Resource> {
             scheduler.store(this);
         } catch (DatabaseException e) {
             LOGGER.error(
-                    "Could not update the information in the database for %s",
-                    this);
+                    "Could not update the information in the database for %s: %s",
+                    this, e.getMessage());
         }
     }
 
@@ -620,6 +644,7 @@ public abstract class Resource implements Comparable<Resource> {
     public void printHTML(PrintWriter out, PrintConfig config) {
         out.format("<div><b>Resource id</b>: %s</h2>", locator);
         out.format("<div><b>Status</b>: %s</div>", state);
+
 
     }
 }

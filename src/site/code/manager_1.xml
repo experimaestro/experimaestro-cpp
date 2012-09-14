@@ -18,7 +18,7 @@
 
 <example xmlns="http://my.ns" xmlns:xp="sf.net.experimaestro" xp:resource="file:///home/xpm/output">
     <!-- A simple typed value -->
-	<xp:value id="id" value="abc1" type="xs:string"/>
+    <xp:value id="id" value="abc1" type="xs:string"/>
 
     <!-- Another value -->
     <alpha xp:type="xs:integer">3</alpha>

@@ -17,34 +17,34 @@
   -->
 
 <project xmlns="http://maven.apache.org/DECORATION/1.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd"
-	name="Experimaestro experiment manager">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd"
+         name="Experimaestro experiment manager">
 
     <bannerLeft>
         <name>Experimaestro - Managing and Scheduling experiments in Computer Science</name>
     </bannerLeft>
 
     <body>
-		<menu name="Experimaestro">
-			<item name="Introduction" href="index.html" />
-			<item name="@Sourceforge" href="http://sourceforge.net/projects/experimaestro/" />
-		</menu>
+        <menu name="Experimaestro">
+            <item name="Introduction" href="index.html"/>
+            <item name="@Sourceforge" href="http://sourceforge.net/projects/experimaestro/"/>
+        </menu>
 
-		<menu name="Scheduler">
+        <menu name="Scheduler">
             <item name="Introduction" href="scheduler/index.html"/>
             <item name="Connectors" href="scheduler/connectors.html"/>
         </menu>
 
-		<menu name="Manager">
-			<item name="Introduction" href="manager/index.html"/>
-			<item name="XML Input/Output" href="manager/xml.html"/>
+        <menu name="Manager">
+            <item name="Introduction" href="manager/index.html"/>
+            <item name="XML Input/Output" href="manager/xml.html"/>
             <item name="Tasks" href="manager/tasks.html"/>
             <item name="JavaScript scripts" href="manager/javascript.html"/>
-		</menu>
+        </menu>
 
-		<menu ref="reports" />
-	</body>
+        <menu ref="reports"/>
+    </body>
 
     <skin>
         <groupId>org.apache.maven.skins</groupId>

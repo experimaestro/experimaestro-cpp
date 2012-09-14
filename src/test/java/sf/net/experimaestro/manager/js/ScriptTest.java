@@ -26,7 +26,6 @@ import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.utils.JSUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;

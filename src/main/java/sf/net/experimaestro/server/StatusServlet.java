@@ -21,6 +21,7 @@ package sf.net.experimaestro.server;
 import com.sleepycat.je.DatabaseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
@@ -30,7 +31,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DateFormat;
 import java.util.ArrayList;
 
 /**
@@ -41,8 +41,6 @@ import java.util.ArrayList;
 public class StatusServlet extends XPMServlet {
 	private static final long serialVersionUID = 1L;
 	private final Scheduler scheduler;
-	static DateFormat longDateFormat = DateFormat.getDateTimeInstance(
-			DateFormat.FULL, DateFormat.FULL);
 
 	public StatusServlet(Scheduler manager) {
 		this.scheduler = manager;
@@ -58,19 +56,19 @@ public class StatusServlet extends XPMServlet {
 			final PrintWriter out = startHTMLResponse(response);
 			out.println("<html><head><title>Experimaestro - Resources</title></head><body>");
 
-			ArrayList<ResourceState> values = new ArrayList<ResourceState>(
+			ArrayList<ResourceState> values = new ArrayList<>(
 					ListAdaptator.create(ResourceState.values()));
-			values.add(null);
 			for (ResourceState state : values) {
 				out.format("<h1>Resources in state %s</h1>", state);
 				out.println("<ul>");
 				for (Resource resource : scheduler.resources()) {
 					if (resource.getState() == state)
 						out.format(
-								"<li><a href=\"%s/resource?id=%s\">%s</a></li>",
+								"<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
 								request.getServletPath(),
-								urlEncode(resource.getLocator().toString()),
-								resource.getLocator());
+                                urlEncode(resource.getLocator().getConnector().getIdentifier()),
+                                urlEncode(resource.getLocator().getPath()),
+                                resource.getLocator());
 				}
 				out.println("</ul>");
 			}
@@ -81,15 +79,18 @@ public class StatusServlet extends XPMServlet {
 
 		if (localPath.equals("/resource")) {
 			PrintWriter out = startHTMLResponse(response);
-			String jobId = request.getParameter("id");
+            String connectorId = request.getParameter("id");
+            String path = request.getParameter("path");
 
-			out.format(
+            final ResourceLocator locator = new ResourceLocator(connectorId, path);
+
+            out.format(
 					"<html><head><title>Experimaestro - Details of resource %s</title></head><body>",
-					jobId);
+					locator);
 
 			Resource resource;
 			try {
-				resource = scheduler.getResource(jobId);
+				resource = scheduler.getResource(locator);
 			} catch (DatabaseException e) {
 				throw new IOException(e);
 			}
@@ -98,7 +99,10 @@ public class StatusServlet extends XPMServlet {
 				PrintConfig config = new PrintConfig();
 				config.detailURL = request.getServletPath();
 				resource.printHTML(out, config);
-			}
+			} else {
+                out.format("Could not retrieve resource <b>%s</b>", locator);
+            }
+
 			out.println("</body></html>");
 			return;
 		}

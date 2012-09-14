@@ -25,16 +25,16 @@ import java.io.File;
 
 @Persistent(proxyFor = File.class)
 public class FileProxy implements PersistentProxy<File> {
-	String absolutePath;
-	
-	@Override
-	public void initializeProxy(File object) {
-		absolutePath = object.getAbsolutePath();
-	}
+    String absolutePath;
 
-	@Override
-	public File convertProxy() {
-		return new File(absolutePath);
-	}
+    @Override
+    public void initializeProxy(File object) {
+        absolutePath = object.getAbsolutePath();
+    }
+
+    @Override
+    public File convertProxy() {
+        return new File(absolutePath);
+    }
 
 }

@@ -26,7 +26,6 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
@@ -354,23 +353,6 @@ public class Scheduler {
 	}
 
     /**
-     * Get a resource by locator
-     *
-     * First checks if the resource is in the list of tasks to be run. If not,
-     * we look directly on disk to get back information on the resource.
-     *
-     * @throws DatabaseException
-     *
-     */
-    synchronized public Resource getResource(String id)
-            throws DatabaseException {
-        // TODO: Implement getting a resource by id
-        throw new NotImplementedException();
-//        return getResource(ResourceLocator.decode(id));
-    }
-
-
-    /**
 	 * Add resources
 	 * 
 	 * @throws DatabaseException
@@ -405,7 +387,7 @@ public class Scheduler {
 		// Update the task and notify ourselves since we might want
 		// to run new processes
 
-		// Update the heap
+        // Update the heap
 		waitingJobs.update(job);
 
 		// Notify
@@ -455,7 +437,7 @@ public class Scheduler {
 		return waitingJobs;
 	}
 
-	protected void store(Resource resource) throws DatabaseException {
+	public void store(Resource resource) throws DatabaseException {
 		resources.put(resource);
 	}
 

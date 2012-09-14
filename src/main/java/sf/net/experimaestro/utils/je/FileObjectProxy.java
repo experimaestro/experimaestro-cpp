@@ -33,15 +33,15 @@ public class FileObjectProxy implements PersistentProxy<FileObject> {
     public static class LocalProxy extends FileObjectProxy {
     }
 
-	String uri;
-	
-	@Override
-	public void initializeProxy(FileObject object) {
-        uri = object.toString();
-	}
+    String uri;
 
-	@Override
-	public FileObject convertProxy() {
+    @Override
+    public void initializeProxy(FileObject object) {
+        uri = object.toString();
+    }
+
+    @Override
+    public FileObject convertProxy() {
         try {
             return Scheduler.getVFSManager().resolveFile(uri);
         } catch (FileSystemException e) {

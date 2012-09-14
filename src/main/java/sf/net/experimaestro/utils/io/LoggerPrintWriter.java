@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.utils.io;
 /**
- * 
+ *
  */
 
 
@@ -30,13 +30,12 @@ import java.io.PrintWriter;
 /**
  * @author bpiwowar
  * @date Jan 11, 2008
- *
  */
-public class LoggerPrintWriter extends PrintWriter  {
-	/**
-	 * Creates a PrintStream for a given logger at a given output level
-	 */
-	public LoggerPrintWriter(Logger logger, Level level) {
-		super(new LoggerOutputStream(logger, level));
-	}
+public class LoggerPrintWriter extends PrintWriter {
+    /**
+     * Creates a PrintStream for a given logger at a given output level
+     */
+    public LoggerPrintWriter(Logger logger, Level level) {
+        super(new LoggerOutputStream(logger, level));
+    }
 }

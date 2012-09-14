@@ -17,19 +17,19 @@
   -->
 
 <assembly>
-	<id>bin</id>
-	<formats>
-		<format>dir</format>
-	</formats>
-	<includeBaseDirectory>false</includeBaseDirectory>
+    <id>bin</id>
+    <formats>
+        <format>dir</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
 
-	<dependencySets>
-		<dependencySet>
-			<!--<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping> -->
-			<unpack>false</unpack>
-			<scope>runtime</scope>
-		</dependencySet>
+    <dependencySets>
+        <dependencySet>
+            <!--<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping> -->
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+        </dependencySet>
 
-	</dependencySets>
+    </dependencySets>
 
 </assembly>

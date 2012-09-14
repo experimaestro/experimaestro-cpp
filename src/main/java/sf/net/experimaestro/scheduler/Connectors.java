@@ -19,35 +19,17 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
-import com.sleepycat.persist.PrimaryIndex;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
-
-import java.lang.ref.WeakReference;
-import java.util.Iterator;
-import java.util.WeakHashMap;
 
 /**
  * Stores the connectors in a database
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Connectors implements Iterable<Connector> {
+public class Connectors extends CachedEntitiesStore<String, Connector> {
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * The index
-     */
-    private PrimaryIndex<String, Connector> index;
-
-    /**
-     * A cache to get track of connectors in memory
-     */
-    private WeakHashMap<String, WeakReference<Connector>> cache = new WeakHashMap<>();
 
     /**
      * The associated scheduler
@@ -63,97 +45,24 @@ public class Connectors implements Iterable<Connector> {
      */
     public Connectors(Scheduler scheduler, EntityStore dbStore)
             throws DatabaseException {
+        super(dbStore.getPrimaryIndex(String.class, Connector.class));
         this.scheduler = scheduler;
-        index = dbStore.getPrimaryIndex(String.class, Connector.class);
-    }
-
-    /**
-     * Store the connector in the database - called when an entity has changed
-     *
-     * @param connector The connector to add
-     * @return True if the insertion was successful, or false if the connector
-     *         was not updated (e.g. because it is a running job)
-     * @throws DatabaseException
-     *          If an error occurs while putting the connector in the database
-     */
-    synchronized public boolean put(Connector connector) throws DatabaseException {
-        // Store in database and in cache
-        index.put(connector);
-        cache.put(connector.getIdentifier(), new WeakReference<>(connector));
-
-        // OK, we did update
-        return true;
-    }
-
-    /**
-     * Get a connector
-     *
-     *
-     * @param id
-     * @return The connector or null if no such entities exist
-     * @throws com.sleepycat.je.DatabaseException
-     *
-     */
-    synchronized public Connector get(String id) throws DatabaseException {
-        Connector connector = getFromCache(id);
-        if (connector != null)
-            return connector;
-
-        // Get from the database
-        connector = index.get(id);
-        return connector;
-    }
-
-    private Connector getFromCache(String id) {
-        // Try to get from cache first
-        WeakReference<Connector> reference = cache.get(id);
-        if (reference != null) {
-            Connector connector = reference.get();
-            if (connector != null)
-                return connector;
-        }
-        return null;
     }
 
     @Override
-    public Iterator<Connector> iterator() {
-        try {
-        return new AbstractIterator<Connector>() {
-            EntityCursor<String> iterator = index.keys();
-
-            @Override
-            protected void finalize() throws Throwable {
-                super.finalize();
-                if (iterator != null)
-                    iterator.close();
-            }
-
-            @Override
-            protected boolean storeNext() {
-                try {
-                    String id = iterator.next();
-                    if (id != null) {
-                        value = get(id);
-                        return true;
-                    }
-                } catch (DatabaseException e) {
-                    throw new RuntimeException(e);
-                }
-
-                if (iterator != null) {
-                    try {
-                        iterator.close();
-                    } catch(Exception e) {
-                        LOGGER.error("Cannot close the iterator: %s" , e);
-                    }
-                }
-
-                return false;
-            }
-        };
-        } catch(Exception e) {
-            throw new ExperimaestroRuntimeException(e);
-        }
+    protected boolean canOverride(Connector old, Connector connector) {
+        return true;
     }
+
+    @Override
+    protected String getKey(Connector connector) {
+        return connector.getIdentifier();
+    }
+
+    @Override
+    protected void init(Connector connector) {
+        connector.init(scheduler);
+    }
+
 
 }

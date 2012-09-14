@@ -165,7 +165,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     }
 
     @Override
-    protected void finalize() throws Throwable {
+    protected void finalize()  {
 //		for (ResourceLocator id : dependencies.keySet()) {
 //			scheduler.getResource(id).unregister(this);
 //		}
@@ -311,6 +311,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      * @param objects  Optional parameters
      */
     synchronized public void notify(Resource resource, Object... objects) {
+        LOGGER.debug("Notification [%s] for job [%s]", Arrays.toString(objects), resource);
+
         // Self-notification
         if (resource == null) {
             // Notified of an end of job
@@ -324,8 +326,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 XPMProcess old = process;
                 process = null;
 
-                scheduler.updateState(this); // FIXME: not stored in DB!?
-//                scheduler.store(this);
+                updateDb();
+                scheduler.updateState(this);
                 try {
                     old.dispose();
                 } catch (Exception e) {

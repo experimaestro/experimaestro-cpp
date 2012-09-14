@@ -19,6 +19,7 @@
 package sf.net.experimaestro.server;
 
 import com.sleepycat.je.DatabaseException;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.XmlRpcStreamServer;
@@ -318,7 +319,8 @@ public class RPCHandler {
 
 		// XPMProcess locks
 		for (Object depend : depends) {
-			Resource resource = scheduler.getResource(depend.toString());
+
+			Resource resource = scheduler.getResource(toResourceLocator(depend));
 			if (resource == null)
 				throw new RuntimeException("Resource " + depend
 						+ " was not found");
@@ -327,7 +329,7 @@ public class RPCHandler {
 
 		// We have to wait for read lock resources to be generated
 		for (Object readLock : readLocks) {
-			Resource resource = scheduler.getResource(readLock.toString());
+			Resource resource = scheduler.getResource(toResourceLocator(readLock));
 			if (resource == null)
 				throw new RuntimeException("Resource " + readLock
 						+ " was not found");
@@ -336,10 +338,10 @@ public class RPCHandler {
 
 		// Write locks
 		for (Object writeLock : writeLocks) {
-			final String id = (String) writeLock;
-			Resource resource = scheduler.getResource(id);
+            final ResourceLocator id = toResourceLocator(writeLock);
+            Resource resource = scheduler.getResource(id);
 			if (resource == null) {
-				resource = new SimpleData(scheduler, connector, id,
+				resource = new SimpleData(scheduler, id,
 						LockMode.EXCLUSIVE_WRITER, false);
 				resource.register(job);
 			}
@@ -350,7 +352,12 @@ public class RPCHandler {
 		return true;
 	}
 
-	/**
+    private ResourceLocator toResourceLocator(Object depend) {
+        throw new NotImplementedException();
+//        return null;  //To change body of created methods use File | Settings | File Templates.
+    }
+
+    /**
 	 * Utility function that transforms an array with paired values into a map
 	 * 
 	 * @param envArray

@@ -19,30 +19,16 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
-import com.sleepycat.persist.PrimaryIndex;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
-
-import java.lang.ref.WeakReference;
-import java.util.Iterator;
-import java.util.WeakHashMap;
 
 /**
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Resources implements Iterable<Resource> {
+public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	/** The index */
-	private PrimaryIndex<ResourceLocator, Resource> index;
-
-	/**
-	 * A cache to get track of resources in memory
-	 */
-	private WeakHashMap<ResourceLocator, WeakReference<Resource>> cache = new WeakHashMap<ResourceLocator, WeakReference<Resource>>();
 
 	/**
 	 * The associated scheduler
@@ -57,113 +43,32 @@ public class Resources implements Iterable<Resource> {
 	 */
 	public Resources(Scheduler scheduler, EntityStore dbStore)
 			throws DatabaseException {
+        super(dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class));
 		this.scheduler = scheduler;
-		index = dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class);
+
 	}
 
-	/**
-	 * Store the resource in the database - called when an entity has changed
-	 * 
-	 * 
-	 * @param resource
-	 *            The resource to add
-	 * @return True if the insertion was successful, or false if the resource
-	 *         was not updated (e.g. because it is a running job)
-	 * @throws DatabaseException
-	 *             If an error occurs while putting the resource in the database
-	 */
-	synchronized public boolean put(Resource resource) throws DatabaseException {
-		// Check if overriding a running resource (unless it is the same object)
-		Resource old = get(resource.locator);
 
-		if (old != null) {
-			// Don't override a running task
-			if (old.state == ResourceState.RUNNING && resource != old) {
-				LOGGER.warn("Cannot override a running task [%s]");
-				return false;
-			}
-			// FIXME: should do something
-		}
+    @Override
+    protected boolean canOverride(Resource old, Resource resource) {
+        if (old.state == ResourceState.RUNNING && resource != old) {
+            LOGGER.error(String.format("Cannot override a running task [%s] / %s vs %s", resource.locator,
+                    resource.hashCode(), old.hashCode()));
+            return false;
+        }
+        return true;
+    }
 
-		// Store in database and in cache
-		index.put(resource);
-		cache.put(resource.locator, new WeakReference<Resource>(resource));
 
-		// OK, we did update
-		return true;
-	}
+    @Override
+    protected ResourceLocator getKey(Resource resource) {
+        return resource.getLocator();
+    }
 
-	/**
-	 * Get a resource
-	 * 
-	 * @param id
-	 * @return The resource or null if no such entities exist
-	 * @throws DatabaseException
-	 */
-	synchronized public Resource get(ResourceLocator id) throws DatabaseException {
-		Resource resource = getFromCache(id);
-		if (resource != null)
-			return resource;
+    @Override
+    protected void init(Resource resource) {
+       resource.init(scheduler);
+    }
 
-		// Get from the database
-		resource = index.get(id);
-		if (resource != null) {
-            resource.init(scheduler);
-		}
-		return resource;
-	}
-
-	private Resource getFromCache(ResourceLocator id) {
-		// Try to get from cache first
-		WeakReference<Resource> reference = cache.get(id);
-		if (reference != null) {
-			Resource resource = reference.get();
-			if (resource != null)
-				return resource;
-		}
-		return null;
-	}
-
-	@Override
-	public Iterator<Resource> iterator() {
-		try {
-			return new AbstractIterator<Resource>() {
-				EntityCursor<ResourceLocator> iterator = index.keys();
-
-				@Override
-				protected void finalize() throws Throwable {
-					super.finalize();
-					if (iterator != null)
-						iterator.close();
-				}
-
-				@Override
-				protected boolean storeNext() {
-					try {
-						ResourceLocator id = iterator.next();
-						if (id != null) {
-							value = get(id);
-							return true;
-						}
-					} catch (DatabaseException e) {
-						throw new RuntimeException(e);
-					}
-
-					if (iterator != null) {
-						try {
-							iterator.close();
-						} catch (DatabaseException e) {
-							LOGGER.error(e, "Could not close the cursor on resources");
-						}
-
-					}
-
-					return false;
-				}
-			};
-		} catch (DatabaseException e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 }

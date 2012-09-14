@@ -27,6 +27,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -75,7 +76,7 @@ public class JSScheduler extends ScriptableObject {
      * @throws DatabaseException
      */
     @JSFunction("command_line_job")
-    public void commandlineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
+    public void commandlineJob(String path, Object jsargs, Object jsoptions) throws DatabaseException {
 
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
@@ -104,8 +105,17 @@ public class JSScheduler extends ScriptableObject {
         // Store connector in database
         scheduler.put(connector);
 
-        CommandLineTask task = new CommandLineTask(scheduler, connector, identifier, args);
-
+        CommandLineTask task = new CommandLineTask(scheduler, connector, path, args);
+        final Resource old = scheduler.getResource(task.getLocator());
+        if (old != null) {
+            // TODO: if equal, do not try to replace the task
+            if (!task.replace(old)) {
+                XPMObject.getLog().add(String.format("Cannot override resource [%s]", task.getIdentifier()));
+                return;
+            }
+        } else {
+            scheduler.store(task);
+        }
 
         // --- Options
 
@@ -122,15 +132,17 @@ public class JSScheduler extends ScriptableObject {
 
             // --- Resources to lock
             if (options.has("lock", options)) {
-                NativeArray resources = (NativeArray) options.get("launcher", options);
+                NativeArray resources = (NativeArray) options.get("lock", options);
                 for (int i = (int) resources.getLength(); --i >= 0; ) {
                     NativeArray array = (NativeArray) resources.get(i, resources);
-                    assert array.getLength() == 2;
-                    Resource resource = scheduler.getResource(XPMObject.toString(array
-                            .get(0, array)));
+                    assert array.getLength() == 3;
+//                    final String connectorId = Context.toString(array.get(0, array));
+                    final String rsrcPath = Context.toString(array.get(0, array));
+
+                    Resource resource = scheduler.getResource(new ResourceLocator(connector, rsrcPath));
                     LockType lockType = LockType.valueOf(XPMObject.toString(array.get(
                             1, array)));
-                    LOGGER.debug("Adding dependency on [%s] of tyep [%s]", resource,
+                    LOGGER.debug("Adding dependency on [%s] of type [%s]", resource,
                             lockType);
                     task.addDependency(resource, lockType);
                 }
