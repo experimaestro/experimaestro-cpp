@@ -137,6 +137,16 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
         }
     }
 
+
+    /**
+     * Remove element from Heap
+     * @param element
+     */
+    public E remove(E element) {
+        return remove(element.getIndex());
+    }
+
+
     private void setItem(final int index, final E item) {
         list.set(index, item);
         item.setIndex(index);
@@ -148,9 +158,11 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      * @return
      */
     public E pop() {
-        final E return_value = list.get(0);
-        int hole_index = 0;
-        int new_hole_index = 0;
+        return remove(0);
+    }
+
+    private E remove(int hole_index) {
+        final E return_value = list.get(hole_index);
         final int L = size();
 
         while (true) {
@@ -163,6 +175,8 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
                 hole_index = l;
                 break;
             } else {
+                final int new_hole_index;
+
                 if (comparator.compare(list.get(2 * hole_index + 1), list
                         .get(2 * hole_index + 2)) < 0)
                     new_hole_index = l;

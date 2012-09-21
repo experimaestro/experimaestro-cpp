@@ -138,14 +138,14 @@ public class Scheduler {
         connectors.put(connector);
     }
 
-    public ScheduledFuture<?> schedule(final XPMProcess XPMProcess, int rate, TimeUnit units) {
+    public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    XPMProcess.check();
+                    process.check();
                 } catch (Exception e) {
-                    LOGGER.error("Error while checking job [%s]: %s", XPMProcess.getJob(), e);
+                    LOGGER.error("Error while checking job [%s]: %s", process.getJob(), e);
                 }
             }
         }, 0, rate, units);
@@ -254,13 +254,12 @@ public class Scheduler {
 
         // Initialise the running resources so that they can retrieve their state
         for (Resource resource : resources) {
+            // TODO: restrict to "interesting" states (READY, WAITING, RUNNING)
             if (ResourceState.ACTIVE.contains(resource.getState())) {
                 resource.init(this);
                 // Add job to the queue if ready
                 if (resource instanceof Job && resource.getState() == ResourceState.READY)
                     readyJobs.add((Job) resource);
-
-
             }
         }
 
@@ -343,59 +342,7 @@ public class Scheduler {
         return resource;
     }
 
-    /**
-     * Add resources
-     *
-     * @throws DatabaseException
-     */
-    synchronized public void add(Resource... list) throws DatabaseException {
-        // Loop over the new jobs
-        for (Resource resource : list) {
-            LOGGER.info("Adding the resource [%s]", resource);
 
-            // First, add the job as a new resource
-            resources.put(resource);
-
-            if (resource instanceof Job) {
-                Job job = (Job) resource;
-                // Add to the list of waiting jobs
-                if (job.getState() == ResourceState.READY)
-                    readyJobs.add(job);
-
-            }
-        }
-
-        // Notify if a task runner is waiting for fresh new task(s)
-        notify();
-    }
-
-    /**
-     * Called when something has changed for a job (in order to update the
-     * heap)
-     */
-    synchronized void updateState(Resource resource) {
-        // Update the task and notify ourselves since we might want
-        // to run new processes
-
-        if (resource instanceof Job) {
-            Job job = (Job) resource;
-            // Update the heap
-            if (resource.getState() == ResourceState.READY) {
-                if (job.getIndex() < 0)
-                    readyJobs.add(job);
-                else
-                    readyJobs.update(job);
-                // Notify
-                notify();
-            }
-        }
-
-        // Notify listeners
-        resource.notifyListeners();
-
-        // Save
-        store(resource);
-    }
 
     /**
      * Get the next waiting job
@@ -405,12 +352,13 @@ public class Scheduler {
      */
     Job getNextWaitingJob() throws InterruptedException {
         while (true) {
+            LOGGER.debug("Fetching the next task to run");
             // Try the next task
             synchronized (this) {
                 if (!readyJobs.isEmpty()) {
                     final Job task = readyJobs.peek();
-                    LOGGER.info(
-                            "Checking task %s for execution [%d unsatisfied]",
+                    LOGGER.debug(
+                            "Fetched task %s: checking for execution [%d unsatisfied]",
                             task, task.nbUnsatisfied);
                     if (task.nbUnsatisfied == 0) {
                         return readyJobs.pop();
@@ -440,7 +388,38 @@ public class Scheduler {
         return readyJobs;
     }
 
-    public void store(Resource resource) throws DatabaseException {
+    /**
+     * Store a resource in the database
+     *
+     * @param resource
+     * @throws DatabaseException
+     */
+    synchronized public void store(Resource resource) throws DatabaseException {
+        // Update the task and notify ourselves since we might want
+        // to run new processes
+
+        if (resource instanceof Job) {
+            Job job = (Job) resource;
+            // Update the heap
+            if (resource.getState() == ResourceState.READY) {
+                if (job.getIndex() < 0)
+                    readyJobs.add(job);
+                else
+                    readyJobs.update(job);
+
+                LOGGER.info("Job %s is ready [notifying]", resource);
+
+                // Notify job runners
+                notify();
+            } else if (job.getIndex() > 0) {
+                readyJobs.remove(job);
+            }
+        }
+
+        // Notify listeners
+        resource.notifyListeners();
+
+
         resources.put(resource);
     }
 

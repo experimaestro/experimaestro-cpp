@@ -103,7 +103,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
         index.put(value);
         cache.put(key, new WeakReference<>(value));
         LOGGER.debug("Stored value [%s@%s] in database", key, value.hashCode());
-        // OK, we did update
+        // OK, we did updateFromStatusFile
         return true;
     }
 

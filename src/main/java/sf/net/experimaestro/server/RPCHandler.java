@@ -392,7 +392,7 @@ public class RPCHandler {
             job.addDependency(resource, LockType.WRITE_ACCESS);
         }
 
-        scheduler.add(job);
+        scheduler.store(job);
         return true;
     }
 

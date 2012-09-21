@@ -95,6 +95,7 @@ public class CommandLineTask extends Job {
 
         // Construct command
         this.command = command;
+
     }
 
     /**

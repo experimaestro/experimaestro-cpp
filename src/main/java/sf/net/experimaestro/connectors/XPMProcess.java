@@ -24,6 +24,7 @@ import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -88,6 +89,8 @@ public abstract class XPMProcess {
         this.job = job;
         this.connectorId = connector.getIdentifier();
 
+        LOGGER.debug("XPM Process %s constructed", connectorId);
+
         // Set up the notification thread if needed
         if (notify && job != null) {
             new Thread(String.format("job monitor [%s]", job.getLocator())) {
@@ -98,13 +101,14 @@ public abstract class XPMProcess {
                         try {
                             LOGGER.info("Waiting for task %s to finish", job.getIdentifier());
                             code = waitFor();
+                            LOGGER.info("Task %s has finished running", job.getIdentifier());
                             break;
                         } catch (InterruptedException e) {
                             LOGGER.error("Interrupted: %s", e);
                         }
                     }
 
-                    job.notify(null, new EndOfJobMessage(code));
+                    job.notify(null, new EndOfJobMessage(code, System.currentTimeMillis()));
                 }
             }.start();
         }
@@ -217,7 +221,7 @@ public abstract class XPMProcess {
     public int exitValue() {
         // Check for done file
         try {
-            if (job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.DONE_EXTENSION).exists())
+            if (job.getLocator().resolve(connector, Resource.DONE_EXTENSION).exists())
                 return 0;
 
             // If the job is not done, check the ".code" file to get the error code
@@ -255,7 +259,9 @@ public abstract class XPMProcess {
     public void check() throws Exception {
         if (!isRunning()) {
             // We are not running: send a message
-            job.notify(null, new EndOfJobMessage(exitValue()));
+            LOGGER.debug("End of job [%s]", job);
+            final long time = job.getLocator().resolve(connector, Resource.DONE_EXTENSION).getContent().getLastModifiedTime();
+            job.notify(null, new EndOfJobMessage(exitValue(), time));
         }
     }
 

@@ -58,11 +58,14 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     /**
      * Initialisation of a task
      *
+     * The job is by default initialized as "WAITING": its state should be updated after
+     * the initialization has finished
+     *
      * @param scheduler The job scheduler
      */
     public Job(Scheduler scheduler, Connector connector, String identifier) {
         super(scheduler, connector, identifier, LockMode.EXCLUSIVE_WRITER);
-        state = isDone() ? ResourceState.DONE : ResourceState.WAITING;
+        state = ResourceState.WAITING;
     }
 
     private boolean isDone() {
@@ -104,16 +107,10 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      */
     ComputationalRequirements requirements;
 
-    @Override
-    protected boolean isActive() {
-        return super.isActive() || state == ResourceState.WAITING
-                || state == ResourceState.RUNNING || state == ResourceState.READY;
-    }
-
     /**
      * The dependencies for this job (dependencies are on any resource)
      */
-    private TreeMap<ResourceLocator, Dependency> dependencies = new TreeMap<ResourceLocator, Dependency>();
+    TreeMap<ResourceLocator, Dependency> dependencies = new TreeMap<>();
 
     /**
      * Number of unsatisfied dependencies
@@ -122,7 +119,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
     /**
      * Number of dependencies that are in an "error" state
-     * This is needed to update the "on hold" state
+     * This is needed to updateFromStatusFile the "on hold" state
      */
     int nbHolding;
 
@@ -214,6 +211,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             while (true) {
                 // Check if not done
                 if (isDone()) {
+                    state = ResourceState.DONE;
+                    updateDb();
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -236,6 +235,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
+                    updateDb();
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -309,6 +309,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      * @param resource The resource has changed (or null if itself)
      * @param objects  Optional parameters
      */
+    @Override
     synchronized public void notify(Resource resource, Object... objects) {
         LOGGER.debug("Notification [%s] for job [%s]", Arrays.toString(objects), resource);
 
@@ -317,6 +318,10 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             // Notified of the end of job
             if (objects.length == 1 && objects[0] instanceof EndOfJobMessage) {
                 EndOfJobMessage message = (EndOfJobMessage) objects[0];
+                this.endTimestamp = message.timestamp;
+
+                // TODO: copy done & code to main connector if needed
+
                 LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), message.code);
 
                 // Update state
@@ -325,9 +330,12 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 XPMProcess old = process;
                 process = null;
 
-                scheduler.updateState(this);
+                scheduler.store(this);
                 try {
-                    old.dispose();
+                    LOGGER.debug("Disposing of old XPM process [%s]", old );
+                    if (old != null) {
+                        old.dispose();
+                    }
                 } catch (Exception e) {
                     LOGGER.error("Could not dispose of the old process checker %s", e);
                 }
@@ -336,13 +344,15 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             }
         } else {
             if (checkDependency(resource))
-                scheduler.updateState(this);
+                scheduler.store(this);
         }
 
     }
 
     /**
-     * Check if a dependency changed and returns
+     * Check if a dependency changed and returns whether this has changed the state of the job
+     *
+     *
      * @param resource
      * @return true if the resource changed, false otherwise
      */
@@ -352,6 +362,13 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
         // Get the cached status
         Dependency status = dependencies.get(resource.getLocator());
+        if (status == null) {
+            // Log this
+            LOGGER.error("Could not retrieve dependency %s", resource.getLocator());
+            state = ResourceState.ERROR;
+            updateDb();
+            return false;
+        }
 
         // No change here
         if (status.state == newResourceState)
@@ -360,7 +377,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
         // Is this resource in a state that is good for us?
         int k = resource.accept(status.type).isOK() ? 1 : 0;
 
-        // Computes the difference with the previous status to update the number
+        // Computes the difference with the previous status to updateFromStatusFile the number
         // of unsatisfied resources states
         final int diff = (status.isSatisfied ? 1 : 0) - k;
 
@@ -374,22 +391,37 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             if (!status.state.isBlocking())
                 ++nbHolding;
 
-            if (state != ResourceState.ON_HOLD)
+            if (state != ResourceState.ON_HOLD) {
+                LOGGER.debug("Putting resource [%s] on hold", this);
                 state = ResourceState.ON_HOLD;
+            }
+
+        } else if (status.state.isBlocking()) {
+            --nbHolding;
+            if (nbHolding == 0 && this.state == ResourceState.ON_HOLD) {
+                this.state = ResourceState.WAITING;
+                LOGGER.debug("Resource [%s] state is WAITING", this);
+            }
         }
 
         // Update
         nbUnsatisfied += diff;
-        if (k == 1)
-            status.isSatisfied = true;
-
+        status.isSatisfied = k == 1;
         status.state = newResourceState;
+
+        if (nbUnsatisfied == 0 && this.state == ResourceState.WAITING) {
+            this.state = ResourceState.READY;
+            LOGGER.debug("Resource [%s] state is READY", this);
+        }
+
+        LOGGER.debug("Notification from [%s] state %s : Resource [%s] state is READY", resource, resource.getState(), this);
         return true;
     }
 
     // ----- Heap part (do not touch) -----
 
-    private int index;
+    /** Negative value when not in the heap */
+    private int index = -1;
 
     public int getIndex() {
         return index;

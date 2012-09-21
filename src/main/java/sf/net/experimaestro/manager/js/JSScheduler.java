@@ -76,7 +76,7 @@ public class JSScheduler extends ScriptableObject {
      * @throws DatabaseException
      */
     @JSFunction("command_line_job")
-    public void commandlineJob(String path, Object jsargs, Object jsoptions) throws DatabaseException {
+    public void commandlineJob(String path, Object jsargs, Object jsoptions) throws Exception {
 
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
@@ -164,11 +164,13 @@ public class JSScheduler extends ScriptableObject {
         }
 
 
-        // --- Add it
-        scheduler.add(task);
+
+        // Update the task status now that it is initialized
+        task.updateStatus();
+
     }
 
-    public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws DatabaseException {
+    public void jsFunction_addCommandLineJob(String identifier, Object jsargs, Object jsoptions) throws Exception {
         commandlineJob(identifier, jsargs, jsoptions);
     }
 

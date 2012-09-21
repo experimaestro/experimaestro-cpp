@@ -25,8 +25,10 @@ package sf.net.experimaestro.scheduler;
  */
 public class EndOfJobMessage {
     public int code;
+    public long timestamp;
 
-    public EndOfJobMessage(int code) {
+    public EndOfJobMessage(int code, long timestamp) {
         this.code = code;
+        this.timestamp = timestamp;
     }
 }

@@ -63,11 +63,14 @@ public class ShLauncher implements Launcher {
 
             // Start the process
             final XPMProcessBuilder builder = connector.processBuilder();
+
             builder.command(protect(path, SHELL_SPECIAL));
 
             builder.detach(detach);
             builder.redirectOutput(output);
             builder.redirectError(error);
+
+            builder.job(job);
 
             return builder.start();
         }

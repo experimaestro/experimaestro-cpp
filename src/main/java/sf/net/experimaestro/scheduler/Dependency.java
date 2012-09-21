@@ -23,7 +23,7 @@ import sf.net.experimaestro.locks.LockType;
 
 /**
  * What is the status of a dependency This class stores the previous status
- * (satisfied or not) in order to update the number of blocking resources
+ * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
  */
 @Persistent
 public class Dependency {

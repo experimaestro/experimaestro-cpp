@@ -127,7 +127,8 @@ public class SchedulerTest {
                     null);
             job2.addDependency(job1, LockType.READ_ACCESS);
 
-            scheduler.add(job1, job2);
+            scheduler.store(job1);
+            scheduler.store(job2);
             counter.resume();
 
             assert sequence.get(0).equals("job1");

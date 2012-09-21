@@ -29,17 +29,13 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
+import sf.net.experimaestro.locks.StatusLock;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.EnumSet;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -118,7 +114,7 @@ public abstract class Resource implements Comparable<Resource> {
      * state of this resource)
      */
     @SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY, relatedEntity = Resource.class)
-    Set<ResourceLocator> listeners = new TreeSet<ResourceLocator>();
+    Set<ResourceLocator> listeners = new TreeSet<>();
 
     /**
      * If the resource is currently locked
@@ -171,7 +167,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     void notifyListeners(Object... objects) throws DatabaseException {
         for (ResourceLocator id : listeners) {
-            Job resource = (Job) scheduler.getResource(id);
+            Resource resource = scheduler.getResource(id);
             resource.notify(this, objects);
         }
     }
@@ -194,16 +190,31 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
+     * Update the status of the resource by checking all that could have changed externally
+     *
+     * Calls {@linkplain #doUpdateStatus()}. If a change is detected, then it updates
+     * the representation of the resource in the database by calling {@linkplain Scheduler#store(Resource)}.
+     */
+    final public boolean updateStatus() throws Exception {
+        boolean changed = doUpdateStatus();
+        if (changed)
+            scheduler.store(this);
+        return changed;
+    }
+
+    /**
      * Update the status of this resource
      */
     protected boolean doUpdateStatus() throws Exception {
-        boolean updated = update();
+        boolean updated = updateFromStatusFile();
 
         // Check if the resource was generated
-        if (getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION).exists()
+        final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
+        if (doneFile.exists()
                 && this.getState() != ResourceState.DONE) {
             updated = true;
             // TODO: get the end timestamp reading the done file time stamp
+//            doneFile.getContent().getLastModifiedTime();
             this.state = ResourceState.DONE;
         }
 
@@ -215,21 +226,22 @@ public abstract class Resource implements Comparable<Resource> {
         return updated;
     }
 
-    /** Update the status of the resource by checking all that could have changed externally */
-    public boolean updateStatus() throws Exception {
-        boolean changed = doUpdateStatus();
-        if (changed)
-            scheduler.updateState(this);
-        return changed;
+    /**
+     * Returns the connector associated to this resource
+     * @return a Connector object
+     */
+    final public Connector getConnector() {
+        return locator.getConnector();
     }
 
+    /**
+     * Returns the main connector associated with this resource
+     * @return a SingleHostConnector object
+     */
     public final SingleHostConnector getMainConnector() {
         return getConnector().getMainConnector();
     }
 
-    final public Connector getConnector() {
-        return locator.getConnector();
-    }
 
     /** Initialise a resource when retrieved from database */
     public void init(Scheduler scheduler) throws DatabaseException {
@@ -240,6 +252,13 @@ public abstract class Resource implements Comparable<Resource> {
 
     final static EnumSet<ResourceState> UPDATABLE_STATES
             = EnumSet.of(ResourceState.READY, ResourceState.ERROR, ResourceState.WAITING);
+
+    /**
+     * Replace this resource
+     *
+     * @param old
+     * @return true if the resource was replaced, and false if an error occured
+     */
     public boolean replace(Resource old) {
         synchronized (old) {
             assert old.locator.equals(locator) : "locators do not match";
@@ -252,6 +271,15 @@ public abstract class Resource implements Comparable<Resource> {
             }
             return false;
         }
+
+    }
+
+    /**
+     * Notifies the resource that something happened
+     * @param resource
+     * @param objects
+     */
+    public void notify(Resource resource, Object... objects) {
 
     }
 
@@ -296,7 +324,7 @@ public abstract class Resource implements Comparable<Resource> {
      *         {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     DependencyStatus accept(LockType locktype) {
-        LOGGER.debug("Checking lock %s for resource %s (generated %b)",
+        LOGGER.debug("Checking lock %s for resource %s (state %s)",
                 locktype, this, getState());
 
         // Handle simple cases
@@ -306,7 +334,8 @@ public abstract class Resource implements Comparable<Resource> {
         if (state == ResourceState.ON_HOLD)
             return DependencyStatus.HOLD;
 
-        if (state == ResourceState.WAITING)
+        // If not done, then we wait
+        if (state != ResourceState.DONE)
             return DependencyStatus.WAIT;
 
         // OK, we have to get a look into it
@@ -354,7 +383,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
-     * Tries to lock the resource
+     * Tries to lock the resource depending on the type of dependency
      *
      * @param dependency
      * @throws UnlockableException
@@ -362,6 +391,7 @@ public abstract class Resource implements Comparable<Resource> {
     public Lock lock(String pid, LockType dependency) throws UnlockableException {
         // Check the dependency status
         switch (accept(dependency)) {
+            // Cases where the lock cannot be granted (task waiting or in error)
             case WAIT:
                 throw new UnlockableException(
                         "Cannot grant dependency %s for resource %s", dependency,
@@ -370,11 +400,14 @@ public abstract class Resource implements Comparable<Resource> {
                 throw new RuntimeException(
                         format("Resource %s cannot accept dependency %s", this,
                                 dependency));
+
             case OK_LOCK:
+                // Case where we need a full lock
                 return getMainConnector().createLockFile(locator + LOCK_EXTENSION);
 
             case OK:
-                return new StatusLock(pid, dependency == LockType.WRITE_ACCESS);
+                // Case where we just need a status lock
+                return new StatusLock(this, pid, dependency == LockType.WRITE_ACCESS);
 
         }
 
@@ -412,13 +445,124 @@ public abstract class Resource implements Comparable<Resource> {
         return writers;
     }
 
+
+    /**
+     * Get the task locator
+     *
+     * @return The task unique locator
+     */
+    public ResourceLocator getLocator() {
+        return locator;
+    }
+
+    public String getIdentifier() {
+        return locator.toString();
+    }
+    /**
+     * Is the resource locked?
+     */
+    public boolean isLocked() {
+        return locked;
+    }
+
+    /**
+     * Get the state of the resource
+     *
+     * @return
+     */
+    public ResourceState getState() {
+        return state;
+    }
+
+    /**
+     * Returns the list of listeners
+     */
+    public Set<ResourceLocator> getListeners() {
+        return listeners;
+    }
+
+    /**
+     * Update the database after a change in state
+     */
+    void updateDb() {
+        try {
+            scheduler.store(this);
+        } catch (DatabaseException e) {
+            LOGGER.error(
+                    "Could not update the information in the database for %s: %s",
+                    this, e.getMessage());
+        }
+    }
+
+    /**
+     * Defines how printing should be done
+     */
+    static public class PrintConfig {
+        public String detailURL;
+    }
+
+    /**
+     * Writes an HTML description of the resource
+     *
+     * @param out
+     * @param config The configuration for printing
+     */
+    public void printHTML(PrintWriter out, PrintConfig config) {
+        out.format("<div><b>Resource id</b>: %s</h2>", locator);
+        out.format("<div><b>Status</b>: %s</div>", state);
+    }
+
+
+    /**
+     * Update the status file
+     * @param pidFrom     The old PID (or 0 if none)
+     * @param pidTo       The new PID (or 0 if none)
+     * @param writeAccess True if we need the write access
+     * @throws UnlockableException
+     */
+    public void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
+            throws UnlockableException {
+        // --- Lock the resource
+        Lock fileLock = getMainConnector().createLockFile(locator.path + LOCK_EXTENSION);
+
+        try {
+            // --- Read the resource status
+            updateFromStatusFile();
+
+            final FileObject tmpFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
+            PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
+            if (pidFrom == null) {
+                // We are adding a new entry
+                out.format("%s %s%n", pidTo, writeAccess ? "w" : "r");
+            } else {
+                // We are modifying an entry: rewrite the file
+                processMap.remove(pidFrom);
+                if (pidTo != null)
+                    processMap.put(pidTo, writeAccess);
+                for (Map.Entry<String, Boolean> x : processMap.entrySet())
+                    out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
+            }
+
+            out.close();
+            tmpFile.moveTo(getMainConnector().resolveFile(locator.path + STATUS_EXTENSION));
+        } catch (Exception e) {
+            throw new UnlockableException(
+                    "Status file '%s' could not be created", locator.path + STATUS_EXTENSION);
+        } finally {
+            if (fileLock != null)
+                fileLock.dispose();
+        }
+
+    }
+
+
     /**
      * Update the status of the resource using its status file
      *
      * @return A boolean specifying whether something was updated
-     * @throws FileNotFoundException If some error occurs while reading status
+     * @throws java.io.FileNotFoundException If some error occurs while reading status
      */
-    public boolean update() throws Exception {
+    public boolean updateFromStatusFile() throws Exception {
         boolean updated = writers > 0 || readers > 0;
 
         final FileObject statusFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION);
@@ -460,200 +604,5 @@ public abstract class Resource implements Comparable<Resource> {
 
         }
         return true;
-    }
-
-    /**
-     * Update the status file
-     * @param pidFrom     The old PID (or 0 if none)
-     * @param pidTo       The new PID (or 0 if none)
-     * @param writeAccess True if we need the write access
-     * @throws UnlockableException
-     */
-    void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
-            throws UnlockableException {
-        // --- Lock the resource
-        Lock fileLock = getMainConnector().createLockFile(locator.path + LOCK_EXTENSION);
-
-        try {
-            // --- Read the resource status
-            update();
-
-            final FileObject tmpFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
-            PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
-            if (pidFrom == null) {
-                // We are adding a new entry
-                out.format("%s %s%n", pidTo, writeAccess ? "w" : "r");
-            } else {
-                // We are modifying an entry: rewrite the file
-                processMap.remove(pidFrom);
-                if (pidTo != null)
-                    processMap.put(pidTo, writeAccess);
-                for (Entry<String, Boolean> x : processMap.entrySet())
-                    out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
-            }
-
-            out.close();
-            tmpFile.moveTo(getMainConnector().resolveFile(locator.path + STATUS_EXTENSION));
-        } catch (Exception e) {
-            throw new UnlockableException(
-                    "Status file '%s' could not be created", locator.path + STATUS_EXTENSION);
-        } finally {
-            if (fileLock != null)
-                fileLock.dispose();
-        }
-
-    }
-
-    /**
-     * Defines a status lock
-     *
-     * @author B. Piwowarski <benjamin@bpiwowar.net>
-     */
-    public class StatusLock implements Lock {
-        private String pid;
-        private final boolean writeAccess;
-
-        public StatusLock(String pid, final boolean writeAccess)
-                throws UnlockableException {
-            this.pid = pid;
-            this.writeAccess = writeAccess;
-            updateStatusFile(null, pid, writeAccess);
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        updateStatusFile(StatusLock.this.pid, null, writeAccess);
-                    } catch (UnlockableException e) {
-                        LOGGER.warn(
-                                "Unable to change status file %s (tried to remove pid %d)",
-                                locator.path + STATUS_EXTENSION, StatusLock.this.pid);
-                    }
-                }
-            });
-        }
-
-        /**
-         * Change the PID in the status file
-         *
-         * @throws UnlockableException
-         */
-        public void changePID(String pid) throws UnlockableException {
-            updateStatusFile(this.pid, pid, writeAccess);
-            this.pid = pid;
-        }
-
-        /*
-           * (non-Javadoc)
-           *
-           * @see bpiwowar.expmanager.locks.Lock#dispose()
-           */
-        public boolean dispose() {
-            try {
-                updateStatusFile(pid, null, writeAccess);
-            } catch (UnlockableException e) {
-                return false;
-            }
-            return true;
-        }
-
-        /*
-           * (non-Javadoc)
-           *
-           * @see bpiwowar.expmanager.locks.Lock#changeOwnership(int)
-           */
-        public void changeOwnership(String pid) {
-            try {
-                updateStatusFile(this.pid, pid, writeAccess);
-            } catch (UnlockableException e) {
-                return;
-            }
-
-            this.pid = pid;
-        }
-
-        @Override
-        public void init(Scheduler scheduler) throws DatabaseException {
-        }
-    }
-
-    /**
-     * Get the task locator
-     *
-     * @return The task unique locator
-     */
-    public ResourceLocator getLocator() {
-        return locator;
-    }
-
-    public String getIdentifier() {
-        return locator.toString();
-    }
-    /**
-     * Is the resource locked?
-     */
-    public boolean isLocked() {
-        return locked;
-    }
-
-    /**
-     * Get the state of the resource
-     *
-     * @return
-     */
-    public ResourceState getState() {
-        return state;
-    }
-
-    /**
-     * Checks whether a resource should be kept in main memory (e.g.,
-     * running/waiting jobs & monitored resources)
-     * <p/>
-     * When overriding this method, use
-     * <code>super.isActive() || condition</code>
-     *
-     * @return true if the resource is active
-     */
-    protected boolean isActive() {
-        return !listeners.isEmpty();
-    }
-
-    /**
-     * Returns the list of listeners
-     */
-    public Set<ResourceLocator> getListeners() {
-        return listeners;
-    }
-
-    /**
-     * Update the database after a change in state
-     */
-    void updateDb() {
-        try {
-            scheduler.store(this);
-        } catch (DatabaseException e) {
-            LOGGER.error(
-                    "Could not update the information in the database for %s: %s",
-                    this, e.getMessage());
-        }
-    }
-
-    /**
-     * Defines how printing should be done
-     */
-    static public class PrintConfig {
-        public String detailURL;
-    }
-
-    /**
-     * Writes an HTML description of the resource
-     *
-     * @param out
-     * @param config The configuration for printing
-     */
-    public void printHTML(PrintWriter out, PrintConfig config) {
-        out.format("<div><b>Resource id</b>: %s</h2>", locator);
-        out.format("<div><b>Status</b>: %s</div>", state);
-
-
     }
 }

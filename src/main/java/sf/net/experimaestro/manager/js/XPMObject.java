@@ -397,7 +397,7 @@ public class XPMObject {
     public String addData(Connector connector, String identifier) throws DatabaseException {
         LockMode mode = LockMode.SINGLE_WRITER;
         SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
-        scheduler.add(resource);
+        scheduler.store(resource);
         return identifier;
     }
 
