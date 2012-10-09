@@ -60,8 +60,9 @@ public class JSConnector extends ScriptableObject {
         final String uriString = Context.toString(args[0]);
 
         ConnectorOptions options = null;
-        if (nbArgs == 2)
-            options = (ConnectorOptions) JSUtils.unwrap(args[1]);
+        if (nbArgs == 2) {
+            options = ((JSConnectorOptions) JSUtils.unwrap(args[1])).getOptions();
+        }
 
         try {
             Connector connector = Connector.create(uriString, options);

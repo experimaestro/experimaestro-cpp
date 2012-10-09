@@ -57,15 +57,19 @@ public class CommandLineTask extends Job {
      */
     public TreeMap<String, String> environment = null;
 
+    /**
+     * Working directory
+     */
     public String workingDirectory;
 
     /**
-     * The input source, if any
+     * The input source, if any (path from the main locator)
      */
-    private XPMProcessBuilder.Redirect jobInput = XPMProcessBuilder.Redirect.INHERIT;
+    private String jobInputPath;
+//    private XPMProcessBuilder.Redirect jobInputPath = XPMProcessBuilder.Redirect.INHERIT;
 
     /**
-     * If the input source is a string (and jobInput is PIPE), store it in this variable
+     * If the input source is a string (and jobInputPath is PIPE), store it in this variable
      */
     private String jobInputString;
 
@@ -144,15 +148,19 @@ public class CommandLineTask extends Job {
 
 
         // Write the input if needed
-        if (jobInput == XPMProcessBuilder.Redirect.PIPE) {
-            assert(jobInputString != null);
+        XPMProcessBuilder.Redirect jobInput = XPMProcessBuilder.Redirect.INHERIT;
+
+        if (jobInputString != null) {
             FileObject inputFile = locator.resolve(connector, INPUT_EXTENSION);
             final OutputStream outputStream = inputFile.getContent().getOutputStream();
             outputStream.write(jobInputString.getBytes());
             outputStream.close();
-
-            jobInput = XPMProcessBuilder.Redirect.from(inputFile);
+            jobInputPath = getMainConnector().resolve(inputFile);
         }
+
+        if (jobInputPath != null)
+            jobInput = XPMProcessBuilder.Redirect.from(getMainConnector().resolveFile(jobInputPath));
+
 
         builder.redirectInput(jobInput);
 
@@ -188,7 +196,7 @@ public class CommandLineTask extends Job {
     }
 
     public void setInput(String jobInput) {
-        this.jobInput = XPMProcessBuilder.Redirect.PIPE;
+        this.jobInputPath = null;
         this.jobInputString = jobInput;
     }
 }

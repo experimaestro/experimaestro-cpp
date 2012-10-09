@@ -34,7 +34,6 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import sf.net.experimaestro.utils.je.FileObjectProxy;
 import sf.net.experimaestro.utils.je.FileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -232,7 +231,6 @@ public class Scheduler {
 
         EntityModel model = new AnnotationModel();
         model.registerClass(FileProxy.class);
-        model.registerClass(FileObjectProxy.LocalProxy.class);
         storeConfig.setModel(model);
 
         // Add a shutdown hook

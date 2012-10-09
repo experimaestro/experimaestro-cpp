@@ -16,14 +16,15 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.connectors;
+package sf.net.experimaestro.manager.js;
 
-import com.sleepycat.persist.model.Persistent;
+import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.connectors.ConnectorOptions;
 
 /**
+ * Common class for connector options
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 25/6/12
  */
-@Persistent
-public abstract class ConnectorOptions {
+abstract public class JSConnectorOptions extends ScriptableObject {
+    abstract public ConnectorOptions getOptions();
 }

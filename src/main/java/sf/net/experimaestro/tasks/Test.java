@@ -18,46 +18,13 @@
 
 package sf.net.experimaestro.tasks;
 
-import bpiwowar.argparser.Argument;
-import bpiwowar.argparser.ArgumentClass;
-import bpiwowar.argparser.OrderedArgument;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
-import org.apache.xmlrpc.client.XmlRpcClient;
-import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
-
-import java.io.File;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @TaskDescription(name = "test", project = { "xpmanager" })
 public class Test extends AbstractTask {
 	@Override
 	public int execute() throws Throwable {
-        // (?:\{(\w[\w\.:]+)\}|(\w+):)?((?:\w[-\.])+)
-        // (?:\{(\w+)\}|(\w+):)?(?:\w+)
-
-        Pattern QNAME_PATTERN = Pattern
-                .compile("(?:\\{(\\w(?:\\w|[\\.:])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
-
-
-        String[] paths = new String[] {
-                "a",
-                "xp:a",
-                "{uri.b}b"
-        };
-        for(String path: paths) {
-            final Matcher matcher = QNAME_PATTERN.matcher(path);
-            final boolean b = matcher.matches();
-            System.err.format("Match “%s”: %b%n", path, b);
-
-            if (b) {
-                for(int i = 1; i <= matcher.groupCount(); i++)
-                System.err.format(" [%d] %s%n", i,  matcher.group(i));
-            }
-        }
 
         return 0;
 		

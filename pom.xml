@@ -26,6 +26,10 @@
     <description>Experiment manager framework</description>
 
 
+    <properties>
+        <izpack-standalone.version>4.3.1</izpack-standalone.version>
+        <staging.dir>${project.build.directory}/staging</staging.dir>
+    </properties>
 
 
     <repositories>
@@ -139,6 +143,35 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <!-- IzPack installer - ->
+            <plugin>
+                <groupId>org.codehaus.izpack</groupId>
+                <artifactId>izpack-maven-plugin</artifactId>
+                <version>1.0-alpha-5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.izpack</groupId>
+                        <artifactId>izpack-standalone-compiler</artifactId>
+                        <version>${izpack-standalone.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <izpackBasedir>${staging.dir}</izpackBasedir>
+                    <customPanelDirectory>${staging.dir}</customPanelDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>standard-installer</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>izpack</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            -->
+
         </plugins>
 
     </build>

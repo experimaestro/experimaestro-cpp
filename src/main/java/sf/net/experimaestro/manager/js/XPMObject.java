@@ -29,7 +29,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SSHOptions;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -141,7 +140,7 @@ public class XPMObject {
         ScriptableObject.defineClass(scope, TaskJSWrapper.class);
         ScriptableObject.defineClass(scope, JSScheduler.class);
         ScriptableObject.defineClass(scope, JSConnector.class);
-        ScriptableObject.defineClass(scope, SSHOptions.class);
+        ScriptableObject.defineClass(scope, JSSSHOptions.class);
         ScriptableObject.defineClass(scope, JSObject.class);
 
         // Launchers
@@ -156,10 +155,9 @@ public class XPMObject {
         JSUtils.addFunction(XPMObject.class, scope, "include", null);
 
         // Adds some special functions available for tests only
+        // (TODO: should be included when testing only)
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
-
-        // TODO: would be good to have this at a global level
 
         // --- Add new objects
 
@@ -170,7 +168,7 @@ public class XPMObject {
         addNewObject(cx, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
         addNewObject(cx, scope, "scheduler", "Scheduler",
-                new Object[]{scheduler});
+                new Object[]{scheduler, this});
     }
 
     static private void addNewObject(Context cx, Scriptable scope,

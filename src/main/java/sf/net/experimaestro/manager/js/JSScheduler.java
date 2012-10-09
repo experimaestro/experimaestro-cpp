@@ -22,7 +22,6 @@ import com.sleepycat.je.DatabaseException;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.scheduler.CommandLineTask;
@@ -50,14 +49,16 @@ public class JSScheduler extends ScriptableObject {
     public static final String CLASSNAME = "Scheduler";
 
     Scheduler scheduler;
+    private XPMObject xpm;
 
     public JSScheduler() {
     }
 
-    public void jsConstructor(Scriptable scheduler) {
+    public void jsConstructor(Scriptable scheduler, Scriptable xpm) {
         if (scheduler != null) {
             this.scheduler = (Scheduler) ((NativeJavaObject) scheduler)
                     .unwrap();
+            this.xpm = (XPMObject) ((NativeJavaObject)xpm).unwrap();
         }
     }
 
@@ -99,8 +100,9 @@ public class JSScheduler extends ScriptableObject {
 
         if (options != null && options.has("connector", options)) {
             connector = ((JSConnector) options.get("connector", options)).getConnector();
-        } else
-            connector = new LocalhostConnector();
+        } else {
+            connector = xpm.currentResourceLocator.getConnector();
+        }
 
         // Store connector in database
         scheduler.put(connector);

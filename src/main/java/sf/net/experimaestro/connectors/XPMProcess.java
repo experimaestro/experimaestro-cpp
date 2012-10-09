@@ -118,10 +118,7 @@ public abstract class XPMProcess {
      * Constructs a XPMProcess without an underlying process
      */
     protected XPMProcess(SingleHostConnector connector, final Job job, String pid) {
-        this.connector = connector;
-        this.connectorId = connector.getIdentifier();
-        this.job = job;
-        this.pid = pid;
+        this(connector, pid, job, false);
     }
 
 

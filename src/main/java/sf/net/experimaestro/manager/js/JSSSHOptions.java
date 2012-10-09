@@ -16,14 +16,32 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.connectors;
+package sf.net.experimaestro.manager.js;
 
-import com.sleepycat.persist.model.Persistent;
+import org.mozilla.javascript.annotations.JSFunction;
+import sf.net.experimaestro.connectors.SSHOptions;
+import sf.net.experimaestro.utils.JSUtils;
 
 /**
+ * JavaScript wrapper for SSH connection options
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 25/6/12
+ * @date 9/10/12
  */
-@Persistent
-public abstract class ConnectorOptions {
+public class JSSSHOptions extends JSConnectorOptions {
+    SSHOptions options = new SSHOptions();
+
+
+    public SSHOptions getOptions() {
+        return options;
+    }
+
+    @Override
+    public String getClassName() {
+        return "SSHOptions";
+    }
+
+    @JSFunction("set_stream_proxy")
+    public void setStreamProxy(String uri, Object sshOptions) {
+        options.setStreamProxy(uri, ((JSSSHOptions) JSUtils.unwrap(sshOptions)).options);
+    }
 }

@@ -26,35 +26,49 @@ import com.jcraft.jsch.agentproxy.USocketFactory;
 import com.jcraft.jsch.agentproxy.connector.PageantConnector;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.sftp.IdentityRepositoryFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
-import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSSetter;
+import org.apache.commons.vfs2.provider.sftp.SftpStreamProxy;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 25/6/12
  */
+@Persistent
 public class SSHOptions extends ConnectorOptions  {
     /** Password - TODO: encrypt before storing */
-    String password;
+    private String password;
 
-    String compression;
+    /** Compression level */
+    private String compression;
 
-    boolean useSSHAgent = true;
+    /** Whether to use an SSH agent */
+    private boolean useSSHAgent = true;
 
-    @JSSetter
+    /** Proxy for configuration */
+    private ProxyConfiguration proxy;
+
     public void setCompression(String compression) {
         this.compression = compression;
     }
 
-    @JSSetter
     public void setUseSSHAgent(boolean useSSHAgent) {
         this.useSSHAgent = useSSHAgent;
+    }
 
+    public void setStreamProxy(String uri, SSHOptions sshOptions) {
+        try {
+            proxy = new NCProxyConfiguration(uri, sshOptions);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public FileSystemOptions getOptions() throws FileSystemException {
@@ -73,23 +87,21 @@ public class SSHOptions extends ConnectorOptions  {
         else
             builder.setIdentityRepositoryFactory(options, null);
 
+
+        if (proxy != null)
+            proxy.configure(builder, options);
+
         return options;
     }
 
-    @JSSetter
     public void setPassword(String password) {
         this.password = password;
     }
 
-    @Override
-    public String getClassName() {
-        return "SSHOptions";
+    public String getLockFileCommand() {
+        return "lockfile";
     }
 
-    @JSConstructor
-    static public SSHOptions jsConstructor() {
-        return new SSHOptions();
-    }
 
     /** Use the SSH agent to connect */
     private static class AgentRepositoryFactory implements IdentityRepositoryFactory {
@@ -106,6 +118,42 @@ public class SSHOptions extends ConnectorOptions  {
             } catch (AgentProxyException e) {
                 throw new ExperimaestroRuntimeException(e);
             }
+        }
+    }
+
+    private static interface ProxyConfiguration {
+        void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException;
+    }
+
+    @Persistent
+    private static class NCProxyConfiguration implements ProxyConfiguration {
+        String username;
+        String hostname;
+        int port;
+
+        SSHOptions sshOptions;
+
+        private NCProxyConfiguration() {}
+
+        public NCProxyConfiguration(String uriString, SSHOptions sshOptions) throws URISyntaxException {
+            URI uri = new URI(uriString);
+            this.username = uri.getUserInfo();
+            this.hostname = uri.getHost();
+            this.port = uri.getPort();
+            if (this.port == -1)
+                this.port = SSHConnector.SSHD_DEFAULT_PORT;
+            this.sshOptions = sshOptions;
+        }
+
+        @Override
+        public void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException {
+            builder.setProxyType(opts, SftpFileSystemConfigBuilder.PROXY_STREAM);
+            builder.setProxyCommand(opts, SftpStreamProxy.NETCAT_COMMAND);
+            builder.setProxyUser(opts, username);
+            builder.setProxyHost(opts, hostname);
+            builder.setProxyPassword(opts, "");
+            builder.setProxyPort(opts, port);
+            builder.setProxyOptions(opts, sshOptions.getOptions());
         }
     }
 }

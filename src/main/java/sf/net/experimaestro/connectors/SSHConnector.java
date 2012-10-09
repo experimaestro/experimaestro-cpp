@@ -24,7 +24,6 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
@@ -56,6 +55,7 @@ import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
 public class SSHConnector extends SingleHostConnector {
 
     static final private Logger LOGGER = Logger.getLogger();
+    static final int SSHD_DEFAULT_PORT = 22;
 
     /**
      * Username
@@ -77,12 +77,11 @@ public class SSHConnector extends SingleHostConnector {
      */
     private SSHOptions options = new SSHOptions();
 
-    private static final int SSHD_DEFAULT_PORT = 22;
 
     /**
      * Used for serialization
      */
-    public SSHConnector() {
+    private SSHConnector() {
     }
 
     @Override
@@ -101,18 +100,18 @@ public class SSHConnector extends SingleHostConnector {
         super(String.format("ssh://%s@%s:%d", username, port, hostname));
         this.username = username;
         this.hostname = hostname;
-        this.port = port;
+        this.port = port < 0 ? SSHD_DEFAULT_PORT : port;
     }
 
     public SSHConnector(String username, String hostname) {
-        this(username, hostname, 22);
+        this(username, hostname, SSHD_DEFAULT_PORT);
     }
 
     public Lock createLockFile(final String path) throws UnlockableException {
         try {
             ChannelExec channel = newExecChannel();
             LOGGER.info("Creating SSH lock [%s]", path);
-            channel.setCommand(String.format("lockfile \"%s\"", protect(path, "\"")));
+            channel.setCommand(String.format("%s \"%s\"", options.getLockFileCommand(), protect(path, "\"")));
             channel.setInputStream(null);
             channel.setErrStream(System.err, true);
             channel.setOutputStream(System.out, true);
@@ -177,10 +176,13 @@ public class SSHConnector extends SingleHostConnector {
      */
     @Persistent
     public static class SSHProcess extends XPMProcess {
-        private ChannelExec channel;
+
+        transient private ChannelExec channel;
+
+        private SSHProcess() {}
 
         public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
-            super(connector, job, null);
+            super(connector, null, job, true);
             this.channel = channel;
         }
 
@@ -258,7 +260,6 @@ public class SSHConnector extends SingleHostConnector {
 
         void init() throws JSchException, FileSystemException {
             session = SftpClientFactory.createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
-            session.connect();
         }
 
         SftpFileSystem getFileSystem() {
@@ -311,44 +312,43 @@ public class SSHConnector extends SingleHostConnector {
     static public class SSHLock implements Lock {
         private String path;
 
-        private ConnectorDelegator connector;
+        private String connectorId;
 
-        public SSHLock() {
-        }
+        transient private Connector connector;
+
+        private SSHLock() {}
 
         public SSHLock(Connector connector, String path) {
-            this.connector = connector.delegate();
+            this.connector = connector;
+            this.connectorId = connector.getIdentifier();
             this.path = path;
         }
 
         @Override
         public boolean dispose() {
-            throw new NotImplementedException();
-//            final ChannelExec channel;
-//            try {
-//                ChannelSftp sftp = newSftpChannel();
-//                LOGGER.info("Disposing of SSH lock [%s]", path);
-//                sftp.connect();
-//                sftp.chmod(644, path);
-//                sftp.rm(path);
-//                sftp.disconnect();
-//            } catch (RuntimeException e) {
-//                throw e;
-//            } catch (Exception e) {
-//                new RuntimeException(e);
-//            }
-//
-//            return false;
+            try {
+                ChannelSftp sftp = ((SSHConnector)connector.getMainConnector()).newSftpChannel();
+                LOGGER.info("Disposing of SSH lock [%s]", path);
+                sftp.connect();
+                sftp.chmod(644, path);
+                sftp.rm(path);
+                sftp.disconnect();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                new RuntimeException(e);
+            }
+
+            return true;
         }
 
         @Override
         public void changeOwnership(String pid) {
-            throw new NotImplementedException();
         }
 
         @Override
         public void init(Scheduler scheduler) throws DatabaseException {
-            connector.init(scheduler);
+            connector = scheduler.getConnector(connectorId);
         }
     }
 
@@ -362,7 +362,9 @@ public class SSHConnector extends SingleHostConnector {
     public class SSHProcessBuilder extends XPMProcessBuilder {
 
         private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) {
-            switch(output.type()) {
+            final Redirect.Type type = output == null ? Redirect.Type.INHERIT : output.type();
+
+            switch(type) {
                 case PIPE:
                     streamSetter.setStream(null, false);
                     break;
@@ -370,11 +372,13 @@ public class SSHConnector extends SingleHostConnector {
                     streamSetter.setStream(System.err, true);
                     break;
                 case WRITE:
-                    commandBuilder.append(String.format("%d> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
+                    commandBuilder.append(String.format(" %d> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
                     break;
                 case APPEND:
-                    commandBuilder.append(String.format("%d>> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
+                    commandBuilder.append(String.format(" %d>> \"%s\"", streamSetter.streamNumber(), protect(resolve(output.file()), "\"")));
                     break;
+                default:
+                    throw new RuntimeException("Unhandled redirection type: " + type);
             }
         }
 
@@ -385,6 +389,11 @@ public class SSHConnector extends SingleHostConnector {
                 channel = newExecChannel();
                 StringBuilder commandBuilder = new StringBuilder();
                 commandBuilder.append(CommandLineTask.getCommandLine(command()));
+
+                // Set default
+                channel.setOutputStream(System.out, true);
+                channel.setErrStream(System.err, true);
+                channel.setInputStream(null);
 
 
                 setStream(commandBuilder, output, new StreamSetter() {
@@ -402,7 +411,7 @@ public class SSHConnector extends SingleHostConnector {
                 setStream(commandBuilder, error, new StreamSetter() {
                     @Override
                     public void setStream(OutputStream out, boolean dontClose) {
-                        channel.setOutputStream(out,  dontClose);
+                        channel.setErrStream(out, dontClose);
                     }
 
                     @Override
@@ -411,14 +420,21 @@ public class SSHConnector extends SingleHostConnector {
                     }
                 });
 
-                // TODO: manage standard input
+                final Redirect.Type inputType = input == null ? Redirect.Type.INHERIT : input.type();
+                switch(inputType) {
+                    case INHERIT:
+                    case PIPE:
+                        break;
+                    case READ:
+                        commandBuilder.append(String.format("< \"%s\"",  protect(resolve(input.file()), "\"")));
+                    default:
+                        throw new RuntimeException("Unhandled redirection type: " + inputType);
+                }
 
 
                 String command = commandBuilder.toString();
                 LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
                 channel.setCommand(command);
-                channel.setInputStream(null);
-                channel.setOutputStream(System.out, true);
                 channel.setPty(!detach());
 
                 channel.connect();

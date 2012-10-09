@@ -196,9 +196,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      * @throws FileSystemException
      */
     public FileObject resolve(SingleHostConnector connector, String extension) throws FileSystemException {
-        FileObject baseFile = resolvePath(connector, this.path);
-        final FileObject child = baseFile.getParent().resolveFile(baseFile.getName() + extension);
-        return child;
+        return resolvePath(connector, this.path + extension);
     }
 
     /**
