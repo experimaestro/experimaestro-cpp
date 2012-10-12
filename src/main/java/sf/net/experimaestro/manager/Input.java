@@ -19,15 +19,10 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xquery.XQException;
-import javax.xml.xquery.XQStaticContext;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * A parameter definition in a task factory / task
@@ -112,45 +107,14 @@ public abstract class Input {
 		this.defaultValue = defaultValue;
 	}
 
-	/**
-	 * Defines a connection to the
-	 * 
-	 * @author B. Piwowarski <benjamin@bpiwowar.net>
-	 */
-	static public class Connection {
-		final DotName from;
-		final String path;
-		final DotName to;
-		private NSContext context;
-		private Map<String, String> namespaces;
+    /**
+     * Used when this input is connected, i.e. its value is the
+     * result of an XQuery expression based on other inputs
+     */
+	ArrayList<Connection> connections = new ArrayList<>();
 
-		public Connection(DotName from, String path, DotName to, Element element) {
-			this.from = from;
-			this.path = path;
-			this.to = to;
-			this.context = new NSContext(element);
-			namespaces = Manager.getNamespaces(element);
-		}
-
-		public NSContext getContext() {
-			return context;
-		}
-
-		public void setNamespaces(XQStaticContext xqsc) throws XQException {
-			for (Entry<String, String> mapping : namespaces.entrySet()) {
-				LOGGER.debug("Setting default namespace mapping [%s] to [%s]",
-						mapping.getKey(), mapping.getValue());
-				xqsc.declareNamespace(mapping.getKey(), mapping.getValue());
-			}
-		}
-
-	}
-
-	ArrayList<Connection> connections = new ArrayList<Input.Connection>();
-
-	public void addConnection(DotName from, String path, DotName to,
-			Element element) {
-		connections.add(new Connection(from, path, to, element));
+	public void addConnection(Connection connection) {
+        connections.add(connection);
 	}
 
 	public boolean isUnnamed() {

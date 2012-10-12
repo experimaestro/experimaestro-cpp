@@ -24,6 +24,7 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -35,6 +36,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -124,7 +126,7 @@ public class XMLUtils {
         try {
             // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
             QNAME_PATTERN = Pattern
-                    .compile("(?:\\{(\\w(?:\\w|[\\.:])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
+                    .compile("(?:\\{(\\w(?:\\w|[\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
         } catch (PatternSyntaxException e) {
             LOGGER.error("Could not initialise the pattern: %s", e);
             throw e;
@@ -202,7 +204,7 @@ public class XMLUtils {
      * @return An iterator
      */
     public static Iterable<Element> childIterator(Element element, QName qName) {
-        ArrayList<Element> x = new ArrayList<Element>();
+        ArrayList<Element> x = new ArrayList<>();
         NodeList list = element.getChildNodes();
         String ns = qName.getNamespaceURI();
         String name = qName.getLocalPart();
@@ -216,6 +218,35 @@ public class XMLUtils {
         }
         return x;
     }
+
+    public static Iterable<Element> childElements(final Element element) {
+        final NodeList nodes = element.getChildNodes();
+        return elements(nodes);
+    }
+
+    public static Iterable<Element> elements(final NodeList nodes) {
+        return new Iterable<Element>() {
+            @Override
+            public Iterator<Element> iterator() {
+                return new AbstractIterator<Element>() {
+                    int i = 0;
+
+                    @Override
+                    protected boolean storeNext() {
+                        while (i < nodes.getLength()) {
+                            Node node = nodes.item(i++);
+                            if (node instanceof Element) {
+                                value = (Element) node;
+                                return true;
+                            }
+                        }
+                        return false;  //To change body of implemented methods use File | Settings | File Templates.
+                    }
+                };
+            }
+        };
+    }
+
 
     private final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
             .newInstance();
@@ -268,5 +299,6 @@ public class XMLUtils {
         } while (true);
         return map.entrySet();
     }
+
 
 }

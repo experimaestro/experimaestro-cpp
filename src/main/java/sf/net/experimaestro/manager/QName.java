@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Element;
+
 import static java.lang.String.format;
 
 /**
@@ -62,6 +64,7 @@ public class QName implements Comparable<QName> {
 			return true;
 		if (obj == null)
 			return false;
+
 		if (getClass() != obj.getClass())
 			return false;
 		QName other = (QName) obj;
@@ -107,6 +110,9 @@ public class QName implements Comparable<QName> {
 			return localName;
 		return format("{%s}%s", uri, localName);
 	}
-	
-	
+
+
+    public boolean sameQName(Element element) {
+            return equals(new QName(element.getNamespaceURI(), element.getLocalName()));
+    }
 }

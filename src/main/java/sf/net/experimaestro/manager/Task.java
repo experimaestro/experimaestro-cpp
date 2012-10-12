@@ -22,7 +22,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.utils.Output;
@@ -53,7 +52,7 @@ public abstract class Task {
     /**
      * Sub-tasks without name (subset of the map {@link #values}).
      */
-    protected Set<String> notNamedValues = new TreeSet<String>();
+    protected Set<String> notNamedValues = new TreeSet<>();
 
     protected Task() {
     }
@@ -132,70 +131,88 @@ public abstract class Task {
             Input input = factory.getInputs().get(key);
             Value value = values.get(key);
 
-            // Process the value (run the task, etc.)
-            value.process();
-
-            // Check if value was required
-
-            if (!input.isOptional()) {
-                if (!value.isSet())
-                    throw new ExperimaestroRuntimeException("Parameter [%s] is missing in task [%s]", key, factory.id);
-            }
-
-            // Check type
-            final Type type = input.getType();
-            if (type != null && value.isSet()) {
-                final Element element = value.get().getDocumentElement();
-
-                // Check if we have the expected element type
-                final String tagName = element.getLocalName();
-                final String tagURI = element.getNamespaceURI();
-
-                if (!tagURI.equals(type.getNamespaceURI()) || !tagName.equals(type.getLocalPart()))
-                    throw new ExperimaestroRuntimeException("Parameter [%s] in task [%s] was set to a value with a wrong type [{%s}%s] - expected [%s]",
-                            key, factory.id, tagURI, tagName, type);
-
-                // In cases of values, further check
-                if (type instanceof ValueType) {
-                    QName valueType = ((ValueType) type).getValueType();
-                    String x = element.getAttributeNS(Manager.EXPERIMAESTRO_NS, "value");
-                    boolean ok = false;
-
-                    // Test if the value is OK
-                    switch (valueType.getNamespaceURI()) {
-                        case Manager.XMLSCHEMA_NS:
-                            switch (valueType.getLocalPart()) {
-                                case "string":
-                                    ok = true;
-                                    break; // we accepts anything
-                            }
-                            break;
-
-                        case Manager.EXPERIMAESTRO_NS:
-                            switch (valueType.getLocalPart()) {
-                                case "directory":
-                                    ok = true;
-                                    LOGGER.warn("Did not check if [%s] was a directory", x);
-                                    break;
-                            }
-                            break;
-                    }
-
-                    if (!ok)
-                        throw new ExperimaestroRuntimeException("Un-handled type [%s] in processing parameter [%s] of task [%s]",
-                                valueType, key, factory.id);
-
-                }
-            }
-
-
-            // Process connections
             try {
-                value.processConnections(this);
+
+                // Process connection
+                try {
+                    value.processConnections(this);
+                } catch (ExperimaestroRuntimeException e) {
+                    e.addContext("While connecting from [%s] in task [%s]", key, factory.id);
+                    throw e;
+                }
+
+                // Process the value (run the task, etc.)
+                value.process();
+
+                // Check if value was required
+
+                if (!input.isOptional()) {
+                    if (!value.isSet())
+                        throw new ExperimaestroRuntimeException("Parameter [%s] is missing in task [%s]", key, factory.id);
+                }
+
+                // Check type
+                final Type type = input.getType();
+                if (type != null && value.isSet()) {
+                    final Element element = value.get().getDocumentElement();
+
+                    // Check if we have the expected element type
+                    final String tagName = element.getLocalName();
+                    final String tagURI = element.getNamespaceURI();
+
+                    if (!tagURI.equals(type.getNamespaceURI()) || !tagName.equals(type.getLocalPart()))
+                        throw new ExperimaestroRuntimeException("Parameter [%s] in task [%s] was set to a value with a wrong type [{%s}%s] - expected [%s]",
+                                key, factory.id, tagURI, tagName, type);
+
+                    // In cases of values, further check
+                    if (type instanceof ValueType) {
+                        QName valueType = ((ValueType) type).getValueType();
+                        String x = element.getAttributeNS(Manager.EXPERIMAESTRO_NS, "value");
+                        boolean ok = false;
+
+                        // Test if the value is OK
+                        switch (valueType.getNamespaceURI()) {
+                            case Manager.XMLSCHEMA_NS:
+                                switch (valueType.getLocalPart()) {
+                                    case "string":
+                                        ok = true;
+                                        break; // we accepts anything
+                                    case "float":
+                                        Float.parseFloat(x);
+                                        ok = true;
+                                        break;
+                                    case "integer":
+                                        Integer.parseInt(x);
+                                        ok = true;
+                                        break;
+                                }
+                                break;
+
+                            case Manager.EXPERIMAESTRO_NS:
+                                switch (valueType.getLocalPart()) {
+                                    case "directory":
+                                        LOGGER.warn("Did not check if [%s] was a directory", x);
+                                        ok = true;
+                                        break;
+                                    case "file":
+                                        LOGGER.warn("Did not check if [%s] was a file", x);
+                                        ok = true;
+                                        break;
+                                }
+                                break;
+                        }
+
+                        if (!ok)
+                            throw new ExperimaestroRuntimeException("Un-handled type [%s] in processing parameter [%s] of task [%s]",
+                                    valueType, key, factory.id);
+
+                    }
+                }
             } catch (ExperimaestroRuntimeException e) {
-                e.addContext("While connecting from [%s] in task [%s]", key, factory.id);
+                e.addContext("While processing input [%s] in task [%s]", key, factory.id);
                 throw e;
             }
+
         }
 
         // Do the real-run
@@ -216,14 +233,20 @@ public abstract class Task {
         Map<String, TreeSet<String>> backwards_edges = new TreeMap<String, TreeSet<String>>();
 
         // Build the edge maps
-        for (Entry<String, Value> entry : values.entrySet())
-            for (Connection c : entry.getValue().input.connections) {
-                final String from = entry.getKey();
-                final String to = c.to.get(0);
-                LOGGER.debug("[build] Adding edge from %s to %s", from, to);
-                addEdge(forward_edges, from, to);
-                addEdge(backwards_edges, to, from);
-            }
+        for (Entry<String, Value> entry : values.entrySet()) {
+            final String to = entry.getKey();
+
+
+            final Input input = entry.getValue().input;
+            if (input.connections != null)
+                for (Connection connection : input.connections)
+                    for (Entry<String, DotName> pair : connection.getInputs()) {
+                        String from = pair.getValue().get(0);
+                        LOGGER.debug("[build] Adding edge from %s to %s", from, to);
+                        addEdge(forward_edges, from, to);
+                        addEdge(backwards_edges, to, from);
+                    }
+        }
 
         // Get the free nodes
         boolean done = false;

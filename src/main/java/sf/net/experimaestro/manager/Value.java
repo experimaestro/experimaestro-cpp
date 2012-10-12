@@ -20,216 +20,217 @@ package sf.net.experimaestro.manager;
 
 import net.sf.saxon.xqj.SaxonXQDataSource;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.Input.Connection;
 import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.namespace.QName;
 import javax.xml.xquery.*;
 import java.lang.reflect.Constructor;
-
-import static java.lang.String.format;
+import java.util.Map;
 
 /**
  * Represents a value that can be set
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class Value {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
-	/**
-	 * The corresponding input
-	 */
-	Input input;
+    /**
+     * The corresponding input
+     */
+    Input input;
 
-	/**
-	 * Used to copy the value
-	 */
-	protected Value() {
-	}
+    /**
+     * Used to copy the value
+     */
+    protected Value() {
+    }
 
-	/**
-	 * Construct a new value
-	 * 
-	 * @param input
-	 */
-	public Value(Input input) {
-		this.input = input;
-	}
+    /**
+     * Construct a new value
+     *
+     * @param input
+     */
+    public Value(Input input) {
+        this.input = input;
+    }
 
-	/**
-	 * Set the value
-	 * 
-	 * @param id
-	 *            The name
-	 * @param value
-	 *            The value
-	 */
-	public abstract void set(DotName id, Document value);
+    /**
+     * Set the value
+     *
+     * @param id    The name
+     * @param value The value
+     */
+    public abstract void set(DotName id, Document value);
 
-	/**
-	 * XPMProcess the value before it can be accessed by a task to run
-	 */
-	public abstract void process();
+    /**
+     * XPMProcess the value before it can be accessed by a task to run
+     */
+    public abstract void process();
 
-	/**
-	 * Get the value
-	 * 
-	 * This method is called by a {@link Task} after {@link #process()}.
-	 * 
-	 * @return A valid XML document or null if not set
-	 */
-	public abstract Document get();
+    /**
+     * Get the value
+     * <p/>
+     * This method is called by a {@link Task} after {@link #process()}.
+     *
+     * @return A valid XML document or null if not set
+     */
+    public abstract Document get();
 
-	/**
-	 * 
-	 * This method is called once by a {@link Task} after {@link #process()}.
-	 * 
-	 * @param task
-	 */
-	void processConnections(Task task) {
-		// Do not process if we do not have connections...
-		if (input.connections.isEmpty())
-			return;
+    /**
+     * This method is called once by a {@link Task} after {@link #process()}.
+     *
+     * @param task
+     */
+    void processConnections(Task task) {
+        // Do not process if we do not have connections...
+        for (Connection connection : input.connections) {
+            LOGGER.debug("Processing connection [%s]", connection);
+            final String xQuery = connection.getXQuery();
+            final StringBuilder queryBuilder = new StringBuilder();
 
-		// ... or if the output is null
-		final Document document = get();
-		if (document == null) {
-			LOGGER.warn("Cannot set the value of connections since we have a null value");
-			return;
-		}
+            try {
 
-		LOGGER.debug("Before processing connections, document is [%s]",
-				XMLUtils.toStringObject(document));
-		for (Connection connection : input.connections) {
+                SaxonXQDataSource xqjd = new SaxonXQDataSource();
+                xqjd.registerExtensionFunction(new ParentPath());
+                XQConnection xqjc = xqjd.getConnection();
+                XQStaticContext xqsc = xqjc.getStaticContext();
+                connection.setNamespaces(xqsc);
+                final XQExpression xqje = xqjc.createExpression(xqsc);
 
-			// Construct the from expression
-			String expr = connection.path;
-			
-			try {
-				SaxonXQDataSource xqjd = new SaxonXQDataSource();
-				xqjd.registerExtensionFunction(new ParentPath());
-				XQConnection xqjc = xqjd.getConnection();
-				XQStaticContext xqsc = xqjc.getStaticContext();
-				Node item = document.getDocumentElement();
-				connection.setNamespaces(xqsc);
+                // Collect the inputs and set the appropriate context
+                for (Map.Entry<String, DotName> pair : connection.getInputs()) {
+                    final String varName = pair.getKey();
+                    final DotName from = pair.getValue();
 
-                // --- If we need to dig into the output
-				if (connection.from.size() > 0) {
-					String exprFrom = null;
-					for (int i = connection.from.size(); --i >= 0;) {
-						String step = format("xp:outputs[@xp:name='%s']",
-								connection.from.get(i));
-						if (exprFrom == null)
-							exprFrom = step;
-						else
-							exprFrom = step + "/" + exprFrom;
-					}
-					LOGGER.debug("Processing connection [%s, %s, %s]", exprFrom,
-							expr, connection.to);
+                    final Value value = task.getValues().get(from.get(0));
+                    final Document document = value.get();
 
-					XQItem xqItem = evaluateSingletonExpression(xqjc, document,
-							exprFrom, xqsc);
-					LOGGER.info("Item type is %s", xqItem.getItemType()
-							.toString());
-					item = xqItem.getNode();
-					xqjc.close();
+                    // Search for the appropriate output
 
-				}
+                    if (document == null) {
+                        // If this input was not set, bind to empty sequence
+                        LOGGER.debug("Binding $%s to empty sequence", varName);
+                        queryBuilder.append("declare variable $" + varName + " := (); ");
+                    } else {
+                        Element element = document.getDocumentElement();
+                        for (int i = 1; i < from.size(); i++) {
+                            boolean found = false;
+                            for (Element child : XMLUtils.childElements(element)) {
+                                final String name = child.getAttributeNS(Manager.EXPERIMAESTRO_NS, "name");
+                                if (name != null && name.equals(from.get(i))) {
+                                    element = child;
+                                    found = true;
+                                }
+                            }
+                            if (!found)
+                                throw new ExperimaestroRuntimeException("Cannot process %s in [%s]", from.get(i), from);
 
-                LOGGER.debug("Item is %s", XMLUtils.toStringObject(item));
+                        }
 
-                // --- Now get the value
-				XQItem xqItem = evaluateSingletonExpression(xqjc, item, expr, xqsc);
-				if (xqItem == null) {
-                    throw new ExperimaestroRuntimeException("Could not connect [%s] to [%s] with path [%s]",
-                            connection.from, connection.to, connection.path);
+                        LOGGER.debug("Binding $%s to element [%s]", varName, element.getTagName());
+                        queryBuilder.append("declare variable $" + varName + " external; ");
+
+                        xqje.bindNode(new QName(varName), element, null);
+                    }
                 }
-				
-				switch (xqItem.getItemType().getItemKind()) {
-				case XQItemType.XQITEMKIND_ATOMIC:
-					item = Task.wrapValue(xqItem.getAtomicValue());
-					break;
-				case XQItemType.XQITEMKIND_ELEMENT:
-					item = xqItem.getNode();
-					break;
-				default:
-					throw new ExperimaestroRuntimeException(
-							"Cannot handle XQuery type [%s]", item);
-				}
 
-				// --- Now connects
-				
-				LOGGER.debug("Answer is [%s of type %d]",
-						XMLUtils.toStringObject(item), item.getNodeType());
-				Document newDoc = XMLUtils.newDocument();
-				if (item instanceof Document)
-					item = ((Document) item).getDocumentElement();
+
+                // --- Evaluate the XQuery
+                queryBuilder.append(xQuery);
+                final String query = queryBuilder.toString();
+                LOGGER.debug("Evaluated XQuery is %s", query);
+                XQItem xqItem = evaluateSingletonExpression(query, xqje);
+                if (xqItem == null) {
+                    if (connection.isRequired())
+                        throw new ExperimaestroRuntimeException("Could not connect");
+                    continue;
+                }
+
+                Node item;
+                final int itemKind = xqItem.getItemType().getItemKind();
+                switch (itemKind) {
+                    case XQItemType.XQITEMKIND_ATOMIC:
+                        item = Task.wrapValue(xqItem.getAtomicValue());
+                        break;
+                    case XQItemType.XQITEMKIND_ELEMENT:
+                        item = xqItem.getNode();
+                        break;
+                    case XQItemType.XQITEMKIND_ATTRIBUTE:
+                        item = Task.wrapValue(xqItem.getNode().getTextContent());
+                        break;
+                    default:
+                        throw new ExperimaestroRuntimeException(
+                                "Cannot handle XQuery type [%s]", xqItem.getItemType());
+                }
+
+                // --- Now connects
+
+                LOGGER.debug("Answer is [%s of type %d]",
+                        XMLUtils.toStringObject(item), item.getNodeType());
+                Document newDoc = XMLUtils.newDocument();
+                if (item instanceof Document)
+                    item = ((Document) item).getDocumentElement();
 
                 item = item.cloneNode(true);
-				newDoc.adoptNode(item);
-				newDoc.appendChild(item);
-				task.setParameter(connection.to, newDoc);
+                newDoc.adoptNode(item);
+                newDoc.appendChild(item);
+                LOGGER.info("Setting parameter [%s] in [%s]", connection.to, task);
+                task.setParameter(connection.to, newDoc);
+                xqjc.close();
 
-			} catch (XQException e) {
-				throw new ExperimaestroRuntimeException(e,
-						"Cannot evaluate XPath [%s] when connecting to [%s]",
-						expr, connection.to);
-			}
+            } catch (XQException e) {
+                final ExperimaestroRuntimeException exception = new ExperimaestroRuntimeException(e,
+                        "Cannot evaluate XPath [%s] when connecting to [%s]", xQuery, connection.to);
+                exception.addContext("Internal error: " + e.toString());
+                throw exception;
+            }
+        }
+    }
 
-		}
-	}
+    private static XQItem evaluateSingletonExpression(String query, XQExpression xqje) throws XQException {
+        XQSequence result = xqje.executeQuery(query);
 
-	/**
-	 * Evaluate an XQuery expression that should return a single item
-	 * 
-	 *
-     * @param xqjc The XQuery connection
-     * @param xqsc The static context (useful to set namespaces)
-     * @throws XQException
-	 */
-	static XQItem evaluateSingletonExpression(XQConnection xqjc,
-                                              Node contextItem, String query, XQStaticContext xqsc) throws XQException {
-		XQExpression xqje = xqjc.createExpression(xqsc);
-		xqje.bindNode(XQConstants.CONTEXT_ITEM, contextItem, null);
+        if (!result.next()) {
+            LOGGER.debug("No answer for XQuery [%s]", query);
+            return null;
+        }
 
-		XQSequence result = xqje.executeQuery(query);
+        XQItem xqItem = result.getItem();
+        if (result.next())
+            throw new ExperimaestroRuntimeException(
+                    "Too many answers (%d) for XPath [%s]", query);
 
-		if (!result.next()) {
-			LOGGER.warn("No answer for XQuery [%s]", query);
-			return null;
-		}
+        return xqItem;
+    }
 
-		XQItem xqItem = result.getItem();
-		if (result.next())
-			throw new ExperimaestroRuntimeException(
-					"Too many answers (%d) for XPath [%s]", query);
 
-		return xqItem;
-	}
+    final public Value copy() {
+        try {
+            Constructor<? extends Value> constructor = this.getClass()
+                    .getConstructor(new Class<?>[]{});
+            Value copy = constructor.newInstance(new Object[]{});
+            copy.init(this);
+            return copy;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new ExperimaestroRuntimeException(t);
+        }
+    }
 
-	final public Value copy() {
-		try {
-			Constructor<? extends Value> constructor = this.getClass()
-					.getConstructor(new Class<?>[] {});
-			Value copy = constructor.newInstance(new Object[] {});
-			copy.init(this);
-			return copy;
-		} catch (RuntimeException e) {
-			throw e;
-		} catch (Throwable t) {
-			throw new ExperimaestroRuntimeException(t);
-		}
-	}
+    protected void init(Value other) {
+        this.input = other.input;
+    }
 
-	protected void init(Value other) {
-		this.input = other.input;
-	}
-
-    /** Checks whether the value was set */
+    /**
+     * Checks whether the value was set
+     */
     public boolean isSet() {
         return get() != null;
     }

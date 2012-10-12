@@ -41,27 +41,27 @@ public class Repository extends AbstractRepository {
     /**
      * Dependencies
      */
-    ArrayList<ResourceLocator> sources = new ArrayList<ResourceLocator>();
+    ArrayList<ResourceLocator> sources = new ArrayList<>();
 
 	/**
 	 * The list of available task factories
 	 */
-	private Map<QName, TaskFactory> factories = new TreeMap<QName, TaskFactory>();
+	private Map<QName, TaskFactory> factories = new TreeMap<>();
 
 	/**
 	 * The list of of input types
 	 */
-	Map<QName, Type> types = new HashMap<QName, Type>();
+	Map<QName, Type> types = new HashMap<>();
 
 	/**
 	 * The list of of input types
 	 */
-	Map<QName, Module> modules = new HashMap<QName, Module>();
+	Map<QName, Module> modules = new HashMap<>();
 	
 	/**
 	 * List of XML types
 	 */
-	Map<QName, XSElementDecl> xmlElements = new TreeMap<QName, XSElementDecl>();
+	Map<QName, XSElementDecl> xmlElements = new TreeMap<>();
 
     /**
      * The Experimaestro default module

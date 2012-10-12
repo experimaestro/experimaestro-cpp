@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
@@ -86,30 +85,21 @@ public class JSDirectTask extends JSAbstractTask {
                     "outputs");
             document.appendChild(root);
 
+            // Loop over non null inputs
             for (Entry<String, Value> entry : values.entrySet()) {
                 Value value = entry.getValue();
                 if (value != null) {
-                    Element outputs = document.createElementNS(
-                            Manager.EXPERIMAESTRO_NS, "outputs");
-                    root.appendChild(outputs);
-                    outputs.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
-                            entry.getKey());
-
+//                    Element outputs = document.createElementNS(
+//                            Manager.EXPERIMAESTRO_NS, "outputs");
+//                    root.appendChild(outputs);
                     final Document doc = value.get();
+
                     if (doc != null) {
-                        Element returnRoot = (Element) doc
-                                .getDocumentElement().cloneNode(true);
-                        document.adoptNode(returnRoot);
-                        final String rootURI = returnRoot.getNamespaceURI();
-                        if (rootURI != null && rootURI.equals(
-                                Manager.EXPERIMAESTRO_NS)
-                                && returnRoot.getLocalName().equals("outputs")) {
-                            NodeList nodes = returnRoot.getChildNodes();
-                            for (int i = 0; i < nodes.getLength(); i++) {
-                                outputs.appendChild(nodes.item(i));
-                            }
-                        } else
-                            outputs.appendChild(returnRoot);
+                        Element element = (Element) doc.getDocumentElement().cloneNode(true);
+                        element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
+                                entry.getKey());
+                        document.adoptNode(element);
+                        root.appendChild(element);
                     }
                 }
             }

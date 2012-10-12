@@ -34,7 +34,7 @@ public class Repositories extends Repository {
     static final private Logger LOGGER = Logger.getLogger();
 
     /** Our repositories */
-    TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<ResourceLocator, RepositoryInformation>();
+    TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<>();
 
     /** The repository to which anything is added */
     RepositoryInformation localRepository;

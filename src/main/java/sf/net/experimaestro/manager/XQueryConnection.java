@@ -18,19 +18,36 @@
 
 package sf.net.experimaestro.manager;
 
+import sf.net.experimaestro.utils.Pair;
 
-import sf.net.experimaestro.utils.log.Logger;
+import java.util.ArrayList;
+import java.util.Map;
 
-public class AlternativeInput extends Input {
-	final static Logger LOGGER = Logger.getLogger();
-	
-	public AlternativeInput(AlternativeType type) {
-		super(type);
-	}
+/**
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 12/10/12
+ */
+public class XQueryConnection extends Connection {
+    ArrayList<Pair<String, DotName>> inputs = new ArrayList<>();
+    String query;
 
-	@Override
-	Value newValue() {
-		return new AlternativeValue(this);
-	}
+    public XQueryConnection(DotName to, String query) {
+        super(to);
+        this.query = query;
+    }
 
+
+    @Override
+    public Iterable<? extends Map.Entry<String, DotName>> getInputs() {
+        return inputs;
+    }
+
+    @Override
+    public String getXQuery() {
+        return query;
+    }
+
+    public void bind(String var, DotName name) {
+        inputs.add(Pair.create(var, name));
+    }
 }

@@ -22,6 +22,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class AlternativeValue extends Value {
+    static final private Logger LOGGER = Logger.getLogger();
 
 	/**
 	 * 
@@ -64,32 +66,37 @@ public class AlternativeValue extends Value {
 	
 	/**
 	 * Creates an alternative task object
-	 * @param alternativeInput TODO
-	 * 
-	 * @param type The type of the alternative
+	 * @param input The input
 	 */
-	protected AlternativeValue(AlternativeInput alternativeInput, AlternativeType type) {
-		super(alternativeInput);
-		this.alternativeInput = alternativeInput;
+	protected AlternativeValue(AlternativeInput input) {
+		super(input);
+		this.alternativeInput = input;
 	}
 
 	@Override
 	public void set(DotName id, Document value) {
 		if (id.size() == 0) {
-			final Map<QName, TaskFactory> factories = ((AlternativeType)this.alternativeInput.type).factories;
-			
-			final Element element = value.getDocumentElement();
-			String key = element.getAttributeNS(Manager.EXPERIMAESTRO_NS,
-					"value");
-			QName qname = XMLUtils.parseQName(key, element,
-					Manager.PREDEFINED_PREFIXES);
-			TaskFactory subFactory = factories.get(qname);
-			if (subFactory == null)
-				throw new ExperimaestroRuntimeException(
-						"Could not find an alternative with name [%s]", key);
-			AlternativeInput.LOGGER.info("Creating a task [%s]", subFactory.id);
-			task = subFactory.create();
-			AlternativeInput.LOGGER.info("Created the task for alternative [%s]", key);
+            // Check if we have an XML with the valid type
+            final Element element = value.getDocumentElement();
+            if (alternativeInput.getType().qname().sameQName(element)) {
+                // Nothing to do
+                LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
+                this.value = value;
+            } else {
+                final Map<QName, TaskFactory> factories = ((AlternativeType)this.alternativeInput.type).factories;
+
+                String key = element.getAttributeNS(Manager.EXPERIMAESTRO_NS,
+                        "value");
+                QName qname = XMLUtils.parseQName(key, element,
+                        Manager.PREDEFINED_PREFIXES);
+                TaskFactory subFactory = factories.get(qname);
+                if (subFactory == null)
+                    throw new ExperimaestroRuntimeException(
+                            "Could not find an alternative with name [%s]", key);
+                LOGGER.info("Creating a task [%s]", subFactory.id);
+                task = subFactory.create();
+                AlternativeInput.LOGGER.info("Created the task for alternative [%s]", key);
+            }
 		} else {
 			task.setParameter(id, value);
 		}
@@ -97,16 +104,19 @@ public class AlternativeValue extends Value {
 
 	@Override
 	public void process() {
-		// If the task has not been set, try to use default value
-		if (task == null && input.defaultValue != null)
-			set(DotName.EMPTY, input.defaultValue);
-		
-		if (task == null)
-			throw new ExperimaestroRuntimeException(
-					"Alternative task has not been set");
-		AlternativeInput.LOGGER.info("Running the alternative task [%s]",
-				task.factory != null ? "n/a" : task.factory.id);
-		value = task.run();
+        // If the value has not been set
+        if (value == null) {
+            // If the task has not been set, try to use default value
+            if (task == null && input.defaultValue != null)
+                set(DotName.EMPTY, input.defaultValue);
+
+            if (task == null)
+                throw new ExperimaestroRuntimeException(
+                        "Alternative task has not been set");
+            LOGGER.info("Running the alternative task [%s]",
+                    task.factory != null ? "n/a" : task.factory.id);
+            value = task.run();
+        }
 	}
 
 	@Override
