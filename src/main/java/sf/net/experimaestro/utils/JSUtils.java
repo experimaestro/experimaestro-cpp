@@ -97,6 +97,7 @@ public class JSUtils {
         if (node instanceof Document)
             node = ((Document) node).getDocumentElement();
 
+
         LOGGER.debug("XML is of type %s [%s]; %s", node.getClass(),
                 XMLUtils.toStringObject(node),
                 node.getUserData("org.mozilla.javascript.xmlimpl.XmlNode"));
@@ -126,7 +127,7 @@ public class JSUtils {
             if (className.equals("XML")) {
                 // FIXME: this strips all whitespaces!
                 Node node = XMLLibImpl.toDomNode(object);
-                LOGGER.debug("Cloned node [%s / %s] from [%s]",
+                LOGGER.debug("Got node from JavaScript [%s / %s] from [%s]",
                         node.getClass(), XMLUtils.toStringObject(node),
                         object.toString());
                 return node;

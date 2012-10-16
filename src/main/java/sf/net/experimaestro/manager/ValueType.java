@@ -23,7 +23,8 @@ package sf.net.experimaestro.manager;
  * @date 13/9/12
  */
 public class ValueType extends Type {
-    private static final QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "value");
+    static final QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "value");
+
     private QName type;
 
     public ValueType(QName type) {

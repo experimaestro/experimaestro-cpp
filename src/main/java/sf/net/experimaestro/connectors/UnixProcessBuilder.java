@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
 
-    public static final String SHELL_SPECIAL = " \"'";
+    public static final String SHELL_SPECIAL = " \"'<>";
     public static final String QUOTED_SPECIAL = "\"$";
 
     /**
@@ -168,22 +168,39 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     public XPMProcessBuilder command(List<String> command) {
-        // FIXME: Use redirection information
-        String prefix = "";
+        StringBuilder commandBuilder = new StringBuilder();
 
         switch (input.type()) {
             case INHERIT:
                 break;
             case READ:
                 final String path = connector.resolve(input.file());
-                prefix = String.format("cat \"%s\" | ", protect(path, QUOTED_SPECIAL));
+                commandBuilder.append(String.format("cat \"%s\" | ", protect(path, QUOTED_SPECIAL)));
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
 
         }
 
-        commands.add(prefix + CommandLineTask.getCommandLine(command));
+        commandBuilder.append(CommandLineTask.getCommandLine(command));
+
+        switch (output.type()) {
+            case INHERIT:
+                break;
+            case APPEND:
+                commandBuilder.append(String.format(" >> %s", protect(connector.resolve(output.file()), QUOTED_SPECIAL)));
+                break;
+            case WRITE:
+                commandBuilder.append(String.format(" > %s", protect(connector.resolve(output.file()), QUOTED_SPECIAL)));
+                break;
+            default:
+                throw new UnsupportedOperationException("Unsupported output redirection type: " + input.type());
+
+        }
+
+        commands.add(commandBuilder.toString());
+
+        // Reset error, output and input
         error = output = input = Redirect.INHERIT;
         return this;
     }

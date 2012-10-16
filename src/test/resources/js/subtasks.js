@@ -18,14 +18,13 @@
 
 
 // START SNIPPET: main
-var altName = xpm.qName("a.b.c", "alt");
+var altName = qname("a.b.c", "alt");
 var abc = new Namespace("a.b.c");
 
 
 var task_1 = {
-	id: xpm.qName("a.b.c", "task-1"),
-	inputs: <inputs><input type="xs:integer" id="p"/></inputs>,
-	outputs: <outputs><output type="xs:integer"/></outputs>,
+	id: qname("a.b.c", "task-1"),
+	inputs: <inputs><value type="xs:integer" id="p"/></inputs>,
 	
 	run: function(inputs) {
 		return <outputs>{inputs.p}</outputs>;
@@ -36,9 +35,8 @@ var task_1 = {
 xpm.add_task_factory(task_1);
 
 var task_2 = {
-	id: xpm.qName("a.b.c", "task-2"),
-	inputs: <inputs xmlns:abc="a.b.c"><task type="abc:task-1" id="t1"/></inputs>,
-	outputs: <outputs><output type="xs:integer"/></outputs>,
+	id: qname("a.b.c", "task-2"),
+	inputs: <inputs xmlns:abc="a.b.c"><task ref="abc:task-1" id="t1"/></inputs>,
 	
 	run: function(inputs) {
 		return <outputs>{inputs.t1.xp::value}</outputs>;
@@ -50,7 +48,7 @@ xpm.add_task_factory(task_2);
 
 /** Run and check */
 
-var task = xpm.getTask(task_2.id);
+var task = xpm.get_task(task_2.id);
 task.setParameter("t1.p", "10");
 var r = task.run();
 

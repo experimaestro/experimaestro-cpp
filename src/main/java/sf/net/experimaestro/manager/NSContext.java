@@ -42,7 +42,7 @@ public class NSContext implements NamespaceContext {
 			uri = Manager.PREDEFINED_PREFIXES.get(prefix);
 		if (uri == null)
 			throw new ExperimaestroRuntimeException("Prefix %s not bound", prefix);
-		LOGGER.info("Prefix %s maps to %s", prefix, uri);
+		LOGGER.debug("Prefix %s maps to %s", prefix, uri);
 		return uri;
 	}
 

@@ -20,18 +20,15 @@ var python_script = script_file().getParent().getName().getPath() + "/connectors
 
 var task = {
     // The id of the task is an XML qualified name 
-    id: xpm.qName("a.b.c", "task"),
+    id: qname("a.b.c", "task"),
     
     // One input of type xp:integer
-    inputs: <inputs><input type="xp:integer" id="x"/></inputs>,
+    inputs: <inputs><value type="xs:integer" id="x"/></inputs>,
     
-    // One output of type xp:integer
-    outputs: <outputs><output type="xp:integer"/></outputs>,
-	
     // The function that will be called when the task is run
 	run: function(inputs) {
         v = xpm.evaluate(["python", python_script]);
-		return <outputs>{inputs.x + v}</outputs>;
+		return <outputs>{v[1]}</outputs>;
 	}
 		
 };

@@ -112,7 +112,7 @@ public class JSScheduler extends ScriptableObject {
         if (old != null) {
             // TODO: if equal, do not try to replace the task
             if (!task.replace(old)) {
-                XPMObject.getLog().add(String.format("Cannot override resource [%s]", task.getIdentifier()));
+                xpm.getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 return;
             }
         } else {
@@ -146,6 +146,8 @@ public class JSScheduler extends ScriptableObject {
                             1, array)));
                     LOGGER.debug("Adding dependency on [%s] of type [%s]", resource,
                             lockType);
+                    if (resource == null)
+                        throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
                     task.addDependency(resource, lockType);
                 }
 
@@ -154,12 +156,18 @@ public class JSScheduler extends ScriptableObject {
             // --- Redirect standard output
             if (options.has("stdin", options)) {
                 final Object stdin = JSUtils.unwrap(options.get("stdin", options));
-                if (stdin instanceof String) {
-                    task.setInput((String) stdin);
-                } else throw new ExperimaestroRuntimeException("Unsupported stdin type", stdin.getClass());
+                if (stdin instanceof String || stdin instanceof ConsString) {
+                    task.setInput(stdin.toString());
+                } else throw new ExperimaestroRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
             }
+
             // --- Redirect standard output
-            final Object stdout = options.get("stdout", options);
+            if (options.has("stdout", options)) {
+                final Object stdout = JSUtils.unwrap(options.get("stdout", options));
+                if (stdout instanceof String || stdout instanceof ConsString) {
+                    task.setOutput(connector.getMainConnector().resolveFile(stdout.toString()));
+                } else throw new ExperimaestroRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
+            }
 
             // --- Redirect standard error
             final Object stderr = options.get("stderr", options);

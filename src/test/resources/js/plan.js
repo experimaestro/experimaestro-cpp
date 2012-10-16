@@ -27,14 +27,11 @@ var results = [];
 // The task
 var task = {
     // The id of the task is an XML qualified name 
-    id: xpm.qName("a.b.c", "task"),
+    id: qname("a.b.c", "task"),
     
-    // One input of type xp:integer
-    inputs: <inputs><input type="xp:integer" id="x"/><input type="xp:integer" id="y"/></inputs>,
+    // One input of type xs:integer
+    inputs: <inputs><value type="xs:integer" id="x"/><value type="xs:integer" id="y"/></inputs>,
     
-    // One output of type xp:integer
-    outputs: <outputs><output type="xp:integer"/></outputs>,
-	
     // The function that will be called when the task is run
 	run: function(inputs) {
 	    // Multiply x by y and add it to the results array
@@ -53,15 +50,15 @@ xpm.add_task_factory(task);
 /** Run and check */
 
 function check(expected) {
-    for(var i = 0; i < expected.length; i++)
+    for(var i = 0; i < expected.length; i++) {
         if (expected[i] != results[i])
-            throw new java.lang.String.format("Expected %s and got %s at %d", expected[i], results[i], i);
+            throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], results[i], i);
 }
 
 function test_plan_1() {
     // START SNIPPET: check
     results = [];
-    xpm.experiment(qname("a.b.c", "task"), "x=1,2 * y=5,7");
+    xpm.get_task(qname("a.b.c", "task")).run_plan("x=1,2 * y=5,7");
     xpm.log("The task returned\n%s", results.toSource());
     // END SNIPPET: check
     check([5, 10, 7, 14]);

@@ -301,4 +301,7 @@ public class XMLUtils {
     }
 
 
+    public static boolean is(QName qname, Element element) {
+        return qname.equals(new QName(element.getNamespaceURI(), element.getTagName()));
+    }
 }

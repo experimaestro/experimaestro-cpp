@@ -122,16 +122,16 @@ public class TaskJSWrapper extends ScriptableObject {
             document.appendChild(node);
             getTask().setParameter(id, document);
         } else if (JSUtils.isXML(value)) {
-            LOGGER.debug("Value is XML");
+            LOGGER.debug("Value is JS XML");
             Document document = XMLUtils.newDocument();
-            Node node = ((Element) JSUtils.toDOM(value)).cloneNode(true);
+            Node node = JSUtils.toDOM(value).cloneNode(true);
             document.adoptNode(node);
             document.appendChild(node);
             getTask().setParameter(id, document);
         } else {
             LOGGER.debug("Value will be converted to string [%s/%s]",
                     value.getClassName(), value.getClass());
-            getTask().setParameter(id, (String) value.toString());
+            getTask().setParameter(id, value.toString());
         }
     }
 

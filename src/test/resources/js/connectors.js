@@ -19,9 +19,16 @@
 // Get script path
 
 var script_path = script_file().getParent().getName().getPath();
-var repository_path = script_path + "/connectors.inc";
-xpm.log("Repository path is " + repository_path);
+var repository_path = script_path + "/connectors.inc.js";
 
+
+// Check the answer
+function check(r) {
+	var v = r.toString();
+	var expected = "experimaestro rocks";
+	if (v != expected) 
+		throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
+}
 
 /*
  
@@ -31,14 +38,13 @@ xpm.log("Repository path is " + repository_path);
 
 function test_local() {
 	include_repository(repository_path);
-	var task = xpm.getTask("a.b.c", "task");
+	var task = xpm.get_task("a.b.c", "task");
 	task.setParameter("x", "10");
 	var r = task.run();
-	var v = r.xp::value.@value;
-	if (v != 10) 
-		throw new java.lang.String.format("Value [%s] is different from 10", v);
+	check(r);
 }
 
+test_local();
 
 /*
 
@@ -46,19 +52,6 @@ function test_local() {
 
 
 */
-
-// Get the SSH port of the embedded SSH server
-
-
-
-
-// --- 
-
-
-// --- Set the SSH options
-
-// 
-// sshOptions.useSSHAgent(true);
 
 
 // --- One SSH host
@@ -73,20 +66,16 @@ function test_ssh() {
 	var big_ssh = new Connector("ssh://user@localhost" + ":" + port );
 	include_repository(big_ssh, repository_path);
 
-	var task = xpm.getTask(qname("a.b.c", "task"));
+	var task = xpm.get_task(qname("a.b.c", "task"));
 	task.setParameter("x", "10");
 	var r = task.run();
-	var v = r.xp::value.@value;
-	if (v != 10) 
-		throw new java.lang.String.format("Value [%s] is different from 10", v);
+	check(r);
 }
 
-test_ssh();
-
-// --- Use a group of machines
-function test_ssh_group() {
-	var ssh1 = new SSHConnector("localhost:223");
-	var ssh2 = new SSHConnector("localhost:2132");
+// --- Use a group of machines (disabled)
+function t_est_ssh_group() {
+	var ssh1 = new Connector("ssh://localhost:223");
+	var ssh2 = new Connector("ssh://localhost:2132");
 
 	var group = new ConnectorGroup(ssh1, ssh2);
 

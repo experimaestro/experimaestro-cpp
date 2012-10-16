@@ -88,6 +88,7 @@ public abstract class Value {
      * @param task
      */
     void processConnections(Task task) {
+        LOGGER.debug("Processing %d connections for [%s]", input.connections.size(), task.factory.getId());
         // Do not process if we do not have connections...
         for (Connection connection : input.connections) {
             LOGGER.debug("Processing connection [%s]", connection);
@@ -134,6 +135,7 @@ public abstract class Value {
                         }
 
                         LOGGER.debug("Binding $%s to element [%s]", varName, element.getTagName());
+                        LOGGER.debug(XMLUtils.toString(element));
                         queryBuilder.append("declare variable $" + varName + " external; ");
 
                         xqje.bindNode(new QName(varName), element, null);
@@ -162,6 +164,7 @@ public abstract class Value {
                         item = xqItem.getNode();
                         break;
                     case XQItemType.XQITEMKIND_ATTRIBUTE:
+                    case XQItemType.XQITEMKIND_TEXT:
                         item = Task.wrapValue(xqItem.getNode().getTextContent());
                         break;
                     default:

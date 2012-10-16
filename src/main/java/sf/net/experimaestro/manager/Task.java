@@ -148,7 +148,7 @@ public abstract class Task {
 
                 if (!input.isOptional()) {
                     if (!value.isSet())
-                        throw new ExperimaestroRuntimeException("Parameter [%s] is missing in task [%s]", key, factory.id);
+                        throw new ExperimaestroRuntimeException("Parameter [%s] is not set for task [%s]", key, factory.id);
                 }
 
                 // Check type
@@ -167,7 +167,7 @@ public abstract class Task {
                     // In cases of values, further check
                     if (type instanceof ValueType) {
                         QName valueType = ((ValueType) type).getValueType();
-                        String x = element.getAttributeNS(Manager.EXPERIMAESTRO_NS, "value");
+                        String x = element.getAttribute("value");
                         boolean ok = false;
 
                         // Test if the value is OK
@@ -344,7 +344,7 @@ public abstract class Task {
         final Document doc = XMLUtils.newDocument();
         Element element = doc
                 .createElementNS(Manager.EXPERIMAESTRO_NS, "value");
-        element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "value", value);
+        element.setAttributeNS("", "value", value);
         doc.appendChild(element);
         return doc;
     }

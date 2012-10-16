@@ -86,7 +86,7 @@ public class JSTaskFactory extends TaskFactory {
 
         // --- Get the task inputs
         Object input = JSUtils.get(scope, "inputs", jsObject);
-        inputs = new TreeMap<String, Input>();
+        inputs = new TreeMap<>();
         if (!JSUtils.isXML(input))
             throw new RuntimeException(format(
                     "Property input is not in XML format in %s (%s)", this.id,
@@ -288,7 +288,10 @@ public class JSTaskFactory extends TaskFactory {
 
         // Set the default value
         if (el.hasAttribute("default")) {
-            input.setDefaultValue(Task.wrapValue(el.getAttribute("default")));
+            final Document defaultValue = Task.wrapValue(el.getAttribute("default"));
+            input.setDefaultValue(defaultValue);
+            LOGGER.info("Default value["+el.getAttribute("default")+"]: " + XMLUtils.toString(defaultValue));
+
         } else {
             Node child = XMLUtils.getChild(el, new QName(
                     Manager.EXPERIMAESTRO_NS, "default"));
@@ -300,6 +303,7 @@ public class JSTaskFactory extends TaskFactory {
                 for (int i = 0; i < childNodes.getLength(); i++)
                     document.appendChild(childNodes.item(i));
                 input.setDefaultValue(document);
+                LOGGER.info("Default value: " + XMLUtils.toString(document) + " / " + childNodes.getLength());
             }
         }
 

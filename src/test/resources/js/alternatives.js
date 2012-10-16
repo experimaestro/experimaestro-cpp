@@ -23,17 +23,18 @@
 var altName = qname("a.b.c", "alt");
 var abc = new Namespace("a.b.c");
 
-xpm.declareAlternative(altName);
+xpm.declare_alternative(altName);
 
 /** Alternative 1 */
 
 var configuration_alt_1 = {
-	id: xpm.qName("a.b.c", "alt-1"),
+	id: qname("a.b.c", "alt-1"),
 	documentation: <p>Configuration of a possible alternative</p>,
-	alternative: altName,
+	alternative: true,
+	output: altName,
 	
 	inputs: <inputs>
-		<input id="size" type="xs:integer" help="The parameter"/>
+		<value id="size" type="xs:integer" help="The parameter"/>
 	</inputs>,
 	
 	outputs: <outputs>
@@ -52,10 +53,9 @@ xpm.add_task_factory(configuration_alt_1);
 /** Task */
 
 var task_factory = {
-	id: xpm.qName("a.b.c", "task"),
+	id: qname("a.b.c", "task"),
 	version: "1.0",
-	inputs: <><input type="{a.b.c}alt" id="p"/></>,
-	outputs: <></>,
+	inputs: <inputs><alternative type="{a.b.c}alt" id="p"/></inputs>,
 	
 	run: function(inputs) {
 		return <outputs>{inputs.p}</outputs>;
@@ -66,7 +66,7 @@ xpm.add_task_factory(task_factory);
 
 /** Run and output */
 
-var task = xpm.getTask(task_factory.id);
+var task = xpm.get_task(task_factory.id);
 task.setParameter("p", "{a.b.c}alt-1");
 task.setParameter("p.size", "10");
 var r = task.run();

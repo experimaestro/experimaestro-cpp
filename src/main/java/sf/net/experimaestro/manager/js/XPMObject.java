@@ -23,6 +23,7 @@ import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
 import com.sun.org.apache.xerces.internal.xs.XSModel;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import org.apache.log4j.Hierarchy;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
@@ -47,7 +48,10 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static java.lang.String.format;
 
@@ -100,14 +104,19 @@ public class XPMObject {
      */
     Map<String, Object> properties = new HashMap<>();
 
-    private static ThreadLocal<ArrayList<String>> log = new ThreadLocal<ArrayList<String>>() {
-        protected synchronized ArrayList<String> initialValue() {
-            return new ArrayList<String>();
-        }
-    };
+    /**
+     * Logging should be directed to an output
+     */
+    final private Hierarchy loggerRepository;
+
+    /**
+     * Root logger
+     */
+    private Logger rootLogger;
 
     /**
      * Initialise a new XPM object
+     *
      *
      * @param currentResourceLocator The path to the current script
      * @param cx
@@ -122,16 +131,18 @@ public class XPMObject {
      * @throws NoSuchMethodException
      */
     public XPMObject(ResourceLocator currentResourceLocator, Context cx, Map<String, String> environment,
-                     Scriptable scope, Repository repository, Scheduler scheduler)
+                     Scriptable scope, Repository repository, Scheduler scheduler, Hierarchy loggerRepository)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
-        LOGGER.info("Current script is %s", currentResourceLocator);
+        LOGGER.debug("Current script is %s", currentResourceLocator);
         this.currentResourceLocator = currentResourceLocator;
         this.context = cx;
         this.environment = environment;
         this.scope = scope;
         this.repository = repository;
         this.scheduler = scheduler;
+        this.loggerRepository = loggerRepository;
+        this.rootLogger = Logger.getLogger(loggerRepository);
 
         // --- Define functions and classes
 
@@ -153,11 +164,7 @@ public class XPMObject {
         JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
         JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
         JSUtils.addFunction(XPMObject.class, scope, "include", null);
-
-        // Adds some special functions available for tests only
-        // (TODO: should be included when testing only)
-        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
-
+        JSUtils.addFunction(XPMObject.class, scope, "xpath", new Class<?>[]{ String.class, Object.class });
 
         // --- Add new objects
 
@@ -178,6 +185,10 @@ public class XPMObject {
                 cx.newObject(scope, className, params), 0);
     }
 
+
+    public Logger getRootLogger() {
+        return rootLogger;
+    }
 
     /**
      * Includes a repository
@@ -231,7 +242,7 @@ public class XPMObject {
                 // Run the script in a new environment
                 scriptScope = context.initStandardObjects();
                 final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
-                xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler);
+                xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository);
 
             }
 
@@ -245,7 +256,7 @@ public class XPMObject {
 
     static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
                              Function funObj, boolean repositoryMode) throws Exception {
-        XPMObject xpm = ((JSObject) thisObj.get("xpm", thisObj)).xpm;
+        XPMObject xpm = getXPM(thisObj);
 
         if (args.length == 1)
             // Use the current connector
@@ -256,6 +267,11 @@ public class XPMObject {
         else
             throw new IllegalArgumentException("includeRepository expects one or two arguments");
 
+    }
+
+    /** Retrievs the XPMObject from the JavaScript context */
+    private static XPMObject getXPM(Scriptable thisObj) {
+        return ((JSObject) thisObj.get("xpm", thisObj)).xpm;
     }
 
 
@@ -289,7 +305,7 @@ public class XPMObject {
         if (args.length != 0)
             throw new IllegalArgumentException("script_file() has no argument");
 
-        XPMObject xpm = (XPMObject) thisObj.get("xpm", thisObj);
+        XPMObject xpm = getXPM(thisObj);
 
         return xpm.currentResourceLocator.getFile();
     }
@@ -342,7 +358,7 @@ public class XPMObject {
      */
     public Scriptable getTaskFactory(String namespace, String id) {
         TaskFactory factory = repository.getFactory(new QName(namespace, id));
-        LOGGER.info("Creating a new JS task factory %s", factory);
+        LOGGER.debug("Creating a new JS task factory %s", factory.getId());
         return context.newObject(scope, "XPMTaskFactory",
                 new Object[]{Context.javaToJS(factory, scope)});
     }
@@ -361,11 +377,33 @@ public class XPMObject {
         TaskFactory factory = repository.getFactory(qname);
         if (factory == null)
             throw new ExperimaestroRuntimeException("Could not find a task with name [%s]", qname);
-        LOGGER.info("Creating a new JS task %s", factory);
+        LOGGER.info("Creating a new JS task [%s]", factory.getId());
         return context.newObject(scope, "XPMTask",
                 new Object[]{Context.javaToJS(factory.create(), scope)});
     }
 
+    /**
+     * Runs an XPath
+     *
+     * @param path
+     * @param xml
+     * @return
+     * @throws javax.xml.xpath.XPathExpressionException
+     */
+    static public Object js_xpath(String path, Object xml)
+            throws XPathExpressionException {
+        Node dom = JSUtils.toDOM(xml);
+        XPath xpath = XPathFactory.newInstance().newXPath();
+        xpath.setNamespaceContext(new NSContext(dom));
+        XPathFunctionResolver old = xpath.getXPathFunctionResolver();
+        xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
+
+        XPathExpression expression = xpath.compile(path);
+        String list = (String) expression.evaluate(
+                dom instanceof Document ? ((Document) dom).getDocumentElement()
+                        : dom, XPathConstants.STRING);
+        return list;
+    }
 
     /**
      * Recursive flattening of an array
@@ -442,23 +480,16 @@ public class XPMObject {
         return new NativeArray(new Object[]{error, sb.toString()});
     }
 
+
+
     /**
      * Log a message to be returned to the client
      */
     public void log(String format, Object... objects) {
-        String msg = format(format, objects);
-        log.get().add(msg);
-        LOGGER.debug(msg);
+        rootLogger.info(format, objects);
+        LOGGER.debug(format, objects);
     }
 
-    /**
-     * Get the log for the current thread
-     *
-     * @return
-     */
-    static public ArrayList<String> getLog() {
-        return log.get();
-    }
 
     /**
      * Get a QName
@@ -483,13 +514,6 @@ public class XPMObject {
     public String xmlToString(Node node) {
         return XMLUtils.toString(node);
     }
-
-    public static void resetLog() {
-        log.set(new ArrayList<String>());
-    }
-
-
-
 
     /**
      * Execute an experimental plan
@@ -521,28 +545,6 @@ public class XPMObject {
         return null;
     }
 
-    /**
-     * Runs an XPath
-     *
-     * @param path
-     * @param xml
-     * @return
-     * @throws XPathExpressionException
-     */
-    public Object xpath(String path, Object xml)
-            throws XPathExpressionException {
-        Node dom = JSUtils.toDOM(xml);
-        XPath xpath = XPathFactory.newInstance().newXPath();
-        xpath.setNamespaceContext(new NSContext(dom));
-        XPathFunctionResolver old = xpath.getXPathFunctionResolver();
-        xpath.setXPathFunctionResolver(new XPMXPathFunctionResolver(old));
-
-        XPathExpression expression = xpath.compile(path);
-        String list = (String) expression.evaluate(
-                dom instanceof Document ? ((Document) dom).getDocumentElement()
-                        : dom, XPathConstants.STRING);
-        return list;
-    }
 
     /**
      * Add an XML Schema declaration
@@ -653,7 +655,6 @@ public class XPMObject {
         XPMObject xpm;
 
         public JSObject() {
-            LOGGER.info("Called WITHOUT xpm");
         }
 
 
@@ -763,6 +764,12 @@ public class XPMObject {
             AlternativeType type = new AlternativeType((QName)qname);
             xpm.repository.addType(type);
         }
+
+        @JSFunction("wrap")
+        public Object wrap() {
+            return JSUtils.domToE4X(Task.wrapValue("10"), xpm.context, xpm.scope);
+        }
+
 
 
     }

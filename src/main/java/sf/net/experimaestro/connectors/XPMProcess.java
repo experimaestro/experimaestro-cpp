@@ -124,6 +124,7 @@ public abstract class XPMProcess {
 
     /**
      * Used for serialization
+     *
      * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
      */
     protected XPMProcess() {
@@ -161,7 +162,6 @@ public abstract class XPMProcess {
     public void setJob(Job job) {
         this.job = job;
     }
-
 
 
     /**
@@ -278,9 +278,32 @@ public abstract class XPMProcess {
     abstract public InputStream getInputStream();
 
     /**
+     * Periodic checks
+     *
      * @see {@linkplain Process#waitFor()}
      */
-    abstract public int waitFor() throws InterruptedException;
+    public int waitFor() throws InterruptedException {
+        synchronized (this) {
+            // Wait 1 second
+            while (true) {
+                try {
+                    try {
+                        if (!isRunning()) {
+                            return exitValue();
+                        }
+                    } catch (Exception e) {
+                        // TODO: what to do here?
+                        // Delay?
+                        LOGGER.warn("Error while checking if running");
+                    }
+                    wait(1000);
+
+                } catch (InterruptedException e) {
+
+                }
+            }
+        }
+    }
 
     /**
      * @see {@linkplain Process#destroy()}

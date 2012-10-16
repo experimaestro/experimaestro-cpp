@@ -20,7 +20,11 @@ package sf.net.experimaestro.server;
 
 import com.sleepycat.je.DatabaseException;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
+import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.WriterAppender;
+import org.apache.log4j.spi.RootLogger;
 import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.XmlRpcStreamServer;
 import org.mortbay.jetty.Server;
@@ -38,6 +42,8 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -83,6 +89,8 @@ public class RPCHandler {
     /**
      * Update the status of jobs
      */
+    @RPCHelp("Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
+            " in a change of state")
     public int updateJobs(Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
@@ -112,6 +120,7 @@ public class RPCHandler {
     /**
      * List jobs
      */
+    @RPCHelp("List the jobs along with their states")
     public List<String> listJobs(Object[] states) {
         final EnumSet<ResourceState> set = getStates(states);
         List<String> list = new ArrayList<>();
@@ -125,6 +134,7 @@ public class RPCHandler {
     /**
      * Shutdown the server
      */
+    @RPCHelp("Shutdown Experimaestro server")
     public boolean shutdown() {
         // Close the scheduler
         scheduler.close();
@@ -206,11 +216,22 @@ public class RPCHandler {
 
     }
 
-    private volatile int index = 1;
+    /**
+     * Information about a job
+     */
+    @RPCHelp("Returns detailed information about a job (XML format)")
+    public String getResourceInformation(String resourceId) {
+        final Resource resource = scheduler.getResource(ResourceLocator.parse(resourceId));
+        if (resource == null)
+            throw new ExperimaestroRuntimeException("No resource with id [%s]", resourceId);
 
-    public void echo(String msg) {
-        System.out.println(index + ": " + msg);
-        index++;
+
+        final StringWriter out = new StringWriter();
+        PrintWriter writer = new PrintWriter(out);
+        Resource.PrintConfig config = new Resource.PrintConfig();
+        resource.printHTML(writer, config);
+        writer.close();
+        return out.toString();
     }
 
 
@@ -220,6 +241,7 @@ public class RPCHandler {
      * This version is called from python scripts where maps would be marshalled
      * into a string. Instead, we get a list that we transform into a map.
      */
+    @RPCHelp("Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(boolean isFile, String content,
                                          Object[] envArray) {
         Map<String, String> environment = arrayToMap(envArray);
@@ -229,6 +251,7 @@ public class RPCHandler {
     /**
      * Run a javascript script (either the file or a string)
      */
+    @RPCHelp("Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(boolean isFile, String content,
                                          Map<String, String> environment) {
         if (pRequest instanceof XmlRpcStreamServer) {
@@ -238,6 +261,13 @@ public class RPCHandler {
         int error = 0;
         String errorMsg = "";
         XPMObject jsXPM = null;
+
+        final RootLogger root = new RootLogger(Level.INFO);
+        final Hierarchy loggerRepository = new Hierarchy(root);
+        StringWriter stringWriter = new StringWriter();
+        SimpleLayout layout = new SimpleLayout();
+        WriterAppender appender = new WriterAppender(layout, stringWriter);
+        root.addAppender(appender);
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
@@ -271,8 +301,7 @@ public class RPCHandler {
             ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
                     environment), 0);
             jsXPM = new XPMObject(locator, jsContext, environment, scope, repositories,
-                    scheduler);
-            XPMObject.getLog().clear();
+                    scheduler, loggerRepository);
 
             final Object result;
             if (isFile)
@@ -328,13 +357,12 @@ public class RPCHandler {
             Context.exit();
         }
 
-        ArrayList<Object> list = new ArrayList<Object>();
+        ArrayList<Object> list = new ArrayList<>();
         list.add(error);
         list.add(errorMsg);
         if (jsXPM != null) {
-            list.add(XPMObject.getLog());
+            list.add(stringWriter.toString());
         }
-        XPMObject.resetLog();
         return list;
     }
 
@@ -418,4 +446,6 @@ public class RPCHandler {
         }
         return env;
     }
+
+
 }

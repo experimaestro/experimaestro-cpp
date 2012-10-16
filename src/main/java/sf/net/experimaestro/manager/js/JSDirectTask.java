@@ -72,7 +72,8 @@ public class JSDirectTask extends JSAbstractTask {
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance)
                 throw new ExperimaestroRuntimeException(
-                        "Undefined returned by the function run");
+                        "Undefined returned by the function run of task [%s]",
+                        factory.getId());
 
             result = (Scriptable) returned;
         } else {

@@ -1,11 +1,9 @@
 <head><title>Tasks</title></head>
 
 
-  Tasks are simple objects that can be configured and run. Specific behaviours depend
-  on the underlying language that can include different ways to define tasks, but the underlying
-  mechanism, which remains the same, is described in this document.
+Tasks are simple objects that can be configured and run. Specific behaviours depend on the underlying language that can include different ways to define tasks, but the underlying mechanism, which remains the same, is described in this document.
 
-  A task is characterised by the following:
+A task is characterised by the following:
 
 1. It is uniquely identified by a qualified name (URI + name) and a group name;
 1. It is configured by a set of XML documents, each associated to a given name and,

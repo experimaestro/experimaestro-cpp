@@ -53,7 +53,7 @@ public class LocalhostConnector extends SingleHostConnector {
     static private LocalhostConnector singleton = new LocalhostConnector();
 
     public LocalhostConnector() {
-        super("local:");
+        super("local://");
     }
 
     @Override
@@ -97,6 +97,9 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
 
+    /**
+     * Wrapper for a local thread
+     */
     @Persistent
     private static class LocalProcess extends XPMProcess {
         /**
@@ -115,6 +118,7 @@ public class LocalhostConnector extends SingleHostConnector {
             super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job, true);
             this.process = process;
             if (!detach) {
+                // If we need to destroy this process
                 destroyThread = new Thread() {
                     @Override
                     public void run() {
@@ -160,9 +164,12 @@ public class LocalhostConnector extends SingleHostConnector {
 
         @Override
         public int waitFor() throws InterruptedException {
-            final int exitCode = process.waitFor();
-            process = null;
-            return exitCode;
+            if (process != null) {
+                final int exitCode = process.waitFor();
+                process = null;
+                return exitCode;
+            }
+            return super.waitFor();
         }
 
         @Override

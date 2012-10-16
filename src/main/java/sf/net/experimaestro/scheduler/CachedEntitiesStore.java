@@ -100,7 +100,13 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
 
 
         // Store in database and in cache
-        index.put(value);
+        try {
+            index.put(value);
+        } catch(DatabaseException e) {
+            // TODO: We should have a memory cache for failed updates
+            // so that those are kept in memory for a while
+            LOGGER.error("Caught a database exception (%s) while updating %s", e, value);
+        }
         cache.put(key, new WeakReference<>(value));
         LOGGER.debug("Stored value [%s@%s] in database", key, value.hashCode());
         // OK, we did updateFromStatusFile

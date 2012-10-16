@@ -19,13 +19,15 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.vfs2.*;
-import org.apache.log4j.Logger;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -45,7 +47,7 @@ import static java.lang.String.format;
  * Tests are defined by matching javascript functions matching "function test_XXXX()"
  */
 public class ScriptTest {
-    static final Logger LOGGER = Logger.getLogger(ScriptTest.class);
+    static final Logger LOGGER = Logger.getLogger();
 
     private static final String JS_SCRIPT_PATH = "/js";
 
@@ -56,6 +58,7 @@ public class ScriptTest {
         private Context context;
         private Repository repository;
         private ScriptableObject scope;
+        private boolean initialized;
 
         public JavaScriptChecker(FileObject file) throws
                 IOException {
@@ -68,12 +71,15 @@ public class ScriptTest {
             return format("JavaScript for [%s]", file);
         }
 
+
         @DataProvider
         public Object[][] jsProvider() throws IOException {
             Pattern pattern = Pattern
                     .compile("function\\s+(test_[\\w]+)\\s*\\(");
             Matcher matcher = pattern.matcher(content);
             ArrayList<Object[]> list = new ArrayList<>();
+
+            // Adds the script
             list.add(new Object[]{null});
 
             while (matcher.find()) {
@@ -88,7 +94,6 @@ public class ScriptTest {
             context = Context.enter();
             scope = context.initStandardObjects();
             repository = new Repository(new ResourceLocator());
-
         }
 
         @AfterTest
@@ -102,15 +107,22 @@ public class ScriptTest {
                 InstantiationException, InvocationTargetException,
                 NoSuchMethodException {
             if (functionName == null) {
+                initialized = false;
                 // Defines the environment
                 Map<String, String> environment = System.getenv();
-                XPMObject jsXPM = new XPMObject(new ResourceLocator(), context, environment, scope,
-                        repository, null);
+                final ResourceLocator currentResourceLocator
+                        = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
+                XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
+                        repository, null, null);
 
+                // Adds some special functions available for tests only
+                JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
                 context.evaluateReader(scope, new StringReader(content),
                         file.toString(), 1, null);
+                initialized = true;
             } else {
+                assert initialized : "Not running test since initialization did not work";
                 Object object = scope.get(functionName, scope);
                 assert object instanceof Function : format(
                         "%s is not a function", functionName);
@@ -120,6 +132,11 @@ public class ScriptTest {
         }
     }
 
+    /**
+     * Retrieves all the .js files (excluding .inc.js)
+     * @return
+     * @throws IOException
+     */
     @Factory
     public static Object[] jsFactories() throws IOException {
         // Get the JavaScript files
@@ -135,7 +152,8 @@ public class ScriptTest {
 
             @Override
             public boolean includeFile(FileSelectInfo file) throws Exception {
-                return file.getFile().getName().getExtension().equals("js");
+                final String name = file.getFile().getName().toString();
+                return name.endsWith(".js") && !name.endsWith(".inc.js");
             }
         });
 

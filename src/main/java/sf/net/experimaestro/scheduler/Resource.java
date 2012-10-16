@@ -87,7 +87,7 @@ public abstract class Resource implements Comparable<Resource> {
      * Groups this resource belongs to
      */
     @SecondaryKey(name = "groups", relate = Relationship.MANY_TO_MANY)
-    Set<String> groups = new TreeSet<String>();
+    Set<String> groups = new TreeSet<>();
 
     /**
      * True when the resource has been generated
@@ -113,7 +113,7 @@ public abstract class Resource implements Comparable<Resource> {
      * Our set of listeners (resources that are listening to changes in the
      * state of this resource)
      */
-    @SecondaryKey(name = "listeners", relate = Relationship.ONE_TO_MANY, relatedEntity = Resource.class)
+    @SecondaryKey(name = "listeners", relate = Relationship.MANY_TO_MANY, relatedEntity = Resource.class)
     Set<ResourceLocator> listeners = new TreeSet<>();
 
     /**

@@ -18,20 +18,35 @@
 
 package sf.net.experimaestro.utils.log;
 
+import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggerFactory;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 
 public final class Logger extends org.apache.log4j.Logger {
 
-    static public class Factory implements LoggerFactory {
-        public org.apache.log4j.Logger makeNewLoggerInstance(String name) {
+
+    static public interface Factory extends LoggerFactory {
+        @Override
+        public Logger makeNewLoggerInstance(String name);
+    }
+
+    /**
+     * Our own logger factory
+     */
+    static public class DefaultFactory implements Factory {
+        @Override
+        public Logger makeNewLoggerInstance(String name) {
             return new Logger(name);
         }
 
     }
 
-    private static Factory myFactory = new Factory();
+    private static DefaultFactory myFactory = new DefaultFactory();
+
+    public final static Factory factory() {
+        return myFactory;
+    }
 
     public Logger(String name) {
         super(name);
@@ -91,25 +106,40 @@ public final class Logger extends org.apache.log4j.Logger {
      * This method overrides {@link Logger#getLogger} by supplying its own
      * factory type as a parameter.
      */
-    public static Logger getLogger(String name) {
-        return (Logger) org.apache.log4j.Logger.getLogger(name, myFactory);
+    public static Logger getLogger(String name, Factory factory) {
+        return (Logger) org.apache.log4j.Logger.getLogger(name, factory);
     }
 
+    public static Logger getLogger(Hierarchy repository) {
+        return getLogger(repository, new Throwable().getStackTrace()[1]
+                .getClassName());
+    }
+
+    public static Logger getLogger(Hierarchy repository, String name) {
+        if (repository == null)
+            return getLogger(name);
+        return (Logger) repository.getLogger(name, myFactory);
+    }
+
+
     /**
-     * Shorthand for <code>GetXPMLogger(clazz.getName())</code>.
-     *
-     * @param clazz The name of <code>clazz</code> will be used as the name of the
-     *              logger to retrieve. See {@link #getLogger(String)} for more
-     *              detailed information.
+     * This method overrides {@link Logger#getLogger} by supplying its own
+     * factory type as a parameter.
      */
-    static public Logger GetXPMLogger(Class<?> clazz) {
-        return (Logger) getLogger(clazz.getName());
+    public static Logger getLogger(String name) {
+        return getLogger(name, myFactory);
+    }
+
+    public static Logger getLogger(Factory factory) {
+        return getLogger(new Throwable().getStackTrace()[1]
+                .getClassName(), factory);
     }
 
     public static Logger getLogger() {
-        return (Logger) getLogger(new Throwable().getStackTrace()[1]
-                .getClassName());
+        return getLogger(new Throwable().getStackTrace()[1]
+                .getClassName(), myFactory);
     }
+
 
     private static final String FQCN = Logger.class.getName();
 

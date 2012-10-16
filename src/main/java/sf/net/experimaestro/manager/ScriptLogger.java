@@ -16,35 +16,13 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** Direct task */
+package sf.net.experimaestro.manager;
 
-// START SNIPPET: task
-var task = {
-    // The id of the task is an XML qualified name 
-    id: qname("a.b.c", "task"),
-    
-    // One input of type xp:integer
-    inputs: <inputs><value type="xs:integer" id="x"/></inputs>,		
-};
-
-// Add the task to the list of available factories
-xpm.add_task_factory(task);
-// END SNIPPET: task
-
-
-/** Run and check */
-
-// START SNIPPET: run
-var task = xpm.get_task("a.b.c", "task");
-task.setParameter("x", "10");
-var r = task.run();
-
-// END SNIPPET: run
-
-function test_directtask() {
-	var abc = Namespace("a.b.c");
-	v = r.xp::value.@value;
-	if (v == undefined || v != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", v);
-}	
-	
+/**
+ * Logger mechanism for scripts
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 16/10/12
+ */
+public class ScriptLogger {
+}

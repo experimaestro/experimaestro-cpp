@@ -215,6 +215,9 @@ public class SSHConnector extends SingleHostConnector {
 
         @Override
         public int waitFor() throws InterruptedException {
+            if (channel != null)
+                return super.waitFor();
+
             while (channel.isConnected()) {
                 Thread.sleep(1000);
             }

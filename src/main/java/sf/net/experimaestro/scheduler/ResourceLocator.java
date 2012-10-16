@@ -28,8 +28,13 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 /**
- * Identifies a resource on the network
+ * Identifies a resource on the network.
+ * <p/>
+ * In practice, it is an URI
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/6/12
@@ -42,14 +47,9 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     @KeyField(value = 2)
     String path;
 
-    /**
-     * Connector
-     */
+    /** The underlying connector, initialized with {@linkplain #init(Scheduler)} */
     transient Connector connector;
 
-
-    public ResourceLocator() {
-    }
 
     @Override
     public boolean equals(Object o) {
@@ -69,6 +69,10 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         int result = connectorId.hashCode();
         result = 31 * result + path.hashCode();
         return result;
+    }
+
+
+    public ResourceLocator() {
     }
 
     /**
@@ -93,7 +97,6 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     }
 
 
-
     public String getPath() {
         return path;
     }
@@ -106,9 +109,10 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
     /**
      * Init from a pair of strings
-     *
+     * <p/>
      * <b>Note</b> that the object needs to be initialized if used for something else
      * than retrieving a record
+     *
      * @param connectorId
      * @param path
      */
@@ -117,7 +121,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         this.path = path;
     }
 
-        @Override
+    @Override
     public int compareTo(ResourceLocator other) {
         int z = connectorId.compareTo(other.connectorId);
         if (z != 0)
@@ -130,26 +134,24 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         return String.format("%s%s", connectorId, path);
     }
 
-//    public static ResourceLocator decode(String idString) {
-//        URI uri = null;
-//        try {
-//            uri = new URI(idString);
-//        } catch (URISyntaxException e) {
-//            throw new RuntimeException(e);
-//        }
-//
-//        if ("local".equals(uri.getScheme()))
-//            return LocalhostConnector.getIdentifier(uri);
-//
-//        if ("xpm".equals(uri.getScheme())) {
-//            throw new IllegalArgumentException("xpm URI scheme is not supported yet");
-//        }
-//
-//        if ("ssh".equals(uri.getScheme()))
-//            return SSHConnector.getIdentifier(uri);
-//
-//        throw new RuntimeException(String.format("Unknown scheme [%s] in URL [%s]", uri.getScheme(), idString));
-//    }
+    public static ResourceLocator parse(String idString) {
+        try {
+            final URI uri = new URI(idString);
+            StringBuilder connectorId = new StringBuilder();
+            StringBuilder path = new StringBuilder();
+
+            connectorId.append(uri.getScheme());
+            connectorId.append("://");
+            if (uri.getRawAuthority() != null)
+                connectorId.append(uri.getRawAuthority());
+
+            path.append(uri.getRawPath());
+
+            return new ResourceLocator(connectorId.toString(), path.toString());
+        } catch (URISyntaxException e) {
+            throw new ExperimaestroRuntimeException("Could not handle URI [%s]", idString);
+        }
+    }
 
 
     public String getConnectorId() {
@@ -165,7 +167,8 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
     /**
      * Resolve a path relative to this resource
-     * @param path The path
+     *
+     * @param path   The path
      * @param parent Is the path relative to the parent?
      * @return A new resource locator object
      * @throws FileSystemException If something goes wrong while accessing the file system
@@ -190,6 +193,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
     /**
      * Returns the path of the file relative to the a given's host filesystem, adding an extension
+     *
      * @param connector A single host connector
      * @param extension The extension
      * @return A file object
@@ -201,8 +205,9 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
     /**
      * Resolve a path relative to a given File Object
+     *
      * @param connector
-     * @param path The path to the resource
+     * @param path      The path to the resource
      * @return
      */
     private FileObject resolvePath(SingleHostConnector connector, String path) throws FileSystemException {

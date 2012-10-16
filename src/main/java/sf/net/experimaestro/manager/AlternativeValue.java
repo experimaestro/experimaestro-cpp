@@ -84,9 +84,9 @@ public class AlternativeValue extends Value {
                 this.value = value;
             } else {
                 final Map<QName, TaskFactory> factories = ((AlternativeType)this.alternativeInput.type).factories;
-
-                String key = element.getAttributeNS(Manager.EXPERIMAESTRO_NS,
-                        "value");
+                if (!XMLUtils.is(ValueType.QNAME, element))
+                    throw new ExperimaestroRuntimeException("Expected a value");
+                String key = element.getAttribute("value");
                 QName qname = XMLUtils.parseQName(key, element,
                         Manager.PREDEFINED_PREFIXES);
                 TaskFactory subFactory = factories.get(qname);

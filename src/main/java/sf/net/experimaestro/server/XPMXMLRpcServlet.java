@@ -21,6 +21,7 @@ package sf.net.experimaestro.server;
 import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.XmlRpcRequest;
+import org.apache.xmlrpc.metadata.Util;
 import org.apache.xmlrpc.metadata.XmlRpcSystemImpl;
 import org.apache.xmlrpc.server.PropertyHandlerMapping;
 import org.apache.xmlrpc.server.RequestProcessorFactoryFactory;
@@ -35,8 +36,11 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 /**
  * The XML-RPC servlet for experimaestro
@@ -107,7 +111,37 @@ public final class XPMXMLRpcServlet extends XmlRpcServlet {
 	@Override
 	protected PropertyHandlerMapping newPropertyHandlerMapping(URL url)
 			throws IOException, XmlRpcException {
-		PropertyHandlerMapping mapping = new PropertyHandlerMapping();
+		PropertyHandlerMapping mapping = new PropertyHandlerMapping() {
+            @Override
+            protected String getMethodHelp(Class pClass, Method[] pMethods) {
+                final List<String> result = new ArrayList<>();
+
+                for(Method method: pMethods) {
+                    final RPCHelp annotation = method.getAnnotation(RPCHelp.class);
+                    if (annotation == null)
+                        result.add(Util.getMethodHelp(pClass, method));
+                    else
+                        result.add(annotation.value());
+                }
+
+                switch (result.size()) {
+                    case 0:
+                        return null;
+                    case 1:
+                        return (String) result.get(0);
+                    default:
+                        StringBuffer sb = new StringBuffer();
+                        for (int i = 0;  i < result.size();  i++) {
+                            sb.append(i+1);
+                            sb.append(": ");
+                            sb.append(result.get(i));
+                            sb.append("\n");
+                        }
+                        return sb.toString();
+                }
+            }
+
+        };
 
         RequestProcessorFactoryFactory factory = new RequestProcessorFactoryFactory() {
 			public RequestProcessorFactory getRequestProcessorFactory(

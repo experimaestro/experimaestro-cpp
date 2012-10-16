@@ -73,6 +73,12 @@ public class CommandLineTask extends Job {
      */
     private String jobInputString;
 
+
+    /**
+     * Path for job output
+     */
+    private String jobOutputPath;
+
     protected CommandLineTask() {
     }
 
@@ -120,7 +126,7 @@ public class CommandLineTask extends Job {
     public static String getCommandLine(List<String> args) {
         return bpiwowar.argparser.utils.Output.toString(" ", args, new Formatter<String>() {
             public String format(String t) {
-                return protect(t, " \"'");
+                return protect(t, UnixProcessBuilder.SHELL_SPECIAL);
             }
         });
     }
@@ -161,6 +167,10 @@ public class CommandLineTask extends Job {
         if (jobInputPath != null)
             jobInput = XPMProcessBuilder.Redirect.from(getMainConnector().resolveFile(jobInputPath));
 
+        if (jobOutputPath != null)
+            builder.redirectOutput(XPMProcessBuilder.Redirect.to(getMainConnector().resolveFile(jobOutputPath)));
+        else
+            builder.redirectOutput(XPMProcessBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
 
         builder.redirectInput(jobInput);
 
@@ -170,15 +180,11 @@ public class CommandLineTask extends Job {
         builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
         builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
         // Redirect output & error streams into corresponding files
-        builder.redirectOutput(XPMProcessBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
         builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         // Start
 
         final XPMProcess process = builder.start();
-
-
-
 
         return process;
     }
@@ -186,7 +192,7 @@ public class CommandLineTask extends Job {
     @Override
     public void printHTML(PrintWriter out, PrintConfig config) {
         super.printHTML(out, config);
-        out.format("<div><b>Command</b>: %s</div>", command[2]);
+        out.format("<div><b>Command</b>: %s</div>", Arrays.toString(command));
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
         out.format("<div><b>Environment</b>: %s</div>", environment);
     }
@@ -198,5 +204,9 @@ public class CommandLineTask extends Job {
     public void setInput(String jobInput) {
         this.jobInputPath = null;
         this.jobInputString = jobInput;
+    }
+
+    public void setOutput(FileObject fileObject) {
+        this.jobOutputPath = fileObject.toString();
     }
 }

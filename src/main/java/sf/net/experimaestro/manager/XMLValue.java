@@ -45,7 +45,7 @@ public class XMLValue extends Value {
 	public void process() {
 		// If there is no value, takes the default
 		if (value == null && input.defaultValue != null) {
-			LOGGER.info("Setting default value [%s]",
+			LOGGER.debug("Setting default value [%s]",
 					XMLUtils.toStringObject(input.defaultValue));
 			value = (Document) input.defaultValue.cloneNode(true);
 		}
@@ -56,7 +56,7 @@ public class XMLValue extends Value {
 		if (id.size() != 0)
 			throw new ExperimaestroRuntimeException(
 					"Cannot handle qualified names [%s]");
-		LOGGER.info("Value set to [%s]", XMLUtils.toString(value));
+		LOGGER.debug("Value set to [%s]", XMLUtils.toString(value));
 		this.value = value;
 	}
 

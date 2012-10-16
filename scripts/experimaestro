@@ -110,9 +110,7 @@ def command_run_js(args):
         logging.info("Running JS script %s" % filename)
         try:
           r = xmlrpc.Server.runJSScript(True, filename, env)
-          if len(r) >2:
-            for line in r[2]:
-              print line
+          if len(r) >2: print(r[2])
           if r[0]:
               print
               print "### Error while running %s ###" % filename
@@ -135,6 +133,20 @@ def command_ls(args):
   server = getServer(args)
   for l in server.Server.listJobs([]):
     print l
+
+
+def command_list_methods(args):
+  server = getServer(args)
+  for method in server.system.listMethods():
+    if not method.startswith("system"):
+      print("# %s" % method)
+      print server.system.methodSignature(method)
+      print server.system.methodHelp(method)
+      print
+
+def command_information(args):
+    server = getServer(args)
+    print server.Server.getResourceInformation(args.resourceId[0])
   
 # --- Run command
 
@@ -160,9 +172,14 @@ p_run_js.add_argument("--post", dest="post", help="Execute this javascript after
 p_run_js.set_defaults(func = command_run_js)
 p_run_js.add_argument('files', nargs='*', help='') 
 
-p_update_jobs = subparsers.add_parser("update-jobs", help="Update jobs")
+subparsers.add_parser("update-jobs", help="Update jobs")
 
-p_update_jobs = subparsers.add_parser("ls", help="List jobs")
+subparsers.add_parser("ls", help="List jobs")
+
+subparsers.add_parser("list-methods", help="List XML-RPC methods")
+
+p_information = subparsers.add_parser("information", help="Get information on a resource")
+p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
 # Parse arguments
 args = parser.parse_args()
