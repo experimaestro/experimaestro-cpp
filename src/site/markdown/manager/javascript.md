@@ -67,6 +67,9 @@
 
   The values in are `results` the values 5, 10, 7 and 14.
 
+# Environment variables
+
+  * `XPM_DEFAULT_GROUP` defines the default group for the tasks
 
 # Predefined objects
  
@@ -89,8 +92,10 @@
   * `get_task(qualified_name)` or `get_task(namespace, id)` Get a new instance of task given the namespace and the id
   * `log(format, object, [object ...])` Returns a message using the format static method from String.
   * `include(path)` includes another javascript file (path is relative to the current file)
-  * `xpath(query, xml)` runs an XPath query on an XML document or fragment. See {{XPath handling}} for
-    a description of how XPath are handled within experimaestro.
+  * `xpath(query, xml)` runs an XPath query on an XML document or fragment. See {{XPath handling}} for a description of how XPath are handled within experimaestro.
+  * `value(object)` returns an XML experimaestro value
+  * `path(file_object)` returns an XML description of the path 
+  * `set_default_group(name)` sets the default group for jobs
 
 
 # Scheduler object
@@ -99,11 +104,15 @@ The scheduler object can be used to run jobs asynchronously.
 
 ## Functions
 
-  * `addCommandLineJobs(jobId, commandLine, resources)` where `jobId` is a valid task identifier, `commandLine` is
-   the command line to be executed, and `resources` are the resources to be locked before
-    executing the command line.   `commandLine` can be either
+  * `command_line_job(jobId, commandLine, options)` where `jobId` is a valid task identifier, `commandLine` is
+   the command line to be executed, and `options` are the options.
+   `commandLine` can be either
       1. An array (command line followed by arguments)
       2. An associative array with the entries "command" (required), "environment" (associative array describing the environment)
+  `options` is an associative array:
+  - *stdin*: A string or a file object
+  - *stdout*: A file object
+  - *lock* is an array of couples (resource-id, lock-type) where the lock type can be `READ_ACCESS`, `WRITE_ACCESS`, or `EXCLUSIVE_ACCESS`.
 
 # XPath handling
 

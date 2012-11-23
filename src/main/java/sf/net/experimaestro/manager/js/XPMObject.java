@@ -68,6 +68,7 @@ import static java.lang.String.format;
 public class XPMObject {
 
     final static private Logger LOGGER = Logger.getLogger();
+    public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
 
     /**
      * The experiment repository
@@ -100,7 +101,7 @@ public class XPMObject {
     ResourceLocator currentResourceLocator;
 
     /**
-     * Properties set by the script
+     * Properties set by the script that will be returned
      */
     Map<String, Object> properties = new HashMap<>();
 
@@ -115,28 +116,35 @@ public class XPMObject {
     private Logger rootLogger;
 
     /**
+     * Default group for new jobs
+     */
+    String defaultGroup = "";
+
+    /**
      * Initialise a new XPM object
      *
-     *
      * @param currentResourceLocator The path to the current script
-     * @param cx
-     * @param environment
-     * @param scope
-     * @param repository
-     * @param scheduler
+     * @param context The JS context
+     * @param environment The environment variables
+     * @param scope The JS scope for execution
+     * @param repository The task repository
+     * @param scheduler The job scheduler
+     * @param loggerRepository The logger for the script
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    public XPMObject(ResourceLocator currentResourceLocator, Context cx, Map<String, String> environment,
-                     Scriptable scope, Repository repository, Scheduler scheduler, Hierarchy loggerRepository)
+    public XPMObject(ResourceLocator currentResourceLocator, Context context,
+                     Map<String, String> environment,
+                     Scriptable scope, Repository repository, Scheduler scheduler,
+                     Hierarchy loggerRepository)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentResourceLocator);
         this.currentResourceLocator = currentResourceLocator;
-        this.context = cx;
+        this.context = context;
         this.environment = environment;
         this.scope = scope;
         this.repository = repository;
@@ -157,26 +165,40 @@ public class XPMObject {
         // Launchers
         ScriptableObject.defineClass(scope, JSOARLauncher.class);
 
-        // ComputationalResources
-
         // Add functions
         JSUtils.addFunction(XPMObject.class, scope, "qname", new Class<?>[]{Object.class, String.class});
         JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
         JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
         JSUtils.addFunction(XPMObject.class, scope, "include", null);
-        JSUtils.addFunction(XPMObject.class, scope, "xpath", new Class<?>[]{ String.class, Object.class });
+        JSUtils.addFunction(XPMObject.class, scope, "xpath", new Class<?>[]{String.class, Object.class});
+        JSUtils.addFunction(XPMObject.class, scope, "path", null);
+        JSUtils.addFunction(XPMObject.class, scope, "value", null);
 
         // --- Add new objects
 
 //        ScriptableObject.defineProperty(scope, "xpm", new JSObject(this), 0);
-        addNewObject(cx, scope, "xpm", "XPM", new Object[]{});
+        addNewObject(context, scope, "xpm", "XPM", new Object[]{});
         ((JSObject) get(scope, "xpm")).set(this);
 
-        addNewObject(cx, scope, "xp", "Namespace", new Object[]{"xp",
+        addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
-        addNewObject(cx, scope, "scheduler", "Scheduler",
+        addNewObject(context, scope, "scheduler", "Scheduler",
                 new Object[]{scheduler, this});
+
+        // --- Get the default group from the environment
+        if (environment.containsKey(DEFAULT_GROUP))
+            defaultGroup = environment.get(DEFAULT_GROUP);
+
     }
+
+
+    /** Clone properties from this XPM instance */
+    private XPMObject clone(ResourceLocator scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository);
+        clone.defaultGroup = this.defaultGroup;
+        return clone;
+    }
+
 
     static private void addNewObject(Context cx, Scriptable scope,
                                      final String objectName, final String className,
@@ -242,7 +264,7 @@ public class XPMObject {
                 // Run the script in a new environment
                 scriptScope = context.initStandardObjects();
                 final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
-                xpmObject = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository);
+                xpmObject = clone(scriptpath, scriptScope, newEnvironment);
 
             }
 
@@ -269,7 +291,9 @@ public class XPMObject {
 
     }
 
-    /** Retrievs the XPMObject from the JavaScript context */
+    /**
+     * Retrievs the XPMObject from the JavaScript context
+     */
     private static XPMObject getXPM(Scriptable thisObj) {
         return ((JSObject) thisObj.get("xpm", thisObj)).xpm;
     }
@@ -292,6 +316,50 @@ public class XPMObject {
                                   Function funObj) throws Exception {
 
         include(cx, thisObj, args, funObj, false);
+    }
+
+
+
+    /**
+     * Returns an XML element that corresponds to the path. This can" +
+     * be used when building command lines containing path to resources" +
+     * or executables
+     * @return An XML element
+     */
+    static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        if (args.length != 1)
+            throw new IllegalArgumentException("path() needs one argument");
+
+        XPMObject xpm = getXPM(thisObj);
+        final Document document = XMLUtils.newDocument();
+        Node node = document.createElementNS(Manager.EXPERIMAESTRO_NS, "path");
+
+        final Object o = JSUtils.unwrap(args[0]);
+        final String data;
+        if (o instanceof FileObject) {
+            data = o.toString();
+        } else if (o instanceof String) {
+            data = xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile().toString();
+        } else
+            throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file path", JSUtils.toString(o));
+
+        node.appendChild(document.createTextNode(data));
+        return JSUtils.domToE4X(node, xpm.context, xpm.scope);
+    }
+
+    /**
+     * Returns an XML element that corresponds to the wrapped value
+     * @return An XML element
+     */
+    static public Object js_value(Context cx, Scriptable thisObj, Object[] args, Function funObj) {        if (args.length != 1)
+        if (args.length != 1)
+            throw new IllegalArgumentException("value() needs one argument");
+        final Object object = JSUtils.unwrap(args[0]);
+
+        Document doc = XMLUtils.newDocument();
+        XPMObject xpm = getXPM(thisObj);
+        return JSUtils.domToE4X(doc.createElement(JSUtils.toString(object)), xpm.context, xpm.scope);
+
     }
 
 
@@ -389,6 +457,7 @@ public class XPMObject {
      * @param xml
      * @return
      * @throws javax.xml.xpath.XPathExpressionException
+     *
      */
     static public Object js_xpath(String path, Object xml)
             throws XPathExpressionException {
@@ -479,7 +548,6 @@ public class XPMObject {
         int error = p.waitFor();
         return new NativeArray(new Object[]{error, sb.toString()});
     }
-
 
 
     /**
@@ -673,6 +741,11 @@ public class XPMObject {
             xpm.properties.put(name, object);
         }
 
+        @JSFunction("set_default_group")
+        public void setDefaultGroup(String name) {
+            xpm.defaultGroup = name;
+        }
+
         @JSFunction("log")
         static public void log(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
             if (args.length < 1)
@@ -740,6 +813,7 @@ public class XPMObject {
             return file;
         }
 
+
         @JSFunction("filepath")
         static public File filepath(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
             if (args.length < 1)
@@ -758,18 +832,13 @@ public class XPMObject {
 
         /**
          * Declare an alternative
+         * @param qname A qualified name
          */
         @JSFunction("declare_alternative")
         public void declareAlternative(Object qname) {
-            AlternativeType type = new AlternativeType((QName)qname);
+            AlternativeType type = new AlternativeType((QName) qname);
             xpm.repository.addType(type);
         }
-
-        @JSFunction("wrap")
-        public Object wrap() {
-            return JSUtils.domToE4X(Task.wrapValue("10"), xpm.context, xpm.scope);
-        }
-
 
 
     }

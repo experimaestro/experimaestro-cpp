@@ -177,6 +177,7 @@
     </build>
 
     <dependencies>
+
         <dependency>
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
@@ -267,6 +268,12 @@
             <artifactId>sshd-core</artifactId>
             <version>0.7.0</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.collections</groupId>
+            <artifactId>google-collections</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 

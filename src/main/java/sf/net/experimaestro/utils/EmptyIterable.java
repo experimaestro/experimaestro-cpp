@@ -16,15 +16,19 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils;
+
+import com.google.common.collect.Iterators;
+
+import java.util.Iterator;
 
 /**
- * A name of jobs
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 23/11/12
  */
-public class JobGroup {
-	/**
-	 * Name of the name of jobs
-	 */
-	String name;
+public class EmptyIterable<C> implements Iterable<C> {
+    @Override
+    public Iterator<C> iterator() {
+        return Iterators.emptyIterator();
+    }
 }

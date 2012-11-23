@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.utils;
 
+import com.google.common.collect.Iterables;
 import org.w3c.dom.*;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
@@ -220,27 +221,39 @@ public class XMLUtils {
     }
 
     public static Iterable<Element> childElements(final Element element) {
-        final NodeList nodes = element.getChildNodes();
-        return elements(nodes);
+        return elements(children(element));
     }
 
+    public static Iterable<? extends Node> children(Node node) {
+        final NodeList nodes = node.getChildNodes();
+
+        return nodes(nodes);
+    }
+
+
     public static Iterable<Element> elements(final NodeList nodes) {
-        return new Iterable<Element>() {
+        return Iterables.filter(nodes(nodes), Element.class);
+    }
+
+    public static Iterable<Element> elements(final Iterable<? extends Node> nodes) {
+        return Iterables.filter(nodes, Element.class);
+    }
+
+    private static Iterable<Node> nodes(final NodeList nodes) {
+        return new Iterable<Node>() {
             @Override
-            public Iterator<Element> iterator() {
-                return new AbstractIterator<Element>() {
+            public Iterator<Node> iterator() {
+                return new AbstractIterator<Node>() {
                     int i = 0;
 
                     @Override
                     protected boolean storeNext() {
-                        while (i < nodes.getLength()) {
+                        if (i < nodes.getLength()) {
                             Node node = nodes.item(i++);
-                            if (node instanceof Element) {
-                                value = (Element) node;
-                                return true;
-                            }
+                            value =  node;
+                            return true;
                         }
-                        return false;  //To change body of implemented methods use File | Settings | File Templates.
+                        return false;
                     }
                 };
             }
@@ -304,4 +317,6 @@ public class XMLUtils {
     public static boolean is(QName qname, Element element) {
         return qname.equals(new QName(element.getNamespaceURI(), element.getTagName()));
     }
+
+
 }

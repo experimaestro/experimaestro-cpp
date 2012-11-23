@@ -21,18 +21,18 @@ package sf.net.experimaestro.manager.js;
 import com.sleepycat.je.DatabaseException;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.annotations.JSFunction;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 import static java.lang.String.format;
 
@@ -82,13 +82,45 @@ public class JSScheduler extends ScriptableObject {
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
-        final String[] args;
+        final CommandArguments command = new CommandArguments();
+
         if (jsargs instanceof NativeArray) {
             NativeArray array = ((NativeArray) jsargs);
-            List<String> list = new ArrayList<String>();
-            XPMObject.flattenArray(array, list);
-            args = new String[list.size()];
-            list.toArray(args);
+            for(Object object: array) {
+                final CommandArgument argument;
+                if (JSUtils.isXML(object)) {
+                    argument = new CommandArgument();
+
+                    // The node can be either a single TEXT or xp:path, or either a series of
+                    // them
+                    final Node node = JSUtils.toDOM(object);
+
+                    final Iterable<? extends Node> nodes
+                            = (node.getNodeType() == Node.ELEMENT_NODE && node.getChildNodes().getLength() > 1)
+                               || node.getNodeType() == Node.DOCUMENT_FRAGMENT_NODE ?
+                                XMLUtils.children(node) : Arrays.asList(node);
+
+                    for (Node child : nodes) {
+                        switch (child.getNodeType()) {
+                            case Node.TEXT_NODE:
+                                argument.add(child.getTextContent());
+                                break;
+                            case Node.ELEMENT_NODE:
+                                Element element = (Element)child;
+                                if (XMLUtils.is(Manager.XP_PATH, element)) {
+                                    argument.add(new CommandArgument.Path(element.getTextContent()));
+                                    break;
+                                }
+                            default:
+                                throw new ExperimaestroRuntimeException("Unhandled command XML node  " + child.toString());
+                        }
+                    }
+                } else {
+                    // Transform argument into String
+                    argument = new CommandArgument(JSUtils.toString(object));
+                }
+                command.add(argument);
+            }
         } else
             throw new RuntimeException(format(
                     "Cannot handle an array of type %s", jsargs.getClass()));
@@ -107,7 +139,7 @@ public class JSScheduler extends ScriptableObject {
         // Store connector in database
         scheduler.put(connector);
 
-        CommandLineTask task = new CommandLineTask(scheduler, connector, path, args);
+        CommandLineTask task = new CommandLineTask(scheduler, connector, path, command);
         final Resource old = scheduler.getResource(task.getLocator());
         if (old != null) {
             // TODO: if equal, do not try to replace the task
@@ -116,6 +148,7 @@ public class JSScheduler extends ScriptableObject {
                 return;
             }
         } else {
+            task.setGroup(xpm.defaultGroup);
             scheduler.store(task);
         }
 
@@ -174,8 +207,8 @@ public class JSScheduler extends ScriptableObject {
         }
 
 
-
         // Update the task status now that it is initialized
+        task.setState(ResourceState.WAITING);
         task.updateStatus();
 
     }

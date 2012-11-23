@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager;
 import bpiwowar.argparser.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
+import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -29,7 +30,7 @@ import java.util.Iterator;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class DotName implements Comparable<DotName>, Iterable<String> {
+public class DotName extends AbstractList<String> implements Comparable<DotName> {
 	/**
 	 * Empty dot name
 	 */
@@ -78,7 +79,7 @@ public class DotName implements Comparable<DotName>, Iterable<String> {
 	/**
 	 * Creates an unqualified name
 	 */
-	public DotName(String name) {
+	private DotName(String name) {
 		this.array = new String[] { name };
 	}
 

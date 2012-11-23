@@ -20,7 +20,16 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityStore;
+import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.XPMProcessBuilder;
+import sf.net.experimaestro.connectors.XPMScriptProcessBuilder;
+import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -37,6 +46,12 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
     private final Scheduler scheduler;
 
     /**
+     * A special connector for DB handled resources
+     */
+    public static final String XPM_CONNECTOR_ID = "xpmdb";
+
+
+    /**
      * Initialise the set of connectors
      *
      * @param dbStore
@@ -47,6 +62,9 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
             throws DatabaseException {
         super(dbStore.getPrimaryIndex(String.class, Connector.class));
         this.scheduler = scheduler;
+
+        SingleHostConnector xpmConnector = new MySingleHostConnector();
+        put(xpmConnector);
     }
 
     @Override
@@ -65,4 +83,35 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
     }
 
 
+    @Persistent
+    private static class MySingleHostConnector extends SingleHostConnector {
+        public MySingleHostConnector() {
+            super(Connectors.XPM_CONNECTOR_ID);
+        }
+
+        @Override
+        protected FileSystem doGetFileSystem() throws FileSystemException {
+            throw new AssertionError();
+        }
+
+        @Override
+        public XPMProcessBuilder processBuilder() {
+            throw new AssertionError();
+        }
+
+        @Override
+        public Lock createLockFile(String path) throws UnlockableException {
+            return null;
+        }
+
+        @Override
+        public String getHostName() {
+            return "xpmdb";
+        }
+
+        @Override
+        public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+            throw new AssertionError();
+        }
+    }
 }

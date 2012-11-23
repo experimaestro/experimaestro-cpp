@@ -16,15 +16,12 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.manager.js;
 
 /**
- * A name of jobs
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 17/10/12
  */
-public class JobGroup {
-	/**
-	 * Name of the name of jobs
-	 */
-	String name;
+public @interface JSHelp {
+    String value();
 }

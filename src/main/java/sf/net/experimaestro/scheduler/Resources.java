@@ -18,12 +18,19 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.google.common.collect.HashMultiset;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityStore;
+import com.sleepycat.persist.SecondaryIndex;
+import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.utils.Heap;
+import sf.net.experimaestro.utils.Trie;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
- * 
+ *  A set of resources
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
@@ -35,19 +42,53 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 	 */
 	private final Scheduler scheduler;
 
-	/**
+    /**
+     * The groups the resources belong to
+     */
+    private final SecondaryIndex<String, ResourceLocator,Resource> groups;
+
+    /**
+     * A Trie
+     */
+    Trie<String, DotName> groupsTrie = new Trie<>();
+
+    /**
 	 * Initialise the set of resources
-	 * 
+	 *
+     * @param scheduler The scheduler
+     * @param readyJobs A heap where the resources that are ready will be placed during the initialisation
 	 * @param dbStore
 	 * @throws DatabaseException
 	 */
-	public Resources(Scheduler scheduler, EntityStore dbStore)
+	public Resources(Scheduler scheduler, EntityStore dbStore, Heap<Job> readyJobs)
 			throws DatabaseException {
         super(dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class));
-		this.scheduler = scheduler;
+        groups = dbStore.getSecondaryIndex(index, String.class, Resource.GROUP_KEY_NAME);
+        this.scheduler = scheduler;
 
-	}
+        // Loop over all the resources
+        for (Resource resource : this) {
+            groupsTrie.put(DotName.parse(resource.getGroup()));
+            if (ResourceState.ACTIVE.contains(resource.getState())) {
+                // Initialize the resource
+                resource.init(scheduler);
+                // Add job to the queue if ready
+                if (resource instanceof Job && resource.getState() == ResourceState.READY)
+                    readyJobs.add((Job) resource);
+            }
+        }
 
+        // Loop over all groups
+
+
+    }
+
+
+    @Override
+    public synchronized boolean put(Resource resource) throws DatabaseException {
+        groupsTrie.put(DotName.parse(resource.getGroup()));
+        return super.put(resource);
+    }
 
     @Override
     protected boolean canOverride(Resource old, Resource resource) {
@@ -71,4 +112,29 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     }
 
 
+    public Iterable<Resource> fromGroup(final String group, boolean recursive) {
+        if (!recursive)
+            return groups.entities(group, true, group, true);
+
+         throw new NotImplementedException();
+    }
+
+    /**
+     * Returns subgroups
+     * @param group
+     * @return
+     */
+    public HashMultiset<String> subgroups(String group) {
+        System.err.format("Searching children of group [%s]%n", group);
+        final Trie<String, DotName> node = groupsTrie.find(DotName.parse(group));
+        final HashMultiset<String> set = HashMultiset.create();
+        if (node == null)
+            return set;
+
+        System.err.format("Found a node%n");
+        for(String key: node.childrenKeys())
+            set.add(key);
+
+        return set;
+    }
 }

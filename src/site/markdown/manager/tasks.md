@@ -1,6 +1,5 @@
 <head><title>Tasks</title></head>
 
-
 Tasks are simple objects that can be configured and run. Specific behaviours depend on the underlying language that can include different ways to define tasks, but the underlying mechanism, which remains the same, is described in this document.
 
 A task is characterised by the following:

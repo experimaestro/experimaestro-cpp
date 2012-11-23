@@ -226,4 +226,8 @@ public class JSUtils {
                 aClass.getMethod("js_" + fname, prototype), scope);
         ScriptableObject.putProperty(scope, fname, f);
     }
+
+    public static String toString(Object object) {
+        return Context.toString(object);
+    }
 }

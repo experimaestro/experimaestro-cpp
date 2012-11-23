@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.google.common.collect.Multiset;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
@@ -108,9 +109,6 @@ public class Scheduler {
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    {
-    }
-
     /**
      * The file manager
      */
@@ -129,6 +127,12 @@ public class Scheduler {
         return fsManager;
     }
 
+    /**
+     * Returns the connector with the given id
+     * @param id
+     * @return
+     * @throws DatabaseException
+     */
     public Connector getConnector(String id) throws DatabaseException {
         return connectors.get(id);
     }
@@ -152,17 +156,27 @@ public class Scheduler {
     }
 
     /**
+     * Returns groups contained
+     */
+    public Multiset<String> subgroups(String group) {
+        return resources.subgroups(group);
+    }
+
+
+    /**
      * Returns resources in the given states
      *
+     *
+     * @param recursive
      * @param states
      * @return
      */
-    public Iterable<Resource> resources(final EnumSet<ResourceState> states) {
+    public Iterable<Resource> resources(final String group, final boolean recursive, final EnumSet<ResourceState> states) {
         return new Iterable<Resource>() {
             @Override
             public Iterator<Resource> iterator() {
                 return new AbstractIterator<Resource>() {
-                    Iterator<Resource> iterator = resources().iterator();
+                    Iterator<Resource> iterator = resources.fromGroup(group, recursive).iterator();
 
                     @Override
                     protected boolean storeNext() {
@@ -208,7 +222,7 @@ public class Scheduler {
     /**
      * Initialise the task manager
      *
-     * @param baseDirectory
+     * @param baseDirectory The directory where the XPM database will be stored
      * @throws EnvironmentLockedException
      * @throws DatabaseException
      */
@@ -243,23 +257,14 @@ public class Scheduler {
 
         // Initialise the store
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
-        resources = new Resources(this, dbStore);
         connectors = new Connectors(this, dbStore);
 
-        // FIXME: use bytecode enhancement to remove public default constructors and have better performance
+        // TODO: use bytecode enhancement to remove public default constructors and have better performance
         // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
 
 
         // Initialise the running resources so that they can retrieve their state
-        for (Resource resource : resources) {
-            // TODO: restrict to "interesting" states (READY, WAITING, RUNNING)
-            if (ResourceState.ACTIVE.contains(resource.getState())) {
-                resource.init(this);
-                // Add job to the queue if ready
-                if (resource instanceof Job && resource.getState() == ResourceState.READY)
-                    readyJobs.add((Job) resource);
-            }
-        }
+        resources = new Resources(this, dbStore, readyJobs);
 
         // Start the thread that start the jobs
         LOGGER.info("Starting %d threads", nbThreads);
@@ -416,8 +421,6 @@ public class Scheduler {
 
         // Notify listeners
         resource.notifyListeners();
-
-
         resources.put(resource);
     }
 

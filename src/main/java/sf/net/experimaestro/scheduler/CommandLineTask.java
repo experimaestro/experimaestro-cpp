@@ -23,7 +23,6 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.OutputStream;
@@ -50,7 +49,7 @@ public class CommandLineTask extends Job {
     /**
      * The command to execute
      */
-    private String[] command;
+    private CommandArguments command;
 
     /**
      * The environment
@@ -66,13 +65,11 @@ public class CommandLineTask extends Job {
      * The input source, if any (path from the main locator)
      */
     private String jobInputPath;
-//    private XPMProcessBuilder.Redirect jobInputPath = XPMProcessBuilder.Redirect.INHERIT;
 
     /**
      * If the input source is a string (and jobInputPath is PIPE), store it in this variable
      */
     private String jobInputString;
-
 
     /**
      * Path for job output
@@ -90,13 +87,13 @@ public class CommandLineTask extends Job {
      * @param command    The command with arguments
      */
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
-                           String[] command, Map<String, String> environment, String workingDirectory) {
+                           CommandArguments command, Map<String, String> environment, String workingDirectory) {
 
         super(scheduler, connector, identifier);
 
         launcher = new DefaultLauncher();
 
-        LOGGER.info("Command is %s", Arrays.toString(command));
+        LOGGER.info("Command is %s", command.toString());
 
         // Copy the environment
         if (environment != null)
@@ -105,18 +102,18 @@ public class CommandLineTask extends Job {
 
         // Construct command
         this.command = command;
-
     }
 
     /**
      * New command line task
      *
-     * @param scheduler
-     * @param identifier
-     * @param command
+     * @param scheduler The scheduler
+     * @param connector The connector
+     * @param identifier The resource identifier
+     * @param command The command to run
      */
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
-                           String[] command) {
+                           CommandArguments command) {
         this(scheduler, connector, identifier, command, null, null);
     }
 
@@ -131,12 +128,6 @@ public class CommandLineTask extends Job {
         });
     }
 
-    /**
-     * Helper method to call {@linkplain #getCommandLine(java.util.List)}
-     */
-    public static String getCommandLine(String[] args) {
-        return getCommandLine(ListAdaptator.create(args));
-    }
 
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
@@ -175,7 +166,7 @@ public class CommandLineTask extends Job {
         builder.redirectInput(jobInput);
 
         // Add commands
-        builder.command(command);
+        builder.command(command.toStrings(connector));
         builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
         builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
         builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
@@ -183,16 +174,13 @@ public class CommandLineTask extends Job {
         builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         // Start
-
-        final XPMProcess process = builder.start();
-
-        return process;
+        return builder.start();
     }
 
     @Override
     public void printHTML(PrintWriter out, PrintConfig config) {
         super.printHTML(out, config);
-        out.format("<div><b>Command</b>: %s</div>", Arrays.toString(command));
+        out.format("<div><b>Command</b>: %s</div>", command.toString());
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
         out.format("<div><b>Environment</b>: %s</div>", environment);
     }

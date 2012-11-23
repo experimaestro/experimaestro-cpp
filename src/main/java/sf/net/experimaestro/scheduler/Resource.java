@@ -76,6 +76,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /** Extension for the standard input of a job */
     public static final String INPUT_EXTENSION = ".input";
+    public static final String GROUP_KEY_NAME = "group";
 
     /**
      * The task locator
@@ -84,13 +85,13 @@ public abstract class Resource implements Comparable<Resource> {
     ResourceLocator locator;
 
     /**
-     * Groups this resource belongs to
+     * Group this resource belongs to. Note that name are 0 separated for sorting reasons
      */
-    @SecondaryKey(name = "groups", relate = Relationship.MANY_TO_MANY)
-    Set<String> groups = new TreeSet<>();
+    @SecondaryKey(name = GROUP_KEY_NAME, relate = Relationship.MANY_TO_ONE)
+    private String group = null;
 
     /**
-     * True when the resource has been generated
+     * Resource state
      */
     protected ResourceState state;
 
@@ -167,8 +168,12 @@ public abstract class Resource implements Comparable<Resource> {
      */
     void notifyListeners(Object... objects) throws DatabaseException {
         for (ResourceLocator id : listeners) {
-            Resource resource = scheduler.getResource(id);
-            resource.notify(this, objects);
+            try {
+                Resource resource = scheduler.getResource(id);
+                resource.notify(this, objects);
+            } catch(Exception e) {
+                LOGGER.error(e, "Cannot notify %s [from %s]: %s", id, this.getIdentifier());
+            }
         }
     }
 
@@ -283,7 +288,30 @@ public abstract class Resource implements Comparable<Resource> {
 
     }
 
+    public void setState(ResourceState state) {
+        this.state = state;
+    }
 
+
+    /**
+     * Sets the name
+     * @param group
+     */
+    public void setGroup(String group) {
+        this.group = group;
+    }
+
+    public String getGroup() {
+        return this.group;
+    }
+
+
+
+
+    /**
+     * Defines how a given lock type is satisfied by the current state
+     * of the resource
+     */
     static public enum DependencyStatus {
         /**
          * The resource can be used as is
@@ -301,12 +329,14 @@ public abstract class Resource implements Comparable<Resource> {
         WAIT,
 
         /**
-         * The resource is not ready yet, and is on hold
+         * The resource is not ready yet, and is on hold (this can only be changed
+         * by the external intervention)
          */
         HOLD,
 
         /**
-         * The resource will not be ready given the current state
+         * The resource is not ready, and this is due to an error (possibly among
+         * dependencies)
          */
         ERROR;
 
@@ -319,6 +349,7 @@ public abstract class Resource implements Comparable<Resource> {
      * Can the dependency be accepted?
      *
      * @param locktype
+     * @see {@linkplain }
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
      *         {@link DependencyStatus#WAIT} if it can be satisfied and
      *         {@link DependencyStatus#ERROR} if it cannot be satisfied
@@ -483,15 +514,18 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Update the database after a change in state
+     * @return true if everything went well
      */
-    void updateDb() {
+    boolean updateDb() {
         try {
             scheduler.store(this);
+            return true;
         } catch (DatabaseException e) {
             LOGGER.error(
                     "Could not update the information in the database for %s: %s",
                     this, e.getMessage());
         }
+        return false;
     }
 
     /**

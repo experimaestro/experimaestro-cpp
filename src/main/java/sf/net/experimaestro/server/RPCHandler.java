@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.server;
 
+import com.google.common.collect.Multiset;
 import com.sleepycat.je.DatabaseException;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -85,17 +86,28 @@ public class RPCHandler {
         this.repository = repository;
     }
 
+    /**
+     * Kills all the jobs in a group
+     */
+    @RPCHelp("Kills a set of jobs under a given group")
+    public int killJobs(String group, boolean recursive, Object[] states) {
+        final EnumSet<ResourceState> statesSet = getStates(states);
+        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
+
+        }
+        throw new NotImplementedException();
+    }
 
     /**
      * Update the status of jobs
      */
     @RPCHelp("Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
             " in a change of state")
-    public int updateJobs(Object[] states) throws Exception {
+    public int updateJobs(String group, boolean recursive, Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
         int nbUpdated = 0;
-        for (Resource resource : scheduler.resources(statesSet)) {
+        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
             if (resource.updateStatus())
                 nbUpdated++;
         }
@@ -121,11 +133,25 @@ public class RPCHandler {
      * List jobs
      */
     @RPCHelp("List the jobs along with their states")
-    public List<String> listJobs(Object[] states) {
+    public List<Map<String, String>> listJobs(String group, Object[] states) {
         final EnumSet<ResourceState> set = getStates(states);
-        List<String> list = new ArrayList<>();
-        for(Resource resource: scheduler.resources(set)) {
-            list.add(resource.toString() + "\t" + resource.getState().toString());
+        List<Map<String, String>> list = new ArrayList<>();
+
+        for(Multiset.Entry<String> x: scheduler.subgroups(group).entrySet()) {
+            Map<String,String> map = new HashMap<>();
+            String s = x.getElement();
+            map.put("type", "group");
+            map.put("name", s);
+//            map.put("count", Integer.toString(x.getCount()));
+            list.add(map);
+        }
+
+        for(Resource resource: scheduler.resources(group, false, set)) {
+            Map<String,String> map = new HashMap<>();
+            map.put("type", resource.getClass().getCanonicalName());
+            map.put("state", resource.getState().toString());
+            map.put("name", resource.toString());
+            list.add(map);
         }
         return list;
     }
@@ -381,9 +407,9 @@ public class RPCHandler {
                 Arrays.toString(readLocks), Arrays.toString(writeLocks),
                 Output.toString(", ", env.entrySet()));
 
-        String[] commandArgs = new String[command.length];
+        CommandArguments commandArgs = new CommandArguments();
         for (int i = command.length; --i >= 0; )
-            commandArgs[i] = command[i].toString();
+            commandArgs.add(new CommandArgument(command[i].toString()));
 
         Connector connector = LocalhostConnector.getInstance();
         CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,

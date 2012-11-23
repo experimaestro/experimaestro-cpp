@@ -6,37 +6,40 @@ import subprocess
 import argparse
 import string
 import xmlrpclib
-import logging      
+import logging
 
 
 # --- Set some variables
 
-dir=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-version="0.0.1-SNAPSHOT"
-jarname="experimaestro-%s.jar" % version
+dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+version = "0.0.1-SNAPSHOT"
+jarname = "experimaestro-%s.jar" % version
 
 logging.basicConfig(level=logging.INFO)
 
 # --- Check paths
+
 
 def jarpaths():
     """Returns the different paths where the JAR file can be located"""
     yield os.path.join(dir, jarname)
     yield os.path.join(dir, "target", "experimaestro-%s-bin" % version, jarname)
 
+
 def start_jar(args, jarargs):
     # Check what if we start using maven
     mvnFile = os.path.join(dir, "pom.xml")
-    if not os.path.exists(mvnFile): mvnFile = None
+    if not os.path.exists(mvnFile):
+        mvnFile = None
 
     if args.maven or mvnFile is not None:
-      logging.info("Starting with maven")
-      command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"] 
-      if mvnFile is not None: 
-        command.append("--file")
-        command.append(mvnFile)
-      jarargs = [arg for arg in jarargs]
-      command.append("-Dexec.args=%s" % string.join(jarargs, " "))
+        logging.info("Starting with maven")
+        command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"]
+        if mvnFile is not None:
+            command.append("--file")
+            command.append(mvnFile)
+        jarargs = [arg for arg in jarargs]
+        command.append("-Dexec.args=%s" % string.join(jarargs, " "))
 
     else:
         jarpath = None
@@ -46,42 +49,44 @@ def start_jar(args, jarargs):
                 jarpath = f
                 break
 
-        if jarpath is None: raise Exception("Could not find experimaestro jar file")
-        command = ["java","-Xmx1g","-jar",jarpath] + jarargs
+        if jarpath is None:
+            raise Exception("Could not find experimaestro jar file")
+        command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
 
     # print command
     logging.debug('Runnig command %s' % command)
     subprocess.call(command)
 
-def getProperties(filename):
-   """Get a dictionnary from a property file
-   """
-   propFile= file(filename, "rU" )
 
-   # Set some default values
-   propDict= dict()
-   propDict["url"] = "http://localhost:8080"
-   
-   # Read the properties
-   for propLine in propFile:
-      propDef= propLine.strip()
-      if len(propDef) == 0:
-         continue
-      if propDef[0] in ( '!', '#' ):
-         continue
-      punctuation= [ propDef.find(c) for c in ':= ' ] + [ len(propDef) ]
-      found= min( [ pos for pos in punctuation if pos != -1 ] )
-      name= propDef[:found].rstrip()
-      value= propDef[found:].lstrip(":= ").rstrip()
-      propDict[name]= value
-   propFile.close()
-   return propDict
+def getProperties(filename):
+    """Get a dictionnary from a property file
+   """
+    propFile = file(filename, "rU")
+
+    # Set some default values
+    propDict = dict()
+    propDict["url"] = "http://localhost:8080"
+
+    # Read the properties
+    for propLine in propFile:
+        propDef = propLine.strip()
+        if len(propDef) == 0:
+            continue
+        if propDef[0] in ('!', '#'):
+            continue
+        punctuation = [propDef.find(c) for c in ':= '] + [len(propDef)]
+        found = min([pos for pos in punctuation if pos != -1])
+        name = propDef[:found].rstrip()
+        value = propDef[found:].lstrip(":= ").rstrip()
+        propDict[name] = value
+    propFile.close()
+    return propDict
 
 
 def getServer(args):
     # Get the configuration
-    configfile=os.path.expanduser(args.config)
-    
+    configfile = os.path.expanduser(args.config)
+
     # Initialise the server
     config = getProperties(configfile)
     url = config["url"]
@@ -90,64 +95,72 @@ def getServer(args):
 
 # --- Server
 
+
 def command_server_start(args):
     start_jar(args, ["server"])
 
+
 def command_stop_server(args):
     server = getServer(args)
-    server.Server.shutdown();
+    server.Server.shutdown()
+
 
 def command_run_js(args):
     xmlrpc = getServer(args)
 
-    env=[]
-    for key,value in os.environ.iteritems():
-       env.append([key,value])
+    env = []
+    for key, value in os.environ.iteritems():
+        env.append([key, value])
 
     # Get the command line
     for filename in args.files:
-        filename=os.path.abspath(filename)
+        filename = os.path.abspath(filename)
         logging.info("Running JS script %s" % filename)
         try:
-          r = xmlrpc.Server.runJSScript(True, filename, env)
-          if len(r) >2: print(r[2])
-          if r[0]:
-              print
-              print "### Error while running %s ###" % filename
-              print r[1]
-              sys.exit(r[0])
-              print
+            r = xmlrpc.Server.runJSScript(True, filename, env)
+            if len(r) > 2:
+                print(r[2])
+            if r[0]:
+                print
+                print "### Error while running %s ###" % filename
+                print r[1]
+                sys.exit(r[0])
+                print
         except xmlrpclib.Fault as e:
             print e
             sys.exit(1)
         except Exception as e:
             print e
-            sys.exit(1)     
+            sys.exit(1)
+
 
 def command_update_jobs(args):
-  server = getServer(args)
-  print "%d updated job(s)" % server.Server.updateJobs([])
+    server = getServer(args)
+    print "%d updated job(s)" % server.Server.updateJobs([])
 
 
 def command_ls(args):
-  server = getServer(args)
-  for l in server.Server.listJobs([]):
-    print l
+    server = getServer(args)
+    response = server.Server.listJobs(args.group, [])
+    print "Got response"
+    for l in response:
+        print l
 
 
 def command_list_methods(args):
-  server = getServer(args)
-  for method in server.system.listMethods():
-    if not method.startswith("system"):
-      print("# %s" % method)
-      print server.system.methodSignature(method)
-      print server.system.methodHelp(method)
-      print
+    server = getServer(args)
+    for method in server.system.listMethods():
+        if not method.startswith("system"):
+            print("# %s" % method)
+            print server.system.methodSignature(method)
+            print server.system.methodHelp(method)
+            print
+
 
 def command_information(args):
     server = getServer(args)
     print server.Server.getResourceInformation(args.resourceId[0])
-  
+
 # --- Run command
 
 
@@ -155,12 +168,12 @@ def command_information(args):
 parser = argparse.ArgumentParser(description='experimaestro script.')
 subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 parser.set_defaults(dir=dir)
-parser.add_argument("--log", dest="loglevel", action="store", help="Log level", \
-  choices = ["debug", "info", "warn"], default="info")
+parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
+                    choices=["debug", "info", "warn"], default="info")
 parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
-parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store", \
-  help="Experimaestro configuration file")
+parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store",
+                    help="Experimaestro configuration file")
 
 subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
 subparser.set_defaults(func=command_server_start)
@@ -169,12 +182,13 @@ subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro se
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
-p_run_js.set_defaults(func = command_run_js)
-p_run_js.add_argument('files', nargs='*', help='') 
+p_run_js.set_defaults(func=command_run_js)
+p_run_js.add_argument('files', nargs='*', help='')
 
 subparsers.add_parser("update-jobs", help="Update jobs")
 
-subparsers.add_parser("ls", help="List jobs")
+p_ls = subparsers.add_parser("ls", help="List jobs")
+p_ls.add_argument('group', nargs='?', help="The group to list", default="")
 
 subparsers.add_parser("list-methods", help="List XML-RPC methods")
 
@@ -188,9 +202,9 @@ numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
     raise ValueError('Invalid log level: %s' % loglevel)
 
-try: 
-  fname = "command_%s" % args.command.replace("-","_");
-  locals()[fname](args)
+try:
+    fname = "command_%s" % args.command.replace("-", "_")
+    locals()[fname](args)
 except Exception as e:
-  print e
-  sys.exit(1)
+    print e
+    sys.exit(1)

@@ -80,7 +80,7 @@ public abstract class Task {
      * @return
      */
     protected Input getInput(String key) {
-        return getInputs().get(new DotName(key));
+        return getInputs().get(DotName.parse(key));
     }
 
     /**

@@ -65,7 +65,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
      */
     public Job(Scheduler scheduler, Connector connector, String identifier) {
         super(scheduler, connector, identifier, LockMode.EXCLUSIVE_WRITER);
-        state = ResourceState.WAITING;
+        // State is on hold for the moment
+        state = ResourceState.ON_HOLD;
     }
 
     private boolean isDone() {

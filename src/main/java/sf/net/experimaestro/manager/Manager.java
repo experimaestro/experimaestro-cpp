@@ -38,6 +38,7 @@ public class Manager {
     public static final String EXPERIMAESTRO_PREFIX = "xp";
 
     public static final String XMLSCHEMA_NS = "http://www.w3.org/2001/XMLSchema";
+    public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
 
     static {
 		PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
@@ -47,12 +48,11 @@ public class Manager {
 	/**
 	 * Get the namespaces (default and element based)
 	 * 
-	 * @param xqsc
 	 * @param element
 	 * @throws XQException
 	 */
 	public static Map<String, String> getNamespaces(Element element) {
-		TreeMap<String, String> map = new TreeMap<String, String>();
+		TreeMap<String, String> map = new TreeMap<>();
 		for (Entry<String, String> mapping : PREDEFINED_PREFIXES.entrySet())
 			map.put(mapping.getKey(), mapping.getValue());
 		for (Entry<String, String> mapping : XMLUtils.getNamespaces(element))

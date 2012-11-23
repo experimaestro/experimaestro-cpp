@@ -61,5 +61,6 @@ public enum ResourceState {
         return this == ON_HOLD || this == ERROR;
     }
 
+    /** The state is either running or about to run (all dependencies met) */
     final static public EnumSet<ResourceState> ACTIVE = EnumSet.of(READY, RUNNING);
 }

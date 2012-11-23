@@ -38,7 +38,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
     /**
      * The index
      */
-    private PrimaryIndex<Key, Value> index;
+    protected PrimaryIndex<Key, Value> index;
 
     /**
      * A cache to get track of values in memory
@@ -87,7 +87,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
      * @throws com.sleepycat.je.DatabaseException
      *          If an error occurs while putting the value in the database
      */
-    final synchronized public boolean put(Value value) throws DatabaseException {
+    synchronized public boolean put(Value value) throws DatabaseException {
         // Check if overriding a running value (unless it is the same object)
         final Key key = getKey(value);
         Value old = get(key);
