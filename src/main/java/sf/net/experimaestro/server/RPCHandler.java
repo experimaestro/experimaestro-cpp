@@ -89,11 +89,19 @@ public class RPCHandler {
     /**
      * Kills all the jobs in a group
      */
-    @RPCHelp("Kills a set of jobs under a given group")
-    public int killJobs(String group, boolean recursive, Object[] states) {
-        final EnumSet<ResourceState> statesSet = getStates(states);
-        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
+    @RPCHelp(value = "Stops a set of jobs under a given group.",
+            parameters = {
+                    "The group to consider", "Whether to kill running tasks",
+                    "Whether to put on hold ready/waiting tasks"
+            }
+    )
 
+    public int stopJobs(String group, boolean killRunning, boolean holdWaiting, boolean recursive) {
+        final EnumSet<ResourceState> statesSet
+                = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
+        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
+            if (resource instanceof Job)
+                ((Job) resource).stop();
         }
         throw new NotImplementedException();
     }
@@ -137,8 +145,8 @@ public class RPCHandler {
         final EnumSet<ResourceState> set = getStates(states);
         List<Map<String, String>> list = new ArrayList<>();
 
-        for(Multiset.Entry<String> x: scheduler.subgroups(group).entrySet()) {
-            Map<String,String> map = new HashMap<>();
+        for (Multiset.Entry<String> x : scheduler.subgroups(group).entrySet()) {
+            Map<String, String> map = new HashMap<>();
             String s = x.getElement();
             map.put("type", "group");
             map.put("name", s);
@@ -146,8 +154,8 @@ public class RPCHandler {
             list.add(map);
         }
 
-        for(Resource resource: scheduler.resources(group, false, set)) {
-            Map<String,String> map = new HashMap<>();
+        for (Resource resource : scheduler.resources(group, false, set)) {
+            Map<String, String> map = new HashMap<>();
             map.put("type", resource.getClass().getCanonicalName());
             map.put("state", resource.getState().toString());
             map.put("name", resource.toString());

@@ -43,4 +43,5 @@ public class SimpleData extends Data {
         super(scheduler, identifier, lockMode, generated);
         this.state = generated ? ResourceState.DONE : ResourceState.WAITING;
     }
+
 }

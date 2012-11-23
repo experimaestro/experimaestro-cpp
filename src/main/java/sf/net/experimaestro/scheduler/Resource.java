@@ -305,9 +305,6 @@ public abstract class Resource implements Comparable<Resource> {
         return this.group;
     }
 
-
-
-
     /**
      * Defines how a given lock type is satisfied by the current state
      * of the resource

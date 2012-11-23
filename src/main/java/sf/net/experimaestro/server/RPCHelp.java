@@ -30,4 +30,7 @@ import java.lang.annotation.RetentionPolicy;
 @interface RPCHelp {
     /** Help message */
     String value();
+
+    /** Parameters documentation */
+    String [] parameters() default {};
 }

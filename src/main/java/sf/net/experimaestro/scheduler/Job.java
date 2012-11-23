@@ -515,4 +515,16 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
 
         return changed;
     }
+
+    synchronized public void stop() {
+        if (process != null) {
+            process.destroy();
+            state = ResourceState.ERROR;
+            updateDb();
+        } else {
+            state = ResourceState.ON_HOLD;
+            updateDb();
+        }
+    }
+
 }
