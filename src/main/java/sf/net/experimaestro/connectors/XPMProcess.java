@@ -257,7 +257,8 @@ public abstract class XPMProcess {
         if (!isRunning()) {
             // We are not running: send a message
             LOGGER.debug("End of job [%s]", job);
-            final long time = job.getLocator().resolve(connector, Resource.DONE_EXTENSION).getContent().getLastModifiedTime();
+            final FileObject file = job.getLocator().resolve(connector, Resource.CODE_EXTENSION);
+            final long time = file.exists() ? file.getContent().getLastModifiedTime() : -1;
             job.notify(null, new EndOfJobMessage(exitValue(), time));
         }
     }

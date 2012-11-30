@@ -181,6 +181,8 @@ public class DotName extends AbstractList<String> implements Comparable<DotName>
 	 * @return
 	 */
 	public static DotName parse(String name) {
+        if (name == null)
+            return EMPTY;
 		return new DotName(name.split("\\."));
 	}
 

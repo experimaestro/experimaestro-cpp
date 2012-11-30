@@ -23,7 +23,7 @@ import com.sleepycat.je.DatabaseException;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
 import org.apache.xmlrpc.XmlRpcRequest;
@@ -116,7 +116,7 @@ public class RPCHandler {
 
         int nbUpdated = 0;
         for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
-            if (resource.updateStatus())
+            if (resource.updateStatus(true))
                 nbUpdated++;
         }
 
@@ -263,7 +263,7 @@ public class RPCHandler {
         final StringWriter out = new StringWriter();
         PrintWriter writer = new PrintWriter(out);
         Resource.PrintConfig config = new Resource.PrintConfig();
-        resource.printHTML(writer, config);
+        resource.printXML(writer, config);
         writer.close();
         return out.toString();
     }
@@ -299,7 +299,7 @@ public class RPCHandler {
         final RootLogger root = new RootLogger(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root);
         StringWriter stringWriter = new StringWriter();
-        SimpleLayout layout = new SimpleLayout();
+        PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
         WriterAppender appender = new WriterAppender(layout, stringWriter);
         root.addAppender(appender);
 
@@ -449,12 +449,11 @@ public class RPCHandler {
             if (resource == null) {
                 resource = new SimpleData(scheduler, id,
                         LockMode.EXCLUSIVE_WRITER, false);
-                resource.register(job);
             }
             job.addDependency(resource, LockType.WRITE_ACCESS);
         }
 
-        scheduler.store(job);
+        scheduler.store(job, true);
         return true;
     }
 

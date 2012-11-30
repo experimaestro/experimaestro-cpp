@@ -124,7 +124,7 @@ public class TaskJSWrapper extends ScriptableObject {
         } else if (JSUtils.isXML(value)) {
             LOGGER.debug("Value is JS XML");
             Document document = XMLUtils.newDocument();
-            Node node = JSUtils.toDOM(value).cloneNode(true);
+            Node node = ((Node)JSUtils.toDOM(value)).cloneNode(true);
             document.adoptNode(node);
             document.appendChild(node);
             getTask().setParameter(id, document);

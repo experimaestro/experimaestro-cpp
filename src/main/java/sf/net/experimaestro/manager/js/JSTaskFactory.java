@@ -93,7 +93,7 @@ public class JSTaskFactory extends TaskFactory {
                     input.getClass()));
 
         LOGGER.info("Class is %s in %s", input.getClass(), this.id);
-        Node dom = JSUtils.toDOM(input);
+        Node dom = (Node) JSUtils.toDOM(input);
         NodeList list = dom.getChildNodes();
         for (int i = 0; i < list.getLength(); i++) {
             Node item = list.item(i);

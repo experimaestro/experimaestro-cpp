@@ -18,70 +18,101 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.log4j.Level;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import org.mozilla.javascript.annotations.JSFunction;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends ScriptableObject {
+public class JSFileObject extends JSObject implements Wrapper {
 
-    private Logger logger;
+    public static final String JSCLASSNAME = "FileObject";
+    private FileObject file;
+
+
+
+    public JSFileObject() {}
+
+    public JSFileObject(FileObject file) {
+        this.file = file;
+    }
+
+    public void jsConstructor(Object file) throws FileSystemException {
+        final Object unwrap = JSUtils.unwrap(file);
+        if (unwrap instanceof FileObject) {
+            this.file = (FileObject) unwrap;
+        } else {
+            final String s = JSUtils.toString(unwrap);
+            this.file = Scheduler.getVFSManager().resolveFile(s);
+        }
+    }
+
 
     @Override
-    public String getClassName() {
-        return "Logger";
+    public FileObject unwrap() {
+        return file;
     }
 
-    public JSFileObject() {
+    @Override
+    @JSFunction("toString")
+    public String toString() {
+        return file == null ? "[null]" : file.toString();
     }
 
-    public void jsConstructor(Scriptable xpm, String name) {
-        XPMObject xpmObject = (XPMObject) ((NativeJavaObject)xpm).unwrap();
-        logger = Logger.getLogger(xpmObject.loggerRepository, name);
-    }
-
-
-    static public void jsFunction_trace(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.TRACE, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_debug(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.DEBUG, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_info(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.INFO, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_warn(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.WARN, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_error(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.ERROR, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_fatal(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.FATAL, cx, thisObj, args, funObj);
+    @JSFunction("toSource")
+    public String toSource() {
+        return String.format("new FileObject(%s)", file.toString());
     }
 
 
-    static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        if (args.length < 1)
-            throw new ExperimaestroRuntimeException("There should be at least one argument when logging");
-
-        String format = Context.toString(args[0]);
-        Object[] objects = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            objects[i - 1] = JSUtils.unwrap(args[i]);
-
-        ((JSFileObject) thisObj).logger.log(level, format, objects);
+    @JSFunction("get_parent")
+    public static Scriptable getParent(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        if (args.length != 0)
+            throw new IllegalArgumentException("Expected no argument for FileObject.getAncestor - got " + args.length );
+        return getAncestor(cx, thisObj, 1);
     }
 
+    @JSFunction("get_ancestor")
+    static public Scriptable getAncestor(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        if (args.length != 1)
+            throw new IllegalArgumentException("Expected one argument for FileObject.getAncestor - got " + args.length);
 
+        int level = JSUtils.getInteger(args[0]);
+        if (level < 0)
+            throw new IllegalArgumentException("Level is negative (" + level + ")");
+
+        return getAncestor(cx, thisObj, level);
+    }
+
+    static private Scriptable getAncestor(Context cx, Scriptable thisObj, int level) throws FileSystemException {
+        FileObject file = ((JSFileObject)thisObj).file;
+        while (--level >= 0)
+            file = file.getParent();
+
+        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
+    }
+
+    @JSFunction("path")
+    static public Scriptable path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        final JSFileObject _this = (JSFileObject) thisObj;
+
+        FileObject file = _this.file;
+        for (int i = 0; i < args.length; i++) {
+            String name = Context.toString(args[i]);
+            file = file.resolveFile(name);
+            System.err.format("File is now [%s]%n", file);
+        }
+
+        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
+    }
+
+    @JSFunction("mkdirs")
+    public void mkdirs() throws FileSystemException {
+        file.createFolder();
+    }
 }

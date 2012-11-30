@@ -19,10 +19,12 @@
 package sf.net.experimaestro.scheduler;
 
 /**
- * Resource was stored message
+ * Simple messages that can be sent to resources
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 30/11/12
  */
-public class SimpleMessage {
+public enum  SimpleMessage {
+    // Resource was stored message
+    STORED_IN_DATABASE
 }

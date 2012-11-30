@@ -18,70 +18,38 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.log4j.Level;
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.scheduler.TokenResource;
 
 /**
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSTokenResource extends ScriptableObject {
+public class JSTokenResource extends ScriptableObject implements Wrapper {
 
-    private Logger logger;
+    private TokenResource resource;
 
     @Override
     public String getClassName() {
-        return "Logger";
+        return "TokenResource";
     }
 
     public JSTokenResource() {
     }
 
-    public void jsConstructor(Scriptable xpm, String name) {
-        XPMObject xpmObject = (XPMObject) ((NativeJavaObject)xpm).unwrap();
-        logger = Logger.getLogger(xpmObject.loggerRepository, name);
+    public void jsConstructor(Object resource) {
+        this.resource = (TokenResource)resource;
     }
 
 
-    static public void jsFunction_trace(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.TRACE, cx, thisObj, args, funObj);
+    public void jsFunction_set_limit(int limit) {
+        resource.setLimit(limit);
     }
 
-    static public void jsFunction_debug(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.DEBUG, cx, thisObj, args, funObj);
+    @Override
+    public TokenResource unwrap() {
+        return resource;
     }
-
-    static public void jsFunction_info(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.INFO, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_warn(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.WARN, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_error(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.ERROR, cx, thisObj, args, funObj);
-    }
-
-    static public void jsFunction_fatal(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.FATAL, cx, thisObj, args, funObj);
-    }
-
-
-    static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        if (args.length < 1)
-            throw new ExperimaestroRuntimeException("There should be at least one argument when logging");
-
-        String format = Context.toString(args[0]);
-        Object[] objects = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            objects[i - 1] = JSUtils.unwrap(args[i]);
-
-        ((JSTokenResource) thisObj).logger.log(level, format, objects);
-    }
-
-
 }

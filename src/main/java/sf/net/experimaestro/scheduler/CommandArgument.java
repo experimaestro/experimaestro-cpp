@@ -81,6 +81,10 @@ public class CommandArgument {
 
         private Path() {}
 
+        public Path(FileObject file) {
+            filename = file.getName().getPath();
+        }
+
         public Path(java.lang.String filename) {
             this.filename = filename;
         }

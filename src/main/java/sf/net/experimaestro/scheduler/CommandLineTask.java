@@ -62,7 +62,7 @@ public class CommandLineTask extends Job {
     public String workingDirectory;
 
     /**
-     * The input source, if any (path from the main locator)
+     * The input source, if any (path from the main from)
      */
     private String jobInputPath;
 
@@ -83,7 +83,7 @@ public class CommandLineTask extends Job {
      * Constructs the command line
      *
      * @param scheduler  The scheduler for this command
-     * @param identifier The locator of the command (this will be used for the path of the files)
+     * @param identifier The from of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
@@ -178,8 +178,8 @@ public class CommandLineTask extends Job {
     }
 
     @Override
-    public void printHTML(PrintWriter out, PrintConfig config) {
-        super.printHTML(out, config);
+    public void printXML(PrintWriter out, PrintConfig config) {
+        super.printXML(out, config);
         out.format("<div><b>Command</b>: %s</div>", command.toString());
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
         out.format("<div><b>Environment</b>: %s</div>", environment);

@@ -25,7 +25,10 @@ import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
 
 /**
- * A class that can be locked by a specified number of resources
+ * A class that can be locked a given number of times at the same time.
+ *
+ * This is useful when one wants to limit the number of processes on a host for
+ * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/11/12
@@ -33,7 +36,7 @@ import sf.net.experimaestro.locks.UnlockableException;
 @Persistent
 public class TokenResource extends Resource {
     /** Maximum number of tokens available */
-    private int maxTokens;
+    private int limit;
 
     /** Number of used tokens */
     private int usedTokens;
@@ -41,16 +44,29 @@ public class TokenResource extends Resource {
     private TokenResource() {
     }
 
-    public TokenResource(Scheduler scheduler, String path, int nbTokens) {
+    public TokenResource(Scheduler scheduler, String path, int limit) {
         super(scheduler, scheduler.getConnector(Connectors.XPM_CONNECTOR_ID), path, LockMode.CUSTOM);
-        this.maxTokens = nbTokens;
+        this.limit = limit;
         this.usedTokens = 0;
+    }
+
+    /**
+     * Set the new limit that will take effect at the next locking request (does not
+     * invalidate current locks)
+     *
+     * @param limit The new limit
+     */
+    public void setLimit(int limit) {
+        if (this.limit == limit) return;
+
+        this.limit = limit;
+        updateDb();
     }
 
     @Override
     DependencyStatus accept(LockType locktype) {
         // If we have enough tokens, then hold
-        return usedTokens < maxTokens ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
+        return usedTokens < limit ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
     }
 
     @Override

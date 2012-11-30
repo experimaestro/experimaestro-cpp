@@ -19,8 +19,12 @@
 package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.HashMultiset;
+import com.sleepycat.je.CursorConfig;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Transaction;
+import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
+import com.sleepycat.persist.PrimaryIndex;
 import com.sleepycat.persist.SecondaryIndex;
 import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.manager.DotName;
@@ -28,24 +32,45 @@ import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.Trie;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.ArrayList;
+import java.util.TreeMap;
+
+import static com.sleepycat.je.CursorConfig.READ_UNCOMMITTED;
+
 /**
- *  A set of resources
+ * A set of resources
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
 
-	/**
-	 * The associated scheduler
-	 */
-	private final Scheduler scheduler;
+    /**
+     * The associated scheduler
+     */
+    private final Scheduler scheduler;
 
     /**
      * The groups the resources belong to
      */
-    private final SecondaryIndex<String, ResourceLocator,Resource> groups;
+    private final SecondaryIndex<String, ResourceLocator, Resource> groups;
+
+    /**
+     * The dependencies
+     */
+    private PrimaryIndex<Long, Dependency> dependencies;
+
+    /**
+     * Access to the depencies
+     */
+    private SecondaryIndex<ResourceLocator, Long, Dependency> dependenciesFrom;
+    private SecondaryIndex<ResourceLocator, Long, Dependency> dependenciesTo;
+
+    /**
+     * The job states
+     */
+    private SecondaryIndex<ResourceState, ResourceLocator, Resource> states;
 
     /**
      * A Trie
@@ -53,41 +78,89 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     Trie<String, DotName> groupsTrie = new Trie<>();
 
     /**
-	 * Initialise the set of resources
-	 *
+     * Initialise the set of resources
+     *
      * @param scheduler The scheduler
      * @param readyJobs A heap where the resources that are ready will be placed during the initialisation
-	 * @param dbStore
-	 * @throws DatabaseException
-	 */
-	public Resources(Scheduler scheduler, EntityStore dbStore, Heap<Job> readyJobs)
-			throws DatabaseException {
+     * @param dbStore
+     * @throws DatabaseException
+     */
+    public Resources(Scheduler scheduler, EntityStore dbStore, Heap<Job> readyJobs)
+            throws DatabaseException {
         super(dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class));
-        groups = dbStore.getSecondaryIndex(index, String.class, Resource.GROUP_KEY_NAME);
-        this.scheduler = scheduler;
 
-        // Loop over all the resources
-        for (Resource resource : this) {
-            groupsTrie.put(DotName.parse(resource.getGroup()));
-            if (ResourceState.ACTIVE.contains(resource.getState())) {
-                // Initialize the resource
-                resource.init(scheduler);
-                // Add job to the queue if ready
-                if (resource instanceof Job && resource.getState() == ResourceState.READY)
-                    readyJobs.add((Job) resource);
+        groups = dbStore.getSecondaryIndex(index, String.class, Resource.GROUP_KEY_NAME);
+        dependencies = dbStore.getPrimaryIndex(Long.class, Dependency.class);
+        dependenciesFrom = dbStore.getSecondaryIndex(dependencies, ResourceLocator.class, Dependency.FROM_KEY_NAME);
+        dependenciesTo = dbStore.getSecondaryIndex(dependencies, ResourceLocator.class, Dependency.TO_KEY_NAME);
+        states = dbStore.getSecondaryIndex(index, ResourceState.class, Resource.STATE_KEY_NAME);
+
+        this.scheduler = scheduler;
+    }
+
+    void init(Heap<Job> readyJobs) {
+        // Get the groups
+        final EntityCursor<String> keys = groups.keys();
+        for (String key : keys)
+            groupsTrie.put(DotName.parse(key));
+        keys.close();
+
+        update(ResourceState.RUNNING, readyJobs);
+        update(ResourceState.READY, readyJobs);
+
+        // Now, update waiting tasks (so they can be ready if a job finished but we did not
+        // get notified)
+        update(ResourceState.WAITING, readyJobs);
+    }
+
+    // Update resources in a given state
+    private void update(ResourceState state, Heap<Job> readyJobs) {
+        final EntityCursor<Resource> cursor = states.entities(null, state, true, state, true, CursorConfig.READ_UNCOMMITTED);
+        for (Resource resource : cursor) {
+            resource.init(scheduler);
+            try {
+                if (resource.updateStatus(false))
+                    put(null, resource);
+
+                switch(resource.getState()) {
+                    case READY:
+                        readyJobs.add((Job) resource);
+                    case RUNNING:
+                        super.cache(resource);
+                }
+
+            } catch (Exception e) {
+                LOGGER.error(e, "Error while updating resource %s", resource);
             }
         }
-
-        // Loop over all groups
-
-
     }
 
 
+
     @Override
-    public synchronized boolean put(Resource resource) throws DatabaseException {
+    public synchronized boolean put(Transaction txn, Resource resource) throws DatabaseException {
+        return put(txn, resource, false);
+    }
+
+    public synchronized boolean put(Transaction txn, Resource resource, boolean fullStore) throws DatabaseException {
+        // Get the group
         groupsTrie.put(DotName.parse(resource.getGroup()));
-        return super.put(resource);
+
+        // Starts the transaction
+        if (!super.put(txn, resource))
+            return false;
+
+        if (fullStore && resource.retrievedDependencies()) {
+            // Delete everything
+            dependenciesFrom.delete(txn, resource.getLocator());
+
+            // Store the dependencies
+            for (Dependency dependency : resource.getDependencies()) {
+                dependencies.put(txn, dependency);
+            }
+        }
+
+        return true;
     }
 
     @Override
@@ -103,12 +176,12 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
     @Override
     protected ResourceLocator getKey(Resource resource) {
-        return resource.getLocator();
+        return new ResourceLocator(resource.getLocator());
     }
 
     @Override
     protected void init(Resource resource) {
-       resource.init(scheduler);
+        resource.init(scheduler);
     }
 
 
@@ -116,11 +189,12 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
         if (!recursive)
             return groups.entities(group, true, group, true);
 
-         throw new NotImplementedException();
+        throw new NotImplementedException();
     }
 
     /**
      * Returns subgroups
+     *
      * @param group
      * @return
      */
@@ -132,9 +206,51 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
             return set;
 
         System.err.format("Found a node%n");
-        for(String key: node.childrenKeys())
+        for (String key : node.childrenKeys())
             set.add(key);
 
         return set;
+    }
+
+    /**
+     * Notify the dependencies that a resource has changed
+     *
+     * @param resource The resource that has changed
+     */
+    public void notifyDependencies(Resource resource) {
+        // Join between active states
+        // TODO: should limit to the dependencies of some resources
+        final ResourceLocator from = resource.getLocator();
+
+        // Get all the dependencies
+        ArrayList<Dependency> dependencies = new ArrayList<>();
+        try (final EntityCursor<Dependency> entities = dependenciesFrom.entities(null, from, true, from, true, READ_UNCOMMITTED)) {
+            Dependency dep;
+            while ((dep = entities.next()) != null)
+                dependencies.add(dep);
+        }
+
+        // Notify each of these
+        for (Dependency dependency : dependencies) {
+            if (dependency.state != resource.state) {
+                Resource dep = get(dependency.getTo());
+                if (dep == null)
+                    LOGGER.warn("Dependency [%s] of [%s] was not found", from, dependency.getTo());
+                else {
+                    LOGGER.info("Notifying dependency [%s] from [%s]", from, dependency.getTo());
+                    dep.notify(resource);
+                }
+            }
+        }
+    }
+
+
+    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator locator) {
+        TreeMap<ResourceLocator, Dependency> deps = new TreeMap<>();
+        try (final EntityCursor<Dependency> entities = dependenciesTo.entities(locator, true, locator, true)) {
+            for (Dependency dependency : entities)
+                deps.put(dependency.getFrom(), dependency);
+        }
+        return deps;
     }
 }

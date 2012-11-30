@@ -22,7 +22,6 @@ import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.QName;
@@ -63,6 +62,7 @@ public class JSUtils {
     public static Object unwrap(Object object) {
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
+
         return object;
     }
 
@@ -108,9 +108,9 @@ public class JSUtils {
      * Transform objects into an XML node
      *
      * @param object
-     * @return
+     * @return a {@linkplain Node} or a {@linkplain NodeList}
      */
-    public static Node toDOM(Object object) {
+    public static Object toDOM(Object object) {
         // Unwrap if needed
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
@@ -120,10 +120,43 @@ public class JSUtils {
             return (Node) object;
 
         if (object instanceof XMLObject) {
-            XMLObject xmlObject = (XMLObject) object;
+            final XMLObject xmlObject = (XMLObject) object;
             String className = xmlObject.getClassName();
 
-            // Use Rhino implementation for XML objects
+            if (className.equals("XMLList")) {
+                LOGGER.debug("Transforming from XMLList [%s]", object);
+                final Object[] ids = xmlObject.getIds();
+                if (ids.length == 1)
+                    return toDOM(xmlObject.get((Integer) ids[0], xmlObject));
+
+                NodeList list = new NodeList() {
+                    final Node[] nodes = new Node[ids.length];
+
+                    {
+                        Document doc = XMLUtils.newDocument();
+
+                        for (int i = 0; i < nodes.length; i++) {
+                            nodes[i] = (Node) toDOM(xmlObject.get((Integer) ids[i], xmlObject));
+                            doc.adoptNode(nodes[i]);
+
+                        }
+                    }
+
+                    @Override
+                    public Node item(int index) {
+                        return nodes[index];
+                    }
+
+                    @Override
+                    public int getLength() {
+                        return nodes.length;
+                    }
+                };
+
+
+                return list;
+            }
+
             if (className.equals("XML")) {
                 // FIXME: this strips all whitespaces!
                 Node node = XMLLibImpl.toDomNode(object);
@@ -133,21 +166,6 @@ public class JSUtils {
                 return node;
             }
 
-            // Should be an XMLList
-            if (className.equals("XMLList")) {
-                LOGGER.debug("Transforming from XMLList [%s]", object);
-                IdScriptableObject xmlList = (IdScriptableObject) xmlObject;
-                Document doc = XMLUtils.newDocument();
-                DocumentFragment fragment = doc.createDocumentFragment();
-
-                for (Object _id : xmlList.getIds()) {
-                    Node dom = toDOM(xmlList.get((Integer) _id, xmlList));
-                    doc.adoptNode(dom);
-                    fragment.appendChild(dom);
-                }
-
-                return fragment;
-            }
 
             throw new RuntimeException(format(
                     "Not implemented: convert %s to XML", className));
@@ -176,7 +194,7 @@ public class JSUtils {
      * @return
      */
     public static Document toDocument(Object object, QName wrapName) {
-        Node dom = toDOM(object);
+        Node dom = (Node) toDOM(object);
 
         if (dom instanceof Document)
             return (Document) dom;
@@ -228,6 +246,10 @@ public class JSUtils {
     }
 
     public static String toString(Object object) {
-        return Context.toString(object);
+        return Context.toString(unwrap(object));
+    }
+
+    public static int getInteger(Object object) {
+        return (Integer) unwrap(object);
     }
 }

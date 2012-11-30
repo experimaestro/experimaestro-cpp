@@ -98,7 +98,7 @@ public class StatusServlet extends XPMServlet {
 			if (resource != null) {
 				PrintConfig config = new PrintConfig();
 				config.detailURL = request.getServletPath();
-				resource.printHTML(out, config);
+				resource.printXML(out, config);
 			} else {
                 out.format("Could not retrieve resource <b>%s</b>", locator);
             }

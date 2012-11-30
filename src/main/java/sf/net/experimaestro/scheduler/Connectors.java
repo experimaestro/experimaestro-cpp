@@ -64,7 +64,7 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
         this.scheduler = scheduler;
 
         SingleHostConnector xpmConnector = new MySingleHostConnector();
-        put(xpmConnector);
+        put(null, xpmConnector);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
 
     @Override
     protected String getKey(Connector connector) {
-        return connector.getIdentifier();
+        return new String(connector.getIdentifier());
     }
 
     @Override

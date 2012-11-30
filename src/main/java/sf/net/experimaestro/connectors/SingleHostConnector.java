@@ -97,6 +97,10 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         return file.getName().getPath();
     }
 
+    public String resolve(String path) throws FileSystemException {
+        return resolve(resolveFile(path));
+    }
+
 
     /** Returns a process builder */
     public abstract XPMProcessBuilder processBuilder();

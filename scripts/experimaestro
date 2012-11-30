@@ -142,7 +142,6 @@ def command_update_jobs(args):
 def command_ls(args):
     server = getServer(args)
     response = server.Server.listJobs(args.group, [])
-    print "Got response"
     for l in response:
         print l
 

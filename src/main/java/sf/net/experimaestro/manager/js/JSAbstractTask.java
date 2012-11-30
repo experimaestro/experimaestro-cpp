@@ -80,7 +80,7 @@ public abstract class JSAbstractTask extends Task {
 
 	protected Document getDocument(Object result) {
 		// Get node
-		Node node = JSUtils.toDOM(result);
+		Node node = (Node) JSUtils.toDOM(result);
 
 		if (node instanceof Document)
 			return (Document) node;

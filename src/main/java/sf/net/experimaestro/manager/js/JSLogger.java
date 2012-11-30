@@ -28,21 +28,16 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSLogger extends ScriptableObject {
-
+public class JSLogger extends JSObject {
     private Logger logger;
-
-    @Override
-    public String getClassName() {
-        return "Logger";
-    }
+    private XPMObject xpm;
 
     public JSLogger() {
     }
 
-    public void jsConstructor(Scriptable xpm, String name) {
-        XPMObject xpmObject = (XPMObject) ((NativeJavaObject)xpm).unwrap();
-        logger = Logger.getLogger(xpmObject.loggerRepository, name);
+    public void jsConstructor(Scriptable _xpm, String name) {
+        xpm = (XPMObject) ((NativeJavaObject)_xpm).unwrap();
+        logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
 
@@ -68,6 +63,16 @@ public class JSLogger extends ScriptableObject {
 
     static public void jsFunction_fatal(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.FATAL, cx, thisObj, args, funObj);
+    }
+
+    static public Scriptable jsFunction_create(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+        if (args.length != 1)
+            throw new ExperimaestroRuntimeException("Logger.create() expects one argument, got %d", args.length);
+
+        final JSLogger jslogger = (JSLogger) thisObj;
+        XPMObject xpm = jslogger.xpm;
+        final String subname = JSUtils.toString(args[0]);
+        return xpm.newObject(JSLogger.class, xpm, jslogger.logger.getName() + "." + subname);
     }
 
 

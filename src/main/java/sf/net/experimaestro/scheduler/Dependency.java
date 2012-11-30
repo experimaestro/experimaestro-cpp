@@ -18,15 +18,33 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Persistent;
+import com.sleepycat.persist.model.*;
 import sf.net.experimaestro.locks.LockType;
 
 /**
  * What is the status of a dependency This class stores the previous status
  * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
  */
-@Persistent
+@Entity
 public class Dependency {
+    public static final String FROM_KEY_NAME = "from";
+    public static final String TO_KEY_NAME = "to";
+
+    /**
+     * The resource
+     */
+    @PrimaryKey(sequence = "dependency_id")
+    long id;
+
+    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE)
+    ResourceLocator from;
+
+    /**
+     * The pointed resource
+     */
+    @SecondaryKey(name = TO_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.CASCADE)
+    ResourceLocator to;
+
 	/**
 	 * Type of lock that we request on the dependency 
 	 */
@@ -42,17 +60,26 @@ public class Dependency {
      */
     ResourceState state;
 
-	protected Dependency() {
+    protected Dependency() {
 	}
 
-	public Dependency(LockType type, boolean isSatisfied, ResourceState state) {
+	public Dependency(ResourceLocator from, ResourceLocator to, LockType type, boolean isSatisfied, ResourceState state) {
+        this.from = from;
+        this.to = to;
 		this.type = type;
 		this.isSatisfied = isSatisfied;
         this.state = state;
     }
 
-	public LockType getType() {
+    public ResourceLocator getFrom() {
+        return from;
+    }
+
+    public LockType getType() {
 		return type;
 	}
 
+    public ResourceLocator getTo() {
+        return to;
+    }
 }

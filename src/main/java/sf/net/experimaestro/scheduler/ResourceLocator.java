@@ -170,7 +170,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
      *
      * @param path   The path
      * @param parent Is the path relative to the parent?
-     * @return A new resource locator object
+     * @return A new resource from object
      * @throws FileSystemException If something goes wrong while accessing the file system
      */
     public ResourceLocator resolvePath(String path, boolean parent) throws FileSystemException {

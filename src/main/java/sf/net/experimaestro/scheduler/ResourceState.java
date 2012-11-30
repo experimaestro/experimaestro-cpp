@@ -18,8 +18,6 @@
 
 package sf.net.experimaestro.scheduler;
 
-import java.util.EnumSet;
-
 /**
  * The resource state
  * 
@@ -50,17 +48,20 @@ public enum ResourceState {
 	 * The job ran but did not complete or the data was not generated
 	 */
 	ERROR,
-	
+
 	/**
 	 * Completed (for a job) or generated (for a data resource) 
 	 */
 	DONE;
 
 
+    /**
+     * Returns true if the resource is a state that will not change
+     *
+     * @return
+     */
     public boolean isBlocking() {
         return this == ON_HOLD || this == ERROR;
     }
 
-    /** The state is either running or about to run (all dependencies met) */
-    final static public EnumSet<ResourceState> ACTIVE = EnumSet.of(READY, RUNNING);
 }

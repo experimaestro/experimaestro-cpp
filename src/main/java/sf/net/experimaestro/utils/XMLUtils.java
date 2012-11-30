@@ -315,8 +315,25 @@ public class XMLUtils {
 
 
     public static boolean is(QName qname, Element element) {
-        return qname.equals(new QName(element.getNamespaceURI(), element.getTagName()));
+        return qname.equals(new QName(element.getNamespaceURI(), element.getLocalName()));
     }
 
 
+    public static Iterable<? extends Node> iterable(final NodeList list) {
+        return new Iterable<Node>() {
+            @Override
+            public Iterator<Node> iterator() {
+                return new com.google.common.collect.AbstractIterator<Node>() {
+                    int i = 0;
+                    @Override
+                    protected Node computeNext() {
+                        if (i >= list.getLength())
+                            return endOfData();
+
+                        return list.item(i++);
+                    }
+                };
+            }
+        };
+    }
 }

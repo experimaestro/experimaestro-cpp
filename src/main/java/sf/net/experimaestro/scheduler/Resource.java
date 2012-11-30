@@ -35,7 +35,10 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static java.lang.String.format;
 
@@ -53,33 +56,58 @@ import static java.lang.String.format;
 public abstract class Resource implements Comparable<Resource> {
     final static private Logger LOGGER = Logger.getLogger();
 
-    /** Extension for the lock file */
+    /**
+     * Extension for the lock file
+     */
     public static final String LOCK_EXTENSION = ".lock";
 
-    /** Extension for the file that describes the status of the resource */
+    /**
+     * Extension for the file that describes the status of the resource
+     */
     public static final String STATUS_EXTENSION = ".status";
 
-    /** Extension used to mark a produced resource */
+    /**
+     * Extension used to mark a produced resource
+     */
     public static final String DONE_EXTENSION = ".done";
 
-    /** Extension for the file containing the return code */
+    /**
+     * Extension for the file containing the return code
+     */
     public static final String CODE_EXTENSION = ".code";
 
-    /** Extension for the file containing the script to run */
+    /**
+     * Extension for the file containing the script to run
+     */
     public static final String RUN_EXTENSION = ".run";
 
-    /** Extension for the standard output of a job */
+    /**
+     * Extension for the standard output of a job
+     */
     public static final String OUT_EXTENSION = ".out";
 
-    /** Extension for the standard error of a job */
+    /**
+     * Extension for the standard error of a job
+     */
     public static final String ERR_EXTENSION = ".err";
 
-    /** Extension for the standard input of a job */
+    /**
+     * Extension for the standard input of a job
+     */
     public static final String INPUT_EXTENSION = ".input";
+
+    /**
+     * Secondary key for "keys"
+     */
     public static final String GROUP_KEY_NAME = "group";
 
     /**
-     * The task locator
+     * Secondary key for "state"
+     */
+    public static final String STATE_KEY_NAME = "state";
+
+    /**
+     * The locator for this resource
      */
     @PrimaryKey
     ResourceLocator locator;
@@ -90,9 +118,10 @@ public abstract class Resource implements Comparable<Resource> {
     @SecondaryKey(name = GROUP_KEY_NAME, relate = Relationship.MANY_TO_ONE)
     private String group = null;
 
-    /**
+     /**
      * Resource state
      */
+    @SecondaryKey(name = STATE_KEY_NAME, relate = Relationship.MANY_TO_ONE)
     protected ResourceState state;
 
     /**
@@ -101,27 +130,39 @@ public abstract class Resource implements Comparable<Resource> {
     private LockMode lockmode;
 
     /**
+     * The dependencies for this job (dependencies are on any resource)
+     * This array is filled when needed.
+     */
+    private transient TreeMap<ResourceLocator, Dependency> dependencies = null;
+
+    /**
      * Task manager
      */
     transient Scheduler scheduler;
 
+    /**
+     * Number of unsatisfied dependencies
+     */
+    int nbUnsatisfied;
+    /**
+     * Number of dependencies that are in an "error" state
+     * This is needed to updateFromStatusFile the "on hold" state
+     */
+    int nbHolding;
+
+
     @Override
     protected void finalize() {
-      LOGGER.debug("Finalizing resource %s", this.hashCode());
+        LOGGER.debug("Finalizing resource %s", this.hashCode());
     }
 
-    /**
-     * Our set of listeners (resources that are listening to changes in the
-     * state of this resource)
-     */
-    @SecondaryKey(name = "listeners", relate = Relationship.MANY_TO_MANY, relatedEntity = Resource.class)
-    Set<ResourceLocator> listeners = new TreeSet<>();
 
     /**
      * If the resource is currently locked
      */
     boolean locked;
 
+    /** Called when deserializing from database */
     protected Resource() {
     }
 
@@ -130,55 +171,23 @@ public abstract class Resource implements Comparable<Resource> {
      *
      * @param scheduler The scheduler
      * @param connector The connectorId to the resource
-     * @param path The path to the resource
-     * @param mode The locking mode
+     * @param path      The path to the resource
+     * @param mode      The locking mode
      */
     public Resource(Scheduler scheduler, Connector connector, String path, LockMode mode) {
-        this.scheduler = scheduler;
-        this.locator = new ResourceLocator(connector, path);
-        this.lockmode = mode;
+        this(scheduler, new ResourceLocator(connector, path), mode);
     }
 
     public Resource(Scheduler scheduler, ResourceLocator identifier, LockMode lockMode) {
         this.scheduler = scheduler;
         this.locator = identifier;
         this.lockmode = lockMode;
+        this.dependencies = new TreeMap<>();
     }
 
-    /**
-     * Register a task that waits for our output
-     */
-    synchronized public void register(Job job) {
-        // Copy the string to avoid holding the objects to notify in memory
-        listeners.add(new ResourceLocator(job.locator));
-    }
 
     /**
-     * Unregister a task
-     */
-    public void unregister(Job task) {
-        listeners.remove(task);
-    }
-
-    /**
-     * Called when we have generated the resources (either by running it or
-     * producing it)
-     *
-     * @throws DatabaseException
-     */
-    void notifyListeners(Object... objects) throws DatabaseException {
-        for (ResourceLocator id : listeners) {
-            try {
-                Resource resource = scheduler.getResource(id);
-                resource.notify(this, objects);
-            } catch(Exception e) {
-                LOGGER.error(e, "Cannot notify %s [from %s]: %s", id, this.getIdentifier());
-            }
-        }
-    }
-
-    /**
-     * Compares to another resource (based on the locator)
+     * Compares to another resource (based on the from)
      */
     public int compareTo(Resource o) {
         return locator.compareTo(o.locator);
@@ -196,14 +205,14 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Update the status of the resource by checking all that could have changed externally
-     *
+     * <p/>
      * Calls {@linkplain #doUpdateStatus()}. If a change is detected, then it updates
-     * the representation of the resource in the database by calling {@linkplain Scheduler#store(Resource)}.
+     * the representation of the resource in the database by calling {@linkplain Scheduler#store(Resource, boolean)}.
      */
-    final public boolean updateStatus() throws Exception {
+    final public boolean updateStatus(boolean store) throws Exception {
         boolean changed = doUpdateStatus();
-        if (changed)
-            scheduler.store(this);
+        if (changed && store)
+            scheduler.store(this, false);
         return changed;
     }
 
@@ -233,6 +242,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Returns the connector associated to this resource
+     *
      * @return a Connector object
      */
     final public Connector getConnector() {
@@ -241,6 +251,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Returns the main connector associated with this resource
+     *
      * @return a SingleHostConnector object
      */
     public final SingleHostConnector getMainConnector() {
@@ -248,15 +259,20 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
 
-    /** Initialise a resource when retrieved from database */
+    /**
+     * Initialise a resource when retrieved from database
+     */
     public void init(Scheduler scheduler) throws DatabaseException {
         this.scheduler = scheduler;
         this.locator.init(scheduler);
     }
 
 
+    /**
+     * States in which a resource can replaced
+     */
     final static EnumSet<ResourceState> UPDATABLE_STATES
-            = EnumSet.of(ResourceState.READY, ResourceState.ERROR, ResourceState.WAITING);
+            = EnumSet.of(ResourceState.READY, ResourceState.ON_HOLD, ResourceState.ERROR, ResourceState.WAITING);
 
     /**
      * Replace this resource
@@ -267,20 +283,17 @@ public abstract class Resource implements Comparable<Resource> {
     public boolean replace(Resource old) {
         synchronized (old) {
             assert old.locator.equals(locator) : "locators do not match";
-
             if (UPDATABLE_STATES.contains(old.state)) {
-                // Transfer dependencies
-                this.listeners = old.getListeners();
-                updateDb();
+                scheduler.store(this, true);
                 return true;
             }
-            return false;
         }
-
+        return false;
     }
 
     /**
      * Notifies the resource that something happened
+     *
      * @param resource
      * @param objects
      */
@@ -295,6 +308,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Sets the name
+     *
      * @param group
      */
     public void setGroup(String group) {
@@ -303,6 +317,136 @@ public abstract class Resource implements Comparable<Resource> {
 
     public String getGroup() {
         return this.group;
+    }
+
+    /**
+     * Called when deleting a resource
+     */
+    public void delete() {
+        LOGGER.info("Deleting task %s", this);
+        scheduler.delete(this);
+    }
+
+    /**
+     * The set of dependencies for this object
+     */
+    public Collection<Dependency> getDependencies() {
+        if (dependencies == null)
+            dependencies = scheduler.retrieveDependencies(getLocator());
+        return dependencies.values();
+    }
+
+    /**
+     * Add a dependency to another resource
+     *
+     * <b>Warning</b>: the database is not updated after such a call, it
+     * is the responsability of the caller to do so
+     *
+     * @param resource The resource to lock
+     * @param type     The type of lock that is asked
+     */
+    public void addDependency(Resource resource, LockType type) {
+        LOGGER.info("Adding dependency %s to %s for %s", type, resource, this);
+        final DependencyStatus accept = resource.accept(type);
+        final ResourceState resourceState = resource.state;
+
+        if (accept == DependencyStatus.ERROR)
+            throw new RuntimeException(format(
+                    "Resource %s cannot be satisfied for lock type %s",
+                    resource, type));
+
+        final boolean ready = accept.isOK();
+
+        synchronized (this) {
+            if (!ready)
+                nbUnsatisfied++;
+            // We copy the resource from, otherwise this object can never
+            // be reclaimed
+            final ResourceLocator from = new ResourceLocator(resource.locator);
+            final ResourceLocator to = new ResourceLocator(this.getLocator());
+            final Dependency dependency = new Dependency(from, to, type, ready, resourceState);
+            getDependencies();
+            dependencies.put(from, dependency);
+        }
+    }
+
+    /**
+     * Check if a dependency changed and returns whether this has changed the state of the job
+     *
+     * @param resource
+     * @return true if the resource changed, false otherwise
+     */
+    protected boolean checkDependency(Resource resource) {
+        // Get the new state of the resource
+        final ResourceState newResourceState = resource.getState();
+
+        // Get the cached status
+        Dependency status = getDependency(resource.getLocator());
+        if (status == null) {
+            // Log this
+            LOGGER.error("Could not retrieve dependency %s", resource.getLocator());
+            state = ResourceState.ERROR;
+            updateDb();
+            return false;
+        }
+
+        // No change here
+        if (status.state == newResourceState)
+            return false;
+
+        // Is this resource in a state that is good for us?
+        int k = resource.accept(status.type).isOK() ? 1 : 0;
+
+        // Computes the difference with the previous status to updateFromStatusFile the number
+        // of unsatisfied resources states
+        final int diff = (status.isSatisfied ? 1 : 0) - k;
+
+        LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
+                resource, k, status.type, diff);
+
+        // If the resource has an error / hold state, change our state to
+        // "on hold"
+        if (newResourceState == ResourceState.ERROR || newResourceState == ResourceState.ON_HOLD) {
+
+            if (!status.state.isBlocking())
+                ++nbHolding;
+
+            if (state != ResourceState.ON_HOLD) {
+                LOGGER.debug("Putting resource [%s] on hold", this);
+                state = ResourceState.ON_HOLD;
+            }
+
+        } else if (status.state.isBlocking()) {
+            --nbHolding;
+            if (nbHolding == 0 && this.state == ResourceState.ON_HOLD) {
+                this.state = ResourceState.WAITING;
+                LOGGER.debug("Resource [%s] state is WAITING", this);
+            }
+        }
+
+        // Update
+        nbUnsatisfied += diff;
+        status.isSatisfied = k == 1;
+        status.state = newResourceState;
+
+        if (nbUnsatisfied == 0 && this.state == ResourceState.WAITING) {
+            this.state = ResourceState.READY;
+            LOGGER.debug("Resource [%s] state is READY", this);
+        }
+
+        LOGGER.debug("Notification from [%s] state %s : Resource [%s] state is READY", resource, resource.getState(), this);
+        return true;
+    }
+
+    private Dependency getDependency(ResourceLocator locator) {
+        if (dependencies == null)
+            dependencies = scheduler.retrieveDependencies(getLocator());
+
+        return dependencies.get(locator);
+    }
+
+    public boolean retrievedDependencies() {
+        return dependencies != null;
     }
 
     /**
@@ -346,10 +490,11 @@ public abstract class Resource implements Comparable<Resource> {
      * Can the dependency be accepted?
      *
      * @param locktype
-     * @see {@linkplain }
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
-     *         {@link DependencyStatus#WAIT} if it can be satisfied and
+     *         {@link DependencyStatus#WAIT} if it can be satisfied one day
+     *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
      *         {@link DependencyStatus#ERROR} if it cannot be satisfied
+     * @see {@linkplain }
      */
     DependencyStatus accept(LockType locktype) {
         LOGGER.debug("Checking lock %s for resource %s (state %s)",
@@ -357,7 +502,7 @@ public abstract class Resource implements Comparable<Resource> {
 
         // Handle simple cases
         if (state == ResourceState.ERROR)
-            return DependencyStatus.ERROR;
+            return DependencyStatus.HOLD;
 
         if (state == ResourceState.ON_HOLD)
             return DependencyStatus.HOLD;
@@ -475,9 +620,9 @@ public abstract class Resource implements Comparable<Resource> {
 
 
     /**
-     * Get the task locator
+     * Get the task from
      *
-     * @return The task unique locator
+     * @return The task unique from
      */
     public ResourceLocator getLocator() {
         return locator;
@@ -486,6 +631,7 @@ public abstract class Resource implements Comparable<Resource> {
     public String getIdentifier() {
         return locator.toString();
     }
+
     /**
      * Is the resource locked?
      */
@@ -502,20 +648,15 @@ public abstract class Resource implements Comparable<Resource> {
         return state;
     }
 
-    /**
-     * Returns the list of listeners
-     */
-    public Set<ResourceLocator> getListeners() {
-        return listeners;
-    }
 
     /**
      * Update the database after a change in state
+     *
      * @return true if everything went well
      */
     boolean updateDb() {
         try {
-            scheduler.store(this);
+            scheduler.store(this, false);
             return true;
         } catch (DatabaseException e) {
             LOGGER.error(
@@ -533,12 +674,12 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
-     * Writes an HTML description of the resource
+     * Writes an XML description of the resource
      *
      * @param out
      * @param config The configuration for printing
      */
-    public void printHTML(PrintWriter out, PrintConfig config) {
+    public void printXML(PrintWriter out, PrintConfig config) {
         out.format("<div><b>Resource id</b>: %s</h2>", locator);
         out.format("<div><b>Status</b>: %s</div>", state);
     }
@@ -546,6 +687,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Update the status file
+     *
      * @param pidFrom     The old PID (or 0 if none)
      * @param pidTo       The new PID (or 0 if none)
      * @param writeAccess True if we need the write access
@@ -636,4 +778,12 @@ public abstract class Resource implements Comparable<Resource> {
         }
         return true;
     }
+
+    /**
+     * Called after creation when the task is ready
+     */
+    public void ready() {
+        state = nbHolding == 0 && nbUnsatisfied == 0 ? ResourceState.READY : ResourceState.WAITING;
+    }
+
 }

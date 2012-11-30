@@ -127,8 +127,8 @@ public class SchedulerTest {
                     null);
             job2.addDependency(job1, LockType.READ_ACCESS);
 
-            scheduler.store(job1);
-            scheduler.store(job2);
+            scheduler.store(job1, true);
+            scheduler.store(job2, true);
             counter.resume();
 
             assert sequence.get(0).equals("job1");
@@ -147,5 +147,11 @@ public class SchedulerTest {
         final SimpleJob job = new SimpleJob(id, scheduler, LocalhostConnector.getInstance(), new File(jobDirectory,
                 id).getAbsolutePath(), set ? id : null, waitId);
         return job;
+    }
+
+    @Test(timeOut = 1000, description = "Check that when a resource [1] depends on [2], and [2] gets an error, [1] is put on hold," +
+            "and that [1] put in ready makes [2] waiting")
+    public void test_error_state() {
+
     }
 }

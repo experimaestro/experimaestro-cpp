@@ -84,26 +84,19 @@
    * `script_file()` returns a FileObject corresponding to the current script
    * `include_repository([connector,] path)` includes a repository. The difference with the `include(path)` function is that the repository can be cached. An optional `connector` can be used - by default, the current script connector is used.
    
+
 # XPM object
 
 ## Functions
 
   * `add_task_factory(task)` Adds a task factory to the manager
   * `get_task(qualified_name)` or `get_task(namespace, id)` Get a new instance of task given the namespace and the id
-  * `log(format, object, [object ...])` Returns a message using the format static method from String.
+  * `log(format, object, [object ...])` Returns to the caller a message using the format static method from String.
   * `include(path)` includes another javascript file (path is relative to the current file)
   * `xpath(query, xml)` runs an XPath query on an XML document or fragment. See {{XPath handling}} for a description of how XPath are handled within experimaestro.
   * `value(object)` returns an XML experimaestro value
   * `path(file_object)` returns an XML description of the path 
   * `set_default_group(name)` sets the default group for jobs
-
-
-# Scheduler object
-
-The scheduler object can be used to run jobs asynchronously.
-
-## Functions
-
   * `command_line_job(jobId, commandLine, options)` where `jobId` is a valid task identifier, `commandLine` is
    the command line to be executed, and `options` are the options.
    `commandLine` can be either
@@ -113,6 +106,15 @@ The scheduler object can be used to run jobs asynchronously.
   - *stdin*: A string or a file object
   - *stdout*: A file object
   - *lock* is an array of couples (resource-id, lock-type) where the lock type can be `READ_ACCESS`, `WRITE_ACCESS`, or `EXCLUSIVE_ACCESS`.
+
+# Logging
+
+A logger object is returned by a call to `xpm.logger(dotname)` where name is a dot separated string. The logger output level is `INFO` by default, and can be changed by a call to `xpm.log_level(dotname, level)`.
+
+The method `log(format, object, [object ...])` Returns to the caller a message using the Java format method where `log` is log level for output.
+
+Log levels can be `trace`, `debug`, `info`, `warn`, `error` and `fatal`.
+
 
 # XPath handling
 

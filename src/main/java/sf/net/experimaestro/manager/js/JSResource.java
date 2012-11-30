@@ -18,101 +18,39 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.annotations.JSFunction;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSUtils;
 
 /**
+ * A resource
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
 public class JSResource extends JSObject implements Wrapper {
 
-    public static final String JSCLASSNAME = "FileObject";
-    private FileObject file;
-
-
+    private Resource resource;
 
     public JSResource() {}
 
-    public JSResource(FileObject file) {
-        this.file = file;
-    }
+    public void jsConstructor(Object resource) throws FileSystemException {
+        this.resource = (Resource) JSUtils.unwrap(resource);
 
-    public void jsConstructor(Object file) throws FileSystemException {
-        final Object unwrap = JSUtils.unwrap(file);
-        if (unwrap instanceof FileObject) {
-            this.file = (FileObject) unwrap;
-        } else {
-            final String s = JSUtils.toString(unwrap);
-            this.file = Scheduler.getVFSManager().resolveFile(s);
-        }
+
     }
 
 
     @Override
-    public FileObject unwrap() {
-        return file;
+    public Resource unwrap() {
+        return resource;
     }
 
     @Override
     @JSFunction("toString")
     public String toString() {
-        return file == null ? "[null]" : file.toString();
+        return resource == null ? "[null]" : resource.toString();
     }
 
-    @JSFunction("toSource")
-    public String toSource() {
-        return String.format("new FileObject(%s)", file.toString());
-    }
-
-
-    @JSFunction("get_parent")
-    public static Scriptable getParent(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        if (args.length != 0)
-            throw new IllegalArgumentException("Expected no argument for FileObject.getAncestor - got " + args.length );
-        return getAncestor(cx, thisObj, 1);
-    }
-
-    @JSFunction("get_ancestor")
-    static public Scriptable getAncestor(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        if (args.length != 1)
-            throw new IllegalArgumentException("Expected one argument for FileObject.getAncestor - got " + args.length);
-
-        int level = JSUtils.getInteger(args[0]);
-        if (level < 0)
-            throw new IllegalArgumentException("Level is negative (" + level + ")");
-
-        return getAncestor(cx, thisObj, level);
-    }
-
-    static private Scriptable getAncestor(Context cx, Scriptable thisObj, int level) throws FileSystemException {
-        FileObject file = ((JSResource)thisObj).file;
-        while (--level >= 0)
-            file = file.getParent();
-
-        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
-    }
-
-    @JSFunction("path")
-    static public Scriptable path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        final JSResource _this = (JSResource) thisObj;
-
-        FileObject file = _this.file;
-        for (int i = 0; i < args.length; i++) {
-            String name = Context.toString(args[i]);
-            file = file.resolveFile(name);
-            System.err.format("File is now [%s]%n", file);
-        }
-
-        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
-    }
-
-    @JSFunction("mkdirs")
-    public void mkdirs() throws FileSystemException {
-        file.createFolder();
-    }
 }

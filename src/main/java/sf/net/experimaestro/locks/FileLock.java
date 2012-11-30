@@ -44,7 +44,7 @@ public class FileLock implements Lock {
 	File lockFile;
 
     /** Used for (de)serialization */
-    public FileLock() {}
+    private FileLock() {}
 
 	/**
 	 * Lock a file. If the file exists, waits for it to be deleted.
@@ -101,7 +101,6 @@ public class FileLock implements Lock {
 
 	public void changeOwnership(String pid) {
 		// TODO Auto-generated method stub
-
 	}
 
     @Override

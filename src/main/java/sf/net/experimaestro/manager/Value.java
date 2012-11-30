@@ -183,7 +183,7 @@ public abstract class Value {
                 item = item.cloneNode(true);
                 newDoc.adoptNode(item);
                 newDoc.appendChild(item);
-                LOGGER.info("Setting parameter [%s] in [%s]", connection.to, task);
+                LOGGER.debug("Setting parameter [%s] in [%s]", connection.to, task);
                 task.setParameter(connection.to, newDoc);
                 xqjc.close();
 

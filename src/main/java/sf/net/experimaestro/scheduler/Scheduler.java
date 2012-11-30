@@ -19,10 +19,7 @@
 package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.Multiset;
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.EnvironmentLockedException;
+import com.sleepycat.je.*;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
@@ -39,10 +36,7 @@ import sf.net.experimaestro.utils.je.FileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Timer;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -129,6 +123,7 @@ public class Scheduler {
 
     /**
      * Returns the connector with the given id
+     *
      * @param id
      * @return
      * @throws DatabaseException
@@ -138,7 +133,7 @@ public class Scheduler {
     }
 
     public void put(Connector connector) throws DatabaseException {
-        connectors.put(connector);
+        connectors.put(null, connector);
     }
 
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
@@ -166,7 +161,6 @@ public class Scheduler {
     /**
      * Returns resources in the given states
      *
-     *
      * @param recursive
      * @param states
      * @return
@@ -192,6 +186,15 @@ public class Scheduler {
             }
         };
     }
+
+    void delete(Resource resource) {
+        resources.delete(resource.getLocator());
+    }
+
+    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator locator) {
+        return resources.retrieveDependencies(locator);
+    }
+
 
     /**
      * This task runner takes a new task each time
@@ -236,11 +239,12 @@ public class Scheduler {
         // Initialise the JE database
         LOGGER.info("Initialising JE database in directory %s", baseDirectory);
         EnvironmentConfig myEnvConfig = new EnvironmentConfig();
-        myEnvConfig.setTransactional(false);
+        myEnvConfig.setTransactional(true);
         StoreConfig storeConfig = new StoreConfig();
 
         myEnvConfig.setAllowCreate(true);
         storeConfig.setAllowCreate(true);
+        storeConfig.setTransactional(true);
         dbEnvironment = new Environment(baseDirectory, myEnvConfig);
 
         EntityModel model = new AnnotationModel();
@@ -255,7 +259,7 @@ public class Scheduler {
             }
         }));
 
-        // Initialise the store
+        // Initialise the stores
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
         connectors = new Connectors(this, dbStore);
 
@@ -265,6 +269,7 @@ public class Scheduler {
 
         // Initialise the running resources so that they can retrieve their state
         resources = new Resources(this, dbStore, readyJobs);
+        resources.init(readyJobs);
 
         // Start the thread that start the jobs
         LOGGER.info("Starting %d threads", nbThreads);
@@ -332,7 +337,7 @@ public class Scheduler {
     // ----
 
     /**
-     * Get a resource by locator
+     * Get a resource by from
      * <p/>
      * First checks if the resource is in the list of tasks to be run. If not,
      * we look directly on disk to get back information on the resource.
@@ -344,7 +349,6 @@ public class Scheduler {
         Resource resource = resources.get(id);
         return resource;
     }
-
 
 
     /**
@@ -395,11 +399,38 @@ public class Scheduler {
      * Store a resource in the database
      *
      * @param resource
+     * @param full true if we should store all the resource information (everything not related to the
+     *             state of the resource)
      * @throws DatabaseException
      */
-    synchronized public void store(Resource resource) throws DatabaseException {
+    synchronized public void store(Resource resource, boolean full) throws DatabaseException {
         // Update the task and notify ourselves since we might want
         // to run new processes
+
+        final Transaction txn = dbEnvironment.beginTransaction(null, null);
+
+        // TODO: should handle properly failure
+
+        // Store the resource
+        try {
+            if (!resources.put(txn, resource, full))
+                txn.abort();
+            else
+                txn.commit();
+        } catch(RuntimeException e) {
+            txn.abort();
+            throw e;
+        } catch(Throwable e) {
+            txn.abort();
+            throw e;
+        }
+
+
+        // Notify dependencies
+        resources.notifyDependencies(resource);
+
+        // Notify ourselves
+        resource.notify(resource, SimpleMessage.STORED_IN_DATABASE);
 
         if (resource instanceof Job) {
             Job job = (Job) resource;
@@ -414,14 +445,13 @@ public class Scheduler {
 
                 // Notify job runners
                 notify();
+
             } else if (job.getIndex() > 0) {
+                // Otherwise, we remove the job from the empty
                 readyJobs.remove(job);
             }
         }
 
-        // Notify listeners
-        resource.notifyListeners();
-        resources.put(resource);
     }
 
 }

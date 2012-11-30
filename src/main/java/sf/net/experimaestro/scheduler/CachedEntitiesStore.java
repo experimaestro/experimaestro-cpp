@@ -19,6 +19,7 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Transaction;
 import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.PrimaryIndex;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
@@ -55,7 +56,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
     protected abstract boolean canOverride(Value old, Value value);
 
     /**
-     * Returns the key of the entity
+     * Returns a copy of the key of the entity
      */
     protected abstract Key getKey(Value value);
 
@@ -87,7 +88,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
      * @throws com.sleepycat.je.DatabaseException
      *          If an error occurs while putting the value in the database
      */
-    synchronized public boolean put(Value value) throws DatabaseException {
+    synchronized public boolean put(Transaction txn, Value value) throws DatabaseException {
         // Check if overriding a running value (unless it is the same object)
         final Key key = getKey(value);
         Value old = get(key);
@@ -101,7 +102,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
 
         // Store in database and in cache
         try {
-            index.put(value);
+            index.put(txn, value);
         } catch(DatabaseException e) {
             // TODO: We should have a memory cache for failed updates
             // so that those are kept in memory for a while
@@ -152,6 +153,11 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
         return null;
     }
 
+
+    protected void cache(Value value) {
+        cache.put(getKey(value), new WeakReference<>(value));
+    }
+
     @Override
     public Iterator<Value> iterator() {
 
@@ -195,4 +201,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
         }
     }
 
+    public void delete(Key key) {
+        index.delete(key);
+    }
 }
