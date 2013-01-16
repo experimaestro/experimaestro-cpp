@@ -22,6 +22,7 @@ import sf.net.experimaestro.utils.iterators.AbstractIterator;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.Iterator;
 
 
@@ -208,11 +209,18 @@ public class Output {
         }
     }
 
-    /**
-     * @param string
-     * @param actions
-     * @return
-     */
+    public static <U> String toString(String separator, U[] iterable, Formatter<U> formatter) {
+        StringBuilder sb = new StringBuilder();
+        print(sb, separator, Arrays.asList(iterable), formatter);
+        return sb.toString();
+
+    }
+
+        /**
+         * @param string
+         * @param actions
+         * @return
+         */
     public static <U> String toString(String separator, Iterable<U> iterable) {
         StringBuilder sb = new StringBuilder();
         print(sb, separator, iterable);

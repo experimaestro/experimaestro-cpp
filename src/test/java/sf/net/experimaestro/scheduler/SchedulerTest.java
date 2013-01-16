@@ -110,9 +110,7 @@ public class SchedulerTest {
     @Test(timeOut = 1000, description = "Run two jobs - one depend on the other to start", enabled = false)
     public void test_simple_dependency() throws EnvironmentLockedException,
             DatabaseException, IOException, InterruptedException {
-        TemporaryDirectory directory = null;
-        try {
-            directory = new TemporaryDirectory("scheduler-tests", "dir");
+        try(TemporaryDirectory directory = new TemporaryDirectory("scheduler-tests", "dir")) {
 
             final File dbFile = new File(directory.getFile(),
                     "db");
@@ -135,9 +133,6 @@ public class SchedulerTest {
             assert sequence.get(1).equals("job2");
 
             scheduler.close();
-        } finally {
-            if (directory != null)
-                directory.close();
         }
     }
 

@@ -19,7 +19,11 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.log4j.Level;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeJavaObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -36,35 +40,73 @@ public class JSLogger extends JSObject {
     }
 
     public void jsConstructor(Scriptable _xpm, String name) {
-        xpm = (XPMObject) ((NativeJavaObject)_xpm).unwrap();
+        xpm = (XPMObject) ((NativeJavaObject) _xpm).unwrap();
         logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
 
+    @JSFunction("trace")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_trace(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.TRACE, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("debug")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_debug(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.DEBUG, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("info")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_info(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.INFO, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("warn")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_warn(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.WARN, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("error")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_error(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.ERROR, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("fatal")
+    @JSHelp(value = "", arguments = @JSArguments({
+            @JSArgument(type = "String", name = "format", help = "The format string"),
+            @JSArgument(type = "Object...", name = "objects")
+    })
+    )
     static public void jsFunction_fatal(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         log(Level.FATAL, cx, thisObj, args, funObj);
     }
 
+    @JSFunction("create")
+    @JSHelp(value = "Creates a new logger with the given name", arguments = @JSArguments(@JSArgument(type="String", name="name")))
     static public Scriptable jsFunction_create(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         if (args.length != 1)
             throw new ExperimaestroRuntimeException("Logger.create() expects one argument, got %d", args.length);
@@ -75,6 +117,11 @@ public class JSLogger extends JSObject {
         return xpm.newObject(JSLogger.class, xpm, jslogger.logger.getName() + "." + subname);
     }
 
+    @JSFunction("set_level")
+    @JSHelp("Sets the level")
+    public void set_level(@JSArgument(type="String", name="level") String level) {
+        logger.setLevel(Level.toLevel(level));
+    }
 
     static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         if (args.length < 1)

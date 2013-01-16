@@ -43,6 +43,8 @@ import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.server.TasksServlet;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -126,6 +128,20 @@ public class XPMObject {
      */
     Map<Resource, LockType> defaultLocks = new TreeMap<>();
 
+    /**
+     * The resource cleaner
+     */
+    private final Cleaner cleaner;
+
+    static final JSUtils.FunctionDefinition[] definitions = {
+            new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
+            new JSUtils.FunctionDefinition(XPMObject.class, "include_repository", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "script_file", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
+            new JSUtils.FunctionDefinition(XPMObject.class, "path", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "value", null),
+    };
+
 
     /**
      * Initialise a new XPM object
@@ -143,11 +159,14 @@ public class XPMObject {
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    public XPMObject(ResourceLocator currentResourceLocator, Context context,
+    public XPMObject(ResourceLocator currentResourceLocator,
+                     Context context,
                      Map<String, String> environment,
                      Scriptable scope,
-                     Repository repository, Scheduler scheduler,
-                     Hierarchy loggerRepository)
+                     Repository repository,
+                     Scheduler scheduler,
+                     Hierarchy loggerRepository,
+                     Cleaner cleaner)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentResourceLocator);
@@ -158,6 +177,7 @@ public class XPMObject {
         this.repository = repository;
         this.scheduler = scheduler;
         this.loggerRepository = loggerRepository;
+        this.cleaner = cleaner;
         this.rootLogger = Logger.getLogger(loggerRepository);
 
         // --- Tells E4X to preserve whitespaces
@@ -181,26 +201,25 @@ public class XPMObject {
         }
 
         // Add functions
-        JSUtils.addFunction(XPMObject.class, scope, "qname", new Class<?>[]{Object.class, String.class});
-        JSUtils.addFunction(XPMObject.class, scope, "include_repository", null);
-        JSUtils.addFunction(XPMObject.class, scope, "script_file", null);
-        JSUtils.addFunction(XPMObject.class, scope, "include", null);
-        JSUtils.addFunction(XPMObject.class, scope, "xpath", new Class<?>[]{String.class, Object.class});
-        JSUtils.addFunction(XPMObject.class, scope, "path", null);
-        JSUtils.addFunction(XPMObject.class, scope, "value", null);
+        for (JSUtils.FunctionDefinition definition : definitions)
+            JSUtils.addFunction(scope, definition);
 
         // --- Add new objects
 
-//        ScriptableObject.defineProperty(scope, "xpm", new JSInstance(this), 0);
-        addNewObject(context, scope, "xpm", "XPM", new Object[]{});
-        ((JSInstance) get(scope, "xpm")).set(this);
-
+        // namespace
         addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
+
+        // scheduler
         addNewObject(context, scope, "scheduler", "Scheduler",
                 new Object[]{scheduler, this});
 
-        // Adds default logger
+        // xpm object
+        addNewObject(context, scope, "xpm", "XPM", new Object[]{});
+        ((JSInstance) get(scope, "xpm")).set(this);
+
+
+        // logger
         addNewObject(context, scope, "logger", JSObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
 
         // --- Get the default group from the environment
@@ -214,7 +233,7 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(ResourceLocator scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository);
+        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner);
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks = new TreeMap<>(this.defaultLocks);
         return clone;
@@ -733,6 +752,15 @@ public class XPMObject {
     }
 
 
+    /**
+     * Creates a new command line job
+     *
+     * @param path      The identifier for this job
+     * @param jsargs    The command line
+     * @param jsoptions The options
+     * @return
+     * @throws Exception
+     */
     public Resource commandlineJob(Object path, Object jsargs, Object jsoptions) throws Exception {
         CommandLineTask task = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
@@ -801,6 +829,9 @@ public class XPMObject {
 
             // --- Redirect standard error
             final Object stderr = options.get("stderr", options);
+
+            // --- Check if we need to create parameter files
+            final Object files = options.get("files", options);
 
 
             // --- Resources to lock
@@ -963,6 +994,10 @@ public class XPMObject {
         throw new AssertionError("Cannot handle object of type " + object.getClass());
     }
 
+    public void register(Closeable closeable) {
+        cleaner.register(closeable);
+    }
+
 
     // --- Javascript methods
 
@@ -1038,8 +1073,10 @@ public class XPMObject {
             return xpm.newObject(JSLogger.class, xpm, name);
         }
 
+
         @JSFunction("log_level")
-        public void setLogLevel(String name, String level) {
+        @JSHelp(value = "Sets the logger debug level")
+        public void setLogLevel(@JSArgument(name = "name") String name, @JSArgument(type = "String", name = "level") String level) {
             Logger.getLogger(xpm.loggerRepository, name).setLevel(Level.toLevel(level));
         }
 
@@ -1102,15 +1139,18 @@ public class XPMObject {
         }
 
         @JSFunction("file")
-        @JSHelp("Returns a file relative to the current connector")
-        public Scriptable file(String filepath) throws FileSystemException {
+        @JSHelp(value = "Returns a file relative to the current connector")
+        public Scriptable file(@JSArgument(name = "filepath") String filepath) throws FileSystemException {
             return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
                     new Object[]{xpm.currentResourceLocator.resolvePath(filepath).getFile()});
         }
 
 
         @JSFunction("command_line_job")
-        public Scriptable commandlineJob(Object path, Object jsargs, Object jsoptions) throws Exception {
+        @JSHelp(value = "Schedule a command line job")
+        public Scriptable commandlineJob(@JSArgument(type = "String", name = "jobId") Object path,
+                                         @JSArgument(type = "Array", name = "command") Object jsargs,
+                                         @JSArgument(type = "Map", name = "options") Object jsoptions) throws Exception {
             return xpm.newObject(JSResource.class, xpm.commandlineJob(JSUtils.unwrap(path), jsargs, jsoptions));
         }
 
@@ -1120,6 +1160,7 @@ public class XPMObject {
          * @param qname A qualified name
          */
         @JSFunction("declare_alternative")
+        @JSHelp(value = "Declare a qualified name as an alternative input")
         public void declareAlternative(Object qname) {
             AlternativeType type = new AlternativeType((QName) qname);
             xpm.repository.addType(type);
@@ -1132,11 +1173,18 @@ public class XPMObject {
          * @param xml an E4X object
          */
         @JSFunction("output_e4x")
-        public void outputE4X(Object xml) {
+        @JSHelp("Outputs the E4X XML object")
+        public void outputE4X(@JSArgument(name = "xml", help = "The XML object") Object xml) {
             final Iterable<? extends Node> list = XPMObject.xmlAsList(JSUtils.toDOM(xml));
             for (Node node : list) {
                 output(node);
             }
+        }
+
+        @JSFunction("publish")
+        @JSHelp("Publish the repository on the web server")
+        public void publish() throws InterruptedException {
+            TasksServlet.updateRepository(xpm.currentResourceLocator.toString(), xpm.repository);
         }
 
         private void output(Node node) {
@@ -1154,5 +1202,7 @@ public class XPMObject {
                     xpm.log("%s", node.toString());
             }
         }
+
+
     }
 }

@@ -29,7 +29,7 @@ import java.io.IOException;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TemporaryDirectory {
+public class TemporaryDirectory implements AutoCloseable {
     private static final Logger logger = Logger
             .getLogger(TemporaryDirectory.class);
 
@@ -87,6 +87,7 @@ public class TemporaryDirectory {
     /**
      * Dispose of the directory
      */
+    @Override
     public void close() {
         if (deleteThread != null) {
             deleteThread.run();

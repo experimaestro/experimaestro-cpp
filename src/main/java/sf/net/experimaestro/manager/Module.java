@@ -22,6 +22,8 @@ import com.sun.org.apache.xerces.internal.xs.XSModel;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A module groups tasks
@@ -63,6 +65,11 @@ public class Module implements Comparable<Module> {
 	 * List of XML Schemas
 	 */
 	ArrayList<XSModel> xsModels = new ArrayList<XSModel>();
+
+    /**
+     * Map of namespaces to prefixes
+     */
+    Map<String, String> prefixes = new TreeMap<>();
 	
 	public Module() {
 	}
@@ -112,4 +119,16 @@ public class Module implements Comparable<Module> {
 	public void addSchema(XSModel xsModel) {
 		xsModels.add(xsModel);
 	}
+
+    public void setPrefix(String prefix, String url) {
+        prefixes.put(url, prefix);
+    }
+
+    public String getPrefix(String url) {
+        final String prefix = prefixes.get(url);
+        if (parent == null || prefix != null)
+            return prefix;
+
+        return parent.getPrefix(url);
+    }
 }

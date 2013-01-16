@@ -123,7 +123,7 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
     /**
      * Add a new item to the heap
      *
-     * @param item The item to add
+     * @param item The item to append
      */
     public void add(final E item) {
         list.add(item);

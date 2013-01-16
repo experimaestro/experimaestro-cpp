@@ -26,6 +26,7 @@ import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -113,7 +114,7 @@ public class ScriptTest {
                 final ResourceLocator currentResourceLocator
                         = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
                 XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
-                        repository, null, null);
+                        repository, null, null, new Cleaner());
 
                 // Adds some special functions available for tests only
                 JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});

@@ -38,6 +38,7 @@ import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -116,6 +117,7 @@ public class RPCHandler {
 
         int nbUpdated = 0;
         for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
+            resource.init(scheduler);
             if (resource.updateStatus(true))
                 nbUpdated++;
         }
@@ -220,7 +222,7 @@ public class RPCHandler {
 //
 //
 //        ResourceLocator identifier = ResourceLocator.decode(id);
-//		scheduler.add(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
+//		scheduler.append(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
 //				exists));
 //		return true;
 //	}
@@ -305,7 +307,7 @@ public class RPCHandler {
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try {
+        try(Cleaner cleaner = new Cleaner()) {
             Context jsContext = Context
                     .enter();
 
@@ -335,7 +337,7 @@ public class RPCHandler {
             ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
                     environment), 0);
             jsXPM = new XPMObject(locator, jsContext, environment, scope, repositories,
-                    scheduler, loggerRepository);
+                    scheduler, loggerRepository, cleaner);
 
             final Object result;
             if (isFile)

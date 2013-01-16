@@ -18,10 +18,18 @@
 
 package sf.net.experimaestro.manager.js;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 17/10/12
  */
+@Retention(RetentionPolicy.RUNTIME)
 public @interface JSHelp {
+    /* Basic help */
     String value();
+
+    /* List of arguments when using the variable style assignement */
+    JSArguments[] arguments() default {};
 }

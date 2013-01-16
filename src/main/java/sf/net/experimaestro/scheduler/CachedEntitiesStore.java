@@ -82,7 +82,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
     /**
      * Store the value in the database - called when an entity has changed
      *
-     * @param value The value to add
+     * @param value The value to append
      * @return True if the insertion was successful, or false if the value
      *         was not updated (e.g. because it is a running job)
      * @throws com.sleepycat.je.DatabaseException

@@ -136,7 +136,7 @@ def command_run_js(args):
 
 def command_update_jobs(args):
     server = getServer(args)
-    print "%d updated job(s)" % server.Server.updateJobs([])
+    print "%d updated job(s)" % server.Server.updateJobs("", False, [])
 
 
 def command_ls(args):

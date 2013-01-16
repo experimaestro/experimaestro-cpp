@@ -238,8 +238,6 @@ public class JSUtils {
      */
     public static void addFunction(Class<?> aClass, Scriptable scope, final String fname,
                                    Class<?>[] prototype) throws NoSuchMethodException {
-        if (prototype == null)
-            prototype = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
         final FunctionObject f = new FunctionObject(fname,
                 aClass.getMethod("js_" + fname, prototype), scope);
         ScriptableObject.putProperty(scope, fname, f);
@@ -251,5 +249,39 @@ public class JSUtils {
 
     public static int getInteger(Object object) {
         return (Integer) unwrap(object);
+    }
+
+    public static void addFunction(Scriptable scope, FunctionDefinition definition) throws NoSuchMethodException {
+        addFunction(definition.clazz, scope, definition.name, definition.arguments);
+    }
+
+    /**
+     * Defines a JavaScript function by refering a class, a name and its parameters
+     */
+    static public class FunctionDefinition {
+        Class<?> clazz;
+        String name;
+        Class<?>[] arguments;
+
+        public FunctionDefinition(Class<?> clazz, String name, Class<?>... arguments) {
+            this.clazz = clazz;
+            this.name = name;
+            if (arguments == null)
+                this.arguments = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
+            else
+                this.arguments = arguments;
+        }
+
+        public Class<?> getClazz() {
+            return clazz;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Class<?>[] getArguments() {
+            return arguments;
+        }
     }
 }

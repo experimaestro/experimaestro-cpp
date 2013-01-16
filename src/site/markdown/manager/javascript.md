@@ -115,6 +115,13 @@ The method `log(format, object, [object ...])` Returns to the caller a message u
 
 Log levels can be `trace`, `debug`, `info`, `warn`, `error` and `fatal`.
 
+# File
+
+   * `resolve(path)` resolve a path relative to this file
+   * `get_parent()` returns the parent directory of this File object
+   * `get_ancestor(level)` returns the File corresponding to the level<sup>th</sup> ancestors
+   * `path(name, ...)` returns the File corresponding to the subpath given by the list of names
+   * `mkdirs()` creates the directory and if necessary its ancestors
 
 # XPath handling
 

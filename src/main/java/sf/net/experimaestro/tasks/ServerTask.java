@@ -35,10 +35,7 @@ import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.server.ContentServlet;
-import sf.net.experimaestro.server.StatusServlet;
-import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.server.XPMXMLRpcServlet;
+import sf.net.experimaestro.server.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -148,6 +145,12 @@ public class ServerTask extends AbstractTask {
 
         context.addServlet(new ServletHolder(new TasksServlet(repositories,
                 taskManager)), "/tasks/*");
+
+
+        // --- Add the JS Help servlet
+
+        context.addServlet(new ServletHolder(new JSHelpServlet()), "/jshelp/*");
+
 
         // --- Add the default servlet
 

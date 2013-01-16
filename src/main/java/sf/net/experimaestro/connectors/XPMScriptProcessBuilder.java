@@ -24,6 +24,11 @@ import org.apache.commons.vfs2.FileObject;
  * An abstract class that allows building scripts in different scripting languages
  * (sh, etc.)
  *
+ * It differs from the {@linkplain XPMProcessBuilder} by the fact that
+ * {@linkplain #command(String...)} can be called several times. Each
+ * time it resets the redirection and append the command to the list of commands to
+ * be executed
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 10/9/12
  */
