@@ -198,6 +198,20 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
 
         }
 
+        switch (error.type()) {
+            case INHERIT:
+                break;
+            case APPEND:
+                commandBuilder.append(String.format(" 2>> %s", protect(connector.resolve(error.file()), QUOTED_SPECIAL)));
+                break;
+            case WRITE:
+                commandBuilder.append(String.format(" 2> %s", protect(connector.resolve(error.file()), QUOTED_SPECIAL)));
+                break;
+            default:
+                throw new UnsupportedOperationException("Unsupported error redirection type: " + input.type());
+
+        }
+
         commands.add(commandBuilder.toString());
 
         // Reset error, output and input

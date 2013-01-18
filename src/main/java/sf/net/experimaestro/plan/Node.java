@@ -23,10 +23,10 @@ import sf.net.experimaestro.utils.EmptyIterator;
 import java.util.Iterator;
 import java.util.Map;
 
-abstract public class Node implements Iterable<Map<String, String>> {
+abstract public class Node implements Iterable<Map<String, Value>> {
 	static final public Node EMPTY = new Node() {
 		@Override
-		public Iterator<Map<String, String>> iterator() {
+		public Iterator<Map<String, Value>> iterator() {
 			return EmptyIterator.create();
 		}
 	};

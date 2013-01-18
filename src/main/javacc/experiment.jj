@@ -47,9 +47,17 @@ TOKEN :
 | < COMMA : "," >
 | < OR : "|" >
 | < VARNAME : < LETTER > (< LETTERDIGITEXTRAS >)* >
-| < VALUE :  ([  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":", "/", "{", "}", "[", "]" ] | "\\,")+ >
+| < VALUE :  <VALUESTART> (<VALUESTART> | "\\{" )* >
+| < #VALUESTART: [  "a"-"z", "A"-"Z", "0"-"9", "_", "+", "-", ".", ":", "/", "}", "[", "]" ] | "\\," >
 | < #LETTER : [ "a"-"z", "A"-"Z" ] >
 | < #LETTERDIGITEXTRAS : [ "a"-"z", "A"-"Z", "0"-"9", "-", "_", "." ] >
+| < STARTSCRIPT : "{" > : SCRIPT
+}
+
+// Script tokens
+<SCRIPT> TOKEN : {
+    < ENDSCRIPT: "}" > : DEFAULT
+    | < SCRIPTTEXT : ("\\}" | ~["}"])* >
 }
 
 Node plan() : {
@@ -85,18 +93,25 @@ Node parenExpr() : { Node n = Node.EMPTY;}
 }
 	
 
-Var varExpr() : {Token t; String v; Var var = new Var(); }
+Var varExpr() : {Token t; Value v; Var var = new Var(); }
 {
-	   t=<VARNAME> { var.name = t.toString(); } <EQUAL> v=value() { var.values.add(v); } (<COMMA> v=value() { var.values.add(v); })*
+	   t=<VARNAME> { var.name = t.toString(); }
+	   <EQUAL> v=value() { var.values.add(v); }
+	   (<COMMA> v=value() { var.values.add(v); })*
 		   { return var; }
 }
 
-String value() : {Token t = null;}
+
+Value value() : {Token t = null;}
 {
+            <STARTSCRIPT> (t = <SCRIPTTEXT>) <ENDSCRIPT>
+            {
+                return new Value(true, t.toString().replaceAll("\\\\}","}"));
+            }
+        |
 		    (t=<VARNAME> | t=<VALUE>)?
 		    {
-		    if (t == null) return "";
-		    return t.toString().replaceAll("\\\\,",",");
+                return new Value(false, t == null ? "" : t.toString().replaceAll("\\\\,",","));
 		    }
 }
 

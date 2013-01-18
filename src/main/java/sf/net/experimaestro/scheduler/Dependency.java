@@ -30,17 +30,17 @@ public class Dependency {
     public static final String FROM_KEY_NAME = "from";
     public static final String TO_KEY_NAME = "to";
 
-    /**
-     * The resource
-     */
     @PrimaryKey(sequence = "dependency_id")
     long id;
 
+    /**
+     * The resource
+     */
     @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE)
     ResourceLocator from;
 
     /**
-     * The pointed resource
+     * The resource that depends on the resource {@link #from}
      */
     @SecondaryKey(name = TO_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.CASCADE)
     ResourceLocator to;

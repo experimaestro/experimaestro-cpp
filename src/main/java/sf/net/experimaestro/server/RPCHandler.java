@@ -125,6 +125,43 @@ public class RPCHandler {
         return nbUpdated;
     }
 
+    @RPCHelp("Invalidate an already run job. Returns the number of affected jobs.")
+    public int invalidateJob(
+            @RPCHelp("The name of the job") String name,
+            @RPCHelp("Whether we should invalidate dependent results") boolean recursive
+    ) throws Exception {
+        int nbUpdated = 0;
+        Resource resource = scheduler.getResource(ResourceLocator.parse(name));
+        if (resource == null)
+            throw new ExperimaestroRuntimeException("Job not found [%s]", name);
+        if (resource.getState() != ResourceState.DONE)
+            throw new ExperimaestroRuntimeException("Job is not done [%s]", resource.getState());
+
+        resource.invalidate();
+        nbUpdated++;
+
+        if (recursive) {
+            for(Dependency dependency: scheduler.getDependentResources(resource.getLocator()).values()) {
+                final ResourceLocator to = dependency.getTo();
+                LOGGER.info("Invalidating %s", to);
+                resource = scheduler.getResource(to);
+                switch(resource.getState()) {
+                    case RUNNING:
+                        ((Job)resource).stop();
+                        nbUpdated++;
+                        break;
+                    case DONE :
+                        resource.invalidate();
+                        nbUpdated++;
+                        break;
+                }
+            }
+        }
+
+        return nbUpdated;
+    }
+
+
     private EnumSet<ResourceState> getStates(Object[] states) {
         final EnumSet<ResourceState> statesSet;
 
@@ -307,7 +344,7 @@ public class RPCHandler {
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try(Cleaner cleaner = new Cleaner()) {
+        try (Cleaner cleaner = new Cleaner()) {
             Context jsContext = Context
                     .enter();
 

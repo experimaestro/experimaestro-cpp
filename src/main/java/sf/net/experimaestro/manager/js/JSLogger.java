@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -43,57 +42,28 @@ public class JSLogger extends JSObject {
         logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
-    public void jsConstructor(Scriptable _xpm, String name) {
-        xpm = (XPMObject) ((NativeJavaObject) _xpm).unwrap();
-        logger = Logger.getLogger(xpm.loggerRepository, name);
-    }
-
-
-    @JSFunction("trace")
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_trace(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.TRACE, cx, thisObj, args, funObj);
+    public void trace(String format, Object... objects) {
+        logger.trace(Lazy.format(format, objects));
     }
 
     public void debug(String format, Object... objects) {
-        logger.info(Lazy.format(format, objects));
+        logger.debug(Lazy.format(format, objects));
     }
 
     public void info(String format, Object... objects) {
         logger.info(Lazy.format(format, objects));
     }
 
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_warn(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.WARN, cx, thisObj, args, funObj);
+    public void warn(String format, Object... objects) {
+        logger.warn(Lazy.format(format, objects));
     }
 
-    @JSFunction("error")
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_error(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.ERROR, cx, thisObj, args, funObj);
+    public void error(String format, Object... objects) {
+        logger.error(Lazy.format(format, objects));
     }
 
-    @JSFunction("fatal")
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_fatal(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.FATAL, cx, thisObj, args, funObj);
+    public void fatal(String format, Object... objects) {
+        logger.fatal(Lazy.format(format, objects));
     }
 
     @JSFunction("create")

@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import com.google.common.collect.ImmutableList;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
@@ -25,15 +26,15 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Task factory as seen by JavaScript
+ * Task as seen by JavaScript
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -63,22 +64,43 @@ public class TaskJSWrapper extends ScriptableObject {
      */
     @JSFunction(value = "run")
     static public Object run(Context cx, Scriptable thisObj,
-                      Object[] args, Function funObj) throws ParseException {
+                             Object[] args, Function funObj) throws Exception {
+        List<Document> result = run(thisObj, args, true);
+        assert result.size() == 1;
+        return wrap(result, thisObj).get(0);
+
+    }
+
+    private static List<Object> wrap(List<Document> result, Scriptable scope) {
+        ArrayList list = new ArrayList();
+        for (Document document : result) {
+            list.add(JSUtils.domToE4X(document, Context.getCurrentContext(), scope));
+        }
+        return list;
+    }
+
+    @JSFunction(value = "run_plan")
+    static public Object run_plan(Context cx, Scriptable thisObj,
+                                  Object[] args, Function funObj) throws Exception {
+        return wrap(run(thisObj, args, false), thisObj);
+    }
+
+
+    private static List<Document> run(Scriptable thisObj, Object[] args, boolean singlePlan) throws Exception {
         final TaskJSWrapper wrapper = (TaskJSWrapper) thisObj;
 
         if (args.length == 0)
-            return JSUtils.domToE4X(wrapper.getTask().run(), Context.getCurrentContext(),
-                    wrapper);
+            return ImmutableList.of(wrapper.getTask().run());
 
         if (args.length == 1) {
             final String planString = Context.toString(args[0]);
-            final List<Document> documents = wrapper.getTask().runPlan(planString, true);
-            return JSUtils.domToE4X(documents.get(0), Context.getCurrentContext(),
-                    wrapper);
+            final List<Document> documents = wrapper.getTask().runPlan(planString, singlePlan, new JSScriptRunner(thisObj));
+            return documents;
         }
 
         throw new IllegalArgumentException("run() method expects zero or one argument");
     }
+
 
     /**
      * Just a short hand for setParameter
@@ -90,21 +112,11 @@ public class TaskJSWrapper extends ScriptableObject {
         jsFunction_setParameter(_id, value);
     }
 
-    /**
-     * Run an experimental plan
-     *
-     * @param plan
-     * @throws ParseException
-     */
-    public List<Document> jsFunction_run_plan(String plan) throws ParseException {
-        final List<Document> documents = task.runPlan(plan, false);
-        return documents;
-    }
 
     /**
      * Set a parameter
      *
-     * @param _id The ID of the parameter
+     * @param _id   The ID of the parameter
      * @param value
      */
     public void jsFunction_setParameter(String _id, Scriptable value) {
@@ -124,16 +136,21 @@ public class TaskJSWrapper extends ScriptableObject {
         } else if (JSUtils.isXML(value)) {
             LOGGER.debug("Value is JS XML");
             Document document = XMLUtils.newDocument();
-            Node node = ((Node)JSUtils.toDOM(value)).cloneNode(true);
-            document.adoptNode(node);
-            document.appendChild(node);
-            getTask().setParameter(id, document);
+            Node node = ((Node) JSUtils.toDOM(value)).cloneNode(true);
+            if (node.getNodeType() == Node.ATTRIBUTE_NODE)
+                getTask().setParameter(id, node.getNodeValue());
+            else {
+                document.adoptNode(node);
+                document.appendChild(node);
+                getTask().setParameter(id, document);
+            }
         } else {
             LOGGER.debug("Value will be converted to string [%s/%s]",
                     value.getClassName(), value.getClass());
-            getTask().setParameter(id, value.toString());
+            getTask().setParameter(id, JSUtils.toString(value));
         }
     }
+
 
     public Task getTask() {
         return task;

@@ -208,11 +208,20 @@ public abstract class Resource implements Comparable<Resource> {
      * <p/>
      * Calls {@linkplain #doUpdateStatus()}. If a change is detected, then it updates
      * the representation of the resource in the database by calling {@linkplain Scheduler#store(Resource, boolean)}.
+     *
+     * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus(boolean store) throws Exception {
-        boolean changed = doUpdateStatus();
-        if (changed && store)
+    final public boolean updateStatus(boolean store) {
+        boolean changed;
+        try {
+            changed = doUpdateStatus();
+        } catch (Exception e) {
+            state = ResourceState.ON_HOLD;
+            changed = true;
+        }
+        if (changed && store) {
             scheduler.store(this, false);
+        }
         return changed;
     }
 
@@ -447,6 +456,17 @@ public abstract class Resource implements Comparable<Resource> {
 
     public boolean retrievedDependencies() {
         return dependencies != null;
+    }
+
+    synchronized public void invalidate() throws Exception {
+        if (state == ResourceState.DONE) {
+            state = ResourceState.WAITING;
+            final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
+            if (doneFile.exists())
+                doneFile.delete();
+            updateStatus(false);
+            scheduler.store(this, false);
+        }
     }
 
     /**

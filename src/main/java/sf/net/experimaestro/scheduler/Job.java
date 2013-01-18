@@ -154,8 +154,14 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
       *
       * @see java.lang.Runnable#run()
       */
-    final public void run() {
-        ArrayList<Lock> locks = new ArrayList<Lock>();
+    synchronized final public void run() {
+        // First, update our state
+        if (updateStatus(true)) {
+
+        }
+
+
+        ArrayList<Lock> locks = new ArrayList<>();
 
         try {
             while (true) {

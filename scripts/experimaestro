@@ -159,6 +159,10 @@ def command_list_methods(args):
 def command_information(args):
     server = getServer(args)
     print server.Server.getResourceInformation(args.resourceId[0])
+    
+def command_invalidate(args):
+    server = getServer(args)
+    print server.Server.invalidateJob(args.resourceId[0], args.recursive)
 
 # --- Run command
 
@@ -175,13 +179,11 @@ parser.add_argument("--config", dest="config", default="~/.experimaestro", actio
                     help="Experimaestro configuration file")
 
 subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
-subparser.set_defaults(func=command_server_start)
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
-p_run_js.set_defaults(func=command_run_js)
 p_run_js.add_argument('files', nargs='*', help='')
 
 subparsers.add_parser("update-jobs", help="Update jobs")
@@ -190,6 +192,10 @@ p_ls = subparsers.add_parser("ls", help="List jobs")
 p_ls.add_argument('group', nargs='?', help="The group to list", default="")
 
 subparsers.add_parser("list-methods", help="List XML-RPC methods")
+
+p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
+p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help = "Should dependent resources be invalidated?")
+p_invalidate.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')

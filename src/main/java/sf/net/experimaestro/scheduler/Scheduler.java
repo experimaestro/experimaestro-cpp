@@ -191,8 +191,12 @@ public class Scheduler {
         resources.delete(resource.getLocator());
     }
 
-    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator locator) {
-        return resources.retrieveDependencies(locator);
+    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
+        return resources.retrieveDependencies(to);
+    }
+
+    public TreeMap<ResourceLocator, Dependency> getDependentResources(ResourceLocator from) {
+        return resources.retrieveDependencies(from);
     }
 
 
@@ -344,7 +348,7 @@ public class Scheduler {
      *
      * @throws DatabaseException
      */
-    synchronized public Resource getResource(ResourceLocator id)
+    public Resource getResource(ResourceLocator id)
             throws DatabaseException {
         Resource resource = resources.get(id);
         return resource;
@@ -367,9 +371,8 @@ public class Scheduler {
                     LOGGER.debug(
                             "Fetched task %s: checking for execution [%d unsatisfied]",
                             task, task.nbUnsatisfied);
-                    if (task.nbUnsatisfied == 0) {
-                        return readyJobs.pop();
-                    }
+                    final Job pop = readyJobs.pop();
+                    return pop;
                 }
 
                 // ... and wait if we were not lucky (or there were no tasks)
@@ -387,7 +390,7 @@ public class Scheduler {
     /**
      * Iterator on resources
      */
-    synchronized public Iterable<Resource> resources() {
+    public Iterable<Resource> resources() {
         return resources;
     }
 
@@ -399,8 +402,8 @@ public class Scheduler {
      * Store a resource in the database
      *
      * @param resource
-     * @param full true if we should store all the resource information (everything not related to the
-     *             state of the resource)
+     * @param full     true if we should store all the resource information (everything not related to the
+     *                 state of the resource)
      * @throws DatabaseException
      */
     synchronized public void store(Resource resource, boolean full) throws DatabaseException {
@@ -417,10 +420,10 @@ public class Scheduler {
                 txn.abort();
             else
                 txn.commit();
-        } catch(RuntimeException e) {
+        } catch (RuntimeException e) {
             txn.abort();
             throw e;
-        } catch(Throwable e) {
+        } catch (Throwable e) {
             txn.abort();
             throw e;
         }

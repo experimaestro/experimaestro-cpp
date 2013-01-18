@@ -412,16 +412,16 @@ public abstract class Task {
      * @param singlePlan If the plan should be composed of only one plan
      * @throws ParseException
      */
-    public List<Document> runPlan(String planString, boolean singlePlan) throws ParseException {
+        public List<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
         PlanParser planParser = new PlanParser(new StringReader(planString));
         sf.net.experimaestro.plan.Node plans = planParser.plan();
-        final Iterator<Map<String, String>> iterator = plans.iterator();
+        final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
 
         ArrayList<Document> results = new ArrayList<>();
 
         LOGGER.info("Plan is %s", plans.toString());
         while (iterator.hasNext()) {
-            Map<String, String> plan = iterator.next();
+            Map<String, sf.net.experimaestro.plan.Value> plan = iterator.next();
             if (singlePlan && iterator.hasNext()) {
                 throw new ParseException("Plan has several parameter settings");
             }
@@ -433,8 +433,21 @@ public abstract class Task {
             Task task = copy();
 
             // Set the parameters
-            for (Map.Entry<String, String> kv : plan.entrySet())
-                task.setParameter(DotName.parse(kv.getKey()), kv.getValue());
+            for (Entry<String, sf.net.experimaestro.plan.Value> kv : plan.entrySet()) {
+                final sf.net.experimaestro.plan.Value value = kv.getValue();
+                String text = value.getValue();
+                final DotName name = DotName.parse(kv.getKey());
+                if (value.isScript()) {
+                    if (runner == null)
+                        throw new ExperimaestroRuntimeException("Could not run the script [%s]", text);
+                    final Object result = runner.evaluate(text);
+                    if (result instanceof Document)
+                        task.setParameter(name, (Document)result);
+                    else
+                        task.setParameter(name, result.toString());
+                } else
+                    task.setParameter(name, text);
+            }
 
             // and run
             results.add(task.run());

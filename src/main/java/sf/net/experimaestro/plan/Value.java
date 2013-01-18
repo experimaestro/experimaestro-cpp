@@ -18,33 +18,26 @@
 
 package sf.net.experimaestro.plan;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableMap;
-import sf.net.experimaestro.utils.Output;
+public class Value  {
+    boolean script;
+	String value;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
+    public Value(boolean script, String value) {
+        this.script = script;
+        this.value = value;
+    }
 
-public class Var extends Node {
-	String name;
-	ArrayList<Value> values = new ArrayList<>();
-
-	public String toString() {
-		return String.format("%s=[%s]", name, Output.toString("],[", values));
+    public String toString() {
+        if (script)
+            return String.format("{%s}", value);
+		return value;
 	}
 
-	@Override
-	public Iterator<Map<String, Value>> iterator() {
+    public boolean isScript() {
+        return script;
+    }
 
-		return new AbstractIterator<Map<String, Value>>() {
-			Iterator<Value> it = values.iterator();
-			@Override
-			protected Map<String, Value> computeNext() {
-				if (!it.hasNext())
-					return endOfData();
-                return ImmutableMap.of(name, it.next());
-			}
-		};
-	}
+    public String getValue() {
+        return value;
+    }
 }

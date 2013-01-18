@@ -50,6 +50,8 @@ public class JSTask extends JSAbstractTask {
 	public JSTask() {
 	}
 
+
+
 	/**
 	 * Initialise a new task from a JavaScript object
 	 * 

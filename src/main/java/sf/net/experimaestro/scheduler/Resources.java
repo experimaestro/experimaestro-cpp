@@ -245,9 +245,27 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     }
 
 
-    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator locator) {
+    /**
+     * Retrieves resources on which the given resource depends
+     * @param to The resource
+     * @return
+     */
+    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
+        return getDependencies(to, dependenciesTo);
+    }
+    /**
+     * Retrieves resources on that depend upon the given resource depends
+     * @param from The resource
+     * @return
+     */
+    public TreeMap<ResourceLocator, Dependency> retrieveDependentResources(ResourceLocator from) {
+        return getDependencies(from, dependenciesFrom);
+    }
+
+
+    private TreeMap<ResourceLocator, Dependency> getDependencies(ResourceLocator to, SecondaryIndex<ResourceLocator, Long, Dependency> index) {
         TreeMap<ResourceLocator, Dependency> deps = new TreeMap<>();
-        try (final EntityCursor<Dependency> entities = dependenciesTo.entities(locator, true, locator, true)) {
+        try (final EntityCursor<Dependency> entities = index.entities(to, true, to, true)) {
             for (Dependency dependency : entities)
                 deps.put(dependency.getFrom(), dependency);
         }

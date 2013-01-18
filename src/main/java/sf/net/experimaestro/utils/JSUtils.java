@@ -194,7 +194,7 @@ public class JSUtils {
      * @return
      */
     public static Document toDocument(Object object, QName wrapName) {
-        Node dom = (Node) toDOM(object);
+        final Node dom = (Node) toDOM(object);
 
         if (dom instanceof Document)
             return (Document) dom;
@@ -202,7 +202,26 @@ public class JSUtils {
         Document document = XMLUtils.newDocument();
 
         // Add a new root element if needed
-        NodeList childNodes = dom.getChildNodes();
+        NodeList childNodes;
+
+
+        if (dom.getNodeType() == Node.ELEMENT_NODE) {
+            childNodes = new NodeList() {
+                @Override
+                public Node item(int index) {
+                    if (index == 0)
+                        return dom;
+                    throw new IndexOutOfBoundsException(Integer.toString(index) + " out of bounds");
+                }
+
+                @Override
+                public int getLength() {
+                    return 1;
+                }
+            };
+        } else
+            childNodes = dom.getChildNodes();
+
         int elementCount = 0;
         for (int i = 0; i < childNodes.getLength(); i++)
             if (childNodes.item(i).getNodeType() == Node.ELEMENT_NODE)

@@ -88,7 +88,6 @@ public class JSFileObject extends JSObject {
         for (int i = 0; i < args.length; i++) {
             String name = Context.toString(args[i]);
             current = current.resolveFile(name);
-            System.err.format("File is now [%s]%n", current);
         }
 
         return new JSFileObject(xpm, current);

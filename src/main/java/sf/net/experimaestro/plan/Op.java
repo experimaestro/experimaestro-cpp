@@ -18,13 +18,13 @@
 
 package sf.net.experimaestro.plan;
 
-import bpiwowar.argparser.GenericHelper;
+import com.google.common.collect.AbstractIterator;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.IteratorSequence;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class Op extends Node {
 	Node n1, n2;
@@ -41,33 +41,34 @@ public class Op extends Node {
 	}
 
 	@Override
-	public Iterator<Map<String, String>> iterator() {
+	public Iterator<Map<String, Value>> iterator() {
 		switch (type) {
 		case OR: {
 			@SuppressWarnings("unchecked")
-			IteratorSequence<Map<String, String>> a = new IteratorSequence<Map<String, String>>(
+			IteratorSequence<Map<String, Value>> a = new IteratorSequence<>(
 					n1.iterator(), n2.iterator());
 			return a;
 		}
 		
 		case MULT: {
 			@SuppressWarnings({ "unchecked", "rawtypes" })
-			final CartesianProduct<Map<String, String>> p = new CartesianProduct(
+			final CartesianProduct<Map<String, Value>> p = new CartesianProduct(
 					Map.class, true, n1, n2);
-			return new AbstractIterator<Map<String, String>>() {
-				Iterator<Map<String, String>[]> iterator = p.iterator();
+			return new AbstractIterator<Map<String, Value>>() {
+				Iterator<Map<String, Value>[]> iterator = p.iterator();
 
 				@Override
-				protected boolean storeNext() {
+				protected Map<String, Value> computeNext() {
 					if (iterator.hasNext()) {
-						Map<String, String>[] values = iterator.next();
-						value = GenericHelper.newTreeMap();
-						for (Map<String, String> v : values) {
-							value.putAll(v);
+						Map<String, Value>[] values = iterator.next();
+                        Map<String, Value> map = new TreeMap<>();
+						for (Map<String, Value> v : values) {
+							map.putAll(v);
 						}
-						return true;
+						return map;
 					}
-					return false;
+
+					return endOfData();
 				}
 			};
 

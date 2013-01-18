@@ -37,13 +37,10 @@ import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.plan.ParseException;
-import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -624,38 +621,6 @@ public class XPMObject {
     public String xmlToString(Node node) {
         return XMLUtils.toString(node);
     }
-
-    /**
-     * Execute an experimental plan
-     *
-     * @throws ParseException If the plan is not readable
-     */
-    public Object experiment(QName qname, String planString)
-            throws ParseException {
-        // Get the task
-        TaskFactory taskFactory = repository.getFactory(qname);
-        if (taskFactory == null)
-            throw new ExperimaestroRuntimeException("No task factory with id [%s]",
-                    qname);
-
-        // Parse the plan
-
-        PlanParser planParser = new PlanParser(new StringReader(planString));
-        sf.net.experimaestro.plan.Node plans = planParser.plan();
-        LOGGER.info("Plan is %s", plans.toString());
-        for (Map<String, String> plan : plans) {
-            // Run a plan
-            LOGGER.info("Running plan: %s",
-                    Output.toString(" * ", plan.entrySet()));
-            Task task = taskFactory.create();
-            for (Map.Entry<String, String> kv : plan.entrySet())
-                task.setParameter(DotName.parse(kv.getKey()), kv.getValue());
-            task.run();
-        }
-        return null;
-    }
-
-
 
 
     /**
