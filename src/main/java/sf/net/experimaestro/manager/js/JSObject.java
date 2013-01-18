@@ -42,14 +42,14 @@ public abstract class JSObject  {
 
     public static void defineClass(Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         // If not a JSObject descendent, we handle this with standard JS procedure
-        if (!JSObject.class.isAssignableFrom(aClass))
-            ScriptableObject.defineClass(scope, aClass);
-        else {
+        if (JSObject.class.isAssignableFrom(aClass) || JSBaseObject.class.isAssignableFrom(aClass)) {
             // Use our own constructor
             final String name = getClassName(aClass);
             scope = ScriptableObject.getTopLevelScope(scope);
             final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(scope, aClass);
             scope.put(name, scope, nativeJavaClass);
+        } else {
+            ScriptableObject.defineClass(scope, aClass);
         }
     }
 
