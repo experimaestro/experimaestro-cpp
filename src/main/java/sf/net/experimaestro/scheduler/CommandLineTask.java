@@ -27,7 +27,10 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
 
@@ -76,6 +79,11 @@ public class CommandLineTask extends Job {
      */
     private String jobOutputPath;
 
+    /**
+     * Path for job error stream
+     */
+    private String jobErrorPath;
+
     protected CommandLineTask() {
     }
 
@@ -107,10 +115,10 @@ public class CommandLineTask extends Job {
     /**
      * New command line task
      *
-     * @param scheduler The scheduler
-     * @param connector The connector
+     * @param scheduler  The scheduler
+     * @param connector  The connector
      * @param identifier The resource identifier
-     * @param command The command to run
+     * @param command    The command to run
      */
     public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
                            CommandArguments command) {
@@ -163,6 +171,12 @@ public class CommandLineTask extends Job {
         else
             builder.redirectOutput(XPMProcessBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
 
+        // Redirect output & error streams into corresponding files
+        if (jobErrorPath != null)
+            builder.redirectError(XPMProcessBuilder.Redirect.to(getMainConnector().resolveFile(jobErrorPath)));
+        else
+            builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
+
         builder.redirectInput(jobInput);
 
         // Add commands
@@ -170,8 +184,6 @@ public class CommandLineTask extends Job {
         builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
         builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
         builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
-        // Redirect output & error streams into corresponding files
-        builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         // Start
         return builder.start();
@@ -196,5 +208,9 @@ public class CommandLineTask extends Job {
 
     public void setOutput(FileObject fileObject) {
         this.jobOutputPath = fileObject.toString();
+    }
+
+    public void setError(FileObject fileObject) {
+        this.jobErrorPath = fileObject.toString();
     }
 }

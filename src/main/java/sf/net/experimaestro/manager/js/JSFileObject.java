@@ -21,47 +21,26 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.annotations.JSFunction;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.JSUtils;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSObject implements Wrapper {
+public class JSFileObject extends JSObject {
 
     public static final String JSCLASSNAME = "FileObject";
-    private FileObject file;
+    FileObject file;
+    private XPMObject xpm;
 
-    public JSFileObject() {}
+    public JSFileObject() {
+    }
 
-    public JSFileObject(FileObject file) {
+    public JSFileObject(XPMObject xpm, FileObject file) {
+        this.xpm = xpm;
         this.file = file;
-    }
-
-    public void jsConstructor(Object file) throws FileSystemException {
-        final Object unwrap = JSUtils.unwrap(file);
-        if (unwrap instanceof FileObject) {
-            this.file = (FileObject) unwrap;
-        } else {
-            final String s = JSUtils.toString(unwrap);
-            this.file = Scheduler.getVFSManager().resolveFile(s);
-        }
-    }
-
-
-    @Override
-    public FileObject unwrap() {
-        return file;
     }
 
     @Override
@@ -76,61 +55,43 @@ public class JSFileObject extends JSObject implements Wrapper {
     }
 
 
-    @JSFunction("get_parent")
     @JSHelp(value = "Get the parent file object")
-    public static Scriptable getParent(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        if (args.length != 0)
-            throw new IllegalArgumentException("Expected no argument for FileObject.getAncestor - got " + args.length );
-        return getAncestor(cx, thisObj, 1);
+    public JSFileObject get_parent() throws FileSystemException {
+        return get_ancestor(0);
     }
 
     @JSFunction("resolve")
-    public static Scriptable resolve(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        if (args.length != 1)
-            throw new IllegalArgumentException("Expected one argument for FileObject.resolve- got " + args.length);
-
-        FileObject file = ((JSFileObject)thisObj).file;
-        final String path = JSUtils.toString(args[0]);
-        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file.resolveFile(path) } );
+    public JSFileObject resolve(String path) throws FileSystemException {
+        return new JSFileObject(xpm, file.resolveFile(path));
     }
 
-    @JSFunction("get_ancestor")
     @JSHelp(value = "Get the n<sup>th</sup> ancestor of this file object",
-            arguments = @JSArguments(@JSArgument(type="Integer",name="levels")))
-    static public Scriptable getAncestor(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        if (args.length != 1)
-            throw new IllegalArgumentException("Expected one argument for FileObject.getAncestor - got " + args.length);
-
-        int level = JSUtils.getInteger(args[0]);
+            arguments = @JSArguments(@JSArgument(type = "Integer", name = "levels")))
+    public JSFileObject get_ancestor(int level) throws FileSystemException {
         if (level < 0)
             throw new IllegalArgumentException("Level is negative (" + level + ")");
 
-        return getAncestor(cx, thisObj, level);
-    }
-
-    static private Scriptable getAncestor(Context cx, Scriptable thisObj, int level) throws FileSystemException {
-        FileObject file = ((JSFileObject)thisObj).file;
+        FileObject ancestor = this.file;
         while (--level >= 0)
-            file = file.getParent();
+            ancestor = ancestor.getParent();
 
-        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
+        return new JSFileObject(xpm, ancestor);
     }
+
 
     @JSFunction("path")
     @JSHelp(value = "Returns a file object corresponding to the path given in the arguments. " +
             "Each name given corresponds to a new path component starting from this file object.",
-            arguments = @JSArguments({@JSArgument(type="String", name="name"), @JSArgument(name="...")}))
-    static public Scriptable path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        final JSFileObject _this = (JSFileObject) thisObj;
-
-        FileObject file = _this.file;
+            arguments = @JSArguments({@JSArgument(type = "String", name = "name"), @JSArgument(name = "...")}))
+    public JSFileObject path(String... args) throws FileSystemException {
+        FileObject current = file;
         for (int i = 0; i < args.length; i++) {
             String name = Context.toString(args[i]);
-            file = file.resolveFile(name);
-            System.err.format("File is now [%s]%n", file);
+            current = current.resolveFile(name);
+            System.err.format("File is now [%s]%n", current);
         }
 
-        return cx.newObject(thisObj, JSCLASSNAME, new Object[] { file } );
+        return new JSFileObject(xpm, current);
     }
 
     @JSFunction("mkdirs")
@@ -151,23 +112,46 @@ public class JSFileObject extends JSObject implements Wrapper {
         return file.getContent().getSize();
     }
 
-    @JSFunction("output_stream")
-    @JSArguments({})
-    static public PrintWriter output_stream(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        final JSFileObject _this = (JSFileObject) thisObj;
-        final XPMObject xpm = ((XPMObject.JSInstance)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
-        final OutputStream output = _this.file.getContent().getOutputStream();
-        xpm.register(output);
-        return new PrintWriter(output);
+    static class MyPrintWriter extends PrintWriter {
+        final XPMObject xpm;
+
+        public MyPrintWriter(XPMObject xpm, OutputStream out) {
+            super(out);
+            this.xpm = xpm;
+            xpm.register(this);
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            xpm.unregister(this);
+        }
     }
 
-    @JSFunction("input_stream")
-    @JSArguments({})
-    static public BufferedReader input_stream(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        final JSFileObject _this = (JSFileObject) thisObj;
-        final XPMObject xpm = ((XPMObject.JSInstance)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(_this.file.getContent().getInputStream()));
-        xpm.register(reader);
+    public PrintWriter output_stream() throws FileSystemException {
+        final OutputStream output = file.getContent().getOutputStream();
+        final PrintWriter writer = new MyPrintWriter(xpm, output);
+        return writer;
+    }
+
+    static class MyInputStreamReader extends InputStreamReader {
+        final XPMObject xpm;
+
+        public MyInputStreamReader(XPMObject xpm, InputStream in) {
+            super(in);
+            this.xpm = xpm;
+            xpm.register(this);
+        }
+
+        @Override
+        public void close() throws IOException {
+            super.close();
+            xpm.unregister(this);
+        }
+    }
+
+    public BufferedReader input_stream() throws FileSystemException {
+        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm, file.getContent().getInputStream()));
         return reader;
     }
 

@@ -63,4 +63,13 @@ public abstract class XPMServlet extends HttpServlet {
         return out;
     }
 
+    static void header(PrintWriter out, String title) {
+        out.format("<html><head><title>Experimaestro - %s</title>" +
+                "<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/style.css\">\n" +
+                "</head>%n" +
+                "<body>%n" +
+                "<div class='header'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div>",
+                escapeHtml(title));
+
+    }
 }

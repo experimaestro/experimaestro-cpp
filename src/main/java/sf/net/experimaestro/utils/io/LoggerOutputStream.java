@@ -179,7 +179,7 @@ public class LoggerOutputStream extends OutputStream {
      */
     public void flush() {
         // Remove trailing end-lines
-        while (count >= 0)
+        while (count > 0)
             if (buf[count - 1] == '\n' || buf[count - 1] == '\r')
                 count--;
             else

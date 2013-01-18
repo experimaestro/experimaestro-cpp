@@ -19,6 +19,13 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Element;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import static java.lang.String.format;
 
@@ -28,7 +35,9 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class QName implements Comparable<QName> {
-	/**
+    final static private Logger LOGGER = Logger.getLogger();
+
+    /**
 	 * The URI
 	 */
 	String uri;
@@ -48,7 +57,68 @@ public class QName implements Comparable<QName> {
 		this.localName = localName;
 	}
 
-	@Override
+    /**
+     * Matches the following qualified name formats
+     * <ul>
+     * <li>localName</li>
+     * <li>{namespace}name</li>
+     * <li>prefix:name</li>
+     * </ul>
+     */
+    final static Pattern QNAME_PATTERN;
+
+    static {
+        try {
+            // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
+            QNAME_PATTERN =
+                    Pattern
+                    .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
+        } catch (PatternSyntaxException e) {
+            LOGGER.error("Could not initialise the pattern: %s", e);
+            throw e;
+        }
+    }
+    /**
+     * Parse a QName from a string following this format:
+     * <ul>
+     * <li>localName</li>
+     * <li>{namespace}name</li>
+     * <li>prefix:name</li>
+     * </ul>
+     *
+     * @param qname A qualified name string
+     * @return
+     */
+    public static QName parse(String qname, Element context,
+                              Map<String, String> prefixes) {
+        Matcher matcher = QNAME_PATTERN.matcher(qname);
+        if (!matcher.matches())
+            throw new ExperimaestroRuntimeException("Type [%s] is not a valid type: expected name, {uri}name, " +
+                    "or prefix:name",
+                    qname);
+
+        String url = matcher.group(1);
+        String prefix = matcher.group(2);
+        if (prefix != null) {
+            url = context != null ? context.lookupNamespaceURI(prefix) : null;
+            if (url == null && prefixes != null)
+                url = prefixes.get(prefix);
+            if (url == null)
+                throw new ExperimaestroRuntimeException(
+                        "Type [%s] is not a valid type: namespace prefix [%s] not bound",
+                        qname, prefix);
+        }
+
+        String name = matcher.group(3);
+        LOGGER.debug("[%s] parsed as %s", qname, new QName(url, name));
+        return new QName(url, name);
+    }
+
+    public static QName parse(String qname) {
+        return parse(qname, null, null);
+    }
+
+    @Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;

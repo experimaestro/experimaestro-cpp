@@ -38,10 +38,8 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -113,63 +111,7 @@ public class XMLUtils {
         }
     }
 
-    /**
-     * Matches the following qualified name formats
-     * <ul>
-     * <li>localName</li>
-     * <li>{namespace}name</li>
-     * <li>prefix:name</li>
-     * </ul>
-     */
-    final static Pattern QNAME_PATTERN;
 
-    static {
-        try {
-            // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
-            QNAME_PATTERN = Pattern
-                    .compile("(?:\\{(\\w(?:\\w|[\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
-        } catch (PatternSyntaxException e) {
-            LOGGER.error("Could not initialise the pattern: %s", e);
-            throw e;
-        }
-    }
-
-    /**
-     * Parse a QName from a string following this format:
-     * <ul>
-     * <li>localName</li>
-     * <li>{namespace}name</li>
-     * <li>prefix:name</li>
-     * </ul>
-     *
-     * @param qname A qualified name string
-     * @return
-     */
-    public static QName parseQName(String qname, Element context,
-                                   Map<String, String> prefixes) {
-        Matcher matcher = QNAME_PATTERN.matcher(qname);
-        if (!matcher.matches())
-            throw new ExperimaestroRuntimeException("Type [%s] is not a valid type: expected name, {uri}name, " +
-                    "or prefix:name",
-                    qname);
-
-        String url = matcher.group(1);
-        String prefix = matcher.group(2);
-        if (prefix != null) {
-            url = context.lookupNamespaceURI(prefix);
-            if (url == null && prefixes != null)
-                url = prefixes.get(prefix);
-            if (url == null)
-                throw new ExperimaestroRuntimeException(
-                        "Type [%s] is not a valid type: namespace prefix [%s] not bound",
-                        qname, prefix);
-        }
-
-        String name = matcher.group(3);
-        LOGGER.debug("[%s] parsed as %s", qname, new QName(url, name));
-        return new QName(url, name);
-
-    }
 
     /**
      * Finds a child with a given qualified name

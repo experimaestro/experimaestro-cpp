@@ -18,10 +18,10 @@
 
 package sf.net.experimaestro.manager;
 
-import com.sun.org.apache.xerces.internal.impl.xs.XSElementDecl;
-import com.sun.org.apache.xerces.internal.xs.XSConstants;
-import com.sun.org.apache.xerces.internal.xs.XSModel;
-import com.sun.org.apache.xerces.internal.xs.XSNamedMap;
+import org.apache.xerces.impl.xs.XSElementDecl;
+import org.apache.xerces.xs.XSConstants;
+import org.apache.xerces.xs.XSModel;
+import org.apache.xerces.xs.XSNamedMap;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -156,10 +156,10 @@ public class Repository extends AbstractRepository {
 	public void addSchema(Module module, XSModel xsModel) {
 		// Add the schema to the module
 		module.addSchema(xsModel);
-		
+
 		// Add the different elements
-		XSNamedMap components = xsModel
-		.getComponents(XSConstants.ELEMENT_DECLARATION);
+		XSNamedMap components = xsModel.getComponents(XSConstants.ELEMENT_DECLARATION);
+
 		for (int i = 0; i < components.getLength(); i++) {
 			final XSElementDecl item = (XSElementDecl) components.item(i);
 			QName qName = new QName(item.getNamespace(), item.getName());

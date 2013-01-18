@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager;
 
-import com.sun.org.apache.xerces.internal.xs.XSModel;
+import org.apache.xerces.xs.XSModel;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
@@ -54,17 +54,17 @@ public class Module implements Comparable<Module> {
 	/**
 	 * The list of submodules
 	 */
-	ArrayList<Module> submodules = new ArrayList<Module>();
+	ArrayList<Module> submodules = new ArrayList<>();
 
 	/**
 	 * List of tasks
 	 */
-	ArrayList<TaskFactory> factories = new ArrayList<TaskFactory>();
+	ArrayList<TaskFactory> factories = new ArrayList<>();
 
 	/**
 	 * List of XML Schemas
 	 */
-	ArrayList<XSModel> xsModels = new ArrayList<XSModel>();
+	ArrayList<XSModel> xsModels = new ArrayList<>();
 
     /**
      * Map of namespaces to prefixes
@@ -120,6 +120,10 @@ public class Module implements Comparable<Module> {
 		xsModels.add(xsModel);
 	}
 
+    public ArrayList<XSModel> getSchemas() {
+        return xsModels;
+    }
+
     public void setPrefix(String prefix, String url) {
         prefixes.put(url, prefix);
     }
@@ -130,5 +134,13 @@ public class Module implements Comparable<Module> {
             return prefix;
 
         return parent.getPrefix(url);
+    }
+
+    public void setDocumentation(Document documentation) {
+        this.documentation = documentation;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

@@ -26,6 +26,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.Lazy;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -36,7 +37,10 @@ public class JSLogger extends JSObject {
     private Logger logger;
     private XPMObject xpm;
 
-    public JSLogger() {
+
+    public JSLogger(XPMObject xpm, String name) {
+        this.xpm = xpm;
+        logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
     public void jsConstructor(Scriptable _xpm, String name) {
@@ -55,27 +59,14 @@ public class JSLogger extends JSObject {
         log(Level.TRACE, cx, thisObj, args, funObj);
     }
 
-    @JSFunction("debug")
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_debug(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.DEBUG, cx, thisObj, args, funObj);
+    public void debug(String format, Object... objects) {
+        logger.info(Lazy.format(format, objects));
     }
 
-    @JSFunction("info")
-    @JSHelp(value = "", arguments = @JSArguments({
-            @JSArgument(type = "String", name = "format", help = "The format string"),
-            @JSArgument(type = "Object...", name = "objects")
-    })
-    )
-    static public void jsFunction_info(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        log(Level.INFO, cx, thisObj, args, funObj);
+    public void info(String format, Object... objects) {
+        logger.info(Lazy.format(format, objects));
     }
 
-    @JSFunction("warn")
     @JSHelp(value = "", arguments = @JSArguments({
             @JSArgument(type = "String", name = "format", help = "The format string"),
             @JSArgument(type = "Object...", name = "objects")

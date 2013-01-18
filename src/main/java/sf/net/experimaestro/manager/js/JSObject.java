@@ -18,22 +18,72 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.*;
+
+import java.lang.reflect.InvocationTargetException;
 
 /**
+ * Base class for all JS objects
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12
  */
-public abstract class JSObject extends ScriptableObject {
+public abstract class JSObject  {
 
-    @Override
-    public String getClassName() {
-        // Removes the JS prefix
-        return getClassName(getClass());
-    }
-
-    static String getClassName(Class<?> aClass ) {
+    /**
+     * Returns the class name
+     */
+    static String getClassName(Class<?> aClass) {
         assert aClass.getSimpleName().startsWith("JS");
         return aClass.getSimpleName().substring(2);
+    }
+
+
+
+    public static void defineClass(Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        // If not a JSObject descendent, we handle this with standard JS procedure
+        if (!JSObject.class.isAssignableFrom(aClass))
+            ScriptableObject.defineClass(scope, aClass);
+        else {
+            // Use our own constructor
+            final String name = getClassName(aClass);
+            scope = ScriptableObject.getTopLevelScope(scope);
+            final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(scope, aClass);
+            scope.put(name, scope, nativeJavaClass);
+        }
+    }
+
+
+    private static class MyNativeJavaClass extends NativeJavaClass {
+        public MyNativeJavaClass(Scriptable scriptable, Class<? extends Scriptable> aClass) {
+            super(scriptable, aClass);
+        }
+
+        @Override
+        public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
+            NativeJavaObject object = (NativeJavaObject) super.construct(cx, scope, args);
+            return object;
+        }
+    }
+
+    static public class XPMWrapFactory extends WrapFactory {
+        @Override
+        public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
+            if (obj instanceof JSObject)
+                return new MyNativeJavaObject(scope, obj, obj.getClass(), false);
+            return super.wrapNewObject(cx, scope, obj);    //To change body of overridden methods use File | Settings | File Templates.
+        }
+
+    }
+
+    static private class MyNativeJavaObject extends NativeJavaObject {
+        private MyNativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
+            super(scope, javaObject, staticType, isAdapter);
+        }
+
+        @Override
+        public String getClassName() {
+            return JSObject.getClassName(this.staticType);
+        }
     }
 }

@@ -33,7 +33,7 @@ import java.util.TreeMap;
  */
 public class Manager {
 
-	public static final String EXPERIMAESTRO_NS = "http://experimaestro.sf.net";
+	public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
 	public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
     public static final String EXPERIMAESTRO_PREFIX = "xp";
 

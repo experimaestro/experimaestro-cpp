@@ -54,7 +54,7 @@ public class StatusServlet extends XPMServlet {
 
 		if (localPath.equals("")) {
 			final PrintWriter out = startHTMLResponse(response);
-			out.println("<html><head><title>Experimaestro - Resources</title></head><body>");
+            header(out, "Resources");
 
 			ArrayList<ResourceState> values = new ArrayList<>(
 					ListAdaptator.create(ResourceState.values()));
@@ -84,9 +84,7 @@ public class StatusServlet extends XPMServlet {
 
             final ResourceLocator locator = new ResourceLocator(connectorId, path);
 
-            out.format(
-					"<html><head><title>Experimaestro - Details of resource %s</title></head><body>",
-					locator);
+            header(out, String.format("Details of resource %s", locator));
 
 			Resource resource;
 			try {

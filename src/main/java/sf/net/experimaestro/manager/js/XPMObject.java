@@ -20,8 +20,6 @@ package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
 import com.sleepycat.je.DatabaseException;
-import com.sun.org.apache.xerces.internal.impl.xs.XSLoaderImpl;
-import com.sun.org.apache.xerces.internal.xs.XSModel;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
@@ -32,7 +30,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.w3c.dom.ls.LSInput;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
@@ -180,6 +177,9 @@ public class XPMObject {
         this.cleaner = cleaner;
         this.rootLogger = Logger.getLogger(loggerRepository);
 
+
+        context.setWrapFactory(new JSObject.XPMWrapFactory());
+
         // --- Tells E4X to preserve whitespaces
         // XML.ignoreWhitespace=false
 
@@ -193,11 +193,11 @@ public class XPMObject {
         Introspection.addClasses(new Introspection.Checker() {
             @Override
             public boolean accepts(Class<?> aClass) {
-                return (ScriptableObject.class.isAssignableFrom(aClass)) && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
+                return (ScriptableObject.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass)) && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
             }
         }, list, getClass().getPackage().getName(), 0);
         for (Class<?> aClass : list) {
-            ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
+            JSObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
         }
 
         // Add functions
@@ -226,6 +226,10 @@ public class XPMObject {
         if (environment.containsKey(DEFAULT_GROUP))
             defaultGroup = environment.get(DEFAULT_GROUP);
 
+    }
+
+    static XPMObject getXPMObject(Scriptable thisObj) {
+        return ((JSInstance)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
     }
 
 
@@ -261,7 +265,7 @@ public class XPMObject {
      * @return
      */
     public XPMObject include(Object _connector, String path, boolean repositoryMode)
-            throws Exception, InstantiationException, IllegalAccessException {
+            throws Exception {
         // Get the connector
         if (_connector instanceof Wrapper)
             _connector = ((Wrapper) _connector).unwrap();
@@ -361,7 +365,7 @@ public class XPMObject {
     /**
      * Creates a new JavaScript object
      */
-    Scriptable newObject(Class<? extends JSObject> aClass, Object... arguments) {
+    Scriptable newObject(Class<?> aClass, Object... arguments) {
         return context.newObject(scope, JSObject.getClassName(aClass), arguments);
     }
 
@@ -383,11 +387,14 @@ public class XPMObject {
 
         final Object o = JSUtils.unwrap(args[0]);
 
+        if (o instanceof JSFileObject)
+            return o;
+
         if (o instanceof FileObject)
-            return xpm.newObject(JSFileObject.class, o);
+            return xpm.newObject(JSFileObject.class, xpm, o);
 
         if (o instanceof String)
-            return xpm.newObject(JSFileObject.class, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
+            return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
 
         throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file path", o.getClass().toString());
     }
@@ -649,107 +656,6 @@ public class XPMObject {
     }
 
 
-    /**
-     * Add an XML Schema declaration
-     *
-     * @param module
-     * @param path
-     */
-    public void addSchema(Object module, final String path) throws IOException {
-        LOGGER.info("Loading XSD file [%s], with script path [%s]", path, currentResourceLocator.toString());
-        ResourceLocator file = currentResourceLocator.resolvePath(path, true);
-        XSLoaderImpl xsLoader = new XSLoaderImpl();
-        XSModel xsModel = null;
-
-        xsModel = xsLoader.load(new LSInput() {
-            @Override
-            public Reader getCharacterStream() {
-                return null;
-            }
-
-            @Override
-            public void setCharacterStream(Reader reader) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public InputStream getByteStream() {
-                try {
-                    return currentResourceLocator.resolvePath(path, true).getFile().getContent().getInputStream();
-                } catch (Exception e) {
-                    throw new ExperimaestroRuntimeException(e);
-                }
-            }
-
-            @Override
-            public void setByteStream(InputStream inputStream) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public String getStringData() {
-                return null;
-            }
-
-            @Override
-            public void setStringData(String s) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public String getSystemId() {
-                return null;
-            }
-
-            @Override
-            public void setSystemId(String s) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public String getPublicId() {
-                return null;
-            }
-
-            @Override
-            public void setPublicId(String s) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public String getBaseURI() {
-                return null;
-            }
-
-            @Override
-            public void setBaseURI(String s) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public String getEncoding() {
-                return null;
-            }
-
-            @Override
-            public void setEncoding(String s) {
-                throw new AssertionError("Should not be called");
-            }
-
-            @Override
-            public boolean getCertifiedText() {
-                return false;
-            }
-
-            @Override
-            public void setCertifiedText(boolean b) {
-                throw new AssertionError("Should not be called");
-            }
-        });
-
-        // Add to the repository
-        repository.addSchema(JSModule.getModule(repository, module), xsModel);
-    }
 
 
     /**
@@ -821,15 +727,15 @@ public class XPMObject {
 
             // --- Redirect standard output
             if (options.has("stdout", options)) {
-                final Object stdout = JSUtils.unwrap(options.get("stdout", options));
-                if (stdout instanceof String || stdout instanceof ConsString) {
-                    task.setOutput(connector.getMainConnector().resolveFile(stdout.toString()));
-                } else throw new ExperimaestroRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
+                FileObject fileObject = getFileObject(connector, JSUtils.unwrap(options.get("stdout", options)));
+                task.setOutput(fileObject);
             }
 
             // --- Redirect standard error
-            final Object stderr = options.get("stderr", options);
-
+            if (options.has("stderr", options)) {
+                FileObject fileObject = getFileObject(connector, JSUtils.unwrap(options.get("stderr", options)));
+                task.setError(fileObject);
+            }
             // --- Check if we need to create parameter files
             final Object files = options.get("files", options);
 
@@ -877,6 +783,19 @@ public class XPMObject {
         return task;
     }
 
+    private static FileObject getFileObject(Connector connector, Object stdout) throws FileSystemException {
+        if (stdout instanceof String || stdout instanceof ConsString)
+            return connector.getMainConnector().resolveFile(stdout.toString());
+
+        if (stdout instanceof JSFileObject)
+            return connector.getMainConnector().resolveFile(stdout.toString());
+
+        if (stdout instanceof FileObject)
+            return (FileObject) stdout;
+
+        throw new ExperimaestroRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
+    }
+
     /**
      * Transform an array of JS objects into a command line argument object
      *
@@ -921,6 +840,9 @@ public class XPMObject {
      * Recursive parsing of the command line
      */
     private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Object object) {
+        if (object instanceof JSFileObject)
+            object = ((JSFileObject)object).file;
+
         if (object instanceof FileObject) {
             if (sb.length() > 0) {
                 argument.add(sb.toString());
@@ -996,6 +918,14 @@ public class XPMObject {
 
     public void register(Closeable closeable) {
         cleaner.register(closeable);
+    }
+
+    public void unregister(AutoCloseable autoCloseable) {
+        cleaner.unregister(autoCloseable);
+    }
+
+    Repository getRepository() {
+        return repository;
     }
 
 
@@ -1092,17 +1022,18 @@ public class XPMObject {
                 throw new IllegalArgumentException("xpm.get_script_file() takes no argument");
 
             final XPMObject xpm = ((JSInstance) thisObj).xpm;
-            return xpm.newObject(JSFileObject.class, xpm.currentResourceLocator.getFile());
+            return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
         }
 
         /**
          * Add a module
          */
         @JSFunction("add_module")
-        public void addModule(Object object) {
-            JSModule module = new JSModule(xpm.repository, xpm.scope, (NativeObject) object);
-            LOGGER.debug("Adding module [%s]", module.getId());
-            xpm.repository.addModule(module);
+        public JSModule addModule(Object object) {
+            JSModule module = new JSModule(xpm, xpm.repository, xpm.scope, (NativeObject) object);
+            LOGGER.debug("Adding module [%s]", module.module.getId());
+            xpm.repository.addModule(module.module);
+            return module;
         }
 
         /**
@@ -1142,7 +1073,7 @@ public class XPMObject {
         @JSHelp(value = "Returns a file relative to the current connector")
         public Scriptable file(@JSArgument(name = "filepath") String filepath) throws FileSystemException {
             return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
-                    new Object[]{xpm.currentResourceLocator.resolvePath(filepath).getFile()});
+                    new Object[]{xpm, xpm.currentResourceLocator.resolvePath(filepath).getFile()});
         }
 
 

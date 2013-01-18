@@ -235,7 +235,6 @@
         </dependency>
 
 
-
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
             <artifactId>jetty-embedded</artifactId>
@@ -250,9 +249,9 @@
 
 
         <dependency>
-        <artifactId>je</artifactId>
-        <groupId>com.sleepycat</groupId>
-        <version>5.0.58</version>
+            <artifactId>je</artifactId>
+            <groupId>com.sleepycat</groupId>
+            <version>5.0.58</version>
         </dependency>
 
         <!-- XPath & XQuery handling -->
@@ -274,6 +273,13 @@
             <groupId>com.google.collections</groupId>
             <artifactId>google-collections</artifactId>
             <version>1.0</version>
+        </dependency>
+
+        <!-- Relax NG support -->
+        <dependency>
+            <groupId>com.thaiopensource</groupId>
+            <artifactId>trang</artifactId>
+            <version>20091111</version>
         </dependency>
     </dependencies>
 
@@ -345,7 +351,6 @@
             </properties>
         </developer>
     </developers>
-
 
 
 </project>

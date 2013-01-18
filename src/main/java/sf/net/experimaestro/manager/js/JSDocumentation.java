@@ -9,6 +9,7 @@ import sf.net.experimaestro.utils.Output;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -25,8 +26,11 @@ public class JSDocumentation {
         if (name == null) {
             final JSFunction annotation = method.getAnnotation(JSFunction.class);
             if (annotation == null) return;
-
             name = annotation.value();
+        }
+
+        if (name == null) {
+            name = method.getName();
         }
 
         Documentation.Container help = new Documentation.Container();
@@ -131,23 +135,33 @@ public class JSDocumentation {
 
         printer.append(new Documentation.Title(1, new Documentation.Text("Objects")));
         ArrayList<Class<?>> list = new ArrayList<>();
+
         Introspection.addImplementors(list, ScriptableObject.class, XPMObject.class.getPackage().getName(), -1);
+        Introspection.addImplementors(list, JSObject.class, XPMObject.class.getPackage().getName(), -1);
+
         final Documentation.DefinitionList classes = new Documentation.DefinitionList();
 
         for (Class<?> clazz : list) {
+            final Documentation.DefinitionList methods = new Documentation.DefinitionList();
 
-            try {
-                final ScriptableObject o = (ScriptableObject) clazz.newInstance();
-
-                final Documentation.DefinitionList methods = new Documentation.DefinitionList();
-
-                for (Method method : clazz.getDeclaredMethods()) {
-                    documentMethod(methods, method, null);
+            for (Method method : clazz.getDeclaredMethods()) {
+                String name = null;
+                if (ScriptableObject.class.isAssignableFrom(clazz)) {
+                    if (clazz.getAnnotation(JSFunction.class) != null)
+                        if (method.getName().startsWith("js_"))
+                            name = method.getName();
+                        else
+                            continue;
+                } else {
+                    if (!Modifier.isPublic(method.getModifiers()))
+                        continue;
+                    name = method.getName();
                 }
-                classes.add(new Documentation.Text(o.getClassName()), methods);
 
-            } catch (InstantiationException | IllegalAccessException e) {
+                documentMethod(methods, method, name);
             }
+            classes.add(new Documentation.Text(JSObject.getClassName(clazz)), methods);
+
         }
 
         printer.append(classes);

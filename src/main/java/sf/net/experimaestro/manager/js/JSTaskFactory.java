@@ -310,7 +310,7 @@ public class JSTaskFactory extends TaskFactory {
     }
 
     private QName getTypeQName(Element el, String typeAtt) {
-        return !typeAtt.equals("") ? XMLUtils.parseQName(typeAtt, el,
+        return !typeAtt.equals("") ? QName.parse(typeAtt, el,
                 Manager.PREDEFINED_PREFIXES) : null;
     }
 

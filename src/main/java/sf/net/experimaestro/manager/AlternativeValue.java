@@ -87,7 +87,7 @@ public class AlternativeValue extends Value {
                 if (!XMLUtils.is(ValueType.QNAME, element))
                     throw new ExperimaestroRuntimeException("Expected a value");
                 String key = element.getAttribute("value");
-                QName qname = XMLUtils.parseQName(key, element,
+                QName qname = QName.parse(key, element,
                         Manager.PREDEFINED_PREFIXES);
                 TaskFactory subFactory = factories.get(qname);
                 if (subFactory == null)

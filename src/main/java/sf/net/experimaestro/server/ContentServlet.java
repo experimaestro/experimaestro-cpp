@@ -36,7 +36,7 @@ import java.net.URL;
 
 import static java.lang.String.format;
 
-public class ContentServlet extends HttpServlet {
+public class ContentServlet extends XPMServlet {
 	final static private Logger LOGGER = Logger.getLogger();
 	private static final long serialVersionUID = 1L;
 
@@ -80,7 +80,7 @@ public class ContentServlet extends HttpServlet {
 		response.setContentType("text/html");
 		response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 		final PrintWriter out = response.getWriter();
-		out.println("<html><head><title>Error</title></head><body>");
+        header(out, "Error");
 		out.println("<h1>Page not found</h1>");
 		out.format("<p>This URI was not found: %s</p>", request.getRequestURI());
 		out.println("</body></html>");

@@ -47,9 +47,7 @@ public class JSHelpServlet extends XPMServlet {
 
 		if (localPath.equals("")) {
 			final PrintWriter out = startHTMLResponse(response);
-			out.println("<html><head><title>Experimaestro - JavaScript Help</title>" +
-                    "<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/style.css\">\n" +
-                    "</head><body>");
+            header(out, "JavaScript Help");
 
             final Documentation.Printer printer = new Documentation.HTMLPrinter(out);
             JSDocumentation.printJSHelp(printer);
@@ -60,4 +58,6 @@ public class JSHelpServlet extends XPMServlet {
 		// Not found
 		ContentServlet.error404(request, response);
 	}
+
+
 }
