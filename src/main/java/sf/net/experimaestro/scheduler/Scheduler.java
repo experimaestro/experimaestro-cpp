@@ -18,8 +18,10 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Multiset;
 import com.sleepycat.je.*;
+import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
@@ -29,18 +31,17 @@ import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.je.FileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * The scheduler
@@ -104,6 +105,12 @@ public class Scheduler {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     /**
+     * Simple asynchronous executor service (used for asynchronous notification)
+     */
+    final ExecutorService executorService;
+
+
+    /**
      * The file manager
      */
     private static FileSystemManager fsManager;
@@ -161,35 +168,41 @@ public class Scheduler {
     /**
      * Returns resources in the given states
      *
+     * @param txn
      * @param recursive
      * @param states
      * @return
      */
-    public Iterable<Resource> resources(final String group, final boolean recursive, final EnumSet<ResourceState> states) {
-        return new Iterable<Resource>() {
+    public CloseableIterable<Resource> resources(final Transaction txn, final String group, final boolean recursive, final EnumSet<ResourceState> states) {
+        return new CloseableIterable<Resource>() {
+            final EntityCursor<Resource> r = resources.fromGroup(txn, group, recursive);
+
             @Override
             public Iterator<Resource> iterator() {
                 return new AbstractIterator<Resource>() {
-                    Iterator<Resource> iterator = resources.fromGroup(group, recursive).iterator();
+                    Iterator<Resource> iterator = r.iterator();
 
                     @Override
-                    protected boolean storeNext() {
+                    protected Resource computeNext() {
                         while (iterator.hasNext()) {
-                            value = iterator.next();
-                            if (states.contains(value.getState()))
-                                return true;
+                            final Resource value = iterator.next();
+                            if (states.contains(value.getState())) {
+                                return value;
+                            }
                         }
-                        return false;
 
+                        return endOfData();
                     }
                 };
+            }
+
+            @Override
+            public void close() {
+                r.close();
             }
         };
     }
 
-    void delete(Resource resource) {
-        resources.delete(resource.getLocator());
-    }
 
     public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
         return resources.retrieveDependencies(to);
@@ -197,6 +210,17 @@ public class Scheduler {
 
     public TreeMap<ResourceLocator, Dependency> getDependentResources(ResourceLocator from) {
         return resources.retrieveDependencies(from);
+    }
+
+    public void delete(Transaction txn, Resource resource) {
+        synchronized (resource) {
+            final ResourceLocator locator = resource.getLocator();
+            if (resource.getState() == ResourceState.RUNNING)
+                throw new ExperimaestroRuntimeException("Cannot delete the running task [%s]", locator);
+            if (!resources.retrieveDependentResources(locator).isEmpty())
+                throw new ExperimaestroRuntimeException("Cannot delete the resource %s: it has dependencies", locator);
+            resources.delete(txn, locator);
+        }
     }
 
 
@@ -212,16 +236,21 @@ public class Scheduler {
                     LOGGER.info("Starting %s", job);
                     try {
                         job.run();
-                        LOGGER.info("Finished %s", job);
+                        LOGGER.info("Job %s has started", job);
+                    } catch (LockException e) {
+                        // We could not lock the resources: update the job state
+                        LOGGER.info("Could not lock all the resources for job %s", job);
+                        job.updateStatus(null, true);
                     } catch (Throwable t) {
                         LOGGER.warn("Houston, we got a problem: %s", t);
                     }
                 }
             } catch (InterruptedException e) {
                 LOGGER.warn("Shutting down job runner", e);
+            } finally {
+                LOGGER.info("Shutting down job runner");
+                counter.del();
             }
-
-            counter.del();
         }
     }
 
@@ -267,7 +296,7 @@ public class Scheduler {
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
         connectors = new Connectors(this, dbStore);
 
-        // TODO: use bytecode enhancement to remove public default constructors and have better performance
+        // TODO: use bytecode enhancement to delete public default constructors and have better performance
         // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
 
 
@@ -283,6 +312,9 @@ public class Scheduler {
             threads.add(runner);
             runner.start();
         }
+
+        executorService = Executors.newFixedThreadPool(1);
+
 
         LOGGER.info("Done - ready to work now");
     }
@@ -302,11 +334,19 @@ public class Scheduler {
      * Shutdown the scheduler
      */
     public void close() {
+        stopping = true;
+
         // Stop the checker
         if (resourceCheckTimer != null) {
             resourceCheckTimer.cancel();
             resourceCheckTimer = null;
         }
+
+        synchronized (readyJobs) {
+            readyJobs.notifyAll();
+        }
+
+        counter.resume();
 
         // Stop the threads
         for (Thread thread : threads) {
@@ -314,12 +354,27 @@ public class Scheduler {
         }
         threads.clear();
 
+        executorService.shutdown();
+
         if (dbStore != null) {
-            try {
-                dbStore.close();
-            } catch (Exception e) {
-                LOGGER.error(String.format("Error while closing the database: %s", e));
-            }
+            int attempts = 3;
+            while (attempts < 3)
+                try {
+                    dbStore.closeClass(Resource.class);
+                    dbStore.closeClass(Dependency.class);
+                    dbStore.closeClass(Connector.class);
+                    dbStore.close();
+                    break;
+                } catch (Throwable e) {
+                    LOGGER.error(String.format("Error while closing the database: %s [attempt %d]", e, attempts));
+                    synchronized (this) {
+                        try {
+                            wait(1000);
+                        } catch (InterruptedException e1) {
+                            LOGGER.error("Error while waiting...");
+                        }
+                    }
+                }
             dbStore = null;
             LOGGER.info("Closed the database store");
         }
@@ -365,7 +420,11 @@ public class Scheduler {
         while (true) {
             LOGGER.debug("Fetching the next task to run");
             // Try the next task
-            synchronized (this) {
+            synchronized (readyJobs) {
+                LOGGER.info("Looking at the next job to run [%d]", readyJobs.size());
+                if (isStopping())
+                    return null;
+
                 if (!readyJobs.isEmpty()) {
                     final Job task = readyJobs.peek();
                     LOGGER.debug(
@@ -377,7 +436,7 @@ public class Scheduler {
 
                 // ... and wait if we were not lucky (or there were no tasks)
                 try {
-                    wait();
+                    readyJobs.wait();
                 } catch (InterruptedException e) {
                     // The server stopped
                 }
@@ -399,62 +458,105 @@ public class Scheduler {
     }
 
     /**
-     * Store a resource in the database
+     * Store a resource in the database.
+     * <p/>
+     * This method is in charge of storing all the necessary information in the database and
+     * updating the different structures (e.g. list of jobs to be run).
      *
+     * @param txn
      * @param resource
      * @param full     true if we should store all the resource information (everything not related to the
      *                 state of the resource)
      * @throws DatabaseException
      */
-    synchronized public void store(Resource resource, boolean full) throws DatabaseException {
+    synchronized public void store(Transaction txn, final Resource resource, boolean full) throws DatabaseException {
         // Update the task and notify ourselves since we might want
         // to run new processes
 
-        final Transaction txn = dbEnvironment.beginTransaction(null, null);
-
-        // TODO: should handle properly failure
-
-        // Store the resource
-        try {
-            if (!resources.put(txn, resource, full))
-                txn.abort();
-            else
-                txn.commit();
-        } catch (RuntimeException e) {
-            txn.abort();
-            throw e;
-        } catch (Throwable e) {
-            txn.abort();
-            throw e;
+        if (isStopping()) {
+            LOGGER.warn("Database is closing: Could not update resource %s", resource);
+            return;
         }
-
-
-        // Notify dependencies
-        resources.notifyDependencies(resource);
-
-        // Notify ourselves
-        resource.notify(resource, SimpleMessage.STORED_IN_DATABASE);
 
         if (resource instanceof Job) {
             Job job = (Job) resource;
             // Update the heap
             if (resource.getState() == ResourceState.READY) {
-                if (job.getIndex() < 0)
-                    readyJobs.add(job);
-                else
-                    readyJobs.update(job);
+                synchronized (readyJobs) {
+                    if (job.getIndex() < 0)
+                        readyJobs.add(job);
+                    else
+                        readyJobs.update(job);
 
-                LOGGER.info("Job %s is ready [notifying]", resource);
+                    LOGGER.info("Job %s [%d] is ready [notifying], %d", resource, job.getIndex(), readyJobs.size());
 
-                // Notify job runners
-                notify();
+                    // Notify job runners
+                    readyJobs.notify();
+                }
 
-            } else if (job.getIndex() > 0) {
-                // Otherwise, we remove the job from the empty
-                readyJobs.remove(job);
+            } else if (job.getIndex() >= 0) {
+                // Otherwise, we delete the job from the empty
+                LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
+                synchronized (readyJobs) {
+                    readyJobs.remove(job);
+                }
             }
         }
 
+        if (!resources.put(txn, resource, full))
+            LOGGER.warn("Could not store resource [%s]", resource);
+
+        // Notify dependencies, using a new process
+        // TODO: move this away, this should be called when needed
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                if (!isStopping()) {
+                    // Notify the others
+                    resources.notifyDependencies(resource);
+                    // Notify ourselves
+                    resource.notify(resource, SimpleMessage.STORED_IN_DATABASE);
+                }
+            }
+        });
+
+
     }
 
+    synchronized public void store(Resource resource, boolean full) throws DatabaseException {
+        store(null, resource, full);
+    }
+
+
+    public XPMTransaction beginTransaction() {
+        return new XPMTransaction(dbEnvironment.beginTransaction(null, null));
+    }
+
+    static public class XPMTransaction implements AutoCloseable {
+
+        public final Transaction transaction;
+        boolean closed = false;
+
+        public XPMTransaction(Transaction transaction) {
+            this.transaction = transaction;
+        }
+
+        public void commit() {
+            transaction.commit();
+            closed = true;
+        }
+
+        @Override
+        public void close() {
+            if (!closed) {
+                transaction.abort();
+                closed = true;
+            }
+        }
+
+        public void abort() {
+            transaction.abort();
+            closed = true;
+        }
+    }
 }

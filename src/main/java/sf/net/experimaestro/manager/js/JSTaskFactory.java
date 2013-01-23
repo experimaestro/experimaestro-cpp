@@ -32,6 +32,7 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -235,6 +236,19 @@ public class JSTaskFactory extends TaskFactory {
                     input = new XMLInput(type);
                 }
 
+                break;
+            }
+
+            case "array": {
+                final Iterator<Element> it = XMLUtils.childElements(el).iterator();
+                if (!it.hasNext())
+                    throw new ExperimaestroRuntimeException("array element should have only one child");
+                final Element child = it.next();
+                if (it.hasNext())
+                    throw new ExperimaestroRuntimeException("array element should have only one child");
+
+                input = new ArrayInput();
+                el.getFirstChild();
                 break;
             }
 

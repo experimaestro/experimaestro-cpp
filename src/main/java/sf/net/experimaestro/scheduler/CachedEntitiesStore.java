@@ -201,7 +201,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
         }
     }
 
-    public void delete(Key key) {
-        index.delete(key);
+    public void delete(Transaction txn, Key key) {
+        index.delete(txn, key);
     }
 }

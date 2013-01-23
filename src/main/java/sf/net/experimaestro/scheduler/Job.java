@@ -23,6 +23,7 @@ import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.server.XPMServlet;
@@ -46,7 +47,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent()
-public abstract class Job extends Resource implements HeapElement<Job>, Runnable {
+public abstract class Job extends Resource implements HeapElement<Job> {
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -154,13 +155,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run() {
-        // First, update our state
-        if (updateStatus(true)) {
-
-        }
-
-
+    synchronized final public void run() throws LockException {
         ArrayList<Lock> locks = new ArrayList<>();
 
         try {
@@ -168,7 +163,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 // Check if not done
                 if (isDone()) {
                     state = ResourceState.DONE;
-                    updateDb();
+                    updateDb(null);
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -191,7 +186,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
-                    updateDb();
+                    updateDb(null);
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -208,6 +203,10 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                         final Lock lock = rsrc.lock(pid, dependency.type);
                         if (lock != null)
                             locks.add(lock);
+                        else {
+                            throw new LockException("Could not lock %s", id);
+                        }
+
                     }
                 }
 
@@ -236,6 +235,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
             throw new RuntimeException(e);
         } catch (DatabaseException e) {
             throw new RuntimeException(e);
+        } catch (LockException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -284,7 +285,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 XPMProcess old = process;
                 process = null;
 
-                scheduler.store(this, false);
+                scheduler.store(null, this, false);
                 try {
                     LOGGER.debug("Disposing of old XPM process [%s]", old);
                     if (old != null) {
@@ -304,8 +305,8 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
                 LOGGER.error("Received unknown self-message: %s", Arrays.toString(objects));
             }
         } else {
-            if (checkDependency(resource))
-                scheduler.store(this, false);
+            if (checkDependency(null, resource))
+                scheduler.store(null, this, false);
         }
 
     }
@@ -314,9 +315,11 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
     // ----- Heap part (do not touch) -----
 
     /**
-     * Negative value when not in the heap
+     * Negative value when not in the heap. It should
+     * not be serialized since it is linked to a list of jobs
+     * that should remain in main memory
      */
-    private int index = -1;
+    transient private int index = -1;
 
     public int getIndex() {
         return index;
@@ -401,13 +404,7 @@ public abstract class Job extends Resource implements HeapElement<Job>, Runnable
         // Check dependencies if we are in waiting or ready
         if (getState() == ResourceState.WAITING || getState() == ResourceState.READY) {
             for (Dependency dependency : getDependencies())
-                changed |= checkDependency(scheduler.getResource(dependency.getFrom()));
-
-            // Check if in right state
-            if (this.nbUnsatisfied == 0 && getState() == ResourceState.WAITING) {
-                changed = true;
-                state = ResourceState.READY;
-            }
+                changed |= checkDependency(null, scheduler.getResource(dependency.getFrom()));
         }
 
         return changed;

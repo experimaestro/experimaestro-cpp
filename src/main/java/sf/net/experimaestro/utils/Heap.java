@@ -143,7 +143,9 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      * @param element
      */
     public E remove(E element) {
-        return remove(element.getIndex());
+        final int index = element.getIndex();
+        element.setIndex(-1);
+        return remove(index);
     }
 
 
@@ -158,7 +160,9 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      * @return
      */
     public E pop() {
-        return remove(0);
+        final E remove = remove(0);
+        remove.setIndex(-1);
+        return remove;
     }
 
     private E remove(int hole_index) {

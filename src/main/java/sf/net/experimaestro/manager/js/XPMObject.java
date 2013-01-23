@@ -134,6 +134,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
             new JSUtils.FunctionDefinition(XPMObject.class, "path", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "value", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
     };
 
 
@@ -213,7 +214,7 @@ public class XPMObject {
 
         // xpm object
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
-        ((JSInstance) get(scope, "xpm")).set(this);
+        ((JSXPM) get(scope, "xpm")).set(this);
 
 
         // logger
@@ -226,7 +227,7 @@ public class XPMObject {
     }
 
     static XPMObject getXPMObject(Scriptable thisObj) {
-        return ((JSInstance)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
+        return ((JSXPM)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
     }
 
 
@@ -336,7 +337,7 @@ public class XPMObject {
      * Retrievs the XPMObject from the JavaScript context
      */
     private static XPMObject getXPM(Scriptable thisObj) {
-        return ((JSInstance) thisObj.get("xpm", thisObj)).xpm;
+        return ((JSXPM) thisObj.get("xpm", thisObj)).xpm;
     }
 
 
@@ -430,6 +431,15 @@ public class XPMObject {
         return xpm.currentResourceLocator.getFile();
     }
 
+    @JSHelp(value = "Returns a file relative to the current connector")
+    public static Scriptable js_file(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        XPMObject xpm = getXPM(thisObj);
+        if (args.length != 1)
+            throw new IllegalArgumentException("file() takes only one argument");
+        final String arg = JSUtils.toString(args[0]);
+        return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
+                new Object[]{xpm, xpm.currentResourceLocator.resolvePath(arg).getFile()});
+    }
     /**
      * Returns a QName object
      *
@@ -554,7 +564,7 @@ public class XPMObject {
     public String addData(Connector connector, String identifier) throws DatabaseException {
         LockMode mode = LockMode.SINGLE_WRITER;
         SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
-        scheduler.store(resource, true);
+        scheduler.store(null, resource, true);
         return identifier;
     }
 
@@ -735,14 +745,14 @@ public class XPMObject {
         final Resource old = scheduler.getResource(task.getLocator());
         if (old != null) {
             // TODO: if equal, do not try to replace the task
-            if (!task.replace(old)) {
+            if (!task.replace(null, old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 return old;
             } else {
                 getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
             }
         } else {
-            scheduler.store(task, true);
+            scheduler.store(null, task, true);
         }
 
         return task;
@@ -896,10 +906,10 @@ public class XPMObject {
 
     // --- Javascript methods
 
-    static public class JSInstance extends ScriptableObject {
+    static public class JSXPM extends ScriptableObject {
         XPMObject xpm;
 
-        public JSInstance() {
+        public JSXPM() {
         }
 
 
@@ -924,18 +934,20 @@ public class XPMObject {
         }
 
         @JSFunction("set_default_lock")
+        @JSHelp("Adds a new resource to lock for all jobs to be started")
         public void setDefaultLock(Object resource, String mode) {
             xpm.defaultLocks.put((Resource) JSUtils.unwrap(resource), LockType.valueOf(mode));
         }
 
         @JSFunction("token_resource")
-        public Scriptable getTokenResource(String path) {
+        @JSHelp("Retrieve (or creates) a token resource with a given path")
+        public Scriptable getTokenResource(@JSArgument(name="path", help="The path of the resource") String path) {
             final Resource resource = xpm.scheduler.getResource(new ResourceLocator(Connectors.XPM_CONNECTOR_ID, path));
             final TokenResource tokenResource;
             if (resource == null) {
                 tokenResource = new TokenResource(xpm.scheduler, path, 0);
                 tokenResource.init(xpm.scheduler);
-                xpm.scheduler.store(tokenResource, true);
+                xpm.scheduler.store(null, tokenResource, true);
             } else {
                 if (!(resource instanceof TokenResource))
                     throw new AssertionError(String.format("Resource %s exists and is not a token", path));
@@ -955,7 +967,7 @@ public class XPMObject {
             for (int i = 1; i < args.length; i++)
                 objects[i - 1] = JSUtils.unwrap(args[i]);
 
-            ((JSInstance) thisObj).xpm.log(format, objects);
+            ((JSXPM) thisObj).xpm.log(format, objects);
         }
 
         @JSFunction("log")
@@ -986,7 +998,7 @@ public class XPMObject {
             if (args.length != 0)
                 throw new IllegalArgumentException("xpm.get_script_file() takes no argument");
 
-            final XPMObject xpm = ((JSInstance) thisObj).xpm;
+            final XPMObject xpm = ((JSXPM) thisObj).xpm;
             return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
         }
 
@@ -1018,7 +1030,7 @@ public class XPMObject {
 
         @JSFunction("get_task")
         static public Scriptable getTask(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-            final XPMObject xpm = ((JSInstance) thisObj).xpm;
+            final XPMObject xpm = ((JSXPM) thisObj).xpm;
             if (args.length == 1)
                 return xpm.getTask((QName) JSUtils.unwrap(args[0]));
 

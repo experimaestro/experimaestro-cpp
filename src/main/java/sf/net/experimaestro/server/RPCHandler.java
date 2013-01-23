@@ -39,6 +39,7 @@ import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -100,7 +101,7 @@ public class RPCHandler {
     public int stopJobs(String group, boolean killRunning, boolean holdWaiting, boolean recursive) {
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
-        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
+        for (Resource resource : scheduler.resources(null, group, recursive, statesSet)) {
             if (resource instanceof Job)
                 ((Job) resource).stop();
         }
@@ -115,14 +116,19 @@ public class RPCHandler {
     public int updateJobs(String group, boolean recursive, Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
-        int nbUpdated = 0;
-        for (Resource resource : scheduler.resources(group, recursive, statesSet)) {
-            resource.init(scheduler);
-            if (resource.updateStatus(true))
-                nbUpdated++;
-        }
+        try (final Scheduler.XPMTransaction transaction = scheduler.beginTransaction()) {
+            int nbUpdated = 0;
+            final CloseableIterable<Resource> resources = scheduler.resources(transaction.transaction, group, recursive, statesSet);
+            for (Resource resource : resources) {
+                resource.init(scheduler);
+                if (resource.updateStatus(transaction.transaction, true))
+                    nbUpdated++;
+            }
 
-        return nbUpdated;
+            resources.close();
+
+            return nbUpdated;
+        }
     }
 
     @RPCHelp("Invalidate an already run job. Returns the number of affected jobs.")
@@ -137,21 +143,21 @@ public class RPCHandler {
         if (resource.getState() != ResourceState.DONE)
             throw new ExperimaestroRuntimeException("Job is not done [%s]", resource.getState());
 
-        resource.invalidate();
+        resource.invalidate(null);
         nbUpdated++;
 
         if (recursive) {
-            for(Dependency dependency: scheduler.getDependentResources(resource.getLocator()).values()) {
+            for (Dependency dependency : scheduler.getDependentResources(resource.getLocator()).values()) {
                 final ResourceLocator to = dependency.getTo();
                 LOGGER.info("Invalidating %s", to);
                 resource = scheduler.getResource(to);
-                switch(resource.getState()) {
+                switch (resource.getState()) {
                     case RUNNING:
-                        ((Job)resource).stop();
+                        ((Job) resource).stop();
                         nbUpdated++;
                         break;
-                    case DONE :
-                        resource.invalidate();
+                    case DONE:
+                        resource.invalidate(null);
                         nbUpdated++;
                         break;
                 }
@@ -177,6 +183,40 @@ public class RPCHandler {
     }
 
     /**
+     * Remove resources specified with the given filter
+     *
+     * @param group      The group of the resource (or none if no filter)
+     * @param uri        The URI of the resource to delete
+     * @param stateNames The states of the resource to delete
+     */
+    public int remove(String group, String uri, Object[] stateNames) throws Exception {
+        try (Scheduler.XPMTransaction txn = scheduler.beginTransaction()) {
+            int n = 0;
+            EnumSet<ResourceState> states = getStates(stateNames);
+            if (!"".equals(uri)) {
+                final Resource resource = scheduler.getResource(ResourceLocator.parse(uri));
+                if (!resource.getGroup().startsWith(group))
+                    throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
+                            resource, resource.getGroup(), group);
+                if (states.contains(resource.getState()))
+                    throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
+                            resource, resource.getState(), states);
+                scheduler.delete(txn.transaction, resource);
+                n = 1;
+            } else {
+                try (final CloseableIterable<Resource> resources = scheduler.resources(txn.transaction, group, false, states)) {
+                    for (Resource resource : resources) {
+                        scheduler.delete(txn.transaction, resource);
+                        n++;
+                    }
+                }
+            }
+            txn.commit();
+            return n;
+        }
+    }
+
+    /**
      * List jobs
      */
     @RPCHelp("List the jobs along with their states")
@@ -193,7 +233,7 @@ public class RPCHandler {
             list.add(map);
         }
 
-        for (Resource resource : scheduler.resources(group, false, set)) {
+        for (Resource resource : scheduler.resources(null, group, false, set)) {
             Map<String, String> map = new HashMap<>();
             map.put("type", resource.getClass().getCanonicalName());
             map.put("state", resource.getState().toString());
@@ -492,7 +532,7 @@ public class RPCHandler {
             job.addDependency(resource, LockType.WRITE_ACCESS);
         }
 
-        scheduler.store(job, true);
+        scheduler.store(null, job, true);
         return true;
     }
 

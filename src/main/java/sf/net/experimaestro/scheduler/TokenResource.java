@@ -23,10 +23,13 @@ import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.PrintWriter;
 
 /**
  * A class that can be locked a given number of times at the same time.
- *
+ * <p/>
  * This is useful when one wants to limit the number of processes on a host for
  * example
  *
@@ -35,10 +38,16 @@ import sf.net.experimaestro.locks.UnlockableException;
  */
 @Persistent
 public class TokenResource extends Resource {
-    /** Maximum number of tokens available */
+    final static private Logger LOGGER = Logger.getLogger();
+
+    /**
+     * Maximum number of tokens available
+     */
     private int limit;
 
-    /** Number of used tokens */
+    /**
+     * Number of used tokens
+     */
     private int usedTokens;
 
     private TokenResource() {
@@ -48,6 +57,7 @@ public class TokenResource extends Resource {
         super(scheduler, scheduler.getConnector(Connectors.XPM_CONNECTOR_ID), path, LockMode.CUSTOM);
         this.limit = limit;
         this.usedTokens = 0;
+        state = ResourceState.DONE;
     }
 
     /**
@@ -56,7 +66,7 @@ public class TokenResource extends Resource {
      *
      * @param limit The new limit
      */
-    public void setLimit(int limit) {
+    synchronized public void setLimit(int limit) {
         if (this.limit == limit) return;
 
         this.limit = limit;
@@ -73,15 +83,16 @@ public class TokenResource extends Resource {
     synchronized public Lock lock(String pid, LockType dependency) throws UnlockableException {
         if (accept(null) != DependencyStatus.OK_LOCK)
             return null;
+        usedTokens++;
 
         final MyLock lock = new MyLock(this);
-        usedTokens++;
         updateDb();
         return lock;
     }
 
     /**
      * Unlock a resource
+     *
      * @return
      */
     synchronized private boolean unlock() {
@@ -89,6 +100,16 @@ public class TokenResource extends Resource {
         return updateDb();
     }
 
+    @Override
+    public void printXML(PrintWriter out, PrintConfig config) {
+        super.printXML(out, config);
+        out.format("<div>Used tokens: %d out of %d</div>", usedTokens, limit);
+    }
+
+    @Override
+    protected boolean doUpdateStatus() throws Exception {
+        return false;
+    }
 
     /**
      * This lock calls {@linkplain sf.net.experimaestro.scheduler.TokenResource#unlock()} when
@@ -101,7 +122,8 @@ public class TokenResource extends Resource {
         private String resourceId;
         transient private TokenResource resource;
 
-        private MyLock() {}
+        private MyLock() {
+        }
 
         public MyLock(TokenResource resource) {
             this.resource = resource;

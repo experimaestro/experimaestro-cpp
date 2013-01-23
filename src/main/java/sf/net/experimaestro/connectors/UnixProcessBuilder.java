@@ -66,7 +66,7 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
     ArrayList<String> commands = new ArrayList<>();
 
     /**
-     * Lock files to remove
+     * Lock files to delete
      */
     ArrayList<String> lockFiles = new ArrayList<>();
 

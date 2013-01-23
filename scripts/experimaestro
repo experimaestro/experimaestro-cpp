@@ -159,10 +159,30 @@ def command_list_methods(args):
 def command_information(args):
     server = getServer(args)
     print server.Server.getResourceInformation(args.resourceId[0])
-    
+
+
 def command_invalidate(args):
     server = getServer(args)
     print server.Server.invalidateJob(args.resourceId[0], args.recursive)
+
+
+def command_rm(args):
+    server = getServer(args)
+    if len(args.jobid) == 0:
+        args.jobid = [""]
+
+    states = args.states
+    if states is not None:
+        states = args.states.split(",")
+    else:
+        states = []
+
+    if args.group is None:
+        args.group = ""
+
+    for jobid in args.jobid:
+        n = server.Server.remove(args.group, jobid, states)
+        print "Removed %d resources" % n
 
 # --- Run command
 
@@ -194,18 +214,23 @@ p_ls.add_argument('group', nargs='?', help="The group to list", default="")
 subparsers.add_parser("list-methods", help="List XML-RPC methods")
 
 p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
-p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help = "Should dependent resources be invalidated?")
+p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
 p_invalidate.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
+
+p_rm = subparsers.add_parser("rm", help="Remove a resource")
+p_rm.add_argument('--states', dest="states", help="States")
+p_rm.add_argument('--group', dest="group")
+p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 # Parse arguments
 args = parser.parse_args()
 
 numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
-    raise ValueError('Invalid log level: %s' % loglevel)
+    raise ValueError('Invalid log level: %s' % args.loglevel)
 
 try:
     fname = "command_%s" % args.command.replace("-", "_")

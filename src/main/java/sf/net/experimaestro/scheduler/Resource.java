@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.Transaction;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import com.sleepycat.persist.model.Relationship;
@@ -118,7 +119,7 @@ public abstract class Resource implements Comparable<Resource> {
     @SecondaryKey(name = GROUP_KEY_NAME, relate = Relationship.MANY_TO_ONE)
     private String group = null;
 
-     /**
+    /**
      * Resource state
      */
     @SecondaryKey(name = STATE_KEY_NAME, relate = Relationship.MANY_TO_ONE)
@@ -162,7 +163,9 @@ public abstract class Resource implements Comparable<Resource> {
      */
     boolean locked;
 
-    /** Called when deserializing from database */
+    /**
+     * Called when deserializing from database
+     */
     protected Resource() {
     }
 
@@ -207,11 +210,11 @@ public abstract class Resource implements Comparable<Resource> {
      * Update the status of the resource by checking all that could have changed externally
      * <p/>
      * Calls {@linkplain #doUpdateStatus()}. If a change is detected, then it updates
-     * the representation of the resource in the database by calling {@linkplain Scheduler#store(Resource, boolean)}.
-     *
+     * the representation of the resource in the database by calling {@linkplain Scheduler#store(com.sleepycat.je.Transaction, Resource, boolean)}.
+     * <p/>
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus(boolean store) {
+    final public boolean updateStatus(Transaction txn, boolean store) {
         boolean changed;
         try {
             changed = doUpdateStatus();
@@ -220,13 +223,15 @@ public abstract class Resource implements Comparable<Resource> {
             changed = true;
         }
         if (changed && store) {
-            scheduler.store(this, false);
+            scheduler.store(txn, this, false);
         }
         return changed;
     }
 
     /**
      * Update the status of this resource
+     *
+     * @return True if the status was updated
      */
     protected boolean doUpdateStatus() throws Exception {
         boolean updated = updateFromStatusFile();
@@ -289,11 +294,11 @@ public abstract class Resource implements Comparable<Resource> {
      * @param old
      * @return true if the resource was replaced, and false if an error occured
      */
-    public boolean replace(Resource old) {
+    public boolean replace(Transaction txn, Resource old) {
         synchronized (old) {
             assert old.locator.equals(locator) : "locators do not match";
             if (UPDATABLE_STATES.contains(old.state)) {
-                scheduler.store(this, true);
+                scheduler.store(txn, this, true);
                 return true;
             }
         }
@@ -328,13 +333,6 @@ public abstract class Resource implements Comparable<Resource> {
         return this.group;
     }
 
-    /**
-     * Called when deleting a resource
-     */
-    public void delete() {
-        LOGGER.info("Deleting task %s", this);
-        scheduler.delete(this);
-    }
 
     /**
      * The set of dependencies for this object
@@ -347,7 +345,7 @@ public abstract class Resource implements Comparable<Resource> {
 
     /**
      * Add a dependency to another resource
-     *
+     * <p/>
      * <b>Warning</b>: the database is not updated after such a call, it
      * is the responsability of the caller to do so
      *
@@ -385,7 +383,7 @@ public abstract class Resource implements Comparable<Resource> {
      * @param resource
      * @return true if the resource changed, false otherwise
      */
-    protected boolean checkDependency(Resource resource) {
+    synchronized protected boolean checkDependency(Transaction txn, Resource resource) {
         // Get the new state of the resource
         final ResourceState newResourceState = resource.getState();
 
@@ -395,13 +393,9 @@ public abstract class Resource implements Comparable<Resource> {
             // Log this
             LOGGER.error("Could not retrieve dependency %s", resource.getLocator());
             state = ResourceState.ERROR;
-            updateDb();
+            updateDb(txn);
             return false;
         }
-
-        // No change here
-        if (status.state == newResourceState)
-            return false;
 
         // Is this resource in a state that is good for us?
         int k = resource.accept(status.type).isOK() ? 1 : 0;
@@ -410,7 +404,7 @@ public abstract class Resource implements Comparable<Resource> {
         // of unsatisfied resources states
         final int diff = (status.isSatisfied ? 1 : 0) - k;
 
-        LOGGER.info("[%s] Got a notification from %s [%d with %s/%d]", this,
+        LOGGER.info("[%s] Checking dependency %s [%d with %s/%d]", this,
                 resource, k, status.type, diff);
 
         // If the resource has an error / hold state, change our state to
@@ -438,12 +432,18 @@ public abstract class Resource implements Comparable<Resource> {
         status.isSatisfied = k == 1;
         status.state = newResourceState;
 
-        if (nbUnsatisfied == 0 && this.state == ResourceState.WAITING) {
-            this.state = ResourceState.READY;
-            LOGGER.debug("Resource [%s] state is READY", this);
+        if (nbUnsatisfied == 0) {
+            if (this.state == ResourceState.WAITING) {
+                this.state = ResourceState.READY;
+                LOGGER.debug("Resource [%s] state changed to READY", this);
+            }
+        } else {
+            if (this.state == ResourceState.READY) {
+                this.state = ResourceState.WAITING;
+                LOGGER.debug("Resource [%s] state changed to WAITING", this);
+            }
         }
 
-        LOGGER.debug("Notification from [%s] state %s : Resource [%s] state is READY", resource, resource.getState(), this);
         return true;
     }
 
@@ -458,14 +458,14 @@ public abstract class Resource implements Comparable<Resource> {
         return dependencies != null;
     }
 
-    synchronized public void invalidate() throws Exception {
+    synchronized public void invalidate(Transaction txn) throws Exception {
         if (state == ResourceState.DONE) {
             state = ResourceState.WAITING;
             final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
             if (doneFile.exists())
                 doneFile.delete();
-            updateStatus(false);
-            scheduler.store(this, false);
+            updateStatus(txn, false);
+            scheduler.store(txn, this, false);
         }
     }
 
@@ -674,9 +674,9 @@ public abstract class Resource implements Comparable<Resource> {
      *
      * @return true if everything went well
      */
-    boolean updateDb() {
+    boolean updateDb(Transaction txn) {
         try {
-            scheduler.store(this, false);
+            scheduler.store(txn, this, false);
             return true;
         } catch (DatabaseException e) {
             LOGGER.error(
@@ -684,6 +684,10 @@ public abstract class Resource implements Comparable<Resource> {
                     this, e.getMessage());
         }
         return false;
+    }
+
+    boolean updateDb() {
+        return updateDb(null);
     }
 
     /**

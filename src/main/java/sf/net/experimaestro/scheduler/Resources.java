@@ -40,6 +40,14 @@ import static com.sleepycat.je.CursorConfig.READ_UNCOMMITTED;
 /**
  * A set of resources
  *
+ * Resources are stored in two databases:
+ * <ol>
+ *     <li>The main resource</li>
+ *     <li>The <b>active</b> dependencies between resources (only dependencies of jobs in a waiting/holding
+ *     state are stored here)</li>
+ * </ol>
+ *
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
@@ -119,10 +127,10 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
         for (Resource resource : cursor) {
             resource.init(scheduler);
             try {
-                if (resource.updateStatus(false))
+                if (resource.updateStatus(null, false))
                     put(null, resource);
 
-                switch(resource.getState()) {
+                switch (resource.getState()) {
                     case READY:
                         readyJobs.add((Job) resource);
                     case RUNNING:
@@ -136,13 +144,12 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     }
 
 
-
     @Override
     public synchronized boolean put(Transaction txn, Resource resource) throws DatabaseException {
         return put(txn, resource, false);
     }
 
-    public synchronized boolean put(Transaction txn, Resource resource, boolean fullStore) throws DatabaseException {
+    public boolean put(Transaction txn, Resource resource, boolean fullStore) throws DatabaseException {
         // Get the group
         groupsTrie.put(DotName.parse(resource.getGroup()));
 
@@ -167,7 +174,7 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     protected boolean canOverride(Resource old, Resource resource) {
         if (old.state == ResourceState.RUNNING && resource != old) {
             LOGGER.error(String.format("Cannot override a running task [%s] / %s vs %s", resource.locator,
-                    resource.hashCode(), old.hashCode()));
+                    System.identityHashCode(resource), System.identityHashCode(old.hashCode())));
             return false;
         }
         return true;
@@ -185,9 +192,10 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     }
 
 
-    public Iterable<Resource> fromGroup(final String group, boolean recursive) {
+    public EntityCursor<Resource> fromGroup(final Transaction txn, final String group, boolean recursive) {
+        CursorConfig config = new CursorConfig();
         if (!recursive)
-            return groups.entities(group, true, group, true);
+            return groups.entities(txn, group, true, group, true, config);
 
         throw new NotImplementedException();
     }
@@ -232,14 +240,13 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
         // Notify each of these
         for (Dependency dependency : dependencies) {
-            if (dependency.state != resource.state) {
-                Resource dep = get(dependency.getTo());
-                if (dep == null)
-                    LOGGER.warn("Dependency [%s] of [%s] was not found", from, dependency.getTo());
-                else {
-                    LOGGER.info("Notifying dependency [%s] from [%s]", from, dependency.getTo());
-                    dep.notify(resource);
-                }
+            final ResourceLocator to = dependency.getTo();
+            Resource dep = get(to);
+            if (dep == null)
+                LOGGER.warn("Dependency [%s] of [%s] was not found", from, to);
+            else {
+                LOGGER.info("Notifying dependency [%s] from [%s]", to, from);
+                dep.notify(resource);
             }
         }
     }
@@ -247,14 +254,17 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
     /**
      * Retrieves resources on which the given resource depends
+     *
      * @param to The resource
      * @return
      */
     public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
         return getDependencies(to, dependenciesTo);
     }
+
     /**
      * Retrieves resources on that depend upon the given resource depends
+     *
      * @param from The resource
      * @return
      */
