@@ -18,55 +18,59 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.*;
+import org.mozilla.javascript.annotations.JSFunction;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.List;
 
 /**
  * Task factory as seen by JavaScript
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class TaskFactoryJSWrapper extends ScriptableObject {
-	final static private Logger LOGGER = Logger.getLogger();
-	
-	private static final long serialVersionUID = 1L;
+    final static private Logger LOGGER = Logger.getLogger();
 
-	public static final String CLASSNAME = "XPMTaskFactory";
+    private static final long serialVersionUID = 1L;
 
-	TaskFactory factory;
+    public static final String CLASSNAME = "XPMTaskFactory";
 
-	public TaskFactoryJSWrapper() {
-	}
+    TaskFactory factory;
 
-	public void jsConstructor(Scriptable information) {
-		if (information != null) {
-			this.factory = (TaskFactory) ((NativeJavaObject) information)
-					.unwrap();
-		}
-	}
+    public TaskFactoryJSWrapper() {
+    }
 
-	@Override
-	public String getClassName() {
-		return "XPMTaskFactory";
-	}
+    public void jsConstructor(Scriptable information) {
+        if (information != null) {
+            this.factory = (TaskFactory) ((NativeJavaObject) information)
+                    .unwrap();
+        }
+    }
 
-	// ---- JavaScript functions ----
+    @Override
+    public String getClassName() {
+        return "XPMTaskFactory";
+    }
 
-	public Scriptable jsFunction_create() {
-		Task task = factory.create();
-		return Context.getCurrentContext().newObject(getParentScope(), "XPMTask",
-				new Object[] { task });
-	}
-
-	public TaskFactory getFactory() {
-		return factory;
-	}
+    // ---- JavaScript functions ----
 
 
-	
+    @JSFunction("run")
+    static public List<Object> run(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws Exception {
+        if (args.length != 1) throw new ExperimaestroRuntimeException("Expected 1 argument for run");
+        Task task = ((TaskFactoryJSWrapper)thisObj).factory.create();
+        return TaskJSWrapper.wrap(task.runPlan(JSUtils.toString(args[0]), true, new JSScriptRunner(thisObj)), thisObj);
+    }
+
+    @JSFunction("create")
+    public Scriptable create() {
+        Task task = factory.create();
+        return Context.getCurrentContext().newObject(getParentScope(), "XPMTask",
+                new Object[] { task });
+    }
 }

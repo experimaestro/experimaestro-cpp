@@ -36,6 +36,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.js.JSArgument;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Cleaner;
@@ -98,7 +99,11 @@ public class RPCHandler {
             }
     )
 
-    public int stopJobs(String group, boolean killRunning, boolean holdWaiting, boolean recursive) {
+    public int stopJobs(
+            @JSArgument(name = "group") String group,
+            @JSArgument(name = "killRunning") boolean killRunning,
+            @JSArgument(name = "holdWaiting") boolean holdWaiting,
+            @JSArgument(name = "recursive") boolean recursive) {
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
         for (Resource resource : scheduler.resources(null, group, recursive, statesSet)) {
@@ -106,6 +111,19 @@ public class RPCHandler {
                 ((Job) resource).stop();
         }
         throw new NotImplementedException();
+    }
+
+    @RPCHelp("Kill one or more jobs")
+    public int kill(Object... JobIds) {
+        int n = 0;
+        for(Object id: JobIds) {
+            final Resource resource = scheduler.getResource(ResourceLocator.parse((String) id));
+            if (resource instanceof Job) {
+                if (((Job) resource).stop())
+                    n++;
+            }
+        }
+        return n;
     }
 
     /**
@@ -198,15 +216,20 @@ public class RPCHandler {
                 if (!resource.getGroup().startsWith(group))
                     throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
                             resource, resource.getGroup(), group);
-                if (states.contains(resource.getState()))
+                if (!states.contains(resource.getState()))
                     throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
                             resource, resource.getState(), states);
                 scheduler.delete(txn.transaction, resource);
                 n = 1;
             } else {
+                // TODO order the tasks so that depencies are removed first
                 try (final CloseableIterable<Resource> resources = scheduler.resources(txn.transaction, group, false, states)) {
                     for (Resource resource : resources) {
-                        scheduler.delete(txn.transaction, resource);
+                        try {
+                            scheduler.delete(txn.transaction, resource);
+                        } catch(Exception e) {
+
+                        }
                         n++;
                     }
                 }
@@ -532,7 +555,7 @@ public class RPCHandler {
             job.addDependency(resource, LockType.WRITE_ACCESS);
         }
 
-        scheduler.store(null, job, true);
+        scheduler.store(null, job, null);
         return true;
     }
 

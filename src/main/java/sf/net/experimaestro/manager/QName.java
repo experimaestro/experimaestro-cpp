@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -182,7 +183,7 @@ public class QName implements Comparable<QName> {
 	}
 
 
-    public boolean sameQName(Element element) {
+    public boolean sameQName(Node element) {
             return equals(new QName(element.getNamespaceURI(), element.getLocalName()));
     }
 }

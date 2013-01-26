@@ -22,8 +22,10 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 import java.util.ArrayList;
+import java.util.TreeMap;
 
 /**
  * A command argument that can be processed depending on where the command is running.
@@ -49,7 +51,7 @@ public class CommandArgument {
 
 
     static public interface Component {
-        java.lang.String resolve(SingleHostConnector connector) throws FileSystemException;
+        java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException;
     }
 
     @Persistent
@@ -63,7 +65,7 @@ public class CommandArgument {
         }
 
         @Override
-        public java.lang.String resolve(SingleHostConnector connector) {
+        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) {
             return string;
         }
 
@@ -90,7 +92,7 @@ public class CommandArgument {
         }
 
         @Override
-        public java.lang.String resolve(SingleHostConnector connector) throws FileSystemException {
+        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
             FileObject object = Scheduler.getVFSManager().resolveFile(filename);
             return connector.resolve(object);
         }
@@ -98,6 +100,26 @@ public class CommandArgument {
         @Override
         public java.lang.String toString() {
             return java.lang.String.format("<xp:path>%s</xp:path>", filename);
+        }
+    }
+
+    @Persistent
+    static public class ParameterFile implements Component {
+        java.lang.String key;
+
+        private ParameterFile() {
+        }
+
+        public ParameterFile(java.lang.String key) {
+            this.key = key;
+        }
+
+        @Override
+        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) {
+            final FileObject file = files.get(key);
+            if (file == null)
+                throw new ExperimaestroRuntimeException("Could not retrieve parameter file with key [%s]", key);
+            return connector.resolve(file);
         }
     }
 
@@ -117,10 +139,10 @@ public class CommandArgument {
         components.add(component);
     }
 
-    public java.lang.String resolve(final SingleHostConnector connector) throws FileSystemException {
+    public java.lang.String resolve(final SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
         StringBuilder sb = new StringBuilder();
         for(Component component: components)
-            sb.append(component.resolve(connector));
+            sb.append(component.resolve(connector, files));
         return sb.toString();
     }
 

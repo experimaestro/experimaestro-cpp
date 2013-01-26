@@ -24,14 +24,17 @@ import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
 /**
  * Task as seen by JavaScript
@@ -71,12 +74,11 @@ public class TaskJSWrapper extends ScriptableObject {
 
     }
 
-    private static List<Object> wrap(List<Document> result, Scriptable scope) {
-        ArrayList list = new ArrayList();
-        for (Document document : result) {
-            list.add(JSUtils.domToE4X(document, Context.getCurrentContext(), scope));
-        }
-        return list;
+    static NativeArray wrap(List<Document> result, Scriptable scope) {
+        NativeArray array = new NativeArray(result.size());
+        for(int index = 0; index < result.size(); index++)
+            array.put(index, array, JSUtils.domToE4X(result.get(index), Context.getCurrentContext(), scope));
+        return array;
     }
 
     @JSFunction(value = "run_plan")
@@ -104,12 +106,29 @@ public class TaskJSWrapper extends ScriptableObject {
 
     /**
      * Just a short hand for setParameter
-     *
-     * @param _id
-     * @param value
      */
-    public void jsFunction_set(String _id, Scriptable value) {
-        jsFunction_setParameter(_id, value);
+    @JSFunction("set")
+    static public void set(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+        TaskJSWrapper _this = (TaskJSWrapper) thisObj;
+        if (args.length == 1) {
+            final Object unwrap = unwrap(args[0]);
+            if (unwrap instanceof NativeObject) {
+                for(Map.Entry<Object, Object> e: ((NativeObject) unwrap).entrySet()) {
+                        final String key = JSUtils.toString(e.getKey());
+                    try {
+                        _this.jsFunction_setParameter(key, (Scriptable) cx.getWrapFactory().wrap(cx, thisObj, e.getValue(), null));
+                    } catch(RuntimeException err) {
+                        final ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException(err);
+                        e2.addContext("while setting parameter %s of task %s", key, _this.task.getFactory().getId());
+                        throw e2;
+                    }
+                }
+            } else
+                throw new IllegalArgumentException("set() expects one or two arguments");
+        } else if (args.length == 2) {
+            _this.jsFunction_setParameter(JSUtils.toString(args[0]), (Scriptable) args[1]);
+        } else
+            throw new IllegalArgumentException("set() expects one or two arguments");
     }
 
 
@@ -155,4 +174,6 @@ public class TaskJSWrapper extends ScriptableObject {
     public Task getTask() {
         return task;
     }
+
+
 }

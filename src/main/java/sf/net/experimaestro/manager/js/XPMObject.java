@@ -30,10 +30,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.connectors.XPMProcessBuilder;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.*;
@@ -135,6 +132,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "path", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "value", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
     };
 
 
@@ -227,7 +225,7 @@ public class XPMObject {
     }
 
     static XPMObject getXPMObject(Scriptable thisObj) {
-        return ((JSXPM)thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
+        return ((JSXPM) thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
     }
 
 
@@ -397,6 +395,17 @@ public class XPMObject {
         throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file path", o.getClass().toString());
     }
 
+    static public String js_format(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+        if (args.length == 0)
+            return "";
+
+        Object fargs[] = new Object[args.length - 1];
+        for (int i = 1; i < args.length; i++)
+            fargs[i - 1] = JSUtils.unwrap(args[i]);
+        String format = JSUtils.toString(args[0]);
+        return String.format(format, fargs);
+    }
+
 
     /**
      * Returns an XML element that corresponds to the wrapped value
@@ -440,6 +449,7 @@ public class XPMObject {
         return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
                 new Object[]{xpm, xpm.currentResourceLocator.resolvePath(arg).getFile()});
     }
+
     /**
      * Returns a QName object
      *
@@ -564,7 +574,7 @@ public class XPMObject {
     public String addData(Connector connector, String identifier) throws DatabaseException {
         LockMode mode = LockMode.SINGLE_WRITER;
         SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
-        scheduler.store(null, resource, true);
+        scheduler.store(null, resource, null);
         return identifier;
     }
 
@@ -576,12 +586,12 @@ public class XPMObject {
      * @throws InterruptedException
      */
     public NativeArray evaluate(Object jsargs) throws Exception {
-        CommandArguments arguments = getCommandArguments(jsargs);
+        CommandArguments arguments = getCommandArguments(jsargs, null);
 
         // Run the process and captures the output
         final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
         XPMProcessBuilder builder = connector.processBuilder();
-        builder.command(arguments.toStrings(connector));
+        builder.command(arguments.toStrings(connector, null));
         builder.detach(false);
         builder.redirectOutput(XPMProcessBuilder.Redirect.PIPE);
         XPMProcess p = builder.start();
@@ -648,7 +658,8 @@ public class XPMObject {
         // of String
         LOGGER.debug("Adding command line job");
 
-        final CommandArguments command = getCommandArguments(jsargs);
+        Map<String, String> pFiles = new TreeMap<>();
+        final CommandArguments command = getCommandArguments(jsargs, pFiles);
 
         NativeObject options = jsoptions instanceof Undefined ? null : (NativeObject) jsoptions;
 
@@ -674,6 +685,8 @@ public class XPMObject {
 
         task = new CommandLineTask(scheduler, connector, path.toString(), command);
 
+        for (Map.Entry<String, String> entry : pFiles.entrySet())
+            task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
         for (Map.Entry<Resource, LockType> lock : defaultLocks.entrySet()) {
@@ -711,8 +724,6 @@ public class XPMObject {
                 FileObject fileObject = getFileObject(connector, JSUtils.unwrap(options.get("stderr", options)));
                 task.setError(fileObject);
             }
-            // --- Check if we need to create parameter files
-            final Object files = options.get("files", options);
 
 
             // --- Resources to lock
@@ -752,7 +763,7 @@ public class XPMObject {
                 getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
             }
         } else {
-            scheduler.store(null, task, true);
+            scheduler.store(null, task, null);
         }
 
         return task;
@@ -774,10 +785,11 @@ public class XPMObject {
     /**
      * Transform an array of JS objects into a command line argument object
      *
-     * @param jsargs The input array
+     * @param jsargs         The input array
+     * @param parameterFiles (out) A map that will contain the parameter files defined in the command line
      * @return a valid {@linkplain CommandArgument} object
      */
-    private static CommandArguments getCommandArguments(Object jsargs) {
+    private static CommandArguments getCommandArguments(Object jsargs, Map<String, String> parameterFiles) {
         final CommandArguments command = new CommandArguments();
 
         if (jsargs instanceof NativeArray) {
@@ -796,7 +808,7 @@ public class XPMObject {
                         argumentWalkThrough(sb, argument, child);
 
                 } else {
-                    argumentWalkThrough(sb, argument, object);
+                    argumentWalkThrough(sb, argument, object, parameterFiles);
                 }
 
                 if (sb.length() > 0)
@@ -814,9 +826,10 @@ public class XPMObject {
     /**
      * Recursive parsing of the command line
      */
-    private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Object object) {
+    private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Object object,
+                                            Map<String, String> parameterFiles) {
         if (object instanceof JSFileObject)
-            object = ((JSFileObject)object).file;
+            object = ((JSFileObject) object).file;
 
         if (object instanceof FileObject) {
             if (sb.length() > 0) {
@@ -826,10 +839,16 @@ public class XPMObject {
             argument.add(new CommandArgument.Path((FileObject) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
-                argumentWalkThrough(sb, argument, JSUtils.unwrap(child));
+                argumentWalkThrough(sb, argument, JSUtils.unwrap(child), parameterFiles);
         } else if (JSUtils.isXML(object)) {
-            for (Node child : xmlAsList(JSUtils.toDOM(object)))
+            final Object node = JSUtils.toDOM(object);
+            for (Node child : xmlAsList(node))
                 argumentWalkThrough(sb, argument, child);
+        } else if (object instanceof JSParameterFile) {
+            final JSParameterFile pFile = (JSParameterFile) object;
+            argument.add(new CommandArgument.ParameterFile(pFile.key));
+            parameterFiles.put(pFile.key, pFile.value);
+
         } else {
             sb.append(JSUtils.toString(object));
         }
@@ -845,8 +864,14 @@ public class XPMObject {
     private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Node node) {
         switch (node.getNodeType()) {
             case Node.TEXT_NODE:
-            case Node.ATTRIBUTE_NODE:
                 sb.append(node.getTextContent());
+                break;
+
+            case Node.ATTRIBUTE_NODE:
+                if (Manager.XP_PATH.sameQName(node)) {
+                    argument.add(new CommandArgument.Path(node.getNodeValue()));
+                } else
+                    sb.append(node.getTextContent());
                 break;
 
             case Node.ELEMENT_NODE:
@@ -941,13 +966,13 @@ public class XPMObject {
 
         @JSFunction("token_resource")
         @JSHelp("Retrieve (or creates) a token resource with a given path")
-        public Scriptable getTokenResource(@JSArgument(name="path", help="The path of the resource") String path) {
-            final Resource resource = xpm.scheduler.getResource(new ResourceLocator(Connectors.XPM_CONNECTOR_ID, path));
+        public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) {
+            final Resource resource = xpm.scheduler.getResource(new ResourceLocator(XPMConnector.ID, path));
             final TokenResource tokenResource;
             if (resource == null) {
                 tokenResource = new TokenResource(xpm.scheduler, path, 0);
                 tokenResource.init(xpm.scheduler);
-                xpm.scheduler.store(null, tokenResource, true);
+                xpm.scheduler.store(null, tokenResource, null);
             } else {
                 if (!(resource instanceof TokenResource))
                     throw new AssertionError(String.format("Resource %s exists and is not a token", path));

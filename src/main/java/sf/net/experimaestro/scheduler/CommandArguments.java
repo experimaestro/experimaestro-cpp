@@ -19,12 +19,14 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -50,10 +52,10 @@ public class CommandArguments {
         list.add(c);
     }
 
-    public List<String> toStrings(final SingleHostConnector connector) throws FileSystemException {
+    public List<String> toStrings(final SingleHostConnector connector, TreeMap<String, FileObject> files) throws FileSystemException {
         ArrayList<String> strings = new ArrayList<>();
         for(CommandArgument argument: list)
-            strings.add(argument.resolve(connector));
+            strings.add(argument.resolve(connector, files));
         return strings;
     }
 

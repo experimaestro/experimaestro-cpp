@@ -146,18 +146,20 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
     @Override
     public synchronized boolean put(Transaction txn, Resource resource) throws DatabaseException {
-        return put(txn, resource, false);
+        return put(txn, resource, null);
     }
 
-    public boolean put(Transaction txn, Resource resource, boolean fullStore) throws DatabaseException {
+    public boolean put(Transaction txn, Resource resource, Resource.Changes changes) throws DatabaseException {
         // Get the group
         groupsTrie.put(DotName.parse(resource.getGroup()));
 
         // Starts the transaction
-        if (!super.put(txn, resource))
-            return false;
+        if (changes == null || changes.state)
+            if (!super.put(txn, resource))
+                return false;
 
-        if (fullStore && resource.retrievedDependencies()) {
+        if (changes == null || !changes.dependencies.isEmpty() && resource.retrievedDependencies()) {
+            // TODO: more fine grained update would be better
             // Delete everything
             dependenciesFrom.delete(txn, resource.getLocator());
 
@@ -256,26 +258,34 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
      * Retrieves resources on which the given resource depends
      *
      * @param to The resource
-     * @return
+     * @return A map of dependencies
      */
     public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
         return getDependencies(to, dependenciesTo);
     }
 
     /**
-     * Retrieves resources on that depend upon the given resource depends
+     * Retrieves resources that depend upon the given resource
      *
      * @param from The resource
-     * @return
+     * @return A map of dependencies
      */
     public TreeMap<ResourceLocator, Dependency> retrieveDependentResources(ResourceLocator from) {
         return getDependencies(from, dependenciesFrom);
     }
 
 
-    private TreeMap<ResourceLocator, Dependency> getDependencies(ResourceLocator to, SecondaryIndex<ResourceLocator, Long, Dependency> index) {
+    /**
+     * Retrieve the dependencies from a given secondary index, and fills a {@link java.util.Map}
+     * from it
+     *
+     * @param locator The key
+     * @param index The index
+     * @return
+     */
+    private TreeMap<ResourceLocator, Dependency> getDependencies(ResourceLocator locator, SecondaryIndex<ResourceLocator, Long, Dependency> index) {
         TreeMap<ResourceLocator, Dependency> deps = new TreeMap<>();
-        try (final EntityCursor<Dependency> entities = index.entities(to, true, to, true)) {
+        try (final EntityCursor<Dependency> entities = index.entities(locator, true, locator, true)) {
             for (Dependency dependency : entities)
                 deps.put(dependency.getFrom(), dependency);
         }

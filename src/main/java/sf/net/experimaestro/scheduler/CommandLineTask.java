@@ -39,7 +39,7 @@ import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
+@Persistent(version=1)
 public class CommandLineTask extends Job {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -83,6 +83,12 @@ public class CommandLineTask extends Job {
      * Path for job error stream
      */
     private String jobErrorPath;
+
+    /**
+     * The parameter files
+     */
+    public TreeMap<String, String> parameterFiles = new TreeMap<>();
+
 
     protected CommandLineTask() {
     }
@@ -179,8 +185,18 @@ public class CommandLineTask extends Job {
 
         builder.redirectInput(jobInput);
 
+        // Add files
+        TreeMap<String, FileObject> files = new TreeMap<>();
+        for(Map.Entry<String, String> entry: parameterFiles.entrySet()) {
+            FileObject inputFile = locator.resolve(connector, "." + entry.getKey() + INPUT_EXTENSION);
+            final OutputStream outputStream = inputFile.getContent().getOutputStream();
+            outputStream.write(entry.getValue().getBytes());
+            outputStream.close();
+            files.put(entry.getKey(), inputFile);
+        }
+
         // Add commands
-        builder.command(command.toStrings(connector));
+        builder.command(command.toStrings(connector, files));
         builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
         builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
         builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
@@ -212,5 +228,9 @@ public class CommandLineTask extends Job {
 
     public void setError(FileObject fileObject) {
         this.jobErrorPath = fileObject.toString();
+    }
+
+    public void setParameterFile(String key, String value) {
+        parameterFiles.put(key, value);
     }
 }

@@ -97,6 +97,9 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
             if (!canOverride(old, value)) {
                 return false;
             }
+            if (value instanceof Cleaneable) {
+                ((Cleaneable) value).clean();
+            };
         }
 
 
@@ -203,5 +206,6 @@ abstract public class CachedEntitiesStore<Key, Value> implements Iterable<Value>
 
     public void delete(Transaction txn, Key key) {
         index.delete(txn, key);
+        cache.remove(key);
     }
 }

@@ -62,13 +62,14 @@ public class StatusServlet extends XPMServlet {
 				out.format("<h1>Resources in state %s</h1>", state);
 				out.println("<ul>");
 				for (Resource resource : scheduler.resources()) {
-					if (resource.getState() == state)
+					if (resource.getState() == state) {
 						out.format(
 								"<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
 								request.getServletPath(),
-                                urlEncode(resource.getLocator().getConnector().getIdentifier()),
+                                urlEncode(resource.getLocator().getConnectorId()),
                                 urlEncode(resource.getLocator().getPath()),
                                 resource.getLocator());
+                    }
 				}
 				out.println("</ul>");
 			}

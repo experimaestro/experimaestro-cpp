@@ -20,6 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
@@ -163,7 +165,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 // Check if not done
                 if (isDone()) {
                     state = ResourceState.DONE;
-                    updateDb(null);
+                    updateDb(null, Changes.STATE);
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -186,7 +188,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
-                    updateDb(null);
+                    updateDb(null, Changes.STATE);
                     LOGGER.info("Task %s is already done", locator);
                     return;
                 }
@@ -221,7 +223,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                     process = startJob(locks);
                     process.adopt(locks);
                     locks = null;
-                    updateDb();
+                    updateDb(null);
 
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
@@ -285,7 +287,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 XPMProcess old = process;
                 process = null;
 
-                scheduler.store(null, this, false);
+                scheduler.store(null, this, Changes.STATE);
                 try {
                     LOGGER.debug("Disposing of old XPM process [%s]", old);
                     if (old != null) {
@@ -305,8 +307,10 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 LOGGER.error("Received unknown self-message: %s", Arrays.toString(objects));
             }
         } else {
-            if (checkDependency(null, resource))
-                scheduler.store(null, this, false);
+            Changes changes = new Changes();
+            checkDependency(resource, false, changes);
+            if (changes.changed())
+                scheduler.store(null, this, changes);
         }
 
     }
@@ -398,29 +402,70 @@ public abstract class Job extends Resource implements HeapElement<Job> {
     }
 
     @Override
-    protected boolean doUpdateStatus() throws Exception {
-        boolean changed = super.doUpdateStatus();
+    synchronized protected void doUpdateStatus(Changes changes) throws Exception {
+        super.doUpdateStatus(changes);
 
         // Check dependencies if we are in waiting or ready
         if (getState() == ResourceState.WAITING || getState() == ResourceState.READY) {
-            for (Dependency dependency : getDependencies())
-                changed |= checkDependency(null, scheduler.getResource(dependency.getFrom()));
-        }
+            // reset the count
+            nbUnsatisfied = 0;
+            nbHolding = 0;
+            ResourceState old = state;
 
-        return changed;
+            // TODO: smarter check (could say something has changed when nothing has)
+            this.state = ResourceState.READY;
+            for (Dependency dependency : getDependencies()) {
+                checkDependency(scheduler.getResource(dependency.getFrom()), true, changes);
+            }
+            changes.state = old != state;
+
+
+        }
     }
 
     /**
      * Stop the job
      */
-    synchronized public void stop() {
+    synchronized public boolean stop() {
+        // Process is running
         if (process != null) {
             process.destroy();
             state = ResourceState.ERROR;
-            updateDb();
-        } else {
+            updateDb(Changes.STATE);
+            return true;
+        }
+
+        // Process is about to run
+        if (state == ResourceState.READY || state == ResourceState.WAITING) {
             state = ResourceState.ON_HOLD;
-            updateDb();
+            updateDb(Changes.STATE);
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public void clean() {
+        super.clean();
+
+        // Remove the done and code files so that the resource
+        // can be replaced
+
+        // --- Remove done
+        try (final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION)) {
+            if (doneFile.exists())
+                doneFile.delete();
+        } catch (FileSystemException e) {
+            LOGGER.info("Could not remove 'done' file: %s", e);
+        }
+
+        // --- Remove code
+        try (final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION)) {
+            if (doneFile.exists())
+                doneFile.delete();
+        } catch (FileSystemException e) {
+            LOGGER.info("Could not remove 'code' file: %s", e);
         }
     }
 

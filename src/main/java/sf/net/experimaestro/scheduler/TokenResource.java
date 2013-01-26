@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -54,7 +55,7 @@ public class TokenResource extends Resource {
     }
 
     public TokenResource(Scheduler scheduler, String path, int limit) {
-        super(scheduler, scheduler.getConnector(Connectors.XPM_CONNECTOR_ID), path, LockMode.CUSTOM);
+        super(scheduler, XPMConnector.getInstance(), path, LockMode.CUSTOM);
         this.limit = limit;
         this.usedTokens = 0;
         state = ResourceState.DONE;
@@ -70,7 +71,7 @@ public class TokenResource extends Resource {
         if (this.limit == limit) return;
 
         this.limit = limit;
-        updateDb();
+        updateDb(Changes.STATE);
     }
 
     @Override
@@ -86,7 +87,7 @@ public class TokenResource extends Resource {
         usedTokens++;
 
         final MyLock lock = new MyLock(this);
-        updateDb();
+        updateDb(Changes.STATE);
         return lock;
     }
 
@@ -97,7 +98,7 @@ public class TokenResource extends Resource {
      */
     synchronized private boolean unlock() {
         usedTokens--;
-        return updateDb();
+        return updateDb(Changes.STATE);
     }
 
     @Override
@@ -107,8 +108,7 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    protected boolean doUpdateStatus() throws Exception {
-        return false;
+    synchronized protected void doUpdateStatus(Changes changes) throws Exception {
     }
 
     /**

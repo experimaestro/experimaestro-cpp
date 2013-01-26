@@ -143,8 +143,8 @@ public class SchedulerTest {
                 null);
         job2.addDependency(job1, LockType.READ_ACCESS);
 
-        scheduler.store(null, job1, true);
-        scheduler.store(null, job2, true);
+        scheduler.store(null, job1, null);
+        scheduler.store(null, job2, null);
 //        counter.resume();
 
         assert sequence.get(0).equals("job1");
@@ -159,13 +159,13 @@ public class SchedulerTest {
 
         ThreadCount counter = new ThreadCount();
         TokenResource resource = new TokenResource(scheduler, "test", 1);
-        scheduler.store(resource, true);
+        scheduler.store(resource, null);
 
         WaitingJob[] jobs = new WaitingJob[2];
         for(int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(scheduler, counter, jobDirectory,  "job" + i, 500);
             jobs[i].addDependency(resource, LockType.READ_ACCESS);
-            scheduler.store(jobs[i], true);
+            scheduler.store(jobs[i], null);
         }
 
 

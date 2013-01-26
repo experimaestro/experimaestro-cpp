@@ -71,7 +71,7 @@ public abstract class JSObject  {
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
             if (obj instanceof JSObject)
                 return new MyNativeJavaObject(scope, obj, obj.getClass(), false);
-            return super.wrapNewObject(cx, scope, obj);    //To change body of overridden methods use File | Settings | File Templates.
+            return super.wrapNewObject(cx, scope, obj);
         }
 
     }

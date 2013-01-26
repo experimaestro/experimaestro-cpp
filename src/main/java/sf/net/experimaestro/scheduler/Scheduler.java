@@ -150,7 +150,7 @@ public class Scheduler {
                 try {
                     process.check();
                 } catch (Exception e) {
-                    LOGGER.error("Error while checking job [%s]: %s", process.getJob(), e);
+                    LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
                 }
             }
         }, 0, rate, units);
@@ -204,12 +204,24 @@ public class Scheduler {
     }
 
 
-    public TreeMap<ResourceLocator, Dependency> retrieveDependencies(ResourceLocator to) {
+    /**
+     * Retrieves resources on which the given resource depends
+     *
+     * @param to The resource
+     * @return A map of dependencies
+     */
+    public TreeMap<ResourceLocator, Dependency> getDependencies(ResourceLocator to) {
         return resources.retrieveDependencies(to);
     }
 
+    /**
+     * Retrieves resources that depend upon the given resource
+     *
+     * @param from The resource
+     * @return A map of dependencies
+     */
     public TreeMap<ResourceLocator, Dependency> getDependentResources(ResourceLocator from) {
-        return resources.retrieveDependencies(from);
+        return resources.retrieveDependentResources(from);
     }
 
     public void delete(Transaction txn, Resource resource) {
@@ -239,7 +251,7 @@ public class Scheduler {
                         LOGGER.info("Job %s has started", job);
                     } catch (LockException e) {
                         // We could not lock the resources: update the job state
-                        LOGGER.info("Could not lock all the resources for job %s", job);
+                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                         job.updateStatus(null, true);
                     } catch (Throwable t) {
                         LOGGER.warn("Houston, we got a problem: %s", t);
@@ -421,7 +433,7 @@ public class Scheduler {
             LOGGER.debug("Fetching the next task to run");
             // Try the next task
             synchronized (readyJobs) {
-                LOGGER.info("Looking at the next job to run [%d]", readyJobs.size());
+                LOGGER.debug("Looking at the next job to run [%d]", readyJobs.size());
                 if (isStopping())
                     return null;
 
@@ -463,13 +475,13 @@ public class Scheduler {
      * This method is in charge of storing all the necessary information in the database and
      * updating the different structures (e.g. list of jobs to be run).
      *
+     *
      * @param txn
      * @param resource
-     * @param full     true if we should store all the resource information (everything not related to the
-     *                 state of the resource)
+     * @param changes The changes to store (null for a full store, i.e. when replacing the resource)
      * @throws DatabaseException
      */
-    synchronized public void store(Transaction txn, final Resource resource, boolean full) throws DatabaseException {
+    synchronized public void store(Transaction txn, final Resource resource, Resource.Changes changes) throws DatabaseException {
         // Update the task and notify ourselves since we might want
         // to run new processes
 
@@ -503,7 +515,7 @@ public class Scheduler {
             }
         }
 
-        if (!resources.put(txn, resource, full))
+        if (!resources.put(txn, resource, changes))
             LOGGER.warn("Could not store resource [%s]", resource);
 
         // Notify dependencies, using a new process
@@ -523,8 +535,8 @@ public class Scheduler {
 
     }
 
-    synchronized public void store(Resource resource, boolean full) throws DatabaseException {
-        store(null, resource, full);
+    synchronized public void store(Resource resource, Resource.Changes changes) throws DatabaseException {
+        store(null, resource, changes);
     }
 
 

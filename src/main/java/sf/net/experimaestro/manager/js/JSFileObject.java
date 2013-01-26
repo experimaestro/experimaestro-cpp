@@ -57,7 +57,7 @@ public class JSFileObject extends JSObject {
 
     @JSHelp(value = "Get the parent file object")
     public JSFileObject get_parent() throws FileSystemException {
-        return get_ancestor(0);
+        return get_ancestor(1);
     }
 
     @JSFunction("resolve")
@@ -109,6 +109,12 @@ public class JSFileObject extends JSObject {
     @JSFunction("get_size")
     public long get_size() throws FileSystemException {
         return file.getContent().getSize();
+    }
+
+    @JSFunction("add_extension")
+    @JSHelp("Adds an extension to the current filename")
+    public Object add_extension(String extension) throws FileSystemException {
+        return new JSFileObject(xpm, file.getParent().resolveFile(file.getName().getBaseName() + extension));
     }
 
     static class MyPrintWriter extends PrintWriter {

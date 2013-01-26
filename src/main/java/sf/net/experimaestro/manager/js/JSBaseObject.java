@@ -29,7 +29,7 @@ import org.mozilla.javascript.Scriptable;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12
  */
-public  class JSBaseObject implements Scriptable {
+public  class JSBaseObject extends JSObject implements Scriptable {
 
     /**
      * Returns the class name

@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.connectors;
 
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
@@ -32,11 +33,16 @@ import sf.net.experimaestro.locks.UnlockableException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 15/8/12
  */
+@Persistent
 public class XPMConnector extends SingleHostConnector {
     final private static XPMConnector SINGLETON = new XPMConnector();
+    /**
+     * A special connector for DB handled resources
+     */
+    public static final String ID = "xpmdb";
 
     protected XPMConnector() {
-        super("xpm:");
+        super(ID + "://");
     }
 
     @Override
@@ -56,10 +62,10 @@ public class XPMConnector extends SingleHostConnector {
 
     @Override
     public String getHostName() {
-        return "__xpm__";
+        return "";
     }
 
-    public static Connector getInstance() {
+    public static XPMConnector getInstance() {
         return SINGLETON;
     }
 

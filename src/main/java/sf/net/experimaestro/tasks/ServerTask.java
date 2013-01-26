@@ -82,7 +82,9 @@ public class ServerTask extends AbstractTask {
         // Main repository
         final Repositories repositories = new Repositories(new ResourceLocator(XPMConnector.getInstance(), ""));
 
+        // TODO: use a UNIX socket for more secure access
         server = new Server(port);
+//        server.addConnector(new UnixSocketConnector());
 
         Context context = new Context(server, "/");
 

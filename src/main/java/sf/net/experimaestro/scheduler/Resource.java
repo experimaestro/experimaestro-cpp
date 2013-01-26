@@ -54,7 +54,31 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-public abstract class Resource implements Comparable<Resource> {
+public abstract class Resource implements Comparable<Resource>, Cleaneable {
+    /**
+     * Keeps track of the changes when updating a class
+     */
+    static public class Changes {
+        public static final Changes STATE = new Changes(true);
+
+        boolean state = false;
+        TreeMap<ResourceLocator, Dependency> dependencies = new TreeMap<>();
+
+        public Changes() {
+        }
+
+        public Changes(boolean state) {
+            this.state = state;
+        }
+
+        /**
+         * Returns true if something has changed
+         */
+        public boolean changed() {
+            return state || !dependencies.isEmpty();
+        }
+    }
+
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -209,49 +233,51 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Update the status of the resource by checking all that could have changed externally
      * <p/>
-     * Calls {@linkplain #doUpdateStatus()}. If a change is detected, then it updates
-     * the representation of the resource in the database by calling {@linkplain Scheduler#store(com.sleepycat.je.Transaction, Resource, boolean)}.
+     * Calls {@linkplain #doUpdateStatus(sf.net.experimaestro.scheduler.Resource.Changes)}. If a change is detected, then it updates
+     * the representation of the resource in the database by calling {@linkplain Scheduler#store(com.sleepycat.je.Transaction, Resource, sf.net.experimaestro.scheduler.Resource.Changes)}.
      * <p/>
      * If the update fails for some reason, then we just put the state into HOLD
      */
     final public boolean updateStatus(Transaction txn, boolean store) {
-        boolean changed;
+        Changes changes = new Changes();
         try {
-            changed = doUpdateStatus();
+             doUpdateStatus(changes);
         } catch (Exception e) {
             state = ResourceState.ON_HOLD;
-            changed = true;
+            changes.state = true;
         }
-        if (changed && store) {
-            scheduler.store(txn, this, false);
+        if (changes.changed() && store) {
+            // TODO: should store only the needed parts
+            scheduler.store(txn, this, changes);
         }
-        return changed;
+        return changes.changed();
     }
 
     /**
      * Update the status of this resource
      *
      * @return True if the status was updated
+     * @param changes
      */
-    protected boolean doUpdateStatus() throws Exception {
-        boolean updated = updateFromStatusFile();
+    synchronized protected void doUpdateStatus(Changes changes) throws Exception {
+        updateFromStatusFile(changes);
 
         // Check if the resource was generated
         final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
-        if (doneFile.exists()
-                && this.getState() != ResourceState.DONE) {
-            updated = true;
-            // TODO: get the end timestamp reading the done file time stamp
-//            doneFile.getContent().getLastModifiedTime();
+        if (doneFile.exists() && this.getState() != ResourceState.DONE) {
+            changes.state = true;
+            if (this instanceof Job) {
+                ((Job)this).endTimestamp = doneFile.getContent().getLastModifiedTime();
+            }
             this.state = ResourceState.DONE;
         }
 
         // Check if the resource is locked
         boolean locked = getMainConnector().resolveFile(locator.getPath() + LOCK_EXTENSION).exists();
-        updated |= locked != this.locked;
+        // TODO: should be a locking change
+        changes.state |= locked != this.locked;
         this.locked = locked;
 
-        return updated;
     }
 
     /**
@@ -298,7 +324,7 @@ public abstract class Resource implements Comparable<Resource> {
         synchronized (old) {
             assert old.locator.equals(locator) : "locators do not match";
             if (UPDATABLE_STATES.contains(old.state)) {
-                scheduler.store(txn, this, true);
+                scheduler.store(txn, this, null);
                 return true;
             }
         }
@@ -339,7 +365,7 @@ public abstract class Resource implements Comparable<Resource> {
      */
     public Collection<Dependency> getDependencies() {
         if (dependencies == null)
-            dependencies = scheduler.retrieveDependencies(getLocator());
+            dependencies = scheduler.getDependencies(getLocator());
         return dependencies.values();
     }
 
@@ -380,10 +406,11 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Check if a dependency changed and returns whether this has changed the state of the job
      *
-     * @param resource
+     * @param resource The resource to check
+     * @param reset    If true, the stored dependecy status is reset (this is useful when doing a global update)
      * @return true if the resource changed, false otherwise
      */
-    synchronized protected boolean checkDependency(Transaction txn, Resource resource) {
+    synchronized protected void checkDependency(Resource resource, boolean reset, Changes changes) {
         // Get the new state of the resource
         final ResourceState newResourceState = resource.getState();
 
@@ -391,10 +418,16 @@ public abstract class Resource implements Comparable<Resource> {
         Dependency status = getDependency(resource.getLocator());
         if (status == null) {
             // Log this
+            nbHolding++;
+            nbUnsatisfied++;
             LOGGER.error("Could not retrieve dependency %s", resource.getLocator());
-            state = ResourceState.ERROR;
-            updateDb(txn);
-            return false;
+            if (updateState(ResourceState.ON_HOLD)) changes.state = true;
+            return;
+        }
+
+        // Resets the flag if needed
+        if (reset) {
+            status.isSatisfied = true;
         }
 
         // Is this resource in a state that is good for us?
@@ -403,6 +436,10 @@ public abstract class Resource implements Comparable<Resource> {
         // Computes the difference with the previous status to updateFromStatusFile the number
         // of unsatisfied resources states
         final int diff = (status.isSatisfied ? 1 : 0) - k;
+
+        // No change
+        if (diff == 0)
+            return;
 
         LOGGER.info("[%s] Checking dependency %s [%d with %s/%d]", this,
                 resource, k, status.type, diff);
@@ -444,12 +481,23 @@ public abstract class Resource implements Comparable<Resource> {
             }
         }
 
+        changes.state = true;
+    }
+
+    /**
+     * Change the state of the resource
+     * @param state The new state
+     * @return true if the state was changed
+     */
+    protected synchronized boolean updateState(ResourceState state) {
+        if (state == this.state) return false;
+        this.state = state;
         return true;
     }
 
     private Dependency getDependency(ResourceLocator locator) {
         if (dependencies == null)
-            dependencies = scheduler.retrieveDependencies(getLocator());
+            dependencies = scheduler.getDependencies(getLocator());
 
         return dependencies.get(locator);
     }
@@ -465,7 +513,7 @@ public abstract class Resource implements Comparable<Resource> {
             if (doneFile.exists())
                 doneFile.delete();
             updateStatus(txn, false);
-            scheduler.store(txn, this, false);
+            scheduler.store(txn, this, Changes.STATE);
         }
     }
 
@@ -616,6 +664,9 @@ public abstract class Resource implements Comparable<Resource> {
     }
 
     /**
+     * TODO: this should be outside resource : it is part of the locking
+     * mechanism --> create a Locking class that can update itself, etc.
+     *
      * Number of readers and writers
      */
     int writers = 0, readers = 0;
@@ -628,7 +679,7 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Current list
      */
-    transient TreeMap<String, Boolean> processMap = new TreeMap<String, Boolean>();
+    transient TreeMap<String, Boolean> processMap = new TreeMap<>();
 
     public int getReaders() {
         return readers;
@@ -662,7 +713,7 @@ public abstract class Resource implements Comparable<Resource> {
     /**
      * Get the state of the resource
      *
-     * @return
+     * @return The current state of the resource
      */
     public ResourceState getState() {
         return state;
@@ -674,9 +725,9 @@ public abstract class Resource implements Comparable<Resource> {
      *
      * @return true if everything went well
      */
-    boolean updateDb(Transaction txn) {
+    boolean updateDb(Transaction txn, Changes changes) {
         try {
-            scheduler.store(txn, this, false);
+            scheduler.store(txn, this, changes);
             return true;
         } catch (DatabaseException e) {
             LOGGER.error(
@@ -686,8 +737,8 @@ public abstract class Resource implements Comparable<Resource> {
         return false;
     }
 
-    boolean updateDb() {
-        return updateDb(null);
+    boolean updateDb(Changes changes) {
+        return updateDb(null, changes);
     }
 
     /**
@@ -724,7 +775,7 @@ public abstract class Resource implements Comparable<Resource> {
 
         try {
             // --- Read the resource status
-            updateFromStatusFile();
+            updateFromStatusFile(new Changes());
 
             final FileObject tmpFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION + ".tmp");
             PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
@@ -758,20 +809,19 @@ public abstract class Resource implements Comparable<Resource> {
      *
      * @return A boolean specifying whether something was updated
      * @throws java.io.FileNotFoundException If some error occurs while reading status
+     * @param changes
      */
-    public boolean updateFromStatusFile() throws Exception {
-        boolean updated = writers > 0 || readers > 0;
-
+    public void updateFromStatusFile(Changes changes) throws Exception {
         final FileObject statusFile = getMainConnector().resolveFile(locator.path + STATUS_EXTENSION);
 
         if (!statusFile.exists()) {
             writers = readers = 0;
-            return updated;
+            return;
         } else {
             // Check if we need to read the file
             long lastModified = statusFile.getContent().getLastModifiedTime();
             if (lastUpdate >= lastModified)
-                return false;
+                return;
 
             lastUpdate = lastModified;
 
@@ -800,7 +850,6 @@ public abstract class Resource implements Comparable<Resource> {
             }
 
         }
-        return true;
     }
 
     /**
@@ -810,4 +859,7 @@ public abstract class Resource implements Comparable<Resource> {
         state = nbHolding == 0 && nbUnsatisfied == 0 ? ResourceState.READY : ResourceState.WAITING;
     }
 
+    @Override
+    public void clean() {
+    }
 }
