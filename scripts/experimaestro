@@ -163,6 +163,8 @@ def command_ls(args):
             print cformat("#RED;%s" % l)
         elif state == 'DONE':
             print cformat("#GREEN;%s" % l)
+        elif state == 'RUNNING':
+            print cformat("#CYAN;%s" % l)
         else:
             print l
 
