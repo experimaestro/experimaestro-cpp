@@ -7,7 +7,7 @@ import argparse
 import string
 import xmlrpclib
 import logging
-
+from icolor import cformat
 
 # --- Set some variables
 
@@ -112,26 +112,41 @@ def command_run_js(args):
     for key, value in os.environ.iteritems():
         env.append([key, value])
 
+    # Remote mode
+    if args.remote:
+        isFile = False
+    else:
+        isFile = True
+
     # Get the command line
+    filepaths = []
+    filecontents = []
     for filename in args.files:
-        filename = os.path.abspath(filename)
-        logging.info("Running JS script %s" % filename)
-        try:
-            r = xmlrpc.Server.runJSScript(True, filename, env)
-            if len(r) > 2:
-                print(r[2])
-            if r[0]:
-                print
-                print "### Error while running %s ###" % filename
-                print r[1]
-                sys.exit(r[0])
-                print
-        except xmlrpclib.Fault as e:
-            print e
-            sys.exit(1)
-        except Exception as e:
-            print e
-            sys.exit(1)
+        filepath = os.path.abspath(filename)
+        filepaths.append(filepath)
+        if not args.remote:
+            filecontents.append("")
+        else:
+            filecontents.append(file(filepath).read())
+
+    logging.info("Running JS scripts %s" % filepaths)
+
+    try:
+        r = xmlrpc.Server.runJSScript(isFile, filepaths, filecontents, env)
+        if len(r) > 2:
+            print(r[2])
+        if r[0]:
+            print
+            print "### Error while running %s ###" % filename
+            print r[1]
+            sys.exit(r[0])
+            print
+    except xmlrpclib.Fault as e:
+        print e
+        sys.exit(1)
+    except Exception as e:
+        print e
+        sys.exit(1)
 
 
 def command_update_jobs(args):
@@ -143,7 +158,13 @@ def command_ls(args):
     server = getServer(args)
     response = server.Server.listJobs(args.group, [])
     for l in response:
-        print l
+        state = l.get("state", "?")
+        if state == 'ERROR':
+            print cformat("#RED;%s" % l)
+        elif state == 'DONE':
+            print cformat("#GREEN;%s" % l)
+        else:
+            print l
 
 
 def command_list_methods(args):
@@ -209,6 +230,7 @@ subparser = subparsers.add_parser("start-server", help="Start the experimaestro 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_js.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
 p_run_js.add_argument('files', nargs='*', help='')
 

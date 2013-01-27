@@ -32,6 +32,7 @@ import org.mortbay.jetty.Server;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repositories;
@@ -103,20 +104,25 @@ public class RPCHandler {
             @JSArgument(name = "group") String group,
             @JSArgument(name = "killRunning") boolean killRunning,
             @JSArgument(name = "holdWaiting") boolean holdWaiting,
-            @JSArgument(name = "recursive") boolean recursive) {
+            @JSArgument(name = "recursive") boolean recursive) throws Exception {
+        int n = 0;
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
-        for (Resource resource : scheduler.resources(null, group, recursive, statesSet)) {
-            if (resource instanceof Job)
-                ((Job) resource).stop();
+        try (final CloseableIterable<Resource> resources = scheduler.resources(null, group, recursive, statesSet)) {
+            for (Resource resource : resources) {
+                if (resource instanceof Job) {
+                    ((Job) resource).stop();
+                    n++;
+                }
+            }
         }
-        throw new NotImplementedException();
+        return n;
     }
 
     @RPCHelp("Kill one or more jobs")
     public int kill(Object... JobIds) {
         int n = 0;
-        for(Object id: JobIds) {
+        for (Object id : JobIds) {
             final Resource resource = scheduler.getResource(ResourceLocator.parse((String) id));
             if (resource instanceof Job) {
                 if (((Job) resource).stop())
@@ -134,16 +140,15 @@ public class RPCHandler {
     public int updateJobs(String group, boolean recursive, Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
-        try (final Scheduler.XPMTransaction transaction = scheduler.beginTransaction()) {
+        try (final XPMTransaction transaction = scheduler.beginTransaction()) {
             int nbUpdated = 0;
-            final CloseableIterable<Resource> resources = scheduler.resources(transaction.transaction, group, recursive, statesSet);
-            for (Resource resource : resources) {
-                resource.init(scheduler);
-                if (resource.updateStatus(transaction.transaction, true))
-                    nbUpdated++;
+            try (final CloseableIterable<Resource> resources = scheduler.resources(transaction.getTransaction(), group, recursive, statesSet)) {
+                for (Resource resource : resources) {
+                    resource.init(scheduler);
+                    if (resource.updateStatus(transaction, true))
+                        nbUpdated++;
+                }
             }
-
-            resources.close();
 
             return nbUpdated;
         }
@@ -208,7 +213,7 @@ public class RPCHandler {
      * @param stateNames The states of the resource to delete
      */
     public int remove(String group, String uri, Object[] stateNames) throws Exception {
-        try (Scheduler.XPMTransaction txn = scheduler.beginTransaction()) {
+        try (XPMTransaction txn = scheduler.beginTransaction()) {
             int n = 0;
             EnumSet<ResourceState> states = getStates(stateNames);
             if (!"".equals(uri)) {
@@ -219,16 +224,16 @@ public class RPCHandler {
                 if (!states.contains(resource.getState()))
                     throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
                             resource, resource.getState(), states);
-                scheduler.delete(txn.transaction, resource);
+                scheduler.delete(txn, resource);
                 n = 1;
             } else {
                 // TODO order the tasks so that depencies are removed first
-                try (final CloseableIterable<Resource> resources = scheduler.resources(txn.transaction, group, false, states)) {
+                try (final CloseableIterable<Resource> resources = scheduler.resources(txn.getTransaction(), group, false, states)) {
                     for (Resource resource : resources) {
                         try {
-                            scheduler.delete(txn.transaction, resource);
-                        } catch(Exception e) {
-
+                            scheduler.delete(txn, resource);
+                        } catch (Exception e) {
+                            // TODO should output this to the caller
                         }
                         n++;
                     }
@@ -256,12 +261,16 @@ public class RPCHandler {
             list.add(map);
         }
 
-        for (Resource resource : scheduler.resources(null, group, false, set)) {
-            Map<String, String> map = new HashMap<>();
-            map.put("type", resource.getClass().getCanonicalName());
-            map.put("state", resource.getState().toString());
-            map.put("name", resource.toString());
-            list.add(map);
+        try (final CloseableIterable<Resource> resources = scheduler.resources(null, group, false, set)) {
+            for (Resource resource : resources) {
+                Map<String, String> map = new HashMap<>();
+                map.put("type", resource.getClass().getCanonicalName());
+                map.put("state", resource.getState().toString());
+                map.put("name", resource.toString());
+                list.add(map);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         return list;
     }
@@ -378,17 +387,17 @@ public class RPCHandler {
      * into a string. Instead, we get a list that we transform into a map.
      */
     @RPCHelp("Runs a JavaScript file on the server")
-    public ArrayList<Object> runJSScript(boolean isFile, String content,
+    public ArrayList<Object> runJSScript(boolean isFile, Object[] filenames, Object[] contents,
                                          Object[] envArray) {
         Map<String, String> environment = arrayToMap(envArray);
-        return runJSScript(isFile, content, environment);
+        return runJSScript(isFile, filenames, contents, environment);
     }
 
     /**
      * Run a javascript script (either the file or a string)
      */
     @RPCHelp("Runs a JavaScript file on the server")
-    public ArrayList<Object> runJSScript(boolean isFile, String content,
+    public ArrayList<Object> runJSScript(boolean isFile, Object[] filenames, Object[] contents,
                                          Map<String, String> environment) {
         if (pRequest instanceof XmlRpcStreamServer) {
             final XmlRpcStreamServer request = (XmlRpcStreamServer) pRequest.getConfig();
@@ -427,31 +436,35 @@ public class RPCHandler {
                     }));
 
 
-            ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? content : null);
-            LOGGER.info("Script is %s", locator);
-
             // TODO: should be a one shot repository - ugly
             Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
             repositories.add(repository, 0);
 
             ScriptableObject.defineProperty(scope, "env", new JSGetEnv(
                     environment), 0);
-            jsXPM = new XPMObject(locator, jsContext, environment, scope, repositories,
+            jsXPM = new XPMObject(null, jsContext, environment, scope, repositories,
                     scheduler, loggerRepository, cleaner);
 
-            final Object result;
-            if (isFile)
-                result = jsContext.evaluateReader(scope,
-                        new FileReader(content), content, 1, null);
-            else
-                result = jsContext.evaluateString(scope, content, "stdin", 1,
-                        null);
+            Object result = null;
+            for (int i = 0; i < contents.length; i++) {
+                final String v = contents[i].toString();
+                final String filename = filenames[i].toString();
+
+                ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
+                jsXPM.setLocator(locator);
+                LOGGER.info("Script locator is %s", locator);
+
+                if (isFile)
+                    result = jsContext.evaluateReader(scope, new FileReader(filename), filename, 1, null);
+                else
+                    result = jsContext.evaluateString(scope, v, filename, 1, null);
+
+            }
 
             if (result != null)
                 LOGGER.debug("Returns %s", result.toString());
             else
                 LOGGER.debug("Null result");
-
             // Object object = scope.get("Task", null);
             // if (object instanceof NativeFunction) {
             // org.mozilla.javascript.Context cx2 =
@@ -509,7 +522,7 @@ public class RPCHandler {
      */
     public boolean runCommand(String name, int priority, Object[] command,
                               Object[] envArray, String workingDirectory, Object[] depends,
-                              Object[] readLocks, Object[] writeLocks) throws DatabaseException {
+                              Object[] readLocks, Object[] writeLocks) throws DatabaseException, ExperimaestroCannotOverwrite {
         Map<String, String> env = arrayToMap(envArray);
         LOGGER.info(
                 "Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",

@@ -25,6 +25,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.UnlockableException;
@@ -146,10 +147,14 @@ public abstract class Job extends Resource implements HeapElement<Job> {
      * @throws DatabaseException
      */
     @Override
-    public void init(Scheduler scheduler) throws DatabaseException {
-        super.init(scheduler);
+    public boolean init(Scheduler scheduler) throws DatabaseException {
+        if (!super.init(scheduler))
+            return false;
+
         if (process != null)
             process.init(this);
+
+        return true;
     }
 
     /*
@@ -287,7 +292,11 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 XPMProcess old = process;
                 process = null;
 
-                scheduler.store(null, this, Changes.STATE);
+                try {
+                    scheduler.store(this, Changes.STATE);
+                } catch (ExperimaestroCannotOverwrite experimaestroCannotOverwrite) {
+                    LOGGER.error("Cannot overwrite ourselves... strange!");
+                }
                 try {
                     LOGGER.debug("Disposing of old XPM process [%s]", old);
                     if (old != null) {
@@ -310,7 +319,11 @@ public abstract class Job extends Resource implements HeapElement<Job> {
             Changes changes = new Changes();
             checkDependency(resource, false, changes);
             if (changes.changed())
-                scheduler.store(null, this, changes);
+                try {
+                    scheduler.store(null, this, changes);
+                } catch (ExperimaestroCannotOverwrite experimaestroCannotOverwrite) {
+                     LOGGER.error("Could not overwrite ourselves!");
+                }
         }
 
     }
@@ -370,13 +383,15 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                         longDateFormat.format(new Date(end)));
                 out.format("<div>Duration: %s</div>",
                         Time.formatTimeInMilliseconds(end - start));
+                if (process != null)
+                    out.format("<div>PID: %s</div>", process.getPID());
             }
         }
 
         if (!getDependencies().isEmpty()) {
             out.format("<h2>Dependencies</h2><ul>");
-            out.format("<div>%d unsatisfied dependencie(s)</div>",
-                    nbUnsatisfied);
+            out.format("<div>%d (%d) unsatisfied (holding) dependencie(s)</div>",
+                    nbUnsatisfied, nbHolding);
             for (Dependency dependency : getDependencies()) {
                 ResourceLocator locator = dependency.getFrom();
                 Resource resource = null;
@@ -448,24 +463,21 @@ public abstract class Job extends Resource implements HeapElement<Job> {
     @Override
     public void clean() {
         super.clean();
+        LOGGER.info("Cleaning job %s", this);
+        removeJobFile(DONE_EXTENSION);
+        removeJobFile(CODE_EXTENSION);
+        removeJobFile(ERR_EXTENSION);
+        removeJobFile(OUT_EXTENSION);
+        removeJobFile(RUN_EXTENSION);
+    }
 
-        // Remove the done and code files so that the resource
-        // can be replaced
-
-        // --- Remove done
-        try (final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION)) {
+    /** Remove a file linked to this job */
+    private void removeJobFile(String extension) {
+        try (final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + extension)) {
             if (doneFile.exists())
                 doneFile.delete();
         } catch (FileSystemException e) {
-            LOGGER.info("Could not remove 'done' file: %s", e);
-        }
-
-        // --- Remove code
-        try (final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION)) {
-            if (doneFile.exists())
-                doneFile.delete();
-        } catch (FileSystemException e) {
-            LOGGER.info("Could not remove 'code' file: %s", e);
+            LOGGER.info("Could not remove '%s' file: %s", extension, e);
         }
     }
 

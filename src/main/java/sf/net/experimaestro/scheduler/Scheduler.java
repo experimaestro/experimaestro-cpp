@@ -21,7 +21,6 @@ package sf.net.experimaestro.scheduler;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Multiset;
 import com.sleepycat.je.*;
-import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
@@ -31,6 +30,8 @@ import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.CloseableIterable;
@@ -48,7 +49,7 @@ import java.util.concurrent.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class Scheduler {
+final public class Scheduler {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -139,7 +140,7 @@ public class Scheduler {
         return connectors.get(id);
     }
 
-    public void put(Connector connector) throws DatabaseException {
+    public void put(Connector connector) throws DatabaseException, ExperimaestroCannotOverwrite {
         connectors.put(null, connector);
     }
 
@@ -175,7 +176,7 @@ public class Scheduler {
      */
     public CloseableIterable<Resource> resources(final Transaction txn, final String group, final boolean recursive, final EnumSet<ResourceState> states) {
         return new CloseableIterable<Resource>() {
-            final EntityCursor<Resource> r = resources.fromGroup(txn, group, recursive);
+            final CloseableIterable<Resource> r = resources.fromGroup(txn, group, recursive);
 
             @Override
             public Iterator<Resource> iterator() {
@@ -197,7 +198,7 @@ public class Scheduler {
             }
 
             @Override
-            public void close() {
+            public void close() throws CloseException {
                 r.close();
             }
         };
@@ -224,7 +225,7 @@ public class Scheduler {
         return resources.retrieveDependentResources(from);
     }
 
-    public void delete(Transaction txn, Resource resource) {
+    public void delete(XPMTransaction txn, Resource resource) {
         synchronized (resource) {
             final ResourceLocator locator = resource.getLocator();
             if (resource.getState() == ResourceState.RUNNING)
@@ -246,16 +247,24 @@ public class Scheduler {
             try {
                 while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
                     LOGGER.info("Starting %s", job);
+                    boolean jobSubmitted = false;
                     try {
                         job.run();
                         LOGGER.info("Job %s has started", job);
+                        jobSubmitted = true;
                     } catch (LockException e) {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                        job.updateStatus(null, true);
                     } catch (Throwable t) {
-                        LOGGER.warn("Houston, we got a problem: %s", t);
+                        LOGGER.warn("Got a trouble while launching job [%s]: %s", job, t);
+                    } finally {
+                        if (!jobSubmitted)
+                            try {
+                                job.updateStatus(null, true);
+                            } catch (ExperimaestroCannotOverwrite experimaestroCannotOverwrite) {
+                            }
                     }
+
                 }
             } catch (InterruptedException e) {
                 LOGGER.warn("Shutting down job runner", e);
@@ -313,7 +322,7 @@ public class Scheduler {
 
 
         // Initialise the running resources so that they can retrieve their state
-        resources = new Resources(this, dbStore, readyJobs);
+        resources = new Resources(this, dbStore);
         resources.init(readyJobs);
 
         // Start the thread that start the jobs
@@ -461,8 +470,8 @@ public class Scheduler {
     /**
      * Iterator on resources
      */
-    public Iterable<Resource> resources() {
-        return resources;
+    public CloseableIterable<Resource> resources() {
+        return resources.values();
     }
 
     public Iterable<Job> tasks() {
@@ -475,13 +484,12 @@ public class Scheduler {
      * This method is in charge of storing all the necessary information in the database and
      * updating the different structures (e.g. list of jobs to be run).
      *
-     *
      * @param txn
      * @param resource
-     * @param changes The changes to store (null for a full store, i.e. when replacing the resource)
+     * @param changes  The changes to store (null for a full store, i.e. when replacing the resource)
      * @throws DatabaseException
      */
-    synchronized public void store(Transaction txn, final Resource resource, Resource.Changes changes) throws DatabaseException {
+    synchronized public void store(XPMTransaction txn, final Resource resource, Resource.Changes changes) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Update the task and notify ourselves since we might want
         // to run new processes
 
@@ -490,53 +498,76 @@ public class Scheduler {
             return;
         }
 
-        if (resource instanceof Job) {
-            Job job = (Job) resource;
-            // Update the heap
-            if (resource.getState() == ResourceState.READY) {
-                synchronized (readyJobs) {
-                    if (job.getIndex() < 0)
-                        readyJobs.add(job);
-                    else
-                        readyJobs.update(job);
+        // If overwritting, first check
 
-                    LOGGER.info("Job %s [%d] is ready [notifying], %d", resource, job.getIndex(), readyJobs.size());
+        // First store the resource
+        final Resource old = resources.put(txn, resource, changes);
 
-                    // Notify job runners
-                    readyJobs.notify();
-                }
-
-            } else if (job.getIndex() >= 0) {
-                // Otherwise, we delete the job from the empty
-                LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
-                synchronized (readyJobs) {
-                    readyJobs.remove(job);
-                }
-            }
-        }
-
-        if (!resources.put(txn, resource, changes))
-            LOGGER.warn("Could not store resource [%s]", resource);
-
-        // Notify dependencies, using a new process
-        // TODO: move this away, this should be called when needed
-        executorService.submit(new Runnable() {
+        // Task to be done when we commit the transaction
+        Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                if (!isStopping()) {
-                    // Notify the others
-                    resources.notifyDependencies(resource);
-                    // Notify ourselves
-                    resource.notify(resource, SimpleMessage.STORED_IN_DATABASE);
+                // Update the old ones
+                if (resource instanceof Job) {
+                    if (old != null && old instanceof Job) {
+                        int index = ((Job) old).getIndex();
+                        if (index > 0)
+                            readyJobs.remove((Job) old);
+                    }
+
+                    Job job = (Job) resource;
+                    // Update the heap
+                    if (resource.getState() == ResourceState.READY) {
+                        synchronized (readyJobs) {
+                            if (job.getIndex() < 0)
+                                readyJobs.add(job);
+                            else
+                                readyJobs.update(job);
+
+                            LOGGER.info("Job %s [%d] is ready [notifying], %d", resource, job.getIndex(), readyJobs.size());
+
+                            // Notify job runners
+                            readyJobs.notify();
+                        }
+
+                    } else if (job.getIndex() >= 0) {
+                        // Otherwise, we delete the job from the empty
+                        LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
+                        synchronized (readyJobs) {
+                            readyJobs.remove(job);
+                        }
+                    }
+
                 }
+
+                // Notify dependencies, using a new process
+                executorService.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isStopping()) {
+                            // Notify the others
+                            resources.notifyDependencies(resource);
+                            // Notify ourselves
+                            resource.notify(resource, SimpleMessage.STORED_IN_DATABASE);
+                        }
+                    }
+                });
             }
-        });
+        };
+
+        if (txn == null)
+            runnable.run();
+        else
+            txn.addCommitAction(runnable);
 
 
     }
 
-    synchronized public void store(Resource resource, Resource.Changes changes) throws DatabaseException {
-        store(null, resource, changes);
+    synchronized public void store(Resource resource, Resource.Changes changes) throws DatabaseException, ExperimaestroCannotOverwrite {
+        try (XPMTransaction xpm = this.beginTransaction()) {
+            store(xpm, resource, changes);
+            xpm.commit();
+        }
     }
 
 
@@ -544,31 +575,4 @@ public class Scheduler {
         return new XPMTransaction(dbEnvironment.beginTransaction(null, null));
     }
 
-    static public class XPMTransaction implements AutoCloseable {
-
-        public final Transaction transaction;
-        boolean closed = false;
-
-        public XPMTransaction(Transaction transaction) {
-            this.transaction = transaction;
-        }
-
-        public void commit() {
-            transaction.commit();
-            closed = true;
-        }
-
-        @Override
-        public void close() {
-            if (!closed) {
-                transaction.abort();
-                closed = true;
-            }
-        }
-
-        public void abort() {
-            transaction.abort();
-            closed = true;
-        }
-    }
 }

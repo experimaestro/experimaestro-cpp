@@ -181,9 +181,13 @@ public abstract class XPMProcess {
     public void dispose() {
         close();
         if (locks != null) {
-            LOGGER.info("Disposing of locks for %s", this);
-            for (Lock lock : locks)
-                lock.dispose();
+            LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
+            while (!locks.isEmpty()) {
+                locks.get(locks.size()-1).dispose();
+                locks.remove(locks.size()-1);
+            }
+
+            locks = null;
         }
 
     }
@@ -194,8 +198,11 @@ public abstract class XPMProcess {
     void close() {
         if (checker != null) {
             LOGGER.info("Cancelling the checker for %s", this);
-            checker.cancel(true);
-            checker = null;
+            if (!checker.cancel(true)) {
+                checker = null;
+            } else
+                LOGGER.warn("Could not cancel the checker");
+
         }
     }
 
@@ -260,6 +267,7 @@ public abstract class XPMProcess {
             final FileObject file = job.getLocator().resolve(connector, Resource.CODE_EXTENSION);
             final long time = file.exists() ? file.getContent().getLastModifiedTime() : -1;
             job.notify(null, new EndOfJobMessage(exitValue(), time));
+            dispose();
         }
     }
 
@@ -311,4 +319,7 @@ public abstract class XPMProcess {
      */
     abstract public void destroy();
 
+    public String getPID() {
+        return pid;
+    }
 }

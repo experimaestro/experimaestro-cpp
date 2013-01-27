@@ -56,7 +56,7 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
 
     @Override
     protected String getKey(Connector connector) {
-        return new String(connector.getIdentifier());
+        return connector.getIdentifier();
     }
 
     @Override

@@ -27,7 +27,9 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
 import com.sleepycat.persist.SecondaryIndex;
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.Trie;
 import sf.net.experimaestro.utils.log.Logger;
@@ -39,14 +41,13 @@ import static com.sleepycat.je.CursorConfig.READ_UNCOMMITTED;
 
 /**
  * A set of resources
- *
+ * <p/>
  * Resources are stored in two databases:
  * <ol>
- *     <li>The main resource</li>
- *     <li>The <b>active</b> dependencies between resources (only dependencies of jobs in a waiting/holding
- *     state are stored here)</li>
+ * <li>The main resource</li>
+ * <li>The <b>active</b> dependencies between resources (only dependencies of jobs in a waiting/holding
+ * state are stored here)</li>
  * </ol>
- *
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -89,11 +90,10 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
      * Initialise the set of resources
      *
      * @param scheduler The scheduler
-     * @param readyJobs A heap where the resources that are ready will be placed during the initialisation
      * @param dbStore
      * @throws DatabaseException
      */
-    public Resources(Scheduler scheduler, EntityStore dbStore, Heap<Job> readyJobs)
+    public Resources(Scheduler scheduler, EntityStore dbStore)
             throws DatabaseException {
         super(dbStore.getPrimaryIndex(ResourceLocator.class, Resource.class));
 
@@ -108,10 +108,10 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
     void init(Heap<Job> readyJobs) {
         // Get the groups
-        final EntityCursor<String> keys = groups.keys();
-        for (String key : keys)
-            groupsTrie.put(DotName.parse(key));
-        keys.close();
+        try (final EntityCursor<String> keys = groups.keys()) {
+            for (String key : keys)
+                groupsTrie.put(DotName.parse(key));
+        }
 
         update(ResourceState.RUNNING, readyJobs);
         update(ResourceState.READY, readyJobs);
@@ -121,55 +121,59 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
         update(ResourceState.WAITING, readyJobs);
     }
 
-    // Update resources in a given state
+    /**
+     * Update resources in a given state
+     */
     private void update(ResourceState state, Heap<Job> readyJobs) {
-        final EntityCursor<Resource> cursor = states.entities(null, state, true, state, true, CursorConfig.READ_UNCOMMITTED);
-        for (Resource resource : cursor) {
-            resource.init(scheduler);
-            try {
-                if (resource.updateStatus(null, false))
-                    put(null, resource);
+        try (final EntityCursor<Resource> cursor = states.entities(null, state, true, state, true, CursorConfig.READ_UNCOMMITTED)) {
+            for (Resource resource : wrap(cursor)) {
+                resource.init(scheduler);
+                try {
+                    if (resource.updateStatus(null, false))
+                        put(null, resource);
 
-                switch (resource.getState()) {
-                    case READY:
-                        readyJobs.add((Job) resource);
-                    case RUNNING:
-                        super.cache(resource);
+                    switch (resource.getState()) {
+                        case READY:
+                            readyJobs.add((Job) resource);
+                    }
+
+                } catch (Exception e) {
+                    LOGGER.error(e, "Error while updating resource %s", resource);
                 }
-
-            } catch (Exception e) {
-                LOGGER.error(e, "Error while updating resource %s", resource);
             }
         }
     }
 
 
     @Override
-    public synchronized boolean put(Transaction txn, Resource resource) throws DatabaseException {
+    public synchronized Resource put(XPMTransaction txn, Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
         return put(txn, resource, null);
     }
 
-    public boolean put(Transaction txn, Resource resource, Resource.Changes changes) throws DatabaseException {
+    public Resource put(XPMTransaction txn, Resource resource, Resource.Changes changes) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Get the group
         groupsTrie.put(DotName.parse(resource.getGroup()));
 
+        Resource old = null;
         // Starts the transaction
         if (changes == null || changes.state)
-            if (!super.put(txn, resource))
-                return false;
+            old = super.put(txn, resource);
 
         if (changes == null || !changes.dependencies.isEmpty() && resource.retrievedDependencies()) {
             // TODO: more fine grained update would be better
             // Delete everything
-            dependenciesFrom.delete(txn, resource.getLocator());
+            LOGGER.debug("Deleting dependencies to %s [%b]", resource, txn != null);
+            final Transaction transaction = txn != null ? txn.getTransaction() : null;
+            dependenciesTo.delete(transaction, resource.getLocator());
 
             // Store the dependencies
+            LOGGER.debug("Storing dependencies from %s [%b]", resource, txn != null);
             for (Dependency dependency : resource.getDependencies()) {
-                dependencies.put(txn, dependency);
+                dependencies.put(transaction, dependency);
             }
         }
 
-        return true;
+        return old;
     }
 
     @Override
@@ -185,7 +189,7 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
 
     @Override
     protected ResourceLocator getKey(Resource resource) {
-        return new ResourceLocator(resource.getLocator());
+        return resource.getLocator();
     }
 
     @Override
@@ -194,11 +198,11 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
     }
 
 
-    public EntityCursor<Resource> fromGroup(final Transaction txn, final String group, boolean recursive) {
-        CursorConfig config = new CursorConfig();
-        if (!recursive)
-            return groups.entities(txn, group, true, group, true, config);
-
+    public CloseableIterable<Resource> fromGroup(final Transaction txn, final String group, boolean recursive) {
+        final CursorConfig config = new CursorConfig();
+        if (!recursive) {
+            return new IterableWrapper(groups.entities(txn, group, true, group, true, config));
+        }
         throw new NotImplementedException();
     }
 
@@ -209,13 +213,13 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
      * @return
      */
     public HashMultiset<String> subgroups(String group) {
-        System.err.format("Searching children of group [%s]%n", group);
+//        System.err.format("Searching children of group [%s]%n", group);
         final Trie<String, DotName> node = groupsTrie.find(DotName.parse(group));
         final HashMultiset<String> set = HashMultiset.create();
         if (node == null)
             return set;
 
-        System.err.format("Found a node%n");
+//        System.err.format("Found a node%n");
         for (String key : node.childrenKeys())
             set.add(key);
 
@@ -241,14 +245,20 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
         }
 
         // Notify each of these
+        resource.init(scheduler);
         for (Dependency dependency : dependencies) {
             final ResourceLocator to = dependency.getTo();
             Resource dep = get(to);
-            if (dep == null)
-                LOGGER.warn("Dependency [%s] of [%s] was not found", from, to);
-            else {
-                LOGGER.info("Notifying dependency [%s] from [%s]", to, from);
-                dep.notify(resource);
+            try {
+                if (dep == null)
+                    LOGGER.warn("Dependency [%s] of [%s] was not found", from, to);
+                else {
+                    LOGGER.info("Notifying dependency [%s] from [%s]", to, from);
+                    dep.init(scheduler);
+                    dep.notify(resource);
+                }
+            } catch (RuntimeException e) {
+                LOGGER.error(e, "Got an exception while notifying [%s]", resource);
             }
         }
     }
@@ -280,7 +290,7 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
      * from it
      *
      * @param locator The key
-     * @param index The index
+     * @param index   The index
      * @return
      */
     private TreeMap<ResourceLocator, Dependency> getDependencies(ResourceLocator locator, SecondaryIndex<ResourceLocator, Long, Dependency> index) {
@@ -291,4 +301,5 @@ public class Resources extends CachedEntitiesStore<ResourceLocator, Resource> {
         }
         return deps;
     }
+
 }

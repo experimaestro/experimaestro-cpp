@@ -28,6 +28,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.utils.TemporaryDirectory;
@@ -133,7 +134,7 @@ public class SchedulerTest {
 
     @Test(timeOut = 1000, description = "Run two jobs - one depend on the other to start", enabled = false)
     public void test_simple_dependency() throws EnvironmentLockedException,
-            DatabaseException, IOException, InterruptedException {
+            DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
         File jobDirectory = new File(directory.getFile(), "simple");
 
         // Create two jobs: job1, and job2 that depends on job1
@@ -143,8 +144,8 @@ public class SchedulerTest {
                 null);
         job2.addDependency(job1, LockType.READ_ACCESS);
 
-        scheduler.store(null, job1, null);
-        scheduler.store(null, job2, null);
+        scheduler.store(job1, null);
+        scheduler.store(job2, null);
 //        counter.resume();
 
         assert sequence.get(0).equals("job1");
@@ -153,7 +154,7 @@ public class SchedulerTest {
     }
 
     @Test(timeOut = 5000, description = "Test of the token resource")
-    public void test_token_resource() {
+    public void test_token_resource() throws ExperimaestroCannotOverwrite {
         File jobDirectory = new File(directory.getFile(), "token");
         jobDirectory.mkdirs();
 

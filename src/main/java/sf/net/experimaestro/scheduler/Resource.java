@@ -20,7 +20,6 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.Transaction;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import com.sleepycat.persist.model.Relationship;
@@ -28,6 +27,7 @@ import com.sleepycat.persist.model.SecondaryKey;
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.StatusLock;
@@ -178,7 +178,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
 
     @Override
     protected void finalize() {
-        LOGGER.debug("Finalizing resource %s", this.hashCode());
+        LOGGER.debug("Finalizing resource [%s@%s]", System.identityHashCode(this), this);
     }
 
 
@@ -210,6 +210,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
         this.locator = identifier;
         this.lockmode = lockMode;
         this.dependencies = new TreeMap<>();
+        LOGGER.debug("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
 
@@ -227,18 +228,18 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
 
     @Override
     public String toString() {
-        return locator.toString();
+        return  locator.toString();
     }
 
     /**
      * Update the status of the resource by checking all that could have changed externally
      * <p/>
      * Calls {@linkplain #doUpdateStatus(sf.net.experimaestro.scheduler.Resource.Changes)}. If a change is detected, then it updates
-     * the representation of the resource in the database by calling {@linkplain Scheduler#store(com.sleepycat.je.Transaction, Resource, sf.net.experimaestro.scheduler.Resource.Changes)}.
+     * the representation of the resource in the database by calling {@linkplain Scheduler#store(XPMTransaction, Resource, sf.net.experimaestro.scheduler.Resource.Changes)}.
      * <p/>
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus(Transaction txn, boolean store) {
+    final public boolean updateStatus(XPMTransaction txn, boolean store) throws ExperimaestroCannotOverwrite {
         Changes changes = new Changes();
         try {
              doUpdateStatus(changes);
@@ -300,11 +301,18 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
 
 
     /**
-     * Initialise a resource when retrieved from database
+     * Initialise a resource when retrieved from database. Does nothing if the resource
+     * is already initialized
+     *
+     * @return <tt>true</tt> if the object was initialized, <tt>false</tt> if it was already
      */
-    public void init(Scheduler scheduler) throws DatabaseException {
+    public boolean init(Scheduler scheduler) throws DatabaseException {
+        if (this.scheduler != null)
+            return false;
+
         this.scheduler = scheduler;
         this.locator.init(scheduler);
+        return true;
     }
 
 
@@ -320,7 +328,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
      * @param old
      * @return true if the resource was replaced, and false if an error occured
      */
-    public boolean replace(Transaction txn, Resource old) {
+    public boolean replace(XPMTransaction txn, Resource old) throws ExperimaestroCannotOverwrite {
         synchronized (old) {
             assert old.locator.equals(locator) : "locators do not match";
             if (UPDATABLE_STATES.contains(old.state)) {
@@ -438,11 +446,12 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
         final int diff = (status.isSatisfied ? 1 : 0) - k;
 
         // No change
+        LOGGER.info("[%s] Checking dependency %s [ok=%d with lock=%s/diff=%d]", this,
+                resource, k, status.type, diff);
+
         if (diff == 0)
             return;
 
-        LOGGER.info("[%s] Checking dependency %s [%d with %s/%d]", this,
-                resource, k, status.type, diff);
 
         // If the resource has an error / hold state, change our state to
         // "on hold"
@@ -482,6 +491,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
         }
 
         changes.state = true;
+        LOGGER.debug("After checking, [%s] state is %s [u=%d, h=%d]", this, state, nbUnsatisfied, nbHolding);
     }
 
     /**
@@ -506,12 +516,14 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
         return dependencies != null;
     }
 
-    synchronized public void invalidate(Transaction txn) throws Exception {
+    /** Invalidate the resource
+     *
+     * Put the state into waiting mode and clean all the output files
+     */
+    synchronized public void invalidate(XPMTransaction txn) throws Exception {
         if (state == ResourceState.DONE) {
             state = ResourceState.WAITING;
-            final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
-            if (doneFile.exists())
-                doneFile.delete();
+            clean();
             updateStatus(txn, false);
             scheduler.store(txn, this, Changes.STATE);
         }
@@ -725,11 +737,11 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
      *
      * @return true if everything went well
      */
-    boolean updateDb(Transaction txn, Changes changes) {
+    boolean updateDb(XPMTransaction txn, Changes changes) {
         try {
             scheduler.store(txn, this, changes);
             return true;
-        } catch (DatabaseException e) {
+        } catch (DatabaseException | ExperimaestroCannotOverwrite e) {
             LOGGER.error(
                     "Could not update the information in the database for %s: %s",
                     this, e.getMessage());

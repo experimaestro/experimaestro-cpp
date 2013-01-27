@@ -177,8 +177,12 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         // Get the current file
         FileObject file = getFile();
 
-        // Get the target
-        FileObject target = (parent ? file.getParent() : file).resolveFile(path);
+        // Get the target (revert to file if null)
+        FileObject target = (parent ? file.getParent() : file);
+        if (target == null)
+            target = file;
+
+        target = target.resolveFile(path);
         return new ResourceLocator(connector, target.getName().getPath());
     }
 

@@ -31,6 +31,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.connectors.*;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.*;
@@ -118,6 +119,12 @@ public class XPMObject {
      * Default locks for new jobs
      */
     Map<Resource, LockType> defaultLocks = new TreeMap<>();
+
+    /**
+     * List of submitted jobs (so that we don't submit them twice with the same script
+     * by default)
+     */
+    Set<ResourceLocator> submittedJobs = new HashSet<>();
 
     /**
      * The resource cleaner
@@ -236,6 +243,7 @@ public class XPMObject {
         final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner);
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks = new TreeMap<>(this.defaultLocks);
+        clone.submittedJobs = new HashSet<>(this.submittedJobs);
         return clone;
     }
 
@@ -282,7 +290,7 @@ public class XPMObject {
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    public XPMObject include(String path, boolean repositoryMode) throws Exception, IllegalAccessException, InstantiationException {
+    public XPMObject include(String path, boolean repositoryMode) throws Exception {
         ResourceLocator scriptpath = currentResourceLocator.resolvePath(path, true);
         LOGGER.debug("Including repository file [%s]", scriptpath);
         return include(scriptpath, repositoryMode);
@@ -571,10 +579,10 @@ public class XPMObject {
         return object.toString();
     }
 
-    public String addData(Connector connector, String identifier) throws DatabaseException {
+    public String addData(Connector connector, String identifier) throws DatabaseException, ExperimaestroCannotOverwrite {
         LockMode mode = LockMode.SINGLE_WRITER;
         SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
-        scheduler.store(null, resource, null);
+        scheduler.store(resource, null);
         return identifier;
     }
 
@@ -685,6 +693,11 @@ public class XPMObject {
 
         task = new CommandLineTask(scheduler, connector, path.toString(), command);
 
+        if (!submittedJobs.add(task.getLocator())) {
+            LOGGER.info("Not submitting %s [duplicate]", task.getLocator());
+            return scheduler.getResource(task.getLocator());
+        }
+
         for (Map.Entry<String, String> entry : pFiles.entrySet())
             task.setParameterFile(entry.getKey(), entry.getValue());
 
@@ -763,7 +776,10 @@ public class XPMObject {
                 getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
             }
         } else {
-            scheduler.store(null, task, null);
+            try(XPMTransaction txn = scheduler.beginTransaction()) {
+                scheduler.store(txn, task, null);
+                txn.commit();
+            }
         }
 
         return task;
@@ -928,6 +944,10 @@ public class XPMObject {
         return repository;
     }
 
+    public void setLocator(ResourceLocator locator) {
+        this.currentResourceLocator = locator;
+    }
+
 
     // --- Javascript methods
 
@@ -966,13 +986,13 @@ public class XPMObject {
 
         @JSFunction("token_resource")
         @JSHelp("Retrieve (or creates) a token resource with a given path")
-        public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) {
+        public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) throws ExperimaestroCannotOverwrite {
             final Resource resource = xpm.scheduler.getResource(new ResourceLocator(XPMConnector.ID, path));
             final TokenResource tokenResource;
             if (resource == null) {
                 tokenResource = new TokenResource(xpm.scheduler, path, 0);
                 tokenResource.init(xpm.scheduler);
-                xpm.scheduler.store(null, tokenResource, null);
+                xpm.scheduler.store(tokenResource, null);
             } else {
                 if (!(resource instanceof TokenResource))
                     throw new AssertionError(String.format("Resource %s exists and is not a token", path));

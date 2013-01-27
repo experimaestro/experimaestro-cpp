@@ -47,7 +47,7 @@ public abstract class Task {
     /**
      * List of sub-tasks
      */
-    protected Map<String, Value> values = new TreeMap<String, Value>();
+    protected Map<String, Value> values = new TreeMap<>();
 
     /**
      * Sub-tasks without name (subset of the map {@link #values}).
@@ -190,12 +190,13 @@ public abstract class Task {
 
                             case Manager.EXPERIMAESTRO_NS:
                                 switch (valueType.getLocalPart()) {
+                                    // TODO: do those checks
                                     case "directory":
-                                        LOGGER.warn("Did not check if [%s] was a directory", x);
+                                        LOGGER.info("Did not check if [%s] was a directory", x);
                                         ok = true;
                                         break;
                                     case "file":
-                                        LOGGER.warn("Did not check if [%s] was a file", x);
+                                        LOGGER.info("Did not check if [%s] was a file", x);
                                         ok = true;
                                         break;
                                 }

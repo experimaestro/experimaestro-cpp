@@ -19,12 +19,15 @@
 package sf.net.experimaestro.server;
 
 import com.sleepycat.je.DatabaseException;
+import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -35,51 +38,57 @@ import java.util.ArrayList;
 
 /**
  * Gives the current task status
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class StatusServlet extends XPMServlet {
-	private static final long serialVersionUID = 1L;
-	private final Scheduler scheduler;
+    final static private Logger LOGGER = Logger.getLogger();
 
-	public StatusServlet(Scheduler manager) {
-		this.scheduler = manager;
-	}
+    private static final long serialVersionUID = 1L;
+    private final Scheduler scheduler;
 
-	protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
+    public StatusServlet(Scheduler manager) {
+        this.scheduler = manager;
+    }
 
-		String localPath = request.getRequestURI().substring(
-				request.getServletPath().length());
+    protected void doGet(HttpServletRequest request,
+                         HttpServletResponse response) throws ServletException, IOException {
 
-		if (localPath.equals("")) {
-			final PrintWriter out = startHTMLResponse(response);
+        String localPath = request.getRequestURI().substring(
+                request.getServletPath().length());
+
+        if (localPath.equals("")) {
+            final PrintWriter out = startHTMLResponse(response);
             header(out, "Resources");
 
-			ArrayList<ResourceState> values = new ArrayList<>(
-					ListAdaptator.create(ResourceState.values()));
-			for (ResourceState state : values) {
-				out.format("<h1>Resources in state %s</h1>", state);
-				out.println("<ul>");
-				for (Resource resource : scheduler.resources()) {
-					if (resource.getState() == state) {
-						out.format(
-								"<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
-								request.getServletPath(),
-                                urlEncode(resource.getLocator().getConnectorId()),
-                                urlEncode(resource.getLocator().getPath()),
-                                resource.getLocator());
+            ArrayList<ResourceState> values = new ArrayList<>(
+                    ListAdaptator.create(ResourceState.values()));
+            for (ResourceState state : values) {
+                out.format("<h1>Resources in state %s</h1>", state);
+                out.println("<ul>");
+                try (final CloseableIterable<Resource> resources = scheduler.resources()) {
+                    for (Resource resource : resources) {
+                        if (resource.getState() == state) {
+                            out.format(
+                                    "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
+                                    request.getServletPath(),
+                                    urlEncode(resource.getLocator().getConnectorId()),
+                                    urlEncode(resource.getLocator().getPath()),
+                                    resource.getLocator());
+                        }
                     }
-				}
-				out.println("</ul>");
-			}
+                } catch (CloseException e) {
+                    LOGGER.warn("Error while closing the iterator");
+                }
+                out.println("</ul>");
+            }
 
-			out.println("</body></html>");
-			return;
-		}
+            out.println("</body></html>");
+            return;
+        }
 
-		if (localPath.equals("/resource")) {
-			PrintWriter out = startHTMLResponse(response);
+        if (localPath.equals("/resource")) {
+            PrintWriter out = startHTMLResponse(response);
             String connectorId = request.getParameter("id");
             String path = request.getParameter("path");
 
@@ -87,26 +96,27 @@ public class StatusServlet extends XPMServlet {
 
             header(out, String.format("Details of resource %s", locator));
 
-			Resource resource;
-			try {
-				resource = scheduler.getResource(locator);
-			} catch (DatabaseException e) {
-				throw new IOException(e);
-			}
+            Resource resource;
+            try {
+                resource = scheduler.getResource(locator);
+            } catch (DatabaseException e) {
+                throw new IOException(e);
+            }
 
-			if (resource != null) {
-				PrintConfig config = new PrintConfig();
-				config.detailURL = request.getServletPath();
-				resource.printXML(out, config);
-			} else {
+            if (resource != null) {
+                PrintConfig config = new PrintConfig();
+                config.detailURL = request.getServletPath();
+                resource.init(scheduler);
+                resource.printXML(out, config);
+            } else {
                 out.format("Could not retrieve resource <b>%s</b>", locator);
             }
 
-			out.println("</body></html>");
-			return;
-		}
+            out.println("</body></html>");
+            return;
+        }
 
-		// Not found
-		ContentServlet.error404(request, response);
-	}
+        // Not found
+        ContentServlet.error404(request, response);
+    }
 }
