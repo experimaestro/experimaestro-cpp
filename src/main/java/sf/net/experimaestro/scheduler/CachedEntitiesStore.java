@@ -121,7 +121,7 @@ abstract public class CachedEntitiesStore<Key, Value> {
                     ((Cleaneable) old).clean();
                 }
                 cache.put(key, new WeakReference<>(value));
-                LOGGER.info("Stored value [%s@%s] in database", System.identityHashCode(value), key);
+                LOGGER.debug("Stored value [%s@%s] in database", System.identityHashCode(value), key);
             }
         };
 

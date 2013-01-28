@@ -7,7 +7,9 @@ import argparse
 import string
 import xmlrpclib
 import logging
+import re
 from icolor import cformat
+import traceback
 
 # --- Set some variables
 
@@ -58,29 +60,83 @@ def start_jar(args, jarargs):
     subprocess.call(command)
 
 
+class Properties:
+    def __init__(self, map=[None, {}]):
+        self.map = map
+
+    def __len__(self):
+        return len(self.map[1])
+
+    def __getitem__(self, name):
+        v = self.sub(name, None)
+        if v is None:
+            raise Exception("No key %s in properties" % name)
+        return v.map[0]
+
+    def keys(self):
+        return self.map[1].keys()
+
+    def get(self, name, default=None):
+        v = self.sub(name, None)
+        if v is None:
+            return None
+        return v.map[0]
+
+    def __str__(self):
+        return "Properties (%s)" % self.map.__str__()
+
+    def sub(self, name, default=None):
+        c = self.map
+        for k in name.split("."):
+            if not k in c[1]:
+                return default
+            else:
+                c = c[1][k]
+        return Properties(c)
+
+    def set(self, name, value):
+        c = self.map
+        for k in name.split("."):
+            if not k in c[1]:
+                c[1][k] = [None, {}]
+            c = c[1][k]
+
+        c[0] = value
+
+
 def getProperties(filename):
     """Get a dictionnary from a property file
    """
     propFile = file(filename, "rU")
 
+    re_comment = re.compile(r"""[#;].*""")
+    re_section = re.compile(r"""^\[(\w+)\]$""")
+    re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
+
     # Set some default values
-    propDict = dict()
-    propDict["url"] = "http://localhost:8080"
+    props = Properties()
+    section = ""
 
     # Read the properties
     for propLine in propFile:
         propDef = propLine.strip()
-        if len(propDef) == 0:
+        if len(propDef) == 0 or re_comment.match(propDef):
             continue
-        if propDef[0] in ('!', '#'):
+
+        m = re_section.match(propDef)
+        if m is not None:
+            section = m.group(1) + "."
             continue
-        punctuation = [propDef.find(c) for c in ':= '] + [len(propDef)]
-        found = min([pos for pos in punctuation if pos != -1])
-        name = propDef[:found].rstrip()
-        value = propDef[found:].lstrip(":= ").rstrip()
-        propDict[name] = value
+
+        m = re_value.match(propDef)
+        if m is not None:
+            props.set(section + m.group(1), m.group(2))
+            continue
+
+        raise Exception("Could not read line [%s]" % propDef)
+
     propFile.close()
-    return propDict
+    return props
 
 
 def getServer(args):
@@ -89,9 +145,20 @@ def getServer(args):
 
     # Initialise the server
     config = getProperties(configfile)
-    url = config["url"]
-    xmlrpc = xmlrpclib.ServerProxy(url, verbose=args.verbose)
-    return xmlrpc
+
+    clients = config.sub("client", None)
+    if clients is None:
+        raise Exception("No client section in configuration file")
+    if args.server is None:
+        if len(clients) > 1:
+            raise Exception("More than one client [%d] in configuration file (%s): use the --server option" % (len(clients), ",".join(clients.keys())))
+        args.server = clients.keys()[0]
+
+    client = clients.sub(args.server)
+    rpc = xmlrpclib.ServerProxy(client["url"], verbose=args.verbose)
+    remote = client.get("remote", False) in ["true", "True", "1"]
+
+    return (rpc, remote)
 
 # --- Server
 
@@ -101,22 +168,19 @@ def command_server_start(args):
 
 
 def command_stop_server(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     server.Server.shutdown()
 
 
 def command_run_js(args):
-    xmlrpc = getServer(args)
+    (xmlrpc, remote) = getServer(args)
 
     env = []
     for key, value in os.environ.iteritems():
         env.append([key, value])
 
     # Remote mode
-    if args.remote:
-        isFile = False
-    else:
-        isFile = True
+    isFile = not(remote)
 
     # Get the command line
     filepaths = []
@@ -124,7 +188,7 @@ def command_run_js(args):
     for filename in args.files:
         filepath = os.path.abspath(filename)
         filepaths.append(filepath)
-        if not args.remote:
+        if not remote:
             filecontents.append("")
         else:
             filecontents.append(file(filepath).read())
@@ -134,6 +198,7 @@ def command_run_js(args):
     try:
         r = xmlrpc.Server.runJSScript(isFile, filepaths, filecontents, env)
         if len(r) > 2:
+            print "Run OK"
             print(r[2])
         if r[0]:
             print
@@ -150,13 +215,13 @@ def command_run_js(args):
 
 
 def command_update_jobs(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     print "%d updated job(s)" % server.Server.updateJobs("", False, [])
 
 
 def command_ls(args):
-    server = getServer(args)
-    response = server.Server.listJobs(args.group, [])
+    (server, remote) = getServer(args)
+    response = server.Server.listJobs(args.group, get_states(args.states))
     for l in response:
         state = l.get("state", "?")
         if state == 'ERROR':
@@ -170,7 +235,7 @@ def command_ls(args):
 
 
 def command_list_methods(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     for method in server.system.listMethods():
         if not method.startswith("system"):
             print("# %s" % method)
@@ -180,38 +245,49 @@ def command_list_methods(args):
 
 
 def command_information(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     print server.Server.getResourceInformation(args.resourceId[0])
 
 
 def command_invalidate(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     print server.Server.invalidateJob(args.resourceId[0], args.recursive)
 
 
 def command_kill(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     n = server.Server.kill(args.jobid)
     print "Killed %d jobs" % n
 
 
 def command_rm(args):
-    server = getServer(args)
+    (server, remote) = getServer(args)
     if len(args.jobid) == 0:
         args.jobid = [""]
 
-    states = args.states
-    if states is not None:
-        states = args.states.split(",")
-    else:
-        states = []
-
+    states = get_states(args.states)
     if args.group is None:
         args.group = ""
 
     for jobid in args.jobid:
         n = server.Server.remove(args.group, jobid, states)
         print "Removed %d resources" % n
+
+
+def command_log_level(args):
+    (server, remote) = getServer(args)
+    server.Server.setLogLevel(args.id, args.level)
+
+# --- Utility functions
+
+
+def get_states(states):
+    if states is not None:
+        states = args.states.split(",")
+    else:
+        states = []
+    return states
+
 
 # --- Run command
 
@@ -223,9 +299,11 @@ parser.set_defaults(dir=dir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
                     choices=["debug", "info", "warn"], default="info")
 parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
+parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
 parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store",
                     help="Experimaestro configuration file")
+parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
 subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
 
@@ -239,6 +317,7 @@ p_run_js.add_argument('files', nargs='*', help='')
 subparsers.add_parser("update-jobs", help="Update jobs")
 
 p_ls = subparsers.add_parser("ls", help="List jobs")
+p_ls.add_argument('--states', dest="states", help="States")
 p_ls.add_argument('group', nargs='?', help="The group to list", default="")
 
 subparsers.add_parser("list-methods", help="List XML-RPC methods")
@@ -258,6 +337,10 @@ p_rm.add_argument('jobid', nargs="*", help="The job ids")
 p_kill = subparsers.add_parser("kill", help="Kill a job")
 p_kill.add_argument('jobid', nargs="+", help="The job URIs")
 
+p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
+p_log_level.add_argument('id', nargs=1, help='The logger ID')
+p_log_level.add_argument('level', nargs=1, choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
+
 # Parse arguments
 args = parser.parse_args()
 
@@ -270,4 +353,6 @@ try:
     locals()[fname](args)
 except Exception as e:
     print e
+    if args.debug:
+        print traceback.format_exc()
     sys.exit(1)

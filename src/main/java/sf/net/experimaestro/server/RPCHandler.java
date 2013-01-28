@@ -150,43 +150,70 @@ public class RPCHandler {
                 }
             }
 
+            transaction.commit();
             return nbUpdated;
         }
     }
 
-    @RPCHelp("Invalidate an already run job. Returns the number of affected jobs.")
-    public int invalidateJob(
+    @RPCHelp("Puts back a job into the waiting queue")
+    public int restartJob(
             @RPCHelp("The name of the job") String name,
-            @RPCHelp("Whether we should invalidate dependent results") boolean recursive
+            @RPCHelp("Whether done jobs should be invalidated") boolean restartDone,
+            @RPCHelp("Whether we should invalidate dependent results when the job was done") boolean recursive
     ) throws Exception {
+
         int nbUpdated = 0;
         Resource resource = scheduler.getResource(ResourceLocator.parse(name));
         if (resource == null)
             throw new ExperimaestroRuntimeException("Job not found [%s]", name);
-        if (resource.getState() != ResourceState.DONE)
-            throw new ExperimaestroRuntimeException("Job is not done [%s]", resource.getState());
 
-        resource.invalidate(null);
+        final ResourceState rsrcState = resource.getState();
+
+        if (rsrcState == ResourceState.RUNNING)
+            throw new ExperimaestroRuntimeException("Job is running [%s]", rsrcState);
+
+        // The job is active, so we have nothing to do
+        if (rsrcState.isActive())
+            return 0;
+
+
+        resource.restart(null);
         nbUpdated++;
 
-        if (recursive) {
-            for (Dependency dependency : scheduler.getDependentResources(resource.getLocator()).values()) {
-                final ResourceLocator to = dependency.getTo();
-                LOGGER.info("Invalidating %s", to);
-                resource = scheduler.getResource(to);
-                switch (resource.getState()) {
-                    case RUNNING:
-                        ((Job) resource).stop();
-                        nbUpdated++;
-                        break;
-                    case DONE:
-                        resource.invalidate(null);
-                        nbUpdated++;
-                        break;
-                }
-            }
+        // If the job was done, we need to restart the dependences
+        if (recursive && rsrcState == ResourceState.DONE) {
+            nbUpdated += invalidate(resource);
         }
 
+        return nbUpdated;
+    }
+
+    // Restart all the job (recursion)
+    private int invalidate(Resource resource) throws Exception {
+        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getLocator()).values();
+
+        if (deps.isEmpty())
+            return 0;
+
+        int nbUpdated = 0;
+
+        for (Dependency dependency : deps) {
+            final ResourceLocator to = dependency.getTo();
+            LOGGER.info("Invalidating %s", to);
+            Resource child = scheduler.getResource(to);
+
+            invalidate(child);
+
+            final ResourceState state = child.getState();
+            if (state == ResourceState.RUNNING)
+                ((Job) child).stop();
+            if (!state.isActive()) {
+                nbUpdated++;
+                // We invalidate grand-children if the child was done
+                if (state == ResourceState.DONE) invalidate(child);
+                child.restart(null);
+            }
+        }
         return nbUpdated;
     }
 
@@ -303,6 +330,7 @@ public class RPCHandler {
                         try {
                             wait(10000);
                         } catch (InterruptedException e) {
+                            LOGGER.error(e);
                         }
                         System.exit(1);
 
@@ -570,6 +598,15 @@ public class RPCHandler {
 
         scheduler.store(null, job, null);
         return true;
+    }
+
+
+    @RPCHelp("Sets alog level")
+    public int setLogLevel(String identifier, String level) {
+
+        final Logger logger = Logger.getLogger(identifier);
+        logger.setLevel(Level.toLevel(level));
+        return 0;
     }
 
     private ResourceLocator toResourceLocator(Object depend) {

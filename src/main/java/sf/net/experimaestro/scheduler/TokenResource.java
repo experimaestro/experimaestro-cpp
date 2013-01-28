@@ -30,7 +30,7 @@ import java.io.PrintWriter;
 
 /**
  * A class that can be locked a given number of times at the same time.
- * <p/>
+ *
  * This is useful when one wants to limit the number of processes on a host for
  * example
  *
@@ -81,7 +81,7 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    synchronized public Lock lock(String pid, LockType dependency) throws UnlockableException {
+    synchronized public Lock lock(String pid, LockType lockType) throws UnlockableException {
         if (accept(null) != DependencyStatus.OK_LOCK)
             return null;
         usedTokens++;

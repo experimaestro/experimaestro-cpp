@@ -400,13 +400,16 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 } catch (DatabaseException e) {
                 }
                 out.format(
-                        "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a>: %s [%b]</li>",
+                        "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a>: %s [%b/%s/%b]</li>",
                         config.detailURL,
                         XPMServlet.urlEncode(locator.getConnectorId()),
                         XPMServlet.urlEncode(locator.getPath()),
                         locator,
                         dependency.getType(),
-                        resource != null && resource.accept(dependency.type).isOK());
+                        dependency.isSatisfied,
+                        dependency.state,
+                        resource != null && resource.accept(dependency.type).isOK()
+                );
             }
             out.println("</ul>");
         }

@@ -255,7 +255,9 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
     }
 
     /**
-     * Update the status of this resource
+     * Do a full update of the status of this resource.
+     *
+     * This implies looking at the disk to check for done/lock files, etc.
      *
      * @return True if the status was updated
      * @param changes
@@ -387,7 +389,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
      * @param type     The type of lock that is asked
      */
     public void addDependency(Resource resource, LockType type) {
-        LOGGER.info("Adding dependency %s to %s for %s", type, resource, this);
+        LOGGER.debug("Adding dependency %s to %s for %s", type, resource, this);
         final DependencyStatus accept = resource.accept(type);
         final ResourceState resourceState = resource.state;
 
@@ -446,7 +448,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
         final int diff = (status.isSatisfied ? 1 : 0) - k;
 
         // No change
-        LOGGER.info("[%s] Checking dependency %s [ok=%d with lock=%s/diff=%d]", this,
+        LOGGER.debug("[%s] Checking dependency %s [ok=%d with lock=%s/diff=%d]", this,
                 resource, k, status.type, diff);
 
         if (diff == 0)
@@ -520,8 +522,8 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
      *
      * Put the state into waiting mode and clean all the output files
      */
-    synchronized public void invalidate(XPMTransaction txn) throws Exception {
-        if (state == ResourceState.DONE) {
+    synchronized public void restart(XPMTransaction txn) throws Exception {
+        if (!state.isActive()) {
             state = ResourceState.WAITING;
             clean();
             updateStatus(txn, false);
@@ -569,7 +571,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
     /**
      * Can the dependency be accepted?
      *
-     * @param locktype
+     * @param locktype The lock type we wish to take
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
      *         {@link DependencyStatus#WAIT} if it can be satisfied one day
      *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
@@ -638,21 +640,22 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
     /**
      * Tries to lock the resource depending on the type of dependency
      *
-     * @param dependency
+     * @param pid The process ID of the locking resource
+     * @param lockType The lock that the process wishes to take
      * @throws UnlockableException
      */
-    public Lock lock(String pid, LockType dependency) throws UnlockableException {
+    public Lock lock(String pid, LockType lockType) throws UnlockableException {
         // Check the dependency status
-        switch (accept(dependency)) {
+        switch (accept(lockType)) {
             // Cases where the lock cannot be granted (task waiting or in error)
             case WAIT:
                 throw new UnlockableException(
-                        "Cannot grant dependency %s for resource %s", dependency,
+                        "Cannot grant dependency %s for resource %s", lockType,
                         this);
             case ERROR:
                 throw new RuntimeException(
                         format("Resource %s cannot accept dependency %s", this,
-                                dependency));
+                                lockType));
 
             case OK_LOCK:
                 // Case where we need a full lock
@@ -660,7 +663,7 @@ public abstract class Resource implements Comparable<Resource>, Cleaneable {
 
             case OK:
                 // Case where we just need a status lock
-                return new StatusLock(this, pid, dependency == LockType.WRITE_ACCESS);
+                return new StatusLock(this, pid, lockType == LockType.WRITE_ACCESS);
 
         }
 

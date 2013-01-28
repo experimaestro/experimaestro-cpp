@@ -64,4 +64,11 @@ public enum ResourceState {
         return this == ON_HOLD || this == ERROR;
     }
 
+    /**
+     * Returns whether a job is active (waiting, ready or running)
+     * @return
+     */
+    public boolean isActive() {
+        return this == WAITING || this == RUNNING || this == READY;
+    }
 }
