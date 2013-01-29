@@ -19,7 +19,6 @@
 package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
-import com.sleepycat.je.DatabaseException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
@@ -33,7 +32,6 @@ import org.w3c.dom.NodeList;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
@@ -46,6 +44,7 @@ import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -118,7 +117,7 @@ public class XPMObject {
     /**
      * Default locks for new jobs
      */
-    Map<Resource, LockType> defaultLocks = new TreeMap<>();
+    Map<Resource, Object> defaultLocks = new TreeMap<>();
 
     /**
      * List of submitted jobs (so that we don't submit them twice with the same script
@@ -133,6 +132,7 @@ public class XPMObject {
 
     static final JSUtils.FunctionDefinition[] definitions = {
             new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
+            new JSUtils.FunctionDefinition(XPMObject.class, "include", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "include_repository", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "script_file", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
@@ -193,12 +193,24 @@ public class XPMObject {
 
         // Define the new classes (scans the package for implementations of ScriptableObject)
         ArrayList<Class<?>> list = new ArrayList<>();
-        Introspection.addClasses(new Introspection.Checker() {
-            @Override
-            public boolean accepts(Class<?> aClass) {
-                return (ScriptableObject.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass)) && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
+
+        try {
+            final String packageName = getClass().getPackage().getName();
+            final String resourceName =  packageName.replace('.', '/');
+            final Enumeration<URL> urls = XPMObject.class.getClassLoader().getResources(resourceName);
+            while (urls.hasMoreElements()) {
+                URL url = urls.nextElement();
+                Introspection.addClasses(new Introspection.Checker() {
+                    @Override
+                    public boolean accepts(Class<?> aClass) {
+                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass)) && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
+                    }
+                }, list, packageName, -1, url);
             }
-        }, list, getClass().getPackage().getName(), 0);
+        } catch (IOException e) {
+            LOGGER.error(e, "While trying to grab resources");
+        }
+
         for (Class<?> aClass : list) {
             JSObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
         }
@@ -213,14 +225,13 @@ public class XPMObject {
         addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
 
-        // scheduler
-        addNewObject(context, scope, "scheduler", "Scheduler",
-                new Object[]{scheduler, this});
-
         // xpm object
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
         ((JSXPM) get(scope, "xpm")).set(this);
 
+        // scheduler
+        addNewObject(context, scope, "scheduler", "Scheduler",
+                new Object[]{scheduler, this});
 
         // logger
         addNewObject(context, scope, "logger", JSObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
@@ -579,12 +590,6 @@ public class XPMObject {
         return object.toString();
     }
 
-    public String addData(Connector connector, String identifier) throws DatabaseException, ExperimaestroCannotOverwrite {
-        LockMode mode = LockMode.SINGLE_WRITER;
-        SimpleData resource = new SimpleData(scheduler, connector, identifier, mode, false);
-        scheduler.store(resource, null);
-        return identifier;
-    }
 
     /**
      * Simple evaluation of shell commands (does not create a job)
@@ -691,7 +696,8 @@ public class XPMObject {
         } else
             path = connector.getMainConnector().resolve(path.toString());
 
-        task = new CommandLineTask(scheduler, connector, path.toString(), command);
+        final ResourceLocator locator = new ResourceLocator(connector.getMainConnector(), path.toString());
+        task = new CommandLineTask(scheduler, locator, command);
 
         if (!submittedJobs.add(task.getLocator())) {
             LOGGER.info("Not submitting %s [duplicate]", task.getLocator());
@@ -702,8 +708,8 @@ public class XPMObject {
             task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
-        for (Map.Entry<Resource, LockType> lock : defaultLocks.entrySet()) {
-            task.addDependency(lock.getKey(), lock.getValue());
+        for (Map.Entry<Resource, Object> lock : defaultLocks.entrySet()) {
+            lock.getKey().createDependency(lock.getValue());
         }
 
         // --- Options
@@ -749,13 +755,13 @@ public class XPMObject {
                     final String rsrcPath = Context.toString(array.get(0, array));
 
                     Resource resource = scheduler.getResource(ResourceLocator.parse(rsrcPath));
-                    LockType lockType = LockType.valueOf(XPMObject.toString(array.get(
-                            1, array)));
-                    LOGGER.debug("Adding dependency on [%s] of type [%s]", resource,
-                            lockType);
+
+                    final Object o = array.get(1, array);
+                    LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, o);
                     if (resource == null)
                         throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
-                    task.addDependency(resource, lockType);
+                    final Dependency dependency = resource.createDependency(o);
+                    task.addDependency(dependency);
                 }
 
             }
@@ -764,22 +770,18 @@ public class XPMObject {
 
         // Update the task status now that it is initialized
         task.setGroup(defaultGroup);
-        task.ready();
 
         final Resource old = scheduler.getResource(task.getLocator());
         if (old != null) {
             // TODO: if equal, do not try to replace the task
-            if (!task.replace(null, old)) {
+            if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 return old;
             } else {
                 getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
             }
         } else {
-            try(XPMTransaction txn = scheduler.beginTransaction()) {
-                scheduler.store(txn, task, null);
-                txn.commit();
-            }
+            scheduler.store(task);
         }
 
         return task;
@@ -980,19 +982,20 @@ public class XPMObject {
 
         @JSFunction("set_default_lock")
         @JSHelp("Adds a new resource to lock for all jobs to be started")
-        public void setDefaultLock(Object resource, String mode) {
-            xpm.defaultLocks.put((Resource) JSUtils.unwrap(resource), LockType.valueOf(mode));
+        public void setDefaultLock(Object resource, Object parameters) {
+            xpm.defaultLocks.put((Resource) JSUtils.unwrap(resource), parameters);
         }
 
         @JSFunction("token_resource")
         @JSHelp("Retrieve (or creates) a token resource with a given path")
         public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) throws ExperimaestroCannotOverwrite {
-            final Resource resource = xpm.scheduler.getResource(new ResourceLocator(XPMConnector.ID, path));
+            final ResourceLocator locator = new ResourceLocator(XPMConnector.ID, path);
+            final Resource resource = xpm.scheduler.getResource(locator);
             final TokenResource tokenResource;
             if (resource == null) {
-                tokenResource = new TokenResource(xpm.scheduler, path, 0);
+                tokenResource = new TokenResource(xpm.scheduler, new ResourceData(locator), 0);
                 tokenResource.init(xpm.scheduler);
-                xpm.scheduler.store(tokenResource, null);
+                xpm.scheduler.store(tokenResource);
             } else {
                 if (!(resource instanceof TokenResource))
                     throw new AssertionError(String.format("Resource %s exists and is not a token", path));

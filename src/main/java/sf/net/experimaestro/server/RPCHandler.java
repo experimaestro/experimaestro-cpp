@@ -19,7 +19,6 @@
 package sf.net.experimaestro.server;
 
 import com.google.common.collect.Multiset;
-import com.sleepycat.je.DatabaseException;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
@@ -30,11 +29,8 @@ import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.XmlRpcStreamServer;
 import org.mortbay.jetty.Server;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.JSArgument;
@@ -45,7 +41,6 @@ import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -105,10 +100,13 @@ public class RPCHandler {
             @JSArgument(name = "killRunning") boolean killRunning,
             @JSArgument(name = "holdWaiting") boolean holdWaiting,
             @JSArgument(name = "recursive") boolean recursive) throws Exception {
-        int n = 0;
+
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
-        try (final CloseableIterable<Resource> resources = scheduler.resources(null, group, recursive, statesSet)) {
+
+
+        int n = 0;
+        try (final CloseableIterable<Resource> resources = scheduler.resources(group, recursive, statesSet)) {
             for (Resource resource : resources) {
                 if (resource instanceof Job) {
                     ((Job) resource).stop();
@@ -140,19 +138,16 @@ public class RPCHandler {
     public int updateJobs(String group, boolean recursive, Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
-        try (final XPMTransaction transaction = scheduler.beginTransaction()) {
-            int nbUpdated = 0;
-            try (final CloseableIterable<Resource> resources = scheduler.resources(transaction.getTransaction(), group, recursive, statesSet)) {
-                for (Resource resource : resources) {
-                    resource.init(scheduler);
-                    if (resource.updateStatus(transaction, true))
-                        nbUpdated++;
-                }
+        int nbUpdated = 0;
+        try (final CloseableIterable<Resource> resources = scheduler.resources(group, recursive, statesSet)) {
+            for (Resource resource : resources) {
+                resource.init(scheduler);
+                if (resource.updateStatus())
+                    nbUpdated++;
             }
-
-            transaction.commit();
-            return nbUpdated;
         }
+
+        return nbUpdated;
     }
 
     @RPCHelp("Puts back a job into the waiting queue")
@@ -177,7 +172,7 @@ public class RPCHandler {
             return 0;
 
 
-        resource.restart(null);
+        ((Job) resource).restart();
         nbUpdated++;
 
         // If the job was done, we need to restart the dependences
@@ -190,7 +185,7 @@ public class RPCHandler {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getLocator()).values();
+        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId()).values();
 
         if (deps.isEmpty())
             return 0;
@@ -198,7 +193,7 @@ public class RPCHandler {
         int nbUpdated = 0;
 
         for (Dependency dependency : deps) {
-            final ResourceLocator to = dependency.getTo();
+            final long to = dependency.getTo();
             LOGGER.info("Invalidating %s", to);
             Resource child = scheduler.getResource(to);
 
@@ -211,7 +206,7 @@ public class RPCHandler {
                 nbUpdated++;
                 // We invalidate grand-children if the child was done
                 if (state == ResourceState.DONE) invalidate(child);
-                child.restart(null);
+                ((Job) child).restart();
             }
         }
         return nbUpdated;
@@ -240,35 +235,32 @@ public class RPCHandler {
      * @param stateNames The states of the resource to delete
      */
     public int remove(String group, String uri, Object[] stateNames) throws Exception {
-        try (XPMTransaction txn = scheduler.beginTransaction()) {
-            int n = 0;
-            EnumSet<ResourceState> states = getStates(stateNames);
-            if (!"".equals(uri)) {
-                final Resource resource = scheduler.getResource(ResourceLocator.parse(uri));
-                if (!resource.getGroup().startsWith(group))
-                    throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
-                            resource, resource.getGroup(), group);
-                if (!states.contains(resource.getState()))
-                    throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
-                            resource, resource.getState(), states);
-                scheduler.delete(txn, resource);
-                n = 1;
-            } else {
-                // TODO order the tasks so that depencies are removed first
-                try (final CloseableIterable<Resource> resources = scheduler.resources(txn.getTransaction(), group, false, states)) {
-                    for (Resource resource : resources) {
-                        try {
-                            scheduler.delete(txn, resource);
-                        } catch (Exception e) {
-                            // TODO should output this to the caller
-                        }
-                        n++;
+        int n = 0;
+        EnumSet<ResourceState> states = getStates(stateNames);
+        if (!"".equals(uri)) {
+            final Resource resource = scheduler.getResource(ResourceLocator.parse(uri));
+            if (!resource.getGroup().startsWith(group))
+                throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
+                        resource, resource.getGroup(), group);
+            if (!states.contains(resource.getState()))
+                throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
+                        resource, resource.getState(), states);
+            scheduler.delete(resource);
+            n = 1;
+        } else {
+            // TODO order the tasks so that depencies are removed first
+            try (final CloseableIterable<Resource> resources = scheduler.resources(group, false, states)) {
+                for (Resource resource : resources) {
+                    try {
+                        scheduler.delete(resource);
+                    } catch (Exception e) {
+                        // TODO should output this to the caller
                     }
+                    n++;
                 }
             }
-            txn.commit();
-            return n;
         }
+        return n;
     }
 
     /**
@@ -288,7 +280,7 @@ public class RPCHandler {
             list.add(map);
         }
 
-        try (final CloseableIterable<Resource> resources = scheduler.resources(null, group, false, set)) {
+        try (final CloseableIterable<Resource> resources = scheduler.resources(group, false, set)) {
             for (Resource resource : resources) {
                 Map<String, String> map = new HashMap<>();
                 map.put("type", resource.getClass().getCanonicalName());
@@ -543,62 +535,62 @@ public class RPCHandler {
         return list;
     }
 
-    /**
-     * Add a command line job
-     *
-     * @throws DatabaseException
-     */
-    public boolean runCommand(String name, int priority, Object[] command,
-                              Object[] envArray, String workingDirectory, Object[] depends,
-                              Object[] readLocks, Object[] writeLocks) throws DatabaseException, ExperimaestroCannotOverwrite {
-        Map<String, String> env = arrayToMap(envArray);
-        LOGGER.info(
-                "Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",
-                name, Arrays.toString(command), priority,
-                Arrays.toString(readLocks), Arrays.toString(writeLocks),
-                Output.toString(", ", env.entrySet()));
-
-        CommandArguments commandArgs = new CommandArguments();
-        for (int i = command.length; --i >= 0; )
-            commandArgs.add(new CommandArgument(command[i].toString()));
-
-        Connector connector = LocalhostConnector.getInstance();
-        CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
-                env, new File(workingDirectory).getAbsolutePath());
-
-        // XPMProcess locks
-        for (Object depend : depends) {
-
-            Resource resource = scheduler.getResource(toResourceLocator(depend));
-            if (resource == null)
-                throw new RuntimeException("Resource " + depend
-                        + " was not found");
-            job.addDependency(resource, LockType.GENERATED);
-        }
-
-        // We have to wait for read lock resources to be generated
-        for (Object readLock : readLocks) {
-            Resource resource = scheduler.getResource(toResourceLocator(readLock));
-            if (resource == null)
-                throw new RuntimeException("Resource " + readLock
-                        + " was not found");
-            job.addDependency(resource, LockType.READ_ACCESS);
-        }
-
-        // Write locks
-        for (Object writeLock : writeLocks) {
-            final ResourceLocator id = toResourceLocator(writeLock);
-            Resource resource = scheduler.getResource(id);
-            if (resource == null) {
-                resource = new SimpleData(scheduler, id,
-                        LockMode.EXCLUSIVE_WRITER, false);
-            }
-            job.addDependency(resource, LockType.WRITE_ACCESS);
-        }
-
-        scheduler.store(null, job, null);
-        return true;
-    }
+//    /**
+//     * Add a command line job
+//     *
+//     * @throws DatabaseException
+//     */
+//    public boolean runCommand(String name, int priority, Object[] command,
+//                              Object[] envArray, String workingDirectory, Object[] depends,
+//                              Object[] readLocks, Object[] writeLocks) throws DatabaseException, ExperimaestroCannotOverwrite {
+//        Map<String, String> env = arrayToMap(envArray);
+//        LOGGER.info(
+//                "Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",
+//                name, Arrays.toString(command), priority,
+//                Arrays.toString(readLocks), Arrays.toString(writeLocks),
+//                Output.toString(", ", env.entrySet()));
+//
+//        CommandArguments commandArgs = new CommandArguments();
+//        for (int i = command.length; --i >= 0; )
+//            commandArgs.add(new CommandArgument(command[i].toString()));
+//
+//        Connector connector = LocalhostConnector.getInstance();
+//        CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
+//                env, new File(workingDirectory).getAbsolutePath());
+//
+//        // XPMProcess locks
+//        for (Object depend : depends) {
+//
+//            Resource resource = scheduler.getResource(toResourceLocator(depend));
+//            if (resource == null)
+//                throw new RuntimeException("Resource " + depend
+//                        + " was not found");
+//            job.addDependency(resource, LockType.GENERATED);
+//        }
+//
+//        // We have to wait for read lock resources to be generated
+//        for (Object readLock : readLocks) {
+//            Resource resource = scheduler.getResource(toResourceLocator(readLock));
+//            if (resource == null)
+//                throw new RuntimeException("Resource " + readLock
+//                        + " was not found");
+//            job.addDependency(resource, LockType.READ_ACCESS);
+//        }
+//
+//        // Write locks
+//        for (Object writeLock : writeLocks) {
+//            final ResourceLocator id = toResourceLocator(writeLock);
+//            Resource resource = scheduler.getResource(id);
+//            if (resource == null) {
+//                resource = new SimpleData(scheduler, id,
+//                        LockMode.EXCLUSIVE_WRITER, false);
+//            }
+//            job.addDependency(resource, LockType.WRITE_ACCESS);
+//        }
+//
+//        scheduler.store(job, null);
+//        return true;
+//    }
 
 
     @RPCHelp("Sets alog level")

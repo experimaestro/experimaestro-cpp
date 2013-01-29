@@ -19,16 +19,17 @@
 package sf.net.experimaestro.scheduler;
 
 /**
- * Notify a job that it has ended
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/6/12
+ * @date 29/1/13
  */
-public class EndOfJobMessage extends Message {
-    public int code;
-    public long timestamp;
+public class DependencyChangedMessage extends Message {
+    Dependency dependency;
+    DependencyStatus from;
+    DependencyStatus to;
 
-    public EndOfJobMessage(int code, long timestamp) {
-        this.code = code;
-        this.timestamp = timestamp;
+    public DependencyChangedMessage(Dependency dependency, DependencyStatus from, DependencyStatus to) {
+        this.dependency = dependency;
+        this.from = from;
+        this.to = to;
     }
 }

@@ -29,6 +29,7 @@ import bpiwowar.argparser.EnumValue;
  *     <li>Exclusive writer</li>
  *     <li>Single writer with concurrent multiple reader</li>
  *     <li>Multiple writer</li>
+ *     <li>custom</li>
  * </ul>
  */
 public enum LockMode {

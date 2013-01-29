@@ -39,7 +39,7 @@ import java.util.List;
  *
  * @author bpiwowar
  */
-final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
+final public class Heap<Element extends HeapElement<Element>> implements Iterable<Element> {
 
     /**
      * Default element for a heap
@@ -71,9 +71,9 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
         }
     }
 
-    List<E> list = new ArrayList<E>();
+    List<Element> list = new ArrayList<Element>();
 
-    Comparator<E> comparator = null;
+    Comparator<Element> comparator = null;
 
     /**
      * Default construction
@@ -88,14 +88,14 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
     /**
      * Default construction
      */
-    public Heap(Comparator<E> comparator) {
+    public Heap(Comparator<Element> comparator) {
         this.comparator = comparator;
     }
 
     /**
      * Construct with a list
      */
-    public Heap(List<E> list) {
+    public Heap(List<Element> list) {
         if (!verify())
             throw new IllegalArgumentException(
                     "The list given for the heap does not verify the heap property");
@@ -108,8 +108,8 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      * @param j The index of the second element
      */
     private void swap(final int i, final int j) {
-        final E x = list.get(i);
-        final E y = list.get(j);
+        final Element x = list.get(i);
+        final Element y = list.get(j);
 
         // Swap indices
         final int k = y.getIndex();
@@ -125,7 +125,7 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      *
      * @param item The item to append
      */
-    public void add(final E item) {
+    public void add(final Element item) {
         list.add(item);
         int i = list.size() - 1;
         list.get(i).setIndex(i);
@@ -142,14 +142,14 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      * Remove element from Heap
      * @param element
      */
-    public E remove(E element) {
+    public Element remove(Element element) {
         final int index = element.getIndex();
         element.setIndex(-1);
         return remove(index);
     }
 
 
-    private void setItem(final int index, final E item) {
+    private void setItem(final int index, final Element item) {
         list.set(index, item);
         item.setIndex(index);
     }
@@ -159,14 +159,14 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      *
      * @return
      */
-    public E pop() {
-        final E remove = remove(0);
+    public Element pop() {
+        final Element remove = remove(0);
         remove.setIndex(-1);
         return remove;
     }
 
-    private E remove(int hole_index) {
-        final E return_value = list.get(hole_index);
+    private Element remove(int hole_index) {
+        final Element return_value = list.get(hole_index);
         final int L = size();
 
         while (true) {
@@ -211,7 +211,7 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
      *
      * @param item
      */
-    public void update(final E item) {
+    public void update(final Element item) {
         int k = item.getIndex();
         final int size = size();
         if (k > 0 && compare(k, (k - 1) / 2) < 0) {
@@ -253,7 +253,7 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
         return list.size();
     }
 
-    public E peek() {
+    public Element peek() {
         return list.get(0);
     }
 
@@ -309,7 +309,7 @@ final public class Heap<E extends HeapElement<E>> implements Iterable<E> {
         return list.isEmpty();
     }
 
-    public Iterator<E> iterator() {
+    public Iterator<Element> iterator() {
         return list.iterator();
     }
 

@@ -20,17 +20,16 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
+import java.util.TreeMap;
 
 /**
  * A class that can be locked a given number of times at the same time.
- *
+ * <p/>
  * This is useful when one wants to limit the number of processes on a host for
  * example
  *
@@ -38,7 +37,7 @@ import java.io.PrintWriter;
  * @date 23/11/12
  */
 @Persistent
-public class TokenResource extends Resource {
+public class TokenResource extends Resource<ResourceData> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -54,8 +53,15 @@ public class TokenResource extends Resource {
     private TokenResource() {
     }
 
-    public TokenResource(Scheduler scheduler, String path, int limit) {
-        super(scheduler, XPMConnector.getInstance(), path, LockMode.CUSTOM);
+    /**
+     * Creates a new token resource
+     *
+     * @param scheduler The scheduler this resource belongs to
+     * @param data      The resource data
+     * @param limit     The maximum number of tokens
+     */
+    public TokenResource(Scheduler scheduler, ResourceData data, int limit) {
+        super(scheduler, data);
         this.limit = limit;
         this.usedTokens = 0;
         state = ResourceState.DONE;
@@ -71,35 +77,9 @@ public class TokenResource extends Resource {
         if (this.limit == limit) return;
 
         this.limit = limit;
-        updateDb(Changes.STATE);
+        storeState();
     }
 
-    @Override
-    DependencyStatus accept(LockType locktype) {
-        // If we have enough tokens, then hold
-        return usedTokens < limit ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
-    }
-
-    @Override
-    synchronized public Lock lock(String pid, LockType lockType) throws UnlockableException {
-        if (accept(null) != DependencyStatus.OK_LOCK)
-            return null;
-        usedTokens++;
-
-        final MyLock lock = new MyLock(this);
-        updateDb(Changes.STATE);
-        return lock;
-    }
-
-    /**
-     * Unlock a resource
-     *
-     * @return
-     */
-    synchronized private boolean unlock() {
-        usedTokens--;
-        return updateDb(Changes.STATE);
-    }
 
     @Override
     public void printXML(PrintWriter out, PrintConfig config) {
@@ -108,7 +88,54 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    synchronized protected void doUpdateStatus(Changes changes) throws Exception {
+    synchronized protected boolean doUpdateStatus() throws Exception {
+        final TreeMap<Long,Dependency> dependencies = scheduler.getDependentResources(getId());
+
+        // TODO: should check all the links
+        return false;
+    }
+
+
+    @Override
+    public TokenDependency createDependency(Object values) {
+        return new TokenDependency();
+    }
+
+    /**
+     * A token dependency
+     */
+    static public class TokenDependency extends Dependency {
+
+        @Override
+        protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
+            TokenResource token = (TokenResource) getFrom(scheduler, from);
+            return token.usedTokens < token.limit ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
+        }
+
+        @Override
+        protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+            TokenResource token = (TokenResource) getFrom(scheduler, from);
+            synchronized (token) {
+                if (token.usedTokens >= token.limit)
+                    throw new UnlockableException("All the tokens are already taken");
+
+                token.usedTokens++;
+                token.storeState();
+
+                return new TokenLock(token);
+            }
+        }
+    }
+
+
+    /**
+     * Unlock a resource
+     *
+     * @return
+     */
+    synchronized private void unlock() {
+        usedTokens--;
+        storeState();
     }
 
     /**
@@ -117,27 +144,26 @@ public class TokenResource extends Resource {
      * TODO: maybe ensure that we only unlock valid locks (using an ID)
      */
     @Persistent
-    private static class MyLock implements Lock {
+    private static class TokenLock implements Lock {
         private String pid;
         private String resourceId;
         transient private TokenResource resource;
 
-        private MyLock() {
+        private TokenLock() {
         }
 
-        public MyLock(TokenResource resource) {
+        public TokenLock(TokenResource resource) {
             this.resource = resource;
             resourceId = resource.getIdentifier();
         }
 
+
         @Override
-        public boolean dispose() {
+        public void close() {
             if (resource != null) {
                 resource.unlock();
                 resource = null;
-                return true;
             }
-            return false;
         }
 
         @Override

@@ -24,13 +24,9 @@ import com.sleepycat.persist.model.Persistent;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.LockType;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
@@ -75,7 +71,7 @@ public class SchedulerTest {
     static Counters counters = new Counters();
 
     @Persistent
-    static public class SimpleJob extends Job {
+    static public class SimpleJob extends Job<JobData> {
         private String waitId;
         private String id;
         private ThreadCount counter;
@@ -83,9 +79,14 @@ public class SchedulerTest {
         public SimpleJob() {
         }
 
+        @Override
+        protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
+            return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
         public SimpleJob(String id, Scheduler scheduler, Connector connector, String fullId, String waitId,
                          String setId) {
-            super(scheduler, connector, fullId);
+            super(scheduler, new JobData(new ResourceLocator(connector, fullId)));
             this.id = id;
             this.waitId = waitId;
             this.state = ResourceState.WAITING;
@@ -93,25 +94,10 @@ public class SchedulerTest {
             counters.add(setId);
         }
 
-        @Override
-        public synchronized void notify(Resource resource, Object... objects) {
-            super.notify(resource, objects);
-            if (resource == null) {
 
-            }
-        }
 
-        @Override
-        protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-            // Wait that this task has been added to the queue
-            counters.resume(waitId);
 
-            synchronized (sequence) {
-                sequence.add(id);
-            }
-            counter.del();
-            return null;
-        }
+
     }
 
 
@@ -142,10 +128,10 @@ public class SchedulerTest {
                 "job2");
         SimpleJob job2 = simpleJob(scheduler, jobDirectory, "job2", true,
                 null);
-        job2.addDependency(job1, LockType.READ_ACCESS);
+//        job2.addDependency(job1, LockType.READ_ACCESS);
 
-        scheduler.store(job1, null);
-        scheduler.store(job2, null);
+        scheduler.store(job1);
+        scheduler.store(job2);
 //        counter.resume();
 
         assert sequence.get(0).equals("job1");
@@ -159,14 +145,15 @@ public class SchedulerTest {
         jobDirectory.mkdirs();
 
         ThreadCount counter = new ThreadCount();
-        TokenResource resource = new TokenResource(scheduler, "test", 1);
-        scheduler.store(resource, null);
+        ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), "test");
+        TokenResource token = new TokenResource(scheduler, new ResourceData(locator), 1);
+        scheduler.store(token);
 
         WaitingJob[] jobs = new WaitingJob[2];
-        for(int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory,  "job" + i, 500);
-            jobs[i].addDependency(resource, LockType.READ_ACCESS);
-            scheduler.store(jobs[i], null);
+        for (int i = 0; i < jobs.length; i++) {
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500);
+            jobs[i].addDependency(token.createDependency(null));
+            scheduler.store(jobs[i]);
         }
 
 
@@ -180,13 +167,12 @@ public class SchedulerTest {
         });
 
         // Check that one started after the other
-        for(int i = 0; i < jobs.length - 1; i++)
-            assert jobs[i].getEndTimestamp() < jobs[i+1].getStartTimestamp()
-                : "The jobs did not start one after the other";
+        for (int i = 0; i < jobs.length - 1; i++)
+            assert jobs[i].getEndTimestamp() < jobs[i + 1].getStartTimestamp()
+                    : "The jobs did not start one after the other";
 
         LOGGER.info("Finished token test");
     }
-
 
 
     static SimpleJob simpleJob(Scheduler scheduler, File jobDirectory,
@@ -205,13 +191,15 @@ public class SchedulerTest {
     }
 
     @Persistent
-    static private class WaitingJob extends Job {
+    static private class WaitingJob extends Job<JobData> {
         transient private ThreadCount counter;
         long duration;
 
-        public WaitingJob() {}
+        public WaitingJob() {
+        }
+
         public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration) {
-            super(scheduler, LocalhostConnector.getInstance(), new File(dir, id).getAbsolutePath());
+            super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), dir.getAbsolutePath())));
             this.counter = counter;
             counter.add();
             state = ResourceState.READY;
@@ -231,6 +219,7 @@ public class SchedulerTest {
             public MyXPMProcess() {
 
             }
+
             public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, long duration) {
                 super(connector, "1", job, true);
                 this.timestamp = System.currentTimeMillis();
@@ -255,7 +244,7 @@ public class SchedulerTest {
 
             @Override
             public boolean isRunning() throws Exception {
-                return  duration < System.currentTimeMillis() - timestamp;
+                return duration < System.currentTimeMillis() - timestamp;
             }
 
             @Override
@@ -283,4 +272,8 @@ public class SchedulerTest {
             }
         }
     }
+
+
+
+//
 }

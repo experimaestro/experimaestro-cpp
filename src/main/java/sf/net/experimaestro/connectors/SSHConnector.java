@@ -328,7 +328,7 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         @Override
-        public boolean dispose() {
+        public void close() {
             try {
                 ChannelSftp sftp = ((SSHConnector)connector.getMainConnector()).newSftpChannel();
                 LOGGER.info("Disposing of SSH lock [%s]", path);
@@ -341,8 +341,6 @@ public class SSHConnector extends SingleHostConnector {
             } catch (Exception e) {
                 new RuntimeException(e);
             }
-
-            return true;
         }
 
         @Override

@@ -19,67 +19,140 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.*;
-import sf.net.experimaestro.locks.LockType;
+import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.locks.UnlockableException;
+import sf.net.experimaestro.utils.log.Logger;
 
 /**
- * What is the status of a dependency This class stores the previous status
+ * What is the state of a dependency.
+ * This class stores the previous state
  * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
  */
 @Entity
-public class Dependency {
+abstract public class Dependency {
+    final static private Logger LOGGER = Logger.getLogger();
+
     public static final String FROM_KEY_NAME = "from";
     public static final String TO_KEY_NAME = "to";
 
     @PrimaryKey(sequence = "dependency_id")
-    long id;
+    private long id;
 
     /**
-     * The resource
+     * The resource.
+     * We abort its deletion if there is a dependency.
      */
-    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE)
-    ResourceLocator from;
+    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE, onRelatedEntityDelete = DeleteAction.ABORT)
+    private long from;
 
     /**
      * The resource that depends on the resource {@link #from}
      */
     @SecondaryKey(name = TO_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.CASCADE)
-    ResourceLocator to;
-
-	/**
-	 * Type of lock that we request on the dependency 
-	 */
-	LockType type = null;
-	
-	/**
-	 * Was this dependency satisfied when we last checked?
-	 */
-	boolean isSatisfied = false;
+    private long to;
 
     /**
-     * Previous state
+     * The locking mechanism
      */
-    ResourceState state;
+    LockMode lockMode;
+
+    /**
+     * The state of this dependency
+     */
+    DependencyStatus status;
+
+    /**
+     * The lock (or null if no lock taken)
+     */
+    private Lock lock;
+
 
     protected Dependency() {
-	}
-
-	public Dependency(ResourceLocator from, ResourceLocator to, LockType type, boolean isSatisfied, ResourceState state) {
-        this.from = from;
-        this.to = to;
-		this.type = type;
-		this.isSatisfied = isSatisfied;
-        this.state = state;
     }
 
-    public ResourceLocator getFrom() {
+    public Dependency(long from) {
+        this.from = from;
+    }
+
+    public Dependency setTo(long to) {
+        this.to = to;
+        return this;
+    }
+
+
+    public long getFrom() {
         return from;
     }
 
-    public LockType getType() {
-		return type;
-	}
-
-    public ResourceLocator getTo() {
+    public long getTo() {
         return to;
     }
+
+    /**
+     * Can the dependency be accepted?
+     *
+     * @return {@link DependencyStatus#OK} if the dependency is satisfied,
+     *         {@link DependencyStatus#WAIT} if it can be satisfied one day
+     *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
+     *         {@link DependencyStatus#ERROR} if it cannot be satisfied
+     */
+    protected DependencyStatus accept(Scheduler scheduler, Resource from) {
+        // Handle simple cases
+        if (from.getState() == ResourceState.ERROR)
+            return DependencyStatus.HOLD;
+
+        if (from.getState() == ResourceState.ON_HOLD)
+            return DependencyStatus.HOLD;
+
+        // If not done, then we wait
+        if (from.getState() != ResourceState.DONE)
+            return DependencyStatus.WAIT;
+
+        return _accept(scheduler, from);
+    }
+
+    /**
+     * Check the dependency status
+     */
+    abstract protected DependencyStatus _accept(Scheduler scheduler, Resource from);
+
+    /**
+     * Lock the resource
+     */
+    protected abstract Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException;
+
+
+    /**
+     * Update a dependency status
+     *
+     * @param scheduler
+     * @param from      The  resource to be locked, i.e. {@linkplain #from} or null (in this case,
+     *                  it might be loaded from DB using the scheduler)
+     * @param store     <tt>true</tt> if the dependency status should be stored in DB if changed.
+     * @return
+     */
+    synchronized final public boolean update(Scheduler scheduler, Resource from, boolean store) {
+        DependencyStatus newStatus = _accept(scheduler, from);
+        if (newStatus != status)
+            return false;
+        if (store)
+            scheduler.store(this);
+        return true;
+    }
+
+    final public Lock lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+        lock = _lock(scheduler, from, pid);
+        if (lock != null) {
+            scheduler.store(this);
+        }
+        return lock;
+    }
+
+
+
+    protected Resource getFrom(Scheduler scheduler, Resource from) {
+        return from != null ? from : scheduler.getResource(getFrom());
+    }
+
+
 }

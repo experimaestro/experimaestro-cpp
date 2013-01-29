@@ -22,6 +22,7 @@ import com.sleepycat.je.DatabaseException;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
@@ -46,6 +47,7 @@ public class JSScheduler extends ScriptableObject {
     public JSScheduler() {
     }
 
+    @JSConstructor
     public void jsConstructor(Scriptable scheduler, Scriptable xpm) {
         if (scheduler != null) {
             this.scheduler = (Scheduler) ((NativeJavaObject) scheduler)

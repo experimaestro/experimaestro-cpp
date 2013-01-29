@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,36 +16,34 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.locks;
+package sf.net.experimaestro.scheduler;
+
+import sf.net.experimaestro.connectors.ComputationalRequirements;
 
 /**
- * Possible lock types on a resource
- * 
- * <p>
- * {@link #READ_ACCESS} and {@link #GENERATED} imply that the resource should be
- * generated before use
- * </p>
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- */
-public enum LockType {
-	/**
-	 * Asks for a read access
-	 */
-	READ_ACCESS,
+* @author B. Piwowarski <benjamin@bpiwowar.net>
+* @date 29/1/13
+*/
+public class JobData extends ResourceData {
+    /**
+     * The priority of the job (the higher, the more urgent)
+     */
+    int priority;
 
-	/**
-	 * Waits for a read/write access
-	 */
-	WRITE_ACCESS,
+    /**
+     * When was the job submitted (in case the priority is not enough)
+     */
+    long timestamp = System.currentTimeMillis();
 
-	/**
-	 * Waits for an exclusive access
-	 */
-	EXCLUSIVE_ACCESS,
+    /**
+     * Requirements
+     */
+    ComputationalRequirements requirements;
 
-	/**
-	 * Just asks that the data be generated
-	 */
-	GENERATED,
+    public JobData() {
+    }
+
+    public JobData(ResourceLocator locator) {
+        super(locator);
+    }
 }

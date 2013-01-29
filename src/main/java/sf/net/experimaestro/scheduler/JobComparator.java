@@ -26,11 +26,11 @@ import java.util.Comparator;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JobComparator implements Comparator<Job> {
+public class JobComparator implements Comparator<Job<? extends JobData>> {
 	/**
 	 * A public instance
 	 */
-	public static final Comparator<Job> INSTANCE = new JobComparator();
+	public static final Comparator<Job<? extends JobData>> INSTANCE = new JobComparator();
 
 	/**
 	 * Private since the public instance should be used in all cases
@@ -54,17 +54,14 @@ public class JobComparator implements Comparator<Job> {
 		if (a.nbUnsatisfied == 0 ^ b.nbUnsatisfied == 0)
 			return a.nbUnsatisfied > b.nbUnsatisfied ? 1 : -1;
 
-		// Then on locked status
-		if (a.locked ^ b.locked)
-			return a.locked ? 1 : -1;
 
 		// Then check on priority
-		int i = Integer.signum(b.priority - a.priority);
+		int i = Integer.signum(b.getPriority() - a.getPriority());
 		if (i != 0)
 			return i;
 
 		// Then check on timestamp
-		i = Long.signum(a.timestamp - b.timestamp);
+		i = Long.signum(a.getTimestamp() - b.getTimestamp());
 		if (i != 0)
 			return i;
 

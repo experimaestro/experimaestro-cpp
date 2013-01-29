@@ -18,17 +18,39 @@
 
 package sf.net.experimaestro.scheduler;
 
-/**
- * Notify a job that it has ended
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/6/12
- */
-public class EndOfJobMessage extends Message {
-    public int code;
-    public long timestamp;
+import org.testng.annotations.Test;
 
-    public EndOfJobMessage(int code, long timestamp) {
-        this.code = code;
-        this.timestamp = timestamp;
+/**
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 29/1/13
+ */
+public class GroupIdTest {
+    static int compare(String a, String b) {
+        return new GroupId(a).compareTo(new GroupId(b));
     }
+
+    @Test
+    public void testEquals() {
+        assert compare("a.b", "a.b") == 0;
+    }
+
+    @Test
+    public void testDifferent() {
+        assert compare("a.b", "ab") == -1;
+        assert compare("ab", "a.b") == 1;
+    }
+
+    @Test
+    public void testInside() {
+        assert compare("a", "a.b") == -1;
+        assert compare("a.b", "a") == 1;
+    }
+
+    @Test
+    public void testLast() {
+        assert compare("a.", "a.b") == 1;
+        assert compare("a.b", "a.") == -1;
+    }
+
+
 }

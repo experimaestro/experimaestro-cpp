@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,28 +18,39 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Entity;
-import sf.net.experimaestro.connectors.Connector;
-
 /**
- * Represents some data that can be produced by a given job
- * 
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * Defines how a given lock type is satisfied by the current state
+ * of the resource
  */
-@Entity
-public abstract class Data extends Resource {
+public enum DependencyStatus {
+    /**
+     * The resource can be used as is
+     */
+    OK,
 
-	public Data(Scheduler taskManager, Connector connector, String path, LockMode mode) {
-		super(taskManager, connector, path, mode);
-	}
+    /**
+     * The resource can be used when properly locked
+     */
+    OK_LOCK,
 
-	/**
-	 * The job that can or has generated this data (if any)
-	 */
-	transient Job generatingJob = null;
+    /**
+     * The resource is not ready yet
+     */
+    WAIT,
 
-    public Data(Scheduler scheduler, ResourceLocator identifier, LockMode lockMode, boolean exists) {
-        super(scheduler, identifier, lockMode);
+    /**
+     * The resource is not ready yet, and is on hold (this can only be changed
+     * by the external intervention)
+     */
+    HOLD,
 
+    /**
+     * The resource is not ready, and this is due to an error (possibly among
+     * dependencies)
+     */
+    ERROR;
+
+    public boolean isOK() {
+        return this == OK_LOCK || this == OK;
     }
 }

@@ -29,12 +29,11 @@ import sf.net.experimaestro.scheduler.Scheduler;
  * 
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public interface Lock {
+public interface Lock extends AutoCloseable {
 	/**
-	 * Dispose of the resource - returns true if the resource was properly
-	 * unlocked
+	 * Dispose of the resource
 	 */
-	boolean dispose();
+	void close();
 
 	/**
 	 * Change ownership

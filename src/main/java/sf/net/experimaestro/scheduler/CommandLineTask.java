@@ -40,7 +40,7 @@ import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent(version=1)
-public class CommandLineTask extends Job {
+public class CommandLineTask extends Job<JobData> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -97,13 +97,12 @@ public class CommandLineTask extends Job {
      * Constructs the command line
      *
      * @param scheduler  The scheduler for this command
-     * @param identifier The from of the command (this will be used for the path of the files)
      * @param command    The command with arguments
      */
-    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
+    public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
                            CommandArguments command, Map<String, String> environment, String workingDirectory) {
 
-        super(scheduler, connector, identifier);
+        super(scheduler, new JobData(locator));
 
         launcher = new DefaultLauncher();
 
@@ -122,13 +121,12 @@ public class CommandLineTask extends Job {
      * New command line task
      *
      * @param scheduler  The scheduler
-     * @param connector  The connector
-     * @param identifier The resource identifier
+     * @param locator    The resource locator
      * @param command    The command to run
      */
-    public CommandLineTask(Scheduler scheduler, Connector connector, String identifier,
+    public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
                            CommandArguments command) {
-        this(scheduler, connector, identifier, command, null, null);
+        this(scheduler, locator, command, null, null);
     }
 
     /**
@@ -147,6 +145,7 @@ public class CommandLineTask extends Job {
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
         SingleHostConnector connector = getConnector().getConnector(null);
 
+        ResourceLocator locator = getLocator();
         final FileObject runFile = locator.resolve(connector, RUN_EXTENSION);
         LOGGER.info("Starting command with run file [%s]", runFile);
         XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(connector, runFile);

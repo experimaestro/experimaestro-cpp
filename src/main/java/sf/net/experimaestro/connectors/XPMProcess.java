@@ -183,7 +183,7 @@ public abstract class XPMProcess {
         if (locks != null) {
             LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
             while (!locks.isEmpty()) {
-                locks.get(locks.size()-1).dispose();
+                locks.get(locks.size()-1).close();
                 locks.remove(locks.size()-1);
             }
 

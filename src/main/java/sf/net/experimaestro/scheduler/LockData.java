@@ -18,17 +18,12 @@
 
 package sf.net.experimaestro.scheduler;
 
-/**
- * Notify a job that it has ended
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/6/12
- */
-public class EndOfJobMessage extends Message {
-    public int code;
-    public long timestamp;
+import com.sleepycat.persist.model.Persistent;
 
-    public EndOfJobMessage(int code, long timestamp) {
-        this.code = code;
-        this.timestamp = timestamp;
-    }
+/**
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 29/1/13
+ */
+@Persistent
+public class LockData {
 }

@@ -19,16 +19,10 @@
 package sf.net.experimaestro.scheduler;
 
 /**
- * Notify a job that it has ended
+ * An action to be performed on each resource
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/6/12
+ * @date 29/1/13
  */
-public class EndOfJobMessage extends Message {
-    public int code;
-    public long timestamp;
-
-    public EndOfJobMessage(int code, long timestamp) {
-        this.code = code;
-        this.timestamp = timestamp;
-    }
+public interface ResourceAction {
 }
