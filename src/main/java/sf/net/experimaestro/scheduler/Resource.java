@@ -139,6 +139,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Get the ID
      */
     public long getId() {
+        if (resourceID == null)
+            return 0;
         return resourceID;
     }
 
@@ -193,11 +195,19 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Get the resource data
      */
     Data getData() {
-        if (data != null) {
+        if (data == null) {
+            // If not from DB, creates a default resource data
+            if (!stored())
+                return (Data) (data = new ResourceData());
+
             assert scheduler != null;
             return (Data) scheduler.getResources().getData(resourceID).init(scheduler);
         }
         return (Data) data;
+    }
+
+    public boolean stored() {
+        return resourceID != null;
     }
 
 
@@ -294,7 +304,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      */
     protected Map<Long, Dependency> getDependencyMap() {
         if (dependencies == null)
-            if (resourceID != 0)
+            if (!stored())
                 dependencies = scheduler.getDependencies(resourceID);
             else
                 dependencies = new TreeMap<>();
@@ -304,7 +314,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
 
     public void addDependency(Dependency dependency) {
-        if (resourceID != 0)
+        if (stored())
             throw new RuntimeException("Cannot add dependencies to a stored resource");
 
         getDependencyMap().put(dependency.getFrom(), dependency);

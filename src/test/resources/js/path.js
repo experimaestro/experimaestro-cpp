@@ -20,8 +20,6 @@
  */
 
 
-// Fix the tests first
-exit(1);
 
 // Direct
 scheduler.command_line_job("/tmp/a",["/bin/ls"]);

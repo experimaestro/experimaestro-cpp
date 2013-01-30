@@ -181,7 +181,7 @@ public class XPMObject {
         this.rootLogger = Logger.getLogger(loggerRepository);
 
 
-        context.setWrapFactory(new JSObject.XPMWrapFactory());
+        context.setWrapFactory(JSObject.XPMWrapFactory.INSTANCE);
 
         // --- Tells E4X to preserve whitespaces
         // XML.ignoreWhitespace=false
@@ -449,14 +449,14 @@ public class XPMObject {
      *
      * @todo Should return a wrapper to FileObject for enhanced security
      */
-    static public FileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
+    static public JSFileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
             throws FileSystemException {
         if (args.length != 0)
             throw new IllegalArgumentException("script_file() has no argument");
 
         XPMObject xpm = getXPM(thisObj);
 
-        return xpm.currentResourceLocator.getFile();
+        return new JSFileObject(xpm, xpm.currentResourceLocator.getFile());
     }
 
     @JSHelp(value = "Returns a file relative to the current connector")
@@ -847,7 +847,7 @@ public class XPMObject {
     private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Object object,
                                             Map<String, String> parameterFiles) {
         if (object instanceof JSFileObject)
-            object = ((JSFileObject) object).file;
+            object = ((JSFileObject) object).getFile();
 
         if (object instanceof FileObject) {
             if (sb.length() > 0) {

@@ -115,7 +115,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
         this.scheduler = scheduler;
 
-        resourceByState = dbStore.getSecondaryIndex(index, ResourceState.class, Resource.STATUS_EXTENSION);
+        resourceByState = dbStore.getSecondaryIndex(index, ResourceState.class, Resource.STATE_KEY_NAME);
 
         // Create dependencies indices
         dependencies = dbStore.getPrimaryIndex(Long.class, Dependency.class);
@@ -188,7 +188,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         // Get the group
         groupsTrie.put(DotName.parse(resource.getData().getGroupId()));
 
-        final boolean newResource = resource.getId() == 0;
+        final boolean newResource = !resource.stored();
         final Resource old = super.put(resource);
 
         if (newResource) {
@@ -343,6 +343,9 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
     public Resource getByLocator(ResourceLocator locator) {
         final ResourceData resourceData = data.get(locator);
+        if (resourceData == null)
+            return null;
+
         return get(resourceData.resourceId);
     }
 
@@ -355,4 +358,8 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         dependencies.put(dependency);
     }
 
+    @Override
+    public Resource getSame(Resource resource) {
+        return getByLocator(resource.getLocator());
+    }
 }

@@ -32,7 +32,7 @@ import java.io.*;
 public class JSFileObject extends JSObject {
 
     public static final String JSCLASSNAME = "FileObject";
-    FileObject file;
+    private FileObject file;
     private XPMObject xpm;
 
     public JSFileObject() {
@@ -160,4 +160,12 @@ public class JSFileObject extends JSObject {
         return reader;
     }
 
+    public FileObject getFile() {
+        return file;
+    }
+
+    @JSFunction("get_path")
+    public String get_path() {
+        return file.getName().getPath();
+    }
 }

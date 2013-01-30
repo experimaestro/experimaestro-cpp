@@ -18,8 +18,8 @@
 
 // Get script path
 
-var script_path = script_file().getParent().getName().getPath();
-var repository_path = script_path + "/connectors.inc.js";
+var script_path = script_file().get_parent();
+var repository_path = script_path.path("connectors.inc.js");
 
 
 // Check the answer
@@ -64,7 +64,7 @@ function test_ssh() {
 	xpm.log("SSH server on port " + port);
 
 	var big_ssh = new Connector("ssh://user@localhost" + ":" + port );
-	include_repository(big_ssh, repository_path);
+	include_repository(big_ssh, repository_path.get_path());
 
 	var task = xpm.get_task(qname("a.b.c", "task"));
 	task.setParameter("x", "10");

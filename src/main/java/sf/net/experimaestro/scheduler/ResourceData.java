@@ -18,15 +18,13 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.DeleteAction;
-import com.sleepycat.persist.model.PrimaryKey;
-import com.sleepycat.persist.model.Relationship;
-import com.sleepycat.persist.model.SecondaryKey;
+import com.sleepycat.persist.model.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 29/1/13
  */
+@Entity
 public class ResourceData {
     /**
      *
@@ -54,7 +52,7 @@ public class ResourceData {
      * Group this resource belongs to. Note that names are separated by one zero byte for sorting reasons
      */
     @SecondaryKey(name = GROUP_KEY_NAME, relate = Relationship.MANY_TO_ONE)
-    GroupId groupId = null;
+    GroupId groupId = new GroupId();
 
 
     protected ResourceData() {

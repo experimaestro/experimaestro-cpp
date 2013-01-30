@@ -16,7 +16,7 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-var python_script = script_file().getParent().getName().getPath() + "/connectors.py";
+var python_script = script_file().get_parent().path("connectors.py");
 
 var task = {
     // The id of the task is an XML qualified name 

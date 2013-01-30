@@ -16,36 +16,37 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils;
 
-import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.connectors.ComputationalRequirements;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 29/1/13
-*/
-@Persistent
-public class JobData extends ResourceData {
-    /**
-     * The priority of the job (the higher, the more urgent)
-     */
-    int priority;
+ * A map of threaded counters
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 30/1/13
+ */
+public class Counters {
+    Map<String, ThreadCount> counters = new TreeMap<>();
 
-    /**
-     * When was the job submitted (in case the priority is not enough)
-     */
-    long timestamp = System.currentTimeMillis();
-
-    /**
-     * Requirements
-     */
-    ComputationalRequirements requirements;
-
-    public JobData() {
+    ThreadCount get(String id) {
+        ThreadCount count = counters.get(id);
+        if (id == null)
+            counters.put(id, count = new ThreadCount());
+        return count;
     }
 
-    public JobData(ResourceLocator locator) {
-        super(locator);
+    public void add(String id) {
+        if (id == null)
+            return;
+        get(id).add();
     }
+
+    public void resume(String id) {
+        if (id == null)
+            return;
+        get(id).resume();
+    }
+
 }

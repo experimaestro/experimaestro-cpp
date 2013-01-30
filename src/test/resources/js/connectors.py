@@ -2,5 +2,6 @@
 
 # Says hello world
 
+import sys
 
-print "experimaestro rocks"
+sys.stdout.write("experimaestro rocks")

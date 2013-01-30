@@ -19,12 +19,12 @@
 package sf.net.experimaestro.manager.js;
 
 import com.sleepycat.je.DatabaseException;
-import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -49,11 +49,8 @@ public class JSScheduler extends ScriptableObject {
 
     @JSConstructor
     public void jsConstructor(Scriptable scheduler, Scriptable xpm) {
-        if (scheduler != null) {
-            this.scheduler = (Scheduler) ((NativeJavaObject) scheduler)
-                    .unwrap();
-            this.xpm = (XPMObject) ((NativeJavaObject)xpm).unwrap();
-        }
+        this.scheduler = (Scheduler) JSUtils.unwrap(scheduler);
+        this.xpm = (XPMObject) JSUtils.unwrap(xpm);
     }
 
     @Override

@@ -229,6 +229,10 @@ final public class Scheduler {
      * This task runner takes a new task each time
      */
     class JobRunner extends Thread {
+        JobRunner(String name) {
+            super(name);
+        }
+
         @Override
         public void run() {
             Job job;
@@ -309,7 +313,7 @@ final public class Scheduler {
         LOGGER.info("Starting %d threads", nbThreads);
         for (int i = 0; i < nbThreads; i++) {
             counter.add();
-            final JobRunner runner = new JobRunner();
+            final JobRunner runner = new JobRunner("JobRunner@" + i);
             threads.add(runner);
             runner.start();
         }

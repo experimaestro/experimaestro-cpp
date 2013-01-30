@@ -35,7 +35,7 @@ var task = {
     // The function that will be called when the task is run
 	run: function(inputs) {
 	    // Multiply x by y and add it to the results array
-        results.push(inputs.x.@xp::value * inputs.y.@xp::value);
+        results.push(inputs.x.@value * inputs.y.@value);
         // Returns something
 		return <outputs>{inputs.x}{inputs.y}</outputs>;
 	}
@@ -53,6 +53,7 @@ function check(expected) {
     for(var i = 0; i < expected.length; i++) {
         if (expected[i] != results[i])
             throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], results[i], i);
+    }
 }
 
 function test_plan_1() {

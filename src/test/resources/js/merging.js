@@ -24,7 +24,7 @@ var abc = new Namespace("a.b.c");
 
 // First task
 var sub_task = {
-	id: qname("a.b.c", "task-1"),
+	id: qname("a.b.c", "sub_task"),
 	inputs: <inputs><value type="xs:integer" id="x"/></inputs>,	
 };
 
@@ -40,7 +40,7 @@ var task = {
         </inputs>,
 	
 	run: function(inputs) {
-		return value(inputs.subtask.@value);
+		return inputs.subtask.xp::value;
 	}
 		
 };
@@ -60,8 +60,8 @@ var r = task.run();
 // END SNIPPET: main
 
 function test_composing_2() {
-	v = r.xp::value.@value;
+	v = r.@value;
 	if (v == undefined || v != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
+		throw new java.lang.String.format("Value [%s] is different from 10", r.@value);
 }
 	

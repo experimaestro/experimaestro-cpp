@@ -19,6 +19,7 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.KeyField;
+import com.sleepycat.persist.model.Persistent;
 
 import static java.lang.StrictMath.min;
 
@@ -28,6 +29,7 @@ import static java.lang.StrictMath.min;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 29/1/13
  */
+@Persistent
 public class GroupId implements Comparable<GroupId> {
     @KeyField(1)
     private String name;

@@ -84,7 +84,7 @@ public class JSModule extends JSObject {
     }
 
     public void add_schema(@JSArgument(name = "path", help = "Path relative to the script") final JSFileObject path) throws IOException, SAXException, InputFailedException, OutputFailedException, InvalidParamsException {
-        final String extension = path.file.getName().getExtension();
+        final String extension = path.getFile().getName().getExtension();
         if (extension.equals("rnc")) {
             add_schema(path, Type.RELAXNG);
 
@@ -101,7 +101,7 @@ public class JSModule extends JSObject {
     ) throws IOException, InputFailedException, SAXException, InvalidParamsException, OutputFailedException {
         File outFile = null;
 
-        FileObject file = _file.file, origFile = _file.file;
+        FileObject file = _file.getFile(), origFile = _file.getFile();
 
         try {
             LOGGER.info("Loading XSD with path [%s]", file);

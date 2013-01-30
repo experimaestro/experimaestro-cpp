@@ -67,6 +67,10 @@ public abstract class JSObject  {
     }
 
     static public class XPMWrapFactory extends WrapFactory {
+        public final static XPMWrapFactory INSTANCE = new XPMWrapFactory();
+
+        private XPMWrapFactory() {}
+
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
             if (obj instanceof JSObject)

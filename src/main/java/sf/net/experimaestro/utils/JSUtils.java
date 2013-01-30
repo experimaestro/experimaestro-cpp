@@ -60,6 +60,9 @@ public class JSUtils {
      * @return
      */
     public static Object unwrap(Object object) {
+        if (object == null)
+            return null;
+
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
 
