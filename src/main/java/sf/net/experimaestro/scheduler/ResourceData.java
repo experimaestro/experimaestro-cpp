@@ -46,7 +46,7 @@ public class ResourceData {
      * The rersouce ID
      */
     @SecondaryKey(name = RESOURCE_ID_NAME, relate = Relationship.ONE_TO_ONE, onRelatedEntityDelete = DeleteAction.CASCADE)
-    Long resourceId;
+    long resourceId;
 
     /**
      * Group this resource belongs to. Note that names are separated by one zero byte for sorting reasons

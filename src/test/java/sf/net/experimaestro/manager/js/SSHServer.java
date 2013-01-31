@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.util.SecurityUtils;
@@ -31,7 +32,10 @@ import org.apache.sshd.server.sftp.SftpSubsystem;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.security.PublicKey;
@@ -150,11 +154,12 @@ public class SSHServer {
      * Handles two commands: id -u and id -G
      */
     private static class TestCommandFactory extends ScpCommandFactory {
+
         public Command createCommand(final String command) {
             return new Command() {
                 public ExitCallback callback = null;
-                public PrintStream out = null;
-                public PrintStream err = null;
+                public OutputStream out = null;
+                public OutputStream err = null;
 
                 @Override
                 public void setInputStream(InputStream in) {
@@ -162,12 +167,12 @@ public class SSHServer {
 
                 @Override
                 public void setOutputStream(OutputStream out) {
-                    this.out = new PrintStream(out);
+                    this.out = out;
                 }
 
                 @Override
                 public void setErrorStream(OutputStream err) {
-                    this.err = new PrintStream(err);
+                    this.err = err;
                 }
 
                 @Override
@@ -178,23 +183,37 @@ public class SSHServer {
 
                 @Override
                 public void start(Environment env) throws IOException {
-                    int code = 0;
-                    if (command.equals("id -G") || command.equals("id -u")) {
-                        out.println(0);
-                    } else {
-                        if (err != null) {
-                            err.format("Unknown command %s%n", command);
+                    final ProcessBuilder builder = new ProcessBuilder();
+                    // basic split -- just for test!
+                    builder.command(command.split("(?!\\\\) "));
+
+                    if (out != null)
+                        builder.redirectOutput(ProcessBuilder.Redirect.PIPE);
+                    if (err != null)
+                        builder.redirectError(ProcessBuilder.Redirect.PIPE);
+
+                    final Process process = builder.start();
+
+
+                    if (out != null)
+                        copyStream(process.getInputStream(), out);
+                    if (err != null)
+                        copyStream(process.getErrorStream(), err);
+
+
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            try {
+                                callback.onExit(process.waitFor());
+                            } catch (InterruptedException e) {
+                                callback.onExit(-1);
+                                throw new AssertionError("Error while waiting for the process to end", e);
+                            }
                         }
-                        code = -1;
-                    }
-                    if (out != null) {
-                        out.flush();
-                    }
-                    if (err != null) {
-                        err.flush();
-                    }
-                    callback.onExit(code);
+                    }.start();
                 }
+
 
                 @Override
                 public void destroy() {
@@ -202,4 +221,29 @@ public class SSHServer {
             };
         }
     }
+
+    /**
+     * Asynchronous copy stream
+     * @param inputStream
+     * @param out
+     */
+    static private void copyStream(final InputStream inputStream, final OutputStream out) {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    IOUtils.copy(inputStream, out);
+                } catch (IOException e) {
+                    throw new AssertionError("I/O error", e);
+                } finally {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        throw new AssertionError("I/O error", e);
+                    }
+                }
+            }
+        }.start();
+    }
+
 }

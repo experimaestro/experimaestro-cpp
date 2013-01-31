@@ -19,6 +19,7 @@
 package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
@@ -40,6 +41,7 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 29/1/13
  */
+@Persistent
 public class ReadWriteDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 

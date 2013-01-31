@@ -281,7 +281,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      */
     @Override
     synchronized public void notify(Resource resource, Message message) {
-        LOGGER.debug("Notification [%s] for job [%s]", message);
+        LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         if (resource == this || resource == null) {
             // --- Notified of the end of job
@@ -403,8 +403,31 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     }
 
     @Override
-    synchronized protected boolean doUpdateStatus() throws Exception {
-        boolean changes = super.doUpdateStatus();
+    public void addDependency(Dependency dependency) {
+        if (stored())
+            throw new RuntimeException("Cannot add dependencies to a stored resource");
+
+        // Start with an unsatisfied dependency -- the status will be updated
+        // when storing the resource
+        dependency.status = DependencyStatus.WAIT;
+        nbUnsatisfied++;
+        getDependencyMap().put(dependency.getFrom(), dependency);
+
+    }
+
+    @Override
+    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+        boolean changes = super.doUpdateStatus(store);
+
+        // Check the done file
+        final FileObject doneFile = getMainConnector().resolveFile(getLocator().getPath() + DONE_EXTENSION);
+        if (doneFile.exists() && state != ResourceState.DONE) {
+            changes = true;
+            if (this instanceof Job) {
+                ((Job) this).endTimestamp = doneFile.getContent().getLastModifiedTime();
+            }
+            this.state = ResourceState.DONE;
+        }
 
         // Check dependencies if we are in waiting or ready
         if (getState() == ResourceState.WAITING || getState() == ResourceState.READY) {
@@ -413,7 +436,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
             int nbHolding = 0;
 
             for (Dependency dependency : getDependencies()) {
-                dependency.update(scheduler, null, true);
+                dependency.update(scheduler, null, store);
                 if (dependency.status.isOK()) {
                     nbUnsatisfied++;
                     if (dependency.status == DependencyStatus.HOLD)

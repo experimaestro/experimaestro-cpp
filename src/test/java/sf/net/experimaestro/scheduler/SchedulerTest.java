@@ -37,7 +37,7 @@ public class SchedulerTest extends XPMEnvironment {
     final static private Logger LOGGER = Logger.getLogger();
 
 
-    @Test(timeOut = 1000, description = "Run two jobs - one depend on the other to start")
+    @Test(/*timeOut = 1000,*/ description = "Run two jobs - one depend on the other to start")
     public void test_simple_dependency() throws
             DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
@@ -48,7 +48,7 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500);
-            if (i > 1)
+            if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i]);
         }
@@ -61,7 +61,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
 
-    @Test(timeOut = 5000, description = "Test of the token resource - one job at a time")
+    @Test(/*timeOut = 5000,*/ description = "Test of the token resource - one job at a time")
     public void test_token_resource() throws ExperimaestroCannotOverwrite {
 
         File jobDirectory = mkTestDir();
@@ -121,7 +121,9 @@ public class SchedulerTest extends XPMEnvironment {
     static private void checkSequence(Job<?>... jobs) {
         for (int i = 0; i < jobs.length - 1; i++)
             assert jobs[i].getEndTimestamp() < jobs[i + 1].getStartTimestamp()
-                    : String.format("The jobs (%s) and (%s) did not start one after the other", jobs[i], jobs[i + 1]);
+                    : String.format("The jobs (%s, end=%d) and (%s, start=%d) did not start one after the other",
+                    jobs[i], jobs[i].getEndTimestamp(),
+                    jobs[i + 1], jobs[i+1].getStartTimestamp());
     }
 
     /**
@@ -133,7 +135,7 @@ public class SchedulerTest extends XPMEnvironment {
     private void checkState(EnumSet<ResourceState> states, Job[] jobs) {
         for (int i = 0; i < jobs.length; i++)
             assert states.contains(jobs[i].state)
-                    : String.format("The job (%s) is not in one of the states %s", jobs[i], states);
+                    : String.format("The job (%s) is not in one of the states %s but %s", jobs[i], states, jobs[i].state);
 
     }
 

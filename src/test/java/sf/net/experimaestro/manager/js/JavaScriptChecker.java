@@ -24,6 +24,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.Cleaner;
@@ -95,7 +96,7 @@ public class JavaScriptChecker {
     public void enter() {
         context = Context.enter();
         scope = context.initStandardObjects();
-        repository = new Repository(new ResourceLocator());
+        repository = new Repository(new ResourceLocator(XPMConnector.getInstance(), "/"));
     }
 
     @AfterTest

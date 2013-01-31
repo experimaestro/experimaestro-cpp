@@ -37,25 +37,39 @@ import java.util.ArrayList;
  * @date 30/1/13
  */
 @Persistent
-class WaitingJob extends Job<JobData> {
+public class WaitingJob extends Job<JobData> {
     transient private ThreadCount counter;
     long duration;
 
-    public WaitingJob() {
-    }
+    protected WaitingJob() {}
 
     public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration) {
-        super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), dir.getAbsolutePath())));
+        super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, "job-" + id).getAbsolutePath())));
         this.counter = counter;
+        this.duration = duration;
         counter.add();
         state = ResourceState.READY;
     }
+
 
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
         return new MyXPMProcess(counter, getMainConnector(), this, duration);
     }
 
+    @Override
+    public boolean canBeOverriden(Resource current) {
+        // We don't want to be overriden
+        return false;
+    }
+
+    @Override
+    public synchronized void notify(Resource resource, Message message) {
+        super.notify(resource, message);
+        if (resource == null || this == resource && message instanceof EndOfJobMessage) {
+            counter.del();
+        }
+    }
 
     @Persistent
     static private class MyXPMProcess extends XPMProcess {
@@ -76,7 +90,6 @@ class WaitingJob extends Job<JobData> {
 
         @Override
         public void dispose() {
-            counter.del();
             super.dispose();
         }
 

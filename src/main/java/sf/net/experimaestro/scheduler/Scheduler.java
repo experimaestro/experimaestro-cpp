@@ -246,7 +246,7 @@ final public class Scheduler {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                     } catch (Throwable t) {
-                        LOGGER.warn("Got a trouble while launching job [%s]: %s", job, t);
+                        LOGGER.warn(t,"Got a trouble while launching job [%s]", job);
                     } finally {
                     }
 
@@ -516,8 +516,8 @@ final public class Scheduler {
                     // Notify the others
                     resources.notifyDependencies(resource);
 
-                    // Notify ourselves
-                    resource.notify(resource, SimpleMessage.STORED_IN_DATABASE.wrap());
+//                    // Notify ourselves
+//                    resource.notify(resource, SimpleMessage.STORED_IN_DATABASE.wrap());
                 }
             }
         });

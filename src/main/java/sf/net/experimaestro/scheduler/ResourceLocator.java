@@ -72,7 +72,9 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     }
 
 
-    public ResourceLocator() {
+    protected ResourceLocator() {
+        this.connectorId = "";
+        this.path = "";
     }
 
     /**
@@ -121,9 +123,14 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         this.path = path;
     }
 
+
     @Override
     public int compareTo(ResourceLocator other) {
+        if (other == null)
+            return 1;
+
         int z = connectorId.compareTo(other.connectorId);
+
         if (z != 0)
             return z;
         return path.compareTo(other.path);

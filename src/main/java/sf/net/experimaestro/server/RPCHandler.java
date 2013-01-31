@@ -142,7 +142,7 @@ public class RPCHandler {
         try (final CloseableIterable<Resource> resources = scheduler.resources(group, recursive, statesSet)) {
             for (Resource resource : resources) {
                 resource.init(scheduler);
-                if (resource.updateStatus())
+                if (resource.updateStatus(true))
                     nbUpdated++;
             }
         }

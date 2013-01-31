@@ -91,12 +91,21 @@ abstract public class Dependency {
     /**
      * Can the dependency be accepted?
      *
+     * @param scheduler The scheduler to retrieve data from database
+     * @param from The requirement (to avoid a fetch from database) or null
+     *
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
      *         {@link DependencyStatus#WAIT} if it can be satisfied one day
      *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
      *         {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     protected DependencyStatus accept(Scheduler scheduler, Resource from) {
+        if (from == null) {
+            from = scheduler.getResource(this.from);
+            if (from == null)
+                throw new AssertionError(String.format("Could not find resource with ID %d", this.from));
+        }
+
         // Handle simple cases
         if (from.getState() == ResourceState.ERROR)
             return DependencyStatus.HOLD;
@@ -132,9 +141,12 @@ abstract public class Dependency {
      * @return
      */
     synchronized final public boolean update(Scheduler scheduler, Resource from, boolean store) {
-        DependencyStatus newStatus = _accept(scheduler, from);
-        if (newStatus != status)
+        DependencyStatus old = status;
+        status = accept(scheduler, from);
+
+        if (status != old)
             return false;
+
         if (store)
             scheduler.store(this);
         return true;

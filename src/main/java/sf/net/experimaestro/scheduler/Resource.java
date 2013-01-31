@@ -24,7 +24,6 @@ import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import com.sleepycat.persist.model.Relationship;
 import com.sleepycat.persist.model.SecondaryKey;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
@@ -132,6 +131,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
     @Override
     public String toString() {
+        if (data != null)
+            return String.format("Resource %x [%s]", resourceID, data.locator);
         return String.format("Resource %x", resourceID);
     }
 
@@ -147,12 +148,12 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Update the state of the resource by checking all that could have changed externally
      * <p/>
-     * Calls {@linkplain #doUpdateStatus()}.
+     * Calls {@linkplain #doUpdateStatus(boolean)}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus() {
+    final public boolean updateStatus(boolean store) {
         try {
-            return doUpdateStatus();
+            return doUpdateStatus(store);
         } catch (Exception e) {
             LOGGER.error(e, "Exception while updating status");
             return set(ResourceState.ON_HOLD);
@@ -165,29 +166,11 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * <p/>
      * This implies looking at the disk to check for done/lock files, etc.
      *
+     * @param store <tt>true</tt> if changes should be stored in DB
      * @return True if the state was updated
      */
-    synchronized protected boolean doUpdateStatus() throws Exception {
-        throw new NotImplementedException();
-        // FIXME: some of the method should go down to Jobs, etc.
-//        updateFromStatusFile(changes);
-//
-//        // Check if the resource was generated
-//        final FileObject doneFile = getMainConnector().resolveFile(locator.getPath() + DONE_EXTENSION);
-//        if (doneFile.exists() && state != ResourceState.DONE) {
-//            changes.state = true;
-//            if (this instanceof Job) {
-//                ((Job) this).endTimestamp = doneFile.getContent().getLastModifiedTime();
-//            }
-//            this.state = ResourceState.DONE;
-//        }
-//
-//        // Check if the resource is locked
-//        boolean locked = getMainConnector().resolveFile(locator.getPath() + LOCK_EXTENSION).exists();
-//        // TODO: should be a locking change
-//        changes.state |= locked != this.locked;
-//        this.locked = locked;
-
+    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+        return false;
     }
 
 
@@ -195,11 +178,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Get the resource data
      */
     Data getData() {
+        // data should not be null if initialized directly
         if (data == null) {
-            // If not from DB, creates a default resource data
-            if (!stored())
-                return (Data) (data = new ResourceData());
-
             assert scheduler != null;
             return (Data) scheduler.getResources().getData(resourceID).init(scheduler);
         }
@@ -312,12 +292,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     }
 
 
-
     public void addDependency(Dependency dependency) {
-        if (stored())
-            throw new RuntimeException("Cannot add dependencies to a stored resource");
-
-        getDependencyMap().put(dependency.getFrom(), dependency);
+        throw new RuntimeException("Cannot add dependency to resource of type " + this.getClass());
     }
 
 
@@ -389,10 +365,25 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Creates a new dependency on this resource
      *
-     * @param object The parameters for the dependency
+     * @param type The parameters for the dependency
      * @return a new dependency
      */
     public abstract Dependency createDependency(Object type);
+
+    /**
+     * Returns whether this resource can be overriden
+     *
+     * @param current
+     * @return
+     */
+    public boolean canBeOverriden(Resource current) {
+        if (state == ResourceState.RUNNING && current != this) {
+            LOGGER.error(String.format("Cannot override a running task [%s] / %s vs %s", current,
+                    System.identityHashCode(current), System.identityHashCode(this.hashCode())));
+            return false;
+        }
+        return true;
+    }
 
     /**
      * Defines how printing should be done
@@ -434,8 +425,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         }
 
         @Override
-        protected boolean updateStatus(Resource resource) {
-            return resource.updateStatus();
+        protected boolean updateStatus(Resource resource, boolean store) {
+            return resource.updateStatus(store);
         }
 
         @Override

@@ -32,7 +32,7 @@ import static java.lang.StrictMath.min;
 @Persistent
 public class GroupId implements Comparable<GroupId> {
     @KeyField(1)
-    private String name;
+    private String name = "";
 
     protected GroupId() {
     }

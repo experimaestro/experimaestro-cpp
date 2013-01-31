@@ -149,6 +149,10 @@ public abstract class XPMProcess {
             lock.init(scheduler);
     }
 
+    @Override
+    public String toString() {
+        return String.format("[Process of %s]", job);
+    }
 
     /**
      * Get the underlying job
@@ -183,8 +187,8 @@ public abstract class XPMProcess {
         if (locks != null) {
             LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
             while (!locks.isEmpty()) {
-                locks.get(locks.size()-1).close();
-                locks.remove(locks.size()-1);
+                locks.get(locks.size() - 1).close();
+                locks.remove(locks.size() - 1);
             }
 
             locks = null;

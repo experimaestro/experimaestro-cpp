@@ -159,7 +159,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         try (final EntityCursor<Resource> cursor = resourceByState.entities(null, status, true, status, true, CursorConfig.READ_UNCOMMITTED)) {
             for (Resource resource : cursor) {
                 try {
-                    if (updateStatus(resource))
+                    if (updateStatus(resource, false))
                         cursor.update(resource);
 
                     switch (resource.state) {
@@ -186,9 +186,13 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     @Override
     public Resource put(Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Get the group
+        LOGGER.debug("Storing resource [%s]", resource);
         groupsTrie.put(DotName.parse(resource.getData().getGroupId()));
 
         final boolean newResource = !resource.stored();
+
+        // Update status before starting
+        resource.updateStatus(false);
         final Resource old = super.put(resource);
 
         if (newResource) {
@@ -197,9 +201,9 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
             // Add the data
 
-            final ResourceData data = resource.getData();
-            data.setResourceID(id);
-            this.data.put(data);
+            final ResourceData resourceData = resource.getData();
+            resourceData.setResourceID(id);
+            this.data.put(resourceData);
 
             // Add the dependencies
             final Collection<Dependency> deps = resource.getDependencies();
@@ -214,13 +218,8 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     }
 
     @Override
-    protected boolean canOverride(Resource old, Resource state) {
-        if (old.state == ResourceState.RUNNING && state != old) {
-            LOGGER.error(String.format("Cannot override a running task [%s] / %s vs %s", state,
-                    System.identityHashCode(state), System.identityHashCode(old.hashCode())));
-            return false;
-        }
-        return true;
+    protected boolean canOverride(Resource old, Resource current) {
+        return old.canBeOverriden(current);
     }
 
 
@@ -285,7 +284,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                         DependencyStatus beforeState = dep.status;
 
                         // Update the dependency in database
-                        entities.update(dep);
+                        store(dep);
 
                         // Notify the resource that a dependency has changed
                         resource.notify(resource, new DependencyChangedMessage(dep, beforeState, dep.status));
@@ -342,6 +341,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     }
 
     public Resource getByLocator(ResourceLocator locator) {
+        assert locator != null;
         final ResourceData resourceData = data.get(locator);
         if (resourceData == null)
             return null;
@@ -352,7 +352,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Update the status of a resource
      */
-    protected abstract boolean updateStatus(Resource resource);
+    protected abstract boolean updateStatus(Resource resource, boolean store);
 
     public void store(Dependency dependency) {
         dependencies.put(dependency);

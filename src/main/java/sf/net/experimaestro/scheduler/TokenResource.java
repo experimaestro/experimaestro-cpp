@@ -50,8 +50,8 @@ public class TokenResource extends Resource<ResourceData> {
      */
     private int usedTokens;
 
-    private TokenResource() {
-    }
+
+    protected TokenResource() {}
 
     /**
      * Creates a new token resource
@@ -88,7 +88,7 @@ public class TokenResource extends Resource<ResourceData> {
     }
 
     @Override
-    synchronized protected boolean doUpdateStatus() throws Exception {
+    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
         final TreeMap<Long,Dependency> dependencies = scheduler.getDependentResources(getId());
 
         // TODO: should check all the links
@@ -98,13 +98,21 @@ public class TokenResource extends Resource<ResourceData> {
 
     @Override
     public TokenDependency createDependency(Object values) {
-        return new TokenDependency();
+        return new TokenDependency(this.getId());
     }
 
     /**
      * A token dependency
      */
+    @Persistent
     static public class TokenDependency extends Dependency {
+
+        protected TokenDependency() {}
+
+        public TokenDependency(long from) {
+            super(from);
+        }
+
 
         @Override
         protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
