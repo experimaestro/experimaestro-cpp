@@ -291,6 +291,15 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         return dependencies;
     }
 
+    /**
+     * Update a dependency if we have a cache of it
+     * @param dependency The dependency
+     */
+    protected void updateDependency(Dependency dependency) {
+        if (dependencies != null)
+            dependencies.put(dependency.getFrom(), dependency);
+    }
+
 
     public void addDependency(Dependency dependency) {
         throw new RuntimeException("Cannot add dependency to resource of type " + this.getClass());

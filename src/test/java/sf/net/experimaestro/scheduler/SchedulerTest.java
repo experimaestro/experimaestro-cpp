@@ -47,7 +47,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, 0);
             if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i]);
@@ -56,6 +56,29 @@ public class SchedulerTest extends XPMEnvironment {
         counter.resume();
         checkSequence(jobs);
         checkState(EnumSet.of(ResourceState.DONE), jobs);
+    }
+
+
+    @Test(/*timeOut = 1000,*/ description = "Run two jobs - one depend on the other to start, the first fails")
+    public void test_failed_dependency() throws
+            DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
+
+        File jobDirectory = mkTestDir();
+        ThreadCount counter = new ThreadCount();
+
+        // Create two jobs: job1, and job2 that depends on job1
+        WaitingJob[] jobs = new WaitingJob[2];
+        for (int i = 0; i < jobs.length; i++) {
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, i == 0 ? 1 : 0);
+            if (i > 0)
+                jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
+            scheduler.store(jobs[i]);
+        }
+
+        counter.resume();
+
+        checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
+        checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
     }
 
 
@@ -73,7 +96,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, 0);
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i]);
         }
@@ -118,12 +141,17 @@ public class SchedulerTest extends XPMEnvironment {
      *
      * @param jobs
      */
-    static private void checkSequence(Job<?>... jobs) {
-        for (int i = 0; i < jobs.length - 1; i++)
-            assert jobs[i].getEndTimestamp() < jobs[i + 1].getStartTimestamp()
+    static private void checkSequence(WaitingJob... jobs) {
+        for (int i = 0; i < jobs.length - 1; i++) {
+            assert jobs[i].getEndTimestamp() < jobs[i + 1].readyTimestamp
                     : String.format("The jobs (%s, end=%d) and (%s, start=%d) did not start one after the other",
                     jobs[i], jobs[i].getEndTimestamp(),
-                    jobs[i + 1], jobs[i+1].getStartTimestamp());
+                    jobs[i + 1], jobs[i+1].readyTimestamp);
+
+            // just to be on the safe side
+            assert jobs[i].getEndTimestamp() < jobs[i + 1].getStartTimestamp();
+        }
+
     }
 
     /**
@@ -132,7 +160,7 @@ public class SchedulerTest extends XPMEnvironment {
      * @param states The state
      * @param jobs   The jobs
      */
-    private void checkState(EnumSet<ResourceState> states, Job[] jobs) {
+    private void checkState(EnumSet<ResourceState> states, WaitingJob... jobs) {
         for (int i = 0; i < jobs.length; i++)
             assert states.contains(jobs[i].state)
                     : String.format("The job (%s) is not in one of the states %s but %s", jobs[i], states, jobs[i].state);

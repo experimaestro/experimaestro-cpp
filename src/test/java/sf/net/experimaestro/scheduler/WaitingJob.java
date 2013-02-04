@@ -39,22 +39,34 @@ import java.util.ArrayList;
 @Persistent
 public class WaitingJob extends Job<JobData> {
     transient private ThreadCount counter;
+
+    // When was the job ready to run
+    long readyTimestamp = 0;
+
+    // Duration before exiting
     long duration;
 
-    protected WaitingJob() {}
+    // The code to return
+    private int code;
 
-    public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration) {
+    protected WaitingJob() {
+    }
+
+    public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration, int code) {
         super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, "job-" + id).getAbsolutePath())));
         this.counter = counter;
         this.duration = duration;
         counter.add();
-        state = ResourceState.READY;
+        this.code = code;
+
+        // put ourselves in waiting mode (rather than ON HOLD default)
+        this.state = ResourceState.WAITING;
     }
 
 
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-        return new MyXPMProcess(counter, getMainConnector(), this, duration);
+        return new MyXPMProcess(counter, getMainConnector(), this, duration, code);
     }
 
     @Override
@@ -66,26 +78,41 @@ public class WaitingJob extends Job<JobData> {
     @Override
     public synchronized void notify(Resource resource, Message message) {
         super.notify(resource, message);
-        if (resource == null || this == resource && message instanceof EndOfJobMessage) {
-            counter.del();
+        if (resource == null || this == resource) {
+            if (message instanceof EndOfJobMessage || (message instanceof DependencyChangedMessage && state.isBlocking())) {
+                counter.del();
+            }
+
+            if (message instanceof DependencyChangedMessage && state == ResourceState.READY) {
+                readyTimestamp = System.currentTimeMillis();
+            }
         }
     }
+
+    @Override
+    protected synchronized boolean doUpdateStatus(boolean store) throws Exception {
+        final boolean b = super.doUpdateStatus(store);
+        return b;
+    }
+
 
     @Persistent
     static private class MyXPMProcess extends XPMProcess {
         private long timestamp;
         private long duration;
         private transient ThreadCount counter;
+        int code;
 
         public MyXPMProcess() {
 
         }
 
-        public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, long duration) {
+        public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, long duration, int code) {
             super(connector, "1", job, true);
             this.timestamp = System.currentTimeMillis();
             this.duration = duration;
             this.counter = counter;
+            this.code = code;
         }
 
         @Override
@@ -99,7 +126,7 @@ public class WaitingJob extends Job<JobData> {
                 long toWait = duration - (System.currentTimeMillis() - timestamp);
                 if (toWait > 0) wait(toWait);
             }
-            return 0;
+            return code;
         }
 
         @Override

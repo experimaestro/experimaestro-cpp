@@ -85,9 +85,9 @@ public abstract class Connector implements Comparable<Connector> {
 //     *
 //     * @param path
 //     * @return A lock object
-//     * @throws UnlockableException
+//     * @throws LockException
 //     */
-//    public abstract Lock createLockFile(String path) throws UnlockableException;
+//    public abstract Lock createLockFile(String path) throws LockException;
 //
 
 

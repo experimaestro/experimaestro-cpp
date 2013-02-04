@@ -23,9 +23,9 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -68,7 +68,7 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public Lock createLockFile(String path) throws UnlockableException {
+    public Lock createLockFile(String path) throws LockException {
         return new FileLock(path);
     }
 

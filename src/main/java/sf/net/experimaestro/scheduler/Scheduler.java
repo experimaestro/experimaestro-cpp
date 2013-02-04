@@ -82,7 +82,7 @@ final public class Scheduler {
      * The list of jobs organised in a heap - with those having all dependencies
      * fulfilled first
      */
-    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>)new Heap<Job<? extends JobData>>(JobComparator.INSTANCE);
+    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>) new Heap<Job<? extends JobData>>(JobComparator.INSTANCE);
 
     /**
      * All the resources
@@ -171,8 +171,6 @@ final public class Scheduler {
     }
 
 
-
-
     /**
      * Retrieves resources on which the given resource depends
      *
@@ -245,8 +243,12 @@ final public class Scheduler {
                     } catch (LockException e) {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                        job.state = ResourceState.WAITING;
+                        job.storeState();
                     } catch (Throwable t) {
-                        LOGGER.warn(t,"Got a trouble while launching job [%s]", job);
+                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                        job.state = ResourceState.ERROR;
+                        job.storeState();
                     } finally {
                     }
 
@@ -513,11 +515,7 @@ final public class Scheduler {
             @Override
             public void run() {
                 if (!isStopping()) {
-                    // Notify the others
                     resources.notifyDependencies(resource);
-
-//                    // Notify ourselves
-//                    resource.notify(resource, SimpleMessage.STORED_IN_DATABASE.wrap());
                 }
             }
         });

@@ -20,8 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
@@ -121,11 +121,11 @@ public class TokenResource extends Resource<ResourceData> {
         }
 
         @Override
-        protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+        protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
             TokenResource token = (TokenResource) getFrom(scheduler, from);
             synchronized (token) {
                 if (token.usedTokens >= token.limit)
-                    throw new UnlockableException("All the tokens are already taken");
+                    throw new LockException("All the tokens are already taken");
 
                 token.usedTokens++;
                 token.storeState();
@@ -143,6 +143,7 @@ public class TokenResource extends Resource<ResourceData> {
      */
     synchronized private void unlock() {
         usedTokens--;
+        LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
         storeState();
     }
 

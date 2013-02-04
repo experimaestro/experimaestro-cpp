@@ -32,8 +32,8 @@ import org.apache.commons.vfs2.provider.sftp.SftpClientFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystem;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -107,7 +107,7 @@ public class SSHConnector extends SingleHostConnector {
         this(username, hostname, SSHD_DEFAULT_PORT);
     }
 
-    public Lock createLockFile(final String path) throws UnlockableException {
+    public Lock createLockFile(final String path) throws LockException {
         try {
             ChannelExec channel = newExecChannel();
             LOGGER.info("Creating SSH lock [%s]", path);
@@ -125,9 +125,9 @@ public class SSHConnector extends SingleHostConnector {
             }
             channel.disconnect();
         } catch (JSchException e) {
-            throw new UnlockableException(e);
+            throw new LockException(e);
         } catch (FileSystemException e) {
-            throw new UnlockableException(e);
+            throw new LockException(e);
         }
 
         return new SSHLock(this, path);
@@ -146,7 +146,6 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     /**
-     *
      * @param username
      * @param hostname
      * @param port
@@ -179,7 +178,8 @@ public class SSHConnector extends SingleHostConnector {
 
         transient private ChannelExec channel;
 
-        private SSHProcess() {}
+        private SSHProcess() {
+        }
 
         public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
             super(connector, null, job, true);
@@ -319,7 +319,8 @@ public class SSHConnector extends SingleHostConnector {
 
         transient private Connector connector;
 
-        private SSHLock() {}
+        private SSHLock() {
+        }
 
         public SSHLock(Connector connector, String path) {
             this.connector = connector;
@@ -330,7 +331,7 @@ public class SSHConnector extends SingleHostConnector {
         @Override
         public void close() {
             try {
-                ChannelSftp sftp = ((SSHConnector)connector.getMainConnector()).newSftpChannel();
+                ChannelSftp sftp = ((SSHConnector) connector.getMainConnector()).newSftpChannel();
                 LOGGER.info("Disposing of SSH lock [%s]", path);
                 sftp.connect();
                 sftp.chmod(644, path);
@@ -356,6 +357,7 @@ public class SSHConnector extends SingleHostConnector {
 
     private interface StreamSetter {
         public void setStream(OutputStream out, boolean dontClose);
+
         int streamNumber();
     }
 
@@ -365,7 +367,7 @@ public class SSHConnector extends SingleHostConnector {
         private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) {
             final Redirect.Type type = output == null ? Redirect.Type.INHERIT : output.type();
 
-            switch(type) {
+            switch (type) {
                 case PIPE:
                     streamSetter.setStream(null, false);
                     break;
@@ -422,12 +424,12 @@ public class SSHConnector extends SingleHostConnector {
                 });
 
                 final Redirect.Type inputType = input == null ? Redirect.Type.INHERIT : input.type();
-                switch(inputType) {
+                switch (inputType) {
                     case INHERIT:
                     case PIPE:
                         break;
                     case READ:
-                        commandBuilder.append(String.format("< \"%s\"",  protect(resolve(input.file()), "\"")));
+                        commandBuilder.append(String.format("< \"%s\"", protect(resolve(input.file()), "\"")));
                     default:
                         throw new RuntimeException("Unhandled redirection type: " + inputType);
                 }

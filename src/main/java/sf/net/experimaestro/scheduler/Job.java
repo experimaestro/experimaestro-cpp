@@ -25,7 +25,6 @@ import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
@@ -34,6 +33,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 
 import static java.lang.String.format;
@@ -191,7 +191,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // Try to lock, otherwise wait
                 try {
                     locks.add(getMainConnector().createLockFile(getLocator().path + LOCK_EXTENSION));
-                } catch (UnlockableException e) {
+                } catch (LockException e) {
                     LOGGER.info("Could not lock job [%s]", this);
                     synchronized (this) {
                         try {
@@ -218,11 +218,13 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // the task manager
                 synchronized (Scheduler.LockSync) {
                     for (Dependency dependency : getDependencies()) {
-                        final Lock lock = dependency.lock(scheduler, null, pid);
-                        if (lock != null)
-                            locks.add(lock);
-                        else {
-                            throw new LockException("Could not lock %s", dependency);
+                        try {
+                            final Lock lock = dependency.lock(scheduler, null, pid);
+                            if (lock != null)
+                                locks.add(lock);
+                        } catch (LockException e) {
+                            dependency.update(scheduler, null, true);
+                            throw new LockException(e, "Could not lock %s", dependency);
                         }
 
                     }
@@ -300,6 +302,13 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 process = null;
 
                 storeState();
+
+                final Collection<Dependency> deps = getDependencies();
+                for (Dependency dep : deps) {
+                    dep.status = DependencyStatus.UNACTIVE;
+                    scheduler.getResources().store(dep);
+                }
+
                 try {
                     LOGGER.debug("Disposing of old XPM process [%s]", old);
                     if (old != null) {
@@ -315,11 +324,41 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     default:
                         LOGGER.error("Received unknown self-message: %s", message);
                 }
-            }
-        } else {
-            if (message instanceof DependencyChangedMessage) {
-                final Dependency dependency = ((DependencyChangedMessage) message).dependency;
+            } else if (message instanceof DependencyChangedMessage) {
+                final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
 
+                // Store in cache
+                updateDependency(depChanged.dependency);
+
+                int diff = (depChanged.to.isOK() ? 1 : 0) - (depChanged.from.isOK() ? 1 : 0);
+                int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (depChanged.from.isBlocking() ? 1 : 0);
+
+                if (diff != 0 || diffHold != 0) {
+                    nbUnsatisfied -= diff;
+                    nbHolding += diffHold;
+
+                    // Manages the holding count
+                    if (depChanged.to == DependencyStatus.ERROR) {
+                        nbHolding++;
+                    } else if (depChanged.from == DependencyStatus.ERROR) {
+                        nbHolding--;
+                    }
+
+
+                    // Change the state in funciton of the number of unsatified requirements
+                    if (nbUnsatisfied == 0) {
+                        if (state == ResourceState.WAITING)
+                            state = ResourceState.READY;
+                    } else {
+                        if (state == ResourceState.READY)
+                            state = ResourceState.WAITING;
+                    }
+
+                    // Store the result
+                    assert nbHolding >= 0;
+                    assert nbUnsatisfied >= nbHolding;
+                    storeState();
+                }
             }
         }
     }
@@ -437,25 +476,25 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
             for (Dependency dependency : getDependencies()) {
                 dependency.update(scheduler, null, store);
-                if (dependency.status.isOK()) {
+                if (!dependency.status.isOK()) {
                     nbUnsatisfied++;
                     if (dependency.status == DependencyStatus.HOLD)
                         nbHolding++;
                 }
             }
 
-            ResourceState state = ResourceState.READY;
+            ResourceState state = nbUnsatisfied > 0 ? ResourceState.WAITING : ResourceState.READY;
+            if (nbHolding > 0)
+                state = ResourceState.ON_HOLD;
 
             if (nbUnsatisfied != this.nbUnsatisfied) {
                 changes = true;
                 this.nbUnsatisfied = nbUnsatisfied;
-                state = ResourceState.WAITING;
             }
 
             if (nbHolding != this.nbHolding) {
                 changes = true;
                 this.nbHolding = nbHolding;
-                state = ResourceState.ON_HOLD;
             }
 
             changes |= set(state);

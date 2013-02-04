@@ -19,8 +19,8 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.*;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -128,7 +128,7 @@ abstract public class Dependency {
     /**
      * Lock the resource
      */
-    protected abstract Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException;
+    protected abstract Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException;
 
 
     /**
@@ -144,7 +144,7 @@ abstract public class Dependency {
         DependencyStatus old = status;
         status = accept(scheduler, from);
 
-        if (status != old)
+        if (status == old)
             return false;
 
         if (store)
@@ -152,7 +152,7 @@ abstract public class Dependency {
         return true;
     }
 
-    final public Lock lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+    final public Lock lock(Scheduler scheduler, Resource from, String pid) throws LockException {
         lock = _lock(scheduler, from, pid);
         if (lock != null) {
             scheduler.store(this);

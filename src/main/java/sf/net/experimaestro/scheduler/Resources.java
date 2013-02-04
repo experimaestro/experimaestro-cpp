@@ -84,7 +84,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Access to the index that gives dependent resources
      */
-    private SecondaryIndex<Long, Long, Dependency> fromToDependency;
+    private SecondaryIndex<Long, Long, Dependency> fromDependencies;
 
     /**
      * Access to the index that gives required resources
@@ -119,7 +119,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
         // Create dependencies indices
         dependencies = dbStore.getPrimaryIndex(Long.class, Dependency.class);
-        fromToDependency = dbStore.getSecondaryIndex(dependencies, Long.class, Dependency.FROM_KEY_NAME);
+        fromDependencies = dbStore.getSecondaryIndex(dependencies, Long.class, Dependency.FROM_KEY_NAME);
         toDependencies = dbStore.getSecondaryIndex(dependencies, Long.class, Dependency.TO_KEY_NAME);
 
 
@@ -200,7 +200,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
             LOGGER.debug("Adding a new resource [%s] in database [id=%d]", resource, id);
 
             // Add the data
-
             final ResourceData resourceData = resource.getData();
             resourceData.setResourceID(id);
             this.data.put(resourceData);
@@ -275,23 +274,28 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         final long from = resource.getId();
 
         // Notify dependencies in turn
-        try (final EntityCursor<Dependency> entities = fromToDependency.entities(null, from, true, from, true, READ_UNCOMMITTED)) {
+        try (final EntityCursor<Dependency> entities = fromDependencies.entities(null, from, true, from, true, READ_UNCOMMITTED)) {
             for (Dependency dep : entities) {
-                try {
-                    LOGGER.info("Notifying dependency [%s] from [%s]", dep.getTo(), from);
-                    if (dep.update(scheduler, resource, false)) {
-                        // Preserver the previous state
+                if (dep.status != DependencyStatus.UNACTIVE)
+                    try {
+                        // when the dependency status is null, the dependency is not active anymore
+                        LOGGER.debug("Notifying dependency [%s] from [%s]", dep.getTo(), from);
+                        // Preserves the previous state
                         DependencyStatus beforeState = dep.status;
 
-                        // Update the dependency in database
-                        store(dep);
+                        if (dep.update(scheduler, resource, false)) {
+                            final Resource depResource = get(dep.getTo());
 
-                        // Notify the resource that a dependency has changed
-                        resource.notify(resource, new DependencyChangedMessage(dep, beforeState, dep.status));
+                            // Update the dependency in database
+                            store(dep);
+
+                            // Notify the resource that a dependency has changed
+                            depResource.notify(depResource, new DependencyChangedMessage(dep, beforeState, dep.status));
+                            LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.state, depResource);
+                        }
+                    } catch (RuntimeException e) {
+                        LOGGER.error(e, "Got an exception while notifying [%s]", resource);
                     }
-                } catch (RuntimeException e) {
-                    LOGGER.error(e, "Got an exception while notifying [%s]", resource);
-                }
             }
         }
 
@@ -315,7 +319,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
      * @return A map of dependencies
      */
     public TreeMap<Long, Dependency> retrieveDependentResources(long from) {
-        return getDependencies(from, fromToDependency);
+        return getDependencies(from, fromDependencies);
     }
 
 
@@ -362,4 +366,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     public Resource getSame(Resource resource) {
         return getByLocator(resource.getLocator());
     }
+
+
 }

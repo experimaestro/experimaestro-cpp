@@ -56,7 +56,8 @@ public enum ResourceState {
 
 
     /**
-     * Returns true if the resource is a state that will not change
+     * Returns true if the resource is not done and
+     * is blocked (error or hold)
      *
      * @return
      */

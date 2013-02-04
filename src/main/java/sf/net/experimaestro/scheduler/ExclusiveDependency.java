@@ -20,8 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -59,14 +59,14 @@ public class ExclusiveDependency extends Dependency {
     }
 
     @Override
-    synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+    synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
         Resource resource = getFrom(scheduler, from);
         try {
             FileObject file = resource.getFileWithExtension(Resource.LOCK_EXTENSION);
             final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath());
             return lockFile;
         } catch (FileSystemException e) {
-            throw new UnlockableException(e);
+            throw new LockException(e);
         }
     }
 }

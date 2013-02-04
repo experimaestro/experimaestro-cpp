@@ -20,6 +20,7 @@ package sf.net.experimaestro.locks;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.WatchFileMonitor;
 import sf.net.experimaestro.utils.log.Logger;
@@ -55,7 +56,7 @@ public class FileLock implements Lock {
      * @param lockFile
      * @throws IOException
      */
-    public FileLock(File lockFile, boolean wait) throws UnlockableException {
+    public FileLock(File lockFile, boolean wait) throws LockException {
         this.lockFile = lockFile;
         WatchFileMonitor monitor = new WatchFileMonitor(lockFile,
                 WatchFileMonitor.Mode.DELETED);
@@ -63,18 +64,18 @@ public class FileLock implements Lock {
             while (!lockFile.createNewFile())
                 if (wait)
                     monitor.take();
-                else throw new UnlockableException();
+                else throw new LockException();
             lockFile.deleteOnExit();
         } catch (IOException e) {
-            throw new UnlockableException("Could not create the lock file");
+            throw new LockException("Could not create the lock file");
         }
     }
 
-    public FileLock(File lockFile) throws UnlockableException {
+    public FileLock(File lockFile) throws LockException {
         this(lockFile, true);
     }
 
-    public FileLock(String lockFile) throws UnlockableException {
+    public FileLock(String lockFile) throws LockException {
         this(new File(lockFile), true);
     }
 

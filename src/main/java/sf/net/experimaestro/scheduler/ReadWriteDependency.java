@@ -23,8 +23,8 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -71,14 +71,14 @@ public class ReadWriteDependency extends Dependency {
     }
 
     @Override
-    synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws UnlockableException {
+    synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
         Resource resource = getFrom(scheduler, from);
         try {
             FileObject file = resource.getFileWithExtension(LOCK_EXTENSION);
             final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath());
             return lockFile;
         } catch (FileSystemException e) {
-            throw new UnlockableException(e);
+            throw new LockException(e);
         }
     }
 
@@ -97,10 +97,10 @@ public class ReadWriteDependency extends Dependency {
          * @param pidFrom     The old PID (or 0 if none)
          * @param pidTo       The new PID (or 0 if none)
          * @param writeAccess True if we need the write access
-         * @throws UnlockableException
+         * @throws LockException
          */
         public void updateStatusFile(SingleHostConnector connector, String path, String pidFrom, String pidTo, boolean writeAccess)
-                throws UnlockableException {
+                throws LockException {
             // --- Lock the resource
             try (Lock fileLock = connector.createLockFile(path + LOCK_EXTENSION)) {
 
@@ -133,7 +133,7 @@ public class ReadWriteDependency extends Dependency {
                     else
                         readers += 1;
                 } catch (Exception e) {
-                    throw new UnlockableException(
+                    throw new LockException(
                             "Status file '%s' could not be created", path + STATUS_EXTENSION);
                 }
             }

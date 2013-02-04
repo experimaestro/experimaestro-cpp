@@ -23,8 +23,8 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.locks.UnlockableException;
 
 /**
  * A fake connector used for internal purposes. It is backed up by
@@ -56,7 +56,7 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
-    public Lock createLockFile(String path) throws UnlockableException {
+    public Lock createLockFile(String path) throws LockException {
         throw new NotImplementedException();
     }
 
