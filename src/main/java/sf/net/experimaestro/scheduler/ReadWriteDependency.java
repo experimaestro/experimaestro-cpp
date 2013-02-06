@@ -19,6 +19,7 @@
 package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.ReadLineIterator;
+import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -56,40 +57,94 @@ public class ReadWriteDependency extends Dependency {
 
     @Override
     synchronized protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
-        Resource resource = getFrom(scheduler, from);
-        resource.init(scheduler);
-        final FileObject file;
-        try {
-            file = resource.getFileWithExtension(LOCK_EXTENSION);
-            return file.exists() ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
-        } catch (FileSystemException e) {
-            LOGGER.error(e, "Error while checking the presence of lock file for [%s]", from);
-            return DependencyStatus.ERROR;
-
-        }
-
+        // The file was generated, so it is just a matter of locking
+        return DependencyStatus.OK_LOCK;
     }
 
     @Override
     synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
+        // Retrieve data about resource
         Resource resource = getFrom(scheduler, from);
-        try {
-            FileObject file = resource.getFileWithExtension(LOCK_EXTENSION);
-            final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath());
-            return lockFile;
-        } catch (FileSystemException e) {
-            throw new LockException(e);
+
+        return new StatusLock(resource, pid, false);
+    }
+
+    static private Data getData(Resource resource) {
+        Data data = (Data) resource.getLockData();
+        if (data == null) {
+            resource.setLockData(data = new Data(resource));
+        }
+        return data;
+    }
+
+    @Persistent
+    static public class StatusLock implements Lock {
+        long resourceId;
+        private String pid;
+
+        transient Resource resource;
+
+        protected StatusLock() {
+        }
+
+        public StatusLock(Resource resource, String pid, boolean writeAccess) throws LockException {
+            this.resource = resource;
+            this.pid = pid;
+            this.resourceId = resource.getId();
+
+            Data data = getData(resource);
+            data.updateStatusFile(resource.getMainConnector(), resource.getLocator().getPath(), null, pid, writeAccess);
+            LOGGER.debug("Created status lock [pid=%s] on %s: %s", pid, resource, data);
+        }
+
+        @Override
+        public void close() {
+            Data data = getData(resource);
+            try {
+                data.updateStatusFile(resource.getMainConnector(), resource.getLocator().getPath(), pid, null, /*not used*/false);
+                LOGGER.debug("Removed status lock [pid=%s] on %s: %s", pid, resource, data);
+            } catch (LockException e) {
+                LOGGER.error(e, "Could not remove the status lock on %s", resource);
+            }
+        }
+
+        @Override
+        public void changeOwnership(String pid) throws LockException {
+            Data data = getData(resource);
+            data.updateStatusFile(resource.getMainConnector(), resource.getLocator().getPath(), this.pid, pid, /*not used*/false);
+            LOGGER.debug("Changed status lock [pid=%s -> %s] on %s: %s", this.pid, pid, resource, data);
+            this.pid = pid;
+        }
+
+        @Override
+        public void init(Scheduler scheduler) throws DatabaseException {
+            if (resource == null)
+                resource = scheduler.getResource(resourceId);
         }
     }
 
-
     /**
-     * This data will be stored with the resource
+     * This data is cached by the resource
      */
     static public class Data extends LockData {
         int writers = 0;
         int readers = 0;
         long lastUpdate = 0;
+
+        Resource resource;
+
+        public Data(Resource resource) {
+            this.resource = resource;
+        }
+
+        public Lock lock(String pid, boolean writeAccess) throws FileSystemException, LockException {
+            return new StatusLock(resource, pid, writeAccess);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Locks(r=%d/w=%d)", readers, writers);
+        }
 
         /**
          * Update the state file
@@ -102,7 +157,7 @@ public class ReadWriteDependency extends Dependency {
         public void updateStatusFile(SingleHostConnector connector, String path, String pidFrom, String pidTo, boolean writeAccess)
                 throws LockException {
             // --- Lock the resource
-            try (Lock fileLock = connector.createLockFile(path + LOCK_EXTENSION)) {
+            try (Lock ignored = connector.createLockFile(path + LOCK_EXTENSION)) {
 
                 try {
                     // --- Read the resource state
@@ -114,26 +169,45 @@ public class ReadWriteDependency extends Dependency {
                         out.format("%s %s%n", pidTo, writeAccess ? "w" : "r");
                         out.close();
                     } else {
-                        final FileObject tmpFile = connector.resolveFile(path + STATUS_EXTENSION + ".tmp");
-                        PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
-                        // We are modifying an entry: rewrite the file
                         Map<String, Boolean> processMap = new TreeMap<>();
                         updateFromStatusFile(connector, path, processMap);
-                        processMap.remove(pidFrom);
-                        if (pidTo != null)
+                        if (pidFrom != null) {
+                            Boolean writeAccessFrom = processMap.remove(pidFrom);
+                            if (writeAccessFrom != null)
+                                if (writeAccessFrom)
+                                    writers--;
+                                else
+                                    readers--;
+
+                        }
+
+                        if (pidTo != null) {
                             processMap.put(pidTo, writeAccess);
-                        for (Map.Entry<String, Boolean> x : processMap.entrySet())
-                            out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
-                        out.close();
-                        tmpFile.moveTo(connector.resolveFile(path + STATUS_EXTENSION));
+                            if (writeAccess)
+                                writers++;
+                            else
+                                readers++;
+
+                        }
+
+
+                        if (processMap.isEmpty()) {
+                            connector.resolveFile(path + STATUS_EXTENSION).delete();
+                        } else {
+                            final FileObject tmpFile = connector.resolveFile(path + STATUS_EXTENSION + ".tmp");
+                            PrintWriter out = new PrintWriter(tmpFile.getContent().getOutputStream());
+                            // We are modifying an entry: rewrite the file
+                            if (pidTo != null)
+                                processMap.put(pidTo, writeAccess);
+                            for (Map.Entry<String, Boolean> x : processMap.entrySet())
+                                out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
+                            out.close();
+                            tmpFile.moveTo(connector.resolveFile(path + STATUS_EXTENSION));
+                        }
                     }
 
-                    if (writeAccess)
-                        writers += 1;
-                    else
-                        readers += 1;
                 } catch (Exception e) {
-                    throw new LockException(
+                    throw new LockException(e,
                             "Status file '%s' could not be created", path + STATUS_EXTENSION);
                 }
             }
@@ -158,9 +232,9 @@ public class ReadWriteDependency extends Dependency {
                 if (lastUpdate >= lastModified)
                     return;
 
-                lastUpdate = lastModified;
 
                 try {
+                    writers = readers = 0;
                     for (String line : new ReadLineIterator(statusFile.getContent().getInputStream())) {
                         String[] fields = line.split("\\s+");
                         if (fields.length != 2)
@@ -168,6 +242,7 @@ public class ReadWriteDependency extends Dependency {
                                     "Skipping line %s (wrong number of fields)",
                                     line);
                         else {
+                            map.put(fields[0], fields[1].equals("w"));
                             if (fields[1].equals("r"))
                                 readers += 1;
                             else if (fields[1].equals("w"))
@@ -177,11 +252,15 @@ public class ReadWriteDependency extends Dependency {
                                         fields[1]);
                         }
                     }
+
+                    lastUpdate = lastModified;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
 
             }
         }
+
+
     }
 }

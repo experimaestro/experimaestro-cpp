@@ -63,9 +63,9 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     ResourceState state;
 
     /**
-     * Lock-related data
+     * Lock-related data: we don't store it
      */
-    LockData lockData;
+    private transient LockData lockData;
 
 
     // --- Values filled on demand
@@ -241,7 +241,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         synchronized (old) {
             assert old.getLocator().equals(getLocator()) : "locators do not match";
             if (UPDATABLE_STATES.contains(old.state)) {
-                scheduler.store(this);
+                scheduler.store(this, false);
                 return true;
             }
         }
@@ -331,6 +331,10 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         return lockData;
     }
 
+    public void setLockData(LockData lockData) {
+        this.lockData = lockData;
+    }
+
     /**
      * Get the state of the resource
      *
@@ -345,10 +349,11 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Update the database after a change in state
      *
      * @return true if everything went well
+     * @param notify
      */
-    boolean storeState() {
+    boolean storeState(boolean notify) {
         try {
-            scheduler.store(this);
+            scheduler.store(this, notify);
             return true;
         } catch (DatabaseException | ExperimaestroCannotOverwrite e) {
             LOGGER.error(

@@ -279,19 +279,23 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                 if (dep.status != DependencyStatus.UNACTIVE)
                     try {
                         // when the dependency status is null, the dependency is not active anymore
-                        LOGGER.debug("Notifying dependency [%s] from [%s]", dep.getTo(), from);
+                        LOGGER.debug("Notifying dependency: [%s] to [%s]; current state=%s", from, dep.getTo(), dep.status);
                         // Preserves the previous state
                         DependencyStatus beforeState = dep.status;
 
                         if (dep.update(scheduler, resource, false)) {
                             final Resource depResource = get(dep.getTo());
 
-                            // Update the dependency in database
-                            store(dep);
+                            synchronized (depResource) {
+                                // Update the dependency in database
+                                store(dep);
 
-                            // Notify the resource that a dependency has changed
-                            depResource.notify(depResource, new DependencyChangedMessage(dep, beforeState, dep.status));
-                            LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.state, depResource);
+                                // Notify the resource that a dependency has changed
+                                depResource.notify(depResource, new DependencyChangedMessage(dep, beforeState, dep.status));
+                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.state, depResource);
+                            }
+                        } else {
+                            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                         }
                     } catch (RuntimeException e) {
                         LOGGER.error(e, "Got an exception while notifying [%s]", resource);

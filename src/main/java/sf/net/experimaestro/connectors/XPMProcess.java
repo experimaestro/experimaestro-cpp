@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -175,7 +176,11 @@ public abstract class XPMProcess {
         // Changing the ownership of the different logs
         this.locks = locks;
         for (Lock lock : locks) {
-            lock.changeOwnership(pid);
+            try {
+                lock.changeOwnership(pid);
+            } catch (LockException e) {
+                LOGGER.error("Could not adopt lock %s", lock);
+            }
         }
     }
 

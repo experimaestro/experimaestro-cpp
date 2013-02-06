@@ -77,7 +77,7 @@ public class TokenResource extends Resource<ResourceData> {
         if (this.limit == limit) return;
 
         this.limit = limit;
-        storeState();
+        storeState(true);
     }
 
 
@@ -128,7 +128,8 @@ public class TokenResource extends Resource<ResourceData> {
                     throw new LockException("All the tokens are already taken");
 
                 token.usedTokens++;
-                token.storeState();
+                LOGGER.debug("Taking one token (%s/%s)", token.usedTokens, token.limit);
+                token.storeState(true);
 
                 return new TokenLock(token);
             }
@@ -144,7 +145,7 @@ public class TokenResource extends Resource<ResourceData> {
     synchronized private void unlock() {
         usedTokens--;
         LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
-        storeState();
+        storeState(true);
     }
 
     /**

@@ -22,7 +22,7 @@ package sf.net.experimaestro.scheduler;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 29/1/13
  */
-public class DependencyChangedMessage extends Message {
+final public class DependencyChangedMessage extends Message {
     Dependency dependency;
     DependencyStatus from;
     DependencyStatus to;
@@ -31,5 +31,10 @@ public class DependencyChangedMessage extends Message {
         this.dependency = dependency;
         this.from = from;
         this.to = to;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Dependency changed [%s -> %s / %s]", from, to, dependency);
     }
 }

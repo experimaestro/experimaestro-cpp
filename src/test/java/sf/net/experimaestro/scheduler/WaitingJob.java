@@ -24,6 +24,7 @@ import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.InputStream;
@@ -38,10 +39,15 @@ import java.util.ArrayList;
  */
 @Persistent
 public class WaitingJob extends Job<JobData> {
+    final static private Logger LOGGER = Logger.getLogger();
+
     transient private ThreadCount counter;
 
     // When was the job ready to run
     long readyTimestamp = 0;
+
+    // id for debugging
+    private String id;
 
     // Duration before exiting
     long duration;
@@ -52,9 +58,16 @@ public class WaitingJob extends Job<JobData> {
     protected WaitingJob() {
     }
 
+
+    @Override
+    public String toString() {
+        return id;
+    }
+
     public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration, int code) {
-        super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, "job-" + id).getAbsolutePath())));
+        super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, id).getAbsolutePath())));
         this.counter = counter;
+        this.id = id;
         this.duration = duration;
         counter.add();
         this.code = code;
@@ -76,13 +89,20 @@ public class WaitingJob extends Job<JobData> {
     }
 
     @Override
+    boolean storeState(boolean notify) {
+        final boolean r = super.storeState(notify);
+        if (!state.isActive() && counter != null) {
+            LOGGER.debug("Releasing counter for job " + id);
+            counter.del();
+            counter = null;
+        }
+        return r;
+    }
+
+    @Override
     public synchronized void notify(Resource resource, Message message) {
         super.notify(resource, message);
         if (resource == null || this == resource) {
-            if (message instanceof EndOfJobMessage || (message instanceof DependencyChangedMessage && state.isBlocking())) {
-                counter.del();
-            }
-
             if (message instanceof DependencyChangedMessage && state == ResourceState.READY) {
                 readyTimestamp = System.currentTimeMillis();
             }

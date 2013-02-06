@@ -19,6 +19,7 @@
 package sf.net.experimaestro.locks;
 
 import com.sleepycat.je.DatabaseException;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
@@ -41,7 +42,7 @@ public interface Lock extends AutoCloseable {
      * @param pid
      *            The new owner PID
      */
-	void changeOwnership(String pid);
+	void changeOwnership(String pid) throws LockException;
 
     /** Initialize the lock when restored from database */
     void init(Scheduler scheduler) throws DatabaseException;

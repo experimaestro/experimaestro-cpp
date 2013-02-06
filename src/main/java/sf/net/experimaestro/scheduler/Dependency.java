@@ -106,6 +106,10 @@ abstract public class Dependency {
                 throw new AssertionError(String.format("Could not find resource with ID %d", this.from));
         }
 
+        assert from.getId() == this.from;
+
+        LOGGER.debug("From [%d] is in state %s [to=%s]", this.from, from.getState(), to);
+
         // Handle simple cases
         if (from.getState() == ResourceState.ERROR)
             return DependencyStatus.HOLD;

@@ -781,7 +781,7 @@ public class XPMObject {
                 getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
             }
         } else {
-            scheduler.store(task);
+            scheduler.store(task, false);
         }
 
         return task;
@@ -995,7 +995,7 @@ public class XPMObject {
             if (resource == null) {
                 tokenResource = new TokenResource(xpm.scheduler, new ResourceData(locator), 0);
                 tokenResource.init(xpm.scheduler);
-                xpm.scheduler.store(tokenResource);
+                xpm.scheduler.store(tokenResource, false);
             } else {
                 if (!(resource instanceof TokenResource))
                     throw new AssertionError(String.format("Resource %s exists and is not a token", path));

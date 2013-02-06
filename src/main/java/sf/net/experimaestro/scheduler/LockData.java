@@ -18,12 +18,9 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Persistent;
-
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 29/1/13
  */
-@Persistent
 public class LockData {
 }

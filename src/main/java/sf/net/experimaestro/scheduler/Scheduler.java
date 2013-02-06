@@ -244,11 +244,11 @@ final public class Scheduler {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                         job.state = ResourceState.WAITING;
-                        job.storeState();
+                        job.storeState(false);
                     } catch (Throwable t) {
                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                         job.state = ResourceState.ERROR;
-                        job.storeState();
+                        job.storeState(false);
                     } finally {
                     }
 
@@ -461,7 +461,7 @@ final public class Scheduler {
      * @param resource The resource to store
      * @throws DatabaseException
      */
-    synchronized public void store(final Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
+    synchronized public void store(final Resource resource, boolean notify) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Update the task and notify ourselves since we might want
         // to run new processes
 
@@ -511,14 +511,15 @@ final public class Scheduler {
         }
 
         // Notify dependencies, using a new process
-        executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                if (!isStopping()) {
-                    resources.notifyDependencies(resource);
+        if (notify)
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isStopping()) {
+                        resources.notifyDependencies(resource);
+                    }
                 }
-            }
-        });
+            });
     }
 
 

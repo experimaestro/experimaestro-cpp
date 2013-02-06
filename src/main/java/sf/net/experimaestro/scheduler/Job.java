@@ -112,9 +112,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         if (!state.isActive()) {
             set(ResourceState.WAITING);
             clean();
-            // FIXME: why updating status?
-//            updateStatus(false);
-            scheduler.store(this);
+            scheduler.store(this, true);
         }
     }
 
@@ -183,7 +181,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // Check if not done
                 if (isDone()) {
                     state = ResourceState.DONE;
-                    storeState();
+                    storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
                 }
@@ -206,7 +204,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
-                    storeState();
+                    storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
                 }
@@ -241,7 +239,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     process = startJob(locks);
                     process.adopt(locks);
                     locks = null;
-                    storeState();
+                    storeState(false);
 
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
@@ -266,12 +264,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     } catch (Exception e) {
                         LOGGER.error(e);
                     }
-            try {
-                if (process != null && !process.isRunning())
-                    process.dispose();
-            } catch (Exception e) {
-                LOGGER.error("Error while disposing of locks of XPMProcess: %s", e);
-            }
         }
 
     }
@@ -301,7 +293,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 XPMProcess old = process;
                 process = null;
 
-                storeState();
+                storeState(true);
 
                 final Collection<Dependency> deps = getDependencies();
                 for (Dependency dep : deps) {
@@ -357,8 +349,9 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     // Store the result
                     assert nbHolding >= 0;
                     assert nbUnsatisfied >= nbHolding;
-                    storeState();
+                    storeState(false);
                 }
+                LOGGER.debug("Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
             }
         }
     }
@@ -511,14 +504,14 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         if (process != null) {
             process.destroy();
             state = ResourceState.ERROR;
-            storeState();
+            storeState(true);
             return true;
         }
 
         // Process is about to run
         if (state == ResourceState.READY || state == ResourceState.WAITING) {
             state = ResourceState.ON_HOLD;
-            storeState();
+            storeState(true);
             return true;
         }
 
@@ -548,13 +541,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         }
     }
 
-
-    @Override
-    public LockData getLockData() {
-        if (lockData == null)
-            lockData = new ReadWriteDependency.Data();
-        return lockData;
-    }
 
     @Override
     public ReadWriteDependency createDependency(Object object) {
