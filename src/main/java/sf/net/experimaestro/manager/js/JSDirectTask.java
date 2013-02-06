@@ -107,6 +107,8 @@ public class JSDirectTask extends JSAbstractTask {
 
             if (convertToE4X)
                 result = JSUtils.domToE4X(document, cx, jsScope);
+            else
+                result = document;
         }
 
         LOGGER.debug("[/Running] task: %s", factory.getId());

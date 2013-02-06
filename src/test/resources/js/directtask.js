@@ -39,11 +39,12 @@ var task = xpm.get_task("a.b.c", "task");
 task.setParameter("x", "10");
 var r = task.run();
 
+
 // END SNIPPET: run
 
 function test_directtask() {
 	var abc = Namespace("a.b.c");
-	v = r.xp::value.@value;
+	v = r.x;
 	if (v == undefined || v != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", v);
 }	

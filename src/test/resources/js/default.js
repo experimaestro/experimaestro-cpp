@@ -24,18 +24,13 @@ var abc = new Namespace("a.b.c");
 var task = {
 	id: qname("a.b.c", "task"),
 
-	input: {
-		"a": { "default": 10, "value-type": "xs:integer" },
-		"b": { "default": 20, "value-type": "xs:integer" }
-	},
-
 	inputs: <inputs xmlns={xp.uri}>
 	        <!-- a has a default value of 10 -->
             <value type="xs:integer" id="a" default="10"/>
 
             <!-- b has a default value given by the contained XML -->
             <value id="b" type="xs:integer">
-                <default><value value="20"/></default>
+                <default>20</default>
             </value>
         </inputs>,
 };
@@ -48,9 +43,9 @@ var r = task.run();
 
 
 function test_default_attribute() {
-	assert_equals(r.xp::value[0].@value, 10);
+	assert_equals(r.a, 10);
 }
 
 function test_default_element() {
-	assert_equals(r.xp::value[1].@value, 20);
+	assert_equals(r.b, 20);
 }	

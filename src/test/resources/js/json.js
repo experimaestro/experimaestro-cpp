@@ -16,44 +16,49 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Tests for JSON way of transmitting information
 
-// START SNIPPET: main
-var altName = qname("a.b.c", "alt");
+
+// START SNIPPET: task
 var abc = new Namespace("a.b.c");
+var task = {
+    // The id of the task is an XML qualified name
+    id: qname(ns, "task"),
 
+    // One input of type xp:integer
+    inputs: {
+        x: { type: "xs:integer", default: 3 }
+    }
 
-var task_1 = {
-	id: qname("a.b.c", "task-1"),
-	inputs: <inputs><value type="xs:integer" id="p"/></inputs>,
-	
-	run: function(inputs) {
-		return inputs.p;
-	}
-		
+    run: function(input) {
+        return {
+            "abc:output": {
+                x: input.x,
+                "" : []
+            }
+        };
+    }
 };
 
-xpm.add_task_factory(task_1);
+// Add the task to the list of available factories
 
-var task_2 = {
-	id: qname("a.b.c", "task-2"),
-	inputs: <inputs xmlns:abc="a.b.c"><task ref="abc:task-1" id="t1"/></inputs>,
-	
-	run: function(inputs) {
-		return inputs.t1;
-	}
-		
-};
+xpm.add_task(task);
 
-xpm.add_task_factory(task_2);
+// END SNIPPET: task
+
 
 /** Run and check */
 
-var task = xpm.get_task(task_2.id);
-task.setParameter("t1.p", "10");
+// START SNIPPET: run
+var task = xpm.get_task(ns, "task");
+ns.x = 10;
 var r = task.run();
 
-// END SNIPPET: main
-if (r == undefined || r != 10)
-	throw new java.lang.String.format("Value [%s] is different from 10", r);
-	
-	
+// END SNIPPET: run
+
+function test_json() {
+	v = r.xp::value.@value;
+	if (v == undefined || v != 10)
+		throw new java.lang.String.format("Value [%s] is different from 10", v);
+}
+

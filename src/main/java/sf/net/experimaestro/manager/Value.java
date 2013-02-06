@@ -23,6 +23,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -61,17 +62,20 @@ public abstract class Value {
     }
 
     /**
-     * Set the value
-     *
-     * @param id    The name
-     * @param value The value
+     * Returns the value object corresponding to this path
+     * @param id The ID
+     * @return The value or
      */
-    public abstract void set(DotName id, Document value);
+    public abstract Value getValue(DotName id) throws NoSuchParameter;
+
+
+    /** Set to the given value */
+    public abstract void set(Document value);
 
     /**
      * XPMProcess the value before it can be accessed by a task to run
      */
-    public abstract void process();
+    public abstract void process() throws NoSuchParameter;
 
     /**
      * Get the value
@@ -87,7 +91,7 @@ public abstract class Value {
      *
      * @param task
      */
-    void processConnections(Task task) {
+    void processConnections(Task task) throws NoSuchParameter {
         LOGGER.debug("Processing %d connections for [%s]", input.connections.size(), task.factory.getId());
         // Do not process if we do not have connections...
         for (Connection connection : input.connections) {
@@ -154,18 +158,19 @@ public abstract class Value {
                     continue;
                 }
 
+                Value destination = task.getValue(connection.to);
                 Node item;
                 final int itemKind = xqItem.getItemType().getItemKind();
                 switch (itemKind) {
                     case XQItemType.XQITEMKIND_ATOMIC:
-                        item = Task.wrapValue(xqItem.getAtomicValue());
+                        item = Task.wrapValue(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
                         break;
                     case XQItemType.XQITEMKIND_ELEMENT:
                         item = xqItem.getNode();
                         break;
                     case XQItemType.XQITEMKIND_ATTRIBUTE:
                     case XQItemType.XQITEMKIND_TEXT:
-                        item = Task.wrapValue(xqItem.getNode().getTextContent());
+                        item = Task.wrapValue(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
                         break;
                     default:
                         throw new ExperimaestroRuntimeException(
@@ -184,7 +189,7 @@ public abstract class Value {
                 newDoc.adoptNode(item);
                 newDoc.appendChild(item);
                 LOGGER.debug("Setting parameter [%s] in [%s]", connection.to, task);
-                task.setParameter(connection.to, newDoc);
+                destination.set(newDoc);
                 xqjc.close();
 
             } catch (XQException e) {
@@ -237,5 +242,6 @@ public abstract class Value {
     public boolean isSet() {
         return get() != null;
     }
+
 
 }

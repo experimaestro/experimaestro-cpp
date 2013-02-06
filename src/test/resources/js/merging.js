@@ -40,7 +40,8 @@ var task = {
         </inputs>,
 	
 	run: function(inputs) {
-		return inputs.subtask.xp::value;
+        logger.info(inputs.subtask.x.toSource());
+		return inputs.subtask.x;
 	}
 		
 };
@@ -60,8 +61,7 @@ var r = task.run();
 // END SNIPPET: main
 
 function test_composing_2() {
-	v = r.@value;
-	if (v == undefined || v != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", r.@value);
+	if (r == undefined || r != 10)
+		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
 	

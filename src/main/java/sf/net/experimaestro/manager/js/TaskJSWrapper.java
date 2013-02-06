@@ -25,6 +25,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.utils.JSUtils;
@@ -108,7 +109,7 @@ public class TaskJSWrapper extends ScriptableObject {
      * Just a short hand for setParameter
      */
     @JSFunction("set")
-    static public void set(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+    static public void set(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws NoSuchParameter {
         TaskJSWrapper _this = (TaskJSWrapper) thisObj;
         if (args.length == 1) {
             final Object unwrap = unwrap(args[0]);
@@ -138,7 +139,7 @@ public class TaskJSWrapper extends ScriptableObject {
      * @param _id   The ID of the parameter
      * @param value
      */
-    public void jsFunction_setParameter(String _id, Scriptable value) {
+    public void jsFunction_setParameter(String _id, Scriptable value) throws NoSuchParameter {
         DotName id = DotName.parse(_id);
         LOGGER.debug("Setting input [%s] to [%s] of type %s", _id, value,
                 value.getClass());

@@ -40,8 +40,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -277,5 +275,11 @@ public class XMLUtils {
                 };
             }
         };
+    }
+
+    public static void cloneAndAppend(Document document, Node node) {
+        node = node.cloneNode(true);
+        document.adoptNode(node);
+        document.appendChild(node);
     }
 }

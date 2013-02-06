@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
@@ -34,81 +34,84 @@ import java.util.Map;
 public class AlternativeValue extends Value {
     static final private Logger LOGGER = Logger.getLogger();
 
-	/**
-	 * 
-	 */
-	private  AlternativeInput alternativeInput;
+    /**
+     *
+     */
+    private AlternativeInput alternativeInput;
 
-	/**
-	 * The real task
-	 */
-	private Task task;
+    /**
+     * The real task
+     */
+    private Task task;
 
-	/**
-	 * The returned value
-	 */
-	private Document value = null;
+    /**
+     * The returned value
+     */
+    private Document value = null;
 
-	
-	public AlternativeValue() {
-	}
-	
-	@Override
-	protected void init(Value _other) {
-		AlternativeValue other = (AlternativeValue)_other;
-		super.init(other);
-		
-		alternativeInput = other.alternativeInput;
-		// Copy the task if it has been set
-		if (task != null)
-			task = task.copy();
-	}
-	
-	/**
-	 * Creates an alternative task object
-	 * @param input The input
-	 */
-	protected AlternativeValue(AlternativeInput input) {
-		super(input);
-		this.alternativeInput = input;
-	}
 
-	@Override
-	public void set(DotName id, Document value) {
-		if (id.size() == 0) {
-            // Check if we have an XML with the valid type
-            final Element element = value.getDocumentElement();
-            if (alternativeInput.getType().qname().sameQName(element)) {
-                // Nothing to do
-                LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
-                this.value = value;
-            } else {
-                final Map<QName, TaskFactory> factories = ((AlternativeType)this.alternativeInput.type).factories;
-                if (!XMLUtils.is(ValueType.QNAME, element))
-                    throw new ExperimaestroRuntimeException("Expected a value");
-                String key = element.getAttribute("value");
-                QName qname = QName.parse(key, element,
-                        Manager.PREDEFINED_PREFIXES);
-                TaskFactory subFactory = factories.get(qname);
-                if (subFactory == null)
-                    throw new ExperimaestroRuntimeException(
-                            "Could not find an alternative with name [%s]", key);
-                LOGGER.info("Creating a task [%s]", subFactory.id);
-                task = subFactory.create();
-                AlternativeInput.LOGGER.info("Created the task for alternative [%s]", key);
-            }
-		} else {
-			task.setParameter(id, value);
-		}
-	}
+    public AlternativeValue() {
+    }
 
-	@Override
-	public void process() {
+    @Override
+    protected void init(Value _other) {
+        AlternativeValue other = (AlternativeValue) _other;
+        super.init(other);
+
+        alternativeInput = other.alternativeInput;
+        // Copy the task if it has been set
+        if (task != null)
+            task = task.copy();
+    }
+
+    /**
+     * Creates an alternative task object
+     *
+     * @param input The input
+     */
+    protected AlternativeValue(AlternativeInput input) {
+        super(input);
+        this.alternativeInput = input;
+    }
+
+    @Override
+    public Value getValue(DotName id) throws NoSuchParameter {
+        if (id.size() == 0)
+            return this;
+
+        return task.getValue(id);
+    }
+
+    @Override
+    public void set(Document value) {
+        // Check if we have an XML with the valid type
+        final Element element = value.getDocumentElement();
+        if (alternativeInput.getType().qname().sameQName(element)) {
+            // Nothing to do
+            LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
+            this.value = value;
+        } else {
+            final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
+            String key = element.getTextContent();
+            QName qname = QName.parse(key, element,
+                    Manager.PREDEFINED_PREFIXES);
+            TaskFactory subFactory = factories.get(qname);
+            if (subFactory == null)
+                throw new ExperimaestroRuntimeException(
+                        "Could not find an alternative with name [%s]", key);
+            LOGGER.info("Creating a task [%s]", subFactory.id);
+            task = subFactory.create();
+            AlternativeInput.LOGGER.info("Created the task for alternative [%s]", key);
+        }
+    }
+
+    @Override
+    public void process() throws NoSuchParameter {
         // If the value has not been set
         if (value == null) {
             // If the task has not been set, try to use default value
             if (task == null && input.defaultValue != null)
-                set(DotName.EMPTY, input.defaultValue);
+                set(input.defaultValue);
 
             if (task == null)
                 throw new ExperimaestroRuntimeException(
@@ -117,13 +120,12 @@ public class AlternativeValue extends Value {
                     task.factory != null ? "n/a" : task.factory.id);
             value = task.run();
         }
-	}
+    }
 
-	@Override
-	public Document get() {
-		return value;
-	}
-
+    @Override
+    public Document get() {
+        return value;
+    }
 
 
 }

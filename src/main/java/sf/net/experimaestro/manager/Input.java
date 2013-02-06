@@ -57,7 +57,12 @@ public abstract class Input {
 	 */
 	boolean unnamed;
 
-	/**
+    /**
+     * Defines the namespace for wrapping values
+     */
+    private String namespace;
+
+    /**
 	 * Returns whether the input is optional or not
 	 * 
 	 * @return
@@ -125,4 +130,11 @@ public abstract class Input {
 		this.unnamed = unnamed;
 	}
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 }

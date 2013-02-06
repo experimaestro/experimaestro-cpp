@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 
 public class TaskValue extends Value {
 	private Task task;
@@ -27,18 +28,25 @@ public class TaskValue extends Value {
 	public TaskValue() {
 	}
 
-	public TaskValue(TaskInput taskInput) {
+
+    public TaskValue(TaskInput taskInput) {
 		super(taskInput);
 		task = taskInput.factory.create();
 	}
 
-	@Override
-	public void set(DotName id, Document value) {
-		task.setParameter(id, value);
-	}
 
-	@Override
-	public void process() {
+    @Override
+    public Value getValue(DotName id) throws NoSuchParameter {
+        return task.getValue(id);
+    }
+
+    @Override
+    public void set(Document value) {
+        throw new IllegalArgumentException("Cannot set task value");
+    }
+
+    @Override
+	public void process() throws NoSuchParameter {
 		value = task.run();
 	}
 

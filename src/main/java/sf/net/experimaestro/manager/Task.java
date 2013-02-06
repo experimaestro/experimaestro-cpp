@@ -119,7 +119,7 @@ public abstract class Task {
      * <p/>
      * Calls {@linkplain #doRun()}
      */
-    final public Document run() {
+    final public Document run() throws NoSuchParameter {
         LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter
@@ -158,54 +158,62 @@ public abstract class Task {
 
                     // Check if we have the expected element type
                     final String tagName = element.getLocalName();
-                    final String tagURI = element.getNamespaceURI();
+                    String tagURI = element.getNamespaceURI();
+                    if (tagURI == null)
+                        tagURI = "";
 
-                    if (!tagURI.equals(type.getNamespaceURI()) || !tagName.equals(type.getLocalPart()))
+                    if (!type.matches(tagURI, tagName))
                         throw new ExperimaestroRuntimeException("Parameter [%s] in task [%s] was set to a value with a wrong type [{%s}%s] - expected [%s]",
                                 key, factory.id, tagURI, tagName, type);
 
                     // In cases of values, further check
                     if (type instanceof ValueType) {
                         QName valueType = ((ValueType) type).getValueType();
-                        String x = element.getAttribute("value");
-                        boolean ok = false;
-
+                        String x = element.getTextContent();
                         // Test if the value is OK
-                        switch (valueType.getNamespaceURI()) {
-                            case Manager.XMLSCHEMA_NS:
-                                switch (valueType.getLocalPart()) {
-                                    case "string":
-                                        ok = true;
-                                        break; // we accepts anything
-                                    case "float":
-                                        Float.parseFloat(x);
-                                        ok = true;
-                                        break;
-                                    case "integer":
-                                        Integer.parseInt(x);
-                                        ok = true;
-                                        break;
-                                }
-                                break;
+                        try {
+                            boolean ok = false;
 
-                            case Manager.EXPERIMAESTRO_NS:
-                                switch (valueType.getLocalPart()) {
-                                    // TODO: do those checks
-                                    case "directory":
-                                        LOGGER.info("Did not check if [%s] was a directory", x);
-                                        ok = true;
-                                        break;
-                                    case "file":
-                                        LOGGER.info("Did not check if [%s] was a file", x);
-                                        ok = true;
-                                        break;
-                                }
-                                break;
+                            switch (valueType.getNamespaceURI()) {
+                                case Manager.XMLSCHEMA_NS:
+                                    switch (valueType.getLocalPart()) {
+                                        case "string":
+                                            ok = true;
+                                            break; // we accepts anything
+                                        case "float":
+                                            Float.parseFloat(x);
+                                            ok = true;
+                                            break;
+                                        case "integer":
+                                            Integer.parseInt(x);
+                                            ok = true;
+                                            break;
+                                    }
+                                    break;
+
+                                case Manager.EXPERIMAESTRO_NS:
+                                    switch (valueType.getLocalPart()) {
+                                        // TODO: do those checks
+                                        case "directory":
+                                            LOGGER.info("Did not check if [%s] was a directory", x);
+                                            ok = true;
+                                            break;
+                                        case "file":
+                                            LOGGER.info("Did not check if [%s] was a file", x);
+                                            ok = true;
+                                            break;
+                                    }
+                                    break;
+                            }
+
+                            if (!ok)
+                                throw new ExperimaestroRuntimeException("Un-handled type [%s] in processing parameter [%s] of task [%s]",
+                                        valueType, key, factory.id);
+                        } catch (NumberFormatException e) {
+                            ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException("Wrong value for type [%s]: %s", valueType, x);
+                            throw e2;
                         }
 
-                        if (!ok)
-                            throw new ExperimaestroRuntimeException("Un-handled type [%s] in processing parameter [%s] of task [%s]",
-                                    valueType, key, factory.id);
 
                     }
                 }
@@ -217,7 +225,10 @@ public abstract class Task {
         }
 
         // Do the real-run
-        return doRun();
+        return
+
+                doRun();
+
     }
 
     /**
@@ -292,60 +303,76 @@ public abstract class Task {
     }
 
     /**
-     * Set a parameter
+     * Set a parameter from an XML value
      *
      * @param id    The identifier for this parameter (dot names)
      * @param value The value to be set (this should be an XML fragment)
      * @return True if the parameter was set and false otherwise
      */
-    public final void setParameter(DotName id, Document value) {
+    public final void setParameter(DotName id, Document value) throws NoSuchParameter {
+        getValue(id).set(value);
+    }
+
+    /**
+     * Set a parameter from a text value.
+     * <p/>
+     * Wraps the value into a node whose name depends upon the input
+     *
+     * @param id
+     * @param value
+     */
+    public void setParameter(DotName id, String value) throws NoSuchParameter {
+        final Value v = getValue(id);
+        final String ns = v.input.getNamespace();
+        final Document doc = wrapValue(ns, id.getName(), value);
+        v.set(doc);
+    }
+
+
+    /**
+     * Returns the {@linkplain} object corresponding to the
+     *
+     * @param id
+     * @return
+     * @throws NoSuchParameter
+     */
+    public final Value getValue(DotName id) throws NoSuchParameter {
         String name = id.get(0);
 
+        // Look at merged inputs
         if (!notNamedValues.isEmpty()) {
             for (String vname : notNamedValues) {
                 try {
                     Value v = values.get(vname);
-                    v.set(id, value);
-                    return;
+                    return v.getValue(id);
                 } catch (NoSuchParameter e) {
                 }
             }
 
         }
 
+        // Look at our inputs
         Value inputValue = values.get(name);
         if (inputValue == null)
             throw new NoSuchParameter("Task %s has no input [%s]", factory.id,
                     name);
 
-        inputValue.set(id.offset(1), value);
-
+        return inputValue.getValue(id.offset(1));
     }
 
-    /**
-     * Set a parameter.
-     * <p/>
-     * Utility function that wraps a string into an XML node
-     *
-     * @param id
-     * @param value
-     */
-    public void setParameter(DotName id, String value) {
-        final Document doc = wrapValue(value);
-        setParameter(id, doc);
-    }
 
     /**
-     * Wrap a value into an XML document
+     * Wraps a value into an XML document
      *
+     * @param name
      * @param value
      * @return An XML document representing the value
      */
-    static public Document wrapValue(String value) {
+    static public Document wrapValue(String namespace, String name, String value) {
         final Document doc = XMLUtils.newDocument();
         Element element = doc
-                .createElementNS(Manager.EXPERIMAESTRO_NS, "value");
-        element.setAttributeNS("", "value", value);
+                .createElementNS(namespace, name);
+        element.setTextContent(value);
         doc.appendChild(element);
         return doc;
     }
@@ -413,7 +440,7 @@ public abstract class Task {
      * @param singlePlan If the plan should be composed of only one plan
      * @throws ParseException
      */
-        public List<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
+    public List<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
         PlanParser planParser = new PlanParser(new StringReader(planString));
         sf.net.experimaestro.plan.Node plans = planParser.plan();
         final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
@@ -443,7 +470,7 @@ public abstract class Task {
                         throw new ExperimaestroRuntimeException("Could not run the script [%s]", text);
                     final Object result = runner.evaluate(text);
                     if (result instanceof Document)
-                        task.setParameter(name, (Document)result);
+                        task.setParameter(name, (Document) result);
                     else
                         task.setParameter(name, result.toString());
                 } else

@@ -44,11 +44,12 @@ var task = {
             <task ref="abc:task-2" id="t2">
                 <connect from="t1.x" path="." to="x"/>
             </task>
+            
             <task ref="abc:task-1" id="t1"/>
         </inputs>,
 	
 	run: function(inputs) {
-		return <outputs>{inputs.t2.xp::value}</outputs>;
+		return inputs.t2.x;
 	}
 		
 };
@@ -67,9 +68,8 @@ task.setParameter("t1.x", "10");
 var r = task.run();
 
 // END SNIPPET: main
-
-v = r.xp::value.@value;
-if (v == undefined || v != 10)
-	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
-	
+function test_value() {
+    if (r == undefined || r != 10)
+    	throw new java.lang.String.format("Value [%s] is different from 10", r);
+}
 	

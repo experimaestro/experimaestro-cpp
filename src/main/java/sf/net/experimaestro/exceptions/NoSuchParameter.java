@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.exceptions;
 
-public class NoSuchParameter extends ExperimaestroRuntimeException {
+public class NoSuchParameter extends ExperimaestroException {
 	private static final long serialVersionUID = 1L;
 
 	public NoSuchParameter() {

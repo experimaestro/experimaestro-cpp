@@ -52,6 +52,16 @@ public class Type {
 
     @Override
     public String toString() {
-        return qname.toString();
+        return qname == null ? "ANY" : qname.toString();
+    }
+
+    /**
+     * REturns whether the tag name matches the type
+     * @param namespaceURI
+     * @param name
+     * @return <tt>true</tt> if it matches, false otherwise
+     */
+    public boolean matches(String namespaceURI, String name) {
+        return namespaceURI.equals(getNamespaceURI()) && name.equals(getLocalPart());
     }
 }

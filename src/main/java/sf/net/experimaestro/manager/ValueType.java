@@ -19,16 +19,17 @@
 package sf.net.experimaestro.manager;
 
 /**
+ * Represents an atomic value
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/9/12
  */
 public class ValueType extends Type {
-    static final QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "value");
+    static final QName QNAME = null;
 
     private QName type;
 
     public ValueType(QName type) {
-        super(QNAME);
+        super(null);
         this.type = type;
     }
 
@@ -39,5 +40,10 @@ public class ValueType extends Type {
     @Override
     public String toString() {
         return super.toString() + ": " + type.toString();
+    }
+
+    @Override
+    public boolean matches(String namespaceURI, String name) {
+        return true;
     }
 }

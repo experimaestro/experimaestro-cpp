@@ -35,7 +35,7 @@ var task = {
     // The function that will be called when the task is run
 	run: function(inputs) {
 	    // Multiply x by y and add it to the results array
-        results.push(inputs.x.@value * inputs.y.@value);
+        results.push(inputs.x * inputs.y);
         // Returns something
 		return <outputs>{inputs.x}{inputs.y}</outputs>;
 	}

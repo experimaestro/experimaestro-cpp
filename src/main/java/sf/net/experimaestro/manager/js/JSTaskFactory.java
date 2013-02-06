@@ -210,6 +210,16 @@ public class JSTaskFactory extends TaskFactory {
             throw new RuntimeException(
                     format("Input without id in %s", this.id));
 
+
+        // By default, the namespace is unspecified
+        String namespace = null;
+        final int colon = id.indexOf(":");
+        if (colon >= 0) {
+            namespace = id.substring(0, colon);
+            id = id.substring(colon+1);
+        }
+
+
         LOGGER.debug("New input [%s] for task [%s]", id, this.id);
 
         // --- Get the type
@@ -279,6 +289,8 @@ public class JSTaskFactory extends TaskFactory {
         }
 
 
+        input.setNamespace(namespace);
+
         // Should we merge all the parameters?
         if ("true".equals(el.getAttribute("merge")))
             input.setUnnamed(true);
@@ -300,11 +312,12 @@ public class JSTaskFactory extends TaskFactory {
                 input.setDocumentation(XMLUtils.toString(child));
         }
 
+
         // Set the default value
         if (el.hasAttribute("default")) {
-            final Document defaultValue = Task.wrapValue(el.getAttribute("default"));
+            final Document defaultValue = Task.wrapValue(namespace, id, el.getAttribute("default"));
             input.setDefaultValue(defaultValue);
-            LOGGER.info("Default value["+el.getAttribute("default")+"]: " + XMLUtils.toString(defaultValue));
+            LOGGER.debug("Default value["+el.getAttribute("default")+"]: " + XMLUtils.toString(defaultValue));
 
         } else {
             Node child = XMLUtils.getChild(el, new QName(
@@ -313,11 +326,16 @@ public class JSTaskFactory extends TaskFactory {
                 Document document = XMLUtils.newDocument();
                 child = child.cloneNode(true);
                 document.adoptNode(child);
-                NodeList childNodes = child.getChildNodes();
-                for (int i = 0; i < childNodes.getLength(); i++)
-                    document.appendChild(childNodes.item(i));
+                final Iterator<Element> elements = XMLUtils.elements(child.getChildNodes()).iterator();
+                if (!elements.hasNext()) {
+                    document = Task.wrapValue(namespace, id, child.getTextContent());
+                } else {
+                    document.appendChild(elements.next());
+                    if (elements.hasNext())
+                        throw new ExperimaestroRuntimeException("Default value should be either atomic or one element");
+                }
                 input.setDefaultValue(document);
-                LOGGER.info("Default value: " + XMLUtils.toString(document) + " / " + childNodes.getLength());
+                LOGGER.debug("Default value: " + XMLUtils.toString(document));
             }
         }
 

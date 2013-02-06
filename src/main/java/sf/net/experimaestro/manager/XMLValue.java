@@ -52,13 +52,19 @@ public class XMLValue extends Value {
 	}
 
 	@Override
-	public void set(DotName id, Document value) {
+	public Value getValue(DotName id) {
 		if (id.size() != 0)
 			throw new ExperimaestroRuntimeException(
 					"Cannot handle qualified names [%s]");
 		LOGGER.debug("Value set to [%s]", XMLUtils.toString(value));
-		this.value = value;
+        return this;
 	}
+
+    @Override
+    public void set(Document value) {
+        LOGGER.debug("Value set to [%s]", XMLUtils.toString(value));
+        this.value = value;
+    }
 
 	@Override
 	public Document get() {

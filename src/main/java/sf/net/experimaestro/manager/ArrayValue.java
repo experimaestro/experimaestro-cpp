@@ -1,6 +1,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
 
 import java.util.ArrayList;
 
@@ -15,8 +16,13 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void set(DotName id, Document value) {
+    public Value getValue(DotName id) throws NoSuchParameter {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
 
+    @Override
+    public void set(Document value) {
+        //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override

@@ -75,7 +75,7 @@ xpm.log("Value of p.size is %s", r.abc::alt.xp::value.@value);
 // END SNIPPET: main
 
 function test_value() {
-    v = r.abc::alt.xp::value.@value;
+    v = r.abc::alt.abc::size;
     if (v == undefined || v != 10)
     	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
 }
