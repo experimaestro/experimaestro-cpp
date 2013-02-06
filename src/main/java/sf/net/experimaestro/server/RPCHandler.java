@@ -407,22 +407,23 @@ public class RPCHandler {
      * into a string. Instead, we get a list that we transform into a map.
      */
     @RPCHelp("Runs a JavaScript file on the server")
-    public ArrayList<Object> runJSScript(boolean isFile, Object[] filenames, Object[] contents,
+    public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
                                          Object[] envArray) {
         Map<String, String> environment = arrayToMap(envArray);
-        return runJSScript(isFile, filenames, contents, environment);
+        return runJSScript(filenames, contents, environment);
     }
 
     /**
      * Run a javascript script (either the file or a string)
      */
     @RPCHelp("Runs a JavaScript file on the server")
-    public ArrayList<Object> runJSScript(boolean isFile, Object[] filenames, Object[] contents,
+    public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
                                          Map<String, String> environment) {
         if (pRequest instanceof XmlRpcStreamServer) {
-            final XmlRpcStreamServer request = (XmlRpcStreamServer) pRequest.getConfig();
+//            final XmlRpcStreamServer request = (XmlRpcStreamServer) pRequest.getConfig();
             LOGGER.info("HERE I AM !!!!");
         }
+
         int error = 0;
         String errorMsg = "";
         XPMObject jsXPM = null;
@@ -467,7 +468,9 @@ public class RPCHandler {
 
             Object result = null;
             for (int i = 0; i < contents.length; i++) {
-                final String v = contents[i].toString();
+
+                boolean isFile = contents[i] instanceof Boolean;
+                final String v = isFile ? null : contents[i].toString();
                 final String filename = filenames[i].toString();
 
                 ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");

@@ -189,14 +189,18 @@ def command_run_js(args):
         filepath = os.path.abspath(filename)
         filepaths.append(filepath)
         if not remote:
-            filecontents.append("")
+            filecontents.append(False)
         else:
             filecontents.append(file(filepath).read())
 
-    logging.info("Running JS scripts %s" % filepaths)
+    if args.post:
+        filepaths.append("<post>");
+        filecontents.append(args.post);
+
+    logging.debug("Running JS scripts %s" % filepaths)
 
     try:
-        r = xmlrpc.Server.runJSScript(isFile, filepaths, filecontents, env)
+        r = xmlrpc.Server.runJSScript(filepaths, filecontents, env)
         if len(r) > 2:
             print "Run OK"
             print(r[2])
