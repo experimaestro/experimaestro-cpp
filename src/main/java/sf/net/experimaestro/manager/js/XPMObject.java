@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
@@ -140,6 +141,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "value", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
     };
 
 
@@ -196,7 +198,7 @@ public class XPMObject {
 
         try {
             final String packageName = getClass().getPackage().getName();
-            final String resourceName =  packageName.replace('.', '/');
+            final String resourceName = packageName.replace('.', '/');
             final Enumeration<URL> urls = XPMObject.class.getClassLoader().getResources(resourceName);
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
@@ -224,6 +226,8 @@ public class XPMObject {
         // namespace
         addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
+        addNewObject(context, scope, "xs", "Namespace", new Object[]{"xs",
+                Manager.XMLSCHEMA_NS});
 
         // xpm object
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
@@ -232,6 +236,9 @@ public class XPMObject {
         // scheduler
         addNewObject(context, scope, "scheduler", "Scheduler",
                 new Object[]{scheduler, this});
+
+        // tasks object
+        addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
 
         // logger
         addNewObject(context, scope, "logger", JSObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
@@ -469,6 +476,12 @@ public class XPMObject {
                 new Object[]{xpm, xpm.currentResourceLocator.resolvePath(arg).getFile()});
     }
 
+
+    @JSHelp(value = "Unwrap an annotated XML value into a native JS object")
+    public static Scriptable js_unwrap(Object object) {
+        throw new NotImplementedException();
+    }
+
     /**
      * Returns a QName object
      *
@@ -552,7 +565,7 @@ public class XPMObject {
      */
     static public Object js_xpath(String path, Object xml)
             throws XPathExpressionException {
-        Node dom = (Node) JSUtils.toDOM(xml);
+        Node dom = (Node) JSUtils.toDOM(null, xml);
         XPath xpath = XPathFactory.newInstance().newXPath();
         xpath.setNamespaceContext(new NSContext(dom));
         XPathFunctionResolver old = xpath.getXPathFunctionResolver();
@@ -822,11 +835,11 @@ public class XPMObject {
                 if (JSUtils.isXML(object)) {
 
                     // Walk through
-                    for (Node child : xmlAsList(JSUtils.toDOM(object)))
+                    for (Node child : xmlAsList(JSUtils.toDOM(array, object)))
                         argumentWalkThrough(sb, argument, child);
 
                 } else {
-                    argumentWalkThrough(sb, argument, object, parameterFiles);
+                    argumentWalkThrough(array, sb, argument, object, parameterFiles);
                 }
 
                 if (sb.length() > 0)
@@ -844,7 +857,7 @@ public class XPMObject {
     /**
      * Recursive parsing of the command line
      */
-    private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Object object,
+    private static void argumentWalkThrough(Scriptable scope, StringBuilder sb, CommandArgument argument, Object object,
                                             Map<String, String> parameterFiles) {
         if (object instanceof JSFileObject)
             object = ((JSFileObject) object).getFile();
@@ -857,9 +870,9 @@ public class XPMObject {
             argument.add(new CommandArgument.Path((FileObject) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
-                argumentWalkThrough(sb, argument, JSUtils.unwrap(child), parameterFiles);
+                argumentWalkThrough(scope, sb, argument, JSUtils.unwrap(child), parameterFiles);
         } else if (JSUtils.isXML(object)) {
-            final Object node = JSUtils.toDOM(object);
+            final Object node = JSUtils.toDOM(scope, object);
             for (Node child : xmlAsList(node))
                 argumentWalkThrough(sb, argument, child);
         } else if (object instanceof JSParameterFile) {
@@ -1131,7 +1144,7 @@ public class XPMObject {
         @JSFunction("output_e4x")
         @JSHelp("Outputs the E4X XML object")
         public void outputE4X(@JSArgument(name = "xml", help = "The XML object") Object xml) {
-            final Iterable<? extends Node> list = XPMObject.xmlAsList(JSUtils.toDOM(xml));
+            final Iterable<? extends Node> list = XPMObject.xmlAsList(JSUtils.toDOM(null, xml));
             for (Node node : list) {
                 output(node);
             }

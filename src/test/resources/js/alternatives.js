@@ -70,14 +70,14 @@ var task = xpm.get_task(task_factory.id);
 task.setParameter("p", "{a.b.c}alt-1");
 task.setParameter("p.size", "10");
 var r = task.run();
-xpm.log("Value of p.size is %s", r.abc::alt.xp::value.@value);
+xpm.log("Value of p.size is %s", r.abc::alt.abc::size);
 
 // END SNIPPET: main
 
 function test_value() {
     v = r.abc::alt.abc::size;
     if (v == undefined || v != 10)
-    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
+    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.abc::size);
 }
 	
 	

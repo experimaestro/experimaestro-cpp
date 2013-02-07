@@ -1,6 +1,7 @@
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.ArrayList;
  * @date 23/1/13
  */
 public class ArrayValue extends Value {
-    ArrayList<Document> documents;
+    ArrayList<Node> documents;
 
     public ArrayValue() {
     }
@@ -21,7 +22,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void set(Document value) {
+    public void set(Node value) {
         //To change body of implemented methods use File | Settings | File Templates.
     }
 
@@ -31,7 +32,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public Document get() {
+    public DocumentFragment get() {
         return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 }

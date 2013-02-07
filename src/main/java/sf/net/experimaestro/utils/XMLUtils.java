@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.utils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.w3c.dom.*;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
@@ -39,6 +40,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 /**
@@ -108,7 +110,6 @@ public class XMLUtils {
             return e.toString();
         }
     }
-
 
 
     /**
@@ -190,7 +191,7 @@ public class XMLUtils {
                     protected boolean storeNext() {
                         if (i < nodes.getLength()) {
                             Node node = nodes.item(i++);
-                            value =  node;
+                            value = node;
                             return true;
                         }
                         return false;
@@ -265,6 +266,7 @@ public class XMLUtils {
             public Iterator<Node> iterator() {
                 return new com.google.common.collect.AbstractIterator<Node>() {
                     int i = 0;
+
                     @Override
                     protected Node computeNext() {
                         if (i >= list.getLength())
@@ -281,5 +283,41 @@ public class XMLUtils {
         node = node.cloneNode(true);
         document.adoptNode(node);
         document.appendChild(node);
+    }
+
+
+    public static Iterable<? extends Node> iterable(Object nodes) {
+        if (nodes instanceof Node)
+            return ImmutableList.of((Node) nodes);
+        return iterable((NodeList) nodes);
+    }
+
+    /**
+     * Returns the root element if it exists
+     *
+     * @param node
+     * @return
+     * @throws java.util.NoSuchElementException
+     *          if no root element exists
+     */
+    public static Element getRootElement(Node node) throws NoSuchElementException {
+        Element element = null;
+        if (node instanceof Document) {
+            element = ((Document) node).getDocumentElement();
+        } if (node instanceof Element) {
+            return (Element) node;
+        } else {
+            final Iterator<Element> iterator = elements(node.getChildNodes()).iterator();
+            if (iterator.hasNext()) {
+                element = iterator.next();
+                if (iterator.hasNext())
+                    throw new NoSuchElementException("Document fragment has more than one element");
+            }
+        }
+
+        if (element == null)
+            throw new NoSuchElementException("Document fragment has no child element");
+
+        return element;
     }
 }

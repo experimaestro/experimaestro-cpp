@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.plan.ParseException;
@@ -112,14 +113,14 @@ public abstract class Task {
      *
      * @return An XML description of the output
      */
-    public abstract Document doRun();
+    public abstract Node doRun();
 
     /**
      * Run this task.
      * <p/>
      * Calls {@linkplain #doRun()}
      */
-    final public Document run() throws NoSuchParameter {
+    final public Node run() throws NoSuchParameter {
         LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter
@@ -154,7 +155,10 @@ public abstract class Task {
                 // Check type
                 final Type type = input.getType();
                 if (type != null && value.isSet()) {
-                    final Element element = value.get().getDocumentElement();
+                    final Element element = XMLUtils.getRootElement(value.get());
+
+                    if (element == null)
+                        throw new ExperimaestroRuntimeException("No root element");
 
                     // Check if we have the expected element type
                     final String tagName = element.getLocalName();
@@ -225,9 +229,7 @@ public abstract class Task {
         }
 
         // Do the real-run
-        return
-
-                doRun();
+        return doRun();
 
     }
 
@@ -436,16 +438,18 @@ public abstract class Task {
     /**
      * Run an experimental plan
      *
+     *
+     *
      * @param planString The plan string
      * @param singlePlan If the plan should be composed of only one plan
      * @throws ParseException
      */
-    public List<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
+    public ArrayList<Node> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
         PlanParser planParser = new PlanParser(new StringReader(planString));
         sf.net.experimaestro.plan.Node plans = planParser.plan();
         final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
 
-        ArrayList<Document> results = new ArrayList<>();
+        ArrayList<Node> results = new ArrayList<Node>();
 
         LOGGER.info("Plan is %s", plans.toString());
         while (iterator.hasNext()) {
@@ -483,4 +487,5 @@ public abstract class Task {
 
         return results;
     }
+
 }

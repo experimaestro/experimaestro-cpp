@@ -20,10 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -80,9 +77,9 @@ public abstract class JSAbstractTask extends Task {
         return jsInput;
     }
 
-    protected Document getDocument(Object result) {
+    protected Document getDocument(Scriptable scope, Object result) {
         // Get node
-        final Object xmlObject = JSUtils.toDOM(result);
+        final Object xmlObject = JSUtils.toDOM(scope, result);
 
 
         if (xmlObject instanceof Document)
@@ -120,8 +117,8 @@ public abstract class JSAbstractTask extends Task {
     }
 
     @Override
-    public Document doRun() {
-        return getDocument(jsrun(false));
+    public Node doRun() {
+        return (Node) jsrun(false);
     }
 
     abstract protected Object jsrun(boolean convertToE4X);

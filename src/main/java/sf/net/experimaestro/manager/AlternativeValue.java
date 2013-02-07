@@ -18,10 +18,11 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
@@ -47,7 +48,7 @@ public class AlternativeValue extends Value {
     /**
      * The returned value
      */
-    private Document value = null;
+    private Node value = null;
 
 
     public AlternativeValue() {
@@ -83,9 +84,9 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void set(Document value) {
+    public void set(Node value) {
         // Check if we have an XML with the valid type
-        final Element element = value.getDocumentElement();
+        final Element element = XMLUtils.getRootElement(value);
         if (alternativeInput.getType().qname().sameQName(element)) {
             // Nothing to do
             LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
@@ -123,7 +124,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public Document get() {
+    public Node get() {
         return value;
     }
 

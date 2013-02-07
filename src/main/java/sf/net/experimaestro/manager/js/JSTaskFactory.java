@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
@@ -29,14 +30,17 @@ import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.exceptions.ExperimaestroRuntimeException.SHOULD_NOT_BE_HERE;
 
 /**
  * A task factory as defined by a JavaScript object
@@ -66,15 +70,21 @@ public class JSTaskFactory extends TaskFactory {
      */
     private Type output;
 
+
+    public JSTaskFactory(Scriptable scope, NativeObject jsObject,
+                         Repository repository) {
+        this(getQName(scope, jsObject, "id", false), scope, jsObject, repository);
+    }
+
     /**
      * Creates a new task information from a javascript object
      *
      * @param scope    The scope
      * @param jsObject The object
      */
-    public JSTaskFactory(Scriptable scope, NativeObject jsObject,
+    public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                          Repository repository) {
-        super(repository, getQName(scope, jsObject, "id", false), JSUtils.get(scope,
+        super(repository, qname, JSUtils.get(scope,
                 "version", jsObject, "1.0"), null);
         this.jsScope = scope;
         this.jsObject = jsObject;
@@ -88,13 +98,99 @@ public class JSTaskFactory extends TaskFactory {
         // --- Get the task inputs
         Object input = JSUtils.get(scope, "inputs", jsObject);
         inputs = new TreeMap<>();
-        if (!JSUtils.isXML(input))
-            throw new RuntimeException(format(
-                    "Property input is not in XML format in %s (%s)", this.id,
-                    input.getClass()));
 
-        LOGGER.info("Class is %s in %s", input.getClass(), this.id);
-        Node dom = (Node) JSUtils.toDOM(input);
+        if (JSUtils.isXML(input)) {
+            Node dom = (Node) JSUtils.toDOM(null, input);
+            setInputs(repository, dom);
+        } else if (input instanceof NativeObject) {
+            setInputs(scope, (NativeObject) input);
+        } else
+            throw new ExperimaestroRuntimeException("Cannot handle inputs of type %s", inputs.getClass());
+
+
+        // --- Get the task outputs
+        QName outQName = getQName(scope, jsObject, "output", true);
+        if (outQName != null)
+            output = new Type(outQName);
+
+
+        // --- Are we an alternative?
+
+        Boolean altType = JSUtils.get(jsScope, "alternative", jsObject, null);
+        if (altType != null && altType) {
+            if (output == null)
+                throw new ExperimaestroRuntimeException("No output has been defined for an alternative");
+
+            Type type = repository.getType(outQName);
+            if (type == null || !(type instanceof AlternativeType))
+                throw new ExperimaestroRuntimeException(
+                        "Type %s is not an alternative", outQName == null ? "null"
+                        : outQName.toString());
+
+            ((AlternativeType) type).add(id, this);
+            return;
+        }
+
+        init();
+
+    }
+
+    static public String onlyOne(Scriptable object, String... keys) {
+        String selected = null;
+        for (String key : keys) {
+            if (object.has(key, object))
+                if (selected == null)
+                    selected = key;
+                else
+                    throw new ExperimaestroRuntimeException("Object has at least two conflicting properties: %s and %s",
+                            selected, key);
+        }
+        if (selected == null)
+            throw new ExperimaestroRuntimeException("Expected at least one property in %s", Arrays.toString(keys));
+        return selected;
+    }
+
+    private void setInputs(final Scriptable scope, final NativeObject jsInput) {
+        String2String prefixes = new JSNamespaceBinder(scope);
+
+        final Object[] ids = jsInput.getIds();
+        for (Object _id : ids) {
+            String id = JSUtils.toString(_id);
+
+            final Scriptable definition = (Scriptable) jsInput.get(id);
+
+            String type = onlyOne(definition, "value", "alternative", "xml", "task");
+
+            Input input;
+            final QName inputType = QName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
+
+            switch(type) {
+                case "value":
+                    final ValueType valueType = inputType == null ? null : new ValueType(inputType);
+                    input = new XMLInput(valueType);
+                    break;
+
+                case "xml":
+                case "alternative":
+                    throw new NotImplementedException();
+
+                case "task":
+                    throw new NotImplementedException();
+                default:
+                    throw SHOULD_NOT_BE_HERE;
+            }
+
+            inputs.put(id, input);
+        }
+    }
+
+    /**
+     * Set inputs from XML
+     *
+     * @param repository
+     * @param dom
+     */
+    private void setInputs(Repository repository, Node dom) {
         NodeList list = dom.getChildNodes();
         for (int i = 0; i < list.getLength(); i++) {
             Node item = list.item(i);
@@ -135,7 +231,7 @@ public class JSTaskFactory extends TaskFactory {
                     String query = xqueryList.item(0).getTextContent();
                     XQueryConnection _connection = new XQueryConnection(to, query);
 
-                    for(Element from: XMLUtils.elements(connect.getElementsByTagNameNS(Manager.EXPERIMAESTRO_NS, "from"))) {
+                    for (Element from : XMLUtils.elements(connect.getElementsByTagNameNS(Manager.EXPERIMAESTRO_NS, "from"))) {
                         final String ref = ensureAttribute(from, "ref", "no @ref attribute");
                         final String var = ensureAttribute(from, "var", "no @var attribute");
                         _connection.bind(var, DotName.parse(ref));
@@ -162,32 +258,6 @@ public class JSTaskFactory extends TaskFactory {
 
             }
         }
-
-        // --- Get the task outputs
-        QName qname = getQName(scope, jsObject, "output", true);
-        if (qname != null)
-            output = new Type(qname);
-
-
-        // --- Are we an alternative?
-
-        Boolean altType = JSUtils.get(jsScope, "alternative", jsObject, null);
-        if (altType != null && altType) {
-            if (output == null)
-                throw new ExperimaestroRuntimeException("No output has been defined for an alternative");
-
-            Type type = repository.getType(qname);
-            if (type == null || !(type instanceof AlternativeType))
-                throw new ExperimaestroRuntimeException(
-                        "Type %s is not an alternative", qname == null ? "null"
-                        : qname.toString());
-
-            ((AlternativeType) type).add(id, this);
-            return;
-        }
-
-        init();
-
     }
 
     private String ensureAttribute(Element connect, String name, String message) {
@@ -216,7 +286,7 @@ public class JSTaskFactory extends TaskFactory {
         final int colon = id.indexOf(":");
         if (colon >= 0) {
             namespace = id.substring(0, colon);
-            id = id.substring(colon+1);
+            id = id.substring(colon + 1);
         }
 
 
@@ -317,7 +387,7 @@ public class JSTaskFactory extends TaskFactory {
         if (el.hasAttribute("default")) {
             final Document defaultValue = Task.wrapValue(namespace, id, el.getAttribute("default"));
             input.setDefaultValue(defaultValue);
-            LOGGER.debug("Default value["+el.getAttribute("default")+"]: " + XMLUtils.toString(defaultValue));
+            LOGGER.debug("Default value[" + el.getAttribute("default") + "]: " + XMLUtils.toString(defaultValue));
 
         } else {
             Node child = XMLUtils.getChild(el, new QName(
@@ -357,6 +427,11 @@ public class JSTaskFactory extends TaskFactory {
         if (object != null)
             return object.toString();
         return "";
+    }
+
+
+    public Object run(NativeObject object) {
+        return new JSPlan(this, object).run(object.getParentScope());
     }
 
     @Override

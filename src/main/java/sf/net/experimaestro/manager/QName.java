@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
@@ -39,24 +40,25 @@ public class QName implements Comparable<QName> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-	 * The URI
-	 */
-	String uri;
-	
-	/**
-	 * The local name 
-	 */
-	String localName;
-	
-	/**
-	 * Constructs with an URI and a local name
-	 * @param uri
-	 * @param localName
-	 */
-	public QName(String uri, String localName) {
-		this.uri = uri;
-		this.localName = localName;
-	}
+     * The URI
+     */
+    String uri;
+
+    /**
+     * The local name
+     */
+    String localName;
+
+    /**
+     * Constructs with an URI and a local name
+     *
+     * @param uri
+     * @param localName
+     */
+    public QName(String uri, String localName) {
+        this.uri = uri;
+        this.localName = localName;
+    }
 
     /**
      * Matches the following qualified name formats
@@ -73,12 +75,23 @@ public class QName implements Comparable<QName> {
             // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
             QNAME_PATTERN =
                     Pattern
-                    .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
+                            .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
         } catch (PatternSyntaxException e) {
             LOGGER.error("Could not initialise the pattern: %s", e);
             throw e;
         }
     }
+
+    public static QName parse(String qname, Element context,
+                              final Map<String,String> prefixes) {
+        return parse(qname, context, new String2String() {
+            @Override
+            public String get(String id) {
+                return prefixes.get(id);
+            }
+        });
+    }
+
     /**
      * Parse a QName from a string following this format:
      * <ul>
@@ -91,7 +104,7 @@ public class QName implements Comparable<QName> {
      * @return
      */
     public static QName parse(String qname, Element context,
-                              Map<String, String> prefixes) {
+                              String2String prefixes) {
         Matcher matcher = QNAME_PATTERN.matcher(qname);
         if (!matcher.matches())
             throw new ExperimaestroRuntimeException("Type [%s] is not a valid type: expected name, {uri}name, " +
@@ -116,74 +129,78 @@ public class QName implements Comparable<QName> {
     }
 
     public static QName parse(String qname) {
-        return parse(qname, null, null);
+        return parse(qname, null, (String2String)null);
     }
 
     @Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((localName == null) ? 0 : localName.hashCode());
-		result = prime * result + ((uri == null) ? 0 : uri.hashCode());
-		return result;
-	}
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((localName == null) ? 0 : localName.hashCode());
+        result = prime * result + ((uri == null) ? 0 : uri.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
 
-		if (getClass() != obj.getClass())
-			return false;
-		QName other = (QName) obj;
-		if (localName == null) {
-			if (other.localName != null)
-				return false;
-		} else if (!localName.equals(other.localName))
-			return false;
-		if (uri == null) {
-			if (other.uri != null)
-				return false;
-		} else if (!uri.equals(other.uri))
-			return false;
-		return true;
-	}
+        if (getClass() != obj.getClass())
+            return false;
+        QName other = (QName) obj;
+        if (localName == null) {
+            if (other.localName != null)
+                return false;
+        } else if (!localName.equals(other.localName))
+            return false;
+        if (uri == null) {
+            if (other.uri != null)
+                return false;
+        } else if (!uri.equals(other.uri))
+            return false;
+        return true;
+    }
 
 
-	@Override
-	public int compareTo(QName other) {
-		int z =  (uri != null ? 1 : 0) - (other.uri != null ? 1 : 0);
-		if (z != 0 ) return z;
-		
-		z = uri.compareTo(other.uri);
-		if (z != 0 ) return z;
-		
-		 z =  (localName != null ? 1 : 0) - (other.localName != null ? 1 : 0);
-		if (z != 0 ) return z;
+    @Override
+    public int compareTo(QName other) {
+        int z = (uri != null ? 1 : 0) - (other.uri != null ? 1 : 0);
+        if (z != 0) return z;
 
-		return localName.compareTo(other.localName);
-	}
+        z = uri.compareTo(other.uri);
+        if (z != 0) return z;
 
-	public String getNamespaceURI() {
-		return uri;
-	}
+        z = (localName != null ? 1 : 0) - (other.localName != null ? 1 : 0);
+        if (z != 0) return z;
 
-	public String getLocalPart() {
-		return localName;
-	}
-	
-	@Override
-	public String toString() {
-		if (uri == null)
-			return localName;
-		return format("{%s}%s", uri, localName);
-	}
+        return localName.compareTo(other.localName);
+    }
+
+    public String getNamespaceURI() {
+        return uri;
+    }
+
+    public String getLocalPart() {
+        return localName;
+    }
+
+    @Override
+    public String toString() {
+        if (uri == null)
+            return localName;
+        return format("{%s}%s", uri, localName);
+    }
 
 
     public boolean sameQName(Node element) {
-            return equals(new QName(element.getNamespaceURI(), element.getLocalName()));
+        return equals(new QName(element.getNamespaceURI(), element.getLocalName()));
+    }
+
+    public boolean hasNamespace() {
+        return uri != null;
     }
 }

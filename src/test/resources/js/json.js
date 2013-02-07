@@ -17,48 +17,37 @@
  */
 
 // Tests for JSON way of transmitting information
-
+// (1) for inputs
+// (2) for outpus
 
 // START SNIPPET: task
-var abc = new Namespace("a.b.c");
-var task = {
-    // The id of the task is an XML qualified name
-    id: qname(ns, "task"),
 
-    // One input of type xp:integer
+// Namespace
+var tests = new Namespace("xpm.tests");
+
+
+
+// Add the task to the list of available factories
+tasks.tests::task = {
     inputs: {
-        x: { type: "xs:integer", default: 3 }
-    }
-
-    run: function(input) {
-        return {
-            "abc:output": {
-                x: input.x,
-                "" : []
-            }
-        };
+        x: { value: "xs:integer", default: 3 }      
+        // could be xml: "...", alternative: ...,   
+    },
+    run: function(p) {
+        // Without unwrap, it would create an XML
+        // like <tests:x><x>VALUE</x></tests:x>
+        return {  "tests:x": p.x.text() }
     }
 };
 
-// Add the task to the list of available factories
-
-xpm.add_task(task);
-
 // END SNIPPET: task
-
-
-/** Run and check */
-
-// START SNIPPET: run
-var task = xpm.get_task(ns, "task");
-ns.x = 10;
-var r = task.run();
-
-// END SNIPPET: run
-
-function test_json() {
-	v = r.xp::value.@value;
-	if (v == undefined || v != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", v);
+function test_json_plan() {
+    var r = tasks.tests::task.run({x: 10});
+    r = r[0];
+	if (r == undefined || r != 10)
+		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
+
+
+
 

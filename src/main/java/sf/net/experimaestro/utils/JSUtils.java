@@ -21,10 +21,11 @@ package sf.net.experimaestro.utils;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
-import org.w3c.dom.Document;
+import org.w3c.dom.*;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.utils.log.Logger;
 
 import static java.lang.String.format;
@@ -100,6 +101,20 @@ public class JSUtils {
         if (node instanceof Document)
             node = ((Document) node).getDocumentElement();
 
+        if (node instanceof DocumentFragment) {
+
+            final Document document = node.getOwnerDocument();
+            Element root = document.createElement("root");
+            document.appendChild(root);
+
+            Scriptable xml = cx.newObject(scope, "XML", new Node[]{root});
+
+            final Scriptable list = (Scriptable) xml.get("*", xml);
+            for (Node child : XMLUtils.children(node)) {
+                list.put(0, list, cx.newObject(scope, "XML", new Node[]{child}));
+            }
+            return list;
+        }
 
         LOGGER.debug("XML is of type %s [%s]; %s", node.getClass(),
                 XMLUtils.toStringObject(node),
@@ -113,7 +128,7 @@ public class JSUtils {
      * @param object
      * @return a {@linkplain Node} or a {@linkplain NodeList}
      */
-    public static Object toDOM(Object object) {
+    public static Node toDOM(Scriptable scope, Object object) {
         // Unwrap if needed
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
@@ -130,34 +145,17 @@ public class JSUtils {
                 LOGGER.debug("Transforming from XMLList [%s]", object);
                 final Object[] ids = xmlObject.getIds();
                 if (ids.length == 1)
-                    return toDOM(xmlObject.get((Integer) ids[0], xmlObject));
+                    return toDOM(scope, xmlObject.get((Integer) ids[0], xmlObject));
 
-                NodeList list = new NodeList() {
-                    final Node[] nodes = new Node[ids.length];
+                Document doc = XMLUtils.newDocument();
+                DocumentFragment fragment = doc.createDocumentFragment();
 
-                    {
-                        Document doc = XMLUtils.newDocument();
+                for (int i = 0; i < ids.length; i++) {
+                    Node node = toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject));
+                    fragment.appendChild(doc.adoptNode(node));
+                }
 
-                        for (int i = 0; i < nodes.length; i++) {
-                            nodes[i] = (Node) toDOM(xmlObject.get((Integer) ids[i], xmlObject));
-                            doc.adoptNode(nodes[i]);
-
-                        }
-                    }
-
-                    @Override
-                    public Node item(int index) {
-                        return nodes[index];
-                    }
-
-                    @Override
-                    public int getLength() {
-                        return nodes.length;
-                    }
-                };
-
-
-                return list;
+                return fragment;
             }
 
             if (className.equals("XML")) {
@@ -173,9 +171,33 @@ public class JSUtils {
             throw new RuntimeException(format(
                     "Not implemented: convert %s to XML", className));
 
+        } else if (object instanceof NativeObject) {
+            // JSON case: each key of the JS object is an XML element
+            NativeObject json = (NativeObject) object;
+            Document document = XMLUtils.newDocument();
+            DocumentFragment fragment = document.createDocumentFragment();
+
+            for (Object _id : json.getIds()) {
+
+                final QName qname = QName.parse(JSUtils.toString(_id), null, new JSNamespaceBinder(scope));
+
+                Element element = qname.hasNamespace() ?
+                        document.createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
+                        : document.createElement(qname.getLocalPart());
+
+                fragment.appendChild(element);
+
+                final Object seq = toDOM(scope, json.get(JSUtils.toString(_id), json));
+                for (Node node : XMLUtils.iterable(seq)) {
+                    node = node.cloneNode(true);
+                    element.appendChild(document.adoptNode(node));
+                }
+            }
+
+            return fragment;
         }
 
-        throw new RuntimeException("Class %s cannot be converted to XML");
+        throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
     }
 
     /**
@@ -196,8 +218,8 @@ public class JSUtils {
      *                 element child (or zero), use this to wrap the elements
      * @return
      */
-    public static Document toDocument(Object object, QName wrapName) {
-        final Node dom = (Node) toDOM(object);
+    public static Document toDocument(Scriptable scope, Object object, QName wrapName) {
+        final Node dom = (Node) toDOM(scope, object);
 
         if (dom instanceof Document)
             return (Document) dom;
@@ -306,4 +328,5 @@ public class JSUtils {
             return arguments;
         }
     }
+
 }

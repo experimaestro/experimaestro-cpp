@@ -23,7 +23,7 @@ public class JSScriptRunner implements ScriptRunner {
     public Object evaluate(String script) throws Exception {
         final Object result = Context.getCurrentContext().evaluateString(scope, script, "inline", 1, null);
         if (JSUtils.isXML(result))
-            return JSUtils.toDocument(result, new QName(Manager.EXPERIMAESTRO_NS, "parameters"));
+            return JSUtils.toDocument(null, result, new QName(Manager.EXPERIMAESTRO_NS, "parameters"));
         return JSUtils.toString(result);
     }
 }

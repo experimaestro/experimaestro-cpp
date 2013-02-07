@@ -68,7 +68,7 @@ public class JSModule extends JSObject {
 
         module.setName(JSUtils.toString(JSUtils.get(jsScope, "name", jsObject)));
         module.setDocumentation(JSUtils
-                .toDocument(JSUtils.get(jsScope, "description", jsObject),
+                .toDocument(jsScope, JSUtils.get(jsScope, "description", jsObject),
                         new QName(Manager.EXPERIMAESTRO_NS, "documentation")));
 
         // Set the parent

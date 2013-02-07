@@ -69,8 +69,9 @@ public abstract class Value {
     public abstract Value getValue(DotName id) throws NoSuchParameter;
 
 
-    /** Set to the given value */
-    public abstract void set(Document value);
+    /** Set to the given value
+     * @param value*/
+    public abstract void set(Node value);
 
     /**
      * XPMProcess the value before it can be accessed by a task to run
@@ -84,7 +85,7 @@ public abstract class Value {
      *
      * @return A valid XML document or null if not set
      */
-    public abstract Document get();
+    public abstract Node get();
 
     /**
      * This method is called once by a {@link Task} after {@link #process()}.
@@ -114,7 +115,7 @@ public abstract class Value {
                     final DotName from = pair.getValue();
 
                     final Value value = task.getValues().get(from.get(0));
-                    final Document document = value.get();
+                    final Node document = value.get();
 
                     // Search for the appropriate output
 
@@ -123,10 +124,10 @@ public abstract class Value {
                         LOGGER.debug("Binding $%s to empty sequence", varName);
                         queryBuilder.append("declare variable $" + varName + " := (); ");
                     } else {
-                        Element element = document.getDocumentElement();
+                        Node element = XMLUtils.getRootElement(document);
                         for (int i = 1; i < from.size(); i++) {
                             boolean found = false;
-                            for (Element child : XMLUtils.childElements(element)) {
+                            for (Element child : XMLUtils.elements(element.getChildNodes())) {
                                 final String name = child.getAttributeNS(Manager.EXPERIMAESTRO_NS, "name");
                                 if (name != null && name.equals(from.get(i))) {
                                     element = child;
@@ -138,7 +139,7 @@ public abstract class Value {
 
                         }
 
-                        LOGGER.debug("Binding $%s to element [%s]", varName, element.getTagName());
+                        LOGGER.debug("Binding $%s to element [%s]", varName, ((Element) element).getTagName());
                         LOGGER.debug(XMLUtils.toString(element));
                         queryBuilder.append("declare variable $" + varName + " external; ");
 

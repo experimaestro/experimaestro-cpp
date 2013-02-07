@@ -19,8 +19,8 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import org.w3c.dom.*;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
@@ -75,12 +75,14 @@ public class JSDirectTask extends JSAbstractTask {
                         "Undefined returned by the function run of task [%s]",
                         factory.getId());
 
-            result = (Scriptable) returned;
+            if (convertToE4X)
+                result = returned;
+            else
+                result = JSUtils.toDOM(jsScope, returned);
         } else {
             // We just copy the inputs as an output
 
             Document document = XMLUtils.newDocument();
-            result = document;
 
             Element root = document.createElementNS(Manager.EXPERIMAESTRO_NS,
                     "outputs");
@@ -90,13 +92,10 @@ public class JSDirectTask extends JSAbstractTask {
             for (Entry<String, Value> entry : values.entrySet()) {
                 Value value = entry.getValue();
                 if (value != null) {
-//                    Element outputs = document.createElementNS(
-//                            Manager.EXPERIMAESTRO_NS, "outputs");
-//                    root.appendChild(outputs);
-                    final Document doc = value.get();
+                    final Node doc = value.get();
 
                     if (doc != null) {
-                        Element element = (Element) doc.getDocumentElement().cloneNode(true);
+                        Element element = XMLUtils.getRootElement(doc);
                         element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
                                 entry.getKey());
                         document.adoptNode(element);
@@ -109,7 +108,9 @@ public class JSDirectTask extends JSAbstractTask {
                 result = JSUtils.domToE4X(document, cx, jsScope);
             else
                 result = document;
+
         }
+
 
         LOGGER.debug("[/Running] task: %s", factory.getId());
 

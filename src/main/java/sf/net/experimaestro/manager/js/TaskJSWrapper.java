@@ -69,13 +69,13 @@ public class TaskJSWrapper extends ScriptableObject {
     @JSFunction(value = "run")
     static public Object run(Context cx, Scriptable thisObj,
                              Object[] args, Function funObj) throws Exception {
-        List<Document> result = run(thisObj, args, true);
+        List<Node> result = run(thisObj, args, true);
         assert result.size() == 1;
         return wrap(result, thisObj).get(0);
 
     }
 
-    static NativeArray wrap(List<Document> result, Scriptable scope) {
+    static NativeArray wrap(List<Node> result, Scriptable scope) {
         NativeArray array = new NativeArray(result.size());
         for(int index = 0; index < result.size(); index++)
             array.put(index, array, JSUtils.domToE4X(result.get(index), Context.getCurrentContext(), scope));
@@ -89,7 +89,7 @@ public class TaskJSWrapper extends ScriptableObject {
     }
 
 
-    private static List<Document> run(Scriptable thisObj, Object[] args, boolean singlePlan) throws Exception {
+    private static List<Node> run(Scriptable thisObj, Object[] args, boolean singlePlan) throws Exception {
         final TaskJSWrapper wrapper = (TaskJSWrapper) thisObj;
 
         if (args.length == 0)
@@ -97,7 +97,7 @@ public class TaskJSWrapper extends ScriptableObject {
 
         if (args.length == 1) {
             final String planString = Context.toString(args[0]);
-            final List<Document> documents = wrapper.getTask().runPlan(planString, singlePlan, new JSScriptRunner(thisObj));
+            final List<Node> documents = wrapper.getTask().runPlan(planString, singlePlan, new JSScriptRunner(thisObj));
             return documents;
         }
 
@@ -156,7 +156,7 @@ public class TaskJSWrapper extends ScriptableObject {
         } else if (JSUtils.isXML(value)) {
             LOGGER.debug("Value is JS XML");
             Document document = XMLUtils.newDocument();
-            Node node = ((Node) JSUtils.toDOM(value)).cloneNode(true);
+            Node node = ((Node) JSUtils.toDOM(value, value)).cloneNode(true);
             if (node.getNodeType() == Node.ATTRIBUTE_NODE)
                 getTask().setParameter(id, node.getNodeValue());
             else {

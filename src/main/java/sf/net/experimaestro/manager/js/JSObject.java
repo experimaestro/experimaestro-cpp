@@ -28,7 +28,7 @@ import java.lang.reflect.InvocationTargetException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12
  */
-public abstract class JSObject  {
+public abstract class JSObject implements JSConstructable {
 
     /**
      * Returns the class name
@@ -39,10 +39,21 @@ public abstract class JSObject  {
     }
 
 
-
+    /**
+     * Defines a new class.
+     * <p/>
+     * Used in order to plug our class constructor {@linkplain MyNativeJavaClass}
+     * if the object is a {@linkplain JSObject} or a {@linkplain JSBaseObject}
+     *
+     * @param scope
+     * @param aClass
+     * @throws IllegalAccessException
+     * @throws InvocationTargetException
+     * @throws InstantiationException
+     */
     public static void defineClass(Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         // If not a JSObject descendent, we handle this with standard JS procedure
-        if (JSObject.class.isAssignableFrom(aClass) || JSBaseObject.class.isAssignableFrom(aClass)) {
+        if (JSConstructable.class.isAssignableFrom(aClass)) {
             // Use our own constructor
             final String name = getClassName(aClass);
             scope = ScriptableObject.getTopLevelScope(scope);
@@ -61,15 +72,15 @@ public abstract class JSObject  {
 
         @Override
         public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-            NativeJavaObject object = (NativeJavaObject) super.construct(cx, scope, args);
-            return object;
+            return super.construct(cx, scope, args);
         }
     }
 
     static public class XPMWrapFactory extends WrapFactory {
         public final static XPMWrapFactory INSTANCE = new XPMWrapFactory();
 
-        private XPMWrapFactory() {}
+        private XPMWrapFactory() {
+        }
 
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {

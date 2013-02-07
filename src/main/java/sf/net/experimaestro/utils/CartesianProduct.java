@@ -47,13 +47,15 @@ public class CartesianProduct<T> implements Iterable<T[]> {
         this.iterables = iterables;
     }
 
+
+
     @Override
     public Iterator<T[]> iterator() {
         @SuppressWarnings("unchecked")
         final Iterator<? extends T>[] iterators = new Iterator[iterables.length];
 
         return new AbstractIterator<T[]>() {
-            boolean eof = false;
+            boolean eof = iterables.length == 0;
 
             @Override
             protected boolean storeNext() {
