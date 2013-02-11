@@ -85,14 +85,15 @@ public class DAGCartesianProduct {
 
         // We search for the iterator that has a next value
 
-        for (int i = 0; i < iterables.length; i++) {
+        main: for (int i = 0; i < iterables.length; i++) {
             if (iterables[i].next()) {
-                // ok, no we search for the next values
-                for (int j = i; --i >= 0; ) {
-                    if (!iterables[i].next()) {
+                // ok, now we search for the next values of the previous iterators
+                for (int j = i; --j >= 0; ) {
+                    iterables[j].reset();
+                    if (!iterables[j].next()) {
                         // No next, we start back from here
                         i = j;
-                        continue;
+                        continue main;
                     }
                 }
                 return true;

@@ -43,6 +43,16 @@
             <layout>default</layout>
         </repository>
 
+        <!-- TODO: remove when VFS 2.1 is out -->
+        <repository>
+            <id>commons-vfs</id>
+            <name>Apache Commons VFS Repository Group</name>
+            <url>https://repository.apache.org/content/groups/snapshots/</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <build>

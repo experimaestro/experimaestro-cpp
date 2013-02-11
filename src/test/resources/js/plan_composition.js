@@ -59,6 +59,7 @@ tasks.ns::task_2 = {
     },
 
     run: function(p) {
+		logger.info("Task 2: got x=%s and %s", p.x, p.y)
         return p.x * p.y;
     }
 };
@@ -79,8 +80,11 @@ tasks.ns::task_3 = {
 };
 
 function check(results, expected) {
+	if (results.length != expected.length)
+		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
     for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != results[i]) throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], results[i], i);
+        if (expected[i] != Number(results[i])) 
+			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].toSource(), i);
     }
 }
 
@@ -100,7 +104,8 @@ function test_simple() {
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
     var result = plan2();
-    check(result, [3, 6, 5, 10]);
+	logger.info("Got %s", result.toSource());
+    check(result, [3, 5, 6, 10]);
 }
 
 
@@ -121,7 +126,7 @@ function test_simple_access() {
     // Should be an array of XML values 3, 6, 5, 10
     logger.info(result);
     var result = plan2();
-    check(result, [3, 6, 5, 10]);
+    check(result, [3, 5, 6, 10]);
 }
 
 

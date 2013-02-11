@@ -172,7 +172,9 @@ public class JSUtils {
             throw new RuntimeException(format(
                     "Not implemented: convert %s to XML", className));
 
-        } else if (object instanceof NativeObject) {
+        }
+
+        if (object instanceof NativeObject) {
             // JSON case: each key of the JS object is an XML element
             NativeObject json = (NativeObject) object;
             Document document = XMLUtils.newDocument();
@@ -196,8 +198,10 @@ public class JSUtils {
             }
 
             return fragment;
-        } else if (object instanceof Double) {
-            wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString((Double) object));
+        }
+
+        if (object instanceof Double) {
+            return wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString((Double) object));
         }
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());

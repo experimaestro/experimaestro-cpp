@@ -176,6 +176,11 @@ public class JSPlan extends XMLObject implements Callable {
     }
 
     @Override
+    public Object get(String name, Scriptable start) {
+        return new JSPlanRef(plan, "/" + name);
+    }
+
+    @Override
     public Object get(Context cx, Object id) {
         throw new NotImplementedException();
     }
