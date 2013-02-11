@@ -1083,7 +1083,7 @@ public class XPMObject {
         @JSFunction("add_task_factory")
         public Scriptable add_task_factory(NativeObject object) {
             JSTaskFactory f = new JSTaskFactory(xpm.scope, object, xpm.repository);
-            xpm.repository.addFactory(f);
+            xpm.repository.addFactory(f.factory);
             return xpm.context.newObject(xpm.scope, "XPMTaskFactory",
                     new Object[]{Context.javaToJS(f, xpm.scope)});
         }

@@ -24,6 +24,7 @@ import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.utils.log.Logger;
@@ -195,6 +196,8 @@ public class JSUtils {
             }
 
             return fragment;
+        } else if (object instanceof Double) {
+            wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString((Double) object));
         }
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
@@ -297,6 +300,21 @@ public class JSUtils {
 
     public static void addFunction(Scriptable scope, FunctionDefinition definition) throws NoSuchMethodException {
         addFunction(definition.clazz, scope, definition.name, definition.arguments);
+    }
+
+    /**
+     * Wraps a value into an XML document
+     *
+     * @param name
+     * @param value
+     * @return An XML document representing the value
+     */
+    static public Document wrap(String namespace, String name, String value) {
+        final Document doc = XMLUtils.newDocument();
+        Element element = doc.createElementNS(namespace, name);
+        element.setTextContent(value);
+        doc.appendChild(element);
+        return doc;
     }
 
     /**

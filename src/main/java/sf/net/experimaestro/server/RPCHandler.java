@@ -425,7 +425,7 @@ public class RPCHandler {
         }
 
         int error = 0;
-        String errorMsg = "";
+        StringBuilder errorMsg = new StringBuilder();
         XPMObject jsXPM = null;
 
         final RootLogger root = new RootLogger(Level.INFO);
@@ -497,33 +497,31 @@ public class RPCHandler {
             // org.mozilla.javascript.Context.exit();
             // }
 
-        } catch (WrappedException e) {
-            LOGGER.printException(Level.INFO, e.getCause());
+        } catch(Throwable e) {
+            final Throwable wrapped = e.getCause() != null ? e.getCause() : e;
+            LOGGER.printException(Level.INFO, wrapped);
 
-            error = 2;
-            errorMsg = e.getCause().toString();
+            error = 1;
+            errorMsg.append(wrapped.toString());
 
-            if (e.getCause() instanceof ExperimaestroRuntimeException) {
-                ExperimaestroRuntimeException ee = (ExperimaestroRuntimeException) e
-                        .getCause();
+            ExperimaestroRuntimeException ee = null;
+
+            if (e instanceof ExperimaestroRuntimeException)
+                ee = (ExperimaestroRuntimeException) e;
+            else if (e.getCause() instanceof ExperimaestroRuntimeException)
+                ee = (ExperimaestroRuntimeException) e.getCause();
+            if (ee != null) {
                 List<String> context = ee.getContext();
                 if (!context.isEmpty()) {
-                    errorMsg += "\n[context]\n";
+                    errorMsg.append("\n[context]\n");
                     for (String s : ee.getContext()) {
-                        errorMsg += s + "\n";
+                        errorMsg.append(s + "\n");
                     }
                 }
             }
-            errorMsg += "\n" + e.getScriptStackTrace();
-        } catch (JavaScriptException e) {
-            LOGGER.printException(Level.INFO, e);
-            error = 3;
-            errorMsg = e.toString();
-            errorMsg += "\n" + e.getScriptStackTrace();
-        } catch (Exception e) {
-            LOGGER.printException(Level.INFO, e);
-            error = 1;
-            errorMsg = e.toString();
+
+            RhinoException re = e instanceof RhinoException ? (RhinoException)e : new WrappedException(e);
+            errorMsg.append("\n" + re.getScriptStackTrace());
         } finally {
             // Exit context
             Context.exit();
@@ -531,7 +529,7 @@ public class RPCHandler {
 
         ArrayList<Object> list = new ArrayList<>();
         list.add(error);
-        list.add(errorMsg);
+        list.add(errorMsg.toString());
         if (jsXPM != null) {
             list.add(stringWriter.toString());
         }

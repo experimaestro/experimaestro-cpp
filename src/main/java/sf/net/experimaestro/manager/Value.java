@@ -25,6 +25,7 @@ import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.xq.ParentPath;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -164,14 +165,14 @@ public abstract class Value {
                 final int itemKind = xqItem.getItemType().getItemKind();
                 switch (itemKind) {
                     case XQItemType.XQITEMKIND_ATOMIC:
-                        item = Task.wrapValue(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
+                        item = JSUtils.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
                         break;
                     case XQItemType.XQITEMKIND_ELEMENT:
                         item = xqItem.getNode();
                         break;
                     case XQItemType.XQITEMKIND_ATTRIBUTE:
                     case XQItemType.XQITEMKIND_TEXT:
-                        item = Task.wrapValue(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
+                        item = JSUtils.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
                         break;
                     default:
                         throw new ExperimaestroRuntimeException(

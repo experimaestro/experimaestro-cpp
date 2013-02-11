@@ -16,30 +16,19 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.js;
 
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-
-import javax.xml.xpath.XPathExpressionException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * A mapping from a variable name to a value
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */
-public abstract class Mapping {
-    /**
-     * Sets the value
-     *
-     * @param task
-     */
-    abstract void set(Task task) throws NoSuchParameter, XPathExpressionException;
+@Retention(RetentionPolicy.RUNTIME)
+public @interface JSFunction {
+    String value();
 
-
-    static public interface Set extends Iterable<Mapping> {
-    }
-
-
+    /** Whether the method takes scope & context */
+    boolean scope() default false;
 }
-

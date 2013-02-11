@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -311,7 +312,7 @@ public abstract class Task {
      * @param value The value to be set (this should be an XML fragment)
      * @return True if the parameter was set and false otherwise
      */
-    public final void setParameter(DotName id, Document value) throws NoSuchParameter {
+    public final void setParameter(DotName id, Node value) throws NoSuchParameter {
         getValue(id).set(value);
     }
 
@@ -326,7 +327,7 @@ public abstract class Task {
     public void setParameter(DotName id, String value) throws NoSuchParameter {
         final Value v = getValue(id);
         final String ns = v.input.getNamespace();
-        final Document doc = wrapValue(ns, id.getName(), value);
+        final Document doc = JSUtils.wrap(ns, id.getName(), value);
         v.set(doc);
     }
 
@@ -362,22 +363,6 @@ public abstract class Task {
         return inputValue.getValue(id.offset(1));
     }
 
-
-    /**
-     * Wraps a value into an XML document
-     *
-     * @param name
-     * @param value
-     * @return An XML document representing the value
-     */
-    static public Document wrapValue(String namespace, String name, String value) {
-        final Document doc = XMLUtils.newDocument();
-        Element element = doc
-                .createElementNS(namespace, name);
-        element.setTextContent(value);
-        doc.appendChild(element);
-        return doc;
-    }
 
     /**
      * Initialise the task

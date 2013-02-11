@@ -109,14 +109,17 @@ public class JSTasks extends XMLObject implements JSConstructable {
             final TaskFactory factory = xpm.getRepository().getFactory(id);
             if (factory == null)
                 return NOT_FOUND;
-            return factory;
+            if (factory instanceof JSTaskFactory.FactoryImpl)
+               return new JSTaskFactory((JSTaskFactory.FactoryImpl)factory);
+
+            throw new NotImplementedException();
         }
 
         @Override
         public Object set(Context cx, Object _value) {
             NativeObject value = (NativeObject) _value;
             final JSTaskFactory factory = new JSTaskFactory(id, value.getParentScope(), value, xpm.getRepository());
-            xpm.getRepository().addFactory(factory);
+            xpm.getRepository().addFactory(factory.factory);
             return factory;
         }
     }

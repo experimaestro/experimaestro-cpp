@@ -19,16 +19,12 @@
 package sf.net.experimaestro.manager;
 
 import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableList;
-import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.utils.CartesianProduct;
-import sf.net.experimaestro.utils.SingleIterable;
+import sf.net.experimaestro.utils.DAGCartesianProduct;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import javax.xml.xpath.XPathExpressionException;
+import java.util.*;
 
 /**
  * An experimental plan.
@@ -38,86 +34,208 @@ import java.util.Iterator;
  */
 public class Plan {
     /**
-     * Sub-plans
+     * The data
      */
-    ArrayList<Plan> subplans = new ArrayList<>();
-
+    private Data data;
 
     /**
-     * The task factory for this plan
-     */
-    TaskFactory factory;
-
-    /**
-     * Direct mappings
-     */
-    Iterable<? extends Mapping> mappings;
-
-    public Plan(TaskFactory factory) {
-        this.factory = factory;
-    }
-
-    public void setMappings(Iterable<? extends Mapping> mappings) {
-        this.mappings = mappings;
-    }
-
-    // Connections
-
-    /**
-     * Run the plan
+     * Creates a new plan
      *
-     * @return An iterator over the generated documents
+     * @param factory
      */
-    Iterator<Node> run() {
-        // Prepares the iterator over the cartesian product
-        final Iterator<Node[]> subiterator;
+    public Plan(TaskFactory factory, Mappings mappings) {
+        this.data = new Data(factory, mappings);
+    }
 
-        if (subplans.size() == 0) {
-            subiterator = ImmutableList.of(new Node[][] { new Node[0] }).iterator();
-        } else {
-            final Iterable<Document> iterables[] = new Iterable[subplans.size()];
-            for (int i = 0; i < iterables.length; i++)
-                iterables[i] = new SingleIterable(subplans.get(i).run());
-            CartesianProduct<Node> subvalues = new CartesianProduct<>(Node.class, true, iterables);
-            subiterator = subvalues.iterator();
+    /**
+     * Add a join over those subplans
+     *
+     * @param plans
+     */
+    synchronized public void addJoin(Set<Plan[]> plans) {
+        data = data.addJoin(plans);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        // Two plans are equal if holding the same data
+        return data == ((Plan) other).data;
+    }
+
+    /**
+     * Run this plan
+     *
+     * @return An iterator over the generated XML nodes
+     */
+    public Iterator<Node> run() throws XPathExpressionException {
+        return data.run(this);
+    }
+
+    /**
+     * Create a task
+     *
+     * @return
+     */
+    public Task createTask() {
+        return data.factory.create();
+    }
+
+    public TaskFactory getFactory() {
+        return data.factory;
+    }
+
+
+    /**
+     * The data associated to a plan. It is a distinct object since a plan
+     * can be either directly equal to another (same object) or can share
+     * the same data.
+     */
+    static public class Data {
+        /**
+         * The task factory for this plan
+         */
+        TaskFactory factory;
+
+        /**
+         * Direct mappings
+         */
+        Mappings mappings;
+
+        /**
+         * Joins to perform
+         */
+        ArrayList<Set<Plan[]>> joins = new ArrayList<Set<Plan[]>>();
+
+        /**
+         * Direct sub-plans
+         */
+        ArrayList<Plan> subplans = new ArrayList<>();
+
+        /**
+         * Number of distinct plans that share this data
+         */
+        int count = 1;
+
+        public Data(TaskFactory factory, Mappings mappings) {
+            this.factory = factory;
+            this.mappings = mappings;
+            HashSet<Plan> set = new HashSet<>();
+            mappings.addPlans(set);
+            this.subplans = new ArrayList<>(set);
         }
 
-        // Returns the iterator
-        return new AbstractIterator<Node>() {
-            Iterator<? extends Mapping> iterator = null;
-            Node[] subvalues = null;
+        /**
+         * Add a join between a set of nodes
+         *
+         * @param paths
+         * @return
+         */
+        synchronized public Data addJoin(Set<Plan[]> paths) {
+            final Data data = ensureOne();
+            if (data != this)
+                return data.addJoin(paths);
 
-            @Override
-            protected Node computeNext() {
-                if (iterator == null) {
-                    iterator = mappings.iterator();
-                    if (!iterator.hasNext())
-                        return endOfData();
-                }
+            joins.add(paths);
+            return this;
+        }
 
-                if (!iterator.hasNext())
-                    subvalues = null;
-
-                // Takes care of the sub-values
-                if (subvalues == null) {
-                    if (subiterator.hasNext())
-                        subvalues = subiterator.next();
-                    else
-                        return endOfData();
-
-                    iterator = mappings.iterator();
-                }
-
-                try {
-                    final Task task = factory.create();
-                    final Mapping mapping = iterator.next();
-                    mapping.set(task);
-                    return task.run();
-                } catch (NoSuchParameter noSuchParameter) {
-                    throw new ExperimaestroRuntimeException(noSuchParameter);
-                }
+        /**
+         * Ensure we do not share anything with other plans
+         *
+         * @return
+         */
+        synchronized private Data ensureOne() {
+            if (count > 1) {
+                Data data = new Data(factory, mappings);
+                data.joins.addAll(data.joins);
+                data.subplans.addAll(data.subplans);
+                return data;
             }
-        };
+
+            return this;
+        }
+
+
+        /**
+         * Run this plan
+         *
+         * @param plan
+         * @return
+         */
+        Iterator<Node> run(Plan plan) throws XPathExpressionException {
+            // Creates the PlanNode
+            final PlanNode planNode = planGraph(plan);
+
+            HashSet<PlanNode> set = new HashSet<>();
+            planNode.fillWithNodes(set);
+            final PlanNode[] nodes = set.toArray(new PlanNode[set.size()]);
+            final DAGCartesianProduct product = new DAGCartesianProduct(nodes);
+            return new AbstractIterator<Node>() {
+                @Override
+                protected Node computeNext() {
+                    if (product.next())
+                        return planNode.value;
+                    return endOfData();
+                }
+            };
+        }
+
+
+        /**
+         * Returns the graph corresponding to this plan
+         *
+         * @param plan
+         * @return The node that is the root (sink) of the DAG
+         */
+        synchronized private PlanNode planGraph(Plan plan) throws XPathExpressionException {
+            // Create our node
+            final PlanNode self = new PlanNode(plan);
+
+            // --- Create the parent nodes
+            for (Plan subplan : subplans) {
+                final PlanNode parent = subplan.data.planGraph(subplan);
+                self.parents.add(parent);
+                parent.children.add(self);
+            }
+
+            // --- Handle joins
+            PlanNode target = null;
+            for (Set<Plan[]> set : joins) {
+                // Find it (will be kth of current)
+                int k = -1;
+                PlanNode current = null;
+                for (Plan[] path : set) {
+                    current = current == null ? self : current.parents.get(k);
+                    k = -1;
+                    for (int i = 0; i < path.length; i++) {
+                        for (int j = 0; j < current.parents.size(); j++)
+                            if (current.parents.get(j).getPlan() == path[i]) {
+                                k = j;
+                                break;
+                            }
+                        if (k == -1)
+                            throw new RuntimeException();
+                    }
+                }
+
+                if (target == null)
+                    // If we have no target yet
+                    target = current.parents.get(k);
+                else {
+                    // Ensure equality
+                    if (!current.parents.get(k).equals(target))
+                        throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
+                    // Join
+                    current.parents.set(k, target);
+                }
+
+            }
+
+            self.init(mappings);
+            return self;
+        }
 
     }
+
+
 }

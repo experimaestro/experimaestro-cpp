@@ -19,11 +19,13 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.*;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -47,9 +49,9 @@ public class JSDirectTask extends JSAbstractTask {
     public JSDirectTask() {
     }
 
-    public JSDirectTask(JSTaskFactory jsTaskFactory, Scriptable jsScope,
+    public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
                         NativeObject jsFactory, Function runFunction) {
-        super(jsTaskFactory, jsScope);
+        super(taskFactory, jsScope);
         this.jsFactory = jsFactory;
         this.runFunction = runFunction;
 

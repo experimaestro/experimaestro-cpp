@@ -36,6 +36,9 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -319,5 +322,20 @@ public class XMLUtils {
             throw new NoSuchElementException("Document fragment has no child element");
 
         return element;
+    }
+
+    final static private XPathFactory XPATH_FACTORY = XPathFactory.newInstance();
+
+    public static XPathExpression parseXPath(String path) throws XPathExpressionException {
+        return XPATH_FACTORY.newXPath().compile(path);
+    }
+
+    /** Tranform a node list into a document fragment */
+    public static Node toDocumentFragment(NodeList list) {
+        Document document = newDocument();
+        DocumentFragment fragment = document.createDocumentFragment();
+        for(int i = 0; i < list.getLength(); i++)
+            fragment.appendChild(document.adoptNode(list.item(i).cloneNode(true)));
+        return fragment;
     }
 }
