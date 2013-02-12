@@ -84,6 +84,10 @@ class Properties:
 
     def __str__(self):
         return "Properties (%s)" % self.map.__str__()
+        
+    def __iter__(self):
+        for k,v in self.map[1].iteritems():
+            yield k,Properties(v)
 
     def sub(self, name, default=None):
         c = self.map
@@ -149,10 +153,22 @@ def getServer(args):
     clients = config.sub("client", None)
     if clients is None:
         raise Exception("No client section in configuration file")
+
+        
     if args.server is None:
         if len(clients) > 1:
-            raise Exception("More than one client [%d] in configuration file (%s): use the --server option" % (len(clients), ",".join(clients.keys())))
-        args.server = clients.keys()[0]
+            args.server = None
+            for name,client in clients:
+                if client.get("default", False) == "true":
+                    if args.server is None:
+                        args.server = name
+                    else:
+                        raise Exception("More than one client defined as default in configuration file")
+            if args.server is None:
+                raise Exception("More than one client [%d] in configuration file (%s): use the --server option or make one client the default" 
+                    % (len(clients), ",".join(clients.keys())))
+        else:
+            args.server = clients.keys()[0]
 
     client = clients.sub(args.server)
     rpc = xmlrpclib.ServerProxy(client["url"], verbose=args.verbose)
@@ -202,7 +218,6 @@ def command_run_js(args):
     try:
         r = xmlrpc.Server.runJSScript(filepaths, filecontents, env)
         if len(r) > 2:
-            print "Run OK"
             print(r[2])
         if r[0]:
             print
