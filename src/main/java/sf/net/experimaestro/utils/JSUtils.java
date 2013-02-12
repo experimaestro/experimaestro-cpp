@@ -153,19 +153,34 @@ public class JSUtils {
 
                 for (int i = 0; i < ids.length; i++) {
                     Node node = toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject));
+                    if (node instanceof Document)
+                        node = ((Document) node).getDocumentElement();
                     fragment.appendChild(doc.adoptNode(node));
                 }
 
                 return fragment;
             }
 
+            // XML node
             if (className.equals("XML")) {
                 // FIXME: this strips all whitespaces!
                 Node node = XMLLibImpl.toDomNode(object);
                 LOGGER.debug("Got node from JavaScript [%s / %s] from [%s]",
                         node.getClass(), XMLUtils.toStringObject(node),
                         object.toString());
-                return node;
+
+                if (node instanceof Document)
+                    node = ((Document) node).getDocumentElement();
+
+                final Document document = XMLUtils.newDocument();
+                node = document.adoptNode(node.cloneNode(true));
+                if (node instanceof Element) {
+                    document.appendChild(node);
+                    return document;
+                }
+                final DocumentFragment fragment = document.createDocumentFragment();
+                fragment.appendChild(node);
+                return fragment;
             }
 
 
@@ -201,7 +216,15 @@ public class JSUtils {
         }
 
         if (object instanceof Double) {
-            return wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString((Double) object));
+            // Wrap a double
+            final Double x = (Double) object;
+            if (x.longValue() == x.doubleValue())
+                return wrap(Manager.EXPERIMAESTRO_NS, "value", Long.toString(x.longValue()));
+            return wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString(x));
+        }
+
+        if (object instanceof Integer) {
+            return wrap(Manager.EXPERIMAESTRO_NS, "value", Integer.toString((Integer) object));
         }
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
@@ -226,7 +249,7 @@ public class JSUtils {
      * @return
      */
     public static Document toDocument(Scriptable scope, Object object, QName wrapName) {
-        final Node dom = (Node) toDOM(scope, object);
+        final Node dom = toDOM(scope, object);
 
         if (dom instanceof Document)
             return (Document) dom;

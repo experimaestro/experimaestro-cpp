@@ -20,6 +20,7 @@ package sf.net.experimaestro.utils.graphs;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.*;
 
@@ -30,6 +31,8 @@ import java.util.*;
  * @date 8/2/13
  */
 public class Sort {
+    static final private Logger LOGGER = Logger.getLogger();
+
 
     /**
      * Topological sort of a set of nodes
@@ -56,11 +59,15 @@ public class Sort {
 
             HashSet<NodeRef<T>> newDandling = new HashSet<>();
             for (NodeRef<T> ref : dandling) {
-                remaining.remove(ref);
                 ordered.add(ref.node);
+                remaining.remove(ref);
+            }
+
+            for (NodeRef<T> ref : dandling) {
                 for (Node parent : ref.node.getParents()) {
                     final MutableInt children = remaining.get(new NodeRef<>(parent));
                     children.decrement();
+                    assert children.intValue() >= 0;
                     if (children.intValue() == 0)
                         newDandling.add(new NodeRef(parent));
                 }

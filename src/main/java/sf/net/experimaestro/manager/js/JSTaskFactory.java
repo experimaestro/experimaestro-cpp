@@ -76,10 +76,15 @@ public class JSTaskFactory extends JSBaseObject {
         return factory.create();
     }
 
+    @JSFunction(value = "run", scope = true)
+    public Object run(Context context, Scriptable scope, NativeObject object) throws XPathExpressionException {
+        return plan(context, scope, object).run(context, scope);
+    }
+
 
     @JSHelp("Creates a plan from this task")
     @JSFunction(value = "plan", scope = true)
-    public Object plan(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
+    public JSPlan plan(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
         return new JSPlan(factory, object);
     }
 
@@ -130,8 +135,8 @@ public class JSTaskFactory extends JSBaseObject {
             inputs = new TreeMap<>();
 
             if (JSUtils.isXML(input)) {
-                Node dom = (Node) JSUtils.toDOM(null, input);
-                setInputs(repository, dom);
+                Document dom = JSUtils.toDocument(null, input, new QName(Manager.EXPERIMAESTRO_NS, "inputs"));
+                setInputs(repository, dom.getDocumentElement());
             } else if (input instanceof NativeObject) {
                 setInputs(scope, (NativeObject) input);
             } else
@@ -270,7 +275,7 @@ public class JSTaskFactory extends JSBaseObject {
                     } else {
                         final DotName from = DotName
                                 .parse(fromAtt);
-                        final String path = ensureAttribute(connect, "path", "Attribute path has to be defined (and not at the same time)");
+                        final String path = ensureAttribute(connect, "path", "Attribute path has to be defined");
                         LOGGER.info("Found connection between [%s in %s] and [%s]",
                                 path, from, to);
 

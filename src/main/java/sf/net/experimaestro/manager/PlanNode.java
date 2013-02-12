@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.utils.DAGCartesianProduct;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -96,17 +97,54 @@ public class PlanNode implements sf.net.experimaestro.utils.graphs.Node, DAGCart
         }
     }
 
-    /**
-     * Initialisation of the mappings
-     * @param mappings
-     */
-    public void init(Mappings mappings) throws XPathExpressionException {
-        this.mappings = mappings.init(this);
-    }
-
     public void fillWithNodes(HashSet<PlanNode> set) {
         set.add(this);
         for(PlanNode parent: parents)
             parent.fillWithNodes(set);
+    }
+
+    public void printDOT(PrintStream out, HashSet<PlanNode> planNodes) {
+        if (planNodes.contains(this))
+            return;
+        planNodes.add(this);
+        out.format("p%s;%n", System.identityHashCode(this));
+        for(PlanNode parent: parents) {
+            parent.printDOT(out, planNodes);
+            out.format("p%s -> p%s;%n", System.identityHashCode(this), System.identityHashCode(parent));
+        }
+    }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof PlanNode) {
+            PlanNode other = (PlanNode)obj;
+            return other == this || getPlan().equals(other.getPlan());
+        }
+
+        return super.equals(obj);
+    }
+
+    /**
+     * Init self and then parents
+     */
+    public void init() throws XPathExpressionException {
+        init(new HashSet<PlanNode>());
+    }
+
+    /**
+     * Initialize the node and its parents
+     * @param nodes
+     * @throws XPathExpressionException
+     */
+    private void init(HashSet<PlanNode> nodes) throws XPathExpressionException {
+        if (nodes.contains(this))
+            return;
+
+        nodes.add(this);
+        mappings = plan.init(this);
+        for(PlanNode parent: parents) {
+            parent.init(nodes);
+        }
     }
 }

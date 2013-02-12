@@ -19,7 +19,6 @@
 package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
@@ -49,6 +48,7 @@ import java.net.URL;
 import java.util.*;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
 /**
  * This class contains both utility static methods and functions that can be
@@ -142,13 +142,14 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
+            new JSUtils.FunctionDefinition(XPMObject.class, "transform", null),
     };
 
 
     /**
      * Initialise a new XPM object
      *
-     * @param currentResourceLocator The path to the current script
+     * @param currentResourceLocator The xpath to the current script
      * @param context                The JS context
      * @param environment            The environment variables
      * @param scope                  The JS scope for execution
@@ -304,7 +305,7 @@ public class XPMObject {
     /**
      * Includes a repository
      *
-     * @param path The path, absolute or relative to the current evaluated script
+     * @param path The xpath, absolute or relative to the current evaluated script
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
@@ -392,22 +393,23 @@ public class XPMObject {
     }
 
     /**
-     * Returns an XML element that corresponds to the path. This can
+     * Returns a JSFileObject that corresponds to the path. This can
      * be used when building command lines containing path to resources
      * or executables
      *
-     * @return An XML element describing the path
+     * @return A {@JSFileObject}
      */
+    @JSHelp("Returns a FileObject corresponding to the path")
     static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         if (args.length != 1)
-            throw new IllegalArgumentException("path() needs one argument");
+            throw new IllegalArgumentException("xpath() needs one argument");
 
         XPMObject xpm = getXPM(thisObj);
 
         if (args[0] instanceof JSFileObject)
             return args[0];
 
-        final Object o = JSUtils.unwrap(args[0]);
+        final Object o = unwrap(args[0]);
 
         if (o instanceof JSFileObject)
             return o;
@@ -418,7 +420,7 @@ public class XPMObject {
         if (o instanceof String)
             return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
 
-        throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file path", o.getClass().toString());
+        throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
 
     static public String js_format(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
@@ -427,7 +429,7 @@ public class XPMObject {
 
         Object fargs[] = new Object[args.length - 1];
         for (int i = 1; i < args.length; i++)
-            fargs[i - 1] = JSUtils.unwrap(args[i]);
+            fargs[i - 1] = unwrap(args[i]);
         String format = JSUtils.toString(args[0]);
         return String.format(format, fargs);
     }
@@ -442,7 +444,7 @@ public class XPMObject {
         if (args.length != 1)
             if (args.length != 1)
                 throw new IllegalArgumentException("value() needs one argument");
-        final Object object = JSUtils.unwrap(args[0]);
+        final Object object = unwrap(args[0]);
 
         Document doc = XMLUtils.newDocument();
         XPMObject xpm = getXPM(thisObj);
@@ -478,9 +480,23 @@ public class XPMObject {
 
 
     @JSHelp(value = "Unwrap an annotated XML value into a native JS object")
-    public static Scriptable js_unwrap(Object object) {
-        throw new NotImplementedException();
+    public static Object js_unwrap(Object object) {
+        return object.toString();
     }
+
+
+    @JSHelp(value = "Transform plan outputs with a function")
+    public static Scriptable js_transform(Context cx, Scriptable scope, Object[] args, Function funObj) throws FileSystemException {
+        Callable f = (Callable) args[0];
+        JSPlan.JSPlanRef plans[] = new JSPlan.JSPlanRef[args.length - 1];
+        for (int i = 0; i < plans.length; i++)
+            if (args[i+1] instanceof JSPlan)
+                plans[i] = ((JSPlan)args[i+1]).new JSPlanRef(".");
+            else
+                plans[i] = (JSPlan.JSPlanRef) unwrap(args[i + 1]);
+        return new JSPlan.JSTransform(cx, scope, f, plans);
+    }
+
 
     /**
      * Returns a QName object
@@ -703,7 +719,7 @@ public class XPMObject {
         // Store connector in database
         scheduler.put(connector);
 
-        // Resolve the path for the given connector
+        // Resolve the xpath for the given connector
         if (path instanceof FileObject) {
             path = connector.getMainConnector().resolve((FileObject) path);
         } else
@@ -739,7 +755,7 @@ public class XPMObject {
 
             // --- Redirect standard output
             if (options.has("stdin", options)) {
-                final Object stdin = JSUtils.unwrap(options.get("stdin", options));
+                final Object stdin = unwrap(options.get("stdin", options));
                 if (stdin instanceof String || stdin instanceof ConsString) {
                     task.setInput(stdin.toString());
                 } else throw new ExperimaestroRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
@@ -747,13 +763,13 @@ public class XPMObject {
 
             // --- Redirect standard output
             if (options.has("stdout", options)) {
-                FileObject fileObject = getFileObject(connector, JSUtils.unwrap(options.get("stdout", options)));
+                FileObject fileObject = getFileObject(connector, unwrap(options.get("stdout", options)));
                 task.setOutput(fileObject);
             }
 
             // --- Redirect standard error
             if (options.has("stderr", options)) {
-                FileObject fileObject = getFileObject(connector, JSUtils.unwrap(options.get("stderr", options)));
+                FileObject fileObject = getFileObject(connector, unwrap(options.get("stderr", options)));
                 task.setError(fileObject);
             }
 
@@ -828,7 +844,7 @@ public class XPMObject {
 
             for (Object _object : array) {
                 final CommandArgument argument = new CommandArgument();
-                Object object = JSUtils.unwrap(_object);
+                Object object = unwrap(_object);
                 StringBuilder sb = new StringBuilder();
 
                 // XML argument (deprecated -- too many problems with E4X!)
@@ -870,7 +886,7 @@ public class XPMObject {
             argument.add(new CommandArgument.Path((FileObject) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
-                argumentWalkThrough(scope, sb, argument, JSUtils.unwrap(child), parameterFiles);
+                argumentWalkThrough(scope, sb, argument, unwrap(child), parameterFiles);
         } else if (JSUtils.isXML(object)) {
             final Object node = JSUtils.toDOM(scope, object);
             for (Node child : xmlAsList(node))
@@ -984,7 +1000,7 @@ public class XPMObject {
 
         @JSFunction("set_property")
         public void setProperty(String name, Object object) {
-            final Object x = JSUtils.unwrap(object);
+            final Object x = unwrap(object);
             xpm.properties.put(name, object);
         }
 
@@ -996,11 +1012,11 @@ public class XPMObject {
         @JSFunction("set_default_lock")
         @JSHelp("Adds a new resource to lock for all jobs to be started")
         public void setDefaultLock(Object resource, Object parameters) {
-            xpm.defaultLocks.put((Resource) JSUtils.unwrap(resource), parameters);
+            xpm.defaultLocks.put((Resource) unwrap(resource), parameters);
         }
 
         @JSFunction("token_resource")
-        @JSHelp("Retrieve (or creates) a token resource with a given path")
+        @JSHelp("Retrieve (or creates) a token resource with a given xpath")
         public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) throws ExperimaestroCannotOverwrite {
             final ResourceLocator locator = new ResourceLocator(XPMConnector.ID, path);
             final Resource resource = xpm.scheduler.getResource(locator);
@@ -1026,7 +1042,7 @@ public class XPMObject {
             String format = Context.toString(args[0]);
             Object[] objects = new Object[args.length - 1];
             for (int i = 1; i < args.length; i++)
-                objects[i - 1] = JSUtils.unwrap(args[i]);
+                objects[i - 1] = unwrap(args[i]);
 
             ((JSXPM) thisObj).xpm.log(format, objects);
         }
@@ -1093,7 +1109,7 @@ public class XPMObject {
         static public Scriptable getTask(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
             final XPMObject xpm = ((JSXPM) thisObj).xpm;
             if (args.length == 1)
-                return xpm.getTask((QName) JSUtils.unwrap(args[0]));
+                return xpm.getTask((QName) unwrap(args[0]));
 
             if (args.length == 2)
                 return xpm.getTask(Context.toString(args[0]), Context.toString(args[1]));
@@ -1120,7 +1136,7 @@ public class XPMObject {
         public Scriptable commandlineJob(@JSArgument(type = "String", name = "jobId") Object path,
                                          @JSArgument(type = "Array", name = "command") Object jsargs,
                                          @JSArgument(type = "Map", name = "options") Object jsoptions) throws Exception {
-            return xpm.newObject(JSResource.class, xpm.commandlineJob(JSUtils.unwrap(path), jsargs, jsoptions));
+            return xpm.newObject(JSResource.class, xpm.commandlineJob(unwrap(path), jsargs, jsoptions));
         }
 
         /**

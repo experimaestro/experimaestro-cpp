@@ -24,7 +24,7 @@
 
 ns = new Namespace("xpm.tests");
 
-tasks.ns::task_1 = {
+tasks.ns::identity = {
     inputs: {
         x: {
             value: "xs:integer"
@@ -36,7 +36,7 @@ tasks.ns::task_1 = {
     }
 };
 
-tasks.ns::task_1_bis = {
+tasks.ns::identity_bis = {
     inputs: {
         x: {
             value: "xs:integer"
@@ -48,7 +48,7 @@ tasks.ns::task_1_bis = {
     }
 };
 
-tasks.ns::task_2 = {
+tasks.ns::mult = {
     inputs: {
         x: {
             value: "xs:integer"
@@ -59,12 +59,12 @@ tasks.ns::task_2 = {
     },
 
     run: function(p) {
-		logger.info("Task 2: got x=%s and %s", p.x, p.y)
-        return p.x * p.y;
+		logger.debug("Task mult: got x=%s and y=%s", p.x, p.y)
+        return Number(p.x) * Number(p.y);
     }
 };
 
-tasks.ns::task_3 = {
+tasks.ns::plus = {
     inputs: {
         x: {
             value: "xs:integer"
@@ -75,7 +75,8 @@ tasks.ns::task_3 = {
     },
 
     run: function(p) {
-        return p.x + p.y;
+		logger.debug("Task plus: got x=%s and y=%s: %s", p.x, p.y, Number(p.x)+Number(p.y))
+        return Number(p.x)+Number(p.y);
     }
 };
 
@@ -93,10 +94,10 @@ function check(results, expected) {
  */
 function test_simple() {
     // Plan
-    var plan1 = tasks.ns::task_1.plan({
+    var plan1 = tasks.ns::identity.plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::task_2.plan({
+    var plan2 = tasks.ns::mult.plan({
         x: plan1,
         y: [3, 5]
     });
@@ -104,7 +105,6 @@ function test_simple() {
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
     var result = plan2();
-	logger.info("Got %s", result.toSource());
     check(result, [3, 5, 6, 10]);
 }
 
@@ -114,17 +114,16 @@ function test_simple() {
  */
 function test_simple_access() {
     // Plan
-    var plan1 = tasks.ns::task_1_bis.plan({
+    var plan1 = tasks.ns::identity_bis.plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::task_2.plan({
-        x: plan1.a,
+    var plan2 = tasks.ns::mult.plan({
+        x: plan1.a.x,
         y: [3, 5]
     });
 
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
-    logger.info(result);
     var result = plan2();
     check(result, [3, 5, 6, 10]);
 }
@@ -134,37 +133,36 @@ function test_simple_access() {
 // We apply some transformation on the output of a task
 
 function test_transform() {
-    var f = function() {
-        return x + 1;
+    var f = function(x) {
+        return Number(x) + 1;
     };
 
-    var plan1 = tasks.ns::task_1.plan({
+    var plan1 = tasks.ns::identity.plan({
         x: [0, 1]
     });
-    var plan2 = tasks.ns::task_2.plan({
-        x: transform(f, plan1().x),
+    var plan2 = tasks.ns::mult.plan({
+        x: transform(f, plan1),
         y: [3, 5]
     });
 
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
-    logger.info(result);
     var result = plan2();
-    check(result, [3, 6, 5, 10]);
+    check(result, [3, 5, 6, 10]);
 }
 
 // Joining tasks
 // Goal: computes x + (x * y)
 
 function test_join() {
-    var plan1 = tasks.ns::task_1.plan({
+    var plan1 = tasks.ns::identity.plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::task_2.plan({
-        x: plan1().x,
+    var plan2 = tasks.ns::mult.plan({
+        x: plan1.x,
         y: [3, 5]
     });
-    var plan3 = tasks.ns::task_3.plan(
+    var plan3 = tasks.ns::plus.plan(
         {
             x: plan1,
             y: plan2
@@ -172,25 +170,35 @@ function test_join() {
     );
     
     // Join plan1 of plan2 with plan1 (within plan2)
-    plan3.join(plan1, plan2.plan1);
+    plan3.join(plan1, [plan2, plan1]);
     
     var result = plan3();
-    check(result, [4, 8, 6, 12]);
+    check(result, [4, 6, 8, 12]);
+}
+
+// Implicit join 
+function test_implicit_join() {
+    var plan1 = tasks.ns::identity.plan({
+        x: [2, 3]
+    });
+    var plan2 = tasks.ns::plus.plan({
+        x: plan1,
+        y: plan1
+    });
+    var result = plan2();
+    check(result, [4, 6]);
 }
 
 
 // Copy of a plan to perform cartesian products
 function test_product() {
-    var plan1_1 = tasks.ns::task_1.plan({
-        x: [1, 2]
+    var plan1 = tasks.ns::identity.plan({
+        x: [2, 3]
     });
-    var plan1_2 = tasks.ns::task_1.plan({
-        x: [3, 5]
-    });
-    var plan2 = tasks.ns::task_32.plan({
+    var plan2 = tasks.ns::plus.plan({
         x: plan1,
         y: plan1.copy(),
     });
-    var result = plan3();
-    check(result, [3, 6, 5, 10]);
+    var result = plan2();
+    check(result, [4, 5, 5, 6]);
 }

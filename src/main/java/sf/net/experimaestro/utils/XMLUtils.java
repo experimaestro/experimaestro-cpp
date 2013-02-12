@@ -332,6 +332,9 @@ public class XMLUtils {
 
     /** Tranform a node list into a document fragment */
     public static Node toDocumentFragment(NodeList list) {
+        if (list.getLength() == 1 && list.item(0) instanceof Document)
+            return list.item(0);
+
         Document document = newDocument();
         DocumentFragment fragment = document.createDocumentFragment();
         for(int i = 0; i < list.getLength(); i++)

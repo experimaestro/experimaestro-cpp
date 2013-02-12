@@ -47,8 +47,7 @@ public class TaskFactoryJSWrapper extends ScriptableObject {
 
     public void jsConstructor(Scriptable information) {
         if (information != null) {
-            this.factory = (TaskFactory) ((NativeJavaObject) information)
-                    .unwrap();
+            this.factory = ((JSTaskFactory) information).factory;
         }
     }
 

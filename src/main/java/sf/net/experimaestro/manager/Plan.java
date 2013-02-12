@@ -19,12 +19,18 @@
 package sf.net.experimaestro.manager;
 
 import com.google.common.collect.AbstractIterator;
+import org.apache.log4j.Level;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.DAGCartesianProduct;
+import sf.net.experimaestro.utils.io.LoggerPrintStream;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * An experimental plan.
@@ -33,6 +39,7 @@ import java.util.*;
  * @date 7/2/13
  */
 public class Plan {
+    final static private Logger LOGGER = Logger.getLogger();
     /**
      * The data
      */
@@ -47,19 +54,23 @@ public class Plan {
         this.data = new Data(factory, mappings);
     }
 
+    private Plan(Data data) {
+        this.data = data;
+    }
+
     /**
      * Add a join over those subplans
      *
      * @param plans
      */
-    synchronized public void addJoin(Set<Plan[]> plans) {
+    synchronized public void addJoin(List<Plan[]> plans) {
         data = data.addJoin(plans);
     }
 
     @Override
     public boolean equals(Object other) {
         // Two plans are equal if holding the same data
-        return data == ((Plan) other).data;
+        return this == other || (other instanceof Plan && data == ((Plan) other).data);
     }
 
     /**
@@ -84,6 +95,14 @@ public class Plan {
         return data.factory;
     }
 
+    public Mappings init(PlanNode node) throws XPathExpressionException {
+        return data.mappings.init(node);
+    }
+
+    public Plan copy() {
+        return new Plan(data.copy());
+    }
+
 
     /**
      * The data associated to a plan. It is a distinct object since a plan
@@ -104,7 +123,7 @@ public class Plan {
         /**
          * Joins to perform
          */
-        ArrayList<Set<Plan[]>> joins = new ArrayList<Set<Plan[]>>();
+        ArrayList<List<Plan[]>> joins = new ArrayList<>();
 
         /**
          * Direct sub-plans
@@ -130,7 +149,7 @@ public class Plan {
          * @param paths
          * @return
          */
-        synchronized public Data addJoin(Set<Plan[]> paths) {
+        synchronized public Data addJoin(List<Plan[]> paths) {
             final Data data = ensureOne();
             if (data != this)
                 return data.addJoin(paths);
@@ -165,6 +184,16 @@ public class Plan {
         Iterator<Node> run(Plan plan) throws XPathExpressionException {
             // Creates the PlanNode
             final PlanNode planNode = planGraph(plan);
+            planNode.init();
+
+            // Display the plan graph
+            if (LOGGER.isTraceEnabled())  {
+                LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE);
+                out.println("digraph G {");
+                planNode.printDOT(out, new HashSet<PlanNode>());
+                out.println("}");
+                out.flush();
+            }
 
             HashSet<PlanNode> set = new HashSet<>();
             planNode.fillWithNodes(set);
@@ -200,41 +229,46 @@ public class Plan {
 
             // --- Handle joins
             PlanNode target = null;
-            for (Set<Plan[]> set : joins) {
+            for (List<Plan[]> list : joins) {
                 // Find it (will be kth of current)
-                int k = -1;
-                PlanNode current = null;
-                for (Plan[] path : set) {
-                    current = current == null ? self : current.parents.get(k);
-                    k = -1;
+                for (Plan[] path : list) {
+                    int k = -1;
+                    PlanNode current = null;
                     for (int i = 0; i < path.length; i++) {
+                        current = current == null ? self : current.parents.get(k);
+                        k = -1;
                         for (int j = 0; j < current.parents.size(); j++)
                             if (current.parents.get(j).getPlan() == path[i]) {
                                 k = j;
                                 break;
                             }
                         if (k == -1)
-                            throw new RuntimeException();
+                            throw new RuntimeException("Could not find a matching plan");
                     }
-                }
 
-                if (target == null)
-                    // If we have no target yet
-                    target = current.parents.get(k);
-                else {
-                    // Ensure equality
-                    if (!current.parents.get(k).equals(target))
-                        throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
-                    // Join
-                    current.parents.set(k, target);
+                    if (target == null)
+                        // If we have no target yet
+                        target = current.parents.get(k);
+                    else {
+                        // Ensure equality
+                        if (!current.parents.get(k).equals(target))
+                            throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
+                        // Join
+                        LOGGER.debug("Join: replacing %s by %s", System.identityHashCode(current.parents.get(k)), System.identityHashCode(target));
+                        current.parents.set(k, target);
+                        target.children.add(current);
+                    }
                 }
 
             }
 
-            self.init(mappings);
             return self;
         }
 
+        synchronized protected Data copy() {
+            count++;
+            return this;
+        }
     }
 
 

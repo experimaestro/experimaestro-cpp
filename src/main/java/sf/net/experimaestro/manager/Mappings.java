@@ -22,6 +22,7 @@ import com.google.common.collect.AbstractIterator;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -146,6 +147,9 @@ abstract public class Mappings implements Iterable<Mapping> {
     }
 
 
+    /**
+     * Connections between plans
+     */
     static public class Connection {
         Function function;
         List<Reference> parameters;
@@ -244,7 +248,12 @@ abstract public class Mappings implements Iterable<Mapping> {
                                     final Node node = reference.node.value;
 
 
-                                    nodes[i] = XMLUtils.toDocumentFragment((NodeList)reference.xpath.evaluate(node, XPathConstants.NODESET));
+                                    final NodeList list = (NodeList) reference.xpath.evaluate(node, XPathConstants.NODESET);
+                                    if (list.getLength() == 0)
+                                        throw new ExperimaestroRuntimeException("XPath [%s] did not return any result", reference.xpath);
+
+                                    nodes[i] = XMLUtils.toDocumentFragment(list);
+
 
                                 }
                                 task.setParameter(id, connection.function.f(nodes));

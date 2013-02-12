@@ -79,9 +79,9 @@ public class JSFileObject extends JSObject {
     }
 
 
-    @JSFunction("path")
-    @JSHelp(value = "Returns a file object corresponding to the path given in the arguments. " +
-            "Each name given corresponds to a new path component starting from this file object.",
+    @JSFunction("xpath")
+    @JSHelp(value = "Returns a file object corresponding to the xpath given in the arguments. " +
+            "Each name given corresponds to a new xpath component starting from this file object.",
             arguments = @JSArguments({@JSArgument(type = "String", name = "name"), @JSArgument(name = "...")}))
     public JSFileObject path(String... args) throws FileSystemException {
         FileObject current = file;

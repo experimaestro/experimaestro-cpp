@@ -22,11 +22,11 @@
 
 
 // Direct
-scheduler.command_line_job("/tmp/a",["/bin/ls"]);
+xpm.command_line_job("/tmp/a",["/bin/ls"]);
 
 // With path
-scheduler.command_line_job("/tmp/a",[path("/bin/ls")]);
+xpm.command_line_job("/tmp/a",[path("/bin/ls")]);
 
 // Test with Several components
 var arg = <>{path("/Users/bpiwowar/workspace/experimaestro")}/resources</>;
-scheduler.command_line_job("/tmp/b",[path("/bin/ls"), arg]);
+xpm.command_line_job("/tmp/b",[path("/bin/ls"), arg]);

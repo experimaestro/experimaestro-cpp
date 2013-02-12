@@ -104,7 +104,7 @@ public class JSModule extends JSObject {
         FileObject file = _file.getFile(), origFile = _file.getFile();
 
         try {
-            LOGGER.info("Loading XSD with path [%s]", file);
+            LOGGER.info("Loading XSD with xpath [%s]", file);
 
             switch (type) {
                 case SCHEMA:

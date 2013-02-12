@@ -76,16 +76,31 @@ public abstract class JSObject implements JSConstructable {
         }
     }
 
+    /**
+     * The Experimaestro wrap factory to handle special cases
+     */
     static public class XPMWrapFactory extends WrapFactory {
         public final static XPMWrapFactory INSTANCE = new XPMWrapFactory();
 
         private XPMWrapFactory() {
         }
 
+
+        @Override
+        public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
+            if (obj instanceof JSPlan.JSPlanRef) {
+                return new JSPlan(((JSPlan.JSPlanRef) obj).getPlan(), ((JSPlan.JSPlanRef) obj).xpath);
+            }
+
+            return super.wrap(cx, scope, obj, staticType);
+        }
+
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
             if (obj instanceof JSObject)
                 return new MyNativeJavaObject(scope, obj, obj.getClass(), false);
+
+
             return super.wrapNewObject(cx, scope, obj);
         }
 

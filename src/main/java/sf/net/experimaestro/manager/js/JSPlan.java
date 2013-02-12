@@ -45,9 +45,15 @@ public class JSPlan extends XMLObject implements Callable {
      * The wrapped plan
      */
     private Plan plan;
+    private String xpath;
 
 
     public JSPlan() {
+    }
+
+    public JSPlan(Plan plan, String xpath) {
+        this.plan = plan;
+        this.xpath = xpath;
     }
 
     @JSConstructor
@@ -97,7 +103,6 @@ public class JSPlan extends XMLObject implements Callable {
     }
 
 
-
     /**
      * Returns a mapping for the given value
      *
@@ -126,10 +131,21 @@ public class JSPlan extends XMLObject implements Callable {
 
         if (value instanceof JSPlanRef) {
             JSPlanRef jsplanRef = (JSPlanRef) value;
-            final Mappings.Reference reference = new Mappings.Reference(jsplanRef.plan, toPath(jsplanRef.path));
+            final Mappings.Reference reference = new Mappings.Reference(jsplanRef.getPlan(), jsplanRef.xpath);
             final Mappings.Connection connection = new Mappings.Connection(Mappings.IdentityFunction.INSTANCE, reference);
             return connection;
         }
+
+        if (value instanceof JSTransform) {
+            final JSTransform jsTransform = (JSTransform) value;
+            Mappings.Reference references[] = new Mappings.Reference[jsTransform.plans.length];
+            for(int i = 0; i < references.length; i++)
+                references[i] = new Mappings.Reference(jsTransform.plans[i].getPlan(), jsTransform.plans[i].xpath);
+            final Mappings.Connection connection = new Mappings.Connection(jsTransform, references);
+
+            return connection;
+        }
+
         return null;
 
     }
@@ -163,10 +179,14 @@ public class JSPlan extends XMLObject implements Callable {
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+        if (xpath != null)
+            throw new IllegalAccessError("Cannot call a path reference of a plan");
         try {
             return run(cx, scope);
         } catch (XPathExpressionException e) {
             throw new RuntimeException(e);
+        } catch (Throwable t) {
+            throw new WrappedException(t);
         }
     }
 
@@ -175,10 +195,6 @@ public class JSPlan extends XMLObject implements Callable {
         throw new NotImplementedException();
     }
 
-    @Override
-    public Object get(String name, Scriptable start) {
-        return new JSPlanRef(plan, "/" + name);
-    }
 
     @Override
     public Object get(Context cx, Object id) {
@@ -211,18 +227,23 @@ public class JSPlan extends XMLObject implements Callable {
     }
 
     @Override
+    public Object get(String name, Scriptable start) {
+        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + name);
+    }
+
+    @Override
     public Ref memberRef(Context cx, Object elem, int memberTypeFlags) {
-        return new JSPlanRef(plan, JSUtils.toString(elem));
+        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + JSUtils.toString(elem));
     }
 
     @Override
     public Ref memberRef(Context cx, Object namespace, Object elem, int memberTypeFlags) {
-        return new JSPlanRef(plan, new QName(JSUtils.toString(namespace), JSUtils.toString(elem)).toString());
+        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + new QName(JSUtils.toString(namespace), JSUtils.toString(elem)).toString());
     }
 
     @Override
     public NativeWith enterWith(Scriptable scope) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new NotImplementedException();
     }
 
     @Override
@@ -233,17 +254,11 @@ public class JSPlan extends XMLObject implements Callable {
 
     // --- Path from a reference
 
-    public class JSPlanRef extends Ref {
-        Plan plan;
-        List<String> path = new ArrayList<>();
+    public class JSPlanRef extends Ref implements Callable {
+        String xpath;
 
-        public JSPlanRef(Plan plan, String... path) {
-            this(plan, Arrays.asList(path));
-        }
-
-        public JSPlanRef(Plan plan, List<String> path) {
-            this.plan = plan;
-            this.path = path;
+        public JSPlanRef(String path) {
+            this.xpath = path;
         }
 
         @Override
@@ -255,7 +270,72 @@ public class JSPlan extends XMLObject implements Callable {
         public Object set(Context cx, Object value) {
             throw new ExperimaestroRuntimeException("Cannot be set");
         }
+
+
+        @Override
+        public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+            assert JSPlan.this == thisObj;
+            final String fname = xpath.substring(1);
+
+            switch (fname) {
+                case "join":
+                    Plan paths[][] = new Plan[args.length][];
+                    for (int i = 0; i < args.length; i++) {
+                        final Object object = JSUtils.unwrap(args[i]);
+                        if (object instanceof JSPlan) {
+                            paths[i] = new Plan[]{((JSPlan) object).plan};
+                        } else if (object instanceof NativeArray) {
+                            NativeArray path = (NativeArray) object;
+                            if (path.getLength() > Integer.MAX_VALUE)
+                                throw new AssertionError("Array length above java capacity");
+                            paths[i] = new Plan[(int) path.getLength()];
+                            for (int j = 0; j < paths[i].length; j++) {
+                                paths[i][j] = ((JSPlan) JSUtils.unwrap(path.get(j))).plan;
+                            }
+                        } else
+                            ScriptRuntime.typeError0("Cannot handle argument of type " + object.getClass() + " in join()");
+
+                    }
+                    plan.addJoin(Arrays.asList(paths));
+                    return UniqueTag.NULL_VALUE;
+
+                case "copy":
+                    return new JSPlan(plan.copy(), null);
+
+                default:
+                    throw ScriptRuntime.notFunctionError(NOT_FOUND, fname);
+            }
+        }
+
+        public Plan getPlan() {
+            return JSPlan.this.plan;
+        }
     }
 
 
+    /**
+     * JS function to transform inputs in a plan
+     */
+    static public class JSTransform extends JSBaseObject implements Mappings.Function {
+        protected final Context cx;
+        protected final Scriptable scope;
+        protected final Callable f;
+
+        protected final JSPlanRef[] plans;
+
+        public JSTransform(Context cx, Scriptable scope, Callable f, JSPlanRef[] plans) {
+            this.cx = cx;
+            this.scope = scope;
+            this.f = f;
+            this.plans = plans;
+        }
+
+        @Override
+        public Node f(Node[] parameters) {
+            Object [] e4x_args = new Object[parameters.length];
+            for(int i = 0; i < parameters.length; i++)
+                e4x_args[i] = JSUtils.domToE4X(parameters[i], cx, scope);
+            return JSUtils.toDOM(scope, f.call(cx, scope, null, e4x_args));
+        }
+    }
 }
