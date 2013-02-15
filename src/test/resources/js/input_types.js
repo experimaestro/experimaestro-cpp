@@ -74,7 +74,7 @@ function test_integer() {
 function test_xml() {
     assert_ok({ x_xml: <a>1</a> });    
     
-    assert_error({ x_ns_xml: <a xmlns={test.uri}>1</a> });    
+    assert_error({ x_xml: <a xmlns={test.uri}>1</a> });    
     assert_error({ x_xml: <b>1</b> });    
 }
 
