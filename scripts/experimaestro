@@ -201,6 +201,11 @@ def command_run_js(args):
     # Get the command line
     filepaths = []
     filecontents = []
+
+    if args.pre:
+        filepaths.append("<pre>");
+        filecontents.append(args.pre);
+
     for filename in args.files:
         filepath = os.path.abspath(filename)
         filepaths.append(filepath)
@@ -330,6 +335,7 @@ subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro se
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_js.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
+p_run_js.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
 p_run_js.add_argument('files', nargs='*', help='')
 
