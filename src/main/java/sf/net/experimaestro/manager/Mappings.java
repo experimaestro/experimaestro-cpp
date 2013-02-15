@@ -19,11 +19,13 @@
 package sf.net.experimaestro.manager;
 
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterators;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -46,62 +48,13 @@ abstract public class Mappings implements Iterable<Mapping> {
      */
     abstract public Mappings init(PlanNode planNode) throws XPathExpressionException;
 
+    /**
+     * Add all the plans contained in the mapping
+     * @param subplans
+     */
     public abstract void addPlans(HashSet<Plan> subplans);
 
-    /**
-     * Product of mappings
-     */
-    static public class Product extends Mappings {
-        ArrayList<Mappings> list;
 
-        public Product(Mappings... list) {
-            this(Arrays.asList(list));
-        }
-
-        public Product(List<Mappings> list) {
-            this.list = new ArrayList(list);
-        }
-
-        public void add(Mappings mappings) {
-            list.add(mappings);
-        }
-
-        @Override
-        public Iterator<Mapping> iterator() {
-            final Iterator<Mapping[]> iterator = new CartesianProduct(Mapping.class, list.toArray(new Iterable[list.size()])).iterator();
-
-            return new AbstractIterator<Mapping>() {
-                @Override
-                protected Mapping computeNext() {
-                    if (!iterator.hasNext())
-                        return endOfData();
-                    final Mapping[] mappings = iterator.next();
-                    return new Mapping() {
-                        @Override
-                        public void set(Task task) throws NoSuchParameter, XPathExpressionException {
-                            for (Mapping mapping : mappings)
-                                mapping.set(task);
-
-                        }
-                    };
-                }
-            };
-        }
-
-        @Override
-        public Mappings init(PlanNode planNode) throws XPathExpressionException {
-            ArrayList<Mappings> newList = new ArrayList<>();
-            for (Mappings mappings : list)
-                newList.add(mappings.init(planNode));
-            return new Product(newList);
-        }
-
-        @Override
-        public void addPlans(HashSet<Plan> subplans) {
-            for (Mappings mappings : list)
-                mappings.addPlans(subplans);
-        }
-    }
 
 
     /**
@@ -113,7 +66,7 @@ abstract public class Mappings implements Iterable<Mapping> {
         XPathExpression xpath;
 
         public Reference(Plan plan, String xpath) throws XPathExpressionException {
-            this(plan, XMLUtils.parseXPath(xpath));
+            this(plan, xpath == null ? null : XMLUtils.parseXPath(xpath));
         }
 
         public Reference(Plan plan, XPathExpression xpath) {
@@ -248,7 +201,8 @@ abstract public class Mappings implements Iterable<Mapping> {
                                     final Node node = reference.node.value;
 
 
-                                    final NodeList list = (NodeList) reference.xpath.evaluate(node, XPathConstants.NODESET);
+                                    final NodeList list = reference.xpath == null ? new ArrayNodeList(node)
+                                            : (NodeList) reference.xpath.evaluate(node, XPathConstants.NODESET);
                                     if (list.getLength() == 0)
                                         throw new ExperimaestroRuntimeException("XPath [%s] did not return any result", reference.xpath);
 
@@ -265,4 +219,108 @@ abstract public class Mappings implements Iterable<Mapping> {
             };
         }
     }
+
+
+
+    /**
+     * An abstract list of mappings
+     */
+    public abstract static class _List extends Mappings {
+        ArrayList<Mappings> list;
+
+        public _List(java.util.List<Mappings> list) {
+            this.list = new ArrayList(list);
+        }
+
+        @Override
+        public Mappings init(PlanNode planNode) throws XPathExpressionException {
+            ArrayList<Mappings> newList = new ArrayList<>();
+            for (Mappings mappings : list)
+                newList.add(mappings.init(planNode));
+            return clone(newList);
+        }
+
+        protected abstract Mappings clone(ArrayList<Mappings> list);
+
+        public void add(Mappings mappings) {
+            list.add(mappings);
+        }
+
+        @Override
+        public void addPlans(HashSet<Plan> subplans) {
+            for (Mappings mappings : list)
+                mappings.addPlans(subplans);
+        }
+    }
+
+    /**
+     * Product of mappings
+     */
+    static public class Product extends _List {
+
+        public Product(Mappings... list) {
+            this(Arrays.asList(list));
+        }
+
+        public Product(java.util.List<Mappings> list) {
+            super(list);
+        }
+
+        @Override
+        protected Mappings clone(ArrayList<Mappings> list) {
+            return new Product(list);
+        }
+
+
+        @Override
+        public Iterator<Mapping> iterator() {
+            final Iterator<Mapping[]> iterator = new CartesianProduct(Mapping.class, list.toArray(new Iterable[list.size()])).iterator();
+
+            return new AbstractIterator<Mapping>() {
+                @Override
+                protected Mapping computeNext() {
+                    if (!iterator.hasNext())
+                        return endOfData();
+                    final Mapping[] mappings = iterator.next();
+                    return new Mapping() {
+                        @Override
+                        public void set(Task task) throws NoSuchParameter, XPathExpressionException {
+                            for (Mapping mapping : mappings)
+                                mapping.set(task);
+
+                        }
+                    };
+                }
+            };
+        }
+
+    }
+
+    /**
+     * A list of alternative mappings
+     */
+    static public class Alternative extends _List {
+        public Alternative(Mappings... list) {
+            this(Arrays.asList(list));
+        }
+
+        public Alternative(java.util.List<Mappings> list) {
+            super(list);
+        }
+
+        @Override
+        protected Mappings clone(ArrayList<Mappings> list) {
+            return new Alternative(list);
+        }
+
+        @Override
+        public Iterator<Mapping> iterator() {
+            Iterator<Mapping> iterators[] = new Iterator[list.size()];
+            for(int i = 0; i < iterators.length; i++)
+                iterators[i] = list.get(i).iterator();
+
+            return Iterators.concat(iterators);
+        }
+    }
+
 }

@@ -9,7 +9,7 @@ This allows for a lot of flexibility: input/outputs can be any valid XML documen
 
           <example xmlns="http://my.ns" xmlns:xp="sf.net.experimaestro" xp:resource="file:///home/xpm/output">
               <!-- A simple typed value -->
-          	<xp:value id="id" value="abc1" type="xs:string"/>
+          	<xp:value id="id" type="xs:string">abc</xp:value>
 
               <!-- Another value -->
               <alpha xp:type="xs:integer">3</alpha>
@@ -24,7 +24,7 @@ This allows for a lot of flexibility: input/outputs can be any valid XML documen
   
   1. Any valid XML document is a valid message
   1. Predefined datatypes are defined in Experimaestro (integers, strings, etc.)
-  1. Messages can be compared. This is useful when two resources
+  1. Messages can be compared. This is useful when comparing two resources
   1. Special tags and/or attributes allows to
       * Define resources
       * Define the parameters and their values that were used to generate an output

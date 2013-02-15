@@ -19,10 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -177,14 +174,20 @@ public class JSTaskFactory extends JSBaseObject {
                     if (selected == null)
                         selected = key;
                     else
-                        throw new ExperimaestroRuntimeException("Object has at least two conflicting properties: %s and %s",
-                                selected, key);
+                        throw ScriptRuntime.constructError("Cannot create task factory",
+                                String.format("Object has at least two conflicting properties: %s and %s", selected, key));
+
             }
             if (selected == null)
-                throw new ExperimaestroRuntimeException("Expected at least one property in %s", Arrays.toString(keys));
+                throw ScriptRuntime.constructError("Cannot create task factory", String.format("Expected at least one property in %s", Arrays.toString(keys)));
             return selected;
         }
 
+        /**
+         * Set inputs from JSON data
+         * @param scope The current JS scope
+         * @param jsInput The JS input object
+         */
         private void setInputs(final Scriptable scope, final NativeObject jsInput) {
             String2String prefixes = new JSNamespaceBinder(scope);
 
@@ -195,6 +198,8 @@ public class JSTaskFactory extends JSBaseObject {
                 final Scriptable definition = (Scriptable) jsInput.get(id);
 
                 String type = onlyOne(definition, "value", "alternative", "xml", "task");
+                boolean sequence = JSUtils.toBoolean(scope, definition, "sequence");
+                boolean optional = JSUtils.toBoolean(scope, definition, "optional");
 
                 Input input;
                 final QName inputType = QName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
@@ -206,6 +211,9 @@ public class JSTaskFactory extends JSBaseObject {
                         break;
 
                     case "xml":
+                        input = new XMLInput(new Type(inputType));
+                        break;
+
                     case "alternative":
                         throw new NotImplementedException();
 
@@ -215,6 +223,11 @@ public class JSTaskFactory extends JSBaseObject {
                         throw SHOULD_NOT_BE_HERE;
                 }
 
+                if (sequence)
+                    input = new ArrayInput(input);
+
+                // Set input properties and store
+                input.setOptional(optional);
                 inputs.put(id, input);
             }
         }
@@ -354,18 +367,6 @@ public class JSTaskFactory extends JSBaseObject {
                     break;
                 }
 
-                case "array": {
-                    final Iterator<Element> it = XMLUtils.childElements(el).iterator();
-                    if (!it.hasNext())
-                        throw new ExperimaestroRuntimeException("array element should have only one child");
-                    final Element child = it.next();
-                    if (it.hasNext())
-                        throw new ExperimaestroRuntimeException("array element should have only one child");
-
-                    input = new ArrayInput();
-                    el.getFirstChild();
-                    break;
-                }
 
                 case "task": { // A task
                     if (inputRef == null)

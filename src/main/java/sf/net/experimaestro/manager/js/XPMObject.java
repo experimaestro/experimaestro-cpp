@@ -118,7 +118,7 @@ public class XPMObject {
     /**
      * Default locks for new jobs
      */
-    Map<Resource, Object> defaultLocks = new TreeMap<>();
+    Map<Resource<?>, Object> defaultLocks = new TreeMap<>(Resource.ID_COMPARATOR);
 
     /**
      * List of submitted jobs (so that we don't submit them twice with the same script
@@ -261,7 +261,7 @@ public class XPMObject {
     private XPMObject clone(ResourceLocator scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
         final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner);
         clone.defaultGroup = this.defaultGroup;
-        clone.defaultLocks = new TreeMap<>(this.defaultLocks);
+        clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashSet<>(this.submittedJobs);
         return clone;
     }
@@ -488,12 +488,12 @@ public class XPMObject {
     @JSHelp(value = "Transform plan outputs with a function")
     public static Scriptable js_transform(Context cx, Scriptable scope, Object[] args, Function funObj) throws FileSystemException {
         Callable f = (Callable) args[0];
-        JSPlan.JSPlanRef plans[] = new JSPlan.JSPlanRef[args.length - 1];
+        JSPlanRef plans[] = new JSPlanRef[args.length - 1];
         for (int i = 0; i < plans.length; i++)
             if (args[i+1] instanceof JSPlan)
-                plans[i] = ((JSPlan)args[i+1]).new JSPlanRef(".");
+                plans[i] = new JSPlanRef(((JSPlan)args[i+1]));
             else
-                plans[i] = (JSPlan.JSPlanRef) unwrap(args[i + 1]);
+                plans[i] = (JSPlanRef) unwrap(args[i + 1]);
         return new JSPlan.JSTransform(cx, scope, f, plans);
     }
 
@@ -737,7 +737,7 @@ public class XPMObject {
             task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
-        for (Map.Entry<Resource, Object> lock : defaultLocks.entrySet()) {
+        for (Map.Entry<Resource<?>, Object> lock : defaultLocks.entrySet()) {
             lock.getKey().createDependency(lock.getValue());
         }
 
@@ -919,6 +919,10 @@ public class XPMObject {
                     argument.add(new CommandArgument.Path(node.getNodeValue()));
                 } else
                     sb.append(node.getTextContent());
+                break;
+
+            case Node.DOCUMENT_NODE:
+                argumentWalkThrough(sb, argument, ((Document)node).getDocumentElement());
                 break;
 
             case Node.ELEMENT_NODE:

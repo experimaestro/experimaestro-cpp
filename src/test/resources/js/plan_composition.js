@@ -22,7 +22,34 @@
     - plans can be simplified (factorization) before being run
  */
 
+ // START SNIPPET: task
 ns = new Namespace("xpm.tests");
+var logger = xpm.logger("xpm.tests");
+
+tasks.ns::mult = {
+    inputs: {
+        x: { value: "xs:integer" },
+        y: { value: "xs:integer" }
+    },
+
+    run: function(p) {
+		logger.debug("Task mult: got x=%s and y=%s: %s", p.x, p.y, Number(p.x) * Number(p.y))
+        return Number(p.x) * Number(p.y);
+    }
+};
+
+tasks.ns::plus = {
+    inputs: {
+        x: { value: "xs:integer" },
+        y: { value: "xs:integer" }
+    },
+
+    run: function(p) {
+		logger.debug("Task plus: got x=%s and y=%s: %s", p.x, p.y, Number(p.x)+Number(p.y))
+        return Number(p.x) + Number(p.y);
+    }
+};
+// END SNIPPET: task
 
 tasks.ns::identity = {
     inputs: {
@@ -48,37 +75,7 @@ tasks.ns::identity_bis = {
     }
 };
 
-tasks.ns::mult = {
-    inputs: {
-        x: {
-            value: "xs:integer"
-        },
-        y: {
-            value: "xs:integer"
-        }
-    },
 
-    run: function(p) {
-		logger.debug("Task mult: got x=%s and y=%s", p.x, p.y)
-        return Number(p.x) * Number(p.y);
-    }
-};
-
-tasks.ns::plus = {
-    inputs: {
-        x: {
-            value: "xs:integer"
-        },
-        y: {
-            value: "xs:integer"
-        }
-    },
-
-    run: function(p) {
-		logger.debug("Task plus: got x=%s and y=%s: %s", p.x, p.y, Number(p.x)+Number(p.y))
-        return Number(p.x)+Number(p.y);
-    }
-};
 
 function check(results, expected) {
 	if (results.length != expected.length)
@@ -118,7 +115,7 @@ function test_simple_access() {
         x: [1, 2]
     });
     var plan2 = tasks.ns::mult.plan({
-        x: plan1.a.x,
+        x: plan1.path("a/x"),
         y: [3, 5]
     });
 
@@ -159,7 +156,7 @@ function test_join() {
         x: [1, 2]
     });
     var plan2 = tasks.ns::mult.plan({
-        x: plan1.x,
+        x: plan1.path("x"),
         y: [3, 5]
     });
     var plan3 = tasks.ns::plus.plan(
@@ -201,4 +198,69 @@ function test_product() {
     });
     var result = plan2();
     check(result, [4, 5, 5, 6]);
+}
+
+function test_example() {
+// START SNIPPET: run
+    // Creates the experimental plan
+    var plan1 = tasks.ns::plus.plan({
+        x: [1, 2],
+        y: 3
+    });
+    var plan2 = tasks.ns::mult.plan({
+        // The values from x will come from the output of plan1
+        x: plan1,
+        y: 2
+    });
+    
+    // Executes the experimental plan
+    // Result is an array containing the values (in XML) 8 and 10
+    var result = plan2();
+
+// END SNIPPET: run    
+}
+
+
+
+// Test plans building by adding
+function test_add() {
+    var plan = tasks.ns::plus.plan({ x: [1, 2], y: 3 });
+    plan.add({ x: [4, 5], y: 2});
+    
+    var result = plan();
+    check(result, [4, 5, 6, 7]);
+}
+
+
+// --- Test the group by
+
+tasks.ns::sum = {
+    inputs: {
+        x: { value: "xs:integer", sequence: true },
+    },
+
+    run: function(p) {
+        var sum = 0;
+        for each(var a in x.*)
+            sum += Number(a);
+            
+        return a;
+    }
+};
+
+function test_groupby_all() {
+    var plan1 = tasks.ns::identity.plan({ x: [1, 2, 3] });
+    var plan2 = tasks.ns::sum.plan({ x: plan1.group_by() });
+    
+    var result = plan2();
+    check(result, [6]);
+}
+
+function test_groupby() {
+    var plan1 = tasks.ns::identity.plan({ x: [1, 2, 3] });
+    var plan2 = tasks.ns::plus.plan({ x: plan1, y: [10, 20] })
+    var plan3 = tasks.ns::sum.plan({ x: plan2.group_by(plan1) });
+    
+    var result = plan3();
+    check(result, [16, 26]);
 }

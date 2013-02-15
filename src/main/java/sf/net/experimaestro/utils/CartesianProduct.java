@@ -34,7 +34,6 @@ import java.util.Iterator;
 public class CartesianProduct<T> implements Iterable<T[]> {
     private final Iterable<? extends T>[] iterables;
     private final Class<T> klass;
-    private final boolean reuse;
 
     public CartesianProduct(Class<T> klass, Iterable<? extends T>... iterables) {
         this(klass, false, iterables);
@@ -43,7 +42,6 @@ public class CartesianProduct<T> implements Iterable<T[]> {
     public CartesianProduct(Class<T> klass, boolean reuse,
                             Iterable<? extends T>... iterables) {
         this.klass = klass;
-        this.reuse = reuse;
         this.iterables = iterables;
     }
 
@@ -76,11 +74,6 @@ public class CartesianProduct<T> implements Iterable<T[]> {
                         value[i] = iterators[i].next();
                     }
                 } else {
-                    if (!reuse) {
-                        //@SuppressWarnings("unchecked")
-                        value = (T[]) Array.newInstance(klass, iterables.length);
-                    }
-
                     // Next
                     for (int i = 0; i < iterables.length; i++) {
                         if (!iterators[i].hasNext()) {

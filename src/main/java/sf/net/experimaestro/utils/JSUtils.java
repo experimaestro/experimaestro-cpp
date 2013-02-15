@@ -345,6 +345,21 @@ public class JSUtils {
     }
 
     /**
+     * Convert a property into a boolean
+     * @param scope The JS scope
+     * @param object The JS object
+     * @param name The name of the property
+     * @return <tt>false</tt> if the property does not exist.
+     */
+    public static boolean toBoolean(Scriptable scope, Scriptable object, String name) {
+        if (!object.has(name, scope)) return false;
+        Object value = object.get(name, scope);
+        if (value instanceof Boolean)
+            return (Boolean)value;
+        return Boolean.parseBoolean(JSUtils.toString(value));
+    }
+
+    /**
      * Defines a JavaScript function by refering a class, a name and its parameters
      */
     static public class FunctionDefinition {

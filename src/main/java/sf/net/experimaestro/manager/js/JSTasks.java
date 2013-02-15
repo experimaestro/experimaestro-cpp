@@ -88,6 +88,16 @@ public class JSTasks extends XMLObject implements JSConstructable {
     }
 
     @Override
+    public Object get(String name, Scriptable start) {
+        return new TaskRef(null, name);
+    }
+
+    @Override
+    public void put(String name, Scriptable start, Object value) {
+        new TaskRef(null, name).set(Context.getCurrentContext(), value);
+    }
+
+    @Override
     public NativeWith enterWith(Scriptable scope) {
         throw new NotImplementedException();
     }
@@ -97,7 +107,7 @@ public class JSTasks extends XMLObject implements JSConstructable {
         throw new NotImplementedException();
     }
 
-    private class TaskRef extends Ref {
+    class TaskRef extends Ref {
         private final QName id;
 
         public TaskRef(String namespace, String name) {

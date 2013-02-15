@@ -6,14 +6,19 @@ package sf.net.experimaestro.manager;
  * @date 23/1/13
  */
 public class ArrayInput extends Input {
-    private static final Type TYPE = new Type(new QName(Manager.EXPERIMAESTRO_NS, "array"));
+    /** The qualified name for this type */
+    private static final Type TYPE = new Type(new QName(Manager.EXPERIMAESTRO_NS, "sequence"));
 
-    public ArrayInput() {
+    /** The type of the array elements */
+    private final Input innerType;
+
+    public ArrayInput(Input innerType) {
         super(TYPE);
+        this.innerType = innerType;
     }
 
     @Override
     Value newValue() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return new ArrayValue(this);
     }
 }

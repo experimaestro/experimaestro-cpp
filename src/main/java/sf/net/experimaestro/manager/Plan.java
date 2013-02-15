@@ -67,6 +67,10 @@ public class Plan {
         data = data.addJoin(plans);
     }
 
+    public void groupBy(List<Plan[]> plans) {
+        data = data.groupBy(plans);
+    }
+
     @Override
     public boolean equals(Object other) {
         // Two plans are equal if holding the same data
@@ -103,17 +107,26 @@ public class Plan {
         return new Plan(data.copy());
     }
 
+    public void add(Mappings mappings) {
+        data = data.add(mappings);
+    }
+
 
     /**
      * The data associated to a plan. It is a distinct object since a plan
      * can be either directly equal to another (same object) or can share
      * the same data.
      */
-    static public class Data {
+    static private class Data {
         /**
          * The task factory for this plan
          */
         TaskFactory factory;
+
+        /**
+         * Direct sub-plans
+         */
+        ArrayList<Plan> subplans = new ArrayList<>();
 
         /**
          * Direct mappings
@@ -126,9 +139,10 @@ public class Plan {
         ArrayList<List<Plan[]>> joins = new ArrayList<>();
 
         /**
-         * Direct sub-plans
+         * How to group by
          */
-        ArrayList<Plan> subplans = new ArrayList<>();
+        List<Plan[]> groupBy = null;
+
 
         /**
          * Number of distinct plans that share this data
@@ -267,6 +281,41 @@ public class Plan {
 
         synchronized protected Data copy() {
             count++;
+            return this;
+        }
+
+        /**
+         * Add new mappings
+         * @param mappings
+         * @return
+         */
+        synchronized public Data add(Mappings mappings) {
+            final Data data = ensureOne();
+            if (data != this)
+                return data.add(mappings);
+
+            if (this.mappings instanceof Mappings.Alternative) {
+                ((Mappings.Alternative) this.mappings).add(mappings);
+            } else {
+                Mappings.Alternative alt = new Mappings.Alternative();
+                alt.add(this.mappings);
+                alt.add(mappings);
+                this.mappings = alt;
+            }
+
+            return this;
+        }
+
+        /**
+         * Add groups by
+         * @param plans
+         */
+        synchronized public Data groupBy(List<Plan[]> plans) {
+            final Data data = ensureOne();
+            if (data != this)
+                return data.groupBy(plans);
+
+            groupBy = plans;
             return this;
         }
     }

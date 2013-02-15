@@ -18,21 +18,20 @@
 
 package sf.net.experimaestro.manager.js;
 
-import bpiwowar.argparser.utils.Output;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
-import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.xml.XMLObject;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.Mappings;
+import sf.net.experimaestro.manager.Plan;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
 
+import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * A JS wrapper around {@linkplain sf.net.experimaestro.manager.Plan}
@@ -40,25 +39,18 @@ import java.util.List;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */
-public class JSPlan extends XMLObject implements Callable {
+public class JSPlan extends JSBaseObject implements Callable {
     /**
      * The wrapped plan
      */
-    private Plan plan;
-    private String xpath;
+    Plan plan;
 
-
-    public JSPlan() {
-    }
-
-    public JSPlan(Plan plan, String xpath) {
+    /**
+     * Builds a wrapper around a plan
+     * @param plan
+     */
+    public JSPlan(Plan plan) {
         this.plan = plan;
-        this.xpath = xpath;
-    }
-
-    @JSConstructor
-    public void jsConstruct(JSPlan other) {
-        this.plan = other.plan;
     }
 
     /**
@@ -69,6 +61,12 @@ public class JSPlan extends XMLObject implements Callable {
      */
     public JSPlan(TaskFactory factory, NativeObject object) throws XPathExpressionException {
 
+        Mappings mapping = getMappings(object);
+
+        plan = new Plan(factory, mapping);
+    }
+
+    private Mappings getMappings(NativeObject object) throws XPathExpressionException {
         Mappings.Product mapping = new Mappings.Product();
 
         for (Object _id : object.getIds()) {
@@ -98,8 +96,7 @@ public class JSPlan extends XMLObject implements Callable {
             }
 
         }
-
-        plan = new Plan(factory, mapping);
+        return mapping;
     }
 
 
@@ -124,14 +121,14 @@ public class JSPlan extends XMLObject implements Callable {
 
         if (value instanceof JSPlan) {
             JSPlan jsplan = (JSPlan) value;
-            final Mappings.Reference reference = new Mappings.Reference(jsplan.plan, ".");
+            final Mappings.Reference reference = new Mappings.Reference(jsplan.plan, (XPathExpression) null);
             final Mappings.Connection connection = new Mappings.Connection(Mappings.IdentityFunction.INSTANCE, reference);
             return connection;
         }
 
         if (value instanceof JSPlanRef) {
             JSPlanRef jsplanRef = (JSPlanRef) value;
-            final Mappings.Reference reference = new Mappings.Reference(jsplanRef.getPlan(), jsplanRef.xpath);
+            final Mappings.Reference reference = new Mappings.Reference(jsplanRef.getPlan(), jsplanRef.getPath());
             final Mappings.Connection connection = new Mappings.Connection(Mappings.IdentityFunction.INSTANCE, reference);
             return connection;
         }
@@ -139,19 +136,19 @@ public class JSPlan extends XMLObject implements Callable {
         if (value instanceof JSTransform) {
             final JSTransform jsTransform = (JSTransform) value;
             Mappings.Reference references[] = new Mappings.Reference[jsTransform.plans.length];
-            for(int i = 0; i < references.length; i++)
-                references[i] = new Mappings.Reference(jsTransform.plans[i].getPlan(), jsTransform.plans[i].xpath);
+            for (int i = 0; i < references.length; i++)
+                references[i] = new Mappings.Reference(jsTransform.plans[i].getPlan(), jsTransform.plans[i].getPath());
             final Mappings.Connection connection = new Mappings.Connection(jsTransform, references);
 
             return connection;
         }
 
+        if (JSUtils.isXML(value)) {
+            return JSUtils.toDOM(null, value);
+        }
+
         return null;
 
-    }
-
-    final private String toPath(List<String> path) {
-        return Output.toString("/", path);
     }
 
     public Object run(Context context, Scriptable scope) throws XPathExpressionException {
@@ -179,8 +176,6 @@ public class JSPlan extends XMLObject implements Callable {
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        if (xpath != null)
-            throw new IllegalAccessError("Cannot call a path reference of a plan");
         try {
             return run(cx, scope);
         } catch (XPathExpressionException e) {
@@ -190,126 +185,47 @@ public class JSPlan extends XMLObject implements Callable {
         }
     }
 
-    @Override
-    public boolean has(Context cx, Object id) {
-        throw new NotImplementedException();
-    }
+    @JSFunction("join")
+    public void join(Object... args) {
+        Plan paths[][] = new Plan[args.length][];
+        for (int i = 0; i < args.length; i++) {
+            final Object object = JSUtils.unwrap(args[i]);
+            if (object instanceof JSPlan) {
+                paths[i] = new Plan[]{((JSPlan) object).plan};
+            } else if (object instanceof NativeArray) {
+                NativeArray path = (NativeArray) object;
+                if (path.getLength() > Integer.MAX_VALUE)
+                    throw new AssertionError("Array length above java capacity");
+                paths[i] = new Plan[(int) path.getLength()];
+                for (int j = 0; j < paths[i].length; j++) {
+                    paths[i][j] = ((JSPlan) JSUtils.unwrap(path.get(j))).plan;
+                }
+            } else
+                ScriptRuntime.typeError0("Cannot handle argument of type " + object.getClass() + " in join()");
 
-
-    @Override
-    public Object get(Context cx, Object id) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public void put(Context cx, Object id, Object value) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public boolean delete(Context cx, Object id) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Object getFunctionProperty(Context cx, String name) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Object getFunctionProperty(Context cx, int id) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Scriptable getExtraMethodSource(Context cx) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Object get(String name, Scriptable start) {
-        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + name);
-    }
-
-    @Override
-    public Ref memberRef(Context cx, Object elem, int memberTypeFlags) {
-        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + JSUtils.toString(elem));
-    }
-
-    @Override
-    public Ref memberRef(Context cx, Object namespace, Object elem, int memberTypeFlags) {
-        return new JSPlanRef((xpath == null ? "" : xpath) + "/" + new QName(JSUtils.toString(namespace), JSUtils.toString(elem)).toString());
-    }
-
-    @Override
-    public NativeWith enterWith(Scriptable scope) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public NativeWith enterDotQuery(Scriptable scope) {
-        throw new NotImplementedException();
-    }
-
-
-    // --- Path from a reference
-
-    public class JSPlanRef extends Ref implements Callable {
-        String xpath;
-
-        public JSPlanRef(String path) {
-            this.xpath = path;
         }
+        plan.addJoin(Arrays.asList(paths));
+    }
 
-        @Override
-        public Object get(Context cx) {
-            return JSPlan.this;
-        }
+    @JSFunction("add")
+    public void add(NativeObject plan) throws XPathExpressionException {
+        final Mappings mappings = getMappings(plan);
+        this.plan.add(mappings);
+    }
 
-        @Override
-        public Object set(Context cx, Object value) {
-            throw new ExperimaestroRuntimeException("Cannot be set");
-        }
+    @JSFunction("path")
+    public JSPlanRef path(String path) {
+        return new JSPlanRef(plan, path);
+    }
 
+    @JSFunction("copy")
+    public JSPlan copy() {
+        return new JSPlan(plan.copy());
+    }
 
-        @Override
-        public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-            assert JSPlan.this == thisObj;
-            final String fname = xpath.substring(1);
-
-            switch (fname) {
-                case "join":
-                    Plan paths[][] = new Plan[args.length][];
-                    for (int i = 0; i < args.length; i++) {
-                        final Object object = JSUtils.unwrap(args[i]);
-                        if (object instanceof JSPlan) {
-                            paths[i] = new Plan[]{((JSPlan) object).plan};
-                        } else if (object instanceof NativeArray) {
-                            NativeArray path = (NativeArray) object;
-                            if (path.getLength() > Integer.MAX_VALUE)
-                                throw new AssertionError("Array length above java capacity");
-                            paths[i] = new Plan[(int) path.getLength()];
-                            for (int j = 0; j < paths[i].length; j++) {
-                                paths[i][j] = ((JSPlan) JSUtils.unwrap(path.get(j))).plan;
-                            }
-                        } else
-                            ScriptRuntime.typeError0("Cannot handle argument of type " + object.getClass() + " in join()");
-
-                    }
-                    plan.addJoin(Arrays.asList(paths));
-                    return UniqueTag.NULL_VALUE;
-
-                case "copy":
-                    return new JSPlan(plan.copy(), null);
-
-                default:
-                    throw ScriptRuntime.notFunctionError(NOT_FOUND, fname);
-            }
-        }
-
-        public Plan getPlan() {
-            return JSPlan.this.plan;
-        }
+    @JSFunction("group_by")
+    public void groupBy(JSPlan... plans) {
+        throw new NotImplementedException();
     }
 
 
@@ -332,8 +248,8 @@ public class JSPlan extends XMLObject implements Callable {
 
         @Override
         public Node f(Node[] parameters) {
-            Object [] e4x_args = new Object[parameters.length];
-            for(int i = 0; i < parameters.length; i++)
+            Object[] e4x_args = new Object[parameters.length];
+            for (int i = 0; i < parameters.length; i++)
                 e4x_args[i] = JSUtils.domToE4X(parameters[i], cx, scope);
             return JSUtils.toDOM(scope, f.call(cx, scope, null, e4x_args));
         }

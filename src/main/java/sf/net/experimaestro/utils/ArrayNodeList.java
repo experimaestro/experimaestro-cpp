@@ -25,12 +25,12 @@ import org.w3c.dom.NodeList;
 * @author B. Piwowarski <benjamin@bpiwowar.net>
 * @date 7/2/13
 */
-class ArrayNodeList implements NodeList {
+public class ArrayNodeList implements NodeList {
 
     final Node[] _nodes;
     private final Node[] nodes;
 
-    public ArrayNodeList(Node[] nodes) {
+    public ArrayNodeList(Node... nodes) {
         this.nodes = nodes;
         _nodes = nodes;
     }

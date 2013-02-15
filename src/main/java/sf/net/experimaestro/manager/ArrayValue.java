@@ -4,16 +4,16 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 
-import java.util.ArrayList;
-
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/1/13
  */
 public class ArrayValue extends Value {
-    ArrayList<Node> documents;
+    /** The input nodes */
+    Node fragment;
 
-    public ArrayValue() {
+    public ArrayValue(ArrayInput input) {
+        this.input = input;
     }
 
     @Override
@@ -23,16 +23,18 @@ public class ArrayValue extends Value {
 
     @Override
     public void set(Node value) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        if (value instanceof DocumentFragment) {
+            fragment = value;
+        }
+        throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
     }
 
     @Override
     public void process() {
-        //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
-    public DocumentFragment get() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    public Node get() {
+        return fragment;
     }
 }

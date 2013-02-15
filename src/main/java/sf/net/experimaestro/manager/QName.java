@@ -56,7 +56,7 @@ public class QName implements Comparable<QName> {
      * @param localName
      */
     public QName(String uri, String localName) {
-        this.uri = uri;
+        this.uri = uri == null ? "" : uri;
         this.localName = localName;
     }
 
@@ -171,7 +171,7 @@ public class QName implements Comparable<QName> {
         int z = (uri != null ? 1 : 0) - (other.uri != null ? 1 : 0);
         if (z != 0) return z;
 
-        z = uri.compareTo(other.uri);
+        z = uri == null ? 0 : uri.compareTo(other.uri);
         if (z != 0) return z;
 
         z = (localName != null ? 1 : 0) - (other.localName != null ? 1 : 0);

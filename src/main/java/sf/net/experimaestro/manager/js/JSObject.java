@@ -88,10 +88,9 @@ public abstract class JSObject implements JSConstructable {
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
-            if (obj instanceof JSPlan.JSPlanRef) {
-                return new JSPlan(((JSPlan.JSPlanRef) obj).getPlan(), ((JSPlan.JSPlanRef) obj).xpath);
+            if (obj instanceof JSTasks.TaskRef) {
+                return ((JSTasks.TaskRef) obj).get(cx);
             }
-
             return super.wrap(cx, scope, obj, staticType);
         }
 

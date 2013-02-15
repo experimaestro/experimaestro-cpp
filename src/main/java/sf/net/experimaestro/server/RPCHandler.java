@@ -41,9 +41,7 @@ import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.FileReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -415,6 +413,7 @@ public class RPCHandler {
 
     /**
      * Run a javascript script (either the file or a string)
+     *
      */
     @RPCHelp("Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
@@ -424,13 +423,17 @@ public class RPCHandler {
             LOGGER.info("HERE I AM !!!!");
         }
 
+        // TODO: add a debugger:
+        // - JSDT: RhinoDebugger
+
         int error = 0;
-        StringBuilder errorMsg = new StringBuilder();
+        final StringWriter errString = new StringWriter();
+        final PrintWriter err = new PrintWriter(errString);
         XPMObject jsXPM = null;
 
         final RootLogger root = new RootLogger(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root);
-        StringWriter stringWriter = new StringWriter();
+        StringWriter stringWriter = errString;
         PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
         WriterAppender appender = new WriterAppender(layout, stringWriter);
         root.addAppender(appender);
@@ -488,21 +491,14 @@ public class RPCHandler {
                 LOGGER.debug("Returns %s", result.toString());
             else
                 LOGGER.debug("Null result");
-            // Object object = scope.get("Task", null);
-            // if (object instanceof NativeFunction) {
-            // org.mozilla.javascript.Context cx2 =
-            // org.mozilla.javascript.Context
-            // .enter();
-            // ((NativeFunction) object).call(cx2, scope, scope, null);
-            // org.mozilla.javascript.Context.exit();
-            // }
+
 
         } catch(Throwable e) {
             final Throwable wrapped = e.getCause() != null ? e.getCause() : e;
             LOGGER.printException(Level.INFO, wrapped);
 
             error = 1;
-            errorMsg.append(wrapped.toString());
+            err.println(wrapped.toString());
 
             ExperimaestroRuntimeException ee = null;
 
@@ -510,18 +506,26 @@ public class RPCHandler {
                 ee = (ExperimaestroRuntimeException) e;
             else if (e.getCause() instanceof ExperimaestroRuntimeException)
                 ee = (ExperimaestroRuntimeException) e.getCause();
+
             if (ee != null) {
                 List<String> context = ee.getContext();
                 if (!context.isEmpty()) {
-                    errorMsg.append("\n[context]\n");
+                    err.format("%n[context]%n");
                     for (String s : ee.getContext()) {
-                        errorMsg.append(s + "\n");
+                        err.format("%s%n", s);
                     }
                 }
             }
 
-            RhinoException re = e instanceof RhinoException ? (RhinoException)e : new WrappedException(e);
-            errorMsg.append("\n" + re.getScriptStackTrace());
+            if (wrapped instanceof NotImplementedException)
+                err.format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]);
+            if (e instanceof RhinoException) {
+                err.append("\n" + ((RhinoException) e).getScriptStackTrace());
+            } else {
+                err.format("Internal error:%n");
+                e.printStackTrace(err);
+            }
+
         } finally {
             // Exit context
             Context.exit();
@@ -529,7 +533,8 @@ public class RPCHandler {
 
         ArrayList<Object> list = new ArrayList<>();
         list.add(error);
-        list.add(errorMsg.toString());
+        err.flush();
+        list.add(errString.toString());
         if (jsXPM != null) {
             list.add(stringWriter.toString());
         }

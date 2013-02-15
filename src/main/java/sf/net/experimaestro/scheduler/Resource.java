@@ -32,10 +32,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -494,4 +491,14 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Secondary key for "state"
      */
     public static final String STATE_KEY_NAME = "state";
+
+    /**
+     * Comparator on the database ID
+     */
+    static public final Comparator<Resource<?>> ID_COMPARATOR = new Comparator<Resource<?>>() {
+        @Override
+        public int compare(Resource<?> o1, Resource<?> o2) {
+            return Long.compare(o1.resourceID, o2.resourceID);
+        }
+    };
 }
