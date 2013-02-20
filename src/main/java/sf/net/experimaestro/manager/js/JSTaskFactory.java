@@ -224,7 +224,7 @@ public class JSTaskFactory extends JSBaseObject {
                 }
 
                 if (sequence)
-                    input = new ArrayInput(input);
+                    input = new ArrayInput(input.getType());
 
                 // Set input properties and store
                 input.setOptional(optional);

@@ -22,8 +22,8 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Mappings;
-import sf.net.experimaestro.manager.Plan;
+import sf.net.experimaestro.manager.plans.Mappings;
+import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
 
@@ -34,7 +34,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * A JS wrapper around {@linkplain sf.net.experimaestro.manager.Plan}
+ * A JS wrapper around {@linkplain sf.net.experimaestro.manager.plans.Plan}
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
@@ -92,7 +92,7 @@ public class JSPlan extends JSBaseObject implements Callable {
                     }
                     mapping.add(new Mappings.Simple(id, objects.toArray()));
                 } else
-                    throw new NotImplementedException(String.format("Cannot handle plan value of type %s", value.getClass()));
+                    throw new NotImplementedException(String.format("Cannot handle plan value of type %s", value == null ? "[null]" : value.getClass()));
             }
 
         }
@@ -187,6 +187,11 @@ public class JSPlan extends JSBaseObject implements Callable {
 
     @JSFunction("join")
     public void join(Object... args) {
+        Plan[][] paths = getPlanPaths(args);
+        plan.addJoin(Arrays.asList(paths));
+    }
+
+    private Plan[][] getPlanPaths(Object[] args) {
         Plan paths[][] = new Plan[args.length][];
         for (int i = 0; i < args.length; i++) {
             final Object object = JSUtils.unwrap(args[i]);
@@ -204,7 +209,7 @@ public class JSPlan extends JSBaseObject implements Callable {
                 ScriptRuntime.typeError0("Cannot handle argument of type " + object.getClass() + " in join()");
 
         }
-        plan.addJoin(Arrays.asList(paths));
+        return paths;
     }
 
     @JSFunction("add")
@@ -224,8 +229,10 @@ public class JSPlan extends JSBaseObject implements Callable {
     }
 
     @JSFunction("group_by")
-    public void groupBy(JSPlan... plans) {
-        throw new NotImplementedException();
+    public JSPlan groupBy(Object... paths) {
+        final Plan[][] plans = getPlanPaths(paths);
+        plan.groupBy(Arrays.asList(plans));
+        return this;
     }
 
 

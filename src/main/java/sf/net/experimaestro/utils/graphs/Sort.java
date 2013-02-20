@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.utils.graphs;
 
+import com.google.common.collect.Iterables;
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
@@ -46,11 +47,12 @@ public class Sort {
 
         Map<NodeRef<T>, MutableInt> remaining = new HashMap<>();
         for (Node node : nodes) {
-            final List<? extends Node> children = node.getChildren();
-            if (children.isEmpty())
+            final Iterable<? extends Node> children = node.getChildren();
+            int size = Iterables.size(children);
+            if (size == 0)
                 dandling.add(new NodeRef(node));
             else
-                remaining.put(new NodeRef(node), new MutableInt(children.size()));
+                remaining.put(new NodeRef(node), new MutableInt(size));
         }
 
         while (!remaining.isEmpty() || !dandling.isEmpty()) {
@@ -83,10 +85,10 @@ public class Sort {
     /**
      * Useful to use a hash
      */
-    static private class NodeRef<T extends Node> {
+    static public class NodeRef<T extends Node> {
         T node;
 
-        private NodeRef(T node) {
+        public NodeRef(T node) {
             this.node = node;
         }
 

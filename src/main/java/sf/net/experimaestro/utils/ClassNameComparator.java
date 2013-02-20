@@ -1,6 +1,6 @@
 package sf.net.experimaestro.utils;
 
-import sf.net.experimaestro.manager.Mapping;
+import sf.net.experimaestro.manager.plans.Mapping;
 
 import java.util.Comparator;
 

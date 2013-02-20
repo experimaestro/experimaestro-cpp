@@ -24,6 +24,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -65,7 +66,7 @@ public abstract class Value {
     /**
      * Returns the value object corresponding to this path
      * @param id The ID
-     * @return The value or
+     * @return The value
      */
     public abstract Value getValue(DotName id) throws NoSuchParameter;
 
@@ -77,7 +78,7 @@ public abstract class Value {
     /**
      * XPMProcess the value before it can be accessed by a task to run
      */
-    public abstract void process() throws NoSuchParameter;
+    public abstract void process() throws NoSuchParameter, ValueMismatchException;
 
     /**
      * Get the value

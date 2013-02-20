@@ -16,7 +16,7 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
@@ -25,6 +25,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -38,7 +40,7 @@ import java.util.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/2/13
  */
-abstract public class Mappings implements Iterable<Mapping> {
+abstract public class Mappings {
 
     /**
      * Initialisation.
@@ -46,15 +48,23 @@ abstract public class Mappings implements Iterable<Mapping> {
      * It can return another Mappings object if the initialization changes
      * its state
      */
-    abstract public Mappings init(PlanNode planNode) throws XPathExpressionException;
+    abstract public Mappings init(TaskNode planNode) throws XPathExpressionException;
 
     /**
      * Add all the plans contained in the mapping
+     *
      * @param subplans
      */
     public abstract void addPlans(HashSet<Plan> subplans);
 
 
+    /**
+     * Returns an iterator over a set of elements of type T.
+     *
+     * @param parentValues
+     * @return an Iterator.
+     */
+    abstract Iterator<Mapping> iterator(Value parentValues);
 
 
     /**
@@ -62,8 +72,9 @@ abstract public class Mappings implements Iterable<Mapping> {
      */
     static public class Reference {
         Plan plan;
-        PlanNode node;
         XPathExpression xpath;
+
+        int index;
 
         public Reference(Plan plan, String xpath) throws XPathExpressionException {
             this(plan, xpath == null ? null : XMLUtils.parseXPath(xpath));
@@ -72,6 +83,10 @@ abstract public class Mappings implements Iterable<Mapping> {
         public Reference(Plan plan, XPathExpression xpath) {
             this.plan = plan;
             this.xpath = xpath;
+        }
+
+        public Node get(Value value) {
+            return value.getNodes()[index];
         }
     }
 
@@ -116,18 +131,21 @@ abstract public class Mappings implements Iterable<Mapping> {
             this.parameters = parameters;
         }
 
-        Connection init(PlanNode planNode) throws XPathExpressionException {
+        Connection init(TaskNode taskNode) throws XPathExpressionException {
             final ArrayList<Reference> references = new ArrayList<>();
             for (Reference reference : this.parameters) {
                 boolean ok = false;
-                for (PlanNode parent : planNode.getParents())
-                    if (parent.getPlan() == reference.plan) {
+                int index = 0;
+                for (Plan plan : taskNode.getInput().plans()) {
+                    if (plan == reference.plan) {
                         final Reference e = new Reference(reference.plan, reference.xpath);
                         references.add(e);
-                        e.node = parent;
+                        e.index = index;
                         ok = true;
                         break;
                     }
+                    index++;
+                }
 
                 if (!ok)
                     throw new AssertionError("Could not find the connection");
@@ -158,7 +176,7 @@ abstract public class Mappings implements Iterable<Mapping> {
         }
 
         @Override
-        public Mappings init(PlanNode planNode) throws XPathExpressionException {
+        public Mappings init(TaskNode planNode) throws XPathExpressionException {
             Object[] newValues = new Object[values.size()];
             for (int i = 0; i < values.size(); i++)
                 if (values.get(i) instanceof Connection)
@@ -178,7 +196,7 @@ abstract public class Mappings implements Iterable<Mapping> {
         }
 
         @Override
-        public Iterator<Mapping> iterator() {
+        public Iterator<Mapping> iterator(final Value parentValues) {
             return new AbstractIterator<Mapping>() {
                 Iterator<Object> iterator = values.iterator();
 
@@ -198,7 +216,7 @@ abstract public class Mappings implements Iterable<Mapping> {
                                 final Node[] nodes = new Node[connection.parameters.size()];
                                 for (int i = 0; i < nodes.length; i++) {
                                     final Reference reference = connection.parameters.get(i);
-                                    final Node node = reference.node.value;
+                                    final Node node = reference.get(parentValues);
 
 
                                     final NodeList list = reference.xpath == null ? new ArrayNodeList(node)
@@ -221,7 +239,6 @@ abstract public class Mappings implements Iterable<Mapping> {
     }
 
 
-
     /**
      * An abstract list of mappings
      */
@@ -233,7 +250,7 @@ abstract public class Mappings implements Iterable<Mapping> {
         }
 
         @Override
-        public Mappings init(PlanNode planNode) throws XPathExpressionException {
+        public Mappings init(TaskNode planNode) throws XPathExpressionException {
             ArrayList<Mappings> newList = new ArrayList<>();
             for (Mappings mappings : list)
                 newList.add(mappings.init(planNode));
@@ -273,8 +290,20 @@ abstract public class Mappings implements Iterable<Mapping> {
 
 
         @Override
-        public Iterator<Mapping> iterator() {
-            final Iterator<Mapping[]> iterator = new CartesianProduct(Mapping.class, list.toArray(new Iterable[list.size()])).iterator();
+        public Iterator<Mapping> iterator(final Value parentValues) {
+            // Wraps the mappings into iterables given the parent values
+            final Iterable[] array = new Iterable[list.size()];
+            for (int i = 0; i < array.length; i++) {
+                final Mappings mappings = list.get(i);
+                array[i] = new Iterable() {
+                    @Override
+                    public Iterator iterator() {
+                        return mappings.iterator(parentValues);
+                    }
+                };
+            }
+
+            final Iterator<Mapping[]> iterator = new CartesianProduct(Mapping.class, array).iterator();
 
             return new AbstractIterator<Mapping>() {
                 @Override
@@ -314,10 +343,10 @@ abstract public class Mappings implements Iterable<Mapping> {
         }
 
         @Override
-        public Iterator<Mapping> iterator() {
+        public Iterator<Mapping> iterator(Value parentValues) {
             Iterator<Mapping> iterators[] = new Iterator[list.size()];
-            for(int i = 0; i < iterators.length; i++)
-                iterators[i] = list.get(i).iterator();
+            for (int i = 0; i < iterators.length; i++)
+                iterators[i] = list.get(i).iterator(parentValues);
 
             return Iterators.concat(iterators);
         }

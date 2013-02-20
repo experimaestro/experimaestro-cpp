@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 
 public class TaskValue extends Value {
 	private Task task;
@@ -46,7 +47,7 @@ public class TaskValue extends Value {
     }
 
     @Override
-	public void process() throws NoSuchParameter {
+	public void process() throws NoSuchParameter, ValueMismatchException {
 		value = task.run();
 	}
 

@@ -1,5 +1,6 @@
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
@@ -18,15 +19,25 @@ public class ArrayValue extends Value {
 
     @Override
     public Value getValue(DotName id) throws NoSuchParameter {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        if (id.isEmpty())
+            return this;
+
+        throw new NoSuchParameter("Unknown parameter name: " + id.toString());
     }
 
     @Override
     public void set(Node value) {
         if (value instanceof DocumentFragment) {
             fragment = value;
+
         }
-        throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
+
+        else if (value instanceof Document) {
+            fragment = ((Document) value).createDocumentFragment();
+            fragment.appendChild(((Document) value).getDocumentElement());
+        }
+
+        else throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
     }
 
     @Override

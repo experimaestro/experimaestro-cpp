@@ -16,37 +16,31 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.manager.Task;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
- * A set of plans
+ * A mapping from a variable name to a value
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/2/13
+ * @date 7/2/13
  */
-public class JSPlans extends JSBaseObject {
-    ArrayList<Plan> plans = new ArrayList<>();
+public abstract class Mapping {
+    /**
+     * Sets the value
+     *
+     * @param task
+     */
+    abstract void set(Task task) throws NoSuchParameter, XPathExpressionException;
 
-    @JSFunction("add")
-    public void add(JSPlan jsplan) {
-        plans.add(jsplan.plan);
+
+    static public interface Set extends Iterable<Mapping> {
     }
 
-    @JSFunction("run")
-    public ArrayList<Node> run() throws XPathExpressionException {
-        ArrayList<Node> result = new ArrayList<>();
-        for(Plan plan: plans) {
-            final Iterator<Node> nodes = plan.run();
-            while (nodes.hasNext()) {
-                result.add(nodes.next());
-            }
-        }
-        return result;
-    }
+
 }
+

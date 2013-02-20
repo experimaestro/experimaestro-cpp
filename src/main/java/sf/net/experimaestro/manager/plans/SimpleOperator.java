@@ -16,37 +16,34 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.plans.Plan;
+import com.google.common.collect.ImmutableList;
 
-import javax.xml.xpath.XPathExpressionException;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.List;
 
 /**
- * A set of plans
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/2/13
+ * @date 20/2/13
  */
-public class JSPlans extends JSBaseObject {
-    ArrayList<Plan> plans = new ArrayList<>();
+abstract public class SimpleOperator extends Operator {
+    /**
+     * The input operator
+     */
+    Operator input;
 
-    @JSFunction("add")
-    public void add(JSPlan jsplan) {
-        plans.add(jsplan.plan);
+    @Override
+    public List<Operator> getParents() {
+        return input == null ? ImmutableList.<Operator>of() : ImmutableList.of(input);
     }
 
-    @JSFunction("run")
-    public ArrayList<Node> run() throws XPathExpressionException {
-        ArrayList<Node> result = new ArrayList<>();
-        for(Plan plan: plans) {
-            final Iterator<Node> nodes = plan.run();
-            while (nodes.hasNext()) {
-                result.add(nodes.next());
-            }
-        }
-        return result;
+    @Override
+    public void addParent(Operator parent) {
+        if (this.input != null)
+            throw new IndexOutOfBoundsException("Trying to add more than one parent to a TaskNode");
+        input = parent;
+
     }
+
+
 }

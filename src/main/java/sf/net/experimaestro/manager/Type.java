@@ -19,24 +19,30 @@
 package sf.net.experimaestro.manager;
 
 
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.utils.XMLUtils;
+
 /**
  * An XML type defined by a qualified name
  */
 public class Type {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * The qualified name of this type
-	 */
-	private final QName qname;
+    /**
+     * The qualified name of this type
+     */
+    private final QName qname;
 
-	public Type(QName qname) {
-		this.qname = qname;
-	}
+    public Type(QName qname) {
+        this.qname = qname;
+    }
 
-	public QName getId() {
-		return qname;
-	}
+    public QName getId() {
+        return qname;
+    }
 
     public QName qname() {
         return qname;
@@ -57,11 +63,36 @@ public class Type {
 
     /**
      * REturns whether the tag name matches the type
+     *
      * @param namespaceURI
      * @param name
      * @return <tt>true</tt> if it matches, false otherwise
      */
     public boolean matches(String namespaceURI, String name) {
         return namespaceURI.equals(getNamespaceURI()) && name.equals(getLocalPart());
+    }
+
+    /**
+     * Validate the value
+     *
+     * @param node The XML node to validate
+     */
+    public void validate(Node node) throws ValueMismatchException {
+        final Element element = XMLUtils.getRootElement(node);
+
+        if (element == null)
+            throw new ExperimaestroRuntimeException("No root element");
+
+        // Check if we have the expected element type
+        final String tagName = element.getLocalName();
+        String tagURI = element.getNamespaceURI();
+        if (tagURI == null)
+            tagURI = "";
+
+        if (!matches(tagURI, tagName))
+            throw new ValueMismatchException("Parameter was set to a value with a wrong type [{%s}%s] - expected [%s]",
+                   tagURI, tagName, this);
+
+
     }
 }

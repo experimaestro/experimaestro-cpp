@@ -22,6 +22,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -107,7 +108,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void process() throws NoSuchParameter {
+    public void process() throws NoSuchParameter, ValueMismatchException {
         // If the value has not been set
         if (value == null) {
             // If the task has not been set, try to use default value

@@ -16,17 +16,21 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.AbstractIterator;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterators;
+import com.sun.istack.internal.Nullable;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.utils.DAGCartesianProduct;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -86,6 +90,12 @@ public class Plan {
         return data.run(this);
     }
 
+
+    public void printPlan(PrintStream out) throws XPathExpressionException {
+        final Operator planNode = data.planGraph(this);
+        planNode.printDOT(out);
+    }
+
     /**
      * Create a task
      *
@@ -99,7 +109,7 @@ public class Plan {
         return data.factory;
     }
 
-    public Mappings init(PlanNode node) throws XPathExpressionException {
+    public Mappings init(TaskNode node) throws XPathExpressionException {
         return data.mappings.init(node);
     }
 
@@ -115,7 +125,7 @@ public class Plan {
     /**
      * The data associated to a plan. It is a distinct object since a plan
      * can be either directly equal to another (same object) or can share
-     * the same data.
+     * the same data, which is used to perform joins
      */
     static private class Data {
         /**
@@ -196,63 +206,72 @@ public class Plan {
          * @return
          */
         Iterator<Node> run(Plan plan) throws XPathExpressionException {
-            // Creates the PlanNode
-            final PlanNode planNode = planGraph(plan);
-            planNode.init();
+            // Creates the TaskNode
+            final Operator mainNode = planGraph(plan).init();
 
-            // Display the plan graph
-            if (LOGGER.isTraceEnabled())  {
+            // Display the plan graph is trace is enabled
+            if (LOGGER.isTraceEnabled()) {
                 LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE);
-                out.println("digraph G {");
-                planNode.printDOT(out, new HashSet<PlanNode>());
-                out.println("}");
+                mainNode.printDOT(out);
                 out.flush();
             }
 
-            HashSet<PlanNode> set = new HashSet<>();
-            planNode.fillWithNodes(set);
-            final PlanNode[] nodes = set.toArray(new PlanNode[set.size()]);
-            final DAGCartesianProduct product = new DAGCartesianProduct(nodes);
-            return new AbstractIterator<Node>() {
+            // Now run
+            final Iterator<Value> iterator = mainNode.iterator();
+
+            return Iterators.transform(iterator, new Function<Value, Node>() {
                 @Override
-                protected Node computeNext() {
-                    if (product.next())
-                        return planNode.value;
-                    return endOfData();
+                public Node apply(@Nullable Value from) {
+                    assert from.getNodes().length == 1;
+                    return from.getNodes()[0];
                 }
-            };
+            });
+
         }
 
 
         /**
          * Returns the graph corresponding to this plan
          *
+         *
          * @param plan
          * @return The node that is the root (sink) of the DAG
          */
-        synchronized private PlanNode planGraph(Plan plan) throws XPathExpressionException {
+        synchronized private Operator planGraph(Plan plan) throws XPathExpressionException {
             // Create our node
-            final PlanNode self = new PlanNode(plan);
+            final TaskNode self = new TaskNode(plan);
+            Operator operator = self;
 
-            // --- Create the parent nodes
-            for (Plan subplan : subplans) {
-                final PlanNode parent = subplan.data.planGraph(subplan);
-                self.parents.add(parent);
-                parent.children.add(self);
+            if (subplans.size() <= 1) {
+                if (!subplans.isEmpty()) {
+                    final Operator parent = subplans.get(0).data.planGraph(subplans.get(0));
+                    self.addParent(parent);
+                }
+            } else {
+                // Use a cartesian product
+                Product product = new Product();
+                for (Plan subplan : subplans) {
+                    final Operator parent = subplan.data.planGraph(subplan);
+                    product.addParent(parent);
+                }
+                self.addParent(product);
             }
 
             // --- Handle joins
-            PlanNode target = null;
+            TaskNode target = null;
             for (List<Plan[]> list : joins) {
                 // Find it (will be kth of current)
                 for (Plan[] path : list) {
                     int k = -1;
-                    PlanNode current = null;
+                    TaskNode current = null;
+                    List<Operator> parents = null;
+
                     for (int i = 0; i < path.length; i++) {
-                        current = current == null ? self : current.parents.get(k);
+                        current = current == null ? self : (TaskNode) getParents(current).get(k);
+                        parents = getParents(current);
                         k = -1;
-                        for (int j = 0; j < current.parents.size(); j++)
-                            if (current.parents.get(j).getPlan() == path[i]) {
+                        for (int j = 0; j < parents.size(); j++)
+                            if (((TaskNode) parents.get(j)).getPlan() == path[i]) {
                                 k = j;
                                 break;
                             }
@@ -262,22 +281,68 @@ public class Plan {
 
                     if (target == null)
                         // If we have no target yet
-                        target = current.parents.get(k);
+                        target = (TaskNode) parents.get(k);
                     else {
                         // Ensure equality
-                        if (!current.parents.get(k).equals(target))
+                        if (!parents.get(k).equals(target))
                             throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
                         // Join
-                        LOGGER.debug("Join: replacing %s by %s", System.identityHashCode(current.parents.get(k)), System.identityHashCode(target));
-                        current.parents.set(k, target);
+                        LOGGER.debug("Join: replacing %s by %s", System.identityHashCode(parents.get(k)), System.identityHashCode(target));
+                        parents.set(k, target);
                         target.children.add(current);
                     }
                 }
 
             }
 
-            return self;
+            // --- Handle group by: mark parents
+
+            if (groupBy != null) {
+                GroupBy groupBy = new GroupBy();
+
+                // Get all the ancestor to group by
+                for (Plan[] path : this.groupBy) {
+                    TaskNode current = self;
+                    List<Operator> parents = getParents(current);
+                    for (int i = 0; i < path.length; i++) {
+                        int k = -1;
+                        for (int j = 0; j < parents.size(); j++)
+                            if (((TaskNode)parents.get(j)).getPlan() == path[i]) {
+                                k = j;
+                                break;
+                            }
+                        if (k == -1)
+                            throw new RuntimeException("Could not find a matching plan for group-by");
+
+                        current = (TaskNode) parents.get(k);
+                        parents = getParents(current);
+                    }
+
+                    // Remove
+                    groupBy.add(current);
+                }
+
+                operator = groupBy;
+            }
+
+            return operator;
         }
+
+        /**
+         * Get the taskoperators parents
+         * @param current The current TaskOperator
+         * @return
+         */
+        private List<Operator> getParents(Operator current) {
+            if (current instanceof GroupBy)
+                current = current.getParents().get(0);
+
+
+            if (((TaskNode)current).input instanceof Product)
+                return ((TaskNode)current).input.getParents();
+            return current.getParents();
+        }
+
 
         synchronized protected Data copy() {
             count++;
@@ -286,6 +351,7 @@ public class Plan {
 
         /**
          * Add new mappings
+         *
          * @param mappings
          * @return
          */
@@ -308,6 +374,7 @@ public class Plan {
 
         /**
          * Add groups by
+         *
          * @param plans
          */
         synchronized public Data groupBy(List<Plan[]> plans) {

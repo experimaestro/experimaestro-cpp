@@ -25,7 +25,7 @@ import static java.lang.String.format;
 
 public class ExperimaestroException extends Exception {
 	private static final long serialVersionUID = 1L;
-	ArrayList<String> context = new ArrayList<String>();
+	ArrayList<String> context = new ArrayList<>();
 
 	public ExperimaestroException() {
 		super();

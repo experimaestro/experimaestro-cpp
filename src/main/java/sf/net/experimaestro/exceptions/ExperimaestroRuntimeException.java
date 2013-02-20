@@ -26,7 +26,7 @@ import static java.lang.String.format;
 public class ExperimaestroRuntimeException extends RuntimeException {
 	private static final long serialVersionUID = 1L;
     public static final AssertionError SHOULD_NOT_BE_HERE = new AssertionError("Should not be here");
-    ArrayList<String> context = new ArrayList<String>();
+    ArrayList<String> context = new ArrayList<>();
 
 	public ExperimaestroRuntimeException() {
 		super();

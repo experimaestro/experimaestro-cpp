@@ -18,12 +18,21 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.log.Logger;
+
 /**
  * Represents an atomic value
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/9/12
  */
 public class ValueType extends Type {
+    final static private Logger LOGGER = Logger.getLogger();
+
     static final QName QNAME = null;
 
     private QName type;
@@ -45,5 +54,56 @@ public class ValueType extends Type {
     @Override
     public boolean matches(String namespaceURI, String name) {
         return true;
+    }
+
+    @Override
+    public void validate(Node node) {
+        final Element element = XMLUtils.getRootElement(node);
+
+        if (element == null)
+            throw new ExperimaestroRuntimeException("No root element");
+        String x = element.getTextContent();
+        // Test if the value is OK
+        try {
+            boolean ok = false;
+
+            switch (type.getNamespaceURI()) {
+                case Manager.XMLSCHEMA_NS:
+                    switch (type.getLocalPart()) {
+                        case "string":
+                            ok = true;
+                            break; // we accepts anything
+                        case "float":
+                            Float.parseFloat(x);
+                            ok = true;
+                            break;
+                        case "integer":
+                            Integer.parseInt(x);
+                            ok = true;
+                            break;
+                    }
+                    break;
+
+                case Manager.EXPERIMAESTRO_NS:
+                    switch (type.getLocalPart()) {
+                        // TODO: do those checks
+                        case "directory":
+                            LOGGER.info("Did not check if [%s] was a directory", x);
+                            ok = true;
+                            break;
+                        case "file":
+                            LOGGER.info("Did not check if [%s] was a file", x);
+                            ok = true;
+                            break;
+                    }
+                    break;
+            }
+
+            if (!ok)
+                throw new ExperimaestroRuntimeException("Un-handled type [%s]");
+        } catch (NumberFormatException e) {
+            ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException("Wrong value for type [%s]: %s", type, x);
+            throw e2;
+        }
     }
 }

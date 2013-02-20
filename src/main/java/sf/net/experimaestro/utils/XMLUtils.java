@@ -164,8 +164,8 @@ public class XMLUtils {
         return x;
     }
 
-    public static Iterable<Element> childElements(final Element element) {
-        return elements(children(element));
+    public static Iterable<Element> childElements(final Node node) {
+        return elements(children(node));
     }
 
     public static Iterable<? extends Node> children(Node node) {

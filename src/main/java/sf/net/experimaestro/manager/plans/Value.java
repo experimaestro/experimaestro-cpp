@@ -16,32 +16,40 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.plans;
 
-import sf.net.experimaestro.manager.plans.Plan;
+import org.w3c.dom.Node;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/2/13
- */
-public class JSPlanRef extends JSBaseObject {
-    Plan plan;
-    String path;
+* @author B. Piwowarski <benjamin@bpiwowar.net>
+* @date 20/2/13
+*/
+public class Value {
+    /**
+     * The value ID
+     */
+    long id;
 
-    public JSPlanRef(Plan plan, String path) {
-        this.plan = plan;
-        this.path = path;
+    /**
+     * The next value (useful when sharing)
+     */
+    Value next = null;
+
+    /**
+     * The produced node
+     */
+    Node[] nodes;
+
+    /**
+     * The context
+     */
+    long context[];
+
+    public Value(Node[] nodes) {
+        this.nodes = nodes;
     }
 
-    public JSPlanRef(JSPlan jsplan) {
-        this(jsplan.plan, null);
-    }
-
-    public Plan getPlan() {
-        return plan;
-    }
-
-    public String getPath() {
-        return path;
+    public Node[] getNodes() {
+        return nodes;
     }
 }

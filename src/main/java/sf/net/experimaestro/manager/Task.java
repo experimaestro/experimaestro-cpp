@@ -19,15 +19,15 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.StringReader;
@@ -40,17 +40,14 @@ import java.util.Map.Entry;
  */
 public abstract class Task {
     final static private Logger LOGGER = Logger.getLogger();
-
     /**
      * The information related to this class of experiment
      */
     protected TaskFactory factory;
-
     /**
      * List of sub-tasks
      */
     protected Map<String, Value> values = new TreeMap<>();
-
     /**
      * Sub-tasks without name (subset of the map {@link #values}).
      */
@@ -66,6 +63,14 @@ public abstract class Task {
      */
     protected Task(TaskFactory information) {
         this.factory = information;
+    }
+
+    static private void addEdge(Map<String, TreeSet<String>> edges,
+                                String from, String to) {
+        TreeSet<String> inSet = edges.get(from);
+        if (inSet == null)
+            edges.put(from, inSet = new TreeSet<String>());
+        inSet.add(to);
     }
 
     /**
@@ -121,7 +126,7 @@ public abstract class Task {
      * <p/>
      * Calls {@linkplain #doRun()}
      */
-    final public Node run() throws NoSuchParameter {
+    final public Node run() throws NoSuchParameter, ValueMismatchException {
         LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter
@@ -155,74 +160,14 @@ public abstract class Task {
 
                 // Check type
                 final Type type = input.getType();
+
                 if (type != null && value.isSet()) {
-                    final Element element = XMLUtils.getRootElement(value.get());
-
-                    if (element == null)
-                        throw new ExperimaestroRuntimeException("No root element");
-
-                    // Check if we have the expected element type
-                    final String tagName = element.getLocalName();
-                    String tagURI = element.getNamespaceURI();
-                    if (tagURI == null)
-                        tagURI = "";
-
-                    if (!type.matches(tagURI, tagName))
-                        throw new ExperimaestroRuntimeException("Parameter [%s] in task [%s] was set to a value with a wrong type [{%s}%s] - expected [%s]",
-                                key, factory.id, tagURI, tagName, type);
-
-                    // In cases of values, further check
-                    if (type instanceof ValueType) {
-                        QName valueType = ((ValueType) type).getValueType();
-                        String x = element.getTextContent();
-                        // Test if the value is OK
-                        try {
-                            boolean ok = false;
-
-                            switch (valueType.getNamespaceURI()) {
-                                case Manager.XMLSCHEMA_NS:
-                                    switch (valueType.getLocalPart()) {
-                                        case "string":
-                                            ok = true;
-                                            break; // we accepts anything
-                                        case "float":
-                                            Float.parseFloat(x);
-                                            ok = true;
-                                            break;
-                                        case "integer":
-                                            Integer.parseInt(x);
-                                            ok = true;
-                                            break;
-                                    }
-                                    break;
-
-                                case Manager.EXPERIMAESTRO_NS:
-                                    switch (valueType.getLocalPart()) {
-                                        // TODO: do those checks
-                                        case "directory":
-                                            LOGGER.info("Did not check if [%s] was a directory", x);
-                                            ok = true;
-                                            break;
-                                        case "file":
-                                            LOGGER.info("Did not check if [%s] was a file", x);
-                                            ok = true;
-                                            break;
-                                    }
-                                    break;
-                            }
-
-                            if (!ok)
-                                throw new ExperimaestroRuntimeException("Un-handled type [%s] in processing parameter [%s] of task [%s]",
-                                        valueType, key, factory.id);
-                        } catch (NumberFormatException e) {
-                            ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException("Wrong value for type [%s]: %s", valueType, x);
-                            throw e2;
-                        }
-
-
-                    }
+                    type.validate(value.get());
                 }
             } catch (ExperimaestroRuntimeException e) {
+                e.addContext("While processing input [%s] in task [%s]", key, factory.id);
+                throw e;
+            } catch (ExperimaestroException e) {
                 e.addContext("While processing input [%s] in task [%s]", key, factory.id);
                 throw e;
             }
@@ -241,8 +186,8 @@ public abstract class Task {
     private ArrayList<String> getOrderedInputs() {
         // (1) Order the values to avoid dependencies
         // See http://en.wikipedia.org/wiki/Topological_sorting
-        ArrayList<String> list = new ArrayList<String>();
-        ArrayList<String> graph = new ArrayList<String>(values.keySet());
+        ArrayList<String> list = new ArrayList<>();
+        ArrayList<String> graph = new ArrayList<>(values.keySet());
 
         Map<String, TreeSet<String>> forward_edges = new TreeMap<String, TreeSet<String>>();
         Map<String, TreeSet<String>> backwards_edges = new TreeMap<String, TreeSet<String>>();
@@ -297,14 +242,6 @@ public abstract class Task {
         return list;
     }
 
-    static private void addEdge(Map<String, TreeSet<String>> edges,
-                                String from, String to) {
-        TreeSet<String> inSet = edges.get(from);
-        if (inSet == null)
-            edges.put(from, inSet = new TreeSet<String>());
-        inSet.add(to);
-    }
-
     /**
      * Set a parameter from an XML value
      *
@@ -313,7 +250,15 @@ public abstract class Task {
      * @return True if the parameter was set and false otherwise
      */
     public final void setParameter(DotName id, Node value) throws NoSuchParameter {
-        getValue(id).set(value);
+        try {
+            getValue(id).set(value);
+        } catch (ExperimaestroRuntimeException e) {
+            e.addContext("While setting parameter %s of %s", id, factory.getId());
+        } catch (RuntimeException e) {
+            final ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException(e);
+            e2.addContext("While setting parameter %s of %s", id, factory.getId());
+            throw e2;
+        }
     }
 
     /**
@@ -330,7 +275,6 @@ public abstract class Task {
         final Document doc = JSUtils.wrap(ns, id.getName(), value);
         v.set(doc);
     }
-
 
     /**
      * Returns the {@linkplain} object corresponding to the
@@ -362,7 +306,6 @@ public abstract class Task {
 
         return inputValue.getValue(id.offset(1));
     }
-
 
     /**
      * Initialise the task
@@ -422,8 +365,6 @@ public abstract class Task {
 
     /**
      * Run an experimental plan
-     *
-     *
      *
      * @param planString The plan string
      * @param singlePlan If the plan should be composed of only one plan

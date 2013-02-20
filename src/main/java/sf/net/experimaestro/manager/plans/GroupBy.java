@@ -16,37 +16,39 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.js;
-
-import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.plans.Plan;
+package sf.net.experimaestro.manager.plans;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashSet;
+import java.util.List;
 
 /**
- * A set of plans
+ * Grouping by
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/2/13
+ * @date 20/2/13
  */
-public class JSPlans extends JSBaseObject {
-    ArrayList<Plan> plans = new ArrayList<>();
+public class GroupBy extends SimpleOperator {
+    List<Operator> joins = new ArrayList<>();
 
-    @JSFunction("add")
-    public void add(JSPlan jsplan) {
-        plans.add(jsplan.plan);
+    public void add(Operator operator) {
+        joins.add(operator);
     }
 
-    @JSFunction("run")
-    public ArrayList<Node> run() throws XPathExpressionException {
-        ArrayList<Node> result = new ArrayList<>();
-        for(Plan plan: plans) {
-            final Iterator<Node> nodes = plan.run();
-            while (nodes.hasNext()) {
-                result.add(nodes.next());
-            }
-        }
-        return result;
+    @Override
+    public List<Plan> plans() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
+
+    @Override
+    protected OperatorIterator _iterator() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    protected Operator init(HashSet<Operator> processed) throws XPathExpressionException {
+
+        return super.init(processed);
+    }
+
 }

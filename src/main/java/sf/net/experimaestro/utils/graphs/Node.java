@@ -8,6 +8,6 @@ import java.util.List;
  * @date 8/2/13
  */
 public interface Node {
-    List<? extends Node> getParents();
-    List<? extends Node> getChildren();
+    Iterable<? extends Node> getParents();
+    Iterable<? extends Node> getChildren();
 }

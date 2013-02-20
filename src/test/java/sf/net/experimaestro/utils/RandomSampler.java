@@ -206,7 +206,7 @@ public final class RandomSampler {
                 Vprime = y1 * (-X / Nreal + 1.0) * qu1real / (negSreal + qu1real);
                 if (Vprime <= 1.0) {
                     break;
-                } //break inner loop
+                } //break inner lastUpdated
 
                 //step D4: Accept?
                 double top = -1.0 + Nreal;
@@ -228,7 +228,7 @@ public final class RandomSampler {
                 if (Nreal / (-X + Nreal) >= y1 * Math.exp(Math.log(y2) * nmin1inv)) {
                     // accept !
                     Vprime = Math.exp(Math.log(randomGenerator.nextDouble()) * nmin1inv);
-                    break; //break inner loop
+                    break; //break inner lastUpdated
                 }
                 Vprime = Math.exp(Math.log(randomGenerator.nextDouble()) * ninv);
             }
@@ -444,7 +444,7 @@ public final class RandomSampler {
                 vprime = y1 * (-X / Nreal + 1.0) * qu1real / (negSreal + qu1real);
                 if (vprime <= 1.0) {
                     break;
-                } //break inner loop
+                } //break inner lastUpdated
 
                 //step D4: Accept?
                 double top = -1.0 + Nreal;
@@ -466,7 +466,7 @@ public final class RandomSampler {
                 if (Nreal / (-X + Nreal) >= y1 * Math.exp(Math.log(y2) * nmin1inv)) {
                     // accept !
                     vprime = Math.exp(Math.log(randomGenerator.nextDouble()) * nmin1inv);
-                    break; //break inner loop
+                    break; //break inner lastUpdated
                 }
                 vprime = Math.exp(Math.log(randomGenerator.nextDouble()) * ninv);
             }
