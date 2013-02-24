@@ -19,15 +19,26 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.WrappedException;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.plans.Mappings;
-import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.plans.Constant;
+import sf.net.experimaestro.manager.plans.Function;
+import sf.net.experimaestro.manager.plans.FunctionOperator;
+import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanReference;
+import sf.net.experimaestro.manager.plans.XPathFunction;
 import sf.net.experimaestro.utils.JSUtils;
 
-import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,6 +58,7 @@ public class JSPlan extends JSBaseObject implements Callable {
 
     /**
      * Builds a wrapper around a plan
+     *
      * @param plan
      */
     public JSPlan(Plan plan) {
@@ -60,95 +72,93 @@ public class JSPlan extends JSBaseObject implements Callable {
      * @param object
      */
     public JSPlan(TaskFactory factory, NativeObject object) throws XPathExpressionException {
-
-        Mappings mapping = getMappings(object);
-
-        plan = new Plan(factory, mapping);
+        plan = new Plan(factory);
+        addMappings(object);
     }
 
-    private Mappings getMappings(NativeObject object) throws XPathExpressionException {
-        Mappings.Product mapping = new Mappings.Product();
-
+    private void addMappings(NativeObject object) throws XPathExpressionException {
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
             DotName id = DotName.parse(name);
 
             final Object value = JSUtils.unwrap(object.get(name, object));
 
-            Object o = getValue(value);
-            if (o != null) {
-                mapping.add(new Mappings.Simple(id, o));
-            } else {
-                if (value instanceof NativeArray) {
-                    final NativeArray array = (NativeArray) value;
-                    ArrayList<Object> objects = new ArrayList<>();
-
-                    for (int i = 0; i < array.getLength(); i++) {
-                        final Object e = array.get(i);
-                        o = getValue(e);
-                        if (o == null)
-                            throw new NotImplementedException(String.format("Cannot handle plan value of type %s", e.getClass()));
-                        objects.add(o);
-                    }
-                    mapping.add(new Mappings.Simple(id, objects.toArray()));
-                } else
-                    throw new NotImplementedException(String.format("Cannot handle plan value of type %s", value == null ? "[null]" : value.getClass()));
-            }
+            if (value instanceof NativeArray) {
+                final NativeArray array = (NativeArray) value;
+                for (int i = 0; i < array.getLength(); i++) {
+                    final Object e = array.get(i);
+                    plan.set(id, getSimple(e));
+                }
+            } else
+                plan.set(id, getSimple(value));
 
         }
-        return mapping;
+
     }
 
 
     /**
      * Returns a mapping for the given value
      *
+     *
      * @param value The value
      * @return The object (String or XML fragment) or <tt>null</tt>
      */
-    Object getValue(Object value) throws XPathExpressionException {
+    Operator getSimple(Object value) throws XPathExpressionException {
         value = JSUtils.unwrap(value);
 
-        if (value instanceof Integer)
-            return Integer.toString((Integer) value);
+        if (value instanceof Integer) {
+            return wrapValue(Integer.toString((Integer) value));
+        }
 
         if (value instanceof Double) {
             // Because rhino returns doubles for any number
             if ((((Double) value).longValue()) == ((Double) value).doubleValue())
-                return Long.toString(((Double) value).longValue());
-            return Double.toString((Double) value);
+                return wrapValue(Long.toString(((Double) value).longValue()));
+            return wrapValue(Double.toString((Double) value));
         }
 
-        if (value instanceof JSPlan) {
-            JSPlan jsplan = (JSPlan) value;
-            final Mappings.Reference reference = new Mappings.Reference(jsplan.plan, (XPathExpression) null);
-            final Mappings.Connection connection = new Mappings.Connection(Mappings.IdentityFunction.INSTANCE, reference);
-            return connection;
-        }
+        // Case of plans or functions of plans
+        if (value instanceof JSPlan)
+            return new PlanReference(((JSPlan) value).plan);
 
         if (value instanceof JSPlanRef) {
-            JSPlanRef jsplanRef = (JSPlanRef) value;
-            final Mappings.Reference reference = new Mappings.Reference(jsplanRef.getPlan(), jsplanRef.getPath());
-            final Mappings.Connection connection = new Mappings.Connection(Mappings.IdentityFunction.INSTANCE, reference);
-            return connection;
+            return getOperator((JSPlanRef) value);
         }
 
         if (value instanceof JSTransform) {
             final JSTransform jsTransform = (JSTransform) value;
-            Mappings.Reference references[] = new Mappings.Reference[jsTransform.plans.length];
-            for (int i = 0; i < references.length; i++)
-                references[i] = new Mappings.Reference(jsTransform.plans[i].getPlan(), jsTransform.plans[i].getPath());
-            final Mappings.Connection connection = new Mappings.Connection(jsTransform, references);
-
-            return connection;
+            final FunctionOperator operator = new FunctionOperator(jsTransform);
+            for(JSPlanRef jsplanRef: jsTransform.plans)
+                operator.addParent(getOperator(jsplanRef));
+            throw new NotImplementedException();
         }
 
         if (JSUtils.isXML(value)) {
-            return JSUtils.toDOM(null, value);
+            return new Constant(JSUtils.toDOM(null, value));
         }
 
         return null;
 
+    }
+
+    /**
+     * Get the operator of a Plan reference
+     * @param jsPlanRef
+     * @return
+     * @throws XPathExpressionException
+     */
+    private Operator getOperator(JSPlanRef jsPlanRef) throws XPathExpressionException {
+        if (jsPlanRef.getPath().equals("."))
+            return new PlanReference(jsPlanRef.plan);
+        final XPathFunction function = new XPathFunction(jsPlanRef.getPath());
+        final FunctionOperator operator = new FunctionOperator(function);
+        operator.addParent(new PlanReference(plan));
+        return operator;
+    }
+
+    private Constant wrapValue(String value1) {
+        return new Constant(JSUtils.wrap(Manager.EXPERIMAESTRO_NS, "value", value1));
     }
 
     public Object run(Context context, Scriptable scope) throws XPathExpressionException {
@@ -212,11 +222,6 @@ public class JSPlan extends JSBaseObject implements Callable {
         return paths;
     }
 
-    @JSFunction("add")
-    public void add(NativeObject plan) throws XPathExpressionException {
-        final Mappings mappings = getMappings(plan);
-        this.plan.add(mappings);
-    }
 
     @JSFunction("path")
     public JSPlanRef path(String path) {
@@ -239,7 +244,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     /**
      * JS function to transform inputs in a plan
      */
-    static public class JSTransform extends JSBaseObject implements Mappings.Function {
+    static public class JSTransform extends JSBaseObject implements Function {
         protected final Context cx;
         protected final Scriptable scope;
         protected final Callable f;
@@ -253,7 +258,6 @@ public class JSPlan extends JSBaseObject implements Callable {
             this.plans = plans;
         }
 
-        @Override
         public Node f(Node[] parameters) {
             Object[] e4x_args = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++)

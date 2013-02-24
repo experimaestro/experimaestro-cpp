@@ -18,38 +18,26 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
+ * An operator with multiple inputs
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 20/2/13
+ */
+abstract public class NAryOperator extends Operator {
+    ArrayList<Operator> parents = new ArrayList<>();
 
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Node[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Node... nodes) {
-        this.nodes = nodes;
+    @Override
+    public List<Operator> getParents() {
+        return parents;
     }
 
-    public Node[] getNodes() {
-        return nodes;
+    @Override
+    public void addParent(Operator parent) {
+        super.addParent(parent);
+        parents.add(parent);
     }
+
 }

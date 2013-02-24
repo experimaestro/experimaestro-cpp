@@ -18,32 +18,19 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.ImmutableList;
-
-import java.util.List;
+import org.w3c.dom.Node;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
+ * @date 21/2/13
  */
-abstract public class SimpleOperator extends Operator {
+public interface Function  {
+
     /**
-     * The input operator
+     * Apply the function
+     * @param input
+     * @return
      */
-    Operator input;
-
-    @Override
-    public List<Operator> getParents() {
-        return input == null ? ImmutableList.<Operator>of() : ImmutableList.of(input);
-    }
-
-    @Override
-    public void addParent(Operator parent) {
-        if (this.input != null)
-            throw new IndexOutOfBoundsException("Trying to add more than one parent to a TaskNode");
-        input = parent;
-
-    }
-
+    abstract Node f(Node input[]);
 
 }

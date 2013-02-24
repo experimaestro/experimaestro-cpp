@@ -18,38 +18,22 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
+import org.apache.commons.lang.NotImplementedException;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 22/2/13
+ */
+public class FunctionOperator extends UnaryOperator {
+    Function function;
 
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Node[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Node... nodes) {
-        this.nodes = nodes;
+    public FunctionOperator(Function function) {
+        this.function = function;
     }
 
-    public Node[] getNodes() {
-        return nodes;
+    @Override
+    protected OperatorIterator _iterator() {
+        // TODO: implement _iterator
+        throw new NotImplementedException();
     }
 }

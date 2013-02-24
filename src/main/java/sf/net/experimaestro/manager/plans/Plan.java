@@ -19,22 +19,32 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Multimap;
 import com.sun.istack.internal.Nullable;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 
 /**
  * An experimental plan.
@@ -54,8 +64,8 @@ public class Plan {
      *
      * @param factory
      */
-    public Plan(TaskFactory factory, Mappings mappings) {
-        this.data = new Data(factory, mappings);
+    public Plan(TaskFactory factory) {
+        this.data = new Data(factory);
     }
 
     private Plan(Data data) {
@@ -67,12 +77,31 @@ public class Plan {
      *
      * @param plans
      */
-    synchronized public void addJoin(List<Plan[]> plans) {
+    public void addJoin(List<Plan[]> plans) {
+        verifyPaths(plans);
+
         data = data.addJoin(plans);
     }
 
+
     public void groupBy(List<Plan[]> plans) {
+        verifyPaths(plans);
         data = data.groupBy(plans);
+    }
+
+    private void verifyPaths(List<Plan[]> plans) {
+        for (Plan[] path : plans)
+            if (sub(path, 0) == null)
+                throw new ExperimaestroRuntimeException("Subpath cannot be found");
+    }
+
+    private Plan sub(Plan[] path, int index) {
+        if (index == path.length) return this;
+        for (Plan subplan : data.getSubPlans())
+            if (subplan == path[index])
+                return subplan.sub(path, index + 1);
+
+        return null;
     }
 
     @Override
@@ -92,7 +121,7 @@ public class Plan {
 
 
     public void printPlan(PrintStream out) throws XPathExpressionException {
-        final Operator planNode = data.planGraph(this);
+        final Operator planNode = data.planGraph(this, new PlanMap());
         planNode.printDOT(out);
     }
 
@@ -109,16 +138,13 @@ public class Plan {
         return data.factory;
     }
 
-    public Mappings init(TaskNode node) throws XPathExpressionException {
-        return data.mappings.init(node);
-    }
 
     public Plan copy() {
         return new Plan(data.copy());
     }
 
-    public void add(Mappings mappings) {
-        data = data.add(mappings);
+    public void set(DotName id, Operator operator) {
+        data.set(id, operator);
     }
 
 
@@ -134,14 +160,10 @@ public class Plan {
         TaskFactory factory;
 
         /**
-         * Direct sub-plans
+         * Mappings to either list of plans or operators
          */
-        ArrayList<Plan> subplans = new ArrayList<>();
+        Multimap<DotName, Operator> inputs = ArrayListMultimap.create();
 
-        /**
-         * Direct mappings
-         */
-        Mappings mappings;
 
         /**
          * Joins to perform
@@ -159,12 +181,8 @@ public class Plan {
          */
         int count = 1;
 
-        public Data(TaskFactory factory, Mappings mappings) {
+        public Data(TaskFactory factory) {
             this.factory = factory;
-            this.mappings = mappings;
-            HashSet<Plan> set = new HashSet<>();
-            mappings.addPlans(set);
-            this.subplans = new ArrayList<>(set);
         }
 
         /**
@@ -189,9 +207,10 @@ public class Plan {
          */
         synchronized private Data ensureOne() {
             if (count > 1) {
-                Data data = new Data(factory, mappings);
+                Data data = new Data(factory);
                 data.joins.addAll(data.joins);
-                data.subplans.addAll(data.subplans);
+                data.inputs.putAll(data.inputs);
+                data.groupBy.addAll(data.groupBy);
                 return data;
             }
 
@@ -207,17 +226,31 @@ public class Plan {
          */
         Iterator<Node> run(Plan plan) throws XPathExpressionException {
             // Creates the TaskNode
-            final Operator mainNode = planGraph(plan).init();
+            Operator operator = planGraph(plan, new PlanMap());
+            if (LOGGER.isTraceEnabled())
+                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                    out.println("After creation");
+                    operator.printDOT(out);
+                }
 
-            // Display the plan graph is trace is enabled
-            if (LOGGER.isTraceEnabled()) {
-                LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE);
-                mainNode.printDOT(out);
-                out.flush();
-            }
+
+            operator = Operator.simplify(operator);
+            if (LOGGER.isTraceEnabled())
+                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                    out.println("After simplification");
+                    operator.printDOT(out);
+                }
+
+
+            operator.init();
+            if (LOGGER.isTraceEnabled())
+                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                    out.println("After initialisation");
+                    operator.printDOT(out);
+                }
 
             // Now run
-            final Iterator<Value> iterator = mainNode.iterator();
+            final Iterator<Value> iterator = operator.iterator();
 
             return Iterators.transform(iterator, new Function<Value, Node>() {
                 @Override
@@ -233,114 +266,126 @@ public class Plan {
         /**
          * Returns the graph corresponding to this plan
          *
-         *
          * @param plan
+         * @param map  The current plan path (containg joins in input, and operators in output)
          * @return The node that is the root (sink) of the DAG
          */
-        synchronized private Operator planGraph(Plan plan) throws XPathExpressionException {
-            // Create our node
-            final TaskNode self = new TaskNode(plan);
-            Operator operator = self;
+        synchronized private Operator planGraph(Plan plan, PlanMap map) throws XPathExpressionException {
+            // Check if a plan was not already generated
+            Operator old = map.get();
+            if (old != null)
+                return old;
 
-            if (subplans.size() <= 1) {
-                if (!subplans.isEmpty()) {
-                    final Operator parent = subplans.get(0).data.planGraph(subplans.get(0));
-                    self.addParent(parent);
-                }
-            } else {
-                // Use a cartesian product
-                Product product = new Product();
-                for (Plan subplan : subplans) {
-                    final Operator parent = subplan.data.planGraph(subplan);
-                    product.addParent(parent);
-                }
-                self.addParent(product);
-            }
 
             // --- Handle joins
-            TaskNode target = null;
             for (List<Plan[]> list : joins) {
+                assert list.size() > 1;
+
+                final Plan[] first = list.get(0);
+                Plan refPlan = first[first.length - 1];
+                PlanMap ref = map.sub(first, true);
+
                 // Find it (will be kth of current)
-                for (Plan[] path : list) {
-                    int k = -1;
-                    TaskNode current = null;
-                    List<Operator> parents = null;
+                for (Plan[] path : list.subList(1, list.size() - 1)) {
+                    // Verify that the two plans to be joined are compatible
+                    if (!refPlan.equals(path[path.length - 1]))
+                        throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
 
-                    for (int i = 0; i < path.length; i++) {
-                        current = current == null ? self : (TaskNode) getParents(current).get(k);
-                        parents = getParents(current);
-                        k = -1;
-                        for (int j = 0; j < parents.size(); j++)
-                            if (((TaskNode) parents.get(j)).getPlan() == path[i]) {
-                                k = j;
-                                break;
-                            }
-                        if (k == -1)
-                            throw new RuntimeException("Could not find a matching plan");
-                    }
-
-                    if (target == null)
-                        // If we have no target yet
-                        target = (TaskNode) parents.get(k);
-                    else {
-                        // Ensure equality
-                        if (!parents.get(k).equals(target))
-                            throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
-                        // Join
-                        LOGGER.debug("Join: replacing %s by %s", System.identityHashCode(parents.get(k)), System.identityHashCode(target));
-                        parents.set(k, target);
-                        target.children.add(current);
-                    }
+                    // Join
+                    map.sub(path, true).join(ref);
                 }
-
             }
 
-            // --- Handle group by: mark parents
+            // --- Loop over the cartesian product of the inputs
+            DotName ids[] = new DotName[inputs.keySet().size()];
+            OperatorIterable values[] = new OperatorIterable[inputs.keySet().size()];
 
-            if (groupBy != null) {
-                GroupBy groupBy = new GroupBy();
-
-                // Get all the ancestor to group by
-                for (Plan[] path : this.groupBy) {
-                    TaskNode current = self;
-                    List<Operator> parents = getParents(current);
-                    for (int i = 0; i < path.length; i++) {
-                        int k = -1;
-                        for (int j = 0; j < parents.size(); j++)
-                            if (((TaskNode)parents.get(j)).getPlan() == path[i]) {
-                                k = j;
-                                break;
-                            }
-                        if (k == -1)
-                            throw new RuntimeException("Could not find a matching plan for group-by");
-
-                        current = (TaskNode) parents.get(k);
-                        parents = getParents(current);
-                    }
-
-                    // Remove
-                    groupBy.add(current);
+            {
+                int index = 0;
+                for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
+                    ids[index] = input.getKey();
+                    values[index] = new OperatorIterable(input.getValue(), map);
+                    index++;
                 }
-
-                operator = groupBy;
+                assert index == ids.length;
             }
 
-            return operator;
-        }
+            // Create a new operator
+            Union union = new Union();
+            map.set(union);
 
-        /**
-         * Get the taskoperators parents
-         * @param current The current TaskOperator
-         * @return
-         */
-        private List<Operator> getParents(Operator current) {
-            if (current instanceof GroupBy)
-                current = current.getParents().get(0);
+            for (Operator[] singleInputs : CartesianProduct.of(Operator.class, values)) {
+                // Create our node
+                TaskNode self = new TaskNode(plan);
+
+                // --- Build the Cartesian product / join of the inputs
+                Product product = new Product();
+                ArrayList<DotName> mappings = new ArrayList<>();
+                Multimap<Operator, Product.JoinReference> joinMap = HashMultimap.create();
+                for (int index = 0; index < ids.length; index++) {
+                    Operator parent = singleInputs[index];
+                    for (Map.Entry<Operator, Integer> op : parent.getStreams().entrySet()) {
+                        joinMap.put(op.getKey(), new Product.JoinReference(index, op.getValue()));
+                    }
+                    product.addParent(parent);
+                    mappings.add(ids[index]);
+                }
+
+                self.setMappings(mappings);
+
+                // If we have more than one subplan per operator, then we need to join
+                if (joinMap.keySet().size() != joinMap.size()) {
+                    OrderBy orderBy[] = new OrderBy[singleInputs.length];
+                    Set<OrderBy> orderBySet = new HashSet<>();
+
+                    Product.Join join = new Product.Join();
+                    for (Map.Entry<Operator, Collection<Product.JoinReference>> x : joinMap.asMap().entrySet()) {
+                        if (x.getValue().size() < 2)
+                            continue;
+                        for (Product.JoinReference ref : x.getValue()) {
+                            join.add(ref);
+                            if (orderBy[ref.streamIndex] == null)
+                                orderBy[ref.streamIndex] = new OrderBy(orderBySet);
+                            orderBy[ref.streamIndex].add(ref.contextIndex);
+                        }
+                    }
+
+                    for (int index = 0; index < singleInputs.length; index++) {
+                        if (orderBy[index] != null)
+                            product.getParents().get(index).replaceBy(orderBy[index]);
+                    }
+
+                    // Finally, add the join to the product
+                    product.addJoin(join);
+                }
+
+                self.addParent(product);
 
 
-            if (((TaskNode)current).input instanceof Product)
-                return ((TaskNode)current).input.getParents();
-            return current.getParents();
+                // --- Handle group by
+
+                if (groupBy == null) {
+                    union.addParent(self);
+                } else {
+                    GroupBy groupBy = new GroupBy();
+
+
+                    // Get all the ancestor to group by
+                    for (Plan[] path : this.groupBy) {
+                        final PlanMap submap = map.sub(path, false);
+                        final Operator taskNode = submap.get();
+
+                        // Should not happen since they are defined paths
+                        assert taskNode != null : "Cannot group by: no associated operator";
+
+                        // Add to the operator
+                        groupBy.add(taskNode);
+                    }
+                    union.addParent(groupBy);
+                }
+            }
+
+            return union;
         }
 
 
@@ -349,28 +394,6 @@ public class Plan {
             return this;
         }
 
-        /**
-         * Add new mappings
-         *
-         * @param mappings
-         * @return
-         */
-        synchronized public Data add(Mappings mappings) {
-            final Data data = ensureOne();
-            if (data != this)
-                return data.add(mappings);
-
-            if (this.mappings instanceof Mappings.Alternative) {
-                ((Mappings.Alternative) this.mappings).add(mappings);
-            } else {
-                Mappings.Alternative alt = new Mappings.Alternative();
-                alt.add(this.mappings);
-                alt.add(mappings);
-                this.mappings = alt;
-            }
-
-            return this;
-        }
 
         /**
          * Add groups by
@@ -385,7 +408,101 @@ public class Plan {
             groupBy = plans;
             return this;
         }
+
+        public void set(DotName id, Operator object) {
+            final Data data = ensureOne();
+            if (data != this)
+                data.set(id, object);
+            else {
+                inputs.put(id, object);
+            }
+        }
+
+        public Iterable<? extends Plan> getSubPlans() {
+            Set<Plan> set = new HashSet<>();
+            for (Object input : inputs.values()) {
+                if (input instanceof Plan)
+                    set.add((Plan) input);
+                else if (input instanceof Operator) {
+                    // FIXME: should do something here?
+                } else throw new AssertionError();
+
+            }
+            return set;
+        }
+
     }
 
 
+    static private class OperatorIterable implements Iterable<Operator> {
+        Collection<Operator> collection;
+        PlanMap map;
+
+        public OperatorIterable(Collection<Operator> collection, PlanMap map) {
+            this.collection = collection;
+            this.map = map;
+        }
+
+        @Override
+        public Iterator<Operator> iterator() {
+            // We unroll everything below
+            final Stack<Iterator<? extends Operator>> iterators = new Stack<>();
+
+
+            iterators.add(collection.iterator());
+
+            return new AbstractIterator<Operator>() {
+
+                // We put all "simple" values in a big constant to simplify the plan
+                Constant constant = null;
+
+                @Override
+                protected Operator computeNext() {
+                    while (true) {
+                        // Search for a valid iterator in the stack
+                        while (true) {
+                            if (iterators.peek().hasNext()) break;
+                            iterators.pop();
+                            if (iterators.empty())
+                                if (constant == null)
+                                    return endOfData();
+                                else {
+                                    Constant r = constant;
+                                    constant = null;
+                                    iterators.push(Iterators.<Operator>emptyIterator());
+                                    return r;
+                                }
+                        }
+
+                        // Get the next item and process
+                        Operator source = iterators.peek().next();
+                        if (source instanceof PlanReference) {
+                            try {
+                                Plan plan = ((PlanReference) source).plan;
+                                return plan.data.planGraph(plan, map.sub(plan, true));
+                            } catch (XPathExpressionException e) {
+                                throw new ExperimaestroRuntimeException(e);
+                            }
+                        }
+
+                        if (source instanceof Union) {
+                            iterators.add(source.getParents().iterator());
+                            continue;
+                        }
+
+                        if (source instanceof Constant) {
+                            if (constant == null)
+                                constant = new Constant();
+                            constant.add((Constant) source);
+                            continue;
+                        }
+
+                        return source;
+                    }
+                }
+            };
+        }
+
+
+    }
 }

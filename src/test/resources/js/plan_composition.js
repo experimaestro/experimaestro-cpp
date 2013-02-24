@@ -80,6 +80,10 @@ tasks.ns::identity_bis = {
 function check(results, expected) {
 	if (results.length != expected.length)
 		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
+    
+    // Sort the results
+    results.sort(function(x,y) { return x - y; });
+    logger.info("Results: %s", results.toSource());
     for (var i = 0; i < expected.length; i++) {
         if (expected[i] != Number(results[i])) 
 			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].toSource(), i);
@@ -104,7 +108,6 @@ function test_simple() {
     var result = plan2();
     check(result, [3, 5, 6, 10]);
 }
-
 
 /**
  * Simple product of two plans (with access to output)

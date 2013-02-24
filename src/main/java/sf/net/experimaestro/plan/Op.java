@@ -53,7 +53,7 @@ public class Op extends Node {
 		case MULT: {
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			final CartesianProduct<Map<String, Value>> p = new CartesianProduct(
-					Map.class, true, n1, n2);
+					Map.class, n1, n2);
 			return new AbstractIterator<Map<String, Value>>() {
 				Iterator<Map<String, Value>[]> iterator = p.iterator();
 

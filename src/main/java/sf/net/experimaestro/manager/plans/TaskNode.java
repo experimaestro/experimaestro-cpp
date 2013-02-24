@@ -18,39 +18,30 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import bpiwowar.argparser.utils.Output;
+import com.google.common.collect.ImmutableList;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 
-import javax.xml.xpath.XPathExpressionException;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * A plan node that can be iterated over
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskNode extends SimpleOperator {
-    /**
-     * Add a reference to ourselves in produced values
-     */
-    protected boolean addSelf;
-
-
+public class TaskNode extends UnaryOperator {
     /**
      * The associated plan
      */
     private Plan plan;
-
-    /**
-     * Our mappings
-     */
-    Mappings mappings;
+    private ArrayList<DotName> mappings;
 
     public Plan getPlan() {
         return plan;
@@ -65,11 +56,6 @@ public class TaskNode extends SimpleOperator {
         this.plan = plan;
     }
 
-    @Override
-    public List<Plan> plans() {
-        return Arrays.asList(plan);
-    }
-
     /**
      * Creates an iterator
      */
@@ -78,38 +64,29 @@ public class TaskNode extends SimpleOperator {
         return new OperatorIterator() {
             Value parentValue;
 
-            Iterator<? extends Mapping> iterator;
-
             // Parent values
-            final Iterator<Value> parentIterator = input != null ? input.iterator() : null;
+            final Iterator<Value> iterator = input != null ?
+                    input.iterator() : ImmutableList.of(new Value(new Node[0])).iterator();
 
             @Override
             protected Value _computeNext() {
-                // We started, so we remove the reference
-                currentIterator = null;
+                if (!iterator.hasNext())
+                    return endOfData();
 
-                // Get the next value from which we can iterate
-                while (iterator == null || !iterator.hasNext()) {
-                    if (input != null) {
-                        if (!parentIterator.hasNext())
-                            return endOfData();
-                        parentValue = parentIterator.next();
-                    } else if (iterator != null)
-                        return endOfData();
+                Value value = iterator.next();
 
-                    iterator = mappings.iterator(parentValue);
+                Task task = plan.createTask();
+                assert mappings.size() == value.nodes.length;
+                for(int i = 0; i < value.nodes.length; i++) {
+                    try {
+                        task.setParameter(mappings.get(i), value.nodes[i]);
+                    } catch (NoSuchParameter noSuchParameter) {
+                        throw new AssertionError();
+                    }
                 }
-
-                // Execute
                 try {
-                    final Mapping mapping = iterator.next();
-                    final Task task = plan.createTask();
-                    mapping.set(task);
-                    final Node node = task.run();
-
-
-                    return new Value(new Node[]{node});
-                } catch (NoSuchParameter | ValueMismatchException | XPathExpressionException e) {
+                    return new Value(task.run());
+                } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);
                 }
             }
@@ -130,18 +107,18 @@ public class TaskNode extends SimpleOperator {
     }
 
 
+    public Operator getInput() {
+        return input;
+    }
+
     @Override
-    protected TaskNode init(HashSet<Operator> processed) throws XPathExpressionException {
-        if (super.init(processed) != null) {
-            // Init the mappings
-            mappings = plan.init(this);
-            return this;
-        }
-        return null;
+    protected void printDOTNode(PrintStream out) {
+        out.format("p%s [label=\"task %s(%s)\"];%n", System.identityHashCode(this), plan.getFactory().getId(),
+                Output.toString(", ", mappings));
     }
 
 
-    public Operator getInput() {
-        return input;
+    public void setMappings(ArrayList<DotName> mappings) {
+        this.mappings = mappings;
     }
 }

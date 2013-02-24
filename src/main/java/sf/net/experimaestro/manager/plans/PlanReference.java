@@ -18,38 +18,27 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
+import java.util.List;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
+ * Fake operator that only contains a plan
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 22/2/13
+ */
+public class PlanReference extends Operator {
+    Plan plan;
 
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Node[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Node... nodes) {
-        this.nodes = nodes;
+    public PlanReference(Plan plan) {
+        this.plan = plan;
     }
 
-    public Node[] getNodes() {
-        return nodes;
+    @Override
+    public List<Operator> getParents() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected OperatorIterator _iterator() {
+        throw new UnsupportedOperationException();
     }
 }

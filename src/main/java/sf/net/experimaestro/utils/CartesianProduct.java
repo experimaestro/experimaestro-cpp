@@ -36,16 +36,9 @@ public class CartesianProduct<T> implements Iterable<T[]> {
     private final Class<T> klass;
 
     public CartesianProduct(Class<T> klass, Iterable<? extends T>... iterables) {
-        this(klass, false, iterables);
-    }
-
-    public CartesianProduct(Class<T> klass, boolean reuse,
-                            Iterable<? extends T>... iterables) {
         this.klass = klass;
         this.iterables = iterables;
     }
-
-
 
     @Override
     public Iterator<T[]> iterator() {
@@ -96,4 +89,7 @@ public class CartesianProduct<T> implements Iterable<T[]> {
         };
     }
 
+    public static <T> Iterable<T[]> of(Class<T> aClass, Iterable<? extends T>... values) {
+        return new CartesianProduct<>(aClass, values);
+    }
 }

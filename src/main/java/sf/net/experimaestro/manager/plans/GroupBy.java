@@ -18,9 +18,9 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import javax.xml.xpath.XPathExpressionException;
+import org.apache.commons.lang.NotImplementedException;
+
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -28,27 +28,17 @@ import java.util.List;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/2/13
  */
-public class GroupBy extends SimpleOperator {
+public class GroupBy extends UnaryOperator {
     List<Operator> joins = new ArrayList<>();
 
     public void add(Operator operator) {
         joins.add(operator);
     }
 
-    @Override
-    public List<Plan> plans() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
 
     @Override
     protected OperatorIterator _iterator() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        // TODO: implement _iterator
+        throw new NotImplementedException();
     }
-
-    @Override
-    protected Operator init(HashSet<Operator> processed) throws XPathExpressionException {
-
-        return super.init(processed);
-    }
-
 }

@@ -18,25 +18,10 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * An operator with multiple inputs
+ * Request in terms of
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
+ * @date 21/2/13
  */
-abstract public class Merge extends Operator {
-    ArrayList<Operator> parents;
-
-    @Override
-    public List<Operator> getParents() {
-        return parents;
-    }
-
-    @Override
-    public void addParent(Operator parent) {
-        parents.add(parent);
-        parent.children.add(this);
-    }
+public class StreamRequest {
 }

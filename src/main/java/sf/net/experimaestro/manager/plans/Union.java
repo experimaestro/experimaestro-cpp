@@ -18,10 +18,29 @@
 
 package sf.net.experimaestro.manager.plans;
 
-/**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
- */
-public class Join {
+import org.apache.commons.lang.NotImplementedException;
 
+import java.io.PrintStream;
+
+/**
+ * Merge the output of several operators
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 21/2/13
+ */
+public class Union extends NAryOperator {
+
+    @Override
+    protected OperatorIterator _iterator() {
+        return new OperatorIterator() {
+            @Override
+            protected Value _computeNext() {
+                throw new NotImplementedException();
+            }
+        };
+    }
+
+    @Override
+    protected void printDOTNode(PrintStream out) {
+        out.format("p%s [label=\"Union\"];%n", System.identityHashCode(this));
+    }
 }

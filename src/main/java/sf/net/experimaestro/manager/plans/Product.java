@@ -18,24 +18,49 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.AbstractIterator;
 import org.w3c.dom.Node;
 
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 /**
- * Cartesian product of inputs
+ * Join / cartesian product of inputs
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/2/13
  */
-public class Product extends Merge {
+public class Product extends NAryOperator {
+    /**
+     * A context reference
+     */
+    static public class JoinReference {
+        int streamIndex;
+        int contextIndex;
 
+        public JoinReference(int streamIndex, int contextIndex) {
+            this.streamIndex = streamIndex;
+            this.contextIndex = contextIndex;
+        }
+    }
 
-    @Override
-    public List<Plan> plans() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    static public class Join {
+        long current;
+        List<JoinReference> references = new ArrayList<>();
+
+        public void add(JoinReference reference) {
+            references.add(reference);
+        }
+    }
+
+    /**
+     * List of joins
+     */
+    List<Join> joins = new ArrayList<>();
+
+    public void addJoin(Join join) {
+        joins.add(join);
     }
 
     @Override
@@ -48,34 +73,35 @@ public class Product extends Merge {
 
         return new OperatorIterator() {
             boolean first = true;
-            Value current = null;
+            Node current [] = new Node[inputs.length];
 
             @Override
             protected Value _computeNext() {
+                // First loop
+                Node[] nodes = new Node[inputs.length];
+
                 if (first) {
-                    Node[] nodes = new Node[inputs.length];
                     for (int i = 0; i < parents.size(); i++) {
                         if (!inputs[i].hasNext())
                             return endOfData();
                         else {
-                            set(nodes, i);
+                            if (i > 0)
+                                next(current, i);
                         }
                     }
                     first = false;
-                    return current = new Value(nodes);
                 }
 
-                Node[] nodes = new Node[inputs.length];
                 for (int i = 0; i < parents.size(); i++) {
                     if (inputs[i].hasNext()) {
-                        set(nodes, i);
+                        next(current, i);
 
-                        for (int j = 0; --j >= 0; ) {
+                        for (int j = i; --j >= 0; ) {
                             inputs[j] = parents.get(j).iterator();
-                            set(nodes, j);
+                            next(current, j);
                         }
 
-                        System.arraycopy(current.nodes, i + 1, nodes, i + 1, parents.size() - i - 1);
+                        System.arraycopy(current, 0, nodes, 0, inputs.length);
 
                         return new Value(nodes);
                     }
@@ -84,7 +110,7 @@ public class Product extends Merge {
                 return endOfData();
             }
 
-            private void set(Node[] nodes, int i) {
+            private void next(Node[] nodes, int i) {
                 final Value value = inputs[i].next();
                 assert value.nodes.length == 1;
                 nodes[i] = value.nodes[0];
@@ -92,5 +118,8 @@ public class Product extends Merge {
         };
     }
 
-
+    @Override
+    protected void printDOTNode(PrintStream out) {
+        out.format("p%s [label=\"Product/Join\"];%n", System.identityHashCode(this));
+    }
 }

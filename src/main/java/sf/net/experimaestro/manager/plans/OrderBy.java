@@ -18,29 +18,33 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.manager.Task;
+import org.apache.commons.lang.NotImplementedException;
 
-import javax.xml.xpath.XPathExpressionException;
+import java.util.List;
+import java.util.Set;
 
 /**
- * A mapping from a variable name to a value
- *
+ * Order the input using some operators
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
+ * @date 21/2/13
  */
-public abstract class Mapping {
-    /**
-     * Sets the value
-     *
-     * @param task
-     */
-    abstract void set(Task task) throws NoSuchParameter, XPathExpressionException;
+public class OrderBy extends UnaryOperator {
+    List<Set<Operator>> order;
+    private final Object set;
 
-
-    static public interface Set extends Iterable<Mapping> {
+    public OrderBy(Set<OrderBy> set) {
+        this.set = set;
     }
 
 
-}
+    public void add(int contextIndex) {
+        // TODO: implement add
+        throw new NotImplementedException();
+    }
 
+    @Override
+    protected OperatorIterator _iterator() {
+        // TODO: implement _iterator
+        throw new NotImplementedException();
+    }
+}
