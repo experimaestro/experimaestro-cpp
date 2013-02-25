@@ -18,7 +18,12 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.*;
+import org.apache.commons.lang.ClassUtils;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.WrappedException;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.lang.reflect.Array;
@@ -112,7 +117,8 @@ class MethodFunction implements Callable {
         // Normal arguments
         for (int i = 0; i < nbArgs && score > 0; i++) {
             final Object o = JSUtils.unwrap(args[i]);
-            if (types[i + offset].isAssignableFrom(o.getClass()))
+            Class<?> type = ClassUtils.primitiveToWrapper(types[i + offset]);
+            if (type.isAssignableFrom(o.getClass()))
                 continue;
             score = 0;
             break;
@@ -120,10 +126,10 @@ class MethodFunction implements Callable {
 
         // Var args
         if (method.isVarArgs()) {
-                Class<?> type = types[types.length-1].getComponentType();
+            Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && score > 0; i++) {
-                final Object o = JSUtils.unwrap(args[nbArgs+i]);
+                final Object o = JSUtils.unwrap(args[nbArgs + i]);
                 if (type.isAssignableFrom(o.getClass()))
                     continue;
                 score = 0;

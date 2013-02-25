@@ -433,7 +433,7 @@ public class RPCHandler {
 
         final RootLogger root = new RootLogger(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root);
-        StringWriter stringWriter = errString;
+        StringWriter stringWriter = new StringWriter();
         PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
         WriterAppender appender = new WriterAppender(layout, stringWriter);
         root.addAppender(appender);
@@ -494,7 +494,10 @@ public class RPCHandler {
 
 
         } catch(Throwable e) {
-            final Throwable wrapped = e.getCause() != null ? e.getCause() : e;
+            Throwable wrapped = e;
+            while (wrapped.getCause() != null)
+                wrapped = wrapped.getCause();
+
             LOGGER.printException(Level.INFO, wrapped);
 
             error = 1;

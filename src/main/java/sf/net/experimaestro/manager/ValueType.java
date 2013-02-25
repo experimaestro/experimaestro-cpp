@@ -18,10 +18,10 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Element;
+import org.apache.commons.vfs2.FileSystemException;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -58,29 +58,23 @@ public class ValueType extends Type {
 
     @Override
     public void validate(Node node) {
-        final Element element = XMLUtils.getRootElement(node);
-
-        if (element == null)
-            throw new ExperimaestroRuntimeException("No root element");
-        String x = element.getTextContent();
+        String x = Manager.unwrap(node);
         // Test if the value is OK
         try {
-            boolean ok = false;
 
             switch (type.getNamespaceURI()) {
                 case Manager.XMLSCHEMA_NS:
                     switch (type.getLocalPart()) {
                         case "string":
-                            ok = true;
                             break; // we accepts anything
                         case "float":
                             Float.parseFloat(x);
-                            ok = true;
                             break;
                         case "integer":
                             Integer.parseInt(x);
-                            ok = true;
                             break;
+                        default:
+                            throw new ExperimaestroRuntimeException("Un-handled type [%s]");
                     }
                     break;
 
@@ -89,21 +83,57 @@ public class ValueType extends Type {
                         // TODO: do those checks
                         case "directory":
                             LOGGER.info("Did not check if [%s] was a directory", x);
-                            ok = true;
                             break;
                         case "file":
                             LOGGER.info("Did not check if [%s] was a file", x);
-                            ok = true;
                             break;
+                        default:
+                            throw new ExperimaestroRuntimeException("Un-handled type [%s]");
                     }
                     break;
+
+                default:
+                    throw new ExperimaestroRuntimeException("Un-handled type [%s]");
             }
 
-            if (!ok)
-                throw new ExperimaestroRuntimeException("Un-handled type [%s]");
         } catch (NumberFormatException e) {
             ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException("Wrong value for type [%s]: %s", type, x);
             throw e2;
+        }
+    }
+
+    public Object unwrap(Node node) {
+        String x = Manager.unwrap(node);
+
+        switch (type.getNamespaceURI()) {
+            case Manager.XMLSCHEMA_NS:
+                switch (type.getLocalPart()) {
+                    case "string":
+                        return x;
+                    case "float":
+                        return Float.parseFloat(x);
+                    case "integer":
+                        return Integer.parseInt(x);
+                    default:
+                        throw new ExperimaestroRuntimeException("Un-handled type [%s]");
+                }
+
+            case Manager.EXPERIMAESTRO_NS:
+                switch (type.getLocalPart()) {
+                    // TODO: do those checks
+                    case "directory":
+                    case "file":
+                        try {
+                            return Scheduler.getVFSManager().resolveFile(x);
+                        } catch (FileSystemException e) {
+                            throw new ExperimaestroRuntimeException(e);
+                        }
+                    default:
+                        throw new ExperimaestroRuntimeException("Un-handled type [%s]");
+                }
+
+            default:
+                throw new ExperimaestroRuntimeException("Un-handled type [%s]");
         }
     }
 }

@@ -18,7 +18,12 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.Text;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.xquery.XQException;
@@ -60,4 +65,42 @@ public class Manager {
 		return map;
 	}
 
+    /**
+     * Wraps a value into an XML document
+     *
+     * @param namespace The namespace URI
+     * @param name The local name of the element
+     * @param value The value of the element
+     * @return An XML document representing the value
+     */
+    static public Document wrap(String namespace, String name, String value) {
+        final Document doc = XMLUtils.newDocument();
+        Element element = doc.createElementNS(namespace, name);
+        element.setAttributeNS(EXPERIMAESTRO_NS, "value", value);
+        doc.appendChild(element);
+        return doc;
+    }
+
+    /**
+     * Unwraps the value from XML to a string
+     * @param node
+     * @return
+     */
+    static public String unwrap(Node node) {
+        if (node instanceof DocumentFragment && node.getChildNodes().getLength() == 1) {
+            node = node.getFirstChild();
+        }
+        if (node instanceof Text || node instanceof Attr)
+            return node.getTextContent();
+
+        node = XMLUtils.getRootElement(node);
+
+        // Check if we have an associated value...
+        Element element = ((Element) node);
+        if (element.hasAttributeNS(EXPERIMAESTRO_NS, "value"))
+            return element.getAttributeNS(EXPERIMAESTRO_NS, "value");
+
+        // ... otherwise, returns the text content
+        return element.getTextContent();
+    }
 }

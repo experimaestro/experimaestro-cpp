@@ -26,7 +26,6 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.xq.ParentPath;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -61,6 +60,10 @@ public abstract class Value {
      */
     public Value(Input input) {
         this.input = input;
+    }
+
+    final public Type getType() {
+        return input.getType();
     }
 
     /**
@@ -166,14 +169,14 @@ public abstract class Value {
                 final int itemKind = xqItem.getItemType().getItemKind();
                 switch (itemKind) {
                     case XQItemType.XQITEMKIND_ATOMIC:
-                        item = JSUtils.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
+                        item = Manager.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
                         break;
                     case XQItemType.XQITEMKIND_ELEMENT:
                         item = xqItem.getNode();
                         break;
                     case XQItemType.XQITEMKIND_ATTRIBUTE:
                     case XQItemType.XQITEMKIND_TEXT:
-                        item = JSUtils.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
+                        item = Manager.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
                         break;
                     default:
                         throw new ExperimaestroRuntimeException(

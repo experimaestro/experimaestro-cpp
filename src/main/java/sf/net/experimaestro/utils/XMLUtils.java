@@ -20,7 +20,13 @@ package sf.net.experimaestro.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.w3c.dom.*;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
@@ -29,6 +35,7 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -36,6 +43,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -296,7 +304,15 @@ public class XMLUtils {
     }
 
     /**
-     * Returns the root element if it exists
+     * Returns the "root" element if it exists.
+     *
+     * More precisely, for types
+     * <ul>
+     *     <li>Document: returns the document element</li>
+     *     <li>Element: returns the element</li>
+     *     <li>Other: ensures there is only one child element and returns it</li>
+     * </ul>
+     *
      *
      * @param node
      * @return
@@ -328,6 +344,12 @@ public class XMLUtils {
 
     public static XPathExpression parseXPath(String path) throws XPathExpressionException {
         return XPATH_FACTORY.newXPath().compile(path);
+    }
+
+    public static XPathExpression parseXPath(String expression, NamespaceContext nsContext) throws XPathExpressionException {
+        XPath xpath = XPATH_FACTORY.newXPath();
+        xpath.setNamespaceContext(nsContext);
+        return xpath.compile(expression);
     }
 
     /** Tranform a node list into a document fragment */

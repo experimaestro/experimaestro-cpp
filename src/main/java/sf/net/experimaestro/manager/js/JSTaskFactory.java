@@ -82,7 +82,7 @@ public class JSTaskFactory extends JSBaseObject {
     @JSHelp("Creates a plan from this task")
     @JSFunction(value = "plan", scope = true)
     public JSPlan plan(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
-        return new JSPlan(factory, object);
+        return new JSPlan(scope, factory, object);
     }
 
 
@@ -107,6 +107,11 @@ public class JSTaskFactory extends JSBaseObject {
          */
         private Type output;
 
+        /**
+         * Our XPM object
+         */
+        private final XPMObject xpm;
+
 
         /**
          * Creates a new task information from a javascript object
@@ -120,6 +125,7 @@ public class JSTaskFactory extends JSBaseObject {
                     "version", jsObject, "1.0"), null);
             this.jsScope = scope;
             this.jsObject = jsObject;
+            this.xpm = XPMObject.getXPMObject(scope);
 
             // --- Look up the module
             Module module = JSModule.getModule(repository,
@@ -421,7 +427,7 @@ public class JSTaskFactory extends JSBaseObject {
 
             // Set the default value
             if (el.hasAttribute("default")) {
-                final Document defaultValue = JSUtils.wrap(namespace, id, el.getAttribute("default"));
+                final Document defaultValue = Manager.wrap(namespace, id, el.getAttribute("default"));
                 input.setDefaultValue(defaultValue);
                 LOGGER.debug("Default value[" + el.getAttribute("default") + "]: " + XMLUtils.toString(defaultValue));
 
@@ -434,7 +440,7 @@ public class JSTaskFactory extends JSBaseObject {
                     document.adoptNode(child);
                     final Iterator<Element> elements = XMLUtils.elements(child.getChildNodes()).iterator();
                     if (!elements.hasNext()) {
-                        document = JSUtils.wrap(namespace, id, child.getTextContent());
+                        document = Manager.wrap(namespace, id, child.getTextContent());
                     } else {
                         document.appendChild(elements.next());
                         if (elements.hasNext())
@@ -463,8 +469,8 @@ public class JSTaskFactory extends JSBaseObject {
         }
 
 
-        public Object run(NativeObject object) throws XPathExpressionException {
-            return new JSPlan(this, object).run(Context.getCurrentContext(), object.getParentScope());
+        public Object run(Scriptable scope, NativeObject object) throws XPathExpressionException {
+            return new JSPlan(scope, this, object).run(Context.getCurrentContext(), object.getParentScope());
         }
 
 
@@ -482,7 +488,7 @@ public class JSTaskFactory extends JSBaseObject {
                     throw new RuntimeException(
                             "Could not find the create or run functions.");
 
-                JSDirectTask jsConfigurationTask = new JSDirectTask(this, jsScope,
+                JSDirectTask jsConfigurationTask = new JSDirectTask(xpm, this, jsScope,
                         jsObject, (Function) function);
                 jsConfigurationTask.init();
                 return jsConfigurationTask;

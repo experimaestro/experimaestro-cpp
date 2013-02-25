@@ -54,6 +54,13 @@ var task = {
 		
 };
 
+/* 
+TODO: ease the composition by
+tasks.abc::task = compose({
+    [tasks.abc::task_2, { x: tasks.abc.task_2::x } ]
+});
+*/
+
 
 // Add tasks
 

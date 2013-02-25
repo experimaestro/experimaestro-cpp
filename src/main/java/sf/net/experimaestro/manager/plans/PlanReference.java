@@ -18,10 +18,15 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+
+import javax.xml.xpath.XPathExpressionException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Fake operator that only contains a plan
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 22/2/13
  */
@@ -40,5 +45,21 @@ public class PlanReference extends Operator {
     @Override
     protected OperatorIterator _iterator() {
         throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public Operator init(PlanMap map) {
+        try {
+            return plan.planGraph(map.sub(plan, true));
+        } catch (XPathExpressionException e) {
+            throw new ExperimaestroRuntimeException(e);
+        }
+    }
+
+
+    @Override
+    public void addSubPlans(Set<Plan> set) {
+        set.add(plan);
     }
 }

@@ -29,10 +29,12 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An operator
@@ -67,13 +69,32 @@ public abstract class Operator {
     }
 
     public void addParent(Operator parent) {
-        parent.children.add(this);
+        parent.addChild(this);
+    }
+
+
+    /** Recursive initialization of operator */
+    public Operator init(PlanMap map) {
+        List<Operator> parents = getParents();
+        for(int i = 0; i < parents.size(); i++) {
+            parents.set(i, parents.get(i).init(map));
+        }
+        return this;
+    }
+
+    final public Operator getParent(int i) {
+        return getParents().get(i);
+    }
+
+    public void addSubPlans(Set<Plan> set) {
+        for(Operator parent: getParents())
+            parent.addSubPlans(set);
     }
 
 
     static public abstract class OperatorIterator extends AbstractIterator<Value> {
         boolean started = false;
-        private Value current;
+        private Value current = null;
 
         @Override
         final protected Value computeNext() {
@@ -96,9 +117,11 @@ public abstract class Operator {
 
 
     public Iterator<Value> iterator() {
-        if (currentIterator != null && !currentIterator.started)
-            return currentIterator;
-        return currentIterator = _iterator();
+        return _iterator();
+//        OperatorIterator iterator = _iterator();
+//        if (currentIterator != null && !currentIterator.started)
+//            iterator.current = currentIterator.current;
+//        return currentIterator = iterator;
     }
 
 
@@ -206,26 +229,42 @@ public abstract class Operator {
     // --- Simplify ---
 
     static public Operator simplify(Operator operator) {
-        // First, simplify all the parents
-        // TODO: avoid simplifying two times the same thing
-        for (Operator parent : operator.getParents()) {
-            simplify(parent);
-        }
+        return simplify(operator, new HashMap<Operator, Operator>());
+    }
 
-        // --- Union
-        if (operator instanceof Union) {
-            if (operator.getParents().size() == 1) {
-                return operator.replaceBy(operator.getParents().get(0));
+    static public Operator simplify(Operator operator, Map<Operator, Operator> simplified) {
+        Operator cache = simplified.get(simplified);
+        if (cache != null)
+            return cache;
+
+        // --- First, simplify all the parents
+        List<Operator> parents = operator.getParents();
+        for (int i = 0; i < parents.size(); i++) {
+            Operator newParent = simplify(parents.get(i));
+            if (newParent != parents.get(i)) {
+                parents.set(i, newParent);
+                newParent.addChild(operator);
             }
         }
 
-        // --- Product
+        // --- operator == Union
+        if (operator instanceof Union) {
+            if (parents.size() == 1) {
+                return parents.get(0);
+            }
+        }
+
+        // --- operator == Product
         if (operator instanceof Product) {
-            if (operator.getParents().size() == 1) {
-                return operator.replaceBy(operator.getParents().get(0));
+            if (parents.size() == 1) {
+                return parents.get(0);
             }
         }
         return operator;
+    }
+
+    final private void addChild(Operator parent) {
+        children.add(parent);
     }
 
     /**

@@ -147,6 +147,11 @@ public class Plan {
         data.set(id, operator);
     }
 
+    public Operator planGraph(PlanMap map) throws XPathExpressionException {
+        return data.planGraph(this, map);
+    }
+
+
 
     /**
      * The data associated to a plan. It is a distinct object since a plan
@@ -286,7 +291,7 @@ public class Plan {
                 PlanMap ref = map.sub(first, true);
 
                 // Find it (will be kth of current)
-                for (Plan[] path : list.subList(1, list.size() - 1)) {
+                for (Plan[] path : list.subList(1, list.size())) {
                     // Verify that the two plans to be joined are compatible
                     if (!refPlan.equals(path[path.length - 1]))
                         throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
@@ -420,13 +425,8 @@ public class Plan {
 
         public Iterable<? extends Plan> getSubPlans() {
             Set<Plan> set = new HashSet<>();
-            for (Object input : inputs.values()) {
-                if (input instanceof Plan)
-                    set.add((Plan) input);
-                else if (input instanceof Operator) {
-                    // FIXME: should do something here?
-                } else throw new AssertionError();
-
+            for (Operator operator: inputs.values()) {
+                operator.addSubPlans(set);
             }
             return set;
         }
@@ -476,14 +476,9 @@ public class Plan {
 
                         // Get the next item and process
                         Operator source = iterators.peek().next();
-                        if (source instanceof PlanReference) {
-                            try {
-                                Plan plan = ((PlanReference) source).plan;
-                                return plan.data.planGraph(plan, map.sub(plan, true));
-                            } catch (XPathExpressionException e) {
-                                throw new ExperimaestroRuntimeException(e);
-                            }
-                        }
+
+                        // Transform the operator (in case it is a plan reference)
+                        source = source.init(map);
 
                         if (source instanceof Union) {
                             iterators.add(source.getParents().iterator());

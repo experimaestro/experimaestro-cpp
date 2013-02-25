@@ -32,7 +32,7 @@ tasks.ns::mult = {
         y: { value: "xs:integer" }
     },
 
-    run: function(p) {
+    run: function(x, p) {
 		logger.debug("Task mult: got x=%s and y=%s: %s", p.x, p.y, Number(p.x) * Number(p.y))
         return Number(p.x) * Number(p.y);
     }
@@ -44,7 +44,7 @@ tasks.ns::plus = {
         y: { value: "xs:integer" }
     },
 
-    run: function(p) {
+    run: function(x, p) {
 		logger.debug("Task plus: got x=%s and y=%s: %s", p.x, p.y, Number(p.x)+Number(p.y))
         return Number(p.x) + Number(p.y);
     }
@@ -58,7 +58,7 @@ tasks.ns::identity = {
         }
     },
 
-    run: function(p) {
+    run: function(x, p) {
         return p.x;
     }
 };
@@ -70,7 +70,7 @@ tasks.ns::identity_bis = {
         }
     },
 
-    run: function(p) {
+    run: function(x, p) {
         return <a>{p.x}</a>;
     }
 };
@@ -82,10 +82,10 @@ function check(results, expected) {
 		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
     
     // Sort the results
-    results.sort(function(x,y) { return x - y; });
+    results.sort(function(x,y) { return x.@xp::value - y.@xp::value; });
     logger.info("Results: %s", results.toSource());
     for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != Number(results[i])) 
+        if (expected[i] != Number(results[i].@xp::value)) 
 			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].toSource(), i);
     }
 }
@@ -118,13 +118,13 @@ function test_simple_access() {
         x: [1, 2]
     });
     var plan2 = tasks.ns::mult.plan({
-        x: plan1.path("a/x"),
+        x: plan1.path("a/text()"),
         y: [3, 5]
     });
 
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
-    var result = plan2();
+    var result = plan2.run();
     check(result, [3, 5, 6, 10]);
 }
 
@@ -134,7 +134,7 @@ function test_simple_access() {
 
 function test_transform() {
     var f = function(x) {
-        return Number(x) + 1;
+        return Number(x.@xp::value) + 1;
     };
 
     var plan1 = tasks.ns::identity.plan({
@@ -159,7 +159,7 @@ function test_join() {
         x: [1, 2]
     });
     var plan2 = tasks.ns::mult.plan({
-        x: plan1.path("x"),
+        x: plan1,
         y: [3, 5]
     });
     var plan3 = tasks.ns::plus.plan(
@@ -171,8 +171,8 @@ function test_join() {
     
     // Join plan1 of plan2 with plan1 (within plan2)
     plan3.join(plan1, [plan2, plan1]);
-    
-    var result = plan3();
+    logger.info("Plan:%n%s", plan3.to_dot(true));
+    var result = plan3.run();
     check(result, [4, 6, 8, 12]);
 }
 
@@ -185,7 +185,7 @@ function test_implicit_join() {
         x: plan1,
         y: plan1
     });
-    var result = plan2();
+    var result = plan2.run();
     check(result, [4, 6]);
 }
 

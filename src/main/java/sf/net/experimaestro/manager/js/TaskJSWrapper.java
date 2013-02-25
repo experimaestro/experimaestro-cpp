@@ -35,7 +35,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.util.List;
 import java.util.Map;
 
-import static sf.net.experimaestro.utils.JSUtils.unwrap;
+import static sf.net.experimaestro.manager.Manager.unwrap;
 
 /**
  * Task as seen by JavaScript
@@ -112,7 +112,7 @@ public class TaskJSWrapper extends ScriptableObject {
     static public void set(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws NoSuchParameter {
         TaskJSWrapper _this = (TaskJSWrapper) thisObj;
         if (args.length == 1) {
-            final Object unwrap = unwrap(args[0]);
+            final Object unwrap = JSUtils.unwrap(args[0]);
             if (unwrap instanceof NativeObject) {
                 for(Map.Entry<Object, Object> e: ((NativeObject) unwrap).entrySet()) {
                         final String key = JSUtils.toString(e.getKey());

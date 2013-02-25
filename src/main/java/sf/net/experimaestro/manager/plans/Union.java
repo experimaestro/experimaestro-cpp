@@ -18,9 +18,8 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import java.io.PrintStream;
+import java.util.Iterator;
 
 /**
  * Merge the output of several operators
@@ -31,10 +30,19 @@ public class Union extends NAryOperator {
 
     @Override
     protected OperatorIterator _iterator() {
+
         return new OperatorIterator() {
+            int parent = -1;
+            Iterator<Value> iterator = null;
+
             @Override
             protected Value _computeNext() {
-                throw new NotImplementedException();
+                while (parent < 0 || !iterator.hasNext()) {
+                    if (++parent >= getParents().size())
+                        return endOfData();
+                    iterator = Union.this.getParent(parent).iterator();
+                }
+                return new Value(iterator.next().nodes);
             }
         };
     }

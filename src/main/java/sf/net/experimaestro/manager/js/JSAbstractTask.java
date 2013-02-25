@@ -123,16 +123,6 @@ public abstract class JSAbstractTask extends Task {
 
     abstract protected Object jsrun(boolean convertToE4X);
 
-    protected Scriptable getJSInputs() {
-        Context cx = Context.getCurrentContext();
-        Scriptable jsInputs = cx.newObject(jsScope, "Object", new Object[]{});
-        for (Entry<String, Value> entry : values.entrySet()) {
-            String id = entry.getKey();
-            Value value = entry.getValue();
-            final Object e4x = JSUtils.domToE4X(value.get(), cx, jsScope);
-            jsInputs.put(id, jsInputs, e4x);
-        }
-        return jsInputs;
-    }
+
 
 }

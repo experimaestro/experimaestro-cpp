@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
@@ -35,11 +34,14 @@ import sf.net.experimaestro.manager.plans.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanMap;
 import sf.net.experimaestro.manager.plans.PlanReference;
 import sf.net.experimaestro.manager.plans.XPathFunction;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -71,12 +73,14 @@ public class JSPlan extends JSBaseObject implements Callable {
      * @param factory
      * @param object
      */
-    public JSPlan(TaskFactory factory, NativeObject object) throws XPathExpressionException {
+    public JSPlan(Scriptable scope, TaskFactory factory, NativeObject object) throws XPathExpressionException {
         plan = new Plan(factory);
-        addMappings(object);
+        addMappings(object, scope);
     }
 
-    private void addMappings(NativeObject object) throws XPathExpressionException {
+
+
+    private void addMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
             DotName id = DotName.parse(name);
@@ -87,10 +91,10 @@ public class JSPlan extends JSBaseObject implements Callable {
                 final NativeArray array = (NativeArray) value;
                 for (int i = 0; i < array.getLength(); i++) {
                     final Object e = array.get(i);
-                    plan.set(id, getSimple(e));
+                    plan.set(id, getSimple(e, scope));
                 }
             } else
-                plan.set(id, getSimple(value));
+                plan.set(id, getSimple(value, scope));
 
         }
 
@@ -101,10 +105,12 @@ public class JSPlan extends JSBaseObject implements Callable {
      * Returns a mapping for the given value
      *
      *
+     *
      * @param value The value
+     * @param scope
      * @return The object (String or XML fragment) or <tt>null</tt>
      */
-    Operator getSimple(Object value) throws XPathExpressionException {
+    Operator getSimple(Object value, Scriptable scope) throws XPathExpressionException {
         value = JSUtils.unwrap(value);
 
         if (value instanceof Integer) {
@@ -123,15 +129,15 @@ public class JSPlan extends JSBaseObject implements Callable {
             return new PlanReference(((JSPlan) value).plan);
 
         if (value instanceof JSPlanRef) {
-            return getOperator((JSPlanRef) value);
+            return getOperator((JSPlanRef) value, scope);
         }
 
         if (value instanceof JSTransform) {
             final JSTransform jsTransform = (JSTransform) value;
             final FunctionOperator operator = new FunctionOperator(jsTransform);
             for(JSPlanRef jsplanRef: jsTransform.plans)
-                operator.addParent(getOperator(jsplanRef));
-            throw new NotImplementedException();
+                operator.addParent(getOperator(jsplanRef, scope));
+            return operator;
         }
 
         if (JSUtils.isXML(value)) {
@@ -144,23 +150,26 @@ public class JSPlan extends JSBaseObject implements Callable {
 
     /**
      * Get the operator of a Plan reference
+     *
      * @param jsPlanRef
+     * @param scope
      * @return
      * @throws XPathExpressionException
      */
-    private Operator getOperator(JSPlanRef jsPlanRef) throws XPathExpressionException {
-        if (jsPlanRef.getPath().equals("."))
+    private Operator getOperator(JSPlanRef jsPlanRef, Scriptable scope) throws XPathExpressionException {
+        if (jsPlanRef.getPath() == null || jsPlanRef.getPath().equals("."))
             return new PlanReference(jsPlanRef.plan);
-        final XPathFunction function = new XPathFunction(jsPlanRef.getPath());
+        final XPathFunction function = new XPathFunction(jsPlanRef.getPath(), JSUtils.getNamespaceContext(scope));
         final FunctionOperator operator = new FunctionOperator(function);
-        operator.addParent(new PlanReference(plan));
+        operator.addParent(new PlanReference(jsPlanRef.plan));
         return operator;
     }
 
     private Constant wrapValue(String value1) {
-        return new Constant(JSUtils.wrap(Manager.EXPERIMAESTRO_NS, "value", value1));
+        return new Constant(Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", value1));
     }
 
+    @JSFunction(value = "run", scope = true)
     public Object run(Context context, Scriptable scope) throws XPathExpressionException {
         final Iterator<Node> iterator = plan.run();
         ArrayList<Object> values = new ArrayList<>();
@@ -199,6 +208,17 @@ public class JSPlan extends JSBaseObject implements Callable {
     public void join(Object... args) {
         Plan[][] paths = getPlanPaths(args);
         plan.addJoin(Arrays.asList(paths));
+    }
+
+    @JSFunction("to_dot")
+    public String toDot(boolean simplify) throws XPathExpressionException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        Operator operator = plan.planGraph(new PlanMap());
+        if (simplify)
+            operator = Operator.simplify(operator);
+        operator.printDOT(ps);
+        return baos.toString();
     }
 
     private Plan[][] getPlanPaths(Object[] args) {

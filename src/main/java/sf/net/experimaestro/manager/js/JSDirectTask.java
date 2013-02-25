@@ -18,7 +18,13 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.*;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.vfs2.FileObject;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -26,7 +32,9 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -46,12 +54,18 @@ public class JSDirectTask extends JSAbstractTask {
      */
     private NativeObject jsFactory;
 
+    /**
+     * The XPM object
+     */
+    private XPMObject xpm;
+
     public JSDirectTask() {
     }
 
-    public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
+    public JSDirectTask(XPMObject xpm, TaskFactory taskFactory, Scriptable jsScope,
                         NativeObject jsFactory, Function runFunction) {
         super(taskFactory, jsScope);
+        this.xpm = xpm;
         this.jsFactory = jsFactory;
         this.runFunction = runFunction;
 
@@ -68,9 +82,11 @@ public class JSDirectTask extends JSAbstractTask {
 
         if (runFunction != null) {
             // We have a run function
-            Scriptable jsInputs = getJSInputs();
+            Scriptable jsDirect = cx.newObject(jsScope, "Object", new Object[]{});
+            Scriptable jsE4X = cx.newObject(jsScope, "Object", new Object[]{});
+            getJSInputs(cx, jsE4X, jsDirect);
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
-                    new Object[]{jsInputs});
+                    new Object[]{jsE4X, jsDirect});
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance)
                 throw new ExperimaestroRuntimeException(
@@ -126,4 +142,33 @@ public class JSDirectTask extends JSAbstractTask {
         jsFactory = other.jsFactory;
         runFunction = other.runFunction;
     }
+
+    protected void getJSInputs(Context cx, Scriptable jsE4X, Scriptable jsUnwrapped) {
+        for (Entry<String, Value> entry : values.entrySet()) {
+            String id = entry.getKey();
+            Value value = entry.getValue();
+            final Object e4x = JSUtils.domToE4X(value.get(), cx, jsScope);
+            jsE4X.put(id, jsE4X, e4x);
+
+            Type type = value.getType();
+            if (type instanceof ValueType) {
+                Object object = ((ValueType) type).unwrap(value.get());
+                if (object instanceof FileObject)
+                    object = new JSFileObject(xpm, (FileObject)object);
+                else if (!instanceOf(object, String.class, Float.class, Double.class, Integer.class, Long.class, Character.class))
+                    throw new NotImplementedException(String.format("Ooops. Don't know how to handle %s for JS", object.getClass()));
+                jsUnwrapped.put(id, jsUnwrapped, object);
+            } else
+                jsUnwrapped.put(id, jsUnwrapped, e4x);
+        }
+    }
+
+    private boolean instanceOf(Object object, Class<?>... classes)  {
+        for(Class<?> klass: classes)
+            if (klass.isInstance(object))
+                return true;
+        return false;
+    }
+
+
 }

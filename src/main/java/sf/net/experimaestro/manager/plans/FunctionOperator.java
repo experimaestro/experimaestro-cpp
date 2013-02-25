@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.apache.commons.lang.NotImplementedException;
+import java.util.Iterator;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -33,7 +33,16 @@ public class FunctionOperator extends UnaryOperator {
 
     @Override
     protected OperatorIterator _iterator() {
-        // TODO: implement _iterator
-        throw new NotImplementedException();
+        return new OperatorIterator() {
+            Iterator<Value> iterator = input.iterator();
+            @Override
+            protected Value _computeNext() {
+                if (!iterator.hasNext())
+                    return endOfData();
+
+                Value value = iterator.next();
+                return new Value(function.f(value.nodes));
+            }
+        };
     }
 }

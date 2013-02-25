@@ -18,16 +18,30 @@
 
 package sf.net.experimaestro.utils;
 
-import org.mozilla.javascript.*;
+import org.apache.commons.lang.NotImplementedException;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.FunctionObject;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.UniqueTag;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.utils.log.Logger;
+
+import javax.xml.namespace.NamespaceContext;
+import java.util.Iterator;
 
 import static java.lang.String.format;
 
@@ -219,12 +233,12 @@ public class JSUtils {
             // Wrap a double
             final Double x = (Double) object;
             if (x.longValue() == x.doubleValue())
-                return wrap(Manager.EXPERIMAESTRO_NS, "value", Long.toString(x.longValue()));
-            return wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString(x));
+                return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Long.toString(x.longValue()));
+            return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString(x));
         }
 
         if (object instanceof Integer) {
-            return wrap(Manager.EXPERIMAESTRO_NS, "value", Integer.toString((Integer) object));
+            return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Integer.toString((Integer) object));
         }
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
@@ -330,21 +344,6 @@ public class JSUtils {
     }
 
     /**
-     * Wraps a value into an XML document
-     *
-     * @param name
-     * @param value
-     * @return An XML document representing the value
-     */
-    static public Document wrap(String namespace, String name, String value) {
-        final Document doc = XMLUtils.newDocument();
-        Element element = doc.createElementNS(namespace, name);
-        element.setTextContent(value);
-        doc.appendChild(element);
-        return doc;
-    }
-
-    /**
      * Convert a property into a boolean
      * @param scope The JS scope
      * @param object The JS object
@@ -357,6 +356,36 @@ public class JSUtils {
         if (value instanceof Boolean)
             return (Boolean)value;
         return Boolean.parseBoolean(JSUtils.toString(value));
+    }
+
+    public static NamespaceContext getNamespaceContext(final Scriptable scope) {
+        return new NamespaceContext() {
+            @Override
+            public String getNamespaceURI(String prefix) {
+                Object o = JSUtils.unwrap(scope.get(prefix, scope));
+                if (o == Scriptable.NOT_FOUND)
+                    return null;
+                if (o instanceof Scriptable) {
+                    Scriptable jsObject = (Scriptable) o;
+                    if ("Namespace".equals(jsObject.getClassName()))
+                        return jsObject.get("uri", jsObject).toString();
+                }
+
+                throw new ExperimaestroRuntimeException("%s is bound to a non namespace object (%s)", prefix, o.getClass());
+            }
+
+            @Override
+            public String getPrefix(String namespaceURI) {
+                // TODO: implement getPrefix
+                throw new NotImplementedException();
+            }
+
+            @Override
+            public Iterator getPrefixes(String namespaceURI) {
+                // TODO: implement getPrefixes
+                throw new NotImplementedException();
+            }
+        };
     }
 
     /**

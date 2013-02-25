@@ -23,6 +23,7 @@ import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.XMLUtils;
 
+import javax.xml.namespace.NamespaceContext;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
@@ -32,10 +33,12 @@ import javax.xml.xpath.XPathExpressionException;
  * @date 22/2/13
  */
 public class XPathFunction implements Function {
+    private String xpathString;
     private final XPathExpression xpath;
 
-    public XPathFunction(String xpath) throws XPathExpressionException {
-        this.xpath = XMLUtils.parseXPath(xpath);
+    public XPathFunction(String xpath, NamespaceContext nsContext) throws XPathExpressionException {
+        this.xpath = XMLUtils.parseXPath(xpath, nsContext);
+        this.xpathString = xpath;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class XPathFunction implements Function {
             final NodeList list = (NodeList) xpath.evaluate(input[0], XPathConstants.NODESET);
 
             if (list.getLength() == 0)
-                throw new ExperimaestroRuntimeException("XPath [%s] did not return any result", xpath);
+                throw new ExperimaestroRuntimeException("XPath [%s] did not return any result", xpathString);
             return XMLUtils.toDocumentFragment(list);
 
         } catch (XPathExpressionException e) {

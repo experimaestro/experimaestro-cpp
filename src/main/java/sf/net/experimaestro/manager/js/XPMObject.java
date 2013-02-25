@@ -23,29 +23,75 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.ConsString;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeJavaObject;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.UniqueTag;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.connectors.*;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.XPMConnector;
+import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.manager.AlternativeType;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.NSContext;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
+import sf.net.experimaestro.scheduler.CommandArgument;
+import sf.net.experimaestro.scheduler.CommandArguments;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceData;
+import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.TokenResource;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xpath.*;
-import java.io.*;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathFunctionResolver;
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -250,8 +296,10 @@ public class XPMObject {
 
     }
 
-    static XPMObject getXPMObject(Scriptable thisObj) {
-        return ((JSXPM) thisObj.getParentScope().get("xpm", thisObj.getParentScope())).xpm;
+    static XPMObject getXPMObject(Scriptable scope) {
+        while (scope.getParentScope() != null)
+            scope = scope.getParentScope();
+        return ((JSXPM) scope.get("xpm", scope)).xpm;
     }
 
 
@@ -490,8 +538,8 @@ public class XPMObject {
         Callable f = (Callable) args[0];
         JSPlanRef plans[] = new JSPlanRef[args.length - 1];
         for (int i = 0; i < plans.length; i++)
-            if (args[i+1] instanceof JSPlan)
-                plans[i] = new JSPlanRef(((JSPlan)args[i+1]));
+            if (args[i + 1] instanceof JSPlan)
+                plans[i] = new JSPlanRef(((JSPlan) args[i + 1]));
             else
                 plans[i] = (JSPlanRef) unwrap(args[i + 1]);
         return new JSPlan.JSTransform(cx, scope, f, plans);
@@ -922,7 +970,7 @@ public class XPMObject {
                 break;
 
             case Node.DOCUMENT_NODE:
-                argumentWalkThrough(sb, argument, ((Document)node).getDocumentElement());
+                argumentWalkThrough(sb, argument, ((Document) node).getDocumentElement());
                 break;
 
             case Node.ELEMENT_NODE:

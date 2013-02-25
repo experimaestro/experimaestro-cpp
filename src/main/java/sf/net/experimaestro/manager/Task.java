@@ -26,7 +26,6 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -272,7 +271,7 @@ public abstract class Task {
     public void setParameter(DotName id, String value) throws NoSuchParameter {
         final Value v = getValue(id);
         final String ns = v.input.getNamespace();
-        final Document doc = JSUtils.wrap(ns, id.getName(), value);
+        final Document doc = Manager.wrap(ns, id.getName(), value);
         v.set(doc);
     }
 
