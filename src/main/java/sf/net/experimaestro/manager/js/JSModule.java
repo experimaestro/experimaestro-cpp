@@ -47,7 +47,11 @@ import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 
 public class JSModule extends JSObject {
     final static private Logger LOGGER = Logger.getLogger();

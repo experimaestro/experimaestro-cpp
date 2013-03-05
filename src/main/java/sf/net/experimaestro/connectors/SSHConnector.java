@@ -139,6 +139,12 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
+    protected FileObject getTemporaryDirectory() throws FileSystemException {
+        // FIXME: hardcoded value
+        return getFileSystem().resolveFile("/tmp");
+    }
+
+    @Override
     public FileSystem doGetFileSystem() throws FileSystemException {
         final FileSystem fileSystem = VFS.getManager()
                 .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();

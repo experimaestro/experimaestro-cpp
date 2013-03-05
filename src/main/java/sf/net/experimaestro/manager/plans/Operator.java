@@ -19,16 +19,18 @@
 package sf.net.experimaestro.manager.plans;
 
 
+import bpiwowar.argparser.utils.Formatter;
+import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multiset;
+import org.w3c.dom.Node;
+import sf.net.experimaestro.utils.WrappedResult;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,36 +50,46 @@ public abstract class Operator {
      */
     ArrayList<Operator> children = new ArrayList<>();
 
-
     /**
      * Returns the parents of this node
      */
     public abstract List<Operator> getParents();
 
-    /**
-     * Current iterator
-     */
-    OperatorIterator currentIterator;
+//    /**
+//     * Current iterator
+//     */
+//    OperatorIterator currentIterator;
 
-    Map<Operator, Integer> streams;
+//    /**
+//     * Ingoing streams
+//     */
+//    Map<Operator, Integer> streams;
+//
+//    /**
+//     * Get the mapping between joined operators and context index
+//     */
+//    public Map<Operator, Integer> getStreams() {
+//        return streams == null ? Collections.<Operator, Integer>emptyMap() : Collections.unmodifiableMap(streams);
+//    }
 
     /**
-     * Get the mapping between joined operators and context index
+     * List of mappings for context
      */
-    public Map<Operator, Integer> getStreams() {
-        return streams == null ? Collections.<Operator, Integer>emptyMap() : Collections.unmodifiableMap(streams);
-    }
+    Map<StreamReference, Integer> contextMappings = new HashMap<>();
+
 
     public void addParent(Operator parent) {
         parent.addChild(this);
     }
 
 
-    /** Recursive initialization of operator */
-    public Operator init(PlanMap map) {
+    /**
+     * Recursive initialization of operator
+     */
+    public Operator init(PlanMap map, OperatorMap opMap) {
         List<Operator> parents = getParents();
-        for(int i = 0; i < parents.size(); i++) {
-            parents.set(i, parents.get(i).init(map));
+        for (int i = 0; i < parents.size(); i++) {
+            parents.set(i, parents.get(i).init(map, opMap));
         }
         return this;
     }
@@ -87,14 +99,49 @@ public abstract class Operator {
     }
 
     public void addSubPlans(Set<Plan> set) {
-        for(Operator parent: getParents())
+        for (Operator parent : getParents())
             parent.addSubPlans(set);
     }
 
+    static Operator getSimplified(HashMap<Operator, Operator> simplified, Operator operator) {
+        Operator tmp;
+        while ((tmp = simplified.get(operator)) != null)
+            operator = tmp;
+        return operator;
+    }
 
-    static public abstract class OperatorIterator extends AbstractIterator<Value> {
+    public static void ensureConnections(HashMap<Operator, Operator> simplified, List<Operator> operators) {
+        for(int i = 0; i < operators.size(); i++) {
+            operators.set(i, getSimplified(simplified, operators.get(i)));
+        }
+    }
+
+    public static void ensureConnections(HashMap<Operator, Operator> simplified, Set<Operator> set) {
+        for(Operator operator: set) {
+            Operator newOperator = getSimplified(simplified, operator);
+            if (newOperator != operator) {
+                set.remove(operator);
+                set.add(newOperator);
+            }
+        }
+    }
+
+
+    static public class ReturnValue {
+        Node[] nodes;
+        long[][] contexts;
+
+        public ReturnValue(long[][] contexts, Node... nodes) {
+            this.nodes = nodes;
+            this.contexts = contexts;
+        }
+    }
+
+    public class OperatorIterator extends AbstractIterator<Value> {
         boolean started = false;
         private Value current = null;
+
+        Iterator<ReturnValue> iterator = _iterator();
 
         @Override
         final protected Value computeNext() {
@@ -102,22 +149,37 @@ public abstract class Operator {
             if (current != null && current.next != null)
                 return current = current.next;
 
-            Value newValue = _computeNext();
-            if (current != null && newValue != null) {
+            if (!iterator.hasNext())
+                return endOfData();
+
+            ReturnValue next = iterator.next();
+            Value newValue = new Value(next.nodes);
+            if (current != null) {
                 newValue.id = current.id + 1;
                 current.next = newValue;
             }
+
+            // Copy context
+            if (!contextMappings.isEmpty()) {
+                newValue.context = new long[contextMappings.size()];
+                for (Map.Entry<StreamReference, Integer> entry : contextMappings.entrySet()) {
+                    StreamReference key = entry.getKey();
+                    newValue.context[entry.getValue()] = key.streamIndex < 0 ?
+                            newValue.id : next.contexts[key.streamIndex][key.contextIndex];
+                }
+
+            }
+
             return current = newValue;
         }
 
-        protected abstract Value _computeNext();
     }
 
-    protected abstract OperatorIterator _iterator();
+    protected abstract Iterator<ReturnValue> _iterator();
 
 
     public Iterator<Value> iterator() {
-        return _iterator();
+        return new OperatorIterator();
 //        OperatorIterator iterator = _iterator();
 //        if (currentIterator != null && !currentIterator.started)
 //            iterator.current = currentIterator.current;
@@ -125,71 +187,207 @@ public abstract class Operator {
     }
 
 
+//    /**
+//     * Prepare the streams of an operator (last operation before running)
+//     *
+//     * @param request (in/out) The request in terms of streams
+//     * @return
+//     * @throws XPathExpressionException
+//     */
+//    protected Operator doPrepare(StreamRequest request) throws XPathExpressionException {
+//        return this;
+//    }
+//    final private Operator prepare(HashSet<Operator> processed) throws XPathExpressionException {
+//        if (processed.contains(this))
+//            return null;
+//
+//        for (Operator parent : getParents()) {
+//            Multiset<Operator> parentCounts = HashMultiset.create();
+//        }
+//
+//        final Operator operator = doPrepare(null);
+//
+//        return operator;
+//    }
+//
+//    public Operator prepare() throws XPathExpressionException {
+//        return prepare(new HashSet<Operator>());
+//    }
+
+
     /**
-     * Initialize the node and its parents
+     * Initialize the node (called before the initalization of parents)
      *
-     * @param streams
      * @throws javax.xml.xpath.XPathExpressionException
      *
      */
-    protected Operator doInit(Multimap<Operator, Operator> streams) throws XPathExpressionException {
-        return this;
+    protected void doPreInit() {
     }
 
     /**
-     * Prepare the streams of an operator (last operation before running)
+     * Initialize the node  (called after the initialization of parents)
      *
-     * @param request (in/out) The request in terms of streams
+     * @param parentStreams
+     * @throws javax.xml.xpath.XPathExpressionException
+     *
+     */
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    }
+
+    /**
+     * Initialize the operator.
+     * <p/>
+     * <ol>
+     * <li>Calls the {@linkplain #doPreInit()} method</li>
+     * <li>Initialize the parents</li>
+     * <li>Calls the {@linkplain #doPostInit(List)} method</li>
+     * </ol>
+     *
+     * @param processed  The set of processed operators
+     * @param streamsMap (input) The set of needed operator streams that should go out of this operator
      * @return
      * @throws XPathExpressionException
      */
-    protected Operator doPrepare(StreamRequest request) throws XPathExpressionException {
-        return this;
-    }
+    final private Map<Operator, Integer> init(HashMap<Operator, Map<Operator, Integer>> processed, Multimap<Operator, Operator> streamsMap) throws XPathExpressionException {
+        Map<Operator, Integer> cached = processed.get(this);
+        if (cached != null)
+            return cached;
 
 
-    final private Operator init(HashSet<Operator> processed, Multimap<Operator, Operator> streams) throws XPathExpressionException {
-        if (processed.contains(this))
-            return null;
+        // Initialise the streams that we need
+        doPreInit();
 
-
+        // First, init the parents
+        List<Map<Operator, Integer>> list = new ArrayList<>();
         for (Operator parent : getParents()) {
-            Multimap<Operator, Operator> parentStreams = HashMultimap.create();
-            parent.init(processed, parentStreams);
-//            streams.putAll(parentStreams);
+            Map<Operator, Integer> parentMap = parent.init(processed, streamsMap);
+            list.add(parentMap);
         }
 
-        final Operator operator = doInit(streams);
 
-        // Update the streams
-        processed.add(operator);
+        // Map the previous streams
+        HashMap<Operator, Integer> map = new HashMap<>();
+        int count = 0;
+        Collection<Operator> streams = streamsMap.get(this);
 
-        return operator;
+        for (Operator operator : streams) {
+            for (int streamIndex = 0; streamIndex < list.size(); streamIndex++) {
+                Map<Operator, Integer> parentMap = list.get(streamIndex);
+                Integer contextIndex = parentMap.get(operator);
+                if (contextIndex != null) {
+                    contextMappings.put(new StreamReference(streamIndex, contextIndex), count);
+                    map.put(operator, count);
+                    count++;
+                    break;
+                }
+            }
+
+        }
+
+        // Check if we should add ourselves to the context
+        if (streams.contains(this)) {
+            contextMappings.put(new StreamReference(-1, -1), count);
+            map.put(this, count);
+            count++;
+        }
+
+        doPostInit(list);
+
+        processed.put(this, map);
+
+        return map;
     }
 
     /**
-     * Init ourselves andthen parents
+     * Init our ancestors and ourselves
      */
-    public Operator init() throws XPathExpressionException {
-        return init(new HashSet<Operator>(), null);
+    public void init() throws XPathExpressionException {
+
+        Multimap<Operator, Operator> needed = HashMultimap.create();
+        HashSet<Operator> roots = getRoots();
+
+        // Compute needed streams
+        for (Operator root : roots)
+            root.computeNeededStreams(needed);
+
+        // Compute orders
+        Map<Operator, Order<Operator>> orders = new HashMap<>();
+        for (Operator root : roots)
+            root.computeOrder(orders);
+
+        init(new HashMap<Operator, Map<Operator, Integer>>(), needed);
     }
 
 
-    final private Operator prepare(HashSet<Operator> processed) throws XPathExpressionException {
-        if (processed.contains(this))
-            return null;
+    /**
+     * Top-down computation of the order: we ask our children
+     * to compute their order and then compute ours
+     *
+     * @param orders
+     * @return
+     */
+    private Order<Operator> computeOrder(Map<Operator, Order<Operator>> orders) {
+        if (orders.containsKey(this))
+            return orders.get(this);
 
-        for (Operator parent : getParents()) {
-            Multiset<Operator> parentCounts = HashMultiset.create();
+        // Get the orders needed by children
+        Order<Operator> childrenOrders[] = new Order[children.size()];
+
+        for(int i = 0; i < childrenOrders.length; i++) {
+            childrenOrders[i] = children.get(i).computeOrder(orders);
         }
 
-        final Operator operator = doPrepare(null);
+        WrappedResult<Order<Operator>> result = Order.combine(childrenOrders);
 
-        return operator;
+        // and combine this with our own order
+        Order<Operator> order = doComputeOrder(result.get());
+        orders.put(this, order);
+        return order;
     }
 
-    public Operator prepare() throws XPathExpressionException {
-        return prepare(new HashSet<Operator>());
+    protected Order<Operator> doComputeOrder(Order<Operator> childrenOrder) {
+        childrenOrder.remove(this);
+        return childrenOrder;
+    }
+
+    private Collection<Operator> computeNeededStreams(Multimap<Operator, Operator> needed) {
+        if (needed.containsKey(this))
+            return needed.get(this);
+
+        Collection<Operator> streams = needed.get(this);
+
+        for (Operator child : children) {
+            Collection<Operator> c = child.computeNeededStreams(needed);
+            for (Operator op : c)
+                // TODO: consider using the ancestors map to check if we need to add
+                if (c != child)
+                    streams.add(op);
+            child.addNeededStreams(streams);
+        }
+
+        return streams;
+    }
+
+    /**
+     * Add the streams neeed by this operator
+     */
+    protected void addNeededStreams(Collection<Operator> streams) {
+    }
+
+    private void fillRoots(HashSet<Operator> roots) {
+        if (getParents().isEmpty()) {
+            roots.add(this);
+        } else {
+            for (Operator parent : getParents()) {
+                parent.fillRoots(roots);
+            }
+        }
+    }
+
+    public HashSet<Operator> getRoots() {
+        HashSet<Operator> roots = new HashSet<>();
+        fillRoots(roots);
+        return roots;
     }
 
     /**
@@ -210,26 +408,89 @@ public abstract class Operator {
      * @param out       The output stream
      * @param planNodes The nodes already processed (case of shared ancestors)
      */
-    public void printDOT(PrintStream out, HashSet<Operator> planNodes) {
+    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes) {
         if (planNodes.contains(this))
-            return;
+            return false;
         planNodes.add(this);
         printDOTNode(out);
+        int streamIndex = 0;
         for (Operator parent : getParents()) {
             parent.printDOT(out, planNodes);
-            out.format("p%s -> p%s;%n", System.identityHashCode(parent), System.identityHashCode(this));
+            ArrayList<Map.Entry<StreamReference, Integer>> list = new ArrayList<>();
+            out.format("p%s -> p%s", System.identityHashCode(parent), System.identityHashCode(this));
+            Map<String, String> attributes = new HashMap<>();
+            for (Map.Entry<StreamReference, Integer> x : contextMappings.entrySet()) {
+                if (x.getKey().streamIndex == streamIndex)
+                    list.add(x);
+            }
+
+            if (!list.isEmpty())
+                attributes.put("label", Output.toString(", ", list, new Formatter<Map.Entry<StreamReference, Integer>>() {
+                    @Override
+                    public String format(Map.Entry<StreamReference, Integer> x) {
+                        return String.format("%d/%d", x.getKey().contextIndex, x.getValue());
+                    }
+                }));
+
+            out.print("[");
+            Output.print(out, ", ", attributes.entrySet(), new Formatter<Map.Entry<String, String>>() {
+                @Override
+                public String format(Map.Entry<String, String> o) {
+                    return String.format("%s=\"%s\"", o.getKey(), o.getValue());
+                }
+            });
+            out.println("];");
+            streamIndex++;
         }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s [%s]", getName(), System.identityHashCode(this));
     }
 
     protected void printDOTNode(PrintStream out) {
-        out.format("p%s [label=\"%s\"];%n", System.identityHashCode(this), this.getClass().getName());
+        String color = "";
+
+        for (StreamReference x : contextMappings.keySet())
+            if (x.streamIndex == -1) {
+                color = ", color=\"red\"";
+                break;
+
+            }
+        out.format("p%s [label=\"%s\"%s];%n", System.identityHashCode(this), getName(), color);
+    }
+
+    protected String getName() {
+        return this.getClass().getName();
     }
 
 
     // --- Simplify ---
 
     static public Operator simplify(Operator operator) {
-        return simplify(operator, new HashMap<Operator, Operator>());
+        HashMap<Operator, Operator> map = new HashMap<>();
+        operator = simplify(operator, map);
+        operator.ensureConnections(map, new HashSet<Operator>());
+        return operator;
+    }
+
+    private void ensureConnections(HashMap<Operator, Operator> simplified, HashSet<Operator> visited) {
+        if (visited.contains(this))
+            return;
+        visited.add(this);
+        for(Operator parent: getParents())
+            parent.ensureConnections(simplified, visited);
+
+        ensureConnections(simplified);
+    }
+
+    /**
+     * After simplifications, this is used ensure that connections are kept
+     * @param simplified
+     */
+    protected void ensureConnections(HashMap<Operator, Operator> simplified) {
     }
 
     static public Operator simplify(Operator operator, Map<Operator, Operator> simplified) {
@@ -240,7 +501,7 @@ public abstract class Operator {
         // --- First, simplify all the parents
         List<Operator> parents = operator.getParents();
         for (int i = 0; i < parents.size(); i++) {
-            Operator newParent = simplify(parents.get(i));
+            Operator newParent = simplify(parents.get(i), simplified);
             if (newParent != parents.get(i)) {
                 parents.set(i, newParent);
                 newParent.addChild(operator);
@@ -250,42 +511,26 @@ public abstract class Operator {
         // --- operator == Union
         if (operator instanceof Union) {
             if (parents.size() == 1) {
-                return parents.get(0);
+                return simplify(operator, parents.get(0), simplified);
             }
         }
 
         // --- operator == Product
         if (operator instanceof Product) {
             if (parents.size() == 1) {
-                return parents.get(0);
+                return simplify(operator, parents.get(0), simplified);
             }
         }
         return operator;
+    }
+
+    private static Operator simplify(Operator operator, Operator optimised, Map<Operator, Operator> simplified) {
+        simplified.put(operator, optimised);
+        return optimised;
     }
 
     final private void addChild(Operator parent) {
         children.add(parent);
     }
 
-    /**
-     * Replace {@code this} operator by another one
-     *
-     * @param to The new operator
-     * @return Returns {@code to}
-     */
-    Operator replaceBy(Operator to) {
-        for (Operator child : children) {
-            final List<Operator> childParents = child.getParents();
-            for (int i = 0; i < childParents.size(); i++) {
-                if (childParents.get(i) == this) {
-                    childParents.set(i, to);
-                }
-            }
-        }
-
-        // Copy our children
-        to.children = children;
-
-        return to;
-    }
 }

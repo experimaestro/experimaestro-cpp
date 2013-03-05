@@ -18,108 +18,99 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import com.google.common.collect.AbstractIterator;
 import org.w3c.dom.Node;
 
-import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
- * Join / cartesian product of inputs
+ * Cartesian product of inputs
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/2/13
  */
 public class Product extends NAryOperator {
-    /**
-     * A context reference
-     */
-    static public class JoinReference {
-        int streamIndex;
-        int contextIndex;
-
-        public JoinReference(int streamIndex, int contextIndex) {
-            this.streamIndex = streamIndex;
-            this.contextIndex = contextIndex;
-        }
-    }
-
-    static public class Join {
-        long current;
-        List<JoinReference> references = new ArrayList<>();
-
-        public void add(JoinReference reference) {
-            references.add(reference);
-        }
-    }
-
-    /**
-     * List of joins
-     */
-    List<Join> joins = new ArrayList<>();
-
-    public void addJoin(Join join) {
-        joins.add(join);
-    }
 
     @Override
-    protected OperatorIterator _iterator() {
-
-        final Iterator<Value>[] inputs = new Iterator[parents.size()];
-        for (int i = 0; i < parents.size(); i++)
-            inputs[i] = parents.get(i).iterator();
+    protected Iterator<ReturnValue> _iterator() {
+        return new ProductIterator();
+    }
 
 
-        return new OperatorIterator() {
-            boolean first = true;
-            Node current [] = new Node[inputs.length];
+    @Override
+    protected String getName() {
+        return "product";
+    }
 
-            @Override
-            protected Value _computeNext() {
-                // First loop
-                Node[] nodes = new Node[inputs.length];
 
-                if (first) {
-                    for (int i = 0; i < parents.size(); i++) {
-                        if (!inputs[i].hasNext())
-                            return endOfData();
-                        else {
-                            if (i > 0)
-                                next(current, i);
-                        }
-                    }
-                    first = false;
-                }
+    public abstract class AbstractProductIterator extends AbstractIterator<ReturnValue> {
+        final Iterator<Value>[] inputs;
+        boolean first;
+        Value[] current;
 
+        public AbstractProductIterator() {
+            inputs = new Iterator[parents.size()];
+            for (int i = 0; i < parents.size(); i++)
+                inputs[i] = parents.get(i).iterator();
+            first = true;
+            current = new Value[inputs.length];
+        }
+
+        boolean computeFirst() {
+            if (first) {
                 for (int i = 0; i < parents.size(); i++) {
-                    if (inputs[i].hasNext()) {
-                        next(current, i);
-
-                        for (int j = i; --j >= 0; ) {
-                            inputs[j] = parents.get(j).iterator();
-                            next(current, j);
-                        }
-
-                        System.arraycopy(current, 0, nodes, 0, inputs.length);
-
-                        return new Value(nodes);
-                    }
+                    if (!next(i))
+                        return false;
                 }
+                first = false;
+            }
+            return true;
+        }
 
-                return endOfData();
+        boolean next(int i) {
+            if (!inputs[i].hasNext())
+                return false;
+            final Value value = inputs[i].next();
+            assert value.nodes.length == 1;
+            current[i] = value;
+            return true;
+        }
+
+        ReturnValue getReturnValue(Value[] current) {
+            Node[] nodes = new Node[parents.size()];
+            final long[][] contexts = new long[parents.size()][];
+            for (int j = 0; j < contexts.length; j++) {
+                contexts[j] = current[j].context;
+                nodes[j] = current[j].nodes[0];
             }
 
-            private void next(Node[] nodes, int i) {
-                final Value value = inputs[i].next();
-                assert value.nodes.length == 1;
-                nodes[i] = value.nodes[0];
-            }
-        };
+            return new ReturnValue(contexts, nodes);
+        }
     }
 
-    @Override
-    protected void printDOTNode(PrintStream out) {
-        out.format("p%s [label=\"Product/Join\"];%n", System.identityHashCode(this));
+    private class ProductIterator extends AbstractProductIterator {
+        @Override
+        protected ReturnValue computeNext() {
+            // First loop
+            if (first)
+                if (computeFirst()) return getReturnValue(current);
+                else return endOfData();
+
+            for (int i = 0; i < parents.size(); i++) {
+                if (next(i)) {
+                    for (int j = i; --j >= 0; ) {
+                        inputs[j] = parents.get(j).iterator();
+                        next(j);
+                    }
+
+                    return getReturnValue(current);
+                }
+            }
+
+            return endOfData();
+        }
+
     }
+
+
 }

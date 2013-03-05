@@ -19,12 +19,15 @@
 package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+
+import static java.lang.String.format;
 
 /**
  * A connector that corresponds to a single host.
@@ -118,4 +121,25 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
 
         return this.processBuilder();
     }
+
+    static private final char[] chars = new String("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").toCharArray();
+    public FileObject getTemporaryFile(String prefix, String suffix) throws FileSystemException {
+        FileObject tmpdir = getTemporaryDirectory();
+
+        final int MAX_ATTEMPTS = 1000;
+
+        for(int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            FileObject child = tmpdir.resolveFile(prefix + RandomStringUtils.random(10, chars) + suffix);
+            if (!child.exists()) {
+                try {
+                    child.createFile();
+                } catch(Throwable t) {
+                }
+                return child;
+            }
+        }
+        throw new FileSystemException(format("Could not find a proper temporary file name after %d attempts", MAX_ATTEMPTS));
+    }
+
+    protected abstract FileObject getTemporaryDirectory() throws FileSystemException;
 }

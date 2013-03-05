@@ -18,8 +18,12 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import java.io.PrintStream;
+import com.google.common.collect.AbstractIterator;
+
+import javax.xml.xpath.XPathExpressionException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Merge the output of several operators
@@ -29,26 +33,36 @@ import java.util.Iterator;
 public class Union extends NAryOperator {
 
     @Override
-    protected OperatorIterator _iterator() {
+    protected Iterator<ReturnValue> _iterator() {
 
-        return new OperatorIterator() {
+        return new AbstractIterator<ReturnValue>() {
             int parent = -1;
             Iterator<Value> iterator = null;
 
             @Override
-            protected Value _computeNext() {
+            protected ReturnValue computeNext() {
                 while (parent < 0 || !iterator.hasNext()) {
                     if (++parent >= getParents().size())
                         return endOfData();
                     iterator = Union.this.getParent(parent).iterator();
                 }
-                return new Value(iterator.next().nodes);
+                return new ReturnValue(null, iterator.next().nodes);
             }
         };
     }
 
     @Override
-    protected void printDOTNode(PrintStream out) {
-        out.format("p%s [label=\"Union\"];%n", System.identityHashCode(this));
+    protected String getName() {
+        return "Union";
+    }
+
+    @Override
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+        // Just checks we don't have to copy some context
+        if (contextMappings.size() > 1)
+            throw new AssertionError();
+
+        if (contextMappings.size() == 1 && contextMappings.keySet().iterator().next().streamIndex != -1)
+            throw new AssertionError();
     }
 }

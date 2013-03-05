@@ -80,6 +80,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -503,8 +504,6 @@ public class XPMObject {
 
     /**
      * Returns the current script location
-     *
-     * @todo Should return a wrapper to FileObject for enhanced security
      */
     static public JSFileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
             throws FileSystemException {
@@ -675,27 +674,60 @@ public class XPMObject {
      * @throws IOException
      * @throws InterruptedException
      */
-    public NativeArray evaluate(Object jsargs) throws Exception {
-        CommandArguments arguments = getCommandArguments(jsargs, null);
+    public NativeArray evaluate(Object jsargs, NativeObject options) throws Exception {
+        Map<String, String> pFiles = new TreeMap<>();
+        CommandArguments arguments = getCommandArguments(jsargs, pFiles);
 
         // Run the process and captures the output
         final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
         XPMProcessBuilder builder = connector.processBuilder();
-        builder.command(arguments.toStrings(connector, null));
-        builder.detach(false);
-        builder.redirectOutput(XPMProcessBuilder.Redirect.PIPE);
-        XPMProcess p = builder.start();
-        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-        int len = 0;
-        char[] buffer = new char[8192];
-        StringBuffer sb = new StringBuffer();
-        while ((len = input.read(buffer, 0, buffer.length)) >= 0)
-            sb.append(buffer, 0, len);
-        input.close();
 
-        int error = p.waitFor();
-        return new NativeArray(new Object[]{error, sb.toString()});
+        TreeMap<String, FileObject> files = new TreeMap<>();
+
+        try {
+            for (Map.Entry<String, String> key2Content : pFiles.entrySet()) {
+                FileObject file = connector.getTemporaryFile(key2Content.getKey() + "_", ".input");
+                files.put(key2Content.getKey(), file);
+                PrintWriter out = new PrintWriter(file.getContent().getOutputStream());
+                out.write(key2Content.getValue());
+                out.close();
+                LOGGER.info("Created temporary file %s", file);
+            }
+
+            builder.command(arguments.toStrings(connector, files));
+            if (options != null && options.has("stdout", options)) {
+                FileObject stdout = getFileObject(connector, unwrap(options.get("stdout", options)));
+                builder.redirectOutput(XPMProcessBuilder.Redirect.to(stdout));
+            } else {
+                builder.redirectOutput(XPMProcessBuilder.Redirect.PIPE);
+            }
+
+
+            builder.detach(false);
+            XPMProcess p = builder.start();
+            BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            int len = 0;
+            char[] buffer = new char[8192];
+            StringBuffer sb = new StringBuffer();
+            while ((len = input.read(buffer, 0, buffer.length)) >= 0)
+                sb.append(buffer, 0, len);
+            input.close();
+
+            int error = p.waitFor();
+            return new NativeArray(new Object[]{error, sb.toString()});
+        } finally {
+            // Remove temporary files
+            for (FileObject file : files.values()) {
+                try {
+                    file.delete();
+                } catch (Throwable t) {
+                    LOGGER.warn("Could not delete temporary file %s [%s]", file, t);
+                }
+            }
+
+        }
     }
 
 
@@ -1034,6 +1066,7 @@ public class XPMObject {
 
     // --- Javascript methods
 
+    // TODO: convert to JSBaseObject (for documentation)
     static public class JSXPM extends ScriptableObject {
         XPMObject xpm;
 
@@ -1171,8 +1204,11 @@ public class XPMObject {
 
 
         @JSFunction("evaluate")
-        public NativeArray evaluate(Object jsargs) throws Exception {
-            return xpm.evaluate(jsargs);
+        static public NativeArray evaluate(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws Exception {
+            if (args.length != 1 && args.length != 2)
+                throw new IllegalArgumentException("evaluate() called with the wrong number of arguments");
+            final XPMObject xpm = ((JSXPM) thisObj).xpm;
+            return xpm.evaluate(args[0], args.length == 2 ? (NativeObject) args[1] : null);
         }
 
         @JSFunction("file")

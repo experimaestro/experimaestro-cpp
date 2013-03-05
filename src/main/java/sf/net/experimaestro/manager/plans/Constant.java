@@ -18,12 +18,10 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
 import org.w3c.dom.Node;
 
-import javax.xml.xpath.XPathExpressionException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -47,27 +45,18 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected OperatorIterator _iterator() {
-        return new OperatorIterator() {
+    protected Iterator<ReturnValue> _iterator() {
+        return new AbstractIterator<ReturnValue>() {
             Iterator<? extends Node> iterator = nodes.iterator();
 
             @Override
-            protected Value _computeNext() {
+            protected ReturnValue computeNext() {
                 return iterator.hasNext() ?
-                        new Value(iterator.next()) : endOfData();
+                        new ReturnValue(null, iterator.next()) : endOfData();
             }
         };
     }
 
-    @Override
-    protected Operator doInit(Multimap<Operator, Operator> streams) throws XPathExpressionException {
-        return this;
-    }
-
-    @Override
-    protected Operator doPrepare(StreamRequest request) throws XPathExpressionException {
-        return this;
-    }
 
     @Override
     public void addParent(Operator parent) {
@@ -75,8 +64,8 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected void printDOTNode(PrintStream out) {
-        out.format("p%s [label=\"XML (%d)\"];%n", System.identityHashCode(this), nodes.size());
+    protected String getName() {
+        return String.format("XML (%d)", nodes.size());
     }
 
     public void add(Constant source) {

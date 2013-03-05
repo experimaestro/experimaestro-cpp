@@ -18,7 +18,9 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -27,9 +29,8 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 
-import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * A plan node that can be iterated over
@@ -41,7 +42,7 @@ public class TaskNode extends UnaryOperator {
      * The associated plan
      */
     private Plan plan;
-    private ArrayList<DotName> mappings;
+    private Map<DotName, Integer> mappings;
 
     public Plan getPlan() {
         return plan;
@@ -60,32 +61,30 @@ public class TaskNode extends UnaryOperator {
      * Creates an iterator
      */
     @Override
-    protected OperatorIterator _iterator() {
-        return new OperatorIterator() {
-            Value parentValue;
-
+    protected Iterator<ReturnValue> _iterator() {
+        return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
                     input.iterator() : ImmutableList.of(new Value(new Node[0])).iterator();
 
             @Override
-            protected Value _computeNext() {
+            protected ReturnValue computeNext() {
                 if (!iterator.hasNext())
                     return endOfData();
 
                 Value value = iterator.next();
 
                 Task task = plan.createTask();
-                assert mappings.size() == value.nodes.length;
-                for(int i = 0; i < value.nodes.length; i++) {
+                for (Map.Entry<DotName, Integer> entry : mappings.entrySet()) {
                     try {
-                        task.setParameter(mappings.get(i), value.nodes[i]);
+                        task.setParameter(entry.getKey(), value.nodes[entry.getValue()]);
                     } catch (NoSuchParameter noSuchParameter) {
                         throw new AssertionError();
                     }
                 }
+
                 try {
-                    return new Value(task.run());
+                    return new ReturnValue(new long[][]{value.context}, task.run());
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);
                 }
@@ -111,14 +110,19 @@ public class TaskNode extends UnaryOperator {
         return input;
     }
 
+
     @Override
-    protected void printDOTNode(PrintStream out) {
-        out.format("p%s [label=\"task %s(%s)\"];%n", System.identityHashCode(this), plan.getFactory().getId(),
-                Output.toString(", ", mappings));
+    protected String getName() {
+        return String.format("task %s(%s)", plan.getFactory().getId(), Output.toString(", ", mappings.entrySet(),
+                new Formatter<Map.Entry<DotName, Integer>>() {
+                    @Override
+                    public String format(Map.Entry<DotName, Integer> o) {
+                        return String.format("%s/%d", o.getKey(), o.getValue());
+                    }
+                }));
     }
 
-
-    public void setMappings(ArrayList<DotName> mappings) {
+    public void setMappings(Map<DotName, Integer> mappings) {
         this.mappings = mappings;
     }
 }

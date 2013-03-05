@@ -18,33 +18,36 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.AbstractIterator;
-
-import java.util.Iterator;
-
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 22/2/13
- */
-public class FunctionOperator extends UnaryOperator {
-    Function function;
+* @author B. Piwowarski <benjamin@bpiwowar.net>
+* @date 26/2/13
+*/
+public class StreamReference {
+    int streamIndex;
+    int contextIndex;
 
-    public FunctionOperator(Function function) {
-        this.function = function;
+    public StreamReference(int streamIndex, int contextIndex) {
+        this.contextIndex = contextIndex;
+        this.streamIndex = streamIndex;
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator() {
-        return new AbstractIterator<ReturnValue>() {
-            Iterator<Value> iterator = input.iterator();
-            @Override
-            protected ReturnValue computeNext() {
-                if (!iterator.hasNext())
-                    return endOfData();
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-                Value value = iterator.next();
-                return new ReturnValue(new long[][] { value.context }, function.f(value.nodes));
-            }
-        };
+        StreamReference that = (StreamReference) o;
+
+        if (contextIndex != that.contextIndex) return false;
+        if (streamIndex != that.streamIndex) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = streamIndex;
+        result = 31 * result + contextIndex;
+        return result;
     }
 }

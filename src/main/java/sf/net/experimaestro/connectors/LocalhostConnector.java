@@ -91,6 +91,13 @@ public class LocalhostConnector extends SingleHostConnector {
         return new ProcessBuilder();
     }
 
+    private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
+
+    @Override
+    protected FileObject getTemporaryDirectory() throws FileSystemException {
+        return getFileSystem().resolveFile(TMPDIR);
+    }
+
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
         return new ShLauncher.ProcessBuilder(scriptFile, connector);

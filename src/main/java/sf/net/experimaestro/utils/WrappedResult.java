@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,25 +18,25 @@
 
 package sf.net.experimaestro.utils;
 
-import java.util.Map;
-import java.util.Map.Entry;
+/**
+ * A class that wraps a result together with a boolean
+ * indicating the success of failure of the operation
+ * @param <T> The wrapped result
+ */
+public class WrappedResult<T> {
+    boolean success;
+    T t;
 
-public class Maps {
+    public WrappedResult(boolean success, T t) {
+        this.success = success;
+        this.t = t;
+    }
 
-    /**
-     * Convert the values of a set
-     *
-     * @param <Key>
-     * @param <Value1>
-     * @param <Value2>
-     * @param map1
-     * @param map2
-     * @param converter
-     */
-    public static final <Key, Value1, Value2> Map<Key, Value2> convert(Map<Key, Value1> map1,
-                                                                       Map<Key, Value2> map2, Converter<Value1, Value2> converter) {
-        for (Entry<Key, Value1> entry : map1.entrySet())
-            map2.put(entry.getKey(), converter.convert(entry.getValue()));
-        return map2;
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public T get() {
+        return t;
     }
 }

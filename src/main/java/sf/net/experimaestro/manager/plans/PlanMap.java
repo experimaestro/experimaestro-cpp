@@ -32,7 +32,20 @@ public class PlanMap {
      */
     HashMap<Plan, PlanMap> map = new HashMap<>();
 
+    /**
+     * All joined operators point to the same plan map: the {@linkplain #indirection}
+     * should be resolved to get the plan map that contains the operator
+     */
     PlanMap indirection;
+
+    /**
+     * Number of joins (when indirection is null)
+     */
+    int joins = 0;
+
+    /**
+     * The associated operator
+     */
     Operator operator;
 
     PlanMap sub(Plan plan, boolean create) {
@@ -66,10 +79,13 @@ public class PlanMap {
         // Resolve the reference
         PlanMap ref = resolve();
 
+        // Change all the chain to the given indirection
         while (other != null) {
+            assert other != ref;
             PlanMap next = other.indirection;
             other.indirection = ref;
             other = next;
+            ref.joins++;
         }
     }
 

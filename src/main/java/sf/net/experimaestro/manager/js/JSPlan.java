@@ -33,6 +33,7 @@ import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.plans.OperatorMap;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanMap;
 import sf.net.experimaestro.manager.plans.PlanReference;
@@ -214,7 +215,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     public String toDot(boolean simplify) throws XPathExpressionException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
-        Operator operator = plan.planGraph(new PlanMap());
+        Operator operator = plan.planGraph(new PlanMap(), new OperatorMap());
         if (simplify)
             operator = Operator.simplify(operator);
         operator.printDOT(ps);

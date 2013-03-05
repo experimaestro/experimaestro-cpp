@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -43,15 +44,15 @@ public class PlanReference extends Operator {
     }
 
     @Override
-    protected OperatorIterator _iterator() {
+    protected Iterator<ReturnValue> _iterator() {
         throw new UnsupportedOperationException();
     }
 
 
     @Override
-    public Operator init(PlanMap map) {
+    public Operator init(PlanMap map, OperatorMap opMap) {
         try {
-            return plan.planGraph(map.sub(plan, true));
+            return plan.planGraph(map.sub(plan, true), opMap);
         } catch (XPathExpressionException e) {
             throw new ExperimaestroRuntimeException(e);
         }

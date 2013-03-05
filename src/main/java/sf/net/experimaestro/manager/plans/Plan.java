@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.plans;
 import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.sun.istack.internal.Nullable;
@@ -38,6 +37,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.TreeMap;
 
 /**
  * An experimental plan.
@@ -121,7 +122,7 @@ public class Plan {
 
 
     public void printPlan(PrintStream out) throws XPathExpressionException {
-        final Operator planNode = data.planGraph(this, new PlanMap());
+        final Operator planNode = data.planGraph(this, new PlanMap(), new OperatorMap());
         planNode.printDOT(out);
     }
 
@@ -147,10 +148,9 @@ public class Plan {
         data.set(id, operator);
     }
 
-    public Operator planGraph(PlanMap map) throws XPathExpressionException {
-        return data.planGraph(this, map);
+    public Operator planGraph(PlanMap map, OperatorMap opMap) throws XPathExpressionException {
+        return data.planGraph(this, map, opMap);
     }
-
 
 
     /**
@@ -231,7 +231,7 @@ public class Plan {
          */
         Iterator<Node> run(Plan plan) throws XPathExpressionException {
             // Creates the TaskNode
-            Operator operator = planGraph(plan, new PlanMap());
+            Operator operator = planGraph(plan, new PlanMap(), new OperatorMap());
             if (LOGGER.isTraceEnabled())
                 try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
                     out.println("After creation");
@@ -245,7 +245,6 @@ public class Plan {
                     out.println("After simplification");
                     operator.printDOT(out);
                 }
-
 
             operator.init();
             if (LOGGER.isTraceEnabled())
@@ -275,7 +274,7 @@ public class Plan {
          * @param map  The current plan path (containg joins in input, and operators in output)
          * @return The node that is the root (sink) of the DAG
          */
-        synchronized private Operator planGraph(Plan plan, PlanMap map) throws XPathExpressionException {
+        synchronized private Operator planGraph(Plan plan, PlanMap map, OperatorMap opMap) throws XPathExpressionException {
             // Check if a plan was not already generated
             Operator old = map.get();
             if (old != null)
@@ -304,12 +303,12 @@ public class Plan {
             // --- Loop over the cartesian product of the inputs
             DotName ids[] = new DotName[inputs.keySet().size()];
             OperatorIterable values[] = new OperatorIterable[inputs.keySet().size()];
-
             {
+
                 int index = 0;
                 for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
                     ids[index] = input.getKey();
-                    values[index] = new OperatorIterable(input.getValue(), map);
+                    values[index] = new OperatorIterable(input.getValue(), map, opMap);
                     index++;
                 }
                 assert index == ids.length;
@@ -323,48 +322,40 @@ public class Plan {
                 // Create our node
                 TaskNode self = new TaskNode(plan);
 
-                // --- Build the Cartesian product / join of the inputs
-                Product product = new Product();
-                ArrayList<DotName> mappings = new ArrayList<>();
-                Multimap<Operator, Product.JoinReference> joinMap = HashMultimap.create();
-                for (int index = 0; index < ids.length; index++) {
-                    Operator parent = singleInputs[index];
-                    for (Map.Entry<Operator, Integer> op : parent.getStreams().entrySet()) {
-                        joinMap.put(op.getKey(), new Product.JoinReference(index, op.getValue()));
-                    }
-                    product.addParent(parent);
-                    mappings.add(ids[index]);
+                // Find LCAs and store them in a map operator ID -> inputs
+                BitSet[] joins = new BitSet[singleInputs.length];
+                for (int i = 0; i < joins.length; i++) {
+                    joins[i] = new BitSet();
+                    opMap.add(singleInputs[i]);
                 }
-
-                self.setMappings(mappings);
-
-                // If we have more than one subplan per operator, then we need to join
-                if (joinMap.keySet().size() != joinMap.size()) {
-                    OrderBy orderBy[] = new OrderBy[singleInputs.length];
-                    Set<OrderBy> orderBySet = new HashSet<>();
-
-                    Product.Join join = new Product.Join();
-                    for (Map.Entry<Operator, Collection<Product.JoinReference>> x : joinMap.asMap().entrySet()) {
-                        if (x.getValue().size() < 2)
-                            continue;
-                        for (Product.JoinReference ref : x.getValue()) {
-                            join.add(ref);
-                            if (orderBy[ref.streamIndex] == null)
-                                orderBy[ref.streamIndex] = new OrderBy(orderBySet);
-                            orderBy[ref.streamIndex].add(ref.contextIndex);
+                for (int i = 0; i < ids.length - 1; i++) {
+                    for (int j = i + 1; j < ids.length; j++) {
+                        // TODO: handle without join the case where the same operator corresponds
+                        // to two or more inputs (but is not an LCA of higher order)
+                        ArrayList<Operator> lca = opMap.findLCAs(singleInputs[i], singleInputs[j]);
+                        for (Operator operator : lca) {
+                            int key = opMap.get(operator);
+                            joins[i].set(key);
+                            joins[j].set(key);
                         }
                     }
-
-                    for (int index = 0; index < singleInputs.length; index++) {
-                        if (orderBy[index] != null)
-                            product.getParents().get(index).replaceBy(orderBy[index]);
-                    }
-
-                    // Finally, add the join to the product
-                    product.addJoin(join);
                 }
 
-                self.addParent(product);
+                // Build the trie strucutre for product/joins
+                TrieNode trie = new TrieNode();
+                for (int i = 0; i < joins.length; i++) {
+                    trie.add(joins[i], singleInputs[i]);
+                }
+
+                TrieNode.MergeResult merge = trie.merge(opMap);
+                self.addParent(merge.operator);
+
+                // Associate streams with names
+                Map<DotName,Integer> mappings = new TreeMap<>();
+                for (int i = 0; i < ids.length; i++) {
+                    mappings.put(ids[i], merge.map.get(singleInputs[i]));
+                }
+                self.setMappings(mappings);
 
 
                 // --- Handle group by
@@ -384,8 +375,19 @@ public class Plan {
                         assert taskNode != null : "Cannot group by: no associated operator";
 
                         // Add to the operator
+
+                        // Problem: this can be expanded if it was an union!
                         groupBy.add(taskNode);
                     }
+
+                    // Order using the operators we should group by
+                    Order<Operator> order = new Order();
+                    for (Operator op : groupBy.operators)
+                        order.add(op, false);
+                    OrderBy orderBy = new OrderBy(order);
+                    orderBy.addParent(self);
+
+                    groupBy.addParent(orderBy);
                     union.addParent(groupBy);
                 }
             }
@@ -425,7 +427,7 @@ public class Plan {
 
         public Iterable<? extends Plan> getSubPlans() {
             Set<Plan> set = new HashSet<>();
-            for (Operator operator: inputs.values()) {
+            for (Operator operator : inputs.values()) {
                 operator.addSubPlans(set);
             }
             return set;
@@ -434,13 +436,18 @@ public class Plan {
     }
 
 
+    /**
+     * Iterates over the diffent inputs
+     */
     static private class OperatorIterable implements Iterable<Operator> {
         Collection<Operator> collection;
         PlanMap map;
+        OperatorMap opMap;
 
-        public OperatorIterable(Collection<Operator> collection, PlanMap map) {
+        public OperatorIterable(Collection<Operator> collection, PlanMap map, OperatorMap opMap) {
             this.collection = collection;
             this.map = map;
+            this.opMap = opMap;
         }
 
         @Override
@@ -453,7 +460,7 @@ public class Plan {
 
             return new AbstractIterator<Operator>() {
 
-                // We put all "simple" values in a big constant to simplify the plan
+                // We put all "simple" (constants) values in a big constant to simplify the plan
                 Constant constant = null;
 
                 @Override
@@ -478,12 +485,13 @@ public class Plan {
                         Operator source = iterators.peek().next();
 
                         // Transform the operator (in case it is a plan reference)
-                        source = source.init(map);
+                        source = source.init(map, opMap);
 
-                        if (source instanceof Union) {
-                            iterators.add(source.getParents().iterator());
-                            continue;
-                        }
+//                        if (source instanceof Union) {
+//                            // We unroll an union
+//                            iterators.add(source.getParents().iterator());
+//                            continue;
+//                        }
 
                         if (source instanceof Constant) {
                             if (constant == null)
@@ -500,4 +508,5 @@ public class Plan {
 
 
     }
+
 }

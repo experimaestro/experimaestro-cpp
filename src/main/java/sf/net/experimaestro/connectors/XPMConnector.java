@@ -65,6 +65,11 @@ public class XPMConnector extends SingleHostConnector {
         return "";
     }
 
+    @Override
+    protected FileObject getTemporaryDirectory() throws FileSystemException {
+        throw new UnsupportedOperationException();
+    }
+
     public static XPMConnector getInstance() {
         return SINGLETON;
     }

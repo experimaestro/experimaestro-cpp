@@ -296,7 +296,7 @@
         <dependency>
             <artifactId>je</artifactId>
             <groupId>com.sleepycat</groupId>
-            <version>5.0.58</version>
+            <version>5.0.73</version>
         </dependency>
 
         <!-- XPath & XQuery handling -->
@@ -315,9 +315,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.collections</groupId>
-            <artifactId>google-collections</artifactId>
-            <version>1.0</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>13.0.1</version>
         </dependency>
 
         <!-- Relax NG support -->
@@ -330,6 +330,11 @@
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
             <version>6.4.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.4.1</version>
         </dependency>
     </dependencies>
 

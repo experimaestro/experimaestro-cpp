@@ -171,7 +171,10 @@ function test_join() {
     
     // Join plan1 of plan2 with plan1 (within plan2)
     plan3.join(plan1, [plan2, plan1]);
-    logger.info("Plan:%n%s", plan3.to_dot(true));
+    
+    pdf = xpm.evaluate(["/usr/local/bin/dot", "-Tpdf", new ParameterFile("dot", plan3.to_dot(false))], 
+        { stdout: file("/Users/bpiwowar/workspace/experimaestro/plan-3.pdf") });
+    
     var result = plan3.run();
     check(result, [4, 6, 8, 12]);
 }
@@ -244,10 +247,10 @@ tasks.ns::sum = {
 
     run: function(p) {
         var sum = 0;
-        for each(var a in p.x.*)
-            sum += Number(a);
-            
-        return a;
+        for each(var a in p.x) {
+            sum += Number(a.@xp::value);
+        }            
+        return sum;
     }
 };
 
@@ -265,5 +268,5 @@ function test_groupby() {
     var plan3 = tasks.ns::sum.plan({ x: plan2.group_by(plan1) });
     
     var result = plan3();
-    check(result, [16, 26]);
+    check(result, [32, 34, 36]);
 }

@@ -79,7 +79,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     private transient ResourceData data;
 
 
-    // --- Values filled on doInit
+    // --- Values filled on doPostInit
 
     /**
      * Task manager

@@ -125,8 +125,9 @@ public class JSUtils {
             Scriptable xml = cx.newObject(scope, "XML", new Node[]{root});
 
             final Scriptable list = (Scriptable) xml.get("*", xml);
+            int count = 0;
             for (Node child : XMLUtils.children(node)) {
-                list.put(0, list, cx.newObject(scope, "XML", new Node[]{child}));
+                list.put(count++, list, cx.newObject(scope, "XML", new Node[]{child}));
             }
             return list;
         }
