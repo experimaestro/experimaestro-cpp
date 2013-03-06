@@ -30,22 +30,12 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * An experimental plan.
@@ -302,97 +292,107 @@ public class Plan {
 
             // --- Loop over the cartesian product of the inputs
             DotName ids[] = new DotName[inputs.keySet().size()];
-            OperatorIterable values[] = new OperatorIterable[inputs.keySet().size()];
+            OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
             {
 
                 int index = 0;
                 for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
                     ids[index] = input.getKey();
-                    values[index] = new OperatorIterable(input.getValue(), map, opMap);
+                    inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
                     index++;
                 }
                 assert index == ids.length;
             }
 
             // Create a new operator
-            Union union = new Union();
-            map.set(union);
+            TaskNode self = new TaskNode(plan);
 
-            for (Operator[] singleInputs : CartesianProduct.of(Operator.class, values)) {
-                // Create our node
-                TaskNode self = new TaskNode(plan);
+            Operator inputOperators[] = new Operator[inputValues.length];
+            BitSet[] joins = new BitSet[inputOperators.length];
 
-                // Find LCAs and store them in a map operator ID -> inputs
-                BitSet[] joins = new BitSet[singleInputs.length];
-                for (int i = 0; i < joins.length; i++) {
-                    joins[i] = new BitSet();
-                    opMap.add(singleInputs[i]);
+            for (int i = inputValues.length; --i >= 0; ) {
+                OperatorIterable values = inputValues[i];
+                Union union = new Union();
+                for (Operator operator : values) {
+                    union.addParent(operator);
                 }
-                for (int i = 0; i < ids.length - 1; i++) {
-                    for (int j = i + 1; j < ids.length; j++) {
-                        // TODO: handle without join the case where the same operator corresponds
-                        // to two or more inputs (but is not an LCA of higher order)
-                        ArrayList<Operator> lca = opMap.findLCAs(singleInputs[i], singleInputs[j]);
-                        for (Operator operator : lca) {
-                            int key = opMap.get(operator);
-                            joins[i].set(key);
-                            joins[j].set(key);
-                        }
+
+                if (union.getParents().size() == 1)
+                    inputOperators[i] = union.getParent(0);
+                else
+                    inputOperators[i] = union;
+
+                joins[i] = new BitSet();
+                opMap.add(inputOperators[i]);
+
+            }
+
+            // Find LCAs and store them in a map operator ID -> inputs
+            for (int i = 0; i < ids.length - 1; i++) {
+                for (int j = i + 1; j < ids.length; j++) {
+                    // TODO: handle without join the case where the same operator corresponds
+                    // to two or more inputs (but is not an LCA of higher order)
+                    ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
+                    for (Operator operator : lca) {
+                        int key = opMap.get(operator);
+                        joins[i].set(key);
+                        joins[j].set(key);
                     }
-                }
-
-                // Build the trie strucutre for product/joins
-                TrieNode trie = new TrieNode();
-                for (int i = 0; i < joins.length; i++) {
-                    trie.add(joins[i], singleInputs[i]);
-                }
-
-                TrieNode.MergeResult merge = trie.merge(opMap);
-                self.addParent(merge.operator);
-
-                // Associate streams with names
-                Map<DotName,Integer> mappings = new TreeMap<>();
-                for (int i = 0; i < ids.length; i++) {
-                    mappings.put(ids[i], merge.map.get(singleInputs[i]));
-                }
-                self.setMappings(mappings);
-
-
-                // --- Handle group by
-
-                if (groupBy == null) {
-                    union.addParent(self);
-                } else {
-                    GroupBy groupBy = new GroupBy();
-
-
-                    // Get all the ancestor to group by
-                    for (Plan[] path : this.groupBy) {
-                        final PlanMap submap = map.sub(path, false);
-                        final Operator taskNode = submap.get();
-
-                        // Should not happen since they are defined paths
-                        assert taskNode != null : "Cannot group by: no associated operator";
-
-                        // Add to the operator
-
-                        // Problem: this can be expanded if it was an union!
-                        groupBy.add(taskNode);
-                    }
-
-                    // Order using the operators we should group by
-                    Order<Operator> order = new Order();
-                    for (Operator op : groupBy.operators)
-                        order.add(op, false);
-                    OrderBy orderBy = new OrderBy(order);
-                    orderBy.addParent(self);
-
-                    groupBy.addParent(orderBy);
-                    union.addParent(groupBy);
                 }
             }
 
-            return union;
+
+            // Build the trie structure for product/joins
+            TrieNode trie = new TrieNode();
+            for (int i = 0; i < joins.length; i++) {
+                trie.add(joins[i], inputOperators[i]);
+            }
+
+            TrieNode.MergeResult merge = trie.merge(opMap);
+            self.addParent(merge.operator);
+
+            // Associate streams with names
+            Map<DotName, Integer> mappings = new TreeMap<>();
+            for (int i = 0; i < ids.length; i++) {
+                mappings.put(ids[i], merge.map.get(inputOperators[i]));
+            }
+            self.setMappings(mappings);
+
+
+            // --- Handle group by
+
+            if (groupBy != null) {
+                GroupBy groupBy = new GroupBy();
+
+
+                // Get all the ancestor to group by
+                for (Plan[] path : this.groupBy) {
+                    final PlanMap submap = map.sub(path, false);
+                    final Operator taskNode = submap.get();
+
+                    // Should not happen since they are defined paths
+                    assert taskNode != null : "Cannot group by: no associated operator";
+
+                    // Add to the operator
+
+                    // Problem: this can be expanded if it was an union!
+                    groupBy.add(taskNode);
+                }
+
+                // Order using the operators we should group by
+                Order<Operator> order = new Order();
+                for (Operator op : groupBy.operators)
+                    order.add(op, false);
+                OrderBy orderBy = new OrderBy(order);
+                orderBy.addParent(self);
+
+                groupBy.addParent(orderBy);
+                map.set(groupBy);
+                return groupBy;
+            }
+
+            map.set(self);
+            return self;
         }
 
 

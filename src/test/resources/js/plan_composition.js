@@ -172,11 +172,34 @@ function test_join() {
     // Join plan1 of plan2 with plan1 (within plan2)
     plan3.join(plan1, [plan2, plan1]);
     
-    pdf = xpm.evaluate(["/usr/local/bin/dot", "-Tpdf", new ParameterFile("dot", plan3.to_dot(false))], 
-        { stdout: file("/Users/bpiwowar/workspace/experimaestro/plan-3.pdf") });
-    
     var result = plan3.run();
     check(result, [4, 6, 8, 12]);
+}
+
+// Test a join with an union
+function test_join_union() {
+    var plan1 = tasks.ns::identity.plan({
+        x: [1, 2]
+    });
+    var plan2 = tasks.ns::mult.plan({
+        x: [plan1, -1],
+        y: [3, 5]
+    });
+    var plan3 = tasks.ns::plus.plan(
+        {
+            x: plan1,
+            y: plan2
+        }
+    );
+    
+    // Join plan1 of plan2 with plan1 (within plan2)
+	// note that because x in plan2 has an extra input
+	// this gives a cartesian product with results
+	// plus([-3, -5], [1, 2]
+    plan3.join(plan1, [plan2, plan1]);
+    
+    var result = plan3.run();
+    check(result, [-4, -3, -2, -1, 4, 6, 8, 12]);
 }
 
 // Implicit join 

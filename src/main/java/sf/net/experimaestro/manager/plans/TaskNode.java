@@ -84,7 +84,7 @@ public class TaskNode extends UnaryOperator {
                 }
 
                 try {
-                    return new ReturnValue(new long[][]{value.context}, task.run());
+                    return new ReturnValue(new DefaultContexts(value.context), task.run());
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);
                 }

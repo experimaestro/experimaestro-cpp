@@ -68,6 +68,9 @@ public class PlanMap {
         return resolve().operator;
     }
 
+    /**
+     * Set the operator for this node
+     */
     public Operator set(Operator value) {
         PlanMap ref = resolve();
         Operator old = ref.operator;

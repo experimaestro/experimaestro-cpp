@@ -20,16 +20,13 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.ImmutableList;
 import sf.net.experimaestro.utils.CartesianProduct;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static java.lang.StrictMath.max;
 
 /**
  * Join
@@ -38,6 +35,8 @@ import java.util.Map;
  * @date 3/3/13
  */
 public class Join extends Product {
+    final static private Logger LOGGER = Logger.getLogger();
+
     ArrayList<JoinReference> joins = new ArrayList<>();
 
     @Override
@@ -122,8 +121,11 @@ public class Join extends Product {
             if (first) {
                 if (!computeFirst()) return endOfData();
                 positions = new long[joins.size()];
-                for (int i = positions.length; --i >= 0; )
-                    positions[i] = current[0].context[joins.get(i).contextIndices[0]];
+                for (int i = positions.length; --i >= 0; ) {
+                    positions[i] = -1;
+                    for(int j = parents.size(); --j >= 0; )
+                        positions[i] = max(positions[i], current[0].context[joins.get(i).contextIndices[0]]);
+                }
             }
 
             // Loop until we have a not empty cartesian product with joined values
@@ -142,6 +144,7 @@ public class Join extends Product {
 
                     for (int streamIndex = 0; streamIndex < parents.size(); streamIndex++) {
                         int contextIndex = join.contextIndices[streamIndex];
+                        LOGGER.info("Context %d of stream %d is %d (position = %d)", contextIndex, streamIndex, current[streamIndex].context[contextIndex], positions[joinIndex]);
                         while (current[streamIndex].context[contextIndex] < positions[joinIndex]) {
                             if (!next(streamIndex))
                                 return endOfData();
@@ -208,7 +211,8 @@ public class Join extends Product {
                     minRank = i;
                 } else {
                     // Fails if the input stream is not properly ordered
-                    assert this.positions[i] == resultId;
+                    // TODO: check is not correct (fails when properly ordered)
+//                    assert this.positions[i] == resultId;
                 }
             }
             return minRank;

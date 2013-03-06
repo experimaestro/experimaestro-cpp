@@ -43,7 +43,7 @@ public class FunctionOperator extends UnaryOperator {
                     return endOfData();
 
                 Value value = iterator.next();
-                return new ReturnValue(new long[][] { value.context }, function.f(value.nodes));
+                return new ReturnValue(new DefaultContexts(value.context), function.f(value.nodes));
             }
         };
     }

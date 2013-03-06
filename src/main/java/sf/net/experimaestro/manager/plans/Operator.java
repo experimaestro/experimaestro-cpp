@@ -126,12 +126,28 @@ public abstract class Operator {
         }
     }
 
+    public interface Contexts {
+        long get(int stream, int index);
+    }
+
+    public static class DefaultContexts implements Contexts {
+        long[][] contexts;
+
+        public DefaultContexts(long[]... contexts) {
+            this.contexts = contexts;
+        }
+
+        @Override
+        public long get(int stream, int index) {
+            return contexts[stream][index];
+        }
+    }
 
     static public class ReturnValue {
         Node[] nodes;
-        long[][] contexts;
+        Contexts contexts;
 
-        public ReturnValue(long[][] contexts, Node... nodes) {
+        public ReturnValue(Contexts contexts, Node... nodes) {
             this.nodes = nodes;
             this.contexts = contexts;
         }
@@ -165,7 +181,7 @@ public abstract class Operator {
                 for (Map.Entry<StreamReference, Integer> entry : contextMappings.entrySet()) {
                     StreamReference key = entry.getKey();
                     newValue.context[entry.getValue()] = key.streamIndex < 0 ?
-                            newValue.id : next.contexts[key.streamIndex][key.contextIndex];
+                            newValue.id : next.contexts.get(key.streamIndex, key.contextIndex);
                 }
 
             }
@@ -227,7 +243,7 @@ public abstract class Operator {
     /**
      * Initialize the node  (called after the initialization of parents)
      *
-     * @param parentStreams
+     * @param parentStreams A map from the operators from parent streams to the context index
      * @throws javax.xml.xpath.XPathExpressionException
      *
      */

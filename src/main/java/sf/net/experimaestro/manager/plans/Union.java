@@ -46,10 +46,32 @@ public class Union extends NAryOperator {
                         return endOfData();
                     iterator = Union.this.getParent(parent).iterator();
                 }
-                return new ReturnValue(null, iterator.next().nodes);
+
+                Value value = iterator.next();
+                ReturnValue rv = new ReturnValue(new UnionContexts(parent, value.context), value.nodes);
+                return rv;
             }
+
         };
     }
+
+    static private class UnionContexts implements Contexts {
+        private final int parent;
+        private final long[] context;
+
+        public UnionContexts(int parent, long[] context) {
+            this.parent = parent;
+            this.context = context;
+        }
+
+        @Override
+        public long get(int stream, int index) {
+            if (stream != this.parent)
+                return -1;
+            return context[index];
+        }
+    }
+
 
     @Override
     protected String getName() {
@@ -58,11 +80,5 @@ public class Union extends NAryOperator {
 
     @Override
     protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
-        // Just checks we don't have to copy some context
-        if (contextMappings.size() > 1)
-            throw new AssertionError();
-
-        if (contextMappings.size() == 1 && contextMappings.keySet().iterator().next().streamIndex != -1)
-            throw new AssertionError();
     }
 }

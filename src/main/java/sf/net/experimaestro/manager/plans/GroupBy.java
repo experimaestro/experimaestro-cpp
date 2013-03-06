@@ -115,7 +115,7 @@ public class GroupBy extends UnaryOperator {
                 for (int i : indices)
                     positions[i] = value.context[i];
 
-                ReturnValue rv = new ReturnValue(new long[][]{value.context}, fragment);
+                ReturnValue rv = new ReturnValue(new DefaultContexts(value.context), fragment);
                 add(fragment, value);
 
                 main:

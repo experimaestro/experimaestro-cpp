@@ -82,7 +82,7 @@ public class OrderBy extends UnaryOperator {
                 }
                 if (iterator.hasNext()) {
                     Value value = iterator.next();
-                    return new ReturnValue(new long[][]{value.context}, value.nodes);
+                    return new ReturnValue(new DefaultContexts(value.context), value.nodes);
                 }
                 return endOfData();
             }

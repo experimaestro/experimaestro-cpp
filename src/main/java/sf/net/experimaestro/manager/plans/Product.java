@@ -84,7 +84,7 @@ public class Product extends NAryOperator {
                 nodes[j] = current[j].nodes[0];
             }
 
-            return new ReturnValue(contexts, nodes);
+            return new ReturnValue(new DefaultContexts(contexts), nodes);
         }
     }
 
