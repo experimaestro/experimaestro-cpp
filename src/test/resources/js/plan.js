@@ -23,27 +23,22 @@
 
 // Used to store results
 var results = [];
+var abc = new Namespace("a.b.c");
 
 // The task
-var task = {
-    // The id of the task is an XML qualified name 
-    id: qname("a.b.c", "task"),
-    
+tasks("abc:task") = {    
     // One input of type xs:integer
     inputs: <inputs><value type="xs:integer" id="x"/><value type="xs:integer" id="y"/></inputs>,
     
     // The function that will be called when the task is run
 	run: function(inputs) {
 	    // Multiply x by y and add it to the results array
-        results.push(inputs.x * inputs.y);
+        results.push(inputs.x.get_value() * inputs.y.get_value());
         // Returns something
 		return <outputs>{inputs.x}{inputs.y}</outputs>;
 	}
 		
 };
-
-// Add the task to the list of available factories
-xpm.add_task_factory(task);
 
 // END SNIPPET: main
 
@@ -59,7 +54,7 @@ function check(expected) {
 function test_plan_1() {
     // START SNIPPET: check
     results = [];
-    xpm.get_task(qname("a.b.c", "task")).run_plan("x=1,2 * y=5,7");
+    tasks("abc:task").run_plan("x=1,2 * y=5,7");
     xpm.log("The task returned\n%s", results.toSource());
     // END SNIPPET: check
     check([5, 10, 7, 14]);

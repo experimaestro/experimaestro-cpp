@@ -24,7 +24,7 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 import sf.net.experimaestro.utils.WrappedResult;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -144,10 +144,10 @@ public abstract class Operator {
     }
 
     static public class ReturnValue {
-        Node[] nodes;
+        Document[] nodes;
         Contexts contexts;
 
-        public ReturnValue(Contexts contexts, Node... nodes) {
+        public ReturnValue(Contexts contexts, Document... nodes) {
             this.nodes = nodes;
             this.contexts = contexts;
         }

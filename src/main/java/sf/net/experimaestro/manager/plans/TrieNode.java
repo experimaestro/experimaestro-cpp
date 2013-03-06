@@ -315,8 +315,12 @@ public class TrieNode {
 
 
             for (Map.Entry<Operator, IntSet> parent : mergedOperators.entrySet()) {
+                HashSet<Operator> orderOperators = new HashSet<>();
+                for(int operatorId: parent.getValue())
+                        orderOperators.add(opMap.get(operatorId));
+
                 // Order the results first
-                OrderBy orderBy = new OrderBy(order);
+                OrderBy orderBy = new OrderBy(order, orderOperators);
                 orderBy.addParent(parent.getKey());
 
                 list.add(parent.getKey());

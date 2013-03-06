@@ -160,7 +160,7 @@ public class JSDocumentation {
 
                 documentMethod(methods, method, name);
             }
-            classes.add(new Documentation.Text(JSObject.getClassName(clazz)), methods);
+            classes.add(new Documentation.Text(JSBaseObject.getClassName(clazz)), methods);
 
         }
 

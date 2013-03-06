@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.annotations.JSFunction;
 
 import java.io.*;
 
@@ -29,7 +28,7 @@ import java.io.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSObject {
+public class JSFileObject extends JSBaseObject {
 
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
@@ -56,7 +55,8 @@ public class JSFileObject extends JSObject {
 
 
     @JSHelp(value = "Get the parent file object")
-    public JSFileObject get_parent() throws FileSystemException {
+    @JSFunction("get_parent")
+    public JSFileObject getParent() throws FileSystemException {
         return get_ancestor(1);
     }
 
@@ -67,6 +67,7 @@ public class JSFileObject extends JSObject {
 
     @JSHelp(value = "Get the n<sup>th</sup> ancestor of this file object",
             arguments = @JSArguments(@JSArgument(type = "Integer", name = "levels")))
+    @JSFunction("get_ancestor")
     public JSFileObject get_ancestor(int level) throws FileSystemException {
         if (level < 0)
             throw new IllegalArgumentException("Level is negative (" + level + ")");
@@ -79,9 +80,9 @@ public class JSFileObject extends JSObject {
     }
 
 
-    @JSFunction("xpath")
-    @JSHelp(value = "Returns a file object corresponding to the xpath given in the arguments. " +
-            "Each name given corresponds to a new xpath component starting from this file object.",
+    @JSFunction("path")
+    @JSHelp(value = "Returns a file object corresponding to the path given in the arguments. " +
+            "Each name given corresponds to a new path component starting from this file object.",
             arguments = @JSArguments({@JSArgument(type = "String", name = "name"), @JSArgument(name = "...")}))
     public JSFileObject path(String... args) throws FileSystemException {
         FileObject current = file;

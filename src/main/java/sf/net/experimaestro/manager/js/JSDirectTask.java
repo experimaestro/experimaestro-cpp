@@ -72,38 +72,35 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     @Override
-    public Object jsrun(boolean convertToE4X) {
+    public Document jsrun() {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
 
         // Get the inputs
-        Object result = null;
+        Document result = null;
 
         if (runFunction != null) {
             // We have a run function
             Scriptable jsDirect = cx.newObject(jsScope, "Object", new Object[]{});
-            Scriptable jsE4X = cx.newObject(jsScope, "Object", new Object[]{});
-            getJSInputs(cx, jsE4X, jsDirect);
+            Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
+            getJSInputs(cx, jsXML, jsDirect);
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
-                    new Object[]{jsE4X, jsDirect});
+                    new Object[]{jsXML, jsDirect});
             LOGGER.debug("Returned %s", returned);
-            if (returned == Undefined.instance)
+            if (returned == Undefined.instance || returned == null)
                 throw new ExperimaestroRuntimeException(
                         "Undefined returned by the function run of task [%s]",
                         factory.getId());
 
-            if (convertToE4X)
-                result = returned;
-            else
-                result = JSUtils.toDOM(jsScope, returned);
+            result = JSUtils.toDocument(jsScope, returned);
         } else {
             // We just copy the inputs as an output
 
             Document document = XMLUtils.newDocument();
 
             Element root = document.createElementNS(Manager.EXPERIMAESTRO_NS,
-                    "outputs");
+                    "array");
             document.appendChild(root);
 
             // Loop over non null inputs
@@ -122,10 +119,7 @@ public class JSDirectTask extends JSAbstractTask {
                 }
             }
 
-            if (convertToE4X)
-                result = JSUtils.domToE4X(document, cx, jsScope);
-            else
-                result = document;
+            result = document;
 
         }
 
@@ -147,24 +141,24 @@ public class JSDirectTask extends JSAbstractTask {
         for (Entry<String, Value> entry : values.entrySet()) {
             String id = entry.getKey();
             Value value = entry.getValue();
-            final Object e4x = JSUtils.domToE4X(value.get(), cx, jsScope);
-            jsE4X.put(id, jsE4X, e4x);
+            JSNode xml = new JSNode(value.get());
+            jsE4X.put(id, jsE4X, xml);
 
             Type type = value.getType();
             if (type instanceof ValueType) {
                 Object object = ((ValueType) type).unwrap(value.get());
                 if (object instanceof FileObject)
-                    object = new JSFileObject(xpm, (FileObject)object);
+                    object = new JSFileObject(xpm, (FileObject) object);
                 else if (!instanceOf(object, String.class, Float.class, Double.class, Integer.class, Long.class, Character.class))
                     throw new NotImplementedException(String.format("Ooops. Don't know how to handle %s for JS", object.getClass()));
                 jsUnwrapped.put(id, jsUnwrapped, object);
             } else
-                jsUnwrapped.put(id, jsUnwrapped, e4x);
+                jsUnwrapped.put(id, jsUnwrapped, xml);
         }
     }
 
-    private boolean instanceOf(Object object, Class<?>... classes)  {
-        for(Class<?> klass: classes)
+    private boolean instanceOf(Object object, Class<?>... classes) {
+        for (Class<?> klass : classes)
             if (klass.isInstance(object))
                 return true;
         return false;

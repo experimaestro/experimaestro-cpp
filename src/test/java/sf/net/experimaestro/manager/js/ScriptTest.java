@@ -36,6 +36,9 @@ public class ScriptTest  {
 
     private static final String JS_SCRIPT_PATH = "/js";
 
+    /** If set, we will only use the specified file for testing */
+    public static final String JS_TEST_FILE_KEY = "sf.net.experimaestro.manager.js.test.file";
+
 
     /**
      * Retrieves all the .js files (excluding .inc.js)
@@ -45,6 +48,8 @@ public class ScriptTest  {
     @Factory
     public Object[] jsFactories() throws IOException {
         XPMEnvironment environment = new XPMEnvironment();
+
+        final String testFile = System.getProperty(JS_TEST_FILE_KEY);
 
         // Get the JavaScript files
         final URL url = ScriptTest.class.getResource(JS_SCRIPT_PATH);
@@ -59,7 +64,9 @@ public class ScriptTest  {
 
             @Override
             public boolean includeFile(FileSelectInfo file) throws Exception {
-                final String name = file.getFile().getName().toString();
+                String name = file.getFile().getName().getBaseName();
+                if (testFile != null)
+                    return name.equals(testFile);
                 return name.endsWith(".js") && !name.endsWith(".inc.js");
             }
         });

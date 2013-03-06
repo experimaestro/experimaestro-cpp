@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,10 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.*;
-import org.mozilla.javascript.annotations.JSFunction;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.List;
@@ -33,43 +31,34 @@ import java.util.List;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskFactoryJSWrapper extends ScriptableObject {
+@JSObjectDescription(name = JSTaskFactoryWrapper.CLASSNAME)
+public class JSTaskFactoryWrapper extends JSBaseObject {
     final static private Logger LOGGER = Logger.getLogger();
 
-    private static final long serialVersionUID = 1L;
 
     public static final String CLASSNAME = "XPMTaskFactory";
 
     TaskFactory factory;
 
-    public TaskFactoryJSWrapper() {
-    }
-
-    public void jsConstructor(Scriptable information) {
+    public JSTaskFactoryWrapper(Scriptable information) {
         if (information != null) {
             this.factory = ((JSTaskFactory) information).factory;
         }
-    }
-
-    @Override
-    public String getClassName() {
-        return "XPMTaskFactory";
     }
 
     // ---- JavaScript functions ----
 
 
     @JSFunction("run")
-    static public List<Object> run(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws Exception {
-        if (args.length != 1) throw new ExperimaestroRuntimeException("Expected 1 argument for run");
-        Task task = ((TaskFactoryJSWrapper)thisObj).factory.create();
-        return TaskJSWrapper.wrap(task.runPlan(JSUtils.toString(args[0]), true, new JSScriptRunner(thisObj)), thisObj);
+    public List<Object> run(String plan) throws Exception {
+        Task task = factory.create();
+        return JSTaskWrapper.wrap(task.runPlan(plan, true, new JSScriptRunner(this)));
     }
 
     @JSFunction("create")
     public Scriptable create() {
         Task task = factory.create();
         return Context.getCurrentContext().newObject(getParentScope(), "XPMTask",
-                new Object[] { task });
+                new Object[]{task});
     }
 }

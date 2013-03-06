@@ -77,9 +77,8 @@ public class JavaScriptChecker {
 
     @DataProvider
     public Object[][] jsProvider() throws IOException {
-        Pattern pattern = Pattern
-                .compile("function\\s+(test_[\\w]+)\\s*\\(");
-        Matcher matcher = pattern.matcher(content);
+        Pattern testFunctionPattern = Pattern.compile("function\\s+(test_[\\w]+)\\s*\\(");
+        Matcher matcher = testFunctionPattern.matcher(content);
         ArrayList<Object[]> list = new ArrayList<>();
 
         // Adds the script
@@ -130,7 +129,7 @@ public class JavaScriptChecker {
             assert object instanceof Function : format(
                     "%s is not a function", functionName);
             Function function = (Function) object;
-            context.setWrapFactory(JSObject.XPMWrapFactory.INSTANCE);
+            context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
             function.call(context, scope, null, new Object[]{});
         }
     }

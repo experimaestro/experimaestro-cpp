@@ -20,7 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,9 +33,9 @@ import java.util.List;
  * @date 21/2/13
  */
 public class Constant extends Operator {
-    List<Node> nodes  = new ArrayList<>();
+    List<Document> nodes  = new ArrayList<>();
 
-    public Constant(Node... documents) {
+    public Constant(Document... documents) {
         nodes.addAll(Arrays.asList(documents));
     }
 
@@ -47,7 +47,7 @@ public class Constant extends Operator {
     @Override
     protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
-            Iterator<? extends Node> iterator = nodes.iterator();
+            Iterator<? extends Document> iterator = nodes.iterator();
 
             @Override
             protected ReturnValue computeNext() {

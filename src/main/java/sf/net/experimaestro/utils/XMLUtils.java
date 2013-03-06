@@ -363,4 +363,5 @@ public class XMLUtils {
             fragment.appendChild(document.adoptNode(list.item(i).cloneNode(true)));
         return fragment;
     }
+
 }

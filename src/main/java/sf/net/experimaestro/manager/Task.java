@@ -19,7 +19,6 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
@@ -31,8 +30,13 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.StringReader;
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * The abstract Task object
@@ -118,15 +122,15 @@ public abstract class Task {
      *
      * @return An XML description of the output
      */
-    public abstract Node doRun();
+    public abstract Document doRun();
 
     /**
      * Run this task.
      * <p/>
      * Calls {@linkplain #doRun()}
      */
-    final public Node run() throws NoSuchParameter, ValueMismatchException {
-        LOGGER.info("Running task [%s]", factory == null ? "n/a" : factory.id);
+    final public Document run() throws NoSuchParameter, ValueMismatchException {
+        LOGGER.debug("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter
         ArrayList<String> list = getOrderedInputs();
@@ -248,7 +252,7 @@ public abstract class Task {
      * @param value The value to be set (this should be an XML fragment)
      * @return True if the parameter was set and false otherwise
      */
-    public final void setParameter(DotName id, Node value) throws NoSuchParameter {
+    public final void setParameter(DotName id, Document value) throws NoSuchParameter {
         try {
             getValue(id).set(value);
         } catch (ExperimaestroRuntimeException e) {
@@ -369,12 +373,12 @@ public abstract class Task {
      * @param singlePlan If the plan should be composed of only one plan
      * @throws ParseException
      */
-    public ArrayList<Node> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
+    public ArrayList<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner) throws Exception {
         PlanParser planParser = new PlanParser(new StringReader(planString));
         sf.net.experimaestro.plan.Node plans = planParser.plan();
         final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
 
-        ArrayList<Node> results = new ArrayList<Node>();
+        ArrayList<Document> results = new ArrayList<>();
 
         LOGGER.info("Plan is %s", plans.toString());
         while (iterator.hasNext()) {

@@ -20,7 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 /**
  * Marks javascript objects where the object public constructors
- * have to be used.
+ * has to be used.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13

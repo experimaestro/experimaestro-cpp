@@ -190,6 +190,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
             new JSUtils.FunctionDefinition(XPMObject.class, "transform", null),
+//            new JSUtils.FunctionDefinition(JSXMLConstructor.class, "xml", null)
     };
 
 
@@ -231,7 +232,7 @@ public class XPMObject {
         this.rootLogger = Logger.getLogger(loggerRepository);
 
 
-        context.setWrapFactory(JSObject.XPMWrapFactory.INSTANCE);
+        context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
 
         // --- Tells E4X to preserve whitespaces
         // XML.ignoreWhitespace=false
@@ -253,7 +254,8 @@ public class XPMObject {
                 Introspection.addClasses(new Introspection.Checker() {
                     @Override
                     public boolean accepts(Class<?> aClass) {
-                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass)) && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
+                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSConstructable.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass))
+                                && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
                     }
                 }, list, packageName, -1, url);
             }
@@ -262,7 +264,7 @@ public class XPMObject {
         }
 
         for (Class<?> aClass : list) {
-            JSObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
+            JSBaseObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
         }
 
         // Add functions
@@ -281,6 +283,9 @@ public class XPMObject {
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
         ((JSXPM) get(scope, "xpm")).set(this);
 
+        // xml object (to construct XML easily)
+        addNewObject(context, scope, "xml", "XMLConstructor", new Object[] {});
+
         // scheduler
         addNewObject(context, scope, "scheduler", "Scheduler",
                 new Object[]{scheduler, this});
@@ -289,7 +294,7 @@ public class XPMObject {
         addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
 
         // logger
-        addNewObject(context, scope, "logger", JSObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
+        addNewObject(context, scope, "logger", JSBaseObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
 
         // --- Get the default group from the environment
         if (environment.containsKey(DEFAULT_GROUP))
@@ -438,7 +443,7 @@ public class XPMObject {
      * Creates a new JavaScript object
      */
     Scriptable newObject(Class<?> aClass, Object... arguments) {
-        return context.newObject(scope, JSObject.getClassName(aClass), arguments);
+        return context.newObject(scope, JSBaseObject.getClassName(aClass), arguments);
     }
 
     /**
@@ -613,8 +618,7 @@ public class XPMObject {
         if (factory == null)
             throw new ExperimaestroRuntimeException("Could not find a task with name [%s]", qname);
         LOGGER.info("Creating a new JS task [%s]", factory.getId());
-        return context.newObject(scope, "XPMTask",
-                new Object[]{Context.javaToJS(factory.create(), scope)});
+        return new JSTaskWrapper(factory.create());
     }
 
     /**
@@ -1183,10 +1187,10 @@ public class XPMObject {
          */
         @JSFunction("add_task_factory")
         public Scriptable add_task_factory(NativeObject object) {
-            JSTaskFactory f = new JSTaskFactory(xpm.scope, object, xpm.repository);
-            xpm.repository.addFactory(f.factory);
+            JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
+            xpm.repository.addFactory(factory.factory);
             return xpm.context.newObject(xpm.scope, "XPMTaskFactory",
-                    new Object[]{Context.javaToJS(f, xpm.scope)});
+                    new Object[]{ factory });
         }
 
 

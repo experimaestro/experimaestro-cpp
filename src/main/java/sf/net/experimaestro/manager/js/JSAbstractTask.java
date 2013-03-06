@@ -18,20 +18,19 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.util.Map.Entry;
 
 public abstract class JSAbstractTask extends Task {
     protected Scriptable jsScope;
@@ -48,33 +47,6 @@ public abstract class JSAbstractTask extends Task {
     protected void init(Task other) {
         super.init(other);
         jsScope = ((JSAbstractTask) other).jsScope;
-    }
-
-    /**
-     * Convert a DOM element into a E4X value
-     *
-     * @param value
-     * @return
-     */
-    protected Object toE4X(Element value) {
-        int nodeType = value.getNodeType();
-        Object jsInput = null;
-        Context jsContext = Context.getCurrentContext();
-        if (nodeType == Node.ELEMENT_NODE) {
-            jsInput = JSUtils.domToE4X(value, jsContext, jsScope);
-        } else if (nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
-            // Embed in a list
-            NodeList childNodes = value.getChildNodes();
-            Object[] nodes = new Scriptable[childNodes.getLength()];
-            for (int i = 0; i < nodes.length; i++)
-                nodes[i] = JSUtils.domToE4X(childNodes.item(i), jsContext,
-                        jsScope);
-            jsInput = jsContext.newObject(jsScope, "XMLList", nodes);
-        }
-
-        if (jsInput == null)
-            throw new RuntimeException("Cannot handle type " + nodeType);
-        return jsInput;
     }
 
     protected Document getDocument(Scriptable scope, Object result) {
@@ -117,11 +89,11 @@ public abstract class JSAbstractTask extends Task {
     }
 
     @Override
-    public Node doRun() {
-        return (Node) jsrun(false);
+    public Document doRun() {
+        return jsrun();
     }
 
-    abstract protected Object jsrun(boolean convertToE4X);
+    abstract protected Document jsrun();
 
 
 

@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.utils;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.FunctionObject;
@@ -38,10 +37,10 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
+import sf.net.experimaestro.manager.js.JSNode;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
-import java.util.Iterator;
 
 import static java.lang.String.format;
 
@@ -82,6 +81,8 @@ public class JSUtils {
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
 
+        if (object == Scriptable.NOT_FOUND)
+            return null;
         return object;
     }
 
@@ -138,6 +139,35 @@ public class JSUtils {
         return cx.newObject(scope, "XML", new Node[]{node});
     }
 
+    public static Document toDocument(Scriptable jsScope, Object returned) {
+        return Manager.wrap(toDOM(jsScope, returned));
+    }
+
+    public static Object get(Scriptable scope, String name) {
+        Scriptable _scope = scope;
+        while (scope != null) {
+            if (scope.has(name, _scope))
+                return scope.get(name, _scope);
+            scope = scope.getParentScope();
+        }
+
+        return Scriptable.NOT_FOUND;
+    }
+
+
+    static public class OptionalDocument {
+        Document document;
+        Document get() {
+            if (document == null)
+                document = XMLUtils.newDocument();
+            return document;
+        }
+
+        public boolean has() {
+            return document != null;
+        }
+    }
+
     /**
      * Transform objects into an XML node
      *
@@ -145,6 +175,10 @@ public class JSUtils {
      * @return a {@linkplain Node} or a {@linkplain NodeList}
      */
     public static Node toDOM(Scriptable scope, Object object) {
+        return toDOM(scope, object, new OptionalDocument());
+    }
+
+    public static Node toDOM(Scriptable scope, Object object, OptionalDocument document) {
         // Unwrap if needed
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
@@ -161,13 +195,13 @@ public class JSUtils {
                 LOGGER.debug("Transforming from XMLList [%s]", object);
                 final Object[] ids = xmlObject.getIds();
                 if (ids.length == 1)
-                    return toDOM(scope, xmlObject.get((Integer) ids[0], xmlObject));
+                    return toDOM(scope, xmlObject.get((Integer) ids[0], xmlObject), document);
 
                 Document doc = XMLUtils.newDocument();
                 DocumentFragment fragment = doc.createDocumentFragment();
 
                 for (int i = 0; i < ids.length; i++) {
-                    Node node = toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject));
+                    Node node = toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject), document);
                     if (node instanceof Document)
                         node = ((Document) node).getDocumentElement();
                     fragment.appendChild(doc.adoptNode(node));
@@ -187,13 +221,12 @@ public class JSUtils {
                 if (node instanceof Document)
                     node = ((Document) node).getDocumentElement();
 
-                final Document document = XMLUtils.newDocument();
-                node = document.adoptNode(node.cloneNode(true));
+                node = document.get().adoptNode(node.cloneNode(true));
                 if (node instanceof Element) {
-                    document.appendChild(node);
-                    return document;
+                    document.get().appendChild(node);
+                    return document.get();
                 }
-                final DocumentFragment fragment = document.createDocumentFragment();
+                final DocumentFragment fragment = document.get().createDocumentFragment();
                 fragment.appendChild(node);
                 return fragment;
             }
@@ -207,23 +240,24 @@ public class JSUtils {
         if (object instanceof NativeObject) {
             // JSON case: each key of the JS object is an XML element
             NativeObject json = (NativeObject) object;
-            Document document = XMLUtils.newDocument();
-            DocumentFragment fragment = document.createDocumentFragment();
+            DocumentFragment fragment = document.get().createDocumentFragment();
 
             for (Object _id : json.getIds()) {
 
                 final QName qname = QName.parse(JSUtils.toString(_id), null, new JSNamespaceBinder(scope));
 
                 Element element = qname.hasNamespace() ?
-                        document.createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
-                        : document.createElement(qname.getLocalPart());
+                        document.get().createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
+                        : document.get().createElement(qname.getLocalPart());
 
                 fragment.appendChild(element);
 
-                final Object seq = toDOM(scope, json.get(JSUtils.toString(_id), json));
+                final Object seq = toDOM(scope, json.get(JSUtils.toString(_id), json), document);
                 for (Node node : XMLUtils.iterable(seq)) {
+                    if (node instanceof Document)
+                        node = ((Document) node).getDocumentElement();
                     node = node.cloneNode(true);
-                    element.appendChild(document.adoptNode(node));
+                    element.appendChild(document.get().adoptNode(node));
                 }
             }
 
@@ -234,13 +268,32 @@ public class JSUtils {
             // Wrap a double
             final Double x = (Double) object;
             if (x.longValue() == x.doubleValue())
-                return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Long.toString(x.longValue()));
-            return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Double.toString(x));
+                return document.get().createTextNode(Long.toString(x.longValue()));
+            return document.get().createTextNode(Double.toString(x));
         }
 
         if (object instanceof Integer) {
-            return Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", Integer.toString((Integer) object));
+            return document.get().createTextNode(Integer.toString((Integer) object));
         }
+
+        if (object instanceof String) {
+            return document.get().createTextNode(object.toString());
+        }
+
+        if (object instanceof UniqueTag)
+            throw new ExperimaestroRuntimeException("Undefined cannot be converted to XML", object.getClass());
+
+        if (object instanceof JSNode) {
+            Node node = ((JSNode) object).getNode();
+            if (document.has()) {
+                if (node instanceof Document)
+                    node = ((Document) node).getDocumentElement();
+                return document.get().adoptNode(node);
+            }
+            return node;
+        }
+
+
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
     }
@@ -360,33 +413,7 @@ public class JSUtils {
     }
 
     public static NamespaceContext getNamespaceContext(final Scriptable scope) {
-        return new NamespaceContext() {
-            @Override
-            public String getNamespaceURI(String prefix) {
-                Object o = JSUtils.unwrap(scope.get(prefix, scope));
-                if (o == Scriptable.NOT_FOUND)
-                    return null;
-                if (o instanceof Scriptable) {
-                    Scriptable jsObject = (Scriptable) o;
-                    if ("Namespace".equals(jsObject.getClassName()))
-                        return jsObject.get("uri", jsObject).toString();
-                }
-
-                throw new ExperimaestroRuntimeException("%s is bound to a non namespace object (%s)", prefix, o.getClass());
-            }
-
-            @Override
-            public String getPrefix(String namespaceURI) {
-                // TODO: implement getPrefix
-                throw new NotImplementedException();
-            }
-
-            @Override
-            public Iterator getPrefixes(String namespaceURI) {
-                // TODO: implement getPrefixes
-                throw new NotImplementedException();
-            }
-        };
+        return new JSNamespaceContext(scope);
     }
 
     /**

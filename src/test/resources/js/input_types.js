@@ -20,7 +20,7 @@
  
 var test = new Namespace("xpm.tests");
 
-tasks.inputs = {
+tasks("inputs") = {
      inputs: {
          // Values
          x_integer: { value: "xs:integer", optional: true },
@@ -38,7 +38,7 @@ tasks.inputs = {
 function assert_error(plan) {
     var ok = false;
     try {
-        tasks.inputs.run(plan);
+        tasks("inputs").run(plan);
         ok = false;
     } catch(e) {
         ok = true;
@@ -50,7 +50,7 @@ function assert_error(plan) {
 function assert_ok(plan) {
     var ok = false;
     try {
-        tasks.inputs.run(plan);
+        tasks("inputs").run(plan);
         ok = true;
     } catch(e) {
         logger.warn("Exception: %s", e);

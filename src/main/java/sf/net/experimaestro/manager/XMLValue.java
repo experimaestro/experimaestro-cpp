@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -32,7 +32,7 @@ import sf.net.experimaestro.utils.log.Logger;
 public class XMLValue extends Value {
 	final static private Logger LOGGER = Logger.getLogger();
 
-	private Node value;
+	private Document value;
 
 	public XMLValue(Input input) {
 		super(input);
@@ -47,7 +47,7 @@ public class XMLValue extends Value {
 		if (value == null && input.defaultValue != null) {
 			LOGGER.debug("Setting default value [%s]",
 					XMLUtils.toStringObject(input.defaultValue));
-			value = input.defaultValue.cloneNode(true);
+			value = (Document) input.defaultValue.cloneNode(true);
 		}
 	}
 
@@ -61,13 +61,13 @@ public class XMLValue extends Value {
 	}
 
     @Override
-    public void set(Node value) {
+    public void set(Document value) {
         LOGGER.debug("Value set to [%s]", XMLUtils.toString(value));
         this.value = value;
     }
 
 	@Override
-	public Node get() {
+	public Document get() {
 		return value;
 	}
 
@@ -76,7 +76,7 @@ public class XMLValue extends Value {
 		XMLValue other = (XMLValue) _other;
 		super.init(other);
 		if (other.value != null)
-			value = other.value.cloneNode(true);
+			value = (Document) other.value.cloneNode(true);
 	}
 
     @Override

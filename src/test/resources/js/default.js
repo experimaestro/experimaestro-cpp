@@ -43,9 +43,9 @@ var r = task.run();
 
 
 function test_default_attribute() {
-	assert_equals(r.a, 10);
+	assert_equals(r.get_value("xp:array/a"), 10);
 }
 
 function test_default_element() {
-	assert_equals(r.b, 20);
+	assert_equals(r.get_value("xp:array/b"), 20);
 }	

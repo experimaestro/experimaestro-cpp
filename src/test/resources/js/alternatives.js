@@ -25,59 +25,44 @@ var abc = new Namespace("a.b.c");
 
 xpm.declare_alternative(altName);
 
-/** Alternative 1 */
-
-var configuration_alt_1 = {
-	id: qname("a.b.c", "alt-1"),
-	documentation: <p>Configuration of a possible alternative</p>,
-	alternative: true,
-	output: altName,
+/** Alternative */
+tasks.set("abc:alt1", {
+	documentation: <p>"Configuration of a possible alternative"</p>,
+	alternative: altName,
 	
-	inputs: <inputs>
-		<value id="size" type="xs:integer" help="The parameter"/>
-	</inputs>,
+	inputs: {
+	    size: { value: "xs:integer", help: "The parameter" }
+	},
 	
-	outputs: <outputs>
-		<output type="{a.b.c}alt"/>
-	</outputs>,
-
 	run: function(inputs) {
-		return <alt xmlns="a.b.c">
-				{inputs.size}
-			</alt>;
+		return { "abc:alt": inputs.size };
 	}
-};
-
-xpm.add_task_factory(configuration_alt_1);
+});
 
 /** Task */
 
-var task_factory = {
-	id: qname("a.b.c", "task"),
-	version: "1.0",
-	inputs: <inputs><alternative type="{a.b.c}alt" id="p"/></inputs>,
+tasks.set("abc:task", {
+	inputs: {
+	    p: { alternative: "abc:alt" }
+	},
 	
 	run: function(inputs) {
-		return <outputs>{inputs.p}</outputs>;
+		return inputs.p;
 	}
-};
-
-xpm.add_task_factory(task_factory);
+});
 
 /** Run and output */
-
-var task = xpm.get_task(task_factory.id);
-task.setParameter("p", "{a.b.c}alt-1");
-task.setParameter("p.size", "10");
+var task = tasks.get("abc:task").create();
+task.set("p", "{a.b.c}alt1");
+task.set("p.size", 10);
 var r = task.run();
-xpm.log("Value of p.size is %s", r.abc::alt.abc::size);
+var v = r.get_value("abc:alt/size");
 
 // END SNIPPET: main
 
 function test_value() {
-    v = r.abc::alt.abc::size;
     if (v == undefined || v != 10)
-    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.abc::size);
+    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
 }
 	
 	

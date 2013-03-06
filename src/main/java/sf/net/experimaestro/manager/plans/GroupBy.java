@@ -24,8 +24,9 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.lang.ArrayUtils;
 import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -109,14 +110,14 @@ public class GroupBy extends UnaryOperator {
 
 
                 Document document = XMLUtils.newDocument();
-                DocumentFragment fragment = document.createDocumentFragment();
+                Element array = document.createElementNS(Manager.EXPERIMAESTRO_NS, "array");
 
                 Value value = iterator.next();
                 for (int i : indices)
                     positions[i] = value.context[i];
 
-                ReturnValue rv = new ReturnValue(new DefaultContexts(value.context), fragment);
-                add(fragment, value);
+                ReturnValue rv = new ReturnValue(new DefaultContexts(value.context), document);
+                add(array, value);
 
                 main:
                 while (iterator.hasNext()) {
@@ -126,21 +127,21 @@ public class GroupBy extends UnaryOperator {
                             break main;
                         }
                     iterator.next();
-                    add(fragment, value);
+                    add(array, value);
                 }
 
                 return rv;
 
             }
 
-            private void add(DocumentFragment fragment, Value value) {
+            private void add(Element array, Value value) {
                 Node node = value.nodes[0];
                 assert value.nodes.length == 1;
                 if (node instanceof Document)
                     node = (((Document) node).getDocumentElement());
 
-                node = fragment.getOwnerDocument().adoptNode(node.cloneNode(true));
-                fragment.appendChild(node);
+                node = array.getOwnerDocument().adoptNode(node.cloneNode(true));
+                array.appendChild(node);
             }
         };
     }

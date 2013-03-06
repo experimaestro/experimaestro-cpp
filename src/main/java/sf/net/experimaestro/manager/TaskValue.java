@@ -18,13 +18,13 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 
 public class TaskValue extends Value {
 	private Task task;
-	private Node value;
+	private Document value;
 
 	public TaskValue() {
 	}
@@ -42,7 +42,7 @@ public class TaskValue extends Value {
     }
 
     @Override
-    public void set(Node value) {
+    public void set(Document value) {
         throw new IllegalArgumentException("Cannot set task value");
     }
 
@@ -52,7 +52,7 @@ public class TaskValue extends Value {
 	}
 
 	@Override
-	public Node get() {
+	public Document get() {
 		return value;
 	}
 

@@ -25,6 +25,7 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
+import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
@@ -142,7 +143,7 @@ public class JSPlan extends JSBaseObject implements Callable {
         }
 
         if (JSUtils.isXML(value)) {
-            return new Constant(JSUtils.toDOM(null, value));
+            return new Constant(JSUtils.toDocument(null, value));
         }
 
         return null;
@@ -176,8 +177,7 @@ public class JSPlan extends JSBaseObject implements Callable {
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {
-            final Object e4x = JSUtils.domToE4X(iterator.next(), Context.getCurrentContext(), scope);
-            values.add(e4x);
+            values.add(new JSNode(iterator.next()));
         }
 
         return context.newArray(scope, values.toArray());
@@ -279,11 +279,11 @@ public class JSPlan extends JSBaseObject implements Callable {
             this.plans = plans;
         }
 
-        public Node f(Node[] parameters) {
-            Object[] e4x_args = new Object[parameters.length];
+        public Document f(Document[] parameters) {
+            Object[] args = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++)
-                e4x_args[i] = JSUtils.domToE4X(parameters[i], cx, scope);
-            return JSUtils.toDOM(scope, f.call(cx, scope, null, e4x_args));
+                args[i] = new JSNode(parameters[i]);
+            return JSUtils.toDocument(scope, f.call(cx, scope, null, args));
         }
     }
 }

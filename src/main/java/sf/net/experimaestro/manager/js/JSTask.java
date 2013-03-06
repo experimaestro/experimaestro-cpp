@@ -22,6 +22,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import org.w3c.dom.Document;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
@@ -81,18 +82,15 @@ public class JSTask extends JSAbstractTask {
     /**
      * Run a task
      *
-     * @param convertToE4X
      * @return
      */
-    public Object jsrun(boolean convertToE4X) {
-        LOGGER.info("[Running] task: %s", factory.getId());
+    public Document jsrun() {
+        LOGGER.debug("[Running] task: %s", factory.getId());
         Scriptable result = (Scriptable) runFunction.call(
                 Context.getCurrentContext(), jsScope, jsObject,
                 new Object[]{(Scriptable) jsObject.get("inputs", jsObject)});
-        LOGGER.info("[/Running] task: %s", factory.getId());
+        LOGGER.debug("[/Running] task: %s", factory.getId());
 
-        if (convertToE4X)
-            return result;
         return getDocument(jsScope, result);
     }
 

@@ -27,18 +27,15 @@
 
 var abc = new Namespace("a.b.c");
 
-var task_1 = {
-	id: qname("a.b.c", "task-1"),
+tasks("abc:task-1") = {
 	inputs: <inputs xmlns={xp.uri}><value type="xs:integer" id="x"/></inputs>,		
 };
 
-var task_2 = {
-	id: qname("a.b.c", "task-2"),
+tasks("abc:task-2") = {
 	inputs: <inputs xmlns={xp.uri}><value type="xs:integer" id="x"/></inputs>,	
 };
 
-var task = {
-	id: qname("a.b.c", "task"),
+tasks("abc:task") = {
 	inputs: 
         <inputs xmlns:abc="a.b.c" xmlns:xp={xp.uri} xmlns={xp.uri}>
             <task ref="abc:task-2" id="t2">
@@ -49,34 +46,26 @@ var task = {
         </inputs>,
 	
 	run: function(inputs) {
-		return inputs.t2.x;
+		return inputs.t2.get_node("xp:array/xp:value");
 	}
 		
 };
 
+
+
+// Run and check
+
+var r = tasks("abc:task").run({"t1.x": 10})[0];
+
+// END SNIPPET: main
+function test_value() {
+    if (r == undefined || r.get_value() != 10)
+    	throw new java.lang.String.format("Value [%s] is different from 10", r);
+}
+	
 /* 
 TODO: ease the composition by
 tasks.abc::task = compose({
     [tasks.abc::task_2, { x: tasks.abc.task_2::x } ]
 });
 */
-
-
-// Add tasks
-
-xpm.add_task_factory(task_1);
-xpm.add_task_factory(task_2);
-xpm.add_task_factory(task);
-
-// Run and check
-
-var task = xpm.get_task(task.id);
-task.setParameter("t1.x", "10");
-var r = task.run();
-
-// END SNIPPET: main
-function test_value() {
-    if (r == undefined || r != 10)
-    	throw new java.lang.String.format("Value [%s] is different from 10", r);
-}
-	

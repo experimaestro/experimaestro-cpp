@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.namespace.NamespaceContext;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -107,9 +108,9 @@ public class QName implements Comparable<QName> {
                               String2String prefixes) {
         Matcher matcher = QNAME_PATTERN.matcher(qname);
         if (!matcher.matches())
-            throw new ExperimaestroRuntimeException("Type [%s] is not a valid type: expected name, {uri}name, " +
+            throw new IllegalArgumentException(String.format("Type [%s] is not a valid type: expected name, {uri}name, " +
                     "or prefix:name",
-                    qname);
+                    qname));
 
         String url = matcher.group(1);
         String prefix = matcher.group(2);
@@ -202,5 +203,14 @@ public class QName implements Comparable<QName> {
 
     public boolean hasNamespace() {
         return uri != null;
+    }
+
+    public static QName parse(final String name, final NamespaceContext namespaceContext) {
+        return parse(name, null, new String2String() {
+            @Override
+            public String get(String prefix) {
+                return namespaceContext.getNamespaceURI(prefix);
+            }
+        });
     }
 }

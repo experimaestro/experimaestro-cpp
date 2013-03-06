@@ -16,40 +16,16 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.manager.js;
 
-import org.w3c.dom.Document;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
-
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Document[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Document... nodes) {
-        this.nodes = nodes;
-    }
-
-    public Document[] getNodes() {
-        return nodes;
-    }
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 6/3/13
+ */
+@Retention(RetentionPolicy.RUNTIME)
+public @interface JSObjectDescription {
+    String name() default "";
 }

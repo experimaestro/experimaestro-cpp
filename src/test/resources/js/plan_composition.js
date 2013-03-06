@@ -26,7 +26,7 @@
 ns = new Namespace("xpm.tests");
 var logger = xpm.logger("xpm.tests");
 
-tasks.ns::mult = {
+tasks("ns:mult")= {
     inputs: {
         x: { value: "xs:integer" },
         y: { value: "xs:integer" }
@@ -38,7 +38,7 @@ tasks.ns::mult = {
     }
 };
 
-tasks.ns::plus = {
+tasks("ns:plus")= {
     inputs: {
         x: { value: "xs:integer" },
         y: { value: "xs:integer" }
@@ -51,7 +51,7 @@ tasks.ns::plus = {
 };
 // END SNIPPET: task
 
-tasks.ns::identity = {
+tasks("ns:identity")= {
     inputs: {
         x: {
             value: "xs:integer"
@@ -63,7 +63,7 @@ tasks.ns::identity = {
     }
 };
 
-tasks.ns::identity_bis = {
+tasks("ns:identity_bis")= {
     inputs: {
         x: {
             value: "xs:integer"
@@ -82,10 +82,10 @@ function check(results, expected) {
 		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
     
     // Sort the results
-    results.sort(function(x,y) { return x.@xp::value - y.@xp::value; });
-    logger.info("Results: %s", results.toSource());
+    results.sort(function(x,y) { return x.get_value() - y.get_value(); });
+    logger.debug("Results: %s", results.toSource());
     for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != Number(results[i].@xp::value)) 
+        if (expected[i] != Number(results[i].get_value())) 
 			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].toSource(), i);
     }
 }
@@ -95,10 +95,10 @@ function check(results, expected) {
  */
 function test_simple() {
     // Plan
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         x: plan1,
         y: [3, 5]
     });
@@ -114,10 +114,10 @@ function test_simple() {
  */
 function test_simple_access() {
     // Plan
-    var plan1 = tasks.ns::identity_bis.plan({
+    var plan1 = tasks("ns:identity_bis").plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         x: plan1.path("a/text()"),
         y: [3, 5]
     });
@@ -134,13 +134,13 @@ function test_simple_access() {
 
 function test_transform() {
     var f = function(x) {
-        return Number(x.@xp::value) + 1;
+        return Number(x.get_value()) + 1;
     };
 
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [0, 1]
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         x: transform(f, plan1),
         y: [3, 5]
     });
@@ -155,14 +155,14 @@ function test_transform() {
 // Goal: computes x + (x * y)
 
 function test_join() {
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         x: plan1,
         y: [3, 5]
     });
-    var plan3 = tasks.ns::plus.plan(
+    var plan3 = tasks("ns:plus").plan(
         {
             x: plan1,
             y: plan2
@@ -178,14 +178,14 @@ function test_join() {
 
 // Test a join with an union
 function test_join_union() {
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [1, 2]
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         x: [plan1, -1],
         y: [3, 5]
     });
-    var plan3 = tasks.ns::plus.plan(
+    var plan3 = tasks("ns:plus").plan(
         {
             x: plan1,
             y: plan2
@@ -204,10 +204,10 @@ function test_join_union() {
 
 // Implicit join 
 function test_implicit_join() {
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [2, 3]
     });
-    var plan2 = tasks.ns::plus.plan({
+    var plan2 = tasks("ns:plus").plan({
         x: plan1,
         y: plan1
     });
@@ -218,10 +218,10 @@ function test_implicit_join() {
 
 // Copy of a plan to perform cartesian products
 function test_product() {
-    var plan1 = tasks.ns::identity.plan({
+    var plan1 = tasks("ns:identity").plan({
         x: [2, 3]
     });
-    var plan2 = tasks.ns::plus.plan({
+    var plan2 = tasks("ns:plus").plan({
         x: plan1,
         y: plan1.copy(),
     });
@@ -232,11 +232,11 @@ function test_product() {
 function test_example() {
 // START SNIPPET: run
     // Creates the experimental plan
-    var plan1 = tasks.ns::plus.plan({
+    var plan1 = tasks("ns:plus").plan({
         x: [1, 2],
         y: 3
     });
-    var plan2 = tasks.ns::mult.plan({
+    var plan2 = tasks("ns:mult").plan({
         // The values from x will come from the output of plan1
         x: plan1,
         y: 2
@@ -253,7 +253,7 @@ function test_example() {
 
 // Test plans building by adding
 function test_add() {
-    var plan = tasks.ns::plus.plan({ x: [1, 2], y: 3 });
+    var plan = tasks("ns:plus").plan({ x: [1, 2], y: 3 });
     plan.add({ x: [4, 5], y: 2});
     
     var result = plan();
@@ -263,7 +263,7 @@ function test_add() {
 
 // --- Test the group by
 
-tasks.ns::sum = {
+tasks("ns:sum")= {
     inputs: {
         x: { value: "xs:integer", sequence: true },
     },
@@ -278,17 +278,17 @@ tasks.ns::sum = {
 };
 
 function test_groupby_all() {
-    var plan1 = tasks.ns::identity.plan({ x: [1, 2, 3] });
-    var plan2 = tasks.ns::sum.plan({ x: plan1.group_by() });
+    var plan1 = tasks("ns:identity").plan({ x: [1, 2, 3] });
+    var plan2 = tasks("ns:sum").plan({ x: plan1.group_by() });
     
     var result = plan2();
     check(result, [6]);
 }
 
 function test_groupby() {
-    var plan1 = tasks.ns::identity.plan({ x: [1, 2, 3] });
-    var plan2 = tasks.ns::plus.plan({ x: plan1, y: [10, 20] })
-    var plan3 = tasks.ns::sum.plan({ x: plan2.group_by(plan1) });
+    var plan1 = tasks("ns:identity").plan({ x: [1, 2, 3] });
+    var plan2 = tasks("ns:plus").plan({ x: plan1, y: [10, 20] })
+    var plan3 = tasks("ns:sum").plan({ x: plan2.group_by(plan1) });
     
     var result = plan3();
     check(result, [32, 34, 36]);

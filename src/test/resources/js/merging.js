@@ -23,14 +23,12 @@
 var abc = new Namespace("a.b.c");
 
 // First task
-var sub_task = {
-	id: qname("a.b.c", "sub_task"),
+tasks("abc:sub_task") = {
 	inputs: <inputs><value type="xs:integer" id="x"/></inputs>,	
 };
 
 // Third task
-var task = {
-	id: qname("a.b.c", "task"),
+tasks("abc:task") = {
 	/*
 	    Connects the value returned by t1 to the input of x for t2
 	*/
@@ -40,27 +38,22 @@ var task = {
         </inputs>,
 	
 	run: function(inputs) {
-        logger.info(inputs.subtask.x.toSource());
-		return inputs.subtask.x;
+		return inputs.subtask;
 	}
 		
 };
 
-
-// Add tasks
-xpm.add_task_factory(sub_task);
-xpm.add_task_factory(task);
-
 // Get the task
-var task = xpm.get_task(task.id);
+var task = tasks("abc:task").create();
 // Without merging, we would use "subtask.x"
-task.setParameter("x", "10");
+task.set("x", "10");
 // <outputs>10</outputs>
 var r = task.run();
 
 // END SNIPPET: main
 
 function test_composing_2() {
+    r = r.get_value("xp:array/x");
 	if (r == undefined || r != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }

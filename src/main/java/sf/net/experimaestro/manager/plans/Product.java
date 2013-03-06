@@ -19,7 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 
 import java.util.Iterator;
 
@@ -77,7 +77,7 @@ public class Product extends NAryOperator {
         }
 
         ReturnValue getReturnValue(Value[] current) {
-            Node[] nodes = new Node[parents.size()];
+            Document[] nodes = new Document[parents.size()];
             final long[][] contexts = new long[parents.size()][];
             for (int j = 0; j < contexts.length; j++) {
                 contexts[j] = current[j].context;

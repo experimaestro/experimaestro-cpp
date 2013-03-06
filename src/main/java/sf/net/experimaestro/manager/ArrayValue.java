@@ -1,8 +1,6 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 
 /**
@@ -11,7 +9,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
  */
 public class ArrayValue extends Value {
     /** The input nodes */
-    Node fragment;
+    Document array;
 
     public ArrayValue(ArrayInput input) {
         this.input = input;
@@ -26,18 +24,20 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void set(Node value) {
-        if (value instanceof DocumentFragment) {
-            fragment = value;
-
-        }
-
-        else if (value instanceof Document) {
-            fragment = ((Document) value).createDocumentFragment();
-            fragment.appendChild(((Document) value).getDocumentElement());
-        }
-
-        else throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
+    public void set(Document value) {
+        this.array = value;
+//        if (value instanceof DocumentFragment) {
+//            array = value;
+//
+//        }
+//
+//        else if (value instanceof Document) {
+//            array = ((Document) value).createDocumentFragment();
+//            array.appendChild(((Document) value).getDocumentElement());
+//        }
+//
+//        else
+//            throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
     }
 
     @Override
@@ -45,7 +45,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public Node get() {
-        return fragment;
+    public Document get() {
+        return array;
     }
 }

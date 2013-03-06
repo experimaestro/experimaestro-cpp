@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
+import com.google.common.collect.Iterables;
+import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
@@ -33,44 +35,44 @@ import java.util.TreeMap;
 
 /**
  * Container for global definitions
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Manager {
 
-	public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
-	public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
+    public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
+    public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
     public static final String EXPERIMAESTRO_PREFIX = "xp";
 
     public static final String XMLSCHEMA_NS = "http://www.w3.org/2001/XMLSchema";
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
 
     static {
-		PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
-		PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
-	}
+        PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
+        PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
+    }
 
-	/**
-	 * Get the namespaces (default and element based)
-	 * 
-	 * @param element
-	 * @throws XQException
-	 */
-	public static Map<String, String> getNamespaces(Element element) {
-		TreeMap<String, String> map = new TreeMap<>();
-		for (Entry<String, String> mapping : PREDEFINED_PREFIXES.entrySet())
-			map.put(mapping.getKey(), mapping.getValue());
-		for (Entry<String, String> mapping : XMLUtils.getNamespaces(element))
-			map.put(mapping.getKey(), mapping.getValue());
-		return map;
-	}
+    /**
+     * Get the namespaces (default and element based)
+     *
+     * @param element
+     * @throws XQException
+     */
+    public static Map<String, String> getNamespaces(Element element) {
+        TreeMap<String, String> map = new TreeMap<>();
+        for (Entry<String, String> mapping : PREDEFINED_PREFIXES.entrySet())
+            map.put(mapping.getKey(), mapping.getValue());
+        for (Entry<String, String> mapping : XMLUtils.getNamespaces(element))
+            map.put(mapping.getKey(), mapping.getValue());
+        return map;
+    }
 
     /**
      * Wraps a value into an XML document
      *
      * @param namespace The namespace URI
-     * @param name The local name of the element
-     * @param value The value of the element
+     * @param name      The local name of the element
+     * @param value     The value of the element
      * @return An XML document representing the value
      */
     static public Document wrap(String namespace, String name, String value) {
@@ -83,6 +85,7 @@ public class Manager {
 
     /**
      * Unwraps the value from XML to a string
+     *
      * @param node
      * @return
      */
@@ -102,5 +105,40 @@ public class Manager {
 
         // ... otherwise, returns the text content
         return element.getTextContent();
+    }
+
+    public static Document wrap(Node node) {
+        if (node instanceof Document)
+            return (Document) node;
+
+        Document document = XMLUtils.newDocument();
+        switch (node.getNodeType()) {
+            case Node.ELEMENT_NODE:
+                document.appendChild(document.adoptNode(node.cloneNode(true)));
+                break;
+
+            case Node.TEXT_NODE:
+            case Node.ATTRIBUTE_NODE:
+                Element element = document.createElementNS(EXPERIMAESTRO_NS, "value");
+                element.setAttributeNS(EXPERIMAESTRO_NS, "value", node.getTextContent());
+                document.appendChild(element);
+                break;
+
+            case Node.DOCUMENT_FRAGMENT_NODE:
+                Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
+                int size = Iterables.size(elements);
+                if (size == 1) {
+                    document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+                    break;
+                }
+
+                throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+
+            default:
+                throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
+
+        }
+
+        return document;
     }
 }

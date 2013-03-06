@@ -22,7 +22,6 @@ import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Lazy;
@@ -32,50 +31,49 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSLogger extends JSObject {
+public class JSLogger extends JSBaseObject {
     private Logger logger;
     private XPMObject xpm;
-
 
     public JSLogger(XPMObject xpm, String name) {
         this.xpm = xpm;
         logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
-    public void trace(String format, Object... objects) {
-        logger.trace(Lazy.format(format, objects));
+    @JSFunction("trace")
+    public void trace(Object format, Object... objects) {
+        logger.trace(Lazy.format(JSUtils.toString(format), objects));
     }
 
-    public void debug(String format, Object... objects) {
-        logger.debug(Lazy.format(format, objects));
+    @JSFunction("debug")
+    public void debug(Object format, Object... objects) {
+        logger.debug(Lazy.format(JSUtils.toString(format), objects));
     }
 
-    public void info(String format, Object... objects) {
-        logger.info(Lazy.format(format, objects));
+    @JSFunction("info")
+    public void info(Object format, Object... objects) {
+        logger.info(Lazy.format(JSUtils.toString(format), objects));
     }
 
-    public void warn(String format, Object... objects) {
-        logger.warn(Lazy.format(format, objects));
+    @JSFunction("warn")
+    public void warn(Object format, Object... objects) {
+        logger.warn(Lazy.format(JSUtils.toString(format), objects));
     }
 
-    public void error(String format, Object... objects) {
-        logger.error(Lazy.format(format, objects));
+    @JSFunction("error")
+    public void error(Object format, Object... objects) {
+        logger.error(Lazy.format(JSUtils.toString(format), objects));
     }
 
-    public void fatal(String format, Object... objects) {
-        logger.fatal(Lazy.format(format, objects));
+    @JSFunction("fatal")
+    public void fatal(Object format, Object... objects) {
+        logger.fatal(Lazy.format(JSUtils.toString(format), objects));
     }
 
     @JSFunction("create")
-    @JSHelp(value = "Creates a new logger with the given name", arguments = @JSArguments(@JSArgument(type="String", name="name")))
-    static public Scriptable jsFunction_create(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        if (args.length != 1)
-            throw new ExperimaestroRuntimeException("Logger.create() expects one argument, got %d", args.length);
-
-        final JSLogger jslogger = (JSLogger) thisObj;
-        XPMObject xpm = jslogger.xpm;
-        final String subname = JSUtils.toString(args[0]);
-        return xpm.newObject(JSLogger.class, xpm, jslogger.logger.getName() + "." + subname);
+    @JSHelp(value = "Creates a new logger with the given name")
+    public Scriptable create(String subname) {
+        return xpm.newObject(JSLogger.class, xpm, logger.getName() + "." + subname);
     }
 
     @JSFunction("set_level")

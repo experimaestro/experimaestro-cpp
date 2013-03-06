@@ -19,13 +19,34 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.AlternativeInput;
+import sf.net.experimaestro.manager.AlternativeType;
+import sf.net.experimaestro.manager.ArrayInput;
+import sf.net.experimaestro.manager.Connection;
+import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.manager.Input;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Module;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.SimpleConnection;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.TaskInput;
+import sf.net.experimaestro.manager.Type;
+import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.XMLInput;
+import sf.net.experimaestro.manager.XQueryConnection;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -34,6 +55,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.xml.xpath.XPathExpressionException;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -55,7 +77,7 @@ public class JSTaskFactory extends JSBaseObject {
     }
 
     public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
-                       Repository repository) {
+                         Repository repository) {
         factory = new FactoryImpl(qname, scope, jsObject, repository);
     }
 
@@ -69,8 +91,8 @@ public class JSTaskFactory extends JSBaseObject {
     }
 
     @JSFunction("create")
-    public Object create() {
-        return factory.create();
+    public JSTaskWrapper create() {
+        return new JSTaskWrapper(factory.create());
     }
 
     @JSFunction(value = "run", scope = true)
@@ -83,6 +105,12 @@ public class JSTaskFactory extends JSBaseObject {
     @JSFunction(value = "plan", scope = true)
     public JSPlan plan(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
         return new JSPlan(scope, factory, object);
+    }
+
+    @JSFunction("run_plan")
+    public List<Object> runPlan(String plan) throws Exception {
+        Task task = factory.create();
+        return JSTaskWrapper.wrap(task.runPlan(plan, false, new JSScriptRunner(this)));
     }
 
 
@@ -154,12 +182,21 @@ public class JSTaskFactory extends JSBaseObject {
 
             // --- Are we an alternative?
 
-            Boolean altType = JSUtils.get(jsScope, "alternative", jsObject, null);
-            if (altType != null && altType) {
-                if (output == null)
-                    throw new ExperimaestroRuntimeException("No output has been defined for an alternative");
+            Object altObject = JSUtils.get(jsScope, "alternative", jsObject, null);
+            if (altObject != null) {
+                QName altId;
 
-                Type type = repository.getType(outQName);
+                if (altObject instanceof Boolean) {
+                    if (output == null)
+                        throw new ExperimaestroRuntimeException("No output has been defined for an alternative");
+                    altId = output.getId();
+                } else if (altObject instanceof QName) {
+                    altId = (QName) altObject;
+                } else
+                    throw new NotImplementedException("Cannot handle alternative of type " + altObject.getClass());
+
+
+                Type type = repository.getType(altId);
                 if (type == null || !(type instanceof AlternativeType))
                     throw new ExperimaestroRuntimeException(
                             "Type %s is not an alternative", outQName == null ? "null"
@@ -191,7 +228,8 @@ public class JSTaskFactory extends JSBaseObject {
 
         /**
          * Set inputs from JSON data
-         * @param scope The current JS scope
+         *
+         * @param scope   The current JS scope
          * @param jsInput The JS input object
          */
         private void setInputs(final Scriptable scope, final NativeObject jsInput) {
@@ -221,7 +259,11 @@ public class JSTaskFactory extends JSBaseObject {
                         break;
 
                     case "alternative":
-                        throw new NotImplementedException();
+                        Type altType = getRepository().getType(inputType);
+                        if (altType == null || !(altType instanceof AlternativeType))
+                            throw new IllegalArgumentException("Type " + inputType + " is not an alternative");
+                        input = new AlternativeInput((AlternativeType) altType);
+                        break;
 
                     case "task":
                         throw new NotImplementedException();
@@ -475,7 +517,7 @@ public class JSTaskFactory extends JSBaseObject {
 
 
         @Override
-        public Task create() {
+        public JSAbstractTask create() {
             // Get the "create" method
             Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
@@ -488,10 +530,10 @@ public class JSTaskFactory extends JSBaseObject {
                     throw new RuntimeException(
                             "Could not find the create or run functions.");
 
-                JSDirectTask jsConfigurationTask = new JSDirectTask(xpm, this, jsScope,
+                JSDirectTask jdDirectTask = new JSDirectTask(xpm, this, jsScope,
                         jsObject, (Function) function);
-                jsConfigurationTask.init();
-                return jsConfigurationTask;
+                jdDirectTask.init();
+                return jdDirectTask;
             }
 
             // Call it
@@ -500,7 +542,7 @@ public class JSTaskFactory extends JSBaseObject {
             Object result = f.call(jsContext, jsScope, jsScope, new Object[]{});
             LOGGER.info("Created a new experiment: %s (%s)", result,
                     result.getClass());
-            JSAbstractTask jsTask = new JSTask(this, jsContext, jsScope,
+            JSTask jsTask = new JSTask(this, jsContext, jsScope,
                     (NativeObject) result);
             jsTask.init();
             return jsTask;

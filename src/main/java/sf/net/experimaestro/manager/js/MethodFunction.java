@@ -25,6 +25,7 @@ import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.Output;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -34,7 +35,12 @@ import java.util.ArrayList;
  * Wraps a method of an object
  */
 class MethodFunction implements Callable {
+    String name;
     ArrayList<Method> methods = new ArrayList<>();
+
+    public MethodFunction(String name) {
+        this.name = name;
+    }
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
@@ -49,7 +55,13 @@ class MethodFunction implements Callable {
         }
 
         if (argmax == null)
-            throw ScriptRuntime.typeError("Could not find a matching method");
+            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)", name,
+                    Output.toString(", ", args, new Output.Formatter<Object>() {
+                        @Override
+                        public String format(Object o) {
+                            return o.getClass().toString();
+                        }
+                    })));
 
         // Call the method
 

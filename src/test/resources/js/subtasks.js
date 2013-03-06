@@ -49,11 +49,11 @@ xpm.add_task_factory(task_2);
 /** Run and check */
 
 var task = xpm.get_task(task_2.id);
-task.setParameter("t1.p", "10");
+task.set("t1.p", "10");
 var r = task.run();
 
 // END SNIPPET: main
-if (r == undefined || r != 10)
+if (r == undefined || r.get_value() != 10)
 	throw new java.lang.String.format("Value [%s] is different from 10", r);
 	
 	

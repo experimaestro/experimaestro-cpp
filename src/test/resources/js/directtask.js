@@ -19,32 +19,22 @@
 /** Direct task */
 
 // START SNIPPET: task
-var task = {
-    // The id of the task is an XML qualified name 
-    id: qname("a.b.c", "task"),
-    
+var abc = Namespace("a.b.c");
+tasks("abc:task") = {
     // One input of type xp:integer
-    inputs: <inputs><value type="xs:integer" id="x"/></inputs>,		
+    inputs: { x: { value: "xs:integer" } }
 };
-
-// Add the task to the list of available factories
-xpm.add_task_factory(task);
 // END SNIPPET: task
 
 
 /** Run and check */
 
 // START SNIPPET: run
-var task = xpm.get_task("a.b.c", "task");
-task.setParameter("x", "10");
-var r = task.run();
-
-
+var r = tasks("abc:task").run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {
-	var abc = Namespace("a.b.c");
-	v = r.x;
+	v = r.get_value("/xp:array/xp:value");
 	if (v == undefined || v != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", v);
 }	

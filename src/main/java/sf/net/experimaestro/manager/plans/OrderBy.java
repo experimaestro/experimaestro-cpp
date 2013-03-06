@@ -19,7 +19,9 @@
 package sf.net.experimaestro.manager.plans;
 
 import bpiwowar.argparser.utils.Output;
+import com.google.common.base.Predicate;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
@@ -41,11 +43,18 @@ import java.util.Set;
  * @date 21/2/13
  */
 public class OrderBy extends UnaryOperator {
+    /** The order over streams (might be shared by different order-by before a join */
     Order<Operator> order;
+
+    /** The subset of order operators that we use to sort here */
+    Set<Operator> operators;
+
+    /** The order for the context, computed when intializing this operator */
     int contextOrder[];
 
-    public OrderBy(Order<Operator> order) {
+    public OrderBy(Order<Operator> order, Set<Operator> operators) {
         this.order = order;
+        this.operators = operators;
     }
 
 
@@ -102,10 +111,16 @@ public class OrderBy extends UnaryOperator {
     protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
         IntArrayList contextOrder = new IntArrayList();
         Map<Operator, Integer> inputContext = parentStreams.get(0);
-        // TODO: We should flatten taking the parent order into account (possibly the parents of
-        // operators sharing the same)
+
         order.flatten();
-        for (Operator operator : order.items()) {
+
+        Predicate<Operator> predicate = new Predicate<Operator>() {
+            @Override
+            public boolean apply(Operator input) {
+                return operators == null || operators.contains(input);
+            }
+        };
+        for (Operator operator : Iterables.filter(order.items(), predicate)) {
             Integer contextIndex = inputContext.get(operator);
             contextOrder.add(contextIndex);
         }

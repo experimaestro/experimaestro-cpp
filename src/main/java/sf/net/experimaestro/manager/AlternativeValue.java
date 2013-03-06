@@ -18,8 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
@@ -49,7 +49,7 @@ public class AlternativeValue extends Value {
     /**
      * The returned value
      */
-    private Node value = null;
+    private Document value = null;
 
 
     public AlternativeValue() {
@@ -85,7 +85,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void set(Node value) {
+    public void set(Document value) {
         // Check if we have an XML with the valid type
         final Element element = XMLUtils.getRootElement(value);
         if (alternativeInput.getType().qname().sameQName(element)) {
@@ -94,7 +94,7 @@ public class AlternativeValue extends Value {
             this.value = value;
         } else {
             final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
-            String key = element.getTextContent();
+            String key = Manager.unwrap(element);
             QName qname = QName.parse(key, element,
                     Manager.PREDEFINED_PREFIXES);
             TaskFactory subFactory = factories.get(qname);
@@ -125,7 +125,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public Node get() {
+    public Document get() {
         return value;
     }
 

@@ -383,7 +383,7 @@ public class Plan {
                 Order<Operator> order = new Order();
                 for (Operator op : groupBy.operators)
                     order.add(op, false);
-                OrderBy orderBy = new OrderBy(order);
+                OrderBy orderBy = new OrderBy(order, null);
                 orderBy.addParent(self);
 
                 groupBy.addParent(orderBy);

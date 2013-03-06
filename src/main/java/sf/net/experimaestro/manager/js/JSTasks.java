@@ -19,8 +19,11 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.*;
-import org.mozilla.javascript.xml.XMLObject;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Ref;
+import org.mozilla.javascript.RefCallable;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
@@ -29,11 +32,23 @@ import sf.net.experimaestro.utils.JSUtils;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */
-public class JSTasks extends XMLObject implements JSConstructable {
+public class JSTasks extends JSBaseObject implements RefCallable {
     XPMObject xpm;
 
     public JSTasks(XPMObject xpm) {
         this.xpm = xpm;
+    }
+
+    @JSFunction(value = "set", scope = true)
+    public JSTaskFactory set(Context cx, Scriptable scope, String qname, NativeObject definition) {
+        QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
+        return new TaskRef(id).set(cx, definition);
+    }
+
+    @JSFunction(value = "get", scope = true)
+    public Object get(Context cx, Scriptable scope, String qname) {
+        QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
+        return new TaskRef(id).get(cx);
     }
 
     @Override
@@ -41,77 +56,32 @@ public class JSTasks extends XMLObject implements JSConstructable {
         return "Tasks";
     }
 
+
     @Override
-    public boolean has(Context cx, Object id) {
-        throw new NotImplementedException();
+    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+        if (args.length != 1)
+            throw new IllegalArgumentException("Expected only one argument");
+
+        QName id = QName.parse(JSUtils.toString(args[0]), JSUtils.getNamespaceContext(scope));
+
+        return new TaskRef(id).get(cx);
     }
 
     @Override
-    public Object get(Context cx, Object id) {
-        throw new NotImplementedException();
-    }
+    public Ref refCall(Context cx, Scriptable scope, Object[] args) {
+        if (args.length != 1)
+            throw new IllegalArgumentException("Expected only one argument");
 
-    @Override
-    public void put(Context cx, Object id, Object value) {
-        throw new NotImplementedException();
-    }
+        QName id = QName.parse(JSUtils.toString(args[0]), JSUtils.getNamespaceContext(scope));
 
-    @Override
-    public boolean delete(Context cx, Object id) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Object getFunctionProperty(Context cx, String name) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Object getFunctionProperty(Context cx, int id) {
-        throw new NotImplementedException();
-    }
-
-
-    @Override
-    public Scriptable getExtraMethodSource(Context cx) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Ref memberRef(Context cx, Object elem, int memberTypeFlags) {
-        return new TaskRef(null, JSUtils.toString(elem));
-    }
-
-    @Override
-    public Ref memberRef(Context cx, Object namespace, Object elem, int memberTypeFlags) {
-        return new TaskRef(JSUtils.toString(namespace), JSUtils.toString(elem));
-    }
-
-    @Override
-    public Object get(String name, Scriptable start) {
-        return new TaskRef(null, name);
-    }
-
-    @Override
-    public void put(String name, Scriptable start, Object value) {
-        new TaskRef(null, name).set(Context.getCurrentContext(), value);
-    }
-
-    @Override
-    public NativeWith enterWith(Scriptable scope) {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public NativeWith enterDotQuery(Scriptable scope) {
-        throw new NotImplementedException();
+        return new TaskRef(id);
     }
 
     class TaskRef extends Ref {
         private final QName id;
 
-        public TaskRef(String namespace, String name) {
-            this.id = new QName(namespace, name);
+        public TaskRef(QName id) {
+            this.id = id;
         }
 
         @Override
@@ -120,13 +90,13 @@ public class JSTasks extends XMLObject implements JSConstructable {
             if (factory == null)
                 return NOT_FOUND;
             if (factory instanceof JSTaskFactory.FactoryImpl)
-               return new JSTaskFactory((JSTaskFactory.FactoryImpl)factory);
+                return new JSTaskFactory((JSTaskFactory.FactoryImpl)factory);
 
             throw new NotImplementedException();
         }
 
         @Override
-        public Object set(Context cx, Object _value) {
+        public JSTaskFactory set(Context cx, Object _value) {
             NativeObject value = (NativeObject) _value;
             final JSTaskFactory factory = new JSTaskFactory(id, value.getParentScope(), value, xpm.getRepository());
             xpm.getRepository().addFactory(factory.factory);

@@ -28,7 +28,7 @@ var tests = new Namespace("xpm.tests");
 
 
 // Add the task to the list of available factories
-tasks.tests::task = {
+tasks("tests:task") = {
     inputs: {
         x: { value: "xs:integer", default: 3 }      
         // could be xml: "...", alternative: ...,   
@@ -36,15 +36,15 @@ tasks.tests::task = {
     run: function(p) {
         // Without unwrap, it would create an XML
         // like <tests:x><x>VALUE</x></tests:x>
-        return {  "tests:x": p.x.text() }
+        return {  "tests:x": p.x.get_value() }
     }
 };
 
 // END SNIPPET: task
 function test_json_plan() {
-    var r = tasks.tests::task.run({x: 10});
+    var r = tasks("tests:task").run({x: 10});
     r = r[0];
-	if (r == undefined || r != 10)
+	if (r == undefined || r.get_value() != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
 

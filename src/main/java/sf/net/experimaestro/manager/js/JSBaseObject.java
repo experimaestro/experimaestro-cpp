@@ -19,9 +19,17 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeJavaClass;
+import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.WrapFactory;
+import org.w3c.dom.Node;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,6 +56,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
     /**
      * Analyze a class and returns the map
+     *
      * @param aClass
      * @return
      */
@@ -57,12 +66,15 @@ public class JSBaseObject extends JSObject implements Scriptable {
             if (methods == null) {
                 METHODS.put(aClass, methods = new HashMap<>());
 
-                for (Method method : aClass.getMethods()) {
+                for (Method method : aClass.getDeclaredMethods()) {
                     final JSFunction annotation = method.getAnnotation(JSFunction.class);
                     if (annotation != null) {
-                        MethodFunction methodFunction = methods.get(method.getName());
+                        if ((method.getModifiers() & Modifier.PUBLIC) == 0)
+                            throw new AssertionError("The method " + method + " is not public");
+                        String jsName = annotation.value();
+                        MethodFunction methodFunction = methods.get(jsName);
                         if (methodFunction == null) {
-                            methods.put(annotation.value(), methodFunction = new MethodFunction());
+                            methods.put(jsName, methodFunction = new MethodFunction(jsName));
                         }
                         methodFunction.methods.add(method);
                     }
@@ -77,8 +89,38 @@ public class JSBaseObject extends JSObject implements Scriptable {
      * Returns the class name
      */
     static String getClassName(Class<?> aClass) {
+        JSObjectDescription annotation = aClass.getAnnotation(JSObjectDescription.class);
+        if (annotation != null && !"".equals(annotation.name()))
+            return annotation.name();
+
         assert aClass.getSimpleName().startsWith("JS");
         return aClass.getSimpleName().substring(2);
+    }
+
+    /**
+     * Defines a new class.
+     * <p/>
+     * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
+     * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSObject} or a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
+     *
+     * @param scope
+     * @param aClass
+     * @throws IllegalAccessException
+     * @throws java.lang.reflect.InvocationTargetException
+     *
+     * @throws InstantiationException
+     */
+    public static void defineClass(Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        // If not a JSObject descendent, we handle this with standard JS procedure
+        if (JSConstructable.class.isAssignableFrom(aClass)) {
+            // Use our own constructor
+            final String name = JSBaseObject.getClassName(aClass);
+            scope = ScriptableObject.getTopLevelScope(scope);
+            final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(scope, aClass);
+            scope.put(name, scope, nativeJavaClass);
+        } else {
+            ScriptableObject.defineClass(scope, aClass);
+        }
     }
 
 
@@ -102,7 +144,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
     @Override
     public boolean has(String name, Scriptable start) {
-        throw new NotImplementedException();
+        return methods.containsKey(name);
     }
 
     @Override
@@ -165,4 +207,61 @@ public class JSBaseObject extends JSObject implements Scriptable {
         throw new NotImplementedException();
     }
 
+    /**
+     * The Experimaestro wrap factory to handle special cases
+     */
+    static public class XPMWrapFactory extends WrapFactory {
+        public final static XPMWrapFactory INSTANCE = new XPMWrapFactory();
+
+        private XPMWrapFactory() {
+        }
+
+
+        @Override
+        public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
+            return super.wrap(cx, scope, obj, staticType);
+        }
+
+        @Override
+        public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
+            if (obj instanceof JSBaseObject)
+                return (JSBaseObject) obj;
+
+            if (obj instanceof JSTasks.TaskRef) {
+                return (Scriptable) ((JSTasks.TaskRef) obj).get(cx);
+            }
+
+            if (obj instanceof Node)
+                return new JSNode((Node) obj);
+
+            if (obj instanceof JSObject)
+                return new MyNativeJavaObject(scope, obj, obj.getClass(), false);
+
+
+            return super.wrapNewObject(cx, scope, obj);
+        }
+
+    }
+
+    static private class MyNativeJavaObject extends NativeJavaObject {
+        private MyNativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
+            super(scope, javaObject, staticType, isAdapter);
+        }
+
+        @Override
+        public String getClassName() {
+            return JSBaseObject.getClassName(this.staticType);
+        }
+    }
+
+    private static class MyNativeJavaClass extends NativeJavaClass {
+        public MyNativeJavaClass(Scriptable scriptable, Class<? extends Scriptable> aClass) {
+            super(scriptable, aClass);
+        }
+
+        @Override
+        public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
+            return super.construct(cx, scope, args);
+        }
+    }
 }

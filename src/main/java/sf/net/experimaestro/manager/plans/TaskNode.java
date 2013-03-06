@@ -22,7 +22,7 @@ import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
@@ -65,7 +65,7 @@ public class TaskNode extends UnaryOperator {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator() : ImmutableList.of(new Value(new Node[0])).iterator();
+                    input.iterator() : ImmutableList.of(new Value(new Document[0])).iterator();
 
             @Override
             protected ReturnValue computeNext() {

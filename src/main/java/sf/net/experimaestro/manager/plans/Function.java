@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -31,6 +31,6 @@ public interface Function  {
      * @param input
      * @return
      */
-    abstract Node f(Node input[]);
+    abstract Document f(Document input[]);
 
 }

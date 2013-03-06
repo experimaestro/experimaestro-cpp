@@ -76,7 +76,7 @@ public abstract class Value {
 
     /** Set to the given value
      * @param value*/
-    public abstract void set(Node value);
+    public abstract void set(Document value);
 
     /**
      * XPMProcess the value before it can be accessed by a task to run
@@ -90,7 +90,7 @@ public abstract class Value {
      *
      * @return A valid XML document or null if not set
      */
-    public abstract Node get();
+    public abstract Document get();
 
     /**
      * This method is called once by a {@link Task} after {@link #process()}.
