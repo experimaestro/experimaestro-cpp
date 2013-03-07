@@ -21,21 +21,26 @@ package sf.net.experimaestro.manager.plans;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Fake operator that only contains a plan
+ * Fake operator that only contains an union of plans
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 22/2/13
  */
 public class PlanReference extends Operator {
-    Plan plan;
+    List<Plan> plans = new ArrayList<>();
 
-    public PlanReference(Plan plan) {
-        this.plan = plan;
+    public PlanReference(Plan plans) {
+        this.plans.add(plans);
+    }
+
+    public PlanReference(List<Plan> plans) {
+        this.plans = plans;
     }
 
     @Override
@@ -52,7 +57,13 @@ public class PlanReference extends Operator {
     @Override
     public Operator init(PlanMap map, OperatorMap opMap) {
         try {
-            return plan.planGraph(map.sub(plan, true), opMap);
+            if (plans.size() == 1)
+                return plans.get(0).planGraph(map.sub(plans.get(0), true), opMap);
+
+            Union union = new Union();
+            for(Plan plan: plans)
+                union.addParent(plan.planGraph(map.sub(plan, true), opMap));
+            return union;
         } catch (XPathExpressionException e) {
             throw new ExperimaestroRuntimeException(e);
         }
@@ -61,6 +72,7 @@ public class PlanReference extends Operator {
 
     @Override
     public void addSubPlans(Set<Plan> set) {
-        set.add(plan);
+        for (Plan plan : this.plans)
+            set.add(plan);
     }
 }

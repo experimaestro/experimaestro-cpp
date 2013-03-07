@@ -35,7 +35,16 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeMap;
 
 /**
  * An experimental plan.
@@ -134,8 +143,8 @@ public class Plan {
         return new Plan(data.copy());
     }
 
-    public void set(DotName id, Operator operator) {
-        data.set(id, operator);
+    public void add(PlanInputs inputs) {
+        data.add(inputs);
     }
 
     public Operator planGraph(PlanMap map, OperatorMap opMap) throws XPathExpressionException {
@@ -157,7 +166,7 @@ public class Plan {
         /**
          * Mappings to either list of plans or operators
          */
-        Multimap<DotName, Operator> inputs = ArrayListMultimap.create();
+        List<Multimap<DotName, Operator>> inputsList = new ArrayList();
 
 
         /**
@@ -204,7 +213,9 @@ public class Plan {
             if (count > 1) {
                 Data data = new Data(factory);
                 data.joins.addAll(data.joins);
-                data.inputs.putAll(data.inputs);
+                for (Multimap<DotName, Operator> input : data.inputsList) {
+                    data.inputsList.add(ArrayListMultimap.create(input));
+                }
                 data.groupBy.addAll(data.groupBy);
                 return data;
             }
@@ -290,109 +301,125 @@ public class Plan {
                 }
             }
 
-            // --- Loop over the cartesian product of the inputs
-            DotName ids[] = new DotName[inputs.keySet().size()];
-            OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
-            {
+            ArrayList<Operator> outputs = new ArrayList<>();
+            for (Multimap<DotName, Operator> inputs : inputsList) {
 
-                int index = 0;
-                for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
-                    ids[index] = input.getKey();
-                    inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
-                    index++;
-                }
-                assert index == ids.length;
-            }
 
-            // Create a new operator
-            TaskNode self = new TaskNode(plan);
+                // --- Loop over the cartesian product of the inputs
+                DotName ids[] = new DotName[inputs.keySet().size()];
+                OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
+                {
 
-            Operator inputOperators[] = new Operator[inputValues.length];
-            BitSet[] joins = new BitSet[inputOperators.length];
-
-            for (int i = inputValues.length; --i >= 0; ) {
-                OperatorIterable values = inputValues[i];
-                Union union = new Union();
-                for (Operator operator : values) {
-                    union.addParent(operator);
+                    int index = 0;
+                    for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
+                        ids[index] = input.getKey();
+                        inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
+                        index++;
+                    }
+                    assert index == ids.length;
                 }
 
-                if (union.getParents().size() == 1)
-                    inputOperators[i] = union.getParent(0);
-                else
-                    inputOperators[i] = union;
+                // Create a new operator
+                TaskNode self = new TaskNode(plan);
 
-                joins[i] = new BitSet();
-                opMap.add(inputOperators[i]);
+                Operator inputOperators[] = new Operator[inputValues.length];
+                BitSet[] joins = new BitSet[inputOperators.length];
 
-            }
+                for (int i = inputValues.length; --i >= 0; ) {
+                    OperatorIterable values = inputValues[i];
+                    Union union = new Union();
+                    for (Operator operator : values) {
+                        union.addParent(operator);
+                    }
 
-            // Find LCAs and store them in a map operator ID -> inputs
-            for (int i = 0; i < ids.length - 1; i++) {
-                for (int j = i + 1; j < ids.length; j++) {
-                    // TODO: handle without join the case where the same operator corresponds
-                    // to two or more inputs (but is not an LCA of higher order)
-                    ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
-                    for (Operator operator : lca) {
-                        int key = opMap.get(operator);
-                        joins[i].set(key);
-                        joins[j].set(key);
+                    if (union.getParents().size() == 1)
+                        inputOperators[i] = union.getParent(0);
+                    else
+                        inputOperators[i] = union;
+
+                    joins[i] = new BitSet();
+                    opMap.add(inputOperators[i]);
+
+                }
+
+                // Find LCAs and store them in a map operator ID -> inputs
+                for (int i = 0; i < ids.length - 1; i++) {
+                    for (int j = i + 1; j < ids.length; j++) {
+                        // TODO: handle without join the case where the same operator corresponds
+                        // to two or more inputs (but is not an LCA of higher order)
+                        ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
+                        for (Operator operator : lca) {
+                            int key = opMap.get(operator);
+                            joins[i].set(key);
+                            joins[j].set(key);
+                        }
                     }
                 }
-            }
 
 
-            // Build the trie structure for product/joins
-            TrieNode trie = new TrieNode();
-            for (int i = 0; i < joins.length; i++) {
-                trie.add(joins[i], inputOperators[i]);
-            }
-
-            TrieNode.MergeResult merge = trie.merge(opMap);
-            self.addParent(merge.operator);
-
-            // Associate streams with names
-            Map<DotName, Integer> mappings = new TreeMap<>();
-            for (int i = 0; i < ids.length; i++) {
-                mappings.put(ids[i], merge.map.get(inputOperators[i]));
-            }
-            self.setMappings(mappings);
-
-
-            // --- Handle group by
-
-            if (groupBy != null) {
-                GroupBy groupBy = new GroupBy();
-
-
-                // Get all the ancestor to group by
-                for (Plan[] path : this.groupBy) {
-                    final PlanMap submap = map.sub(path, false);
-                    final Operator taskNode = submap.get();
-
-                    // Should not happen since they are defined paths
-                    assert taskNode != null : "Cannot group by: no associated operator";
-
-                    // Add to the operator
-
-                    // Problem: this can be expanded if it was an union!
-                    groupBy.add(taskNode);
+                // Build the trie structure for product/joins
+                TrieNode trie = new TrieNode();
+                for (int i = 0; i < joins.length; i++) {
+                    trie.add(joins[i], inputOperators[i]);
                 }
 
-                // Order using the operators we should group by
-                Order<Operator> order = new Order();
-                for (Operator op : groupBy.operators)
-                    order.add(op, false);
-                OrderBy orderBy = new OrderBy(order, null);
-                orderBy.addParent(self);
+                TrieNode.MergeResult merge = trie.merge(opMap);
+                self.addParent(merge.operator);
 
-                groupBy.addParent(orderBy);
-                map.set(groupBy);
-                return groupBy;
+                // Associate streams with names
+                Map<DotName, Integer> mappings = new TreeMap<>();
+                for (int i = 0; i < ids.length; i++) {
+                    mappings.put(ids[i], merge.map.get(inputOperators[i]));
+                }
+                self.setMappings(mappings);
+
+
+                // --- Handle group by
+
+                if (groupBy == null) {
+                    map.set(self);
+                    outputs.add(self);
+                } else {
+                    GroupBy groupBy = new GroupBy();
+
+
+                    // Get all the ancestor to group by
+                    for (Plan[] path : this.groupBy) {
+                        final PlanMap submap = map.sub(path, false);
+                        final Operator taskNode = submap.get();
+
+                        // Should not happen since they are defined paths
+                        assert taskNode != null : "Cannot group by: no associated operator";
+
+                        // Add to the operator
+
+                        // Problem: this can be expanded if it was an union!
+                        groupBy.add(taskNode);
+                    }
+
+                    // Order using the operators we should group by
+                    Order<Operator> order = new Order();
+                    for (Operator op : groupBy.operators)
+                        order.add(op, false);
+                    OrderBy orderBy = new OrderBy(order, null);
+                    orderBy.addParent(self);
+
+                    groupBy.addParent(orderBy);
+                    map.set(groupBy);
+                    outputs.add(groupBy);
+                }
             }
 
-            map.set(self);
-            return self;
+            // End of loop over inputs
+
+            if (outputs.size() == 1)
+                return outputs.get(0);
+
+            Union union = new Union();
+            for (Operator output : outputs)
+                union.addParent(output);
+            return union;
+
         }
 
 
@@ -416,19 +443,22 @@ public class Plan {
             return this;
         }
 
-        public void set(DotName id, Operator object) {
+        public void add(PlanInputs inputs) {
             final Data data = ensureOne();
-            if (data != this)
-                data.set(id, object);
-            else {
-                inputs.put(id, object);
+            if (data != this) {
+                data.add(inputs);
+            } else {
+                inputsList.add(inputs.map);
             }
         }
 
+
         public Iterable<? extends Plan> getSubPlans() {
             Set<Plan> set = new HashSet<>();
-            for (Operator operator : inputs.values()) {
-                operator.addSubPlans(set);
+            for (Multimap<DotName, Operator> inputs : inputsList) {
+                for (Operator operator : inputs.values()) {
+                    operator.addSubPlans(set);
+                }
             }
             return set;
         }

@@ -139,7 +139,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
     @Override
     public Object get(int index, Scriptable start) {
-        throw new NotImplementedException();
+        return NOT_FOUND;
     }
 
     @Override
@@ -149,12 +149,12 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
     @Override
     public boolean has(int index, Scriptable start) {
-        throw new NotImplementedException();
+        return false;
     }
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        throw new NotImplementedException();
+        throw new UnsupportedOperationException("Setting the value of a sealed object (" + getClassName() + ")");
     }
 
     @Override
@@ -194,7 +194,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
     @Override
     public Object[] getIds() {
-        throw new NotImplementedException();
+        throw new UnsupportedOperationException("Enumerate JS object: " + getClassName());
     }
 
     @Override

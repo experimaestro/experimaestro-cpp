@@ -537,7 +537,7 @@ public class XPMObject {
     }
 
 
-    @JSHelp(value = "Transform plan outputs with a function")
+    @JSHelp(value = "Transform plans outputs with a function")
     public static Scriptable js_transform(Context cx, Scriptable scope, Object[] args, Function funObj) throws FileSystemException {
         Callable f = (Callable) args[0];
         JSPlanRef plans[] = new JSPlanRef[args.length - 1];

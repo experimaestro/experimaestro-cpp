@@ -364,4 +364,19 @@ public class XMLUtils {
         return fragment;
     }
 
+    /**
+     * Returns the node type name from the node type code
+     * @param nodeType
+     * @return
+     */
+    public static String getTypeName(short nodeType) {
+        switch (nodeType) {
+            case Node.ELEMENT_NODE: return "element";
+            case Node.DOCUMENT_NODE: return "document";
+            case Node.TEXT_NODE: return "text";
+            case Node.ATTRIBUTE_NODE: return "attribute";
+            case Node.CDATA_SECTION_NODE: return "cdata";
+        }
+        return "Unknown[" + nodeType + "]";
+    }
 }

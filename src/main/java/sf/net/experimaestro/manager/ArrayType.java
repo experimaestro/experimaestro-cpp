@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -28,7 +29,7 @@ import sf.net.experimaestro.utils.XMLUtils;
  * @date 18/2/13
  */
 public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "sequence");
+    final private static QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "array");
     private final Type innerType;
 
     public ArrayType(Type innerType) {
@@ -38,8 +39,12 @@ public class ArrayType extends Type {
 
     @Override
     public void validate(Node node) throws ValueMismatchException {
-        for (Element element : XMLUtils.childElements(node)) {
-            innerType.validate(element);
+        if (!QNAME.sameQName(node))
+            throw new ExperimaestroRuntimeException("Expected %s and got %s", QNAME,
+                    new QName(node));
+
+        for (Element child : XMLUtils.childElements(node)) {
+            innerType.validate(child);
         }
     }
 

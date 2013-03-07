@@ -16,45 +16,20 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.utils;
 
-import org.w3c.dom.Document;
+import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.DiscreteDomains;
+import com.google.common.collect.Range;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
-
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Document[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Document... nodes) {
-        this.nodes = nodes;
-    }
-
-    public Value(long[] context, Document... nodes) {
-        this.context = context;
-        this.nodes = nodes;
-    }
-
-    public Document[] getNodes() {
-        return nodes;
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 7/3/13
+ */
+public class RangeUtils {
+    /** Transforms a range into an array of {@linkplain Integer} */
+    public static Integer[] toIntegerArray(Range<Integer> closed) {
+        ContiguousSet<Integer> integers = closed.asSet(DiscreteDomains.integers());
+        return integers.toArray(new Integer[integers.size()]);
     }
 }

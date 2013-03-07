@@ -111,6 +111,7 @@ public class GroupBy extends UnaryOperator {
 
                 Document document = XMLUtils.newDocument();
                 Element array = document.createElementNS(Manager.EXPERIMAESTRO_NS, "array");
+                document.appendChild(array);
 
                 Value value = iterator.next();
                 for (int i : indices)

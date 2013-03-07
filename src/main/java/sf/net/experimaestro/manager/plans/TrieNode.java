@@ -257,9 +257,9 @@ public class TrieNode {
      * Select the node in the trie with the heighest weight, and without any parent
      * with a weight > 1
      *
-     * @param indices The indices of the merged operators up this trie node
+     * @param nodeIndices The indices of the merged operators up this trie node
      */
-    private NAryOperator merge(IntSet indices, OperatorMap opMap, List<Operator> list) {
+    private NAryOperator merge(IntSet nodeIndices, OperatorMap opMap, List<Operator> list) {
         // Nothing to merge
         if (weight == 0)
             return null;
@@ -277,8 +277,8 @@ public class TrieNode {
 
         // Case where we found one
         if (argmax != null) {
-            indices.addAll(argmax.set);
-            NAryOperator merge = argmax.node.merge(indices, opMap, list);
+            nodeIndices.addAll(argmax.set);
+            NAryOperator merge = argmax.node.merge(nodeIndices, opMap, list);
             weight -= merge.parents.size() - 1;
             return merge;
         }
@@ -292,7 +292,7 @@ public class TrieNode {
 
         // Did not find any better parent: merge
         NAryOperator operator;
-        if (indices.isEmpty()) {
+        if (nodeIndices.isEmpty()) {
             Product product = new Product();
             operator = product;
             for (Operator parent : mergedOperators.keySet()) {
@@ -307,7 +307,7 @@ public class TrieNode {
             Order<Operator> order = new Order();
 
             // Build the join and the order on the common indices
-            for (int opIndex : indices) {
+            for (int opIndex : nodeIndices) {
                 Operator op = opMap.get(opIndex);
                 join.addJoin(op);
                 order.add(op, false);
@@ -315,12 +315,8 @@ public class TrieNode {
 
 
             for (Map.Entry<Operator, IntSet> parent : mergedOperators.entrySet()) {
-                HashSet<Operator> orderOperators = new HashSet<>();
-                for(int operatorId: parent.getValue())
-                        orderOperators.add(opMap.get(operatorId));
-
                 // Order the results first
-                OrderBy orderBy = new OrderBy(order, orderOperators);
+                OrderBy orderBy = new OrderBy(order, null);
                 orderBy.addParent(parent.getKey());
 
                 list.add(parent.getKey());

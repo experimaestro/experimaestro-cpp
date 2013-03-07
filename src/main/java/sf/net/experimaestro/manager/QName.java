@@ -61,6 +61,17 @@ public class QName implements Comparable<QName> {
         this.localName = localName;
     }
 
+
+    /**
+     * Create a QName from an element
+     *
+     * @param node
+     * @return
+     */
+    public QName(Node node) {
+        this(node.getNamespaceURI(), node.getLocalName());
+    }
+
     /**
      * Matches the following qualified name formats
      * <ul>
@@ -84,7 +95,7 @@ public class QName implements Comparable<QName> {
     }
 
     public static QName parse(String qname, Element context,
-                              final Map<String,String> prefixes) {
+                              final Map<String, String> prefixes) {
         return parse(qname, context, new String2String() {
             @Override
             public String get(String id) {
@@ -130,7 +141,7 @@ public class QName implements Comparable<QName> {
     }
 
     public static QName parse(String qname) {
-        return parse(qname, null, (String2String)null);
+        return parse(qname, null, (String2String) null);
     }
 
     @Override
@@ -198,7 +209,7 @@ public class QName implements Comparable<QName> {
 
 
     public boolean sameQName(Node element) {
-        return equals(new QName(element.getNamespaceURI(), element.getLocalName()));
+        return equals(new QName(element));
     }
 
     public boolean hasNamespace() {
@@ -213,4 +224,5 @@ public class QName implements Comparable<QName> {
             }
         });
     }
+
 }

@@ -52,6 +52,11 @@ public class OrderBy extends UnaryOperator {
     /** The order for the context, computed when intializing this operator */
     int contextOrder[];
 
+    /**
+     *
+     * @param order
+     * @param operators A subset of operators from order or <tt>null</tt>
+     */
     public OrderBy(Order<Operator> order, Set<Operator> operators) {
         this.order = order;
         this.operators = operators;

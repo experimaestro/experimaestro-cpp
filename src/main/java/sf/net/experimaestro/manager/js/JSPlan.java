@@ -36,6 +36,7 @@ import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.OperatorMap;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.plans.PlanMap;
 import sf.net.experimaestro.manager.plans.PlanReference;
 import sf.net.experimaestro.manager.plans.XPathFunction;
@@ -77,12 +78,13 @@ public class JSPlan extends JSBaseObject implements Callable {
      */
     public JSPlan(Scriptable scope, TaskFactory factory, NativeObject object) throws XPathExpressionException {
         plan = new Plan(factory);
-        addMappings(object, scope);
+        plan.add(getMappings(object, scope));
     }
 
 
 
-    private void addMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
+    private PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
+        PlanInputs inputs = new PlanInputs();
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
             DotName id = DotName.parse(name);
@@ -93,13 +95,13 @@ public class JSPlan extends JSBaseObject implements Callable {
                 final NativeArray array = (NativeArray) value;
                 for (int i = 0; i < array.getLength(); i++) {
                     final Object e = array.get(i);
-                    plan.set(id, getSimple(e, scope));
+                    inputs.set(id, getSimple(e, scope));
                 }
             } else
-                plan.set(id, getSimple(value, scope));
+                inputs.set(id, getSimple(value, scope));
 
         }
-
+        return inputs;
     }
 
 
@@ -259,6 +261,11 @@ public class JSPlan extends JSBaseObject implements Callable {
         final Plan[][] plans = getPlanPaths(paths);
         plan.groupBy(Arrays.asList(plans));
         return this;
+    }
+
+    @JSFunction(value = "add", scope = true)
+    public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
+        plan.add(getMappings(object, scope));
     }
 
 

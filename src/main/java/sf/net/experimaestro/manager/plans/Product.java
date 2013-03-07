@@ -20,7 +20,9 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import org.w3c.dom.Document;
+import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -30,6 +32,7 @@ import java.util.Iterator;
  * @date 20/2/13
  */
 public class Product extends NAryOperator {
+    final static private Logger LOGGER = Logger.getLogger();
 
     @Override
     protected Iterator<ReturnValue> _iterator() {
@@ -73,6 +76,8 @@ public class Product extends NAryOperator {
             final Value value = inputs[i].next();
             assert value.nodes.length == 1;
             current[i] = value;
+            if (LOGGER.isTraceEnabled())
+                LOGGER.trace("New token: [%d] %d: %s", i, value.id, Arrays.toString(value.context));
             return true;
         }
 

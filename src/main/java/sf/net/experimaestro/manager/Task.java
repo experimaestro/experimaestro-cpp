@@ -165,7 +165,7 @@ public abstract class Task {
                 final Type type = input.getType();
 
                 if (type != null && value.isSet()) {
-                    type.validate(value.get());
+                    type.validate(value.get().getDocumentElement());
                 }
             } catch (ExperimaestroRuntimeException e) {
                 e.addContext("While processing input [%s] in task [%s]", key, factory.id);

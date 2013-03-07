@@ -18,43 +18,19 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Document;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import sf.net.experimaestro.manager.DotName;
 
 /**
+ * Inputs for a plan
 * @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
+* @date 7/3/13
 */
-public class Value {
-    /**
-     * The value ID
-     */
-    long id;
+public class PlanInputs {
+    Multimap<DotName, Operator> map = ArrayListMultimap.create();
 
-    /**
-     * The next value (useful when sharing)
-     */
-    Value next = null;
-
-    /**
-     * The produced node
-     */
-    Document[] nodes;
-
-    /**
-     * The context
-     */
-    long context[];
-
-    public Value(Document... nodes) {
-        this.nodes = nodes;
-    }
-
-    public Value(long[] context, Document... nodes) {
-        this.context = context;
-        this.nodes = nodes;
-    }
-
-    public Document[] getNodes() {
-        return nodes;
+    public void set(DotName id, Operator object) {
+        map.put(id, object);
     }
 }

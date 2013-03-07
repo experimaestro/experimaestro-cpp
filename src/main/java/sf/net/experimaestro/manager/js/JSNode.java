@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
@@ -46,12 +45,14 @@ public class JSNode extends JSBaseObject {
     }
 
 
-    @JSFunction(value = "get", scope = true)
-    public void get(Context context, Scriptable scope, String expression) throws XPathExpressionException {
+    @JSFunction(value = "path", scope = true)
+    public JSNodeList path(Context context, Scriptable scope, String expression) throws XPathExpressionException {
         XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
         NodeList list = (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
-        throw new NotImplementedException();
+        return new JSNodeList(list);
     }
+
+
 
     @JSFunction(value = "get_string", scope = true)
     public String getString(Context context, Scriptable scope, String expression) throws XPathExpressionException {
@@ -85,14 +86,18 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction("text")
     public String getText() {
-
         String text = (node instanceof Document ? ((Document)node).getDocumentElement() : node).getTextContent();
         return text == null ? "" : text;
     }
 
     @Override
     public String toString() {
-        return node.getClass() + " ["+ XMLUtils.toString(node) + "]";
+        return String.format("%s (%s)", getClassName(), XMLUtils.getTypeName(node.getNodeType()));
+    }
+
+    @JSFunction("toSource")
+    public String toSource() {
+        return XMLUtils.toString(node);
     }
 
     public Node getNode() {

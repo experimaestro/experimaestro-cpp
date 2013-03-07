@@ -86,7 +86,7 @@ function check(results, expected) {
     logger.debug("Results: %s", results.toSource());
     for (var i = 0; i < expected.length; i++) {
         if (expected[i] != Number(results[i].get_value())) 
-			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].toSource(), i);
+			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].get_value(), i);
     }
 }
 
@@ -270,8 +270,8 @@ tasks("ns:sum")= {
 
     run: function(p) {
         var sum = 0;
-        for each(var a in p.x) {
-            sum += Number(a.@xp::value);
+        for each(var a in p.x.path("xp:array/*")) {
+            sum += Number(a.get_value());
         }            
         return sum;
     }

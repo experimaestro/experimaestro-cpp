@@ -19,8 +19,10 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.ClassUtils;
+import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
@@ -34,7 +36,7 @@ import java.util.ArrayList;
 /**
  * Wraps a method of an object
  */
-class MethodFunction implements Callable {
+class MethodFunction implements Callable, Function {
     String name;
     ArrayList<Method> methods = new ArrayList<>();
 
@@ -75,6 +77,12 @@ class MethodFunction implements Callable {
             throw new WrappedException(e);
         }
 
+    }
+
+    @Override
+    public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
+        // TODO: implement construct
+        throw new NotImplementedException();
     }
 
     private Object[] transform(Context cx, Scriptable scope, Method method, Object[] args) {
@@ -151,5 +159,101 @@ class MethodFunction implements Callable {
 
 
         return score;
+    }
+
+    @Override
+    public String getClassName() {
+        // TODO: implement getClassName
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Object get(String name, Scriptable start) {
+        // TODO: implement get
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Object get(int index, Scriptable start) {
+        // TODO: implement get
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public boolean has(String name, Scriptable start) {
+        // TODO: implement has
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public boolean has(int index, Scriptable start) {
+        // TODO: implement has
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void put(String name, Scriptable start, Object value) {
+        // TODO: implement put
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void put(int index, Scriptable start, Object value) {
+        // TODO: implement put
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void delete(String name) {
+        // TODO: implement delete
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void delete(int index) {
+        // TODO: implement delete
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Scriptable getPrototype() {
+        // TODO: implement getPrototype
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void setPrototype(Scriptable prototype) {
+        // TODO: implement setPrototype
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Scriptable getParentScope() {
+        // TODO: implement getParentScope
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void setParentScope(Scriptable parent) {
+        // TODO: implement setParentScope
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Object[] getIds() {
+        // TODO: implement getIds
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Object getDefaultValue(Class<?> hint) {
+        // TODO: implement getDefaultValue
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public boolean hasInstance(Scriptable instance) {
+        // TODO: implement hasInstance
+        throw new NotImplementedException();
     }
 }

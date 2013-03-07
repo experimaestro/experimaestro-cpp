@@ -111,13 +111,13 @@ public abstract class Operator {
     }
 
     public static void ensureConnections(HashMap<Operator, Operator> simplified, List<Operator> operators) {
-        for(int i = 0; i < operators.size(); i++) {
+        for (int i = 0; i < operators.size(); i++) {
             operators.set(i, getSimplified(simplified, operators.get(i)));
         }
     }
 
     public static void ensureConnections(HashMap<Operator, Operator> simplified, Set<Operator> set) {
-        for(Operator operator: set) {
+        for (Operator operator : set) {
             Operator newOperator = getSimplified(simplified, operator);
             if (newOperator != operator) {
                 set.remove(operator);
@@ -349,7 +349,7 @@ public abstract class Operator {
         // Get the orders needed by children
         Order<Operator> childrenOrders[] = new Order[children.size()];
 
-        for(int i = 0; i < childrenOrders.length; i++) {
+        for (int i = 0; i < childrenOrders.length; i++) {
             childrenOrders[i] = children.get(i).computeOrder(orders);
         }
 
@@ -440,13 +440,16 @@ public abstract class Operator {
                     list.add(x);
             }
 
-            if (!list.isEmpty())
-                attributes.put("label", Output.toString(", ", list, new Formatter<Map.Entry<StreamReference, Integer>>() {
+            String labelValue = Integer.toString(streamIndex);
+            if (!list.isEmpty()) {
+                labelValue += ";" + Output.toString(", ", list, new Formatter<Map.Entry<StreamReference, Integer>>() {
                     @Override
                     public String format(Map.Entry<StreamReference, Integer> x) {
                         return String.format("%d/%d", x.getKey().contextIndex, x.getValue());
                     }
-                }));
+                });
+            }
+            attributes.put("label", labelValue);
 
             out.print("[");
             Output.print(out, ", ", attributes.entrySet(), new Formatter<Map.Entry<String, String>>() {
@@ -496,7 +499,7 @@ public abstract class Operator {
         if (visited.contains(this))
             return;
         visited.add(this);
-        for(Operator parent: getParents())
+        for (Operator parent : getParents())
             parent.ensureConnections(simplified, visited);
 
         ensureConnections(simplified);
@@ -504,6 +507,7 @@ public abstract class Operator {
 
     /**
      * After simplifications, this is used ensure that connections are kept
+     *
      * @param simplified
      */
     protected void ensureConnections(HashMap<Operator, Operator> simplified) {
