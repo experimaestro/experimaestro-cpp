@@ -513,6 +513,7 @@ public class RPCHandler {
 
         } catch (Throwable e) {
             Throwable wrapped = e;
+            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
             while (wrapped.getCause() != null)
                 wrapped = wrapped.getCause();
 
@@ -536,8 +537,15 @@ public class RPCHandler {
 
             if (wrapped instanceof NotImplementedException)
                 err.format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]);
-            if (e instanceof RhinoException) {
-                err.append("\n" + ((RhinoException) e).getScriptStackTrace());
+
+            // Search for innermost rhino exception
+            RhinoException rhinoException = null;
+            for(Throwable t = e; t != null; t = t.getCause())
+                if (t instanceof RhinoException)
+                    rhinoException = (RhinoException)t;
+
+            if (rhinoException != null) {
+                err.append("\n" + rhinoException.getScriptStackTrace());
             } else {
                 err.format("Internal error:%n");
                 e.printStackTrace(err);

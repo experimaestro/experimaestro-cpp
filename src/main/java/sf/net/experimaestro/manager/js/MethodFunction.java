@@ -25,7 +25,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.WrappedException;
+import org.mozilla.javascript.XPMRhinoException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 
@@ -73,10 +73,10 @@ class MethodFunction implements Callable, Function {
             args = transform(cx, scope, argmax, args);
             final Object invoke = argmax.invoke(isStatic ? null : thisObj, args);
             return cx.getWrapFactory().wrap(cx, scope, invoke, null);
+        } catch (XPMRhinoException e) {
+            throw e;
         } catch (Throwable e) {
-            if (e.getCause() != null)
-                e = e.getCause();
-            throw new WrappedException(e);
+            throw new XPMRhinoException(e);
         }
 
     }
