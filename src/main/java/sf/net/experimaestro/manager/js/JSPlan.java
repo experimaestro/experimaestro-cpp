@@ -27,6 +27,7 @@ import org.mozilla.javascript.WrappedException;
 import org.mozilla.javascript.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
@@ -41,6 +42,7 @@ import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.plans.PlanMap;
 import sf.net.experimaestro.manager.plans.PlanReference;
 import sf.net.experimaestro.manager.plans.XPathFunction;
+import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -150,6 +152,9 @@ public class JSPlan extends JSBaseObject implements Callable {
         if (value instanceof XMLSerializable)
             return new Constant(((XMLSerializable) value).serialize());
 
+        if (value instanceof JSPlanInput) {
+            return ((JSPlanInput) value).operator;
+        }
 
         // --- Plans & transformations
 
@@ -315,11 +320,11 @@ public class JSPlan extends JSBaseObject implements Callable {
             return "JS function";
         }
 
-        public Document f(Document[] parameters) {
+        public NodeList f(Document[] parameters) {
             Object[] args = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++)
                 args[i] = new JSNode(parameters[i]);
-            return JSUtils.toDocument(scope, f.call(cx, scope, null, args));
+            return new ArrayNodeList(JSUtils.toDocument(scope, f.call(cx, scope, null, args)));
         }
     }
 }

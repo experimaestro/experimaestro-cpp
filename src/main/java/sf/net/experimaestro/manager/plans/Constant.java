@@ -71,4 +71,8 @@ public class Constant extends Operator {
     public void add(Constant source) {
         nodes.addAll(source.nodes);
     }
+
+    public void add(Document document) {
+        nodes.add(document);
+    }
 }

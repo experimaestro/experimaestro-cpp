@@ -72,6 +72,9 @@ public class JSBaseObject extends JSObject implements Scriptable {
                         if ((method.getModifiers() & Modifier.PUBLIC) == 0)
                             throw new AssertionError("The method " + method + " is not public");
                         String jsName = annotation.value();
+                        if ("".equals(jsName))
+                            jsName = method.getName();
+
                         MethodFunction methodFunction = methods.get(jsName);
                         if (methodFunction == null) {
                             methods.put(jsName, methodFunction = new MethodFunction(jsName));

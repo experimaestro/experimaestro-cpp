@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.plans;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.namespace.NamespaceContext;
@@ -48,16 +47,11 @@ public class XPathFunction implements Function {
     }
 
     @Override
-    public Document f(Document[] input) {
+    public NodeList f(Document[] input) {
         assert input.length == 1;
         try {
             final NodeList list = (NodeList) xpath.evaluate(input[0], XPathConstants.NODESET);
-
-            if (list.getLength() == 0)
-                throw new ExperimaestroRuntimeException("XPath [%s] did not return any result", xpathString);
-            if (list.getLength() != 1)
-                throw new ExperimaestroRuntimeException("XPath [%s] did return too many results (%d)", xpathString, list.getLength());
-            return Manager.wrap(list.item(0));
+            return list;
 
         } catch (XPathExpressionException e) {
             throw new ExperimaestroRuntimeException(e);

@@ -79,7 +79,7 @@ public class TaskNode extends UnaryOperator {
                     try {
                         task.setParameter(entry.getKey(), value.nodes[entry.getValue()]);
                     } catch (NoSuchParameter noSuchParameter) {
-                        throw new AssertionError();
+                        throw new ExperimaestroRuntimeException(noSuchParameter);
                     }
                 }
 

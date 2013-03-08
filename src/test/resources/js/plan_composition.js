@@ -22,6 +22,8 @@
     - plans can be simplified (factorization) before being run
  */
 
+include("check_array.inc.js");
+ 
  // START SNIPPET: task
 ns = new Namespace("xpm.tests");
 var logger = xpm.logger("xpm.tests");
@@ -77,18 +79,7 @@ tasks("ns:identity_bis")= {
 
 
 
-function check(results, expected) {
-	if (results.length != expected.length)
-		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
-    
-    // Sort the results
-    results.sort(function(x,y) { return x.get_value() - y.get_value(); });
-    logger.debug("Results: %s", results.toSource());
-    for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != Number(results[i].get_value())) 
-			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), results[i].get_value(), i);
-    }
-}
+
 
 /**
  * Simple product of two plans
@@ -106,7 +97,7 @@ function test_simple() {
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
     var result = plan2();
-    check(result, [3, 5, 6, 10]);
+    check_array(result, [3, 5, 6, 10]);
 }
 
 /**
@@ -125,7 +116,7 @@ function test_simple_access() {
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
     var result = plan2.run();
-    check(result, [3, 5, 6, 10]);
+    check_array(result, [3, 5, 6, 10]);
 }
 
 
@@ -148,7 +139,7 @@ function test_transform() {
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
     var result = plan2();
-    check(result, [3, 5, 6, 10]);
+    check_array(result, [3, 5, 6, 10]);
 }
 
 // Joining tasks
@@ -173,7 +164,7 @@ function test_join() {
     plan3.join(plan1, [plan2, plan1]);
     
     var result = plan3.run();
-    check(result, [4, 6, 8, 12]);
+    check_array(result, [4, 6, 8, 12]);
 }
 
 // Test a join with an union
@@ -199,7 +190,7 @@ function test_join_union() {
     plan3.join(plan1, [plan2, plan1]);
     
     var result = plan3.run();
-    check(result, [-4, -3, -2, -1, 4, 6, 8, 12]);
+    check_array(result, [-4, -3, -2, -1, 4, 6, 8, 12]);
 }
 
 // Implicit join 
@@ -212,7 +203,7 @@ function test_implicit_join() {
         y: plan1
     });
     var result = plan2.run();
-    check(result, [4, 6]);
+    check_array(result, [4, 6]);
 }
 
 
@@ -226,7 +217,7 @@ function test_product() {
         y: plan1.copy(),
     });
     var result = plan2();
-    check(result, [4, 5, 5, 6]);
+    check_array(result, [4, 5, 5, 6]);
 }
 
 function test_example() {
@@ -257,7 +248,7 @@ function test_add() {
     plan.add({ x: [4, 5], y: 2});
     
     var result = plan();
-    check(result, [4, 5, 6, 7]);
+    check_array(result, [4, 5, 6, 7]);
 }
 
 
@@ -282,7 +273,7 @@ function test_groupby_all() {
     var plan2 = tasks("ns:sum").plan({ x: plan1.group_by() });
     
     var result = plan2();
-    check(result, [6]);
+    check_array(result, [6]);
 }
 
 function test_groupby() {
@@ -291,5 +282,5 @@ function test_groupby() {
     var plan3 = tasks("ns:sum").plan({ x: plan2.group_by(plan1) });
     
     var result = plan3();
-    check(result, [32, 34, 36]);
+    check_array(result, [32, 34, 36]);
 }

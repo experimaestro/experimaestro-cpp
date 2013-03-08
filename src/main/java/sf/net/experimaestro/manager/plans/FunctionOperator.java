@@ -19,6 +19,11 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterators;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.utils.XMLUtils;
 
 import java.util.Iterator;
 
@@ -42,13 +47,23 @@ public class FunctionOperator extends UnaryOperator {
     protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> iterator = input.iterator();
+            public Iterator<? extends Node> innerIterator = Iterators.emptyIterator();
+            DefaultContexts contexts;
+
             @Override
             protected ReturnValue computeNext() {
-                if (!iterator.hasNext())
-                    return endOfData();
+                while (true) {
+                    if (innerIterator.hasNext())
+                        return new ReturnValue(contexts, Manager.wrap(innerIterator.next()));
+                    if (!iterator.hasNext())
+                        return endOfData();
 
-                Value value = iterator.next();
-                return new ReturnValue(new DefaultContexts(value.context), function.f(value.nodes));
+                    Value value = iterator.next();
+                    NodeList list = function.f(value.nodes);
+                    innerIterator = XMLUtils.iterable(list).iterator();
+
+                    contexts = new DefaultContexts(value.context);
+                }
             }
         };
     }

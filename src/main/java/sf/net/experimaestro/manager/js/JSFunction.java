@@ -27,7 +27,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JSFunction {
-    String value();
+    String value() default "";
 
     /** Whether the method takes scope & context */
     boolean scope() default false;

@@ -271,9 +271,10 @@ public class JSUtils {
             return document.get().createTextNode(Integer.toString((Integer) object));
         }
 
-        if (object instanceof String) {
+        if (object instanceof CharSequence) {
             return document.get().createTextNode(object.toString());
         }
+
 
         if (object instanceof UniqueTag)
             throw new ExperimaestroRuntimeException("Undefined cannot be converted to XML", object.getClass());
