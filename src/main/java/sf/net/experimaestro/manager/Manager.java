@@ -45,7 +45,9 @@ public class Manager {
     public static final String EXPERIMAESTRO_PREFIX = "xp";
 
     public static final String XMLSCHEMA_NS = "http://www.w3.org/2001/XMLSchema";
+
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
+    public static final QName XP_RESOURCE = new QName(EXPERIMAESTRO_NS, "resource");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);

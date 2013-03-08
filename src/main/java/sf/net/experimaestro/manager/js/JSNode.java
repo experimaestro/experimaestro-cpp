@@ -20,7 +20,9 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.XPMRhinoException;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.Manager;
@@ -100,6 +102,14 @@ public class JSNode extends JSBaseObject {
     @JSFunction("toSource")
     public String toSource() {
         return XMLUtils.toString(node);
+    }
+
+    @JSFunction()
+    public String resource() {
+        if (!((Element) node).hasAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart()))
+            throw new XPMRhinoException("Not a resource");
+
+        return ((Element) node).getAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart());
     }
 
     public Node getNode() {

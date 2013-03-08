@@ -141,6 +141,7 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
         }
     }
 
+    @JSFunction
     public PrintWriter output_stream() throws FileSystemException {
         final OutputStream output = file.getContent().getOutputStream();
         final PrintWriter writer = new MyPrintWriter(xpm, output);
@@ -163,6 +164,7 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
         }
     }
 
+    @JSFunction
     public BufferedReader input_stream() throws FileSystemException {
         final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm, file.getContent().getInputStream()));
         return reader;

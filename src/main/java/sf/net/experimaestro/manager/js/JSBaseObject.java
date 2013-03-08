@@ -79,7 +79,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
                         if (methodFunction == null) {
                             methods.put(jsName, methodFunction = new MethodFunction(jsName));
                         }
-                        methodFunction.methods.add(method);
+                        methodFunction.add(method);
                     }
                 }
             }

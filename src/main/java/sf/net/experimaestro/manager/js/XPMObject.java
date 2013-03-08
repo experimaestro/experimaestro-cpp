@@ -63,6 +63,7 @@ import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceData;
 import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.TokenResource;
 import sf.net.experimaestro.server.TasksServlet;
@@ -900,11 +901,12 @@ public class XPMObject {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 return old;
             } else {
-                getRootLogger().info(String.format("Overwrote resource [%s]", task.getIdentifier()));
+                getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
             }
-        } else {
-            scheduler.store(task, false);
         }
+
+        task.set(ResourceState.WAITING);
+        scheduler.store(task, false);
 
         return task;
     }
@@ -1295,7 +1297,7 @@ public class XPMObject {
         @sf.net.experimaestro.manager.js.JSFunction("merge")
         static public NativeObject merge(NativeObject... objects) {
             NativeObject returned = new NativeObject();
-            for(NativeObject object: objects) {
+            for (NativeObject object : objects) {
                 for (Map.Entry<Object, Object> entry : object.entrySet()) {
                     Object key = entry.getKey();
                     if (returned.has(key.toString(), returned))

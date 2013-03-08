@@ -178,7 +178,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         // data should not be null if initialized directly
         if (data == null) {
             assert scheduler != null;
-            return (Data) scheduler.getResources().getData(resourceID).init(scheduler);
+            data = scheduler.getResources().getData(resourceID);
+            return (Data) data.init(scheduler);
         }
         return (Data) data;
     }

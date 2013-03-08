@@ -68,6 +68,7 @@ public class StatusServlet extends XPMServlet {
                 out.println("<ul>");
                 try (final CloseableIterable<Resource> resources = scheduler.resources()) {
                     for (Resource resource : resources) {
+                        resource.init(scheduler);
                         if (resource.getState() == state) {
                             out.format(
                                     "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
