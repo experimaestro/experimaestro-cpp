@@ -22,8 +22,11 @@ import com.google.common.collect.AbstractIterator;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.xpath.XPathExpressionException;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Cartesian product of inputs
@@ -45,6 +48,15 @@ public class Product extends NAryOperator {
         return "product";
     }
 
+    @Override
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+        super.doPostInit(parentStreams);
+
+        // Computes the output size
+        outputSize = 0;
+        for(Operator parent: parents)
+            outputSize += parent.outputSize();
+    }
 
     public abstract class AbstractProductIterator extends AbstractIterator<ReturnValue> {
         final Iterator<Value>[] inputs;
@@ -74,7 +86,6 @@ public class Product extends NAryOperator {
             if (!inputs[i].hasNext())
                 return false;
             final Value value = inputs[i].next();
-            assert value.nodes.length == 1;
             current[i] = value;
             if (LOGGER.isTraceEnabled())
                 LOGGER.trace("New token: [%d] %d: %s", i, value.id, Arrays.toString(value.context));
@@ -82,11 +93,13 @@ public class Product extends NAryOperator {
         }
 
         ReturnValue getReturnValue(Value[] current) {
-            Document[] nodes = new Document[parents.size()];
+            Document[] nodes = new Document[Product.this.outputSize()];
             final long[][] contexts = new long[parents.size()][];
+            int offset = 0;
             for (int j = 0; j < contexts.length; j++) {
                 contexts[j] = current[j].context;
-                nodes[j] = current[j].nodes[0];
+                for (int k = 0, n = current[j].nodes.length; k < n; k++)
+                    nodes[offset++] = current[j].nodes[k];
             }
 
             return new ReturnValue(new DefaultContexts(contexts), nodes);

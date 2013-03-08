@@ -51,26 +51,15 @@ public abstract class Operator {
     ArrayList<Operator> children = new ArrayList<>();
 
     /**
+     * Size of the output (1 per default)
+     */
+    int outputSize = 1;
+
+    /**
      * Returns the parents of this node
      */
     public abstract List<Operator> getParents();
 
-//    /**
-//     * Current iterator
-//     */
-//    OperatorIterator currentIterator;
-
-//    /**
-//     * Ingoing streams
-//     */
-//    Map<Operator, Integer> streams;
-//
-//    /**
-//     * Get the mapping between joined operators and context index
-//     */
-//    public Map<Operator, Integer> getStreams() {
-//        return streams == null ? Collections.<Operator, Integer>emptyMap() : Collections.unmodifiableMap(streams);
-//    }
 
     /**
      * List of mappings for context
@@ -124,6 +113,11 @@ public abstract class Operator {
                 set.add(newOperator);
             }
         }
+    }
+
+    /** Returns the size of the output */
+    public int outputSize() {
+        return outputSize;
     }
 
     public interface Contexts {
