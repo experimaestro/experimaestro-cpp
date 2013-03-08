@@ -167,10 +167,7 @@ public abstract class Task {
                 if (type != null && value.isSet()) {
                     type.validate(value.get().getDocumentElement());
                 }
-            } catch (ExperimaestroRuntimeException e) {
-                e.addContext("While processing input [%s] in task [%s]", key, factory.id);
-                throw e;
-            } catch (ExperimaestroException e) {
+            } catch (ExperimaestroRuntimeException | ExperimaestroException e) {
                 e.addContext("While processing input [%s] in task [%s]", key, factory.id);
                 throw e;
             }

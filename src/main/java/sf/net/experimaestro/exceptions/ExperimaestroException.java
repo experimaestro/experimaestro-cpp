@@ -23,7 +23,7 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-public class ExperimaestroException extends Exception {
+public class ExperimaestroException extends Exception implements ContextualException {
 	private static final long serialVersionUID = 1L;
 	ArrayList<String> context = new ArrayList<>();
 

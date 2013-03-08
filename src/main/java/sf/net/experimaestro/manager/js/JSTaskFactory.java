@@ -22,13 +22,13 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.AlternativeInput;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.ArrayInput;
@@ -53,10 +53,11 @@ import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import static sf.net.experimaestro.exceptions.ExperimaestroRuntimeException.SHOULD_NOT_BE_HERE;
@@ -72,12 +73,12 @@ public class JSTaskFactory extends JSBaseObject {
     FactoryImpl factory;
 
     public JSTaskFactory(Scriptable scope, NativeObject jsObject,
-                         Repository repository) {
+                         Repository repository) throws ValueMismatchException {
         this(getQName(scope, jsObject, "id", false), scope, jsObject, repository);
     }
 
     public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
-                         Repository repository) {
+                         Repository repository) throws ValueMismatchException {
         factory = new FactoryImpl(qname, scope, jsObject, repository);
     }
 
@@ -154,7 +155,7 @@ public class JSTaskFactory extends JSBaseObject {
          * @param jsObject The object
          */
         public FactoryImpl(QName qname, Scriptable scope, NativeObject jsObject,
-                           Repository repository) {
+                           Repository repository) throws ValueMismatchException {
             super(repository, qname, JSUtils.get(scope,
                     "version", jsObject, "1.0"), null);
             this.jsScope = scope;
@@ -216,19 +217,13 @@ public class JSTaskFactory extends JSBaseObject {
 
         }
 
-        static public String onlyOne(Scriptable object, String... keys) {
-            String selected = null;
+        static public Set<String> getFields(Scriptable object, String... keys) {
+            Set<String> selected = new HashSet<>();
             for (String key : keys) {
                 if (object.has(key, object))
-                    if (selected == null)
-                        selected = key;
-                    else
-                        throw ScriptRuntime.constructError("Cannot create task factory",
-                                String.format("Object has at least two conflicting properties: %s and %s", selected, key));
+                        selected.add(key);
 
             }
-            if (selected == null)
-                throw ScriptRuntime.constructError("Cannot create task factory", String.format("Expected at least one property in %s", Arrays.toString(keys)));
             return selected;
         }
 
@@ -238,7 +233,7 @@ public class JSTaskFactory extends JSBaseObject {
          * @param scope   The current JS scope
          * @param jsInput The JS input object
          */
-        private void setInputs(final Scriptable scope, final NativeObject jsInput) {
+        private void setInputs(final Scriptable scope, final NativeObject jsInput) throws ValueMismatchException {
             String2String prefixes = new JSNamespaceBinder(scope);
 
             final Object[] ids = jsInput.getIds();
@@ -247,7 +242,19 @@ public class JSTaskFactory extends JSBaseObject {
 
                 final Scriptable definition = (Scriptable) jsInput.get(id);
 
-                String type = onlyOne(definition, "value", "alternative", "xml", "task");
+                Set<String> fields = getFields(definition, "value", "alternative", "xml", "task");
+                String type;
+                if (fields.size() == 1) {
+                    type = fields.iterator().next();
+                }
+                else if (fields.size() == 2 &&  fields.contains("xml") && fields.contains("task")) {
+                    type = "task";
+                }
+                else
+                    throw new ValueMismatchException("Cannot create task factory: expected value, alternative, xml, or" +
+                            "task values in input definition");
+
+
                 boolean sequence = JSUtils.toBoolean(scope, definition, "sequence");
                 boolean optional = JSUtils.toBoolean(scope, definition, "optional");
 
@@ -272,11 +279,25 @@ public class JSTaskFactory extends JSBaseObject {
                         break;
 
                     case "task":
-                        throw new NotImplementedException();
+                        TaskFactory factory = getRepository().getFactory(inputType);
+                        if (factory == null)
+                            throw new ValueMismatchException("Could not find task factory [%s] for input [%s]",
+                                    inputType, id);
+
+                        // The type of this input is either specified (inputType)
+                        // or it is set to the declared output of the task
+                        Type xmlType = fields.contains("type") ?
+                                new Type(QName.parse(JSUtils.toString(definition.get("type", jsObject)), null, prefixes))
+                                : factory.getOutput();
+
+                        input = new TaskInput(factory, xmlType);
+                        break;
+
                     default:
                         throw SHOULD_NOT_BE_HERE;
                 }
 
+                // Case of sequence
                 if (sequence)
                     input = new ArrayInput(input.getType());
 
@@ -286,8 +307,20 @@ public class JSTaskFactory extends JSBaseObject {
                     input.setDefaultValue(document);
                 }
 
-                // Set input properties and store
+                // Set required/optional flag
                 input.setOptional(optional);
+
+                // Process connections
+                if (definition.has("connect", definition)) {
+                    NativeObject connect = (NativeObject) definition.get("connect", definition);
+                    for (Map.Entry<Object, Object> connection : connect.entrySet()) {
+                        DotName to = DotName.parse(connection.getKey().toString());
+                        String query = JSUtils.toString(connection.getValue());
+                        input.addConnection(new XQueryConnection(to, query));
+                    }
+                }
+
+                // Store in the inputs
                 inputs.put(id, input);
             }
         }

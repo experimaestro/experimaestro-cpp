@@ -48,6 +48,7 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.NSContext;
@@ -1194,7 +1195,7 @@ public class XPMObject {
          * @return
          */
         @JSFunction("add_task_factory")
-        public Scriptable add_task_factory(NativeObject object) {
+        public Scriptable add_task_factory(NativeObject object) throws ValueMismatchException {
             JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
             xpm.repository.addFactory(factory.factory);
             return xpm.context.newObject(xpm.scope, "XPMTaskFactory",

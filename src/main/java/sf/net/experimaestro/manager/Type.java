@@ -23,7 +23,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.utils.XMLUtils;
 
 /**
  * An XML type defined by a qualified name
@@ -78,7 +77,7 @@ public class Type {
      * @param node The XML node to validate
      */
     public void validate(Node node) throws ValueMismatchException {
-        final Element element = XMLUtils.getRootElement(node);
+        final Element element = (Element)node;
 
         if (element == null)
             throw new ExperimaestroRuntimeException("No root element");

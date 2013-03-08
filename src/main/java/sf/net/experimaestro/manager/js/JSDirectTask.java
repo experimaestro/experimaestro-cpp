@@ -137,6 +137,7 @@ public class JSDirectTask extends JSAbstractTask {
         runFunction = other.runFunction;
     }
 
+    /** Compute the arguments of the run function */
     protected void getJSInputs(Context cx, Scriptable jsE4X, Scriptable jsUnwrapped) {
         for (Entry<String, Value> entry : values.entrySet()) {
             String id = entry.getKey();

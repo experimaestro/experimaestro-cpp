@@ -23,7 +23,6 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
-import com.sun.istack.internal.Nullable;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -263,7 +262,7 @@ public class Plan {
 
             return Iterators.transform(iterator, new Function<Value, Node>() {
                 @Override
-                public Node apply(@Nullable Value from) {
+                public Node apply(Value from) {
                     assert from.getNodes().length == 1;
                     return from.getNodes()[0];
                 }

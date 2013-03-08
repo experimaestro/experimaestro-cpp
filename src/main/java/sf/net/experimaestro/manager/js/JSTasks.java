@@ -24,6 +24,8 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Ref;
 import org.mozilla.javascript.RefCallable;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.JSUtils;
@@ -98,7 +100,12 @@ public class JSTasks extends JSBaseObject implements RefCallable {
         @Override
         public JSTaskFactory set(Context cx, Object _value) {
             NativeObject value = (NativeObject) _value;
-            final JSTaskFactory factory = new JSTaskFactory(id, value.getParentScope(), value, xpm.getRepository());
+            final JSTaskFactory factory;
+            try {
+                factory = new JSTaskFactory(id, value.getParentScope(), value, xpm.getRepository());
+            } catch (ValueMismatchException e) {
+                throw new XPMRhinoException(e);
+            }
             xpm.getRepository().addFactory(factory.factory);
             return factory;
         }

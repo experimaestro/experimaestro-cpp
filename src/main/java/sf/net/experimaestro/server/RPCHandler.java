@@ -28,7 +28,10 @@ import org.apache.log4j.spi.RootLogger;
 import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.XmlRpcStreamServer;
 import org.mortbay.jetty.Server;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.RhinoException;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -36,15 +39,30 @@ import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.js.JSArgument;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.ResourceState;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
-import java.util.*;
+import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.TreeMap;
 
 /**
  * Our RPC handler for experimaestro
@@ -414,7 +432,6 @@ public class RPCHandler {
 
     /**
      * Run a javascript script (either the file or a string)
-     *
      */
     @RPCHelp("Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
@@ -494,7 +511,7 @@ public class RPCHandler {
                 LOGGER.debug("Null result");
 
 
-        } catch(Throwable e) {
+        } catch (Throwable e) {
             Throwable wrapped = e;
             while (wrapped.getCause() != null)
                 wrapped = wrapped.getCause();
@@ -504,17 +521,15 @@ public class RPCHandler {
             error = 1;
             err.println(wrapped.toString());
 
-            Throwable ee = e;
-            while (ee != null && !(ee instanceof ContextualException))
-                ee = ee.getCause();
-
-            if (ee != null) {
-                ContextualException ee2 = (ContextualException)ee;
-                List<String> context = ee2.getContext();
-                if (!context.isEmpty()) {
-                    err.format("%n[context]%n");
-                    for (String s : ee2.getContext()) {
-                        err.format("%s%n", s);
+            for (Throwable ee = e; ee != null; ee = ee.getCause()) {
+                if (ee instanceof ContextualException) {
+                    ContextualException ce = (ContextualException) ee;
+                    List<String> context = ce.getContext();
+                    if (!context.isEmpty()) {
+                        err.format("%n[context]%n");
+                        for (String s : ce.getContext()) {
+                            err.format("%s%n", s);
+                        }
                     }
                 }
             }
