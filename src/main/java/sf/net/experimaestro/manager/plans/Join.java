@@ -101,7 +101,7 @@ public class Join extends Product {
         Collections.sort(joins, new Comparator<JoinReference>() {
             @Override
             public int compare(JoinReference o1, JoinReference o2) {
-                return Integer.compare(rankMap.get(o1), rankMap.get(o2));
+                return Integer.compare(rankMap.get(o1.operator), rankMap.get(o2.operator));
             }
         });
 
