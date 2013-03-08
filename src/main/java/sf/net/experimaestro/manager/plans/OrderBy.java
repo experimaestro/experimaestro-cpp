@@ -140,6 +140,8 @@ public class OrderBy extends UnaryOperator {
         for(Set<Operator> set: order.list) {
             Operator.ensureConnections(simplified, set);
         }
+        if (operators != null)
+            Operator.ensureConnections(simplified, operators);
     }
 
     @Override

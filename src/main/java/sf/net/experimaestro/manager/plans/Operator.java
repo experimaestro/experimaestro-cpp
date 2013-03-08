@@ -451,6 +451,10 @@ public abstract class Operator {
             }
             attributes.put("label", labelValue);
 
+            // Checks that we are a child of our parent
+            if (!parent.children.contains(this))
+                attributes.put("color", "red");
+
             out.print("[");
             Output.print(out, ", ", attributes.entrySet(), new Formatter<Map.Entry<String, String>>() {
                 @Override
@@ -461,6 +465,8 @@ public abstract class Operator {
             out.println("];");
             streamIndex++;
         }
+
+
         return true;
     }
 
@@ -470,15 +476,28 @@ public abstract class Operator {
     }
 
     protected void printDOTNode(PrintStream out) {
-        String color = "";
+        String attribute = "";
 
+        // If the stream is used in a join, make it dashed
         for (StreamReference x : contextMappings.keySet())
             if (x.streamIndex == -1) {
-                color = ", color=\"red\"";
+                attribute = ", style=\"dashed\"";
                 break;
 
             }
-        out.format("p%s [label=\"%s\"%s];%n", System.identityHashCode(this), getName(), color);
+
+        // Verify that each child has this in its parents
+        int count = 0;
+        for(Operator child: children) {
+            if (!child.getParents().contains(this))
+                count++;
+        }
+        if (count > 0)
+            attribute += ", color=\"red\"";
+
+        out.format("p%s [label=\"%s\"%s];%n", System.identityHashCode(this),
+                getName() + (count > 0 ? " [" + count + "/" + children.size() + "]" : ""),
+                attribute);
     }
 
     protected String getName() {

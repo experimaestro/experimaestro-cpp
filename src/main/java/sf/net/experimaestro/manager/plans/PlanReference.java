@@ -57,16 +57,23 @@ public class PlanReference extends Operator {
     @Override
     public Operator init(PlanMap map, OperatorMap opMap) {
         try {
-            if (plans.size() == 1)
-                return plans.get(0).planGraph(map.sub(plans.get(0), true), opMap);
+            Operator operator = getOperator(map, opMap);
+            operator.children.addAll(children);
+            return operator;
 
-            Union union = new Union();
-            for(Plan plan: plans)
-                union.addParent(plan.planGraph(map.sub(plan, true), opMap));
-            return union;
         } catch (XPathExpressionException e) {
             throw new ExperimaestroRuntimeException(e);
         }
+    }
+
+    private Operator getOperator(PlanMap map, OperatorMap opMap) throws XPathExpressionException {
+        if (plans.size() == 1)
+            return plans.get(0).planGraph(map.sub(plans.get(0), true), opMap);
+
+        Union union = new Union();
+        for(Plan plan: plans)
+            union.addParent(plan.planGraph(map.sub(plan, true), opMap));
+        return union;
     }
 
 
