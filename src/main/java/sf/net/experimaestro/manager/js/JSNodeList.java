@@ -19,8 +19,12 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Scriptable;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.utils.RangeUtils;
+import sf.net.experimaestro.utils.XMLUtils;
+
+import java.util.Iterator;
 
 import static com.google.common.collect.Ranges.closed;
 
@@ -28,7 +32,7 @@ import static com.google.common.collect.Ranges.closed;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/3/13
  */
-public class JSNodeList extends JSBaseObject {
+public class JSNodeList extends JSBaseObject implements Iterable<Node> {
     private final NodeList list;
 
     public JSNodeList(NodeList list) {
@@ -48,5 +52,10 @@ public class JSNodeList extends JSBaseObject {
     @Override
     public Object get(int index, Scriptable start) {
         return new JSNode(list.item(index));
+    }
+
+    @Override
+    public Iterator<Node> iterator() {
+        return (Iterator<Node>) XMLUtils.iterable(list).iterator();
     }
 }

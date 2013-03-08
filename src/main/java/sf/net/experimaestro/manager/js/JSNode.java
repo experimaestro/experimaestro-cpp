@@ -106,10 +106,12 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction()
     public String resource() {
-        if (!((Element) node).hasAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart()))
+        Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
+
+        if (!element.hasAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart()))
             throw new XPMRhinoException("Not a resource");
 
-        return ((Element) node).getAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart());
+        return element.getAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart());
     }
 
     public Node getNode() {

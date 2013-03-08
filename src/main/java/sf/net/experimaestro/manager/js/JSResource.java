@@ -56,7 +56,7 @@ public class JSResource extends ScriptableObject implements Wrapper {
     @Override
     @JSFunction("toString")
     public String toString() {
-        return resource == null ? "[null]" : resource.toString();
+        return resource == null ? "[null]" : resource.getLocator().toString();
     }
 
 }

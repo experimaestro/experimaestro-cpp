@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import com.google.common.collect.Iterables;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
@@ -154,6 +155,16 @@ public class JSPlan extends JSBaseObject implements Callable {
 
         if (value instanceof JSPlanInput) {
             return ((JSPlanInput) value).operator;
+        }
+
+        if (value instanceof JSNodeList) {
+            return new Constant(Iterables.transform((JSNodeList)value, new com.google.common.base.Function<Node, Document>() {
+                @Override
+                public Document apply(Node input) {
+                    return Manager.wrap(input);
+                }
+            }));
+
         }
 
         // --- Plans & transformations

@@ -29,14 +29,20 @@ import java.util.List;
 
 /**
  * A constant in a plan just generate nodes
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
 public class Constant extends Operator {
-    List<Document> nodes  = new ArrayList<>();
+    List<Document> nodes = new ArrayList<>();
 
     public Constant(Document... documents) {
         nodes.addAll(Arrays.asList(documents));
+    }
+
+    public Constant(Iterable<Document> documents) {
+        for (Document document : documents)
+            nodes.add(document);
     }
 
     @Override

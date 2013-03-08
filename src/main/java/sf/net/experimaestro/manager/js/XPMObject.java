@@ -873,7 +873,8 @@ public class XPMObject {
                 NativeArray resources = (NativeArray) options.get("lock", options);
                 for (int i = (int) resources.getLength(); --i >= 0; ) {
                     NativeArray array = (NativeArray) resources.get(i, resources);
-                    assert array.getLength() == 3;
+                    if (array.getLength() != 2)
+                        throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
 //                    final String connectorId = Context.toString(array.get(0, array));
                     final String rsrcPath = Context.toString(array.get(0, array));
 
