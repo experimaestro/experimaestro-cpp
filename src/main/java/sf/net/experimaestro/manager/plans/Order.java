@@ -93,7 +93,7 @@ public class Order<T> implements Iterable<Set<T>> {
             } else {
                 Set<T> intersection = intersection(sets, remaining);
                 if (intersection.isEmpty()) {
-                    return new WrappedResult(false, newList);
+                    return new WrappedResult(false, new Order(newList));
                 }
 
                 // Removed ordered items
