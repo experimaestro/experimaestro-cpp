@@ -32,7 +32,7 @@ public class Cleaner implements AutoCloseable {
     }
 
     public synchronized void close() throws Exception {
-        LOGGER.info("Cleaner is cleaning %d elements", list.size());
+        LOGGER.debug("Cleaner is cleaning %d elements", list.size());
         final Iterator<AutoCloseable> iterator = list.iterator();
         while (iterator.hasNext()) {
             final AutoCloseable value = iterator.next();

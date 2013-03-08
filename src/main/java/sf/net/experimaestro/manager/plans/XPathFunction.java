@@ -43,6 +43,11 @@ public class XPathFunction implements Function {
     }
 
     @Override
+    public String toString() {
+        return String.format("xpath(%s)", xpathString);
+    }
+
+    @Override
     public Document f(Document[] input) {
         assert input.length == 1;
         try {

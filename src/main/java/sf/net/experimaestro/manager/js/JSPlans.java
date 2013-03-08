@@ -19,9 +19,13 @@
 package sf.net.experimaestro.manager.js;
 
 import org.w3c.dom.Node;
+import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.Union;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -48,5 +52,23 @@ public class JSPlans extends JSBaseObject {
             }
         }
         return result;
+    }
+
+    @JSFunction("toDOT")
+    public String toDOT(boolean simplify) throws XPathExpressionException {
+        Union union = new Union();
+        Operator operator = union;
+        for(Plan plan: plans)
+            union.addParent(plan.planGraph());
+
+        if (simplify)
+            operator = Operator.simplify(union);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+
+        operator.printDOT(ps);
+        ps.flush();
+        return baos.toString();
     }
 }

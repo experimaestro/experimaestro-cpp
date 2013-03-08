@@ -22,13 +22,14 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import sf.net.experimaestro.manager.QName;
+import org.mozilla.javascript.XPMRhinoException;
+import org.xml.sax.SAXException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.namespace.NamespaceContext;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
 
 /**
  * A class used to construct XML
@@ -136,17 +137,15 @@ public class JSXMLConstructor implements Scriptable, JSConstructable, Callable {
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
         NamespaceContext ns = JSUtils.getNamespaceContext(scope);
 
-        if (args.length < 1)
-            throw new IllegalArgumentException("Expected at least one argument for xml construction");
+        if (args.length != 1)
+            throw new IllegalArgumentException("Expected only one argument");
 
-        QName qname = QName.parse(JSUtils.toString(args[0]), ns);
+        String s = JSUtils.toString(args[0]);
 
-        Document document = XMLUtils.newDocument();
-        Element root = document.createElementNS(qname.getNamespaceURI(), qname.getLocalPart());
-
-        for(int i = 1; i < args.length; i++) {
-
+        try {
+            return XMLUtils.parseString(s);
+        } catch (ParserConfigurationException | IOException | SAXException e) {
+            throw new XPMRhinoException(e, "Error while parsing the XML document: %s", e.toString());
         }
-        return null;
     }
 }

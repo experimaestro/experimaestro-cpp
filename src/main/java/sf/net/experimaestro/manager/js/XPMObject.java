@@ -35,6 +35,7 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.XPMRhinoException;
 import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -190,7 +191,6 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
             new JSUtils.FunctionDefinition(XPMObject.class, "transform", null),
-//            new JSUtils.FunctionDefinition(JSXMLConstructor.class, "xml", null)
     };
 
 
@@ -271,6 +271,14 @@ public class XPMObject {
         for (JSUtils.FunctionDefinition definition : definitions)
             JSUtils.addFunction(scope, definition);
 
+        // Add functions from our Function object
+
+        Map<String, MethodFunction> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class);
+        for (MethodFunction methodFunction : functionsMap.values()) {
+            ScriptableObject.putProperty(scope, methodFunction.name, methodFunction);
+        }
+
+
         // --- Add new objects
 
         // namespace
@@ -284,7 +292,7 @@ public class XPMObject {
         ((JSXPM) get(scope, "xpm")).set(this);
 
         // xml object (to construct XML easily)
-        addNewObject(context, scope, "xml", "XMLConstructor", new Object[] {});
+        addNewObject(context, scope, "xml", "XMLConstructor", new Object[]{});
 
         // scheduler
         addNewObject(context, scope, "scheduler", "Scheduler",
@@ -1190,7 +1198,7 @@ public class XPMObject {
             JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
             xpm.repository.addFactory(factory.factory);
             return xpm.context.newObject(xpm.scope, "XPMTaskFactory",
-                    new Object[]{ factory });
+                    new Object[]{factory});
         }
 
 
@@ -1279,7 +1287,24 @@ public class XPMObject {
                     xpm.log("%s", node.toString());
             }
         }
+    }
 
+
+    static class XPMFunctions {
+        @sf.net.experimaestro.manager.js.JSFunction("merge")
+        static public NativeObject merge(NativeObject... objects) {
+            NativeObject returned = new NativeObject();
+            for(NativeObject object: objects) {
+                for (Map.Entry<Object, Object> entry : object.entrySet()) {
+                    Object key = entry.getKey();
+                    if (returned.has(key.toString(), returned))
+                        throw new XPMRhinoException("Conflicting id in merge: %s", key);
+                    returned.put(key.toString(), returned, entry.getValue());
+                }
+
+            }
+            return returned;
+        }
 
     }
 }

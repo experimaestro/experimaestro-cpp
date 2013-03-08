@@ -151,6 +151,10 @@ public class Plan {
         return data.planGraph(this, map, opMap);
     }
 
+    public Operator planGraph() throws XPathExpressionException {
+        return planGraph(new PlanMap(), new OperatorMap());
+    }
+
 
     /**
      * The data associated to a plan. It is a distinct object since a plan
@@ -377,7 +381,6 @@ public class Plan {
                 // --- Handle group by
 
                 if (groupBy == null) {
-                    map.set(self);
                     outputs.add(self);
                 } else {
                     GroupBy groupBy = new GroupBy();
@@ -405,17 +408,19 @@ public class Plan {
                     orderBy.addParent(self);
 
                     groupBy.addParent(orderBy);
-                    map.set(groupBy);
                     outputs.add(groupBy);
                 }
             }
 
             // End of loop over inputs
 
-            if (outputs.size() == 1)
+            if (outputs.size() == 1) {
+                map.set(outputs.get(0));
                 return outputs.get(0);
+            }
 
             Union union = new Union();
+            map.set(union);
             for (Operator output : outputs)
                 union.addParent(output);
             return union;

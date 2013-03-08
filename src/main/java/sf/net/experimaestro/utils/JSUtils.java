@@ -157,6 +157,7 @@ public class JSUtils {
 
     static public class OptionalDocument {
         Document document;
+
         Document get() {
             if (document == null)
                 document = XMLUtils.newDocument();
@@ -222,13 +223,7 @@ public class JSUtils {
                     node = ((Document) node).getDocumentElement();
 
                 node = document.get().adoptNode(node.cloneNode(true));
-                if (node instanceof Element) {
-                    document.get().appendChild(node);
-                    return document.get();
-                }
-                final DocumentFragment fragment = document.get().createDocumentFragment();
-                fragment.appendChild(node);
-                return fragment;
+                return node;
             }
 
 
@@ -292,7 +287,6 @@ public class JSUtils {
             }
             return node;
         }
-
 
 
         throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
@@ -399,16 +393,17 @@ public class JSUtils {
 
     /**
      * Convert a property into a boolean
-     * @param scope The JS scope
+     *
+     * @param scope  The JS scope
      * @param object The JS object
-     * @param name The name of the property
+     * @param name   The name of the property
      * @return <tt>false</tt> if the property does not exist.
      */
     public static boolean toBoolean(Scriptable scope, Scriptable object, String name) {
         if (!object.has(name, scope)) return false;
         Object value = object.get(name, scope);
         if (value instanceof Boolean)
-            return (Boolean)value;
+            return (Boolean) value;
         return Boolean.parseBoolean(JSUtils.toString(value));
     }
 

@@ -63,6 +63,9 @@ public class OrderBy extends UnaryOperator {
     }
 
 
+    public int size() {
+        return operators == null ? Iterables.size(order.items()) : operators.size();
+    }
 
     @Override
     protected Iterator<ReturnValue> _iterator() {

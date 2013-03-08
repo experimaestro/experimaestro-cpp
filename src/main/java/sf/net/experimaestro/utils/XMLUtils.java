@@ -30,6 +30,8 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.iterators.AbstractIterator;
@@ -47,6 +49,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -378,5 +382,19 @@ public class XMLUtils {
             case Node.CDATA_SECTION_NODE: return "cdata";
         }
         return "Unknown[" + nodeType + "]";
+    }
+
+    /**
+     * Parse a string into an XML document
+     * @param s The string to parse
+     * @return A valid XML document
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     */
+    public static Document parseString(String s) throws ParserConfigurationException, IOException, SAXException {
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        return dBuilder.parse(new InputSource(new StringReader(s)));
     }
 }

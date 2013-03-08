@@ -21,6 +21,8 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
+import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.Manager;
 
 import java.io.*;
 
@@ -28,7 +30,7 @@ import java.io.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSBaseObject {
+public class JSFileObject extends JSBaseObject implements XMLSerializable {
 
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
@@ -116,6 +118,11 @@ public class JSFileObject extends JSBaseObject {
     @JSHelp("Adds an extension to the current filename")
     public Object add_extension(String extension) throws FileSystemException {
         return new JSFileObject(xpm, file.getParent().resolveFile(file.getName().getBaseName() + extension));
+    }
+
+    @Override
+    public Document serialize() {
+        return Manager.wrap(Manager.EXPERIMAESTRO_NS, "file", file.toString());
     }
 
     static class MyPrintWriter extends PrintWriter {

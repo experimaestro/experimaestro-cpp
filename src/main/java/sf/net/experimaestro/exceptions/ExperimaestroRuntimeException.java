@@ -23,7 +23,7 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-public class ExperimaestroRuntimeException extends RuntimeException {
+public class ExperimaestroRuntimeException extends RuntimeException implements ContextualException {
 	private static final long serialVersionUID = 1L;
     public static final AssertionError SHOULD_NOT_BE_HERE = new AssertionError("Should not be here");
     ArrayList<String> context = new ArrayList<>();

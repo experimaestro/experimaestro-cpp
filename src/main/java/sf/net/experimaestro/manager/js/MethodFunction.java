@@ -31,6 +31,7 @@ import sf.net.experimaestro.utils.Output;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
 /**
@@ -46,10 +47,10 @@ class MethodFunction implements Callable, Function {
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        double max = 0;
+        int max = Integer.MIN_VALUE;
         Method argmax = null;
         for (Method method : methods) {
-            double score = score(method, args);
+            int score = score(method, args);
             if (score > max) {
                 max = score;
                 argmax = method;
@@ -68,8 +69,9 @@ class MethodFunction implements Callable, Function {
         // Call the method
 
         try {
+            boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
             args = transform(cx, scope, argmax, args);
-            final Object invoke = argmax.invoke(thisObj, args);
+            final Object invoke = argmax.invoke(isStatic ? null : thisObj, args);
             return cx.getWrapFactory().wrap(cx, scope, invoke, null);
         } catch (Throwable e) {
             if (e.getCause() != null)
@@ -117,7 +119,7 @@ class MethodFunction implements Callable, Function {
         return methodArgs;
     }
 
-    private double score(Method method, Object[] args) {
+    private int score(Method method, Object[] args) {
         final boolean scope = method.getAnnotation(JSFunction.class).scope();
         int offset = scope ? 2 : 0;
 
@@ -132,16 +134,20 @@ class MethodFunction implements Callable, Function {
         } else if (args.length != nbArgs)
             return 0;
 
-        double score = 1;
+        int score = Integer.MAX_VALUE;
 
         // Normal arguments
         for (int i = 0; i < nbArgs && score > 0; i++) {
             final Object o = JSUtils.unwrap(args[i]);
+            if (o == null) {
+                score--;
+                continue;
+            }
+
             Class<?> type = ClassUtils.primitiveToWrapper(types[i + offset]);
             if (type.isAssignableFrom(o.getClass()))
                 continue;
-            score = 0;
-            break;
+            return Integer.MIN_VALUE;
         }
 
         // Var args
@@ -150,10 +156,9 @@ class MethodFunction implements Callable, Function {
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && score > 0; i++) {
                 final Object o = JSUtils.unwrap(args[nbArgs + i]);
-                if (type.isAssignableFrom(o.getClass()))
+                if (o == null || type.isAssignableFrom(o.getClass()))
                     continue;
-                score = 0;
-                break;
+                return Integer.MIN_VALUE;
             }
         }
 

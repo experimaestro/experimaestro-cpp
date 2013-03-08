@@ -141,12 +141,14 @@ public class JSDirectTask extends JSAbstractTask {
         for (Entry<String, Value> entry : values.entrySet()) {
             String id = entry.getKey();
             Value value = entry.getValue();
-            JSNode xml = new JSNode(value.get());
+            Document input = value.get();
+
+            Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input);
             jsE4X.put(id, jsE4X, xml);
 
             Type type = value.getType();
-            if (type instanceof ValueType) {
-                Object object = ((ValueType) type).unwrap(value.get());
+            if (type instanceof ValueType && input != null) {
+                Object object = ((ValueType) type).unwrap(input);
                 if (object instanceof FileObject)
                     object = new JSFileObject(xpm, (FileObject) object);
                 else if (!instanceOf(object, String.class, Float.class, Double.class, Integer.class, Long.class, Character.class))

@@ -107,6 +107,12 @@ public class JSTaskFactory extends JSBaseObject {
         return new JSPlan(scope, factory, object);
     }
 
+    @JSHelp("Creates a plan from this task")
+    @JSFunction(value = "plan")
+    public JSPlan plan() {
+        return new JSPlan(factory);
+    }
+
     @JSFunction("run_plan")
     public List<Object> runPlan(String plan) throws Exception {
         Task task = factory.create();
@@ -273,6 +279,12 @@ public class JSTaskFactory extends JSBaseObject {
 
                 if (sequence)
                     input = new ArrayInput(input.getType());
+
+                // Case of default
+                if (definition.has("default", definition)) {
+                    Document document = JSUtils.toDocument(jsInput, definition.get("default", definition));
+                    input.setDefaultValue(document);
+                }
 
                 // Set input properties and store
                 input.setOptional(optional);

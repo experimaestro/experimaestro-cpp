@@ -30,6 +30,7 @@ import org.apache.xmlrpc.server.XmlRpcStreamServer;
 import org.mortbay.jetty.Server;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
@@ -503,18 +504,16 @@ public class RPCHandler {
             error = 1;
             err.println(wrapped.toString());
 
-            ExperimaestroRuntimeException ee = null;
-
-            if (e instanceof ExperimaestroRuntimeException)
-                ee = (ExperimaestroRuntimeException) e;
-            else if (e.getCause() instanceof ExperimaestroRuntimeException)
-                ee = (ExperimaestroRuntimeException) e.getCause();
+            Throwable ee = e;
+            while (ee != null && !(ee instanceof ContextualException))
+                ee = ee.getCause();
 
             if (ee != null) {
-                List<String> context = ee.getContext();
+                ContextualException ee2 = (ContextualException)ee;
+                List<String> context = ee2.getContext();
                 if (!context.isEmpty()) {
                     err.format("%n[context]%n");
-                    for (String s : ee.getContext()) {
+                    for (String s : ee2.getContext()) {
                         err.format("%s%n", s);
                     }
                 }

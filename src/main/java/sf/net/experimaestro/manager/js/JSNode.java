@@ -86,13 +86,15 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction("text")
     public String getText() {
+        if (node == null)
+            return "";
         String text = (node instanceof Document ? ((Document)node).getDocumentElement() : node).getTextContent();
         return text == null ? "" : text;
     }
 
     @Override
     public String toString() {
-        return String.format("%s (%s)", getClassName(), XMLUtils.getTypeName(node.getNodeType()));
+        return String.format("%s (%s)", getClassName(), node == null ? "[null]" : XMLUtils.getTypeName(node.getNodeType()));
     }
 
     @JSFunction("toSource")

@@ -34,6 +34,11 @@ public class FunctionOperator extends UnaryOperator {
     }
 
     @Override
+    protected String getName() {
+        return "Function " + function;
+    }
+
+    @Override
     protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> iterator = input.iterator();

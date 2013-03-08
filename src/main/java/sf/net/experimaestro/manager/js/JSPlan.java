@@ -22,11 +22,12 @@ import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
+import org.mozilla.javascript.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -57,12 +58,12 @@ import java.util.Iterator;
  */
 public class JSPlan extends JSBaseObject implements Callable {
     /**
-     * The wrapped plan
+     * The wrapped plans
      */
     Plan plan;
 
     /**
-     * Builds a wrapper around a plan
+     * Builds a wrapper around a plans
      *
      * @param plan
      */
@@ -71,7 +72,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     }
 
     /**
-     * Build a plan from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
+     * Build a plans from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
      *
      * @param factory
      * @param object
@@ -81,6 +82,9 @@ public class JSPlan extends JSBaseObject implements Callable {
         plan.add(getMappings(object, scope));
     }
 
+    public JSPlan(TaskFactory factory) {
+        this.plan = new Plan(factory);
+    }
 
 
     private PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
@@ -91,6 +95,7 @@ public class JSPlan extends JSBaseObject implements Callable {
 
             final Object value = JSUtils.unwrap(object.get(name, object));
 
+            try {
             if (value instanceof NativeArray) {
                 final NativeArray array = (NativeArray) value;
                 for (int i = 0; i < array.getLength(); i++) {
@@ -100,6 +105,10 @@ public class JSPlan extends JSBaseObject implements Callable {
             } else
                 inputs.set(id, getSimple(value, scope));
 
+            } catch(XPMRhinoException | ExperimaestroRuntimeException e) {
+                e.addContext("While setting %s", id);
+                throw e;
+            }
         }
         return inputs;
     }
@@ -117,6 +126,8 @@ public class JSPlan extends JSBaseObject implements Callable {
     Operator getSimple(Object value, Scriptable scope) throws XPathExpressionException {
         value = JSUtils.unwrap(value);
 
+        // --- Constants
+
         if (value instanceof Integer) {
             return wrapValue(Integer.toString((Integer) value));
         }
@@ -127,6 +138,20 @@ public class JSPlan extends JSBaseObject implements Callable {
                 return wrapValue(Long.toString(((Double) value).longValue()));
             return wrapValue(Double.toString((Double) value));
         }
+
+        if (value instanceof String) {
+            return wrapValue(value.toString());
+        }
+
+        if (JSUtils.isXML(value)) {
+            return new Constant(JSUtils.toDocument(null, value));
+        }
+
+        if (value instanceof XMLSerializable)
+            return new Constant(((XMLSerializable) value).serialize());
+
+
+        // --- Plans & transformations
 
         // Case of plans or functions of plans
         if (value instanceof JSPlan)
@@ -144,11 +169,10 @@ public class JSPlan extends JSBaseObject implements Callable {
             return operator;
         }
 
-        if (JSUtils.isXML(value)) {
-            return new Constant(JSUtils.toDocument(null, value));
-        }
 
-        return null;
+
+
+        throw new XPMRhinoException("Cannot handle type " + value.getClass());
 
     }
 
@@ -239,7 +263,7 @@ public class JSPlan extends JSBaseObject implements Callable {
                     paths[i][j] = ((JSPlan) JSUtils.unwrap(path.get(j))).plan;
                 }
             } else
-                ScriptRuntime.typeError0("Cannot handle argument of type " + object.getClass() + " in join()");
+                throw new XPMRhinoException("Cannot handle argument of type %s in join()", object.getClass());
 
         }
         return paths;
@@ -259,7 +283,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     @JSFunction("group_by")
     public JSPlan groupBy(Object... paths) {
         final Plan[][] plans = getPlanPaths(paths);
-        plan.groupBy(Arrays.asList(plans));
+        this.plan.groupBy(Arrays.asList(plans));
         return this;
     }
 
@@ -270,7 +294,7 @@ public class JSPlan extends JSBaseObject implements Callable {
 
 
     /**
-     * JS function to transform inputs in a plan
+     * JS function to transform inputs in a plans
      */
     static public class JSTransform extends JSBaseObject implements Function {
         protected final Context cx;
@@ -284,6 +308,11 @@ public class JSPlan extends JSBaseObject implements Callable {
             this.scope = scope;
             this.f = f;
             this.plans = plans;
+        }
+
+        @Override
+        public String toString() {
+            return "JS function";
         }
 
         public Document f(Document[] parameters) {

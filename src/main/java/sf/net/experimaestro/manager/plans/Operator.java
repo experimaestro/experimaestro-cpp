@@ -541,6 +541,15 @@ public abstract class Operator {
                 return simplify(operator, parents.get(0), simplified);
             }
         }
+
+        // --- operator == Union
+        if (operator instanceof OrderBy) {
+            if (((OrderBy) operator).size() == 0) {
+                return simplify(operator, parents.get(0), simplified);
+            }
+        }
+
+
         return operator;
     }
 
