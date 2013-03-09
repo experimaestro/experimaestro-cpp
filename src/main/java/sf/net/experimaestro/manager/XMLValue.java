@@ -42,7 +42,7 @@ public class XMLValue extends Value {
 	}
 
 	@Override
-	public void process() {
+	public void process(boolean simulate) {
 		// If there is no value, takes the default
 		if (value == null && input.defaultValue != null) {
 			LOGGER.debug("Setting default value [%s]",

@@ -47,8 +47,8 @@ public class TaskValue extends Value {
     }
 
     @Override
-	public void process() throws NoSuchParameter, ValueMismatchException {
-		value = task.run();
+	public void process(boolean simulate) throws NoSuchParameter, ValueMismatchException {
+		value = task.run(simulate);
 	}
 
 	@Override

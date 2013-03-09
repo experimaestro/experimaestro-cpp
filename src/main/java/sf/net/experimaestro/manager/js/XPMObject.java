@@ -396,7 +396,7 @@ public class XPMObject {
             if (repositoryMode) {
                 // Run the script in a new environment
                 scriptScope = context.initStandardObjects();
-                final TreeMap<String, String> newEnvironment = new TreeMap<String, String>(environment);
+                final TreeMap<String, String> newEnvironment = new TreeMap<>(environment);
                 xpmObject = clone(scriptpath, scriptScope, newEnvironment);
 
             }
@@ -877,14 +877,21 @@ public class XPMObject {
 //                    final String connectorId = Context.toString(array.get(0, array));
                     final String rsrcPath = Context.toString(array.get(0, array));
 
-                    Resource resource = scheduler.getResource(ResourceLocator.parse(rsrcPath));
+                    ResourceLocator depLocator = ResourceLocator.parse(rsrcPath);
+                    Resource resource = scheduler.getResource(depLocator);
 
                     final Object o = array.get(1, array);
                     LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, o);
                     if (resource == null)
-                        throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
-                    final Dependency dependency = resource.createDependency(o);
-                    task.addDependency(dependency);
+                        if (simulate) {
+                            if (!submittedJobs.contains(depLocator))
+                                LOGGER.error("The dependency [%s] cannot be found", depLocator);
+                        } else throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
+
+                    if (!simulate) {
+                        final Dependency dependency = resource.createDependency(o);
+                        task.addDependency(dependency);
+                    }
                 }
 
             }

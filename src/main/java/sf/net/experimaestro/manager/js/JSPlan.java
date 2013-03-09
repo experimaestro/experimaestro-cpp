@@ -215,7 +215,16 @@ public class JSPlan extends JSBaseObject implements Callable {
 
     @JSFunction(value = "run", scope = true)
     public Object run(Context context, Scriptable scope) throws XPathExpressionException {
-        final Iterator<Node> iterator = plan.run();
+        return run(context, scope, false);
+    }
+
+    @JSFunction(scope = true)
+    public Object simulate(Context context, Scriptable scope) throws XPathExpressionException {
+        return run(context, scope, false);
+    }
+
+    private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
+        final Iterator<Node> iterator = plan.run(simulate);
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {
@@ -286,18 +295,18 @@ public class JSPlan extends JSBaseObject implements Callable {
     }
 
 
-    @JSFunction("path")
-    public JSPlanRef path(String path) {
+    @JSFunction
+    public JSPlanRef xpath(String path) {
         return new JSPlanRef(plan, path);
     }
 
-    @JSFunction("copy")
+    @JSFunction
     public JSPlan copy() {
         return new JSPlan(plan.copy());
     }
 
-    @JSFunction("group_by")
-    public JSPlan groupBy(Object... paths) {
+    @JSFunction
+    public JSPlan group_by(Object... paths) {
         final Plan[][] plans = getPlanPaths(paths);
         this.plan.groupBy(Arrays.asList(plans));
         return this;

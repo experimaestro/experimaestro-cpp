@@ -41,7 +41,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void process() {
+    public void process(boolean simulate) {
     }
 
     @Override

@@ -151,7 +151,10 @@ public abstract class Operator {
         boolean started = false;
         private Value current = null;
 
-        Iterator<ReturnValue> iterator = _iterator();
+        Iterator<ReturnValue> iterator;
+        OperatorIterator(boolean simulate) {
+            iterator = _iterator(simulate);
+        }
 
         @Override
         final protected Value computeNext() {
@@ -185,11 +188,11 @@ public abstract class Operator {
 
     }
 
-    protected abstract Iterator<ReturnValue> _iterator();
+    protected abstract Iterator<ReturnValue> _iterator(boolean simulate);
 
 
-    public Iterator<Value> iterator() {
-        return new OperatorIterator();
+    public Iterator<Value> iterator(boolean simulate) {
+        return new OperatorIterator(simulate);
 //        OperatorIterator iterator = _iterator();
 //        if (currentIterator != null && !currentIterator.started)
 //            iterator.current = currentIterator.current;

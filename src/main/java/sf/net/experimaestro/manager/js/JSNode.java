@@ -26,6 +26,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -47,13 +48,12 @@ public class JSNode extends JSBaseObject {
     }
 
 
-    @JSFunction(value = "path", scope = true)
-    public JSNodeList path(Context context, Scriptable scope, String expression) throws XPathExpressionException {
+    @JSFunction(value = "xpath", scope = true)
+    public JSNodeList xpath(Context context, Scriptable scope, String expression) throws XPathExpressionException {
         XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
         NodeList list = (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
         return new JSNodeList(list);
     }
-
 
 
     @JSFunction(value = "get_string", scope = true)
@@ -90,7 +90,7 @@ public class JSNode extends JSBaseObject {
     public String getText() {
         if (node == null)
             return "";
-        String text = (node instanceof Document ? ((Document)node).getDocumentElement() : node).getTextContent();
+        String text = (node instanceof Document ? ((Document) node).getDocumentElement() : node).getTextContent();
         return text == null ? "" : text;
     }
 
@@ -106,12 +106,22 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction()
     public String resource() {
+        return getAttribute(Manager.XP_RESOURCE);
+    }
+
+    @JSFunction
+    public String path() {
+        return getAttribute(Manager.XP_PATH);
+
+    }
+
+    private String getAttribute(QName attributeQName) {
         Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
+        if (!element.hasAttributeNS(attributeQName.getNamespaceURI(), attributeQName.getLocalPart())) {
+            throw new XPMRhinoException("No " + attributeQName + " associated to XML element %s", new QName(element));
+        }
 
-        if (!element.hasAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart()))
-            throw new XPMRhinoException("Not a resource");
-
-        return element.getAttributeNS(Manager.XP_RESOURCE.getNamespaceURI(), Manager.XP_RESOURCE.getLocalPart());
+        return element.getAttributeNS(attributeQName.getNamespaceURI(), attributeQName.getLocalPart());
     }
 
     public Node getNode() {

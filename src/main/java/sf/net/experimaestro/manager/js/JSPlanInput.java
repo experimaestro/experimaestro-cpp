@@ -32,7 +32,7 @@ public class JSPlanInput extends JSBaseObject {
 
     @JSFunction(scope = true)
     @JSHelp("Runs an XQuery against the input: each returned item is a new input")
-    public JSPlanInput path(Context context, Scriptable scope, String xpath) throws XPathExpressionException {
+    public JSPlanInput xpath(Context context, Scriptable scope, String xpath) throws XPathExpressionException {
         XPathFunction function = new XPathFunction(xpath, JSUtils.getNamespaceContext(scope));
         Operator operator = new FunctionOperator(function);
         operator.addParent(this.operator);

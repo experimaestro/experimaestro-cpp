@@ -52,7 +52,7 @@ public class JSTaskFactoryWrapper extends JSBaseObject {
     @JSFunction("run")
     public List<Object> run(String plan) throws Exception {
         Task task = factory.create();
-        return JSTaskWrapper.wrap(task.runPlan(plan, true, new JSScriptRunner(this)));
+        return JSTaskWrapper.wrap(task.runPlan(plan, true, new JSScriptRunner(this), false));
     }
 
     @JSFunction("create")

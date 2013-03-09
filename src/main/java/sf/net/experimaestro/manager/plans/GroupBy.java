@@ -94,14 +94,14 @@ public class GroupBy extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator() {
+    protected Iterator<ReturnValue> _iterator(final boolean simulate) {
         int maxIndex = 0;
         for (int i : indices)
             maxIndex = max(maxIndex, i);
         final long positions[] = new long[maxIndex + 1];
 
         return new AbstractIterator<ReturnValue>() {
-            PeekingIterator<Value> iterator = Iterators.peekingIterator(input.iterator());
+            PeekingIterator<Value> iterator = Iterators.peekingIterator(input.iterator(simulate));
 
             @Override
             protected ReturnValue computeNext() {

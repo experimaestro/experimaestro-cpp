@@ -116,9 +116,10 @@ public class Plan {
      * Run this plan
      *
      * @return An iterator over the generated XML nodes
+     * @param simulate
      */
-    public Iterator<Node> run() throws XPathExpressionException {
-        return data.run(this);
+    public Iterator<Node> run(boolean simulate) throws XPathExpressionException {
+        return data.run(this, simulate);
     }
 
 
@@ -233,10 +234,12 @@ public class Plan {
         /**
          * Run this plan
          *
+         *
          * @param plan
+         * @param simulate
          * @return
          */
-        Iterator<Node> run(Plan plan) throws XPathExpressionException {
+        Iterator<Node> run(Plan plan, boolean simulate) throws XPathExpressionException {
             // Creates the TaskNode
             Operator operator = planGraph(plan, new PlanMap(), new OperatorMap());
             if (LOGGER.isTraceEnabled())
@@ -261,7 +264,7 @@ public class Plan {
                 }
 
             // Now run
-            final Iterator<Value> iterator = operator.iterator();
+            final Iterator<Value> iterator = operator.iterator(simulate);
 
             return Iterators.transform(iterator, new Function<Value, Node>() {
                 @Override

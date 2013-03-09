@@ -42,11 +42,19 @@ public class JSPlans extends JSBaseObject {
         plans.add(jsplan.plan);
     }
 
-    @JSFunction("run")
+    @JSFunction
     public ArrayList<Node> run() throws XPathExpressionException {
+        return doRun(false);
+    }
+    @JSFunction
+    public ArrayList<Node> simulate() throws XPathExpressionException {
+        return doRun(true);
+    }
+
+    private ArrayList<Node> doRun(boolean simulate) throws XPathExpressionException {
         ArrayList<Node> result = new ArrayList<>();
         for(Plan plan: plans) {
-            final Iterator<Node> nodes = plan.run();
+            final Iterator<Node> nodes = plan.run(simulate);
             while (nodes.hasNext()) {
                 result.add(nodes.next());
             }

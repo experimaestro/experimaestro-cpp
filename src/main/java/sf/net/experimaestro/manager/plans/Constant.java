@@ -51,7 +51,7 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator() {
+    protected Iterator<ReturnValue> _iterator(boolean simulate) {
         return new AbstractIterator<ReturnValue>() {
             Iterator<? extends Document> iterator = nodes.iterator();
 

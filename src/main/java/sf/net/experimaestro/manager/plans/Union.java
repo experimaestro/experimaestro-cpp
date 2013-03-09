@@ -33,7 +33,7 @@ import java.util.Map;
 public class Union extends NAryOperator {
 
     @Override
-    protected Iterator<ReturnValue> _iterator() {
+    protected Iterator<ReturnValue> _iterator(final boolean simulate) {
 
         return new AbstractIterator<ReturnValue>() {
             int parent = -1;
@@ -44,7 +44,7 @@ public class Union extends NAryOperator {
                 while (parent < 0 || !iterator.hasNext()) {
                     if (++parent >= getParents().size())
                         return endOfData();
-                    iterator = Union.this.getParent(parent).iterator();
+                    iterator = Union.this.getParent(parent).iterator(simulate);
                 }
 
                 Value value = iterator.next();

@@ -38,8 +38,8 @@ public class Product extends NAryOperator {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Override
-    protected Iterator<ReturnValue> _iterator() {
-        return new ProductIterator();
+    protected Iterator<ReturnValue> _iterator(boolean simulate) {
+        return new ProductIterator(simulate);
     }
 
 
@@ -60,13 +60,15 @@ public class Product extends NAryOperator {
 
     public abstract class AbstractProductIterator extends AbstractIterator<ReturnValue> {
         final Iterator<Value>[] inputs;
+        final boolean simulate;
         boolean first;
         Value[] current;
 
-        public AbstractProductIterator() {
+        public AbstractProductIterator(boolean simulate) {
+            this.simulate = simulate;
             inputs = new Iterator[parents.size()];
             for (int i = 0; i < parents.size(); i++)
-                inputs[i] = parents.get(i).iterator();
+                inputs[i] = parents.get(i).iterator(simulate);
             first = true;
             current = new Value[inputs.length];
         }
@@ -107,6 +109,10 @@ public class Product extends NAryOperator {
     }
 
     private class ProductIterator extends AbstractProductIterator {
+        public ProductIterator(boolean simulate) {
+            super(simulate);
+        }
+
         @Override
         protected ReturnValue computeNext() {
             // First loop
@@ -117,7 +123,7 @@ public class Product extends NAryOperator {
             for (int i = 0; i < parents.size(); i++) {
                 if (next(i)) {
                     for (int j = i; --j >= 0; ) {
-                        inputs[j] = parents.get(j).iterator();
+                        inputs[j] = parents.get(j).iterator(simulate);
                         next(j);
                     }
 

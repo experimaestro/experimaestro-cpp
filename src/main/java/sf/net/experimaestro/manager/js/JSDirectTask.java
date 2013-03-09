@@ -72,7 +72,7 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     @Override
-    public Document jsrun() {
+    public Document jsrun(boolean simulate) {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
@@ -85,8 +85,12 @@ public class JSDirectTask extends JSAbstractTask {
             Scriptable jsDirect = cx.newObject(jsScope, "Object", new Object[]{});
             Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
             getJSInputs(cx, jsXML, jsDirect);
+
+            boolean old = xpm.simulate;
+            xpm.simulate = true;
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
                     new Object[]{jsXML, jsDirect});
+            xpm.simulate = old;
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)
                 throw new ExperimaestroRuntimeException(

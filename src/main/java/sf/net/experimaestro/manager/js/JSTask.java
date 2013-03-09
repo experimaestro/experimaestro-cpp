@@ -83,8 +83,9 @@ public class JSTask extends JSAbstractTask {
      * Run a task
      *
      * @return
+     * @param simulate
      */
-    public Document jsrun() {
+    public Document jsrun(boolean simulate) {
         LOGGER.debug("[Running] task: %s", factory.getId());
         Scriptable result = (Scriptable) runFunction.call(
                 Context.getCurrentContext(), jsScope, jsObject,

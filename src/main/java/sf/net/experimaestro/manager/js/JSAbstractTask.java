@@ -89,11 +89,11 @@ public abstract class JSAbstractTask extends Task {
     }
 
     @Override
-    public Document doRun() {
-        return jsrun();
+    public Document doRun(boolean simulate) {
+        return jsrun(simulate);
     }
 
-    abstract protected Document jsrun();
+    abstract protected Document jsrun(boolean simulate);
 
 
 
