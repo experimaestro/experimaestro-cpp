@@ -42,7 +42,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12
  */
-public class JSBaseObject extends JSObject implements Scriptable {
+abstract public class JSBaseObject implements Scriptable, JSConstructable {
     final static private HashMap<Class<?>, Map<String, MethodFunction>> METHODS = new HashMap<>();
 
     private Map<String, MethodFunction> methods;
@@ -104,7 +104,7 @@ public class JSBaseObject extends JSObject implements Scriptable {
      * Defines a new class.
      * <p/>
      * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
-     * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSObject} or a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
+     * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
      *
      * @param scope
      * @param aClass
@@ -236,9 +236,6 @@ public class JSBaseObject extends JSObject implements Scriptable {
 
             if (obj instanceof Node)
                 return new JSNode((Node) obj);
-
-            if (obj instanceof JSObject)
-                return new MyNativeJavaObject(scope, obj, obj.getClass(), false);
 
 
             return super.wrapNewObject(cx, scope, obj);

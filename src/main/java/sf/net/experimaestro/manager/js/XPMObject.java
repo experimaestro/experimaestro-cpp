@@ -261,7 +261,7 @@ public class XPMObject {
                 Introspection.addClasses(new Introspection.Checker() {
                     @Override
                     public boolean accepts(Class<?> aClass) {
-                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSConstructable.class.isAssignableFrom(aClass) || JSObject.class.isAssignableFrom(aClass))
+                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSConstructable.class.isAssignableFrom(aClass) || JSBaseObject.class.isAssignableFrom(aClass))
                                 && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
                     }
                 }, list, packageName, -1, url);

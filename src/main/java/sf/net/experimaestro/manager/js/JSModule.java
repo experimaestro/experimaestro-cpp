@@ -53,7 +53,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
-public class JSModule extends JSObject {
+public class JSModule extends JSBaseObject {
     final static private Logger LOGGER = Logger.getLogger();
     private final XPMObject xpm;
 
@@ -87,6 +87,7 @@ public class JSModule extends JSObject {
         RELAXNG
     }
 
+    @JSFunction
     public void add_schema(@JSArgument(name = "path", help = "Path relative to the script") final JSFileObject path) throws IOException, SAXException, InputFailedException, OutputFailedException, InvalidParamsException {
         final String extension = path.getFile().getName().getExtension();
         if (extension.equals("rnc")) {
@@ -98,6 +99,7 @@ public class JSModule extends JSObject {
     /**
      * Adds an XML Schema declaration
      */
+    @JSFunction
     @JSHelp(value = "Add a schema in the module")
     public void add_schema(
             @JSArgument(name = "path", help = "Path relative to the script") final JSFileObject _file,

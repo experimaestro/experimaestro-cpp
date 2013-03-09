@@ -137,7 +137,7 @@ public class JSDocumentation {
         ArrayList<Class<?>> list = new ArrayList<>();
 
         Introspection.addImplementors(list, ScriptableObject.class, XPMObject.class.getPackage().getName(), -1);
-        Introspection.addImplementors(list, JSObject.class, XPMObject.class.getPackage().getName(), -1);
+        Introspection.addImplementors(list, JSBaseObject.class, XPMObject.class.getPackage().getName(), -1);
 
         final Documentation.DefinitionList classes = new Documentation.DefinitionList();
 
