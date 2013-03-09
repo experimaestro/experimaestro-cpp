@@ -44,9 +44,9 @@ public class FunctionOperator extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final boolean simulate) {
+    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
         return new AbstractIterator<ReturnValue>() {
-            Iterator<Value> iterator = input.iterator(simulate);
+            Iterator<Value> iterator = input.iterator(runOptions);
             public Iterator<? extends Node> innerIterator = Iterators.emptyIterator();
             DefaultContexts contexts;
 

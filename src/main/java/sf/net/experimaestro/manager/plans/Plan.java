@@ -115,11 +115,23 @@ public class Plan {
     /**
      * Run this plan
      *
+     * @param runOptions
      * @return An iterator over the generated XML nodes
-     * @param simulate
      */
-    public Iterator<Node> run(boolean simulate) throws XPathExpressionException {
-        return data.run(this, simulate);
+    public Iterator<Node> run(RunOptions runOptions) throws XPathExpressionException {
+        return data.run(this, runOptions);
+    }
+
+    /**
+     * Get the operator corresponding to this plan
+     *
+     * @return
+     * @throws XPathExpressionException
+     * @param simplify
+     * @param initialize
+     */
+    public Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
+        return data.getPlanOperator(this, simplify, initialize);
     }
 
 
@@ -234,37 +246,16 @@ public class Plan {
         /**
          * Run this plan
          *
-         *
          * @param plan
-         * @param simulate
+         * @param runOptions
          * @return
          */
-        Iterator<Node> run(Plan plan, boolean simulate) throws XPathExpressionException {
-            // Creates the TaskNode
-            Operator operator = planGraph(plan, new PlanMap(), new OperatorMap());
-            if (LOGGER.isTraceEnabled())
-                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                    out.println("After creation");
-                    operator.printDOT(out);
-                }
+        Iterator<Node> run(Plan plan, RunOptions runOptions) throws XPathExpressionException {
+            Operator operator = getPlanOperator(plan, true, true);
 
-
-            operator = Operator.simplify(operator);
-            if (LOGGER.isTraceEnabled())
-                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                    out.println("After simplification");
-                    operator.printDOT(out);
-                }
-
-            operator.init();
-            if (LOGGER.isTraceEnabled())
-                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                    out.println("After initialisation");
-                    operator.printDOT(out);
-                }
 
             // Now run
-            final Iterator<Value> iterator = operator.iterator(simulate);
+            final Iterator<Value> iterator = operator.iterator(runOptions);
 
             return Iterators.transform(iterator, new Function<Value, Node>() {
                 @Override
@@ -274,6 +265,36 @@ public class Plan {
                 }
             });
 
+        }
+
+        private Operator getPlanOperator(Plan plan, boolean simplify, boolean initialize) throws XPathExpressionException {
+            // Creates the TaskNode
+            Operator operator = planGraph(plan, new PlanMap(), new OperatorMap());
+            if (LOGGER.isTraceEnabled())
+                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                    out.println("After creation");
+                    operator.printDOT(out);
+                }
+
+
+            if (simplify) {
+                operator = Operator.simplify(operator);
+                if (LOGGER.isTraceEnabled())
+                    try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                        out.println("After simplification");
+                        operator.printDOT(out);
+                    }
+            }
+
+            if (initialize) {
+                operator.init();
+                if (LOGGER.isTraceEnabled())
+                    try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                        out.println("After initialisation");
+                        operator.printDOT(out);
+                    }
+            }
+            return operator;
         }
 
 
@@ -310,7 +331,10 @@ public class Plan {
                 }
             }
 
+            // Outputs will contain the list of operators that have
+            // to be merged (because we have a series of different inputs)
             ArrayList<Operator> outputs = new ArrayList<>();
+
             for (Multimap<DotName, Operator> inputs : inputsList) {
 
 

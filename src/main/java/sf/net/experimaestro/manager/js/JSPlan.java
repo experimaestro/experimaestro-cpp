@@ -42,6 +42,7 @@ import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.plans.PlanMap;
 import sf.net.experimaestro.manager.plans.PlanReference;
+import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.manager.plans.XPathFunction;
 import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.JSUtils;
@@ -224,7 +225,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     }
 
     private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
-        final Iterator<Node> iterator = plan.run(simulate);
+        final Iterator<Node> iterator = plan.run(new RunOptions(simulate));
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {

@@ -23,6 +23,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -86,22 +87,22 @@ public class GroupBy extends UnaryOperator {
     }
 
     @Override
-    protected void printDOTNode(PrintStream out) {
-        super.printDOTNode(out);
+    protected void printDOTNode(PrintStream out, Map<Operator, MutableInt> counts) {
+        super.printDOTNode(out, counts);
         for (Operator operator : operators)
             out.format("p%s -> p%s [ style=\"dotted\", weight=0 ];%n",
                     System.identityHashCode(operator), System.identityHashCode(this));
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final boolean simulate) {
+    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
         int maxIndex = 0;
         for (int i : indices)
             maxIndex = max(maxIndex, i);
         final long positions[] = new long[maxIndex + 1];
 
         return new AbstractIterator<ReturnValue>() {
-            PeekingIterator<Value> iterator = Iterators.peekingIterator(input.iterator(simulate));
+            PeekingIterator<Value> iterator = Iterators.peekingIterator(input.iterator(runOptions));
 
             @Override
             protected ReturnValue computeNext() {

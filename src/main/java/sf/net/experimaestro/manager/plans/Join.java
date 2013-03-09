@@ -22,6 +22,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -53,8 +54,8 @@ public class Join extends Product {
     ArrayList<JoinReference> joins = new ArrayList<>();
 
     @Override
-    protected Iterator<ReturnValue> _iterator(boolean simulate) {
-        return new JoinIterator(simulate);
+    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+        return new JoinIterator(runOptions);
     }
 
     @Override
@@ -75,8 +76,8 @@ public class Join extends Product {
     }
 
     @Override
-    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes) {
-        if (super.printDOT(out, planNodes)) {
+    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
+        if (super.printDOT(out, planNodes, counts)) {
             for (JoinReference join : joins)
                 out.format("p%s -> p%s [style=\"dotted\"];%n", System.identityHashCode(join.operator), System.identityHashCode(this));
 
@@ -155,7 +156,7 @@ public class Join extends Product {
             }
         }
 
-        private JoinIterator(boolean simulate) {
+        private JoinIterator(RunOptions simulate) {
             super(simulate);
         }
 

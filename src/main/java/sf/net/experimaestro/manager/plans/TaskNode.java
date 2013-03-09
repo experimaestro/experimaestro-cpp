@@ -59,13 +59,14 @@ public class TaskNode extends UnaryOperator {
 
     /**
      * Creates an iterator
+     * @param runOptions
      */
     @Override
-    protected Iterator<ReturnValue> _iterator(final boolean simulate) {
+    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator(simulate) : ImmutableList.of(new Value(new Document[0])).iterator();
+                    input.iterator(runOptions) : ImmutableList.of(new Value(new Document[0])).iterator();
 
             @Override
             protected ReturnValue computeNext() {
@@ -84,7 +85,7 @@ public class TaskNode extends UnaryOperator {
                 }
 
                 try {
-                    return new ReturnValue(new DefaultContexts(value.context), task.run(simulate));
+                    return new ReturnValue(new DefaultContexts(value.context), task.run(runOptions.simulate));
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);
                 }

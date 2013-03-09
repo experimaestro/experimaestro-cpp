@@ -94,6 +94,11 @@ public class JSNode extends JSBaseObject {
         return text == null ? "" : text;
     }
 
+    @JSFunction(scope = true)
+    public Object toE4X(Context cx, Scriptable scope) {
+        return JSUtils.domToE4X(node, cx, scope);
+    }
+
     @Override
     public String toString() {
         return String.format("%s (%s)", getClassName(), node == null ? "[null]" : XMLUtils.getTypeName(node.getNodeType()));

@@ -129,7 +129,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     @Override
     public String toString() {
         if (data != null)
-            return String.format("Resource %x [%s]", resourceID, data.locator);
+            return data.locator.toString();
         return String.format("Resource %x", resourceID);
     }
 

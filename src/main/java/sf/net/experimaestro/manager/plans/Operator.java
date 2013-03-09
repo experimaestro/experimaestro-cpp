@@ -24,6 +24,7 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.utils.WrappedResult;
 
@@ -115,7 +116,9 @@ public abstract class Operator {
         }
     }
 
-    /** Returns the size of the output */
+    /**
+     * Returns the size of the output
+     */
     public int outputSize() {
         return outputSize;
     }
@@ -152,8 +155,14 @@ public abstract class Operator {
         private Value current = null;
 
         Iterator<ReturnValue> iterator;
-        OperatorIterator(boolean simulate) {
-            iterator = _iterator(simulate);
+        private final MutableInt counter;
+
+        OperatorIterator(RunOptions runOptions) {
+            iterator = _iterator(runOptions);
+            if (runOptions.counts != null)
+                runOptions.counts.put(Operator.this, this.counter = new MutableInt(0));
+            else
+                this.counter = null;
         }
 
         @Override
@@ -165,6 +174,8 @@ public abstract class Operator {
             if (!iterator.hasNext())
                 return endOfData();
 
+            if (counter != null)
+                counter.increment();
             ReturnValue next = iterator.next();
             Value newValue = new Value(next.nodes);
             if (current != null) {
@@ -188,11 +199,11 @@ public abstract class Operator {
 
     }
 
-    protected abstract Iterator<ReturnValue> _iterator(boolean simulate);
+    protected abstract Iterator<ReturnValue> _iterator(RunOptions runOptions);
 
 
-    public Iterator<Value> iterator(boolean simulate) {
-        return new OperatorIterator(simulate);
+    public Iterator<Value> iterator(RunOptions runOptions) {
+        return new OperatorIterator(runOptions);
 //        OperatorIterator iterator = _iterator();
 //        if (currentIterator != null && !currentIterator.started)
 //            iterator.current = currentIterator.current;
@@ -409,11 +420,22 @@ public abstract class Operator {
      * @param out The output stream
      */
     public void printDOT(PrintStream out) {
+        printDOT(out, null);
+    }
+
+    /**
+     * Print a graph starting from this node
+     *
+     * @param out    The output stream
+     * @param counts Number of results output by each operator
+     */
+    public void printDOT(PrintStream out, Map<Operator, MutableInt> counts) {
         out.println("digraph G {");
-        printDOT(out, new HashSet<Operator>());
+        printDOT(out, new HashSet<Operator>(), counts);
         out.println("}");
         out.flush();
     }
+
 
     /**
      * Print a node
@@ -421,14 +443,14 @@ public abstract class Operator {
      * @param out       The output stream
      * @param planNodes The nodes already processed (case of shared ancestors)
      */
-    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes) {
+    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
         if (planNodes.contains(this))
             return false;
         planNodes.add(this);
-        printDOTNode(out);
+        printDOTNode(out, counts);
         int streamIndex = 0;
         for (Operator parent : getParents()) {
-            parent.printDOT(out, planNodes);
+            parent.printDOT(out, planNodes, counts);
             ArrayList<Map.Entry<StreamReference, Integer>> list = new ArrayList<>();
             out.format("p%s -> p%s", System.identityHashCode(parent), System.identityHashCode(this));
             Map<String, String> attributes = new HashMap<>();
@@ -446,6 +468,7 @@ public abstract class Operator {
                     }
                 });
             }
+
             attributes.put("label", labelValue);
 
             // Checks that we are a child of our parent
@@ -472,8 +495,10 @@ public abstract class Operator {
         return String.format("%s [%s]", getName(), System.identityHashCode(this));
     }
 
-    protected void printDOTNode(PrintStream out) {
+    protected void printDOTNode(PrintStream out, Map<Operator, MutableInt> counts) {
         String attribute = "";
+        StringBuilder label = new StringBuilder();
+        label.append(getName());
 
         // If the stream is used in a join, make it dashed
         for (StreamReference x : contextMappings.keySet())
@@ -485,15 +510,26 @@ public abstract class Operator {
 
         // Verify that each child has this in its parents
         int count = 0;
-        for(Operator child: children) {
+        for (Operator child : children) {
             if (!child.getParents().contains(this))
                 count++;
         }
-        if (count > 0)
+        if (count > 0) {
             attribute += ", color=\"red\"";
+            label.append(" [" + count + "/" + children.size() + "]");
+        }
 
-        out.format("p%s [label=\"%s\"%s];%n", System.identityHashCode(this),
-                getName() + (count > 0 ? " [" + count + "/" + children.size() + "]" : ""),
+        if (counts != null) {
+            MutableInt outCount = counts.get(this);
+            if (outCount != null) {
+                label.append("\\n# = " + outCount.intValue());
+                if (outCount.intValue() > 0)
+                    attribute += ", peripheries=2";
+
+            }
+        }
+
+        out.format("p%s [label=\"%s\"%s];%n", System.identityHashCode(this), label.toString(),
                 attribute);
     }
 

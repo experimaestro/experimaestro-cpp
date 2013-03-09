@@ -21,7 +21,9 @@ package sf.net.experimaestro.manager.js;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.manager.plans.Union;
+import sf.net.experimaestro.manager.plans.Value;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +33,7 @@ import java.util.Iterator;
 
 /**
  * A set of plans
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/2/13
  */
@@ -43,34 +46,48 @@ public class JSPlans extends JSBaseObject {
     }
 
     @JSFunction
-    public ArrayList<Node> run() throws XPathExpressionException {
-        return doRun(false);
+    public Object run() throws XPathExpressionException {
+        return doRun(false, false);
     }
+
     @JSFunction
-    public ArrayList<Node> simulate() throws XPathExpressionException {
-        return doRun(true);
+    public Object simulate() throws XPathExpressionException {
+        return doRun(true, false);
     }
 
-    private ArrayList<Node> doRun(boolean simulate) throws XPathExpressionException {
+    @JSFunction
+    public Object simulate(boolean details) throws XPathExpressionException {
+        return doRun(true, details);
+    }
+
+    private Object doRun(boolean simulate, boolean details) throws XPathExpressionException {
+        RunOptions runOptions = new RunOptions(true);
+        runOptions.counts(details);
+
         ArrayList<Node> result = new ArrayList<>();
-        for(Plan plan: plans) {
-            final Iterator<Node> nodes = plan.run(simulate);
-            while (nodes.hasNext()) {
-                result.add(nodes.next());
-            }
+        Operator operator = getOperator(true, true);
+
+        final Iterator<Value> nodes = operator.iterator(runOptions);
+        while (nodes.hasNext()) {
+            result.add(nodes.next().getNodes()[0]);
         }
-        return result;
+
+        if (!details)
+            return result;
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        operator.printDOT(ps, runOptions.counts());
+        ps.flush();
+
+        return new Object[] { result, baos.toString() };
+
     }
 
-    @JSFunction("toDOT")
-    public String toDOT(boolean simplify) throws XPathExpressionException {
-        Union union = new Union();
-        Operator operator = union;
-        for(Plan plan: plans)
-            union.addParent(plan.planGraph());
+    @JSFunction("to_dot")
+    public String toDOT(boolean simplify, boolean initialize) throws XPathExpressionException {
+        Operator operator = getOperator(simplify, initialize);
 
-        if (simplify)
-            operator = Operator.simplify(union);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
@@ -78,5 +95,15 @@ public class JSPlans extends JSBaseObject {
         operator.printDOT(ps);
         ps.flush();
         return baos.toString();
+    }
+
+    private Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
+        Union union = new Union();
+        Operator operator = union;
+        for (Plan plan : plans)
+            union.addParent(plan.getOperator(simplify, initialize));
+        if (union.getParents().size() == 1)
+            operator = union.getParent(0);
+        return operator;
     }
 }

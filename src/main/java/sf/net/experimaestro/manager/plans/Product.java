@@ -38,8 +38,8 @@ public class Product extends NAryOperator {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Override
-    protected Iterator<ReturnValue> _iterator(boolean simulate) {
-        return new ProductIterator(simulate);
+    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+        return new ProductIterator(runOptions);
     }
 
 
@@ -60,15 +60,15 @@ public class Product extends NAryOperator {
 
     public abstract class AbstractProductIterator extends AbstractIterator<ReturnValue> {
         final Iterator<Value>[] inputs;
-        final boolean simulate;
+        final RunOptions runOptions;
         boolean first;
         Value[] current;
 
-        public AbstractProductIterator(boolean simulate) {
-            this.simulate = simulate;
+        public AbstractProductIterator(RunOptions runOptions) {
+            this.runOptions = runOptions;
             inputs = new Iterator[parents.size()];
             for (int i = 0; i < parents.size(); i++)
-                inputs[i] = parents.get(i).iterator(simulate);
+                inputs[i] = parents.get(i).iterator(runOptions);
             first = true;
             current = new Value[inputs.length];
         }
@@ -109,8 +109,8 @@ public class Product extends NAryOperator {
     }
 
     private class ProductIterator extends AbstractProductIterator {
-        public ProductIterator(boolean simulate) {
-            super(simulate);
+        public ProductIterator(RunOptions runOptions) {
+            super(runOptions);
         }
 
         @Override
@@ -123,7 +123,7 @@ public class Product extends NAryOperator {
             for (int i = 0; i < parents.size(); i++) {
                 if (next(i)) {
                     for (int j = i; --j >= 0; ) {
-                        inputs[j] = parents.get(j).iterator(simulate);
+                        inputs[j] = parents.get(j).iterator(runOptions);
                         next(j);
                     }
 

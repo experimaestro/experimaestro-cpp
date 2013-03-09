@@ -49,7 +49,7 @@ public class PlanReference extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(boolean simulate) {
+    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
         throw new UnsupportedOperationException();
     }
 
