@@ -159,6 +159,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         try (final EntityCursor<Resource> cursor = resourceByState.entities(null, status, true, status, true, CursorConfig.READ_UNCOMMITTED)) {
             for (Resource resource : cursor) {
                 try {
+                    resource.init(scheduler);
                     if (updateStatus(resource, false))
                         cursor.update(resource);
 

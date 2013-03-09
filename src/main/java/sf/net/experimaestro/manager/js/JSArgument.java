@@ -9,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JSArgument {
-    String name();
+    String name() default "";
 
     String type() default "";
 

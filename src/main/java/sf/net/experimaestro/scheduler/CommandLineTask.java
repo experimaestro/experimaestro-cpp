@@ -232,4 +232,8 @@ public class CommandLineTask extends Job<JobData> {
     public void setParameterFile(String key, String value) {
         parameterFiles.put(key, value);
     }
+
+    public CommandArguments getCommand() {
+        return command;
+    }
 }

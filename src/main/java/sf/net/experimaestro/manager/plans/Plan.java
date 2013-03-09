@@ -89,9 +89,12 @@ public class Plan {
     }
 
     private void verifyPaths(List<Plan[]> plans) {
-        for (Plan[] path : plans)
+        int count = 0;
+        for (Plan[] path : plans) {
+            count++;
             if (sub(path, 0) == null)
-                throw new ExperimaestroRuntimeException("Subpath cannot be found");
+                throw new ExperimaestroRuntimeException("Subpath %d cannot be found", count);
+        }
     }
 
     private Plan sub(Plan[] path, int index) {

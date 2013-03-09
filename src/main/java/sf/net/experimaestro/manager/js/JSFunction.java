@@ -31,4 +31,7 @@ public @interface JSFunction {
 
     /** Whether the method takes scope & context */
     boolean scope() default false;
+
+    /** Number of arguments that are optional */
+    int optional() default 0;
 }

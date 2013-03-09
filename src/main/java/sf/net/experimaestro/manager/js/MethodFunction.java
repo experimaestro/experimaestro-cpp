@@ -36,6 +36,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
+import static java.lang.StrictMath.min;
+
 /**
  * Wraps a method of an object
  */
@@ -52,166 +54,6 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
     }
 
     static private final Function IDENTITY = com.google.common.base.Functions.identity();
-
-    @Override
-    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        Method argmax = null;
-        int max = Integer.MIN_VALUE;
-
-        Function argmaxConverters[] = new Function[args.length];
-        Function converters[] = new Function[args.length];
-
-        for (Method method : methods) {
-            int score = score(method, args, converters);
-            if (score > max) {
-                max = score;
-                argmax = method;
-                Function tmp[] = argmaxConverters;
-                argmaxConverters = converters;
-                converters = tmp;
-            }
-        }
-
-        if (argmax == null)
-            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)", name,
-                    Output.toString(", ", args, new Output.Formatter<Object>() {
-                        @Override
-                        public String format(Object o) {
-                            return o.getClass().toString();
-                        }
-                    })));
-
-        // Call the method
-
-        try {
-            boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
-            args = transform(cx, scope, argmax, args, argmaxConverters);
-            final Object invoke = argmax.invoke(isStatic ? null : thisObj, args);
-            return invoke == null ? Undefined.instance : invoke;
-        } catch (XPMRhinoException e) {
-            throw e;
-        } catch (Throwable e) {
-            throw new XPMRhinoException(e);
-        }
-
-    }
-
-
-    static public class Converter {
-        int score = Integer.MAX_VALUE;
-
-        Function converter(Object o, Class<?> type) {
-            if (o == null) {
-                score--;
-                return IDENTITY;
-            }
-
-            // Assignable: OK
-            type = ClassUtils.primitiveToWrapper(type);
-            if (type.isAssignableFrom(o.getClass()))
-                return IDENTITY;
-
-            // String
-            if (type == String.class) {
-                if (o instanceof Scriptable) {
-                    switch (((Scriptable) o).getClassName()) {
-                        case "String":
-                        case "ConsString":
-                            return Functions.toStringFunction();
-                    }
-                }
-                if (o instanceof CharSequence) {
-                    score--;
-                    return Functions.toStringFunction();
-                }
-            }
-
-            score = Integer.MIN_VALUE;
-            return null;
-        }
-
-        public boolean isOK() {
-            return score != Integer.MIN_VALUE;
-        }
-    }
-
-    private int score(Method method, Object[] args, Function[] converters) {
-        Converter converter = new Converter();
-
-        final boolean scope = method.getAnnotation(JSFunction.class).scope();
-        int offset = scope ? 2 : 0;
-
-        final Class<?>[] types = method.getParameterTypes();
-
-        final int nbArgs = types.length - offset - (method.isVarArgs() ? 1 : 0);
-
-        // If the methods is varargs, then we need at least nbArgs - 1 parameters
-        if (method.isVarArgs()) {
-            if (args.length < nbArgs)
-                return Integer.MIN_VALUE;
-        } else if (args.length != nbArgs)
-            return Integer.MIN_VALUE;
-
-
-        // Normal arguments
-        for (int i = 0; i < nbArgs && converter.isOK(); i++) {
-            final Object o = JSUtils.unwrap(args[i]);
-            converters[i] = converter.converter(o, types[i + offset]);
-        }
-
-        // Var args
-        if (method.isVarArgs()) {
-            Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
-            int nbVarArgs = args.length - nbArgs;
-            for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
-                final Object o = JSUtils.unwrap(args[nbArgs + i]);
-                converters[nbArgs + i] = converter.converter(o, type);
-            }
-        }
-
-        return converter.score;
-    }
-
-    /**
-     * Transform the arguments
-     *
-     * @param cx
-     * @param scope
-     * @param method
-     * @param args
-     * @return
-     */
-    private Object[] transform(Context cx, Scriptable scope, Method method, Object[] args, Function[] converters) {
-        final Class<?>[] types = method.getParameterTypes();
-        Object methodArgs[] = new Object[types.length];
-
-        // --- Add context and scope if needed
-        final boolean useScope = method.getAnnotation(JSFunction.class).scope();
-        int offset = useScope ? 2 : 0;
-        if (useScope) {
-            methodArgs[0] = cx;
-            methodArgs[1] = scope;
-        }
-
-        // --- Copy the non vararg parameters
-        final int length = types.length - (method.isVarArgs() ? 1 : 0) - offset;
-        for (int i = 0; i < length; i++) {
-            methodArgs[i + offset] = converters[i].apply(JSUtils.unwrap(args[i]));
-        }
-
-        // --- Deals with the vararg pararameters
-        if (method.isVarArgs()) {
-            final Class<?> varargType = types[length].getComponentType();
-            int nbVarargs = args.length - length;
-            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
-            for (int i = 0; i < nbVarargs; i++) {
-                array[i] = converters[i + length].apply(JSUtils.unwrap(args[i + length]));
-            }
-            methodArgs[methodArgs.length - 1] = array;
-        }
-
-        return methodArgs;
-    }
 
     @Override
     public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
@@ -313,4 +155,178 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
         // TODO: implement hasInstance
         throw new NotImplementedException();
     }
+
+    @Override
+    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+        Method argmax = null;
+        int max = Integer.MIN_VALUE;
+
+        Function argmaxConverters[] = new Function[args.length];
+        Function converters[] = new Function[args.length];
+
+        for (Method method : methods) {
+            int score = score(method, args, converters);
+            if (score > max) {
+                max = score;
+                argmax = method;
+                Function tmp[] = argmaxConverters;
+                argmaxConverters = converters;
+                converters = tmp;
+            }
+        }
+
+        if (argmax == null)
+            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)", name,
+                    Output.toString(", ", args, new Output.Formatter<Object>() {
+                        @Override
+                        public String format(Object o) {
+                            return o.getClass().toString();
+                        }
+                    })));
+
+        // Call the method
+
+        try {
+            boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
+            args = transform(cx, scope, argmax, args, argmaxConverters);
+            final Object invoke = argmax.invoke(isStatic ? null : thisObj, args);
+            return invoke == null ? Undefined.instance : invoke;
+        } catch (XPMRhinoException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new XPMRhinoException(e);
+        }
+
+    }
+
+
+    static public class Converter {
+        int score = Integer.MAX_VALUE;
+
+        Function converter(Object o, Class<?> type) {
+            if (o == null) {
+                score--;
+                return IDENTITY;
+            }
+
+            // Assignable: OK
+            type = ClassUtils.primitiveToWrapper(type);
+            if (type.isAssignableFrom(o.getClass()))
+                return IDENTITY;
+
+            // Case of string: anything can be converted, but with different
+            // scores
+            if (type == String.class) {
+                if (o instanceof Scriptable) {
+                    switch (((Scriptable) o).getClassName()) {
+                        case "String":
+                        case "ConsString":
+                            return Functions.toStringFunction();
+                    }
+                } else if (o instanceof CharSequence) {
+                    score--;
+                } else {
+                    score -= 10;
+                }
+                return Functions.toStringFunction();
+            }
+
+            score = Integer.MIN_VALUE;
+            return null;
+        }
+
+        public boolean isOK() {
+            return score != Integer.MIN_VALUE;
+        }
+    }
+
+    private int score(Method method, Object[] args, Function[] converters) {
+        // Get the annotations
+        JSFunction annotation = method.getAnnotation(JSFunction.class);
+        final boolean scope = annotation.scope();
+        int optional = annotation.optional();
+
+        // Start the scoring
+        Converter converter = new Converter();
+        int offset = (scope ? 2 : 0);
+
+        final Class<?>[] types = method.getParameterTypes();
+
+        final int nbArgs = types.length - offset - (method.isVarArgs() ? 1 : 0);
+
+        // The number of arguments should be in:
+        // [nbArgs - optional - 1, ...] if varargs
+        // [nbArgs - optional, nbArgs] otherwise
+
+        if (method.isVarArgs()) {
+            if (args.length < nbArgs - optional - 1)
+                return Integer.MIN_VALUE;
+        } else if (args.length < nbArgs - optional || args.length > nbArgs)
+            return Integer.MIN_VALUE;
+
+
+        // Normal arguments
+        for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
+            final Object o = JSUtils.unwrap(args[i]);
+            converters[i] = converter.converter(o, types[i + offset]);
+        }
+
+        // Var args
+        if (method.isVarArgs()) {
+            Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
+            int nbVarArgs = args.length - nbArgs;
+            for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
+                final Object o = JSUtils.unwrap(args[nbArgs + i]);
+                converters[nbArgs + i] = converter.converter(o, type);
+            }
+        }
+
+        return converter.score;
+    }
+
+    /**
+     * Transform the arguments
+     *
+     * @param cx
+     * @param scope
+     * @param method
+     * @param args
+     * @return
+     */
+    private Object[] transform(Context cx, Scriptable scope, Method method, Object[] args, Function[] converters) {
+        final Class<?>[] types = method.getParameterTypes();
+        Object methodArgs[] = new Object[types.length];
+
+        // --- Add context and scope if needed
+        JSFunction annotation = method.getAnnotation(JSFunction.class);
+
+        final boolean useScope = annotation.scope();
+        int offset = useScope ? 2 : 0;
+        if (useScope) {
+            methodArgs[0] = cx;
+            methodArgs[1] = scope;
+        }
+
+        // --- Copy the non vararg parameters
+        final int length = types.length - (method.isVarArgs() ? 1 : 0) - offset;
+        int size = min(length, args.length);
+        for (int i = 0; i < size; i++) {
+            methodArgs[i + offset] = converters[i].apply(JSUtils.unwrap(args[i]));
+        }
+
+        // --- Deals with the vararg pararameters
+        if (method.isVarArgs()) {
+            final Class<?> varargType = types[length].getComponentType();
+            int nbVarargs = args.length - length;
+            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
+            for (int i = 0; i < nbVarargs; i++) {
+                array[i] = converters[i + length].apply(JSUtils.unwrap(args[i + length]));
+            }
+            methodArgs[methodArgs.length - 1] = array;
+        }
+
+        return methodArgs;
+    }
+
+
 }

@@ -36,7 +36,6 @@ import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.XPMRhinoException;
-import org.mozilla.javascript.annotations.JSFunction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -70,6 +69,7 @@ import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPath;
@@ -175,6 +175,11 @@ public class XPMObject {
      * by default)
      */
     Set<ResourceLocator> submittedJobs = new HashSet<>();
+
+    /**
+     * Simulate flags: jobs will not be submitted (but commands will be evaluated)
+     */
+    boolean simulate;
 
     /**
      * The resource cleaner
@@ -296,10 +301,6 @@ public class XPMObject {
         // xml object (to construct XML easily)
         addNewObject(context, scope, "xml", "XMLConstructor", new Object[]{});
 
-        // scheduler
-        addNewObject(context, scope, "scheduler", "Scheduler",
-                new Object[]{scheduler, this});
-
         // tasks object
         addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
 
@@ -327,6 +328,7 @@ public class XPMObject {
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashSet<>(this.submittedJobs);
+        clone.simulate = simulate;
         return clone;
     }
 
@@ -782,13 +784,13 @@ public class XPMObject {
     /**
      * Creates a new command line job
      *
-     * @param path      The identifier for this job
-     * @param jsargs    The command line
-     * @param jsoptions The options
+     * @param path    The identifier for this job
+     * @param jsargs  The command line
+     * @param options The options
      * @return
      * @throws Exception
      */
-    public Resource commandlineJob(Object path, Object jsargs, Object jsoptions) throws Exception {
+    public Resource commandlineJob(Object path, NativeArray jsargs, NativeObject options) throws Exception {
         CommandLineTask task = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
@@ -796,8 +798,6 @@ public class XPMObject {
 
         Map<String, String> pFiles = new TreeMap<>();
         final CommandArguments command = getCommandArguments(jsargs, pFiles);
-
-        NativeObject options = jsoptions instanceof Undefined ? null : (NativeObject) jsoptions;
 
         // --- Create the task
 
@@ -837,14 +837,13 @@ public class XPMObject {
 
         // --- Options
 
-        if (!(jsoptions instanceof Undefined)) {
+        if (options != null) {
             // --- XPMProcess launcher
-            if (options != null) {
-                if (options.has("launcher", options)) {
-                    final Object launcher = options.get("launcher", options);
-                    if (launcher != null && !(launcher instanceof UniqueTag))
-                        task.setLauncher(((JSLauncher) launcher).getLauncher());
-                }
+            if (options.has("launcher", options)) {
+                final Object launcher = options.get("launcher", options);
+                if (launcher != null && !(launcher instanceof UniqueTag))
+                    task.setLauncher(((JSLauncher) launcher).getLauncher());
+
             }
 
             // --- Redirect standard output
@@ -907,7 +906,14 @@ public class XPMObject {
         }
 
         task.set(ResourceState.WAITING);
-        scheduler.store(task, false);
+        if (simulate) {
+            PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
+            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+            pw.format("Command: %s%n", task.getCommand().toString());
+            pw.flush();
+        } else {
+            scheduler.store(task, false);
+        }
 
         return task;
     }
@@ -1082,8 +1088,7 @@ public class XPMObject {
 
     // --- Javascript methods
 
-    // TODO: convert to JSBaseObject (for documentation)
-    static public class JSXPM extends ScriptableObject {
+    static public class JSXPM extends JSBaseObject {
         XPMObject xpm;
 
         public JSXPM() {
@@ -1118,7 +1123,9 @@ public class XPMObject {
 
         @JSFunction("token_resource")
         @JSHelp("Retrieve (or creates) a token resource with a given xpath")
-        public Scriptable getTokenResource(@JSArgument(name = "path", help = "The path of the resource") String path) throws ExperimaestroCannotOverwrite {
+        public Scriptable getTokenResource(
+                @JSArgument(name = "path", help = "The path of the resource") String path
+        ) throws ExperimaestroCannotOverwrite {
             final ResourceLocator locator = new ResourceLocator(XPMConnector.ID, path);
             final Resource resource = xpm.scheduler.getResource(locator);
             final TokenResource tokenResource;
@@ -1148,9 +1155,9 @@ public class XPMObject {
             ((JSXPM) thisObj).xpm.log(format, objects);
         }
 
-        @JSFunction("log")
-        static public void log(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-            log(Level.INFO, cx, thisObj, args, funObj);
+        @JSFunction()
+        public void log() {
+
         }
 
         @JSFunction("logger")
@@ -1161,7 +1168,10 @@ public class XPMObject {
 
         @JSFunction("log_level")
         @JSHelp(value = "Sets the logger debug level")
-        public void setLogLevel(@JSArgument(name = "name") String name, @JSArgument(type = "String", name = "level") String level) {
+        public void setLogLevel(
+                @JSArgument(name = "name") String name,
+                @JSArgument(name = "level") String level
+        ) {
             Logger.getLogger(xpm.loggerRepository, name).setLevel(Level.toLevel(level));
         }
 
@@ -1172,11 +1182,7 @@ public class XPMObject {
         }
 
         @JSFunction("get_script_file")
-        static public Scriptable getScriptFile(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-            if (args.length != 0)
-                throw new IllegalArgumentException("xpm.get_script_file() takes no argument");
-
-            final XPMObject xpm = ((JSXPM) thisObj).xpm;
+        public Scriptable getScriptFile() throws FileSystemException {
             return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
         }
 
@@ -1205,26 +1211,25 @@ public class XPMObject {
                     new Object[]{factory});
         }
 
+        @JSFunction("get_task")
+        public Scriptable getTask(QName name) {
+            return xpm.getTask(name);
+        }
 
         @JSFunction("get_task")
-        static public Scriptable getTask(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-            final XPMObject xpm = ((JSXPM) thisObj).xpm;
-            if (args.length == 1)
-                return xpm.getTask((QName) unwrap(args[0]));
-
-            if (args.length == 2)
-                return xpm.getTask(Context.toString(args[0]), Context.toString(args[1]));
-
-            throw new IllegalArgumentException("get_task() called with the wrong number of arguments");
+        public Scriptable getTask(
+                String namespaceURI,
+                String localName) {
+            return xpm.getTask(namespaceURI, namespaceURI);
         }
 
 
-        @JSFunction("evaluate")
-        static public NativeArray evaluate(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws Exception {
-            if (args.length != 1 && args.length != 2)
-                throw new IllegalArgumentException("evaluate() called with the wrong number of arguments");
-            final XPMObject xpm = ((JSXPM) thisObj).xpm;
-            return xpm.evaluate(args[0], args.length == 2 ? (NativeObject) args[1] : null);
+        @JSFunction(value = "evaluate", optional = 1)
+        public NativeArray evaluate(
+                NativeArray command,
+                NativeObject options
+        ) throws Exception {
+            return xpm.evaluate(command, options);
         }
 
         @JSFunction("file")
@@ -1234,13 +1239,18 @@ public class XPMObject {
                     new Object[]{xpm, xpm.currentResourceLocator.resolvePath(filepath).getFile()});
         }
 
+        @JSFunction
+        public Scriptable file(@JSArgument(name = "file") JSFileObject file) throws FileSystemException {
+            return file;
+        }
 
-        @JSFunction("command_line_job")
+
+        @JSFunction(value = "command_line_job", optional = 1)
         @JSHelp(value = "Schedule a command line job")
-        public Scriptable commandlineJob(@JSArgument(type = "String", name = "jobId") Object path,
-                                         @JSArgument(type = "Array", name = "command") Object jsargs,
-                                         @JSArgument(type = "Map", name = "options") Object jsoptions) throws Exception {
-            return xpm.newObject(JSResource.class, xpm.commandlineJob(unwrap(path), jsargs, jsoptions));
+        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
+                                         @JSArgument(type = "Array", name = "command") NativeArray jsargs,
+                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+            return xpm.newObject(JSResource.class, xpm.commandlineJob(path, jsargs, jsoptions));
         }
 
         /**
@@ -1276,6 +1286,19 @@ public class XPMObject {
             TasksServlet.updateRepository(xpm.currentResourceLocator.toString(), xpm.repository);
         }
 
+        @JSFunction
+        @JSHelp("Set the simulate flag: When true, the jobs are not submitted but just output")
+        public boolean simulate(boolean simulate) {
+            boolean old = xpm.simulate;
+            xpm.simulate = simulate;
+            return simulate;
+        }
+
+        @JSFunction
+        public boolean simulate() {
+            return xpm.simulate;
+        }
+
         private void output(Node node) {
             switch (node.getNodeType()) {
                 case Node.ELEMENT_NODE:
@@ -1295,7 +1318,7 @@ public class XPMObject {
 
 
     static class XPMFunctions {
-        @sf.net.experimaestro.manager.js.JSFunction("merge")
+        @JSFunction("merge")
         static public NativeObject merge(NativeObject... objects) {
             NativeObject returned = new NativeObject();
             for (NativeObject object : objects) {
