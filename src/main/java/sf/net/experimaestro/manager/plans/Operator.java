@@ -24,6 +24,7 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.utils.WrappedResult;
@@ -76,7 +77,7 @@ public abstract class Operator {
     /**
      * Recursive initialization of operator
      */
-    public Operator init(PlanMap map, OperatorMap opMap) {
+    public Operator init(Map<Plan, Operator> map, OperatorMap opMap) {
         List<Operator> parents = getParents();
         for (int i = 0; i < parents.size(); i++) {
             parents.set(i, parents.get(i).init(map, opMap));
@@ -122,6 +123,21 @@ public abstract class Operator {
     public int outputSize() {
         return outputSize;
     }
+
+    public  Operator prepare() throws XPathExpressionException {
+        return planGraph(this, new HashMap<Plan, Operator>(), new OperatorMap());
+    }
+
+    private Operator planGraph(Operator operator, HashMap<Plan, Operator> planOperatorHashMap, OperatorMap operatorMap) {
+        // TODO: implement planGraph
+        throw new NotImplementedException();
+    }
+
+    public Operator copy() {
+        // TODO: implement copy
+        throw new NotImplementedException();
+    }
+
 
     public interface Contexts {
         long get(int stream, int index);

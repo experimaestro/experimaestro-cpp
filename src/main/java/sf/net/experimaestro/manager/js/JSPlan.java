@@ -37,11 +37,8 @@ import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.OperatorMap;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.manager.plans.PlanMap;
-import sf.net.experimaestro.manager.plans.PlanReference;
 import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.manager.plans.XPathFunction;
 import sf.net.experimaestro.utils.ArrayNodeList;
@@ -51,7 +48,6 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -60,7 +56,7 @@ import java.util.Iterator;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */
-public class JSPlan extends JSBaseObject implements Callable {
+public class JSPlan extends JSAbstractOperator implements Callable {
     /**
      * The wrapped plans
      */
@@ -100,16 +96,16 @@ public class JSPlan extends JSBaseObject implements Callable {
             final Object value = JSUtils.unwrap(object.get(name, object));
 
             try {
-            if (value instanceof NativeArray) {
-                final NativeArray array = (NativeArray) value;
-                for (int i = 0; i < array.getLength(); i++) {
-                    final Object e = array.get(i);
-                    inputs.set(id, getSimple(e, scope));
-                }
-            } else
-                inputs.set(id, getSimple(value, scope));
+                if (value instanceof NativeArray) {
+                    final NativeArray array = (NativeArray) value;
+                    for (int i = 0; i < array.getLength(); i++) {
+                        final Object e = array.get(i);
+                        inputs.set(id, getSimple(e, scope));
+                    }
+                } else
+                    inputs.set(id, getSimple(value, scope));
 
-            } catch(XPMRhinoException | ExperimaestroRuntimeException e) {
+            } catch (XPMRhinoException | ExperimaestroRuntimeException e) {
                 e.addContext("While setting %s", id);
                 throw e;
             }
@@ -120,8 +116,6 @@ public class JSPlan extends JSBaseObject implements Callable {
 
     /**
      * Returns a mapping for the given value
-     *
-     *
      *
      * @param value The value
      * @param scope
@@ -154,12 +148,12 @@ public class JSPlan extends JSBaseObject implements Callable {
         if (value instanceof XMLSerializable)
             return new Constant(((XMLSerializable) value).serialize());
 
-        if (value instanceof JSPlanInput) {
-            return ((JSPlanInput) value).operator;
+        if (value instanceof JSAbstractOperator) {
+            return ((JSAbstractOperator) value).getOperator();
         }
 
         if (value instanceof JSNodeList) {
-            return new Constant(Iterables.transform((JSNodeList)value, new com.google.common.base.Function<Node, Document>() {
+            return new Constant(Iterables.transform((JSNodeList) value, new com.google.common.base.Function<Node, Document>() {
                 @Override
                 public Document apply(Node input) {
                     return Manager.wrap(input);
@@ -172,7 +166,7 @@ public class JSPlan extends JSBaseObject implements Callable {
 
         // Case of plans or functions of plans
         if (value instanceof JSPlan)
-            return new PlanReference(((JSPlan) value).plan);
+            return ((JSPlan) value).plan;
 
         if (value instanceof JSPlanRef) {
             return getOperator((JSPlanRef) value, scope);
@@ -181,12 +175,10 @@ public class JSPlan extends JSBaseObject implements Callable {
         if (value instanceof JSTransform) {
             final JSTransform jsTransform = (JSTransform) value;
             final FunctionOperator operator = new FunctionOperator(jsTransform);
-            for(JSPlanRef jsplanRef: jsTransform.plans)
+            for (JSPlanRef jsplanRef : jsTransform.plans)
                 operator.addParent(getOperator(jsplanRef, scope));
             return operator;
         }
-
-
 
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
@@ -194,7 +186,7 @@ public class JSPlan extends JSBaseObject implements Callable {
     }
 
     /**
-     * Get the operator of a Plan reference
+     * Get the operator of a {@linkplain JSPlanRef}
      *
      * @param jsPlanRef
      * @param scope
@@ -203,10 +195,10 @@ public class JSPlan extends JSBaseObject implements Callable {
      */
     private Operator getOperator(JSPlanRef jsPlanRef, Scriptable scope) throws XPathExpressionException {
         if (jsPlanRef.getPath() == null || jsPlanRef.getPath().equals("."))
-            return new PlanReference(jsPlanRef.plan);
+            return jsPlanRef.plan;
         final XPathFunction function = new XPathFunction(jsPlanRef.getPath(), JSUtils.getNamespaceContext(scope));
         final FunctionOperator operator = new FunctionOperator(function);
-        operator.addParent(new PlanReference(jsPlanRef.plan));
+        operator.addParent(jsPlanRef.plan);
         return operator;
     }
 
@@ -257,17 +249,11 @@ public class JSPlan extends JSBaseObject implements Callable {
         }
     }
 
-    @JSFunction("join")
-    public void join(Object... args) {
-        Plan[][] paths = getPlanPaths(args);
-        plan.addJoin(Arrays.asList(paths));
-    }
-
     @JSFunction("to_dot")
     public String toDot(boolean simplify) throws XPathExpressionException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
-        Operator operator = plan.planGraph(new PlanMap(), new OperatorMap());
+        Operator operator = plan.prepare();
         if (simplify)
             operator = Operator.simplify(operator);
         operator.printDOT(ps);
@@ -301,21 +287,15 @@ public class JSPlan extends JSBaseObject implements Callable {
         return new JSPlanRef(plan, path);
     }
 
-    @JSFunction
-    public JSPlan copy() {
-        return new JSPlan(plan.copy());
-    }
-
-    @JSFunction
-    public JSPlan group_by(Object... paths) {
-        final Plan[][] plans = getPlanPaths(paths);
-        this.plan.groupBy(Arrays.asList(plans));
-        return this;
-    }
 
     @JSFunction(value = "add", scope = true)
     public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
         plan.add(getMappings(object, scope));
+    }
+
+    @Override
+    Operator getOperator() {
+        return plan;
     }
 
 

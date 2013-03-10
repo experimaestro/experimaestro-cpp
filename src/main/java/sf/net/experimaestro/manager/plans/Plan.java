@@ -20,12 +20,10 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -33,30 +31,35 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Stack;
 import java.util.TreeMap;
 
 /**
- * An experimental plan.
+ * A fake operator corresponding to a task factory. This is replaced by
+ * {@linkplain TaskNode} when constructing the final plan.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */
-public class Plan {
+public class Plan extends Operator {
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
-     * The data
+     * The task factory associated with this plan
      */
-    private Data data;
+    TaskFactory factory;
+
+    /**
+     * Mappings to either list of plans or operators
+     */
+    List<Multimap<DotName, Operator>> inputsList = new ArrayList();
 
     /**
      * Creates a new plan
@@ -64,52 +67,7 @@ public class Plan {
      * @param factory
      */
     public Plan(TaskFactory factory) {
-        this.data = new Data(factory);
-    }
-
-    private Plan(Data data) {
-        this.data = data;
-    }
-
-    /**
-     * Add a join over those subplans
-     *
-     * @param plans
-     */
-    public void addJoin(List<Plan[]> plans) {
-        verifyPaths(plans);
-
-        data = data.addJoin(plans);
-    }
-
-
-    public void groupBy(List<Plan[]> plans) {
-        verifyPaths(plans);
-        data = data.groupBy(plans);
-    }
-
-    private void verifyPaths(List<Plan[]> plans) {
-        int count = 0;
-        for (Plan[] path : plans) {
-            count++;
-            if (sub(path, 0) == null)
-                throw new ExperimaestroRuntimeException("Subpath %d cannot be found", count);
-        }
-    }
-
-    private Plan sub(Plan[] path, int index) {
-        if (index == path.length) return this;
-        for (Plan subplan : data.getSubPlans())
-            if (subplan == path[index])
-                return subplan.sub(path, index + 1);
-
-        return null;
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        // Two plans are equal if holding the same data
-        return this == other || (other instanceof Plan && data == ((Plan) other).data);
+        this.factory = factory;
     }
 
     /**
@@ -119,25 +77,19 @@ public class Plan {
      * @return An iterator over the generated XML nodes
      */
     public Iterator<Node> run(RunOptions runOptions) throws XPathExpressionException {
-        return data.run(this, runOptions);
+        return run(this, runOptions);
     }
 
     /**
      * Get the operator corresponding to this plan
      *
-     * @return
-     * @throws XPathExpressionException
      * @param simplify
      * @param initialize
+     * @return
+     * @throws XPathExpressionException
      */
     public Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
-        return data.getPlanOperator(this, simplify, initialize);
-    }
-
-
-    public void printPlan(PrintStream out) throws XPathExpressionException {
-        final Operator planNode = data.planGraph(this, new PlanMap(), new OperatorMap());
-        planNode.printDOT(out);
+        return getPlanOperator(this, simplify, initialize);
     }
 
     /**
@@ -146,357 +98,204 @@ public class Plan {
      * @return
      */
     public Task createTask() {
-        return data.factory.create();
+        return factory.create();
     }
 
     public TaskFactory getFactory() {
-        return data.factory;
-    }
-
-
-    public Plan copy() {
-        return new Plan(data.copy());
-    }
-
-    public void add(PlanInputs inputs) {
-        data.add(inputs);
-    }
-
-    public Operator planGraph(PlanMap map, OperatorMap opMap) throws XPathExpressionException {
-        return data.planGraph(this, map, opMap);
-    }
-
-    public Operator planGraph() throws XPathExpressionException {
-        return planGraph(new PlanMap(), new OperatorMap());
+        return factory;
     }
 
 
     /**
-     * The data associated to a plan. It is a distinct object since a plan
-     * can be either directly equal to another (same object) or can share
-     * the same data, which is used to perform joins
+     * Prepare an operator
+     *
+     * @return
+     * @throws XPathExpressionException
      */
-    static private class Data {
-        /**
-         * The task factory for this plan
-         */
-        TaskFactory factory;
-
-        /**
-         * Mappings to either list of plans or operators
-         */
-        List<Multimap<DotName, Operator>> inputsList = new ArrayList();
+    @Override
+    public Operator prepare() throws XPathExpressionException {
+        return planGraph(this, new HashMap<Plan, Operator>(), new OperatorMap());
+    }
 
 
-        /**
-         * Joins to perform
-         */
-        ArrayList<List<Plan[]>> joins = new ArrayList<>();
+    /**
+     * Run this plan
+     *
+     * @param plan
+     * @param runOptions
+     * @return
+     */
+    Iterator<Node> run(Plan plan, RunOptions runOptions) throws XPathExpressionException {
+        Operator operator = getPlanOperator(plan, true, true);
 
-        /**
-         * How to group by
-         */
-        List<Plan[]> groupBy = null;
 
+        // Now run
+        final Iterator<Value> iterator = operator.iterator(runOptions);
 
-        /**
-         * Number of distinct plans that share this data
-         */
-        int count = 1;
+        return Iterators.transform(iterator, new Function<Value, Node>() {
+            @Override
+            public Node apply(Value from) {
+                assert from.getNodes().length == 1;
+                return from.getNodes()[0];
+            }
+        });
 
-        public Data(TaskFactory factory) {
-            this.factory = factory;
-        }
+    }
 
-        /**
-         * Add a join between a set of nodes
-         *
-         * @param paths
-         * @return
-         */
-        synchronized public Data addJoin(List<Plan[]> paths) {
-            final Data data = ensureOne();
-            if (data != this)
-                return data.addJoin(paths);
-
-            joins.add(paths);
-            return this;
-        }
-
-        /**
-         * Ensure we do not share anything with other plans
-         *
-         * @return
-         */
-        synchronized private Data ensureOne() {
-            if (count > 1) {
-                Data data = new Data(factory);
-                data.joins.addAll(data.joins);
-                for (Multimap<DotName, Operator> input : data.inputsList) {
-                    data.inputsList.add(ArrayListMultimap.create(input));
-                }
-                data.groupBy.addAll(data.groupBy);
-                return data;
+    private Operator getPlanOperator(Plan plan, boolean simplify, boolean initialize) throws XPathExpressionException {
+        // Creates the TaskNode
+        Operator operator = planGraph(plan, new HashMap<Plan, Operator>(), new OperatorMap());
+        if (LOGGER.isTraceEnabled())
+            try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                out.println("After creation");
+                operator.printDOT(out);
             }
 
-            return this;
-        }
 
-
-        /**
-         * Run this plan
-         *
-         * @param plan
-         * @param runOptions
-         * @return
-         */
-        Iterator<Node> run(Plan plan, RunOptions runOptions) throws XPathExpressionException {
-            Operator operator = getPlanOperator(plan, true, true);
-
-
-            // Now run
-            final Iterator<Value> iterator = operator.iterator(runOptions);
-
-            return Iterators.transform(iterator, new Function<Value, Node>() {
-                @Override
-                public Node apply(Value from) {
-                    assert from.getNodes().length == 1;
-                    return from.getNodes()[0];
-                }
-            });
-
-        }
-
-        private Operator getPlanOperator(Plan plan, boolean simplify, boolean initialize) throws XPathExpressionException {
-            // Creates the TaskNode
-            Operator operator = planGraph(plan, new PlanMap(), new OperatorMap());
+        if (simplify) {
+            operator = Operator.simplify(operator);
             if (LOGGER.isTraceEnabled())
                 try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                    out.println("After creation");
+                    out.println("After simplification");
                     operator.printDOT(out);
                 }
-
-
-            if (simplify) {
-                operator = Operator.simplify(operator);
-                if (LOGGER.isTraceEnabled())
-                    try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                        out.println("After simplification");
-                        operator.printDOT(out);
-                    }
-            }
-
-            if (initialize) {
-                operator.init();
-                if (LOGGER.isTraceEnabled())
-                    try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
-                        out.println("After initialisation");
-                        operator.printDOT(out);
-                    }
-            }
-            return operator;
         }
 
-
-        /**
-         * Returns the graph corresponding to this plan
-         *
-         * @param plan
-         * @param map  The current plan path (containg joins in input, and operators in output)
-         * @return The node that is the root (sink) of the DAG
-         */
-        synchronized private Operator planGraph(Plan plan, PlanMap map, OperatorMap opMap) throws XPathExpressionException {
-            // Check if a plan was not already generated
-            Operator old = map.get();
-            if (old != null)
-                return old;
-
-
-            // --- Handle joins
-            for (List<Plan[]> list : joins) {
-                assert list.size() > 1;
-
-                final Plan[] first = list.get(0);
-                Plan refPlan = first[first.length - 1];
-                PlanMap ref = map.sub(first, true);
-
-                // Find it (will be kth of current)
-                for (Plan[] path : list.subList(1, list.size())) {
-                    // Verify that the two plans to be joined are compatible
-                    if (!refPlan.equals(path[path.length - 1]))
-                        throw new ExperimaestroRuntimeException("Cannot join two distinct plans");
-
-                    // Join
-                    map.sub(path, true).join(ref);
+        if (initialize) {
+            operator.init();
+            if (LOGGER.isTraceEnabled())
+                try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
+                    out.println("After initialisation");
+                    operator.printDOT(out);
                 }
+        }
+        return operator;
+    }
+
+
+    /**
+     * Returns the graph corresponding to this plan
+     *
+     * @param plan
+     * @param map  The current plan path (containg joins in input, and operators in output)
+     * @return The node that is the root (sink) of the DAG
+     */
+    synchronized private Operator planGraph(Plan plan, Map<Plan, Operator> map, OperatorMap opMap) throws XPathExpressionException {
+        // Check if a plan was not already generated
+        Operator old = map.get(this);
+        if (old != null)
+            return old;
+
+
+        // Outputs will contain the list of operators that have
+        // to be merged (because we have a series of different inputs)
+        ArrayList<Operator> outputs = new ArrayList<>();
+
+        for (Multimap<DotName, Operator> inputs : inputsList) {
+
+
+            // --- Loop over the cartesian product of the inputs
+            DotName ids[] = new DotName[inputs.keySet().size()];
+            OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
+            {
+
+                int index = 0;
+                for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
+                    ids[index] = input.getKey();
+                    inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
+                    index++;
+                }
+                assert index == ids.length;
             }
 
-            // Outputs will contain the list of operators that have
-            // to be merged (because we have a series of different inputs)
-            ArrayList<Operator> outputs = new ArrayList<>();
+            // Create a new operator
+            TaskNode self = new TaskNode(plan);
 
-            for (Multimap<DotName, Operator> inputs : inputsList) {
+            Operator inputOperators[] = new Operator[inputValues.length];
+            BitSet[] joins = new BitSet[inputOperators.length];
 
-
-                // --- Loop over the cartesian product of the inputs
-                DotName ids[] = new DotName[inputs.keySet().size()];
-                OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
-                {
-
-                    int index = 0;
-                    for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
-                        ids[index] = input.getKey();
-                        inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
-                        index++;
-                    }
-                    assert index == ids.length;
+            for (int i = inputValues.length; --i >= 0; ) {
+                OperatorIterable values = inputValues[i];
+                Union union = new Union();
+                for (Operator operator : values) {
+                    union.addParent(operator);
                 }
 
-                // Create a new operator
-                TaskNode self = new TaskNode(plan);
+                if (union.getParents().size() == 1)
+                    inputOperators[i] = union.getParent(0);
+                else
+                    inputOperators[i] = union;
 
-                Operator inputOperators[] = new Operator[inputValues.length];
-                BitSet[] joins = new BitSet[inputOperators.length];
+                joins[i] = new BitSet();
+                opMap.add(inputOperators[i]);
 
-                for (int i = inputValues.length; --i >= 0; ) {
-                    OperatorIterable values = inputValues[i];
-                    Union union = new Union();
-                    for (Operator operator : values) {
-                        union.addParent(operator);
-                    }
+            }
 
-                    if (union.getParents().size() == 1)
-                        inputOperators[i] = union.getParent(0);
-                    else
-                        inputOperators[i] = union;
-
-                    joins[i] = new BitSet();
-                    opMap.add(inputOperators[i]);
-
-                }
-
-                // Find LCAs and store them in a map operator ID -> inputs
-                for (int i = 0; i < ids.length - 1; i++) {
-                    for (int j = i + 1; j < ids.length; j++) {
-                        // TODO: handle without join the case where the same operator corresponds
-                        // to two or more inputs (but is not an LCA of higher order)
-                        ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
-                        for (Operator operator : lca) {
-                            int key = opMap.get(operator);
-                            joins[i].set(key);
-                            joins[j].set(key);
-                        }
+            // Find LCAs and store them in a map operator ID -> inputs
+            for (int i = 0; i < ids.length - 1; i++) {
+                for (int j = i + 1; j < ids.length; j++) {
+                    // TODO: handle without join the case where the same operator corresponds
+                    // to two or more inputs (but is not an LCA of higher order)
+                    ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
+                    for (Operator operator : lca) {
+                        int key = opMap.get(operator);
+                        joins[i].set(key);
+                        joins[j].set(key);
                     }
                 }
-
-
-                // Build the trie structure for product/joins
-                TrieNode trie = new TrieNode();
-                for (int i = 0; i < joins.length; i++) {
-                    trie.add(joins[i], inputOperators[i]);
-                }
-
-                TrieNode.MergeResult merge = trie.merge(opMap);
-                self.addParent(merge.operator);
-
-                // Associate streams with names
-                Map<DotName, Integer> mappings = new TreeMap<>();
-                for (int i = 0; i < ids.length; i++) {
-                    mappings.put(ids[i], merge.map.get(inputOperators[i]));
-                }
-                self.setMappings(mappings);
-
-
-                // --- Handle group by
-
-                if (groupBy == null) {
-                    outputs.add(self);
-                } else {
-                    GroupBy groupBy = new GroupBy();
-
-
-                    // Get all the ancestor to group by
-                    for (Plan[] path : this.groupBy) {
-                        final PlanMap submap = map.sub(path, false);
-                        final Operator taskNode = submap.get();
-
-                        // Should not happen since they are defined paths
-                        assert taskNode != null : "Cannot group by: no associated operator";
-
-                        // Add to the operator
-
-                        // Problem: this can be expanded if it was an union!
-                        groupBy.add(taskNode);
-                    }
-
-                    // Order using the operators we should group by
-                    Order<Operator> order = new Order();
-                    for (Operator op : groupBy.operators)
-                        order.add(op, false);
-                    OrderBy orderBy = new OrderBy(order, null);
-                    orderBy.addParent(self);
-
-                    groupBy.addParent(orderBy);
-                    outputs.add(groupBy);
-                }
             }
 
-            // End of loop over inputs
 
-            if (outputs.size() == 1) {
-                map.set(outputs.get(0));
-                return outputs.get(0);
+            // Build the trie structure for product/joins
+            TrieNode trie = new TrieNode();
+            for (int i = 0; i < joins.length; i++) {
+                trie.add(joins[i], inputOperators[i]);
             }
 
-            Union union = new Union();
-            map.set(union);
-            for (Operator output : outputs)
-                union.addParent(output);
-            return union;
+            TrieNode.MergeResult merge = trie.merge(opMap);
+            self.addParent(merge.operator);
 
-        }
-
-
-        synchronized protected Data copy() {
-            count++;
-            return this;
-        }
-
-
-        /**
-         * Add groups by
-         *
-         * @param plans
-         */
-        synchronized public Data groupBy(List<Plan[]> plans) {
-            final Data data = ensureOne();
-            if (data != this)
-                return data.groupBy(plans);
-
-            groupBy = plans;
-            return this;
-        }
-
-        public void add(PlanInputs inputs) {
-            final Data data = ensureOne();
-            if (data != this) {
-                data.add(inputs);
-            } else {
-                inputsList.add(inputs.map);
+            // Associate streams with names
+            Map<DotName, Integer> mappings = new TreeMap<>();
+            for (int i = 0; i < ids.length; i++) {
+                mappings.put(ids[i], merge.map.get(inputOperators[i]));
             }
+            self.setMappings(mappings);
+
+
+            // --- Handle group by
+
+            outputs.add(self);
         }
 
+        // End of loop over inputs
 
-        public Iterable<? extends Plan> getSubPlans() {
-            Set<Plan> set = new HashSet<>();
-            for (Multimap<DotName, Operator> inputs : inputsList) {
-                for (Operator operator : inputs.values()) {
-                    operator.addSubPlans(set);
-                }
-            }
-            return set;
+        if (outputs.size() == 1) {
+            map.put(plan, outputs.get(0));
+            return outputs.get(0);
         }
 
+        Union union = new Union();
+        map.put(plan, union);
+        for (Operator output : outputs)
+            union.addParent(output);
+        return union;
+
+    }
+
+    public void add(PlanInputs inputs) {
+        inputsList.add(inputs.map);
+    }
+
+
+    @Override
+    public List<Operator> getParents() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+        throw new UnsupportedOperationException();
     }
 
 
@@ -505,10 +304,10 @@ public class Plan {
      */
     static private class OperatorIterable implements Iterable<Operator> {
         Collection<Operator> collection;
-        PlanMap map;
+        Map<Plan, Operator> map;
         OperatorMap opMap;
 
-        public OperatorIterable(Collection<Operator> collection, PlanMap map, OperatorMap opMap) {
+        public OperatorIterable(Collection<Operator> collection, Map<Plan, Operator> map, OperatorMap opMap) {
             this.collection = collection;
             this.map = map;
             this.opMap = opMap;
@@ -550,12 +349,6 @@ public class Plan {
 
                         // Transform the operator (in case it is a plan reference)
                         source = source.init(map, opMap);
-
-//                        if (source instanceof Union) {
-//                            // We unroll an union
-//                            iterators.add(source.getParents().iterator());
-//                            continue;
-//                        }
 
                         if (source instanceof Constant) {
                             if (constant == null)

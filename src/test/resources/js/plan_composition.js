@@ -160,15 +160,17 @@ function test_join() {
         }
     );
     
-    // Join plan1 of plan2 with plan1 (within plan2)
-    plan3.join(plan1, [plan2, plan1]);
-    
     var result = plan3.run();
     check_array(result, [4, 6, 8, 12]);
 }
 
 // Test a join with an union
 function test_join_union() {
+    // Join plan1 of plan2 with plan1 (within plan2)
+	// note that because x in plan2 has an extra input
+	// this gives a cartesian product with results
+	// plus([-3, -5], [1, 2]
+
     var plan1 = tasks("ns:identity").plan({
         x: [1, 2]
     });
@@ -182,12 +184,6 @@ function test_join_union() {
             y: plan2
         }
     );
-    
-    // Join plan1 of plan2 with plan1 (within plan2)
-	// note that because x in plan2 has an extra input
-	// this gives a cartesian product with results
-	// plus([-3, -5], [1, 2]
-    plan3.join(plan1, [plan2, plan1]);
     
     var result = plan3.run();
     check_array(result, [-4, -3, -2, -1, 4, 6, 8, 12]);

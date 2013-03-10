@@ -48,7 +48,7 @@ public class Order<T> implements Iterable<Set<T>> {
      * @param t      The element
      * @param newSet Whether to create a new set
      */
-    void add(T t, boolean newSet) {
+    public void add(T t, boolean newSet) {
         if (list.isEmpty() || newSet)
             list.add(new HashSet<T>());
         list.get(list.size() - 1).add(t);

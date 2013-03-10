@@ -18,26 +18,18 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.NativeArray;
-import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.utils.JSUtils;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 10/3/13
  */
-public class JSPlanInput extends JSAbstractOperator {
-    Operator operator;
+public class JSOperator extends JSAbstractOperator {
+    private final Operator operator;
 
-    public JSPlanInput(NativeArray array) {
-        Constant constant = new Constant();
-        this.operator = constant;
-        for (Object o : array) {
-            constant.add(JSUtils.toDocument(null, o));
-        }
+    public JSOperator(Operator operator) {
+        this.operator = operator;
     }
-
 
     @Override
     Operator getOperator() {
