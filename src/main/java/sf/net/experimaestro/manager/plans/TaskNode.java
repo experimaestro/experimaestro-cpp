@@ -31,6 +31,7 @@ import sf.net.experimaestro.manager.Task;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A plan node that can be iterated over
@@ -55,6 +56,13 @@ public class TaskNode extends UnaryOperator {
      */
     public TaskNode(Plan plan) {
         this.plan = plan;
+    }
+
+    @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        TaskNode copy = new TaskNode(plan);
+        copy.mappings = new TreeMap<>(mappings);
+        return super.copy(deep, map, copy);
     }
 
     /**

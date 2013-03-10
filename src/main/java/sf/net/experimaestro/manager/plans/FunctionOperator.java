@@ -26,6 +26,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -41,6 +42,12 @@ public class FunctionOperator extends UnaryOperator {
     @Override
     protected String getName() {
         return "Function " + function;
+    }
+
+    @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        FunctionOperator copy = new FunctionOperator(function);
+        return super.copy(deep, map, copy);
     }
 
     @Override

@@ -38,6 +38,12 @@ public class Product extends NAryOperator {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        Product copy = new Product();
+        return super.copy(deep, map, copy);
+    }
+
+    @Override
     protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
         return new ProductIterator(runOptions);
     }

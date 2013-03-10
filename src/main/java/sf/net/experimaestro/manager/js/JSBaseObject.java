@@ -65,7 +65,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable {
         synchronized (METHODS) {
             if (methods == null) {
                 METHODS.put(aClass, methods = new HashMap<>());
-
                 for (Method method : aClass.getDeclaredMethods()) {
                     final JSFunction annotation = method.getAnnotation(JSFunction.class);
                     if (annotation != null) {
@@ -82,6 +81,20 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable {
                         methodFunction.add(method);
                     }
                 }
+
+                Class<?> superclass = aClass.getSuperclass();
+                if (JSBaseObject.class.isAssignableFrom(superclass)) {
+                    Map<String, MethodFunction> superclassMethods = analyzeClass(superclass);
+                    for (MethodFunction superclassMethod : superclassMethods.values()) {
+                        MethodFunction previous = methods.get(superclassMethod.name);
+                        if (previous != null)
+                            previous.addAll(superclassMethod);
+                        else
+                            methods.put(superclassMethod.name, superclassMethod);
+                    }
+
+                }
+
             }
         }
         return methods;

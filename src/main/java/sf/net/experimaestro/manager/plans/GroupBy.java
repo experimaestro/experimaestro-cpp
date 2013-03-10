@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -34,7 +35,6 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +56,15 @@ public class GroupBy extends UnaryOperator {
     }
 
     @Override
-    protected void ensureConnections(HashMap<Operator, Operator> simplified) {
-        Operator.ensureConnections(simplified, operators);
+    protected void ensureConnections(Map<Operator, Operator> map) {
+        Operator.ensureConnections(map, operators);
+    }
+
+    @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        GroupBy copy = new GroupBy();
+        copy.operators = Lists.newArrayList(Operator.copy(operators, deep, map));
+        return super.copy(deep, map, copy);
     }
 
     @Override

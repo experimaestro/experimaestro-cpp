@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -59,9 +58,9 @@ public class Join extends Product {
     }
 
     @Override
-    protected void ensureConnections(HashMap<Operator, Operator> simplified) {
+    protected void ensureConnections(Map<Operator, Operator> map) {
         for (JoinReference reference : joins)
-            reference.operator = Operator.getSimplified(simplified, reference.operator);
+            reference.operator = Operator.getSimplified(map, reference.operator);
     }
 
     @Override

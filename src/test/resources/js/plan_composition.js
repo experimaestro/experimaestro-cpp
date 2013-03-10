@@ -109,7 +109,7 @@ function test_simple_access() {
         x: [1, 2]
     });
     var plan2 = tasks("ns:mult").plan({
-        x: plan1.path("a/text()"),
+        x: plan1.xpath("a/text()"),
         y: [3, 5]
     });
 
@@ -257,7 +257,7 @@ tasks("ns:sum")= {
 
     run: function(p) {
         var sum = 0;
-        for each(var a in p.x.path("xp:array/*")) {
+        for each(var a in p.x.xpath("xp:array/*")) {
             sum += Number(a.get_value());
         }            
         return sum;

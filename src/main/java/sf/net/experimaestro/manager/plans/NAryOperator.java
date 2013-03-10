@@ -18,8 +18,11 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An operator with multiple inputs
@@ -40,4 +43,8 @@ abstract public class NAryOperator extends Operator {
         parents.add(parent);
     }
 
+    public NAryOperator copy(boolean deep, Map<Object, Object> map, NAryOperator copy) {
+        copy.parents = Lists.newArrayList(Operator.copy(parents, deep, map));
+        return copy;
+    }
 }

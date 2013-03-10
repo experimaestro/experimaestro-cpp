@@ -30,13 +30,16 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     @JSFunction
-    public JSOperator group_by(JSOperator... operators) {
+    public JSOperator group_by(JSAbstractOperator... operators) {
         GroupBy groupBy = new GroupBy();
 
         // Order using the operators we should group by
         Order<Operator> order = new Order();
-        for (JSOperator op : operators)
-            order.add(op.getOperator(), false);
+        for (JSAbstractOperator jsOperator : operators) {
+            Operator operator = jsOperator.getOperator();
+            groupBy.add(operator);
+            order.add(operator, false);
+        }
         OrderBy orderBy = new OrderBy(order, null);
         orderBy.addParent(getOperator());
 
@@ -47,7 +50,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 
     @JSFunction
     public JSOperator copy() {
-        return new JSOperator(getOperator().copy());
+        return new JSOperator(getOperator().copy(true));
     }
 
 }

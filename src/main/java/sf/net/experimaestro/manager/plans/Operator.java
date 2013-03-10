@@ -21,8 +21,10 @@ package sf.net.experimaestro.manager.plans;
 
 import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
+import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -77,11 +80,12 @@ public abstract class Operator {
     /**
      * Recursive initialization of operator
      */
-    public Operator init(Map<Plan, Operator> map, OperatorMap opMap) {
+    public Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) throws XPathExpressionException {
         List<Operator> parents = getParents();
         for (int i = 0; i < parents.size(); i++) {
-            parents.set(i, parents.get(i).init(map, opMap));
+            parents.set(i, parents.get(i).prepare(map, opMap));
         }
+        ensureConnections(map);
         return this;
     }
 
@@ -94,20 +98,20 @@ public abstract class Operator {
             parent.addSubPlans(set);
     }
 
-    static Operator getSimplified(HashMap<Operator, Operator> simplified, Operator operator) {
+    static Operator getSimplified(Map<Operator, Operator> simplified, Operator operator) {
         Operator tmp;
         while ((tmp = simplified.get(operator)) != null)
             operator = tmp;
         return operator;
     }
 
-    public static void ensureConnections(HashMap<Operator, Operator> simplified, List<Operator> operators) {
+    public static void ensureConnections(Map<Operator, Operator> simplified, List<Operator> operators) {
         for (int i = 0; i < operators.size(); i++) {
             operators.set(i, getSimplified(simplified, operators.get(i)));
         }
     }
 
-    public static void ensureConnections(HashMap<Operator, Operator> simplified, Set<Operator> set) {
+    public static void ensureConnections(Map<Operator, Operator> simplified, Set<Operator> set) {
         for (Operator operator : set) {
             Operator newOperator = getSimplified(simplified, operator);
             if (newOperator != operator) {
@@ -133,9 +137,35 @@ public abstract class Operator {
         throw new NotImplementedException();
     }
 
-    public Operator copy() {
-        // TODO: implement copy
-        throw new NotImplementedException();
+    /**
+     * Copy the operator
+     * @param deep Deep copy
+     */
+    final public Operator copy(boolean deep) {
+        return copy(deep, new IdentityHashMap<Object, Object>());
+    }
+
+    final protected Operator copy(boolean deep, Map<Object, Object> map) {
+        Object o = map.get(this);
+        if (o != null)
+            return (Operator) o;
+        Operator copy = doCopy(deep, map);
+        map.put(this, copy);
+        return copy;
+    }
+
+    protected abstract Operator doCopy(boolean deep, Map<Object, Object> map);
+
+    /**
+     * Copy a collection of operators
+     */
+    protected static Iterable<Operator> copy(Iterable<Operator> collection, final boolean deep, final Map<Object, Object> map) {
+        return Iterables.transform(collection, new Function<Operator, Operator>() {
+            @Override
+            public Operator apply(Operator input) {
+                return input.copy(deep, map);
+            }
+        });
     }
 
 
@@ -574,11 +604,12 @@ public abstract class Operator {
     }
 
     /**
-     * After simplifications, this is used ensure that connections are kept
+     * After changes, this is used ensure that references to changed operators
+     * are kept
      *
-     * @param simplified
+     * @param map The map for changed operators
      */
-    protected void ensureConnections(HashMap<Operator, Operator> simplified) {
+    protected void ensureConnections(Map<Operator, Operator> map) {
     }
 
     static public Operator simplify(Operator operator, Map<Operator, Operator> simplified) {

@@ -22,6 +22,7 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.base.Predicate;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
@@ -30,7 +31,6 @@ import javax.xml.xpath.XPathExpressionException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +62,21 @@ public class OrderBy extends UnaryOperator {
         this.operators = operators;
     }
 
+    public OrderBy() {
+    }
+
+    @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        OrderBy copy = new OrderBy();
+
+        copy.operators = operators != null ? Sets.newHashSet(Operator.copy(operators, deep, map)) : null;
+        copy.order = new Order<>();
+        for (Set<Operator> set : order.list) {
+            copy.order.list.add(Sets.newHashSet(Operator.copy(set, deep, map)));
+        }
+
+        return super.copy(deep, map, copy);
+    }
 
     public int size() {
         return operators == null ? Iterables.size(order.items()) : operators.size();
@@ -136,12 +151,12 @@ public class OrderBy extends UnaryOperator {
     }
 
     @Override
-    protected void ensureConnections(HashMap<Operator, Operator> simplified) {
+    protected void ensureConnections(Map<Operator, Operator> map) {
         for(Set<Operator> set: order.list) {
-            Operator.ensureConnections(simplified, set);
+            Operator.ensureConnections(map, set);
         }
         if (operators != null)
-            Operator.ensureConnections(simplified, operators);
+            Operator.ensureConnections(map, operators);
     }
 
     @Override

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A constant in a plan just generate nodes
@@ -67,6 +68,11 @@ public class Constant extends Operator {
     @Override
     public void addParent(Operator parent) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        return new Constant(nodes);
     }
 
     @Override

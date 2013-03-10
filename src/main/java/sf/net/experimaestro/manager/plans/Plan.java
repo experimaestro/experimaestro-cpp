@@ -20,10 +20,12 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -70,15 +72,6 @@ public class Plan extends Operator {
         this.factory = factory;
     }
 
-    /**
-     * Run this plan
-     *
-     * @param runOptions
-     * @return An iterator over the generated XML nodes
-     */
-    public Iterator<Node> run(RunOptions runOptions) throws XPathExpressionException {
-        return run(this, runOptions);
-    }
 
     /**
      * Get the operator corresponding to this plan
@@ -89,7 +82,7 @@ public class Plan extends Operator {
      * @throws XPathExpressionException
      */
     public Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
-        return getPlanOperator(this, simplify, initialize);
+        return prepare(simplify, initialize);
     }
 
     /**
@@ -114,20 +107,32 @@ public class Plan extends Operator {
      */
     @Override
     public Operator prepare() throws XPathExpressionException {
-        return planGraph(this, new HashMap<Plan, Operator>(), new OperatorMap());
+        return prepare(new HashMap<Operator, Operator>(), new OperatorMap());
+    }
+
+    @Override
+    public Plan doCopy(boolean deep, Map<Object, Object> map) {
+        Plan copy = new Plan(factory);
+        for (Multimap<DotName, Operator> multimap : inputsList) {
+            HashMultimap<DotName, Operator> mapCopy = HashMultimap.create();
+            copy.inputsList.add(mapCopy);
+            for (Map.Entry<DotName, Collection<Operator>> entry : multimap.asMap().entrySet()) {
+                mapCopy.putAll(entry.getKey(), deep ? Operator.copy(entry.getValue(), deep, map) : entry.getValue());
+            }
+        }
+
+        return copy;
     }
 
 
     /**
      * Run this plan
      *
-     * @param plan
      * @param runOptions
-     * @return
+     * @return An iterator over the generated XML nodes
      */
-    Iterator<Node> run(Plan plan, RunOptions runOptions) throws XPathExpressionException {
-        Operator operator = getPlanOperator(plan, true, true);
-
+    public Iterator<Node> run(RunOptions runOptions) throws XPathExpressionException {
+        Operator operator = prepare(true, true);
 
         // Now run
         final Iterator<Value> iterator = operator.iterator(runOptions);
@@ -142,9 +147,9 @@ public class Plan extends Operator {
 
     }
 
-    private Operator getPlanOperator(Plan plan, boolean simplify, boolean initialize) throws XPathExpressionException {
+    private Operator prepare(boolean simplify, boolean initialize) throws XPathExpressionException {
         // Creates the TaskNode
-        Operator operator = planGraph(plan, new HashMap<Plan, Operator>(), new OperatorMap());
+        Operator operator = prepare(new HashMap<Operator, Operator>(), new OperatorMap());
         if (LOGGER.isTraceEnabled())
             try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
                 out.println("After creation");
@@ -176,11 +181,10 @@ public class Plan extends Operator {
     /**
      * Returns the graph corresponding to this plan
      *
-     * @param plan
-     * @param map  The current plan path (containg joins in input, and operators in output)
+     * @param map The current plan path (containg joins in input, and operators in output)
      * @return The node that is the root (sink) of the DAG
      */
-    synchronized private Operator planGraph(Plan plan, Map<Plan, Operator> map, OperatorMap opMap) throws XPathExpressionException {
+    public synchronized Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) throws XPathExpressionException {
         // Check if a plan was not already generated
         Operator old = map.get(this);
         if (old != null)
@@ -209,7 +213,7 @@ public class Plan extends Operator {
             }
 
             // Create a new operator
-            TaskNode self = new TaskNode(plan);
+            TaskNode self = new TaskNode(this);
 
             Operator inputOperators[] = new Operator[inputValues.length];
             BitSet[] joins = new BitSet[inputOperators.length];
@@ -234,8 +238,6 @@ public class Plan extends Operator {
             // Find LCAs and store them in a map operator ID -> inputs
             for (int i = 0; i < ids.length - 1; i++) {
                 for (int j = i + 1; j < ids.length; j++) {
-                    // TODO: handle without join the case where the same operator corresponds
-                    // to two or more inputs (but is not an LCA of higher order)
                     ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
                     for (Operator operator : lca) {
                         int key = opMap.get(operator);
@@ -270,16 +272,21 @@ public class Plan extends Operator {
 
         // End of loop over inputs
 
+        Operator planOperator;
         if (outputs.size() == 1) {
-            map.put(plan, outputs.get(0));
-            return outputs.get(0);
+            map.put(this, outputs.get(0));
+            planOperator = outputs.get(0);
+        } else {
+            Union union = new Union();
+            map.put(this, union);
+            for (Operator output : outputs)
+                union.addParent(output);
+            planOperator = union;
         }
 
-        Union union = new Union();
-        map.put(plan, union);
-        for (Operator output : outputs)
-            union.addParent(output);
-        return union;
+        planOperator.children.addAll(children);
+
+        return planOperator;
 
     }
 
@@ -304,10 +311,10 @@ public class Plan extends Operator {
      */
     static private class OperatorIterable implements Iterable<Operator> {
         Collection<Operator> collection;
-        Map<Plan, Operator> map;
+        Map<Operator, Operator> map;
         OperatorMap opMap;
 
-        public OperatorIterable(Collection<Operator> collection, Map<Plan, Operator> map, OperatorMap opMap) {
+        public OperatorIterable(Collection<Operator> collection, Map<Operator, Operator> map, OperatorMap opMap) {
             this.collection = collection;
             this.map = map;
             this.opMap = opMap;
@@ -348,7 +355,11 @@ public class Plan extends Operator {
                         Operator source = iterators.peek().next();
 
                         // Transform the operator (in case it is a plan reference)
-                        source = source.init(map, opMap);
+                        try {
+                            source = source.prepare(map, opMap);
+                        } catch (XPathExpressionException e) {
+                            throw new ExperimaestroRuntimeException(e);
+                        }
 
                         if (source instanceof Constant) {
                             if (constant == null)

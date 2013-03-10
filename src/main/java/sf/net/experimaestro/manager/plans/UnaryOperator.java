@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import java.util.AbstractList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -67,4 +68,11 @@ abstract public class UnaryOperator extends Operator {
     }
 
 
+    public UnaryOperator copy(boolean deep, Map<Object, Object> map, UnaryOperator copy) {
+        if (deep) {
+            copy.input = input.copy(deep, map);
+        } else
+            copy.input = input;
+        return copy;
+    }
 }

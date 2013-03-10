@@ -33,6 +33,12 @@ import java.util.Map;
 public class Union extends NAryOperator {
 
     @Override
+    protected Operator doCopy(boolean deep, Map<Object, Object> map) {
+        Union copy = new Union();
+        return super.copy(deep, map, copy);
+    }
+
+    @Override
     protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
 
         return new AbstractIterator<ReturnValue>() {

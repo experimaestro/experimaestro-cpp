@@ -199,6 +199,10 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     }
 
+    public void addAll(MethodFunction other) {
+        methods.addAll(other.methods);
+    }
+
 
     static public class Converter {
         int score = Integer.MAX_VALUE;
