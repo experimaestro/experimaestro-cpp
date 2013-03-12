@@ -48,11 +48,13 @@ public class Manager {
 
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
     public static final QName XP_RESOURCE = new QName(EXPERIMAESTRO_NS, "resource");
+    public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
         PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
     }
+
 
     /**
      * Get the namespaces (default and element based)

@@ -23,6 +23,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +61,7 @@ public class Plan extends Operator {
     TaskFactory factory;
 
     /**
-     * Mappings to either list of plans or operators
+     * Mappings to either list of operators or operators
      */
     List<Multimap<DotName, Operator>> inputsList = new ArrayList();
 
@@ -284,8 +286,6 @@ public class Plan extends Operator {
             planOperator = union;
         }
 
-        planOperator.children.addAll(children);
-
         return planOperator;
 
     }
@@ -296,8 +296,23 @@ public class Plan extends Operator {
 
 
     @Override
+    public void getAncestors(HashSet<Operator> ancestors) {
+        if (ancestors.contains(this))
+            return;
+
+        ancestors.add(this);
+        for (int i = 0; i < inputsList.size(); i++) {
+            for (Operator parent : inputsList.get(i).values()) {
+                parent.getAncestors(ancestors);
+            }
+
+        }
+    }
+
+    @Override
     public List<Operator> getParents() {
-        throw new UnsupportedOperationException();
+        // TODO: implement getParents
+        throw new NotImplementedException();
     }
 
     @Override
@@ -309,7 +324,7 @@ public class Plan extends Operator {
     /**
      * Iterates over the diffent inputs
      */
-    static private class OperatorIterable implements Iterable<Operator> {
+    static class OperatorIterable implements Iterable<Operator> {
         Collection<Operator> collection;
         Map<Operator, Operator> map;
         OperatorMap opMap;

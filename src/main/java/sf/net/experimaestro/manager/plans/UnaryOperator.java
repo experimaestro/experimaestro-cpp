@@ -61,7 +61,7 @@ abstract public class UnaryOperator extends Operator {
     @Override
     public void addParent(Operator parent) {
         if (this.input != null)
-            throw new IndexOutOfBoundsException("Trying to add more than one parent to a TaskNode");
+            throw new IndexOutOfBoundsException("Trying to add more than one parent to a unary operator");
         super.addParent(parent);
         input = parent;
 

@@ -28,7 +28,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -50,6 +50,11 @@ import static java.lang.StrictMath.max;
 public class GroupBy extends UnaryOperator {
     List<Operator> operators = new ArrayList<>();
     int[] indices;
+    private final QName wrapperQName;
+
+    public GroupBy(QName qname) {
+        this.wrapperQName = qname;
+    }
 
     public void add(Operator operator) {
         operators.add(operator);
@@ -62,7 +67,7 @@ public class GroupBy extends UnaryOperator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        GroupBy copy = new GroupBy();
+        GroupBy copy = new GroupBy(wrapperQName);
         copy.operators = Lists.newArrayList(Operator.copy(operators, deep, map));
         return super.copy(deep, map, copy);
     }
@@ -118,7 +123,7 @@ public class GroupBy extends UnaryOperator {
 
 
                 Document document = XMLUtils.newDocument();
-                Element array = document.createElementNS(Manager.EXPERIMAESTRO_NS, "array");
+                Element array = document.createElementNS(wrapperQName.getNamespaceURI(), wrapperQName.getLocalPart());
                 document.appendChild(array);
 
                 Value value = iterator.next();

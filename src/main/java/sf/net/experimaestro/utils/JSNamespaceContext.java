@@ -30,7 +30,7 @@ import java.util.Iterator;
 * @author B. Piwowarski <benjamin@bpiwowar.net>
 * @date 6/3/13
 */
-class JSNamespaceContext implements NamespaceContext {
+public class JSNamespaceContext implements NamespaceContext {
     private final Scriptable scope;
 
     public JSNamespaceContext(Scriptable scope) {

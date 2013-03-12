@@ -18,30 +18,23 @@
 
 package sf.net.experimaestro.manager.js;
 
-import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.plans.Union;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/2/13
+ * @date 11/3/13
  */
-public class JSPlanRef extends JSBaseObject {
-    Plan plan;
-    String path;
+public class JSUnion extends JSAbstractOperator {
+    Union union = new Union();
 
-    public JSPlanRef(Plan plan, String path) {
-        this.plan = plan;
-        this.path = path;
+    public JSUnion(JSAbstractOperator... operators) {
+        for (JSAbstractOperator operator : operators)
+            union.addParent(operator.getOperator());
     }
 
-    public JSPlanRef(JSPlan jsplan) {
-        this(jsplan.plan, null);
-    }
-
-    public Plan getPlan() {
-        return plan;
-    }
-
-    public String getPath() {
-        return path;
+    @Override
+    Operator getOperator() {
+        return union;
     }
 }

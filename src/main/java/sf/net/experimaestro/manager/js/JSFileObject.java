@@ -120,6 +120,15 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
         return new JSFileObject(xpm, file.getParent().resolveFile(file.getName().getBaseName() + extension));
     }
 
+    @JSFunction
+    @JSHelp("Removes extension to the current filename")
+    public Object remove_extension(String extension) throws FileSystemException {
+        String baseName = file.getName().getBaseName();
+        if (baseName.endsWith(extension))
+            baseName = baseName.substring(0, baseName.length()-extension.length());
+        return new JSFileObject(xpm, file.getParent().resolveFile(baseName));
+    }
+
     @Override
     public Document serialize() {
         return Manager.wrap(Manager.EXPERIMAESTRO_NS, "file", file.toString());

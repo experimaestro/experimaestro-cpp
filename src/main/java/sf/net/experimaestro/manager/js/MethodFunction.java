@@ -175,14 +175,22 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
             }
         }
 
-        if (argmax == null)
-            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)", name,
+        if (argmax == null) {
+            String context = "";
+            if (thisObj instanceof JSBaseObject)
+                context = " in an object of class " + JSBaseObject.getClassName(thisObj.getClass());
+
+            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)%s",
+                    name,
                     Output.toString(", ", args, new Output.Formatter<Object>() {
                         @Override
                         public String format(Object o) {
                             return o.getClass().toString();
                         }
-                    })));
+                    }),
+                    context
+            ));
+        }
 
         // Call the method
 
@@ -320,7 +328,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
         // --- Deals with the vararg pararameters
         if (method.isVarArgs()) {
-            final Class<?> varargType = types[length].getComponentType();
+            final Class<?> varargType = types[types.length - 1].getComponentType();
             int nbVarargs = args.length - length;
             final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
             for (int i = 0; i < nbVarargs; i++) {

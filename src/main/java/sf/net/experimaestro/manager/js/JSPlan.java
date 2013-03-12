@@ -28,20 +28,15 @@ import org.mozilla.javascript.WrappedException;
 import org.mozilla.javascript.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.plans.Constant;
-import sf.net.experimaestro.manager.plans.Function;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.plans.RunOptions;
-import sf.net.experimaestro.manager.plans.XPathFunction;
-import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -58,12 +53,12 @@ import java.util.Iterator;
  */
 public class JSPlan extends JSAbstractOperator implements Callable {
     /**
-     * The wrapped plans
+     * The wrapped operators
      */
     Plan plan;
 
     /**
-     * Builds a wrapper around a plans
+     * Builds a wrapper around a operators
      *
      * @param plan
      */
@@ -72,7 +67,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
     /**
-     * Build a plans from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
+     * Build a operators from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
      *
      * @param factory
      * @param object
@@ -164,42 +159,12 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
         // --- Plans & transformations
 
-        // Case of plans or functions of plans
-        if (value instanceof JSPlan)
-            return ((JSPlan) value).plan;
-
-        if (value instanceof JSPlanRef) {
-            return getOperator((JSPlanRef) value, scope);
-        }
-
-        if (value instanceof JSTransform) {
-            final JSTransform jsTransform = (JSTransform) value;
-            final FunctionOperator operator = new FunctionOperator(jsTransform);
-            for (JSPlanRef jsplanRef : jsTransform.plans)
-                operator.addParent(getOperator(jsplanRef, scope));
-            return operator;
-        }
-
+        // Case of operators or functions of operators
+        if (value instanceof JSOperator)
+            return ((JSOperator) value).getOperator();
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
 
-    }
-
-    /**
-     * Get the operator of a {@linkplain JSPlanRef}
-     *
-     * @param jsPlanRef
-     * @param scope
-     * @return
-     * @throws XPathExpressionException
-     */
-    private Operator getOperator(JSPlanRef jsPlanRef, Scriptable scope) throws XPathExpressionException {
-        if (jsPlanRef.getPath() == null || jsPlanRef.getPath().equals("."))
-            return jsPlanRef.plan;
-        final XPathFunction function = new XPathFunction(jsPlanRef.getPath(), JSUtils.getNamespaceContext(scope));
-        final FunctionOperator operator = new FunctionOperator(function);
-        operator.addParent(jsPlanRef.plan);
-        return operator;
     }
 
     private Constant wrapValue(String value1) {
@@ -282,11 +247,6 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
 
-    @JSFunction
-    public JSPlanRef xpath(String path) {
-        return new JSPlanRef(plan, path);
-    }
-
 
     @JSFunction(value = "add", scope = true)
     public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
@@ -299,33 +259,4 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
 
-    /**
-     * JS function to transform inputs in a plans
-     */
-    static public class JSTransform extends JSBaseObject implements Function {
-        protected final Context cx;
-        protected final Scriptable scope;
-        protected final Callable f;
-
-        protected final JSPlanRef[] plans;
-
-        public JSTransform(Context cx, Scriptable scope, Callable f, JSPlanRef[] plans) {
-            this.cx = cx;
-            this.scope = scope;
-            this.f = f;
-            this.plans = plans;
-        }
-
-        @Override
-        public String toString() {
-            return "JS function";
-        }
-
-        public NodeList f(Document[] parameters) {
-            Object[] args = new Object[parameters.length];
-            for (int i = 0; i < parameters.length; i++)
-                args[i] = new JSNode(parameters[i]);
-            return new ArrayNodeList(JSUtils.toDocument(scope, f.call(cx, scope, null, args)));
-        }
-    }
 }

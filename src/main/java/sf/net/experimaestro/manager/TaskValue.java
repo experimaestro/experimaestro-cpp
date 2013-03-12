@@ -38,17 +38,22 @@ public class TaskValue extends Value {
 
     @Override
     public Value getValue(DotName id) throws NoSuchParameter {
+        if (id.size() == 0)
+            return this;
         return task.getValue(id);
     }
 
     @Override
     public void set(Document value) {
-        throw new IllegalArgumentException("Cannot set task value");
+        this.value = value;
     }
 
     @Override
 	public void process(boolean simulate) throws NoSuchParameter, ValueMismatchException {
-		value = task.run(simulate);
+        if (value == null) {
+            // Run unless a value was set
+		    value = task.run(simulate);
+        }
 	}
 
 	@Override

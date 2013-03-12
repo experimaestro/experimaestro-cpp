@@ -290,7 +290,8 @@ public class JSUtils {
         }
 
 
-        throw new ExperimaestroRuntimeException("Class %s cannot be converted to XML", object.getClass());
+        // By default, convert to string
+        return document.get().createTextNode(object.toString());
     }
 
     /**

@@ -18,35 +18,27 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileSystemException;
-import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.JSUtils;
 
 /**
  * A resource
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSResource extends ScriptableObject implements Wrapper {
+public class JSResource extends JSBaseObject implements Wrapper {
 
     private Resource resource;
 
-    public JSResource() {}
+    public JSResource(Resource resource) {
+        this.resource = resource;
+    }
 
     @Override
     public String getClassName() {
         return "Resource";
     }
-
-    public void jsConstructor(Object resource) throws FileSystemException {
-        this.resource = (Resource) JSUtils.unwrap(resource);
-
-
-    }
-
 
     @Override
     public Resource unwrap() {

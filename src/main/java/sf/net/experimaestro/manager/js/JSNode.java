@@ -27,6 +27,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -50,9 +51,13 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction(value = "xpath", scope = true)
     public JSNodeList xpath(Context context, Scriptable scope, String expression) throws XPathExpressionException {
-        XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
-        NodeList list = (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
+        NodeList list = evaluate(scope, expression);
         return new JSNodeList(list);
+    }
+
+    private NodeList evaluate(Scriptable scope, String expression) throws XPathExpressionException {
+        XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
+        return (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
     }
 
 
@@ -90,8 +95,12 @@ public class JSNode extends JSBaseObject {
     public String getText() {
         if (node == null)
             return "";
-        String text = (node instanceof Document ? ((Document) node).getDocumentElement() : node).getTextContent();
+        String text = getElement().getTextContent();
         return text == null ? "" : text;
+    }
+
+    private Element getElement() {
+        return node instanceof Document ? ((Document) node).getDocumentElement() : (Element)node;
     }
 
     @JSFunction(scope = true)
@@ -111,16 +120,41 @@ public class JSNode extends JSBaseObject {
 
     @JSFunction()
     public String resource() {
-        return getAttribute(Manager.XP_RESOURCE);
+        return getAttribute(node, Manager.XP_RESOURCE);
+    }
+
+    @JSFunction(scope = true)
+    public String resource(Context cx, Scriptable scope, String xpath) throws XPathExpressionException {
+        NodeList nodeList = get_one_node(scope, xpath);
+        return getAttribute(nodeList.item(0), Manager.XP_RESOURCE);
     }
 
     @JSFunction
     public String path() {
-        return getAttribute(Manager.XP_PATH);
+        return getAttribute(node, Manager.XP_PATH);
 
     }
+    @JSFunction(scope = true)
+    public String path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException {
+        NodeList nodeList = get_one_node(scope, xpath);
+        return getAttribute(nodeList.item(0), Manager.XP_PATH);
+    }
 
-    private String getAttribute(QName attributeQName) {
+    @JSFunction(scope = true)
+    public void set_attribute(Context cx, Scriptable scope, String name, String value) {
+        QName qname = QName.parse(name, new JSNamespaceContext(scope));
+        getElement().setAttributeNS(qname.getNamespaceURI(), qname.getLocalPart(), value);
+    }
+
+
+    private NodeList get_one_node(Scriptable scope, String xpath) throws XPathExpressionException {
+        NodeList nodeList = evaluate(scope, xpath);
+        if (nodeList.getLength() != 1)
+            throw new XPMRhinoException("XPath expression %s gave more than one result (%d)", xpath, nodeList.getLength());
+        return nodeList;
+    }
+
+    static String getAttribute(Node node, QName attributeQName) {
         Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
         if (!element.hasAttributeNS(attributeQName.getNamespaceURI(), attributeQName.getLocalPart())) {
             throw new XPMRhinoException("No " + attributeQName + " associated to XML element %s", new QName(element));

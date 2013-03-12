@@ -91,10 +91,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import static java.lang.String.format;
@@ -174,7 +172,7 @@ public class XPMObject {
      * List of submitted jobs (so that we don't submit them twice with the same script
      * by default)
      */
-    Set<ResourceLocator> submittedJobs = new HashSet<>();
+    Map<ResourceLocator, Resource> submittedJobs = new HashMap<>();
 
     /**
      * Simulate flags: jobs will not be submitted (but commands will be evaluated)
@@ -197,7 +195,6 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "transform", null),
     };
 
 
@@ -327,7 +324,7 @@ public class XPMObject {
         final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner);
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks.putAll(this.defaultLocks);
-        clone.submittedJobs = new HashSet<>(this.submittedJobs);
+        clone.submittedJobs = new HashMap<>(this.submittedJobs);
         clone.simulate = simulate;
         return clone;
     }
@@ -546,19 +543,6 @@ public class XPMObject {
     @JSHelp(value = "Unwrap an annotated XML value into a native JS object")
     public static Object js_unwrap(Object object) {
         return object.toString();
-    }
-
-
-    @JSHelp(value = "Transform plans outputs with a function")
-    public static Scriptable js_transform(Context cx, Scriptable scope, Object[] args, Function funObj) throws FileSystemException {
-        Callable f = (Callable) args[0];
-        JSPlanRef plans[] = new JSPlanRef[args.length - 1];
-        for (int i = 0; i < plans.length; i++)
-            if (args[i + 1] instanceof JSPlan)
-                plans[i] = new JSPlanRef(((JSPlan) args[i + 1]));
-            else
-                plans[i] = (JSPlanRef) unwrap(args[i + 1]);
-        return new JSPlan.JSTransform(cx, scope, f, plans);
     }
 
 
@@ -790,7 +774,7 @@ public class XPMObject {
      * @return
      * @throws Exception
      */
-    public Resource commandlineJob(Object path, NativeArray jsargs, NativeObject options) throws Exception {
+    public JSResource commandlineJob(Object path, NativeArray jsargs, NativeObject options) throws Exception {
         CommandLineTask task = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
@@ -822,9 +806,11 @@ public class XPMObject {
         final ResourceLocator locator = new ResourceLocator(connector.getMainConnector(), path.toString());
         task = new CommandLineTask(scheduler, locator, command);
 
-        if (!submittedJobs.add(task.getLocator())) {
-            LOGGER.info("Not submitting %s [duplicate]", task.getLocator());
-            return scheduler.getResource(task.getLocator());
+        if (submittedJobs.containsKey(locator)) {
+            getRootLogger().info("Not submitting %s [duplicate]", locator);
+            if (simulate)
+                return new JSResource(submittedJobs.get(locator));
+            return new JSResource(scheduler.getResource(locator));
         }
 
         for (Map.Entry<String, String> entry : pFiles.entrySet())
@@ -884,7 +870,7 @@ public class XPMObject {
                     LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, o);
                     if (resource == null)
                         if (simulate) {
-                            if (!submittedJobs.contains(depLocator))
+                            if (!submittedJobs.containsKey(depLocator))
                                 LOGGER.error("The dependency [%s] cannot be found", depLocator);
                         } else throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
 
@@ -901,12 +887,12 @@ public class XPMObject {
         // Update the task status now that it is initialized
         task.setGroup(defaultGroup);
 
-        final Resource old = scheduler.getResource(task.getLocator());
+        final Resource old = scheduler.getResource(locator);
         if (old != null) {
             // TODO: if equal, do not try to replace the task
             if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
-                return old;
+                return new JSResource(old);
             } else {
                 getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
             }
@@ -917,12 +903,13 @@ public class XPMObject {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", task.toString());
             pw.format("Command: %s%n", task.getCommand().toString());
+            pw.format("Locator: %s", locator.toString());
             pw.flush();
         } else {
             scheduler.store(task, false);
         }
 
-        return task;
+        return new JSResource(task);
     }
 
     private static FileObject getFileObject(Connector connector, Object stdout) throws FileSystemException {
@@ -1257,7 +1244,8 @@ public class XPMObject {
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
                                          @JSArgument(type = "Array", name = "command") NativeArray jsargs,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
-            return xpm.newObject(JSResource.class, xpm.commandlineJob(path, jsargs, jsoptions));
+            JSResource jsResource = xpm.commandlineJob(path, jsargs, jsoptions);
+            return jsResource;
         }
 
         /**
@@ -1339,6 +1327,13 @@ public class XPMObject {
             }
             return returned;
         }
+
+        @JSFunction(scope = true)
+        @JSHelp(value = "Transform plans outputs with a function")
+        public static Scriptable transform(Context cx, Scriptable scope, Callable f, JSAbstractOperator... operators) throws FileSystemException {
+            return new JSTransform(cx, scope, f, operators);
+        }
+
 
     }
 }

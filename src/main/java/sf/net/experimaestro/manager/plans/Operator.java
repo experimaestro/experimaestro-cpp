@@ -30,6 +30,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.utils.WrappedResult;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
@@ -50,10 +51,7 @@ import java.util.Set;
  * @date 20/2/13
  */
 public abstract class Operator {
-    /**
-     * Children nodes will take our output
-     */
-    ArrayList<Operator> children = new ArrayList<>();
+    final static private Logger LOGGER = Logger.getLogger();
 
     /**
      * Size of the output (1 per default)
@@ -73,9 +71,7 @@ public abstract class Operator {
 
 
     public void addParent(Operator parent) {
-        parent.addChild(this);
     }
-
 
     /**
      * Recursive initialization of operator
@@ -128,7 +124,7 @@ public abstract class Operator {
         return outputSize;
     }
 
-    public  Operator prepare() throws XPathExpressionException {
+    public Operator prepare() throws XPathExpressionException {
         return planGraph(this, new HashMap<Plan, Operator>(), new OperatorMap());
     }
 
@@ -139,6 +135,7 @@ public abstract class Operator {
 
     /**
      * Copy the operator
+     *
      * @param deep Deep copy
      */
     final public Operator copy(boolean deep) {
@@ -166,6 +163,15 @@ public abstract class Operator {
                 return input.copy(deep, map);
             }
         });
+    }
+
+    public void getAncestors(HashSet<Operator> ancestors) {
+        if (ancestors.contains(this))
+            return;
+
+        ancestors.add(this);
+        for(Operator parent: getParents())
+            parent.getAncestors(ancestors);
     }
 
 
@@ -313,12 +319,12 @@ public abstract class Operator {
      * <li>Calls the {@linkplain #doPostInit(List)} method</li>
      * </ol>
      *
-     * @param processed  The set of processed operators
-     * @param streamsMap (input) The set of needed operator streams that should go out of this operator
+     * @param processed The set of processed operators
+     * @param needed    (input) The set of needed operator streams that should go out of this operator
      * @return
      * @throws XPathExpressionException
      */
-    final private Map<Operator, Integer> init(HashMap<Operator, Map<Operator, Integer>> processed, Multimap<Operator, Operator> streamsMap) throws XPathExpressionException {
+    final private Map<Operator, Integer> init(HashMap<Operator, Map<Operator, Integer>> processed, Multimap<Operator, Operator> needed) throws XPathExpressionException {
         Map<Operator, Integer> cached = processed.get(this);
         if (cached != null)
             return cached;
@@ -330,7 +336,7 @@ public abstract class Operator {
         // First, init the parents
         List<Map<Operator, Integer>> list = new ArrayList<>();
         for (Operator parent : getParents()) {
-            Map<Operator, Integer> parentMap = parent.init(processed, streamsMap);
+            Map<Operator, Integer> parentMap = parent.init(processed, needed);
             list.add(parentMap);
         }
 
@@ -338,7 +344,7 @@ public abstract class Operator {
         // Map the previous streams
         HashMap<Operator, Integer> map = new HashMap<>();
         int count = 0;
-        Collection<Operator> streams = streamsMap.get(this);
+        Collection<Operator> streams = needed.get(this);
 
         for (Operator operator : streams) {
             for (int streamIndex = 0; streamIndex < list.size(); streamIndex++) {
@@ -374,37 +380,57 @@ public abstract class Operator {
     public void init() throws XPathExpressionException {
 
         Multimap<Operator, Operator> needed = HashMultimap.create();
-        HashSet<Operator> roots = getRoots();
+
+        // Compute children
+        Multimap<Operator, Operator> childrenMap = HashMultimap.create();
+        HashSet<Operator> roots = new HashSet<>();
+        computeChildren(roots, childrenMap);
 
         // Compute needed streams
         for (Operator root : roots)
-            root.computeNeededStreams(needed);
+            root.computeNeededStreams(childrenMap, needed);
 
         // Compute orders
         Map<Operator, Order<Operator>> orders = new HashMap<>();
         for (Operator root : roots)
-            root.computeOrder(orders);
+            root.computeOrder(childrenMap, orders);
 
         init(new HashMap<Operator, Map<Operator, Integer>>(), needed);
     }
 
+    private void computeChildren(HashSet<Operator> roots, Multimap<Operator, Operator> childrenMap) {
+        if (getParents().size() == 0)
+            roots.add(this);
+        else for (Operator parent : getParents()) {
+            // Early quit: if we already had this parent-child, this means
+            // we already visited this operator
+            if (!childrenMap.put(parent, this))
+                return;
+
+            parent.computeChildren(roots, childrenMap);
+        }
+    }
 
     /**
      * Top-down computation of the order: we ask our children
      * to compute their order and then compute ours
      *
+     * @param childrenMap
      * @param orders
      * @return
      */
-    private Order<Operator> computeOrder(Map<Operator, Order<Operator>> orders) {
+    private Order<Operator> computeOrder(Multimap<Operator, Operator> childrenMap, Map<Operator, Order<Operator>> orders) {
         if (orders.containsKey(this))
             return orders.get(this);
+
+        Collection<Operator> children = childrenMap.get(this);
 
         // Get the orders needed by children
         Order<Operator> childrenOrders[] = new Order[children.size()];
 
-        for (int i = 0; i < childrenOrders.length; i++) {
-            childrenOrders[i] = children.get(i).computeOrder(orders);
+        int i = 0;
+        for (Operator child : children) {
+            childrenOrders[i++] = child.computeOrder(childrenMap, orders);
         }
 
         WrappedResult<Order<Operator>> result = Order.combine(childrenOrders);
@@ -420,14 +446,22 @@ public abstract class Operator {
         return childrenOrder;
     }
 
-    private Collection<Operator> computeNeededStreams(Multimap<Operator, Operator> needed) {
+    /**
+     * @param childrenMap
+     * @param needed
+     * @return A collection of streams needed by this operator and its descendants
+     */
+    private Collection<Operator> computeNeededStreams(Multimap<Operator, Operator> childrenMap, Multimap<Operator, Operator> needed) {
         if (needed.containsKey(this))
             return needed.get(this);
 
         Collection<Operator> streams = needed.get(this);
+        Collection<Operator> children = childrenMap.get(this);
 
+        // Add the needed streams from all children
+        LOGGER.info("Adding needed streams for %s", this);
         for (Operator child : children) {
-            Collection<Operator> c = child.computeNeededStreams(needed);
+            Collection<Operator> c = child.computeNeededStreams(childrenMap, needed);
             for (Operator op : c)
                 // TODO: consider using the ancestors map to check if we need to add
                 if (c != child)
@@ -442,22 +476,6 @@ public abstract class Operator {
      * Add the streams neeed by this operator
      */
     protected void addNeededStreams(Collection<Operator> streams) {
-    }
-
-    private void fillRoots(HashSet<Operator> roots) {
-        if (getParents().isEmpty()) {
-            roots.add(this);
-        } else {
-            for (Operator parent : getParents()) {
-                parent.fillRoots(roots);
-            }
-        }
-    }
-
-    public HashSet<Operator> getRoots() {
-        HashSet<Operator> roots = new HashSet<>();
-        fillRoots(roots);
-        return roots;
     }
 
     /**
@@ -517,10 +535,6 @@ public abstract class Operator {
 
             attributes.put("label", labelValue);
 
-            // Checks that we are a child of our parent
-            if (!parent.children.contains(this))
-                attributes.put("color", "red");
-
             out.print("[");
             Output.print(out, ", ", attributes.entrySet(), new Formatter<Map.Entry<String, String>>() {
                 @Override
@@ -555,16 +569,6 @@ public abstract class Operator {
             }
 
         // Verify that each child has this in its parents
-        int count = 0;
-        for (Operator child : children) {
-            if (!child.getParents().contains(this))
-                count++;
-        }
-        if (count > 0) {
-            attribute += ", color=\"red\"";
-            label.append(" [" + count + "/" + children.size() + "]");
-        }
-
         if (counts != null) {
             MutableInt outCount = counts.get(this);
             if (outCount != null) {
@@ -623,7 +627,6 @@ public abstract class Operator {
             Operator newParent = simplify(parents.get(i), simplified);
             if (newParent != parents.get(i)) {
                 parents.set(i, newParent);
-                newParent.addChild(operator);
             }
         }
 
@@ -657,8 +660,5 @@ public abstract class Operator {
         return optimised;
     }
 
-    final private void addChild(Operator parent) {
-        children.add(parent);
-    }
 
 }
