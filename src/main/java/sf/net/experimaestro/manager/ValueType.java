@@ -18,10 +18,13 @@
 
 package sf.net.experimaestro.manager;
 
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.w3c.dom.Node;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -33,13 +36,79 @@ import sf.net.experimaestro.utils.log.Logger;
 public class ValueType extends Type {
     final static private Logger LOGGER = Logger.getLogger();
 
-    static final QName QNAME = null;
+    static final public QName TYPE = new QName(Manager.EXPERIMAESTRO_NS, "type");
+    static final public QName VALUE = new QName(Manager.EXPERIMAESTRO_NS, "value");
+
+    static final public QName XS_STRING = new QName(Manager.XMLSCHEMA_NS, "string");
+    static final public QName XS_FLOAT = new QName(Manager.XMLSCHEMA_NS, "float");
+    static final public QName XS_INTEGER = new QName(Manager.XMLSCHEMA_NS, "integer");
+
+    public static final QName XPM_FILE = new QName(Manager.EXPERIMAESTRO_NS, "file");
 
     private QName type;
 
     public ValueType(QName type) {
         super(null);
         this.type = type;
+    }
+
+    /**
+     * Wraps a value into an XML document
+     *
+     * @param namespace The namespace URI
+     * @param name      The local name of the element
+     * @param string    The value of the element
+     * @param type      XML type of the element
+     * @return An XML document representing the value
+     */
+    static public Document wrapString(String namespace, String name, String string, QName type) {
+        final Document doc = XMLUtils.newDocument();
+        Element element = doc.createElementNS(namespace, name);
+        element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "value", string);
+        if (type != null)
+            element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "type", type.toString());
+        doc.appendChild(element);
+        return doc;
+    }
+
+    static public Document wrap(String namespace, String name, Integer value) {
+        return wrapString(namespace, name, Integer.toString(value), XS_INTEGER);
+    }
+
+    static public Document wrap(String namespace, String name, Long value) {
+        return wrapString(namespace, name, Long.toString(value), XS_INTEGER);
+    }
+
+    static public Document wrap(String namespace, String name, Float value) {
+        return wrapString(namespace, name, Float.toString(value), XS_INTEGER);
+    }
+
+    static public Document wrap(String namespace, String name, Double value) {
+        return wrapString(namespace, name, Double.toString(value), XS_FLOAT);
+    }
+
+    static public Document wrap(String namespace, String name, FileObject value) {
+        return wrapString(namespace, name, value.toString(), XPM_FILE);
+    }
+
+    public static Document wrapObject(String namespace, String name, Object value) {
+        if (value instanceof Integer)
+            return wrap(namespace, name, (Integer) value);
+        if (value instanceof Long)
+            return wrap(namespace, name, (Long) value);
+        if (value instanceof Float)
+            return wrap(namespace, name, (Float) value);
+        if (value instanceof Double)
+            return wrap(namespace, name, (Double) value);
+
+        if (value instanceof FileObject)
+            return wrap(namespace, name, (FileObject) value);
+
+        return wrapString(namespace, name, value.toString(), null);
+    }
+
+    public static Document wrap(Object value) {
+        return wrapObject(Manager.EXPERIMAESTRO_NS, "value", value);
     }
 
     public QName getValueType() {
@@ -56,9 +125,12 @@ public class ValueType extends Type {
         return true;
     }
 
+
+
     @Override
-    public void validate(Node node) {
-        String x = Manager.unwrap(node);
+    public void validate(Element element) {
+        String x = Manager.unwrapToString(element);
+
         // Test if the value is OK
         try {
 
@@ -100,10 +172,18 @@ public class ValueType extends Type {
             ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException("Wrong value for type [%s]: %s", type, x);
             throw e2;
         }
+
+        // Annotate the XML
+        element.setAttributeNS(TYPE.getNamespaceURI(), TYPE.getLocalPart(), type.toString());
     }
 
-    public Object unwrap(Node node) {
-        String x = Manager.unwrap(node);
+    static public Object unwrap(Element element) {
+        String x = element.getAttributeNS(VALUE.getNamespaceURI(), VALUE.getLocalPart());
+
+        if (!TYPE.isAttribute(element))
+            return x;
+
+        QName type = QName.parse(TYPE.getAttribute(element));
 
         switch (type.getNamespaceURI()) {
             case Manager.XMLSCHEMA_NS:

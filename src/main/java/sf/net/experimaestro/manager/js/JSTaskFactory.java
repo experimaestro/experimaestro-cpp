@@ -23,6 +23,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -47,6 +48,7 @@ import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.XMLInput;
 import sf.net.experimaestro.manager.XQueryConnection;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -88,7 +90,17 @@ public class JSTaskFactory extends JSBaseObject {
 
 
     private static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
-        return (QName) JSUtils.get(scope, key, jsObject, allowNull);
+        Object o = JSUtils.get(scope, key, jsObject, allowNull);
+        if (o == null)
+            return null;
+
+        if (o instanceof QName)
+            return (QName) o;
+        else if (o instanceof String) {
+            return QName.parse(o.toString(), new JSNamespaceContext(scope));
+        }
+
+        throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
     }
 
     @JSFunction("create")
@@ -221,7 +233,7 @@ public class JSTaskFactory extends JSBaseObject {
             Set<String> selected = new HashSet<>();
             for (String key : keys) {
                 if (object.has(key, object))
-                        selected.add(key);
+                    selected.add(key);
 
             }
             return selected;
@@ -246,11 +258,9 @@ public class JSTaskFactory extends JSBaseObject {
                 String type;
                 if (fields.size() == 1) {
                     type = fields.iterator().next();
-                }
-                else if (fields.size() == 2 &&  fields.contains("xml") && fields.contains("task")) {
+                } else if (fields.size() == 2 && fields.contains("xml") && fields.contains("task")) {
                     type = "task";
-                }
-                else
+                } else
                     throw new ValueMismatchException("Cannot create task factory: expected value, alternative, xml, or" +
                             "task values in input definition");
 
@@ -514,7 +524,8 @@ public class JSTaskFactory extends JSBaseObject {
 
             // Set the default value
             if (el.hasAttribute("default")) {
-                final Document defaultValue = Manager.wrap(namespace, id, el.getAttribute("default"));
+                final Document defaultValue = ValueType.wrapString(namespace, id, el.getAttribute("default"),
+                        input.getType() != null ? input.getType().qname() : null);
                 input.setDefaultValue(defaultValue);
                 LOGGER.debug("Default value[" + el.getAttribute("default") + "]: " + XMLUtils.toString(defaultValue));
 
@@ -527,7 +538,7 @@ public class JSTaskFactory extends JSBaseObject {
                     document.adoptNode(child);
                     final Iterator<Element> elements = XMLUtils.elements(child.getChildNodes()).iterator();
                     if (!elements.hasNext()) {
-                        document = Manager.wrap(namespace, id, child.getTextContent());
+                        document = ValueType.wrapString(namespace, id, child.getTextContent(), input.getType().qname());
                     } else {
                         document.appendChild(elements.next());
                         if (elements.hasNext())
@@ -576,7 +587,7 @@ public class JSTaskFactory extends JSBaseObject {
                             "Could not find the create or run functions.");
 
                 JSDirectTask jdDirectTask = new JSDirectTask(xpm, this, jsScope,
-                        jsObject, (Function) function);
+                        jsObject, (Function) function, output);
                 jdDirectTask.init();
                 return jdDirectTask;
             }

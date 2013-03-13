@@ -94,7 +94,7 @@ public class AlternativeValue extends Value {
             this.value = value;
         } else {
             final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
-            String key = Manager.unwrap(element);
+            String key = Manager.unwrapToString(element);
             QName qname = QName.parse(key, element,
                     Manager.PREDEFINED_PREFIXES);
             TaskFactory subFactory = factories.get(qname);

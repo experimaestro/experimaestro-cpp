@@ -25,13 +25,14 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
@@ -122,18 +123,18 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         // --- Constants
 
         if (value instanceof Integer) {
-            return wrapValue(Integer.toString((Integer) value));
+            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Integer) value));
         }
 
         if (value instanceof Double) {
             // Because rhino returns doubles for any number
             if ((((Double) value).longValue()) == ((Double) value).doubleValue())
-                return wrapValue(Long.toString(((Double) value).longValue()));
-            return wrapValue(Double.toString((Double) value));
+                return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Long) ((Double) value).longValue()));
+            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Double) value));
         }
 
         if (value instanceof String) {
-            return wrapValue(value.toString());
+            return new Constant(ValueType.wrapString(Manager.EXPERIMAESTRO_NS, "value", (String) value, null));
         }
 
         if (JSUtils.isXML(value)) {
@@ -165,10 +166,6 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
 
-    }
-
-    private Constant wrapValue(String value1) {
-        return new Constant(Manager.wrap(Manager.EXPERIMAESTRO_NS, "value", value1));
     }
 
     @JSFunction(value = "run", scope = true)

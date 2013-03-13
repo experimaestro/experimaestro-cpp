@@ -19,7 +19,6 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -38,12 +37,12 @@ public class ArrayType extends Type {
     }
 
     @Override
-    public void validate(Node node) throws ValueMismatchException {
-        if (!QNAME.sameQName(node))
+    public void validate(Element element) throws ValueMismatchException {
+        if (!QNAME.sameQName(element))
             throw new ExperimaestroRuntimeException("Expected %s and got %s", QNAME,
-                    new QName(node));
+                    new QName(element));
 
-        for (Element child : XMLUtils.childElements(node)) {
+        for (Element child : XMLUtils.childElements(element)) {
             innerType.validate(child);
         }
     }

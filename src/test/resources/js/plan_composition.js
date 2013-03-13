@@ -34,9 +34,9 @@ tasks("ns:mult")= {
         y: { value: "xs:integer" }
     },
 
-    run: function(x, p) {
-		logger.debug("Task mult: got x=%s and y=%s: %s", p.x, p.y, Number(p.x) * Number(p.y))
-        return Number(p.x) * Number(p.y);
+    run: function(x) {
+		logger.debug("Task mult: got x=%s and y=%s: %s", x.x(), x.y(), x.x() * x.y())
+        return x.x() * x.y();
     }
 };
 
@@ -46,9 +46,9 @@ tasks("ns:plus")= {
         y: { value: "xs:integer" }
     },
 
-    run: function(x, p) {
-		logger.debug("Task plus: got x=%s and y=%s: %s", p.x, p.y, Number(p.x)+Number(p.y))
-        return Number(p.x) + Number(p.y);
+    run: function(x) {
+		logger.debug("Task plus: got x=%s and y=%s: %s", x.x(), x.y(), x.x() + x.y())
+        return x.x() + x.y()
     }
 };
 // END SNIPPET: task
@@ -60,8 +60,8 @@ tasks("ns:identity")= {
         }
     },
 
-    run: function(x, p) {
-        return p.x;
+    run: function(x) {
+        return x.x();
     }
 };
 
@@ -72,8 +72,8 @@ tasks("ns:identity_bis")= {
         }
     },
 
-    run: function(x, p) {
-        return <a>{p.x}</a>;
+    run: function(x) {
+        return <a>{x.x()}</a>;
     }
 };
 
@@ -258,7 +258,7 @@ tasks("ns:sum")= {
     run: function(p) {
         var sum = 0;
         for each(var a in p.x.xpath("xp:array/*")) {
-            sum += Number(a.get_value());
+            sum += a();
         }            
         return sum;
     }

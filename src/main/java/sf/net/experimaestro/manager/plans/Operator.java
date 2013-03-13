@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
-import sf.net.experimaestro.utils.LinkedIterable;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -113,14 +112,18 @@ public abstract class Operator {
         }
     }
 
-    public static void ensureConnections(Map<Operator, Operator> simplified, Set<Operator> set) {
-        for (Operator operator : set) {
-            Operator newOperator = getSimplified(simplified, operator);
-            if (newOperator != operator) {
-                set.remove(operator);
-                set.add(newOperator);
+    public static void ensureConnections(final Map<Operator, Operator> simplified, Set<Operator> set) {
+        ArrayList<Operator> list = new ArrayList<>(set);
+        set.clear();
+        for (Operator operator : Iterables.transform(list, new Function<Operator, Operator>() {
+            @Override
+            public Operator apply(Operator input) {
+                return getSimplified(simplified, input);
             }
+        })) {
+            set.add(operator);
         }
+
     }
 
     /**
@@ -200,8 +203,7 @@ public abstract class Operator {
     }
 
     public class OperatorIterator extends AbstractIterator<Value> {
-        boolean started = false;
-        private Value current = null;
+        private long id = 0;
 
         Iterator<ReturnValue> iterator;
         private final MutableInt counter;
@@ -216,34 +218,27 @@ public abstract class Operator {
 
         @Override
         final protected Value computeNext() {
-            started = true;
-            if (current != null && current.next != null)
-                return current = current.next;
-
             if (!iterator.hasNext())
                 return endOfData();
 
             if (counter != null)
                 counter.increment();
             ReturnValue next = iterator.next();
-            Value newValue = new Value(next.nodes);
-            if (current != null) {
-                newValue.id = current.id + 1;
-                current.next = newValue;
-            }
+            Value value = new Value(next.nodes);
+            value.id = id++;
 
             // Copy context
             if (!contextMappings.isEmpty()) {
-                newValue.context = new long[contextMappings.size()];
+                value.context = new long[contextMappings.size()];
                 for (Map.Entry<StreamReference, Integer> entry : contextMappings.entrySet()) {
                     StreamReference key = entry.getKey();
-                    newValue.context[entry.getValue()] = key.streamIndex < 0 ?
-                            newValue.id : next.contexts.get(key.streamIndex, key.contextIndex);
+                    value.context[entry.getValue()] = key.streamIndex < 0 ?
+                            value.id : next.contexts.get(key.streamIndex, key.contextIndex);
                 }
 
             }
 
-            return current = newValue;
+            return value;
         }
 
     }
@@ -257,17 +252,18 @@ public abstract class Operator {
     protected abstract Iterator<ReturnValue> _iterator(RunOptions runOptions);
 
 
-    LinkedIterable<Value> cachedIterable;
-    RunOptions cachedOptions;
+//    LinkedIterable<Value> cachedIterable;
+//    RunOptions cachedOptions;
 
     public Iterator<Value> iterator(RunOptions runOptions) {
-        if (!cacheIterator())
-            return new OperatorIterator(runOptions);
-        if (cachedIterable == null || cachedIterable.started() || cachedOptions != runOptions) {
-            cachedIterable = new LinkedIterable<>(new OperatorIterator(runOptions));
-            cachedOptions = runOptions;
-        }
-        return cachedIterable.iterator();
+        return new OperatorIterator(runOptions);
+//        if (!cacheIterator())
+//            return new OperatorIterator(runOptions);
+//        if (cachedIterable == null || cachedIterable.started() || cachedOptions != runOptions) {
+//            cachedIterable = new LinkedIterable<>(new OperatorIterator(runOptions));
+//            cachedOptions = runOptions;
+//        }
+//        return cachedIterable.iterator();
     }
 
     /**
@@ -445,7 +441,7 @@ public abstract class Operator {
         Collection<Operator> children = childrenMap.get(this);
 
         // Add the needed streams from all children
-        LOGGER.info("Adding needed streams for %s", this);
+        LOGGER.debug("Adding needed streams for %s", this);
         for (Operator child : children) {
             Collection<Operator> c = child.computeNeededStreams(childrenMap, needed);
             for (Operator op : c)

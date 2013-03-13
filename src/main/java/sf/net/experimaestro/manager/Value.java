@@ -170,14 +170,14 @@ public abstract class Value {
                 final int itemKind = xqItem.getItemType().getItemKind();
                 switch (itemKind) {
                     case XQItemType.XQITEMKIND_ATOMIC:
-                        item = Manager.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue());
+                        item = ValueType.wrapString(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue(), null);
                         break;
                     case XQItemType.XQITEMKIND_ELEMENT:
                         item = xqItem.getNode();
                         break;
                     case XQItemType.XQITEMKIND_ATTRIBUTE:
                     case XQItemType.XQITEMKIND_TEXT:
-                        item = Manager.wrap(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent());
+                        item = ValueType.wrapString(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent(), null);
                         break;
                     default:
                         throw new ExperimaestroRuntimeException(
@@ -251,4 +251,7 @@ public abstract class Value {
     }
 
 
+    public Input getInput() {
+        return input;
+    }
 }

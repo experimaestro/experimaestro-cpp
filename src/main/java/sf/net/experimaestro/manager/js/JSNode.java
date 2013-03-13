@@ -20,7 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -67,6 +67,12 @@ public class JSNode extends JSBaseObject {
         return xpath.evaluate(node);
     }
 
+    @JSFunction(value = "get_string")
+    public String getString() {
+        return node.getTextContent();
+    }
+
+
     @JSFunction(value = "get_node", scope = true)
     public Object getNode(Context context, Scriptable scope, String expression) throws XPathExpressionException {
         XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
@@ -78,8 +84,12 @@ public class JSNode extends JSBaseObject {
 
 
     @JSFunction(value = "get_value")
-    public Object getValue() throws XPathExpressionException {
-        return Manager.unwrap(node);
+    public Object getValue() {
+        return Manager.unwrapToObject(node);
+    }
+    @JSFunction(call = true)
+    public Object call() {
+        return getValue();
     }
 
     @JSFunction(value = "get_value", scope = true)
@@ -88,7 +98,11 @@ public class JSNode extends JSBaseObject {
         Node node = (Node) xpath.evaluate(this.node, XPathConstants.NODE);
         if (node == null)
             return NOT_FOUND;
-        return Manager.unwrap(node);
+        return Manager.unwrapToObject(node);
+    }
+    @JSFunction(call = true, scope = true)
+    public Object call(Context context, Scriptable scope, String expression) throws XPathExpressionException {
+        return getValue(context, scope, expression);
     }
 
     @JSFunction("text")
@@ -100,7 +114,7 @@ public class JSNode extends JSBaseObject {
     }
 
     private Element getElement() {
-        return node instanceof Document ? ((Document) node).getDocumentElement() : (Element)node;
+        return node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
     }
 
     @JSFunction(scope = true)
@@ -134,6 +148,7 @@ public class JSNode extends JSBaseObject {
         return getAttribute(node, Manager.XP_PATH);
 
     }
+
     @JSFunction(scope = true)
     public String path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException {
         NodeList nodeList = get_one_node(scope, xpath);
@@ -156,11 +171,11 @@ public class JSNode extends JSBaseObject {
 
     static String getAttribute(Node node, QName attributeQName) {
         Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
-        if (!element.hasAttributeNS(attributeQName.getNamespaceURI(), attributeQName.getLocalPart())) {
+        if (!attributeQName.isAttribute(element)) {
             throw new XPMRhinoException("No " + attributeQName + " associated to XML element %s", new QName(element));
         }
 
-        return element.getAttributeNS(attributeQName.getNamespaceURI(), attributeQName.getLocalPart());
+        return attributeQName.getAttribute(element);
     }
 
     public Node getNode() {

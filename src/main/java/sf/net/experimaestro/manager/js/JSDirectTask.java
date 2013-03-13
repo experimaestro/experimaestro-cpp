@@ -18,17 +18,18 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -48,6 +49,7 @@ public class JSDirectTask extends JSAbstractTask {
      * The run function
      */
     private Function runFunction;
+    private Type outputType;
 
     /**
      * The object?
@@ -63,15 +65,23 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     public JSDirectTask(XPMObject xpm, TaskFactory taskFactory, Scriptable jsScope,
-                        NativeObject jsFactory, Function runFunction) {
+                        NativeObject jsFactory, Function runFunction, Type outputType) {
         super(taskFactory, jsScope);
         this.xpm = xpm;
         this.jsFactory = jsFactory;
         this.runFunction = runFunction;
-
+        this.outputType = outputType;
     }
 
-
+    @Override
+    protected void init(Task _other) {
+        JSDirectTask other = (JSDirectTask) _other;
+        super.init(other);
+        jsFactory = other.jsFactory;
+        runFunction = other.runFunction;
+        xpm = other.xpm;
+        outputType = other.outputType;
+    }
 
     @Override
     public Document jsrun(boolean simulate) {
@@ -84,14 +94,17 @@ public class JSDirectTask extends JSAbstractTask {
 
         if (runFunction != null) {
             // We have a run function
-            Scriptable jsDirect = cx.newObject(jsScope, "Object", new Object[]{});
             Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
-            getJSInputs(cx, jsXML, jsDirect);
+            for (Entry<String, Value> entry : values.entrySet()) {
+                Document input = entry.getValue().get();
+                Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input);
+                jsXML.put(entry.getKey(), jsXML, xml);
+            }
 
             boolean old = xpm.simulate;
             xpm.simulate = simulate | xpm.simulate;
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
-                    new Object[]{jsXML, jsDirect});
+                    new Object[]{jsXML});
             xpm.simulate = old;
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)
@@ -105,8 +118,12 @@ public class JSDirectTask extends JSAbstractTask {
 
             Document document = XMLUtils.newDocument();
 
-            Element root = document.createElementNS(Manager.EXPERIMAESTRO_NS,
-                    "array");
+            Element root;
+            if (outputType == null)
+                root = document.createElementNS(Manager.EXPERIMAESTRO_NS, "array");
+            else
+                root = document.createElementNS(outputType.getNamespaceURI(), outputType.getLocalPart());
+
             document.appendChild(root);
 
             // Loop over non null inputs
@@ -115,11 +132,30 @@ public class JSDirectTask extends JSAbstractTask {
                 if (value != null) {
                     final Node doc = value.get();
 
+
                     if (doc != null) {
                         Element element = XMLUtils.getRootElement(doc);
+                        element = (Element) element.cloneNode(true);
+                        document.adoptNode(element);
+
+                        Input input = value.getInput();
+                        if (input != null && input.getType() instanceof ValueType) {
+                            Element newRoot = document.createElementNS(input.getNamespace(), entry.getKey());
+
+                            NamedNodeMap attributes = element.getAttributes();
+                            for (int i = 0; i < attributes.getLength(); i++)
+                                newRoot.setAttributeNode((Attr) (attributes.item(i).cloneNode(false)));
+
+                            for (Node child : XMLUtils.iterable(element.getChildNodes())) {
+                                newRoot.appendChild(child);
+                            }
+
+                            element = newRoot;
+                        }
+
+
                         element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
                                 entry.getKey());
-                        document.adoptNode(element);
                         root.appendChild(element);
                     }
                 }
@@ -134,45 +170,4 @@ public class JSDirectTask extends JSAbstractTask {
 
         return result;
     }
-
-    @Override
-    protected void init(Task _other) {
-        JSDirectTask other = (JSDirectTask) _other;
-        super.init(other);
-        jsFactory = other.jsFactory;
-        runFunction = other.runFunction;
-        xpm = other.xpm;
-    }
-
-    /** Compute the arguments of the run function */
-    protected void getJSInputs(Context cx, Scriptable jsE4X, Scriptable jsUnwrapped) {
-        for (Entry<String, Value> entry : values.entrySet()) {
-            String id = entry.getKey();
-            Value value = entry.getValue();
-            Document input = value.get();
-
-            Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input);
-            jsE4X.put(id, jsE4X, xml);
-
-            Type type = value.getType();
-            if (type instanceof ValueType && input != null) {
-                Object object = ((ValueType) type).unwrap(input);
-                if (object instanceof FileObject)
-                    object = new JSFileObject(xpm, (FileObject) object);
-                else if (!instanceOf(object, String.class, Float.class, Double.class, Integer.class, Long.class, Character.class))
-                    throw new NotImplementedException(String.format("Ooops. Don't know how to handle %s for JS", object.getClass()));
-                jsUnwrapped.put(id, jsUnwrapped, object);
-            } else
-                jsUnwrapped.put(id, jsUnwrapped, xml);
-        }
-    }
-
-    private boolean instanceOf(Object object, Class<?>... classes) {
-        for (Class<?> klass : classes)
-            if (klass.isInstance(object))
-                return true;
-        return false;
-    }
-
-
 }

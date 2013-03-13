@@ -22,19 +22,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
+ * Marks a method that can be called through the Callable interface
+ * of {@linkplain JSBaseObject}
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
+ * @date 13/3/13
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JSFunction {
-    String value() default "";
-
-    /** Whether the method takes scope & context */
-    boolean scope() default false;
-
-    /** Number of arguments that are optional */
-    int optional() default 0;
-
-    /** Marks a function that is used when the object is called */
-    boolean call() default false;
+public @interface JSCall {
 }

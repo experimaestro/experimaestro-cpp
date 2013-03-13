@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager.js;
 import com.google.common.collect.Lists;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;

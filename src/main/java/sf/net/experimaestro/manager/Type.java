@@ -20,8 +20,6 @@ package sf.net.experimaestro.manager;
 
 
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 
 /**
@@ -74,14 +72,9 @@ public class Type {
     /**
      * Validate the value
      *
-     * @param node The XML node to validate
+     * @param element The XML node to validate
      */
-    public void validate(Node node) throws ValueMismatchException {
-        final Element element = (Element)node;
-
-        if (element == null)
-            throw new ExperimaestroRuntimeException("No root element");
-
+    public void validate(Element element) throws ValueMismatchException {
         // Check if we have the expected element type
         final String tagName = element.getLocalName();
         String tagURI = element.getNamespaceURI();

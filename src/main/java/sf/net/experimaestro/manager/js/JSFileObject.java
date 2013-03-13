@@ -23,6 +23,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.ValueType;
 
 import java.io.*;
 
@@ -31,7 +32,6 @@ import java.io.*;
  * @date 26/11/12
  */
 public class JSFileObject extends JSBaseObject implements XMLSerializable {
-
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
     private XPMObject xpm;
@@ -131,7 +131,7 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
 
     @Override
     public Document serialize() {
-        return Manager.wrap(Manager.EXPERIMAESTRO_NS, "file", file.toString());
+        return ValueType.wrapString(Manager.EXPERIMAESTRO_NS, "file", file.toString(), ValueType.XPM_FILE);
     }
 
     static class MyPrintWriter extends PrintWriter {

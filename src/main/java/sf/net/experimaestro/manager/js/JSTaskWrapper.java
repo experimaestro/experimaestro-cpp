@@ -26,6 +26,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.List;
@@ -62,7 +63,7 @@ public class JSTaskWrapper extends JSBaseObject {
         if (JSUtils.isXML(value)) {
             task.setParameter(qid, JSUtils.toDocument(scope, value));
         } else {
-            task.setParameter(qid, JSUtils.toString(value));
+            task.setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
         }
     }
 

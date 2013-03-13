@@ -19,6 +19,7 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
 import java.util.Iterator;
 
@@ -29,8 +30,7 @@ import java.util.Iterator;
  * @date 13/3/13
  */
 public class LinkedIterable<T> implements Iterable<T> {
-
-    boolean started = false;
+    LinkedValue<T> current;
 
     static public class LinkedValue<T> {
         T value;
@@ -41,6 +41,10 @@ public class LinkedIterable<T> implements Iterable<T> {
             if (current != null)
                 current.next = this;
         }
+
+        public boolean eos() {
+            return next == this;
+        }
     }
 
     private final Iterator<T> iterator;
@@ -50,27 +54,33 @@ public class LinkedIterable<T> implements Iterable<T> {
     }
 
     public boolean started() {
-        return started;
+        return current != null;
     }
 
     @Override
     public Iterator<T> iterator() {
-        if (started)
-            return null;
+        if (started())
+            throw new ExperimaestroRuntimeException("Cannot iterate over a started LinkedIterable");
 
         return new AbstractIterator<T>() {
-            LinkedValue<T> current;
-
             @Override
             protected T computeNext() {
-                if (current != null && current.next != null) {
+                if (current == null)
+                    current = new LinkedValue<>(null, null);
+
+                // If a next is stored, use it
+                if (current.next != null) {
+                    if (current.eos())
+                        return endOfData();
+
                     current = current.next;
                     return current.value;
                 }
 
-                started = true;
-                if (!iterator.hasNext())
+                if (!iterator.hasNext()) {
+                    current.next = current;
                     return endOfData();
+                }
 
                 current = new LinkedValue(iterator.next(), current);
                 return current.value;

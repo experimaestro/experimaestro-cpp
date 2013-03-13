@@ -225,4 +225,10 @@ public class QName implements Comparable<QName> {
         });
     }
 
+    public boolean isAttribute(Element element) {
+        return element.hasAttributeNS(uri, localName);
+    }
+    public String getAttribute(Element element) {
+        return element.getAttributeNS(uri, localName);
+    }
 }

@@ -324,6 +324,9 @@ public class XMLUtils {
      *          if no root element exists
      */
     public static Element getRootElement(Node node) throws NoSuchElementException {
+        if (node == null)
+            throw new NoSuchElementException("No root element for null node");
+
         Element element = null;
         if (node instanceof Document) {
             element = ((Document) node).getDocumentElement();

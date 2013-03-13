@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
@@ -43,14 +44,17 @@ import java.util.TreeSet;
  */
 public abstract class Task {
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The information related to this class of experiment
      */
     protected TaskFactory factory;
+
     /**
      * List of sub-tasks
      */
     protected Map<String, Value> values = new TreeMap<>();
+
     /**
      * Sub-tasks without name (subset of the map {@link #values}).
      */
@@ -167,11 +171,17 @@ public abstract class Task {
                 final Type type = input.getType();
 
                 if (type != null && value.isSet()) {
-                    type.validate(value.get().getDocumentElement());
+                    Element element = value.get().getDocumentElement();
+                    assert element != null;
+                    type.validate(element);
                 }
             } catch (ExperimaestroRuntimeException | ExperimaestroException e) {
                 e.addContext("While processing input [%s] in task [%s]", key, factory.id);
                 throw e;
+            } catch(RuntimeException e) {
+                ExperimaestroRuntimeException xpmException = new ExperimaestroRuntimeException(e);
+                xpmException.addContext("While processing input [%s] in task [%s]", key, factory.id);
+                throw xpmException;
             }
 
         }
@@ -274,7 +284,7 @@ public abstract class Task {
     public void setParameter(DotName id, String value) throws NoSuchParameter {
         final Value v = getValue(id);
         final String ns = v.input.getNamespace();
-        final Document doc = Manager.wrap(ns, id.getName(), value);
+        final Document doc = ValueType.wrapString(ns, id.getName(), value, null);
         v.set(doc);
     }
 

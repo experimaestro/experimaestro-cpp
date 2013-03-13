@@ -18,8 +18,9 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.AbstractIterator;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
@@ -53,15 +54,12 @@ public class Constant extends Operator {
 
     @Override
     protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
-        return new AbstractIterator<ReturnValue>() {
-            Iterator<? extends Document> iterator = nodes.iterator();
-
+        return Iterators.transform(nodes.iterator(), new Function<Document, ReturnValue>() {
             @Override
-            protected ReturnValue computeNext() {
-                return iterator.hasNext() ?
-                        new ReturnValue(null, iterator.next()) : endOfData();
+            public ReturnValue apply(Document input) {
+                return new ReturnValue(null, input);
             }
-        };
+        });
     }
 
 

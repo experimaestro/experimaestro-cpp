@@ -26,6 +26,7 @@ import org.apache.log4j.Level;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeJavaObject;
@@ -35,7 +36,7 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -555,7 +556,7 @@ public class XPMObject {
      * @return a QName object
      */
     static public Object js_qname(Object ns, String localName) {
-        // First unwrap the object
+        // First unwrapToObject the object
         if (ns instanceof Wrapper)
             ns = ((Wrapper) ns).unwrap();
 
@@ -1334,6 +1335,17 @@ public class XPMObject {
             return new JSTransform(cx, scope, f, operators);
         }
 
+
+        @JSFunction("assert")
+        public static void _assert(boolean condition) {
+            if (!condition)
+                throw new EvaluatorException("assertion failed");
+        }
+        @JSFunction("assert")
+        public static void _assert(boolean condition, String format, Object... objects) {
+            if (!condition)
+                throw new EvaluatorException("assertion failed: " + String.format(format, objects));
+        }
 
     }
 }

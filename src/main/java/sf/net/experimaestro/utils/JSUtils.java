@@ -289,6 +289,9 @@ public class JSUtils {
             return node;
         }
 
+        if (object instanceof Scriptable) {
+            ((Scriptable) object).getDefaultValue(String.class);
+        }
 
         // By default, convert to string
         return document.get().createTextNode(object.toString());

@@ -2,7 +2,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;

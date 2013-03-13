@@ -49,11 +49,13 @@ public class Manager {
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
     public static final QName XP_RESOURCE = new QName(EXPERIMAESTRO_NS, "resource");
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
+    public static final QName XP_NAME = new QName(EXPERIMAESTRO_NS, "name");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
         PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
     }
+
 
 
     /**
@@ -71,20 +73,31 @@ public class Manager {
         return map;
     }
 
+
     /**
-     * Wraps a value into an XML document
+     * Unwraps the value from XML to an object
      *
-     * @param namespace The namespace URI
-     * @param name      The local name of the element
-     * @param value     The value of the element
-     * @return An XML document representing the value
+     * @param node
+     * @return
      */
-    static public Document wrap(String namespace, String name, String value) {
-        final Document doc = XMLUtils.newDocument();
-        Element element = doc.createElementNS(namespace, name);
-        element.setAttributeNS(EXPERIMAESTRO_NS, "value", value);
-        doc.appendChild(element);
-        return doc;
+    static public Object unwrapToObject(Node node) {
+        if (node instanceof DocumentFragment && node.getChildNodes().getLength() == 1) {
+            node = node.getFirstChild();
+        }
+        if (node instanceof Text || node instanceof Attr)
+            return node.getTextContent();
+
+        if (node instanceof Document)
+            node = ((Document) node).getDocumentElement();
+
+        // Check if we have an associated value...
+        Element element = (Element) node;
+        if (element.hasAttributeNS(EXPERIMAESTRO_NS, "value")) {
+            return ValueType.unwrap(element);
+        }
+
+        // ... otherwise, returns the text content
+        return element.getTextContent();
     }
 
     /**
@@ -93,24 +106,31 @@ public class Manager {
      * @param node
      * @return
      */
-    static public String unwrap(Node node) {
+    static public String unwrapToString(Node node) {
         if (node instanceof DocumentFragment && node.getChildNodes().getLength() == 1) {
             node = node.getFirstChild();
         }
         if (node instanceof Text || node instanceof Attr)
             return node.getTextContent();
 
-        node = XMLUtils.getRootElement(node);
+        if (node instanceof Document)
+            node = ((Document) node).getDocumentElement();
 
         // Check if we have an associated value...
-        Element element = ((Element) node);
-        if (element.hasAttributeNS(EXPERIMAESTRO_NS, "value"))
-            return element.getAttributeNS(EXPERIMAESTRO_NS, "value");
+        Element element = (Element) node;
+        if (ValueType.VALUE.isAttribute(element)) {
+            return ValueType.VALUE.getAttribute(element);
+        }
 
         // ... otherwise, returns the text content
         return element.getTextContent();
     }
 
+    /**
+     * Wrap a node into a document
+     * @param node
+     * @return
+     */
     public static Document wrap(Node node) {
         if (node instanceof Document)
             return (Document) node;
@@ -145,4 +165,6 @@ public class Manager {
 
         return document;
     }
+
+
 }

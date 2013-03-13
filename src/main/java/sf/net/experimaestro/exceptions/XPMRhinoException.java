@@ -16,9 +16,9 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.mozilla.javascript;
+package sf.net.experimaestro.exceptions;
 
-import sf.net.experimaestro.exceptions.ContextualException;
+import org.mozilla.javascript.EvaluatorException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,12 +29,12 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/3/13
  */
-public class XPMRhinoException extends RhinoException implements ContextualException {
+public class XPMRhinoException extends EvaluatorException implements ContextualException {
     private static final long serialVersionUID = 1L;
     ArrayList<String> context = new ArrayList<>();
 
     public XPMRhinoException() {
-        super();
+        super("");
     }
 
     public XPMRhinoException(String message, Throwable t) {
@@ -47,7 +47,7 @@ public class XPMRhinoException extends RhinoException implements ContextualExcep
         initCause(t);
     }
     public XPMRhinoException(Throwable t) {
-        super();
+        super("Wrapped exception");
         initCause(t);
     }
 

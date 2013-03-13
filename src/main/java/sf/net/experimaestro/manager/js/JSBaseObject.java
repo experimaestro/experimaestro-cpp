@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaClass;
 import org.mozilla.javascript.NativeJavaObject;
@@ -26,6 +27,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrapFactory;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -42,7 +44,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12
  */
-abstract public class JSBaseObject implements Scriptable, JSConstructable {
+abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
     final static private HashMap<Class<?>, Map<String, MethodFunction>> METHODS = new HashMap<>();
 
     private Map<String, MethodFunction> methods;
@@ -67,11 +69,15 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable {
                 METHODS.put(aClass, methods = new HashMap<>());
                 for (Method method : aClass.getDeclaredMethods()) {
                     final JSFunction annotation = method.getAnnotation(JSFunction.class);
+
                     if (annotation != null) {
                         if ((method.getModifiers() & Modifier.PUBLIC) == 0)
                             throw new AssertionError("The method " + method + " is not public");
                         String jsName = annotation.value();
-                        if ("".equals(jsName))
+                        if (annotation.call()) {
+                            assert jsName.equals("");
+                            jsName = null;
+                        } else if ("".equals(jsName))
                             jsName = method.getName();
 
                         MethodFunction methodFunction = methods.get(jsName);
@@ -139,6 +145,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable {
         }
     }
 
+    @Override
+    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+        if (methods.containsKey(null))
+            return methods.get(null).call(cx, scope, this, args);
+        throw new XPMRhinoException("Cannot call object of type %s", getClassName());
+    }
 
     @Override
     public String getClassName() {

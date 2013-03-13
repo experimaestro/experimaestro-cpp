@@ -24,7 +24,7 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Ref;
 import org.mozilla.javascript.RefCallable;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
