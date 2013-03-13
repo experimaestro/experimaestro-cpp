@@ -1214,7 +1214,7 @@ public class XPMObject {
         public Scriptable getTask(
                 String namespaceURI,
                 String localName) {
-            return xpm.getTask(namespaceURI, namespaceURI);
+            return xpm.getTask(namespaceURI, localName);
         }
 
 

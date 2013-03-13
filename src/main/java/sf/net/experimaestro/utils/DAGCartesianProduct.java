@@ -38,7 +38,7 @@ import java.util.Set;
 
 /**
  * This produces a cartesian product over all the possible combinations, taking care of dependencies
- * induced by a TaskNode (i.e. an iterator depends on its parents).
+ * induced by a TaskOperator (i.e. an iterator depends on its parents).
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */

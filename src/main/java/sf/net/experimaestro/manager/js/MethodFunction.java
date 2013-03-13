@@ -27,6 +27,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.WrappedException;
 import org.mozilla.javascript.XPMRhinoException;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
@@ -202,7 +203,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
         } catch (XPMRhinoException e) {
             throw e;
         } catch (Throwable e) {
-            throw new XPMRhinoException(e);
+            throw new WrappedException(new XPMRhinoException(e));
         }
 
     }
@@ -234,6 +235,8 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
                         case "String":
                         case "ConsString":
                             return Functions.toStringFunction();
+                        default:
+                            score -= 10;
                     }
                 } else if (o instanceof CharSequence) {
                     score--;
@@ -264,16 +267,17 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
         final Class<?>[] types = method.getParameterTypes();
 
+        // Number of "true" arguments (not scope, not vararg)
         final int nbArgs = types.length - offset - (method.isVarArgs() ? 1 : 0);
 
         // The number of arguments should be in:
-        // [nbArgs - optional - 1, ...] if varargs
+        // [nbArgs - optional, ...] if varargs
         // [nbArgs - optional, nbArgs] otherwise
 
-        if (method.isVarArgs()) {
-            if (args.length < nbArgs - optional - 1)
-                return Integer.MIN_VALUE;
-        } else if (args.length < nbArgs - optional || args.length > nbArgs)
+        if (args.length < nbArgs - optional)
+            return Integer.MIN_VALUE;
+
+        if (!method.isVarArgs() && args.length > nbArgs)
             return Integer.MIN_VALUE;
 
 

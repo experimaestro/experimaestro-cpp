@@ -30,7 +30,7 @@ tasks("abc:task") = {
     // One input of type xs:integer
     inputs: <inputs><value type="xs:integer" id="x"/><value type="xs:integer" id="y"/></inputs>,
     
-    // The function that will be called when the task is run
+    // The function that will be called when the task is run_plan
 	run: function(inputs) {
 	    // Multiply x by y and add it to the results array
         results.push(inputs.x.get_value() * inputs.y.get_value());
@@ -55,7 +55,7 @@ function test_plan_1() {
     // START SNIPPET: check
     results = [];
     tasks("abc:task").run_plan("x=1,2 * y=5,7");
-    xpm.log("The task returned\n%s", results.toSource());
+    logger.info("The task returned\n%s", results.toSource());
     // END SNIPPET: check
     check([5, 10, 7, 14]);
 }

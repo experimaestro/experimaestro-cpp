@@ -71,6 +71,8 @@ public class JSDirectTask extends JSAbstractTask {
 
     }
 
+
+
     @Override
     public Document jsrun(boolean simulate) {
         LOGGER.debug("[Running] task: %s", factory.getId());
@@ -87,7 +89,7 @@ public class JSDirectTask extends JSAbstractTask {
             getJSInputs(cx, jsXML, jsDirect);
 
             boolean old = xpm.simulate;
-            xpm.simulate = true;
+            xpm.simulate = simulate | xpm.simulate;
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
                     new Object[]{jsXML, jsDirect});
             xpm.simulate = old;
@@ -139,6 +141,7 @@ public class JSDirectTask extends JSAbstractTask {
         super.init(other);
         jsFactory = other.jsFactory;
         runFunction = other.runFunction;
+        xpm = other.xpm;
     }
 
     /** Compute the arguments of the run function */

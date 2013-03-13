@@ -47,7 +47,7 @@ import java.util.TreeMap;
 
 /**
  * A fake operator corresponding to a task factory. This is replaced by
- * {@linkplain TaskNode} when constructing the final plan.
+ * {@linkplain TaskOperator} when constructing the final plan.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
@@ -101,16 +101,7 @@ public class Plan extends Operator {
     }
 
 
-    /**
-     * Prepare an operator
-     *
-     * @return
-     * @throws XPathExpressionException
-     */
-    @Override
-    public Operator prepare() throws XPathExpressionException {
-        return prepare(new HashMap<Operator, Operator>(), new OperatorMap());
-    }
+
 
     @Override
     public Plan doCopy(boolean deep, Map<Object, Object> map) {
@@ -150,7 +141,7 @@ public class Plan extends Operator {
     }
 
     private Operator prepare(boolean simplify, boolean initialize) throws XPathExpressionException {
-        // Creates the TaskNode
+        // Creates the TaskOperator
         Operator operator = prepare(new HashMap<Operator, Operator>(), new OperatorMap());
         if (LOGGER.isTraceEnabled())
             try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
@@ -215,7 +206,7 @@ public class Plan extends Operator {
             }
 
             // Create a new operator
-            TaskNode self = new TaskNode(this);
+            TaskOperator self = new TaskOperator(this);
 
             Operator inputOperators[] = new Operator[inputValues.length];
             BitSet[] joins = new BitSet[inputOperators.length];

@@ -26,9 +26,9 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
+import sf.net.experimaestro.utils.LinkedIterable;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -73,6 +73,10 @@ public abstract class Operator {
     public void addParent(Operator parent) {
     }
 
+    final public Operator getParent(int i) {
+        return getParents().get(i);
+    }
+
     /**
      * Recursive initialization of operator
      */
@@ -85,14 +89,16 @@ public abstract class Operator {
         return this;
     }
 
-    final public Operator getParent(int i) {
-        return getParents().get(i);
+    /**
+     * Prepare an operator
+     *
+     * @return
+     * @throws XPathExpressionException
+     */
+    public Operator prepare() throws XPathExpressionException {
+        return prepare(new HashMap<Operator, Operator>(), new OperatorMap());
     }
 
-    public void addSubPlans(Set<Plan> set) {
-        for (Operator parent : getParents())
-            parent.addSubPlans(set);
-    }
 
     static Operator getSimplified(Map<Operator, Operator> simplified, Operator operator) {
         Operator tmp;
@@ -122,15 +128,6 @@ public abstract class Operator {
      */
     public int outputSize() {
         return outputSize;
-    }
-
-    public Operator prepare() throws XPathExpressionException {
-        return planGraph(this, new HashMap<Plan, Operator>(), new OperatorMap());
-    }
-
-    private Operator planGraph(Operator operator, HashMap<Plan, Operator> planOperatorHashMap, OperatorMap operatorMap) {
-        // TODO: implement planGraph
-        throw new NotImplementedException();
     }
 
     /**
@@ -170,7 +167,7 @@ public abstract class Operator {
             return;
 
         ancestors.add(this);
-        for(Operator parent: getParents())
+        for (Operator parent : getParents())
             parent.getAncestors(ancestors);
     }
 
@@ -251,45 +248,34 @@ public abstract class Operator {
 
     }
 
+    /**
+     * Creates a new iterator
+     *
+     * @param runOptions Options
+     * @return A new iterator over return values
+     */
     protected abstract Iterator<ReturnValue> _iterator(RunOptions runOptions);
 
 
+    LinkedIterable<Value> cachedIterable;
+    RunOptions cachedOptions;
+
     public Iterator<Value> iterator(RunOptions runOptions) {
-        return new OperatorIterator(runOptions);
-//        OperatorIterator iterator = _iterator();
-//        if (currentIterator != null && !currentIterator.started)
-//            iterator.current = currentIterator.current;
-//        return currentIterator = iterator;
+        if (!cacheIterator())
+            return new OperatorIterator(runOptions);
+        if (cachedIterable == null || cachedIterable.started() || cachedOptions != runOptions) {
+            cachedIterable = new LinkedIterable<>(new OperatorIterator(runOptions));
+            cachedOptions = runOptions;
+        }
+        return cachedIterable.iterator();
     }
 
-
-//    /**
-//     * Prepare the streams of an operator (last operation before running)
-//     *
-//     * @param request (in/out) The request in terms of streams
-//     * @return
-//     * @throws XPathExpressionException
-//     */
-//    protected Operator doPrepare(StreamRequest request) throws XPathExpressionException {
-//        return this;
-//    }
-//    final private Operator prepare(HashSet<Operator> processed) throws XPathExpressionException {
-//        if (processed.contains(this))
-//            return null;
-//
-//        for (Operator parent : getParents()) {
-//            Multiset<Operator> parentCounts = HashMultiset.create();
-//        }
-//
-//        final Operator operator = doPrepare(null);
-//
-//        return operator;
-//    }
-//
-//    public Operator prepare() throws XPathExpressionException {
-//        return prepare(new HashSet<Operator>());
-//    }
-
+    /**
+     * Whether we should cache the result of the iterator to avoid recomputing the values
+     */
+    boolean cacheIterator() {
+        return false;
+    }
 
     /**
      * Initialize the node (called before the initalization of parents)

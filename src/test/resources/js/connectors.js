@@ -44,8 +44,6 @@ function test_local() {
 	check(r);
 }
 
-test_local();
-
 /*
 
 	SSH connectors
@@ -61,7 +59,7 @@ function test_ssh() {
 	sshOptions.password = "user";
 
 	var port = sshd_server();
-	xpm.log("SSH server on port " + port);
+	logger.info("SSH server on port " + port);
 
 	var big_ssh = new Connector("ssh://user@localhost" + ":" + port );
 	include_repository(big_ssh, repository_path.get_path());

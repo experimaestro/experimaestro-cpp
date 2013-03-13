@@ -35,7 +35,7 @@ function test_simple() {
         check_array(result, [1, 2]);
 }
 
-// function test_simple() {
+function test_simple() {
     var input = new PlanInput([
         <a><b>10</b><c>1</c><c>2</c></a>,
         <a><b>20</b><c>3</c></a>
@@ -48,8 +48,8 @@ function test_simple() {
             }
         }
 
-        var plan = tasks("plus").plan({ b: input.path("/a/b"), c: input.path("/a/c") });
+        var plan = tasks("plus").plan({ b: input.xpath("/a/b"), c: input.xpath("/a/c") });
         logger.debug("Plan:%n%s%n", plan.to_dot(true));
         var result = plan.run();
         check_array(result, [11, 12, 23]);
-// }
+}

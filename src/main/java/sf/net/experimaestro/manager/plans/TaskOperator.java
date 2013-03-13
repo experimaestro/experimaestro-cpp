@@ -34,11 +34,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * A plan node that can be iterated over
+ * An operator associated to a task
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskNode extends UnaryOperator {
+public class TaskOperator extends UnaryOperator {
     /**
      * The associated plan
      */
@@ -54,15 +54,21 @@ public class TaskNode extends UnaryOperator {
      *
      * @param plan The associated plan
      */
-    public TaskNode(Plan plan) {
+    public TaskOperator(Plan plan) {
         this.plan = plan;
     }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        TaskNode copy = new TaskNode(plan);
+        TaskOperator copy = new TaskOperator(plan);
         copy.mappings = new TreeMap<>(mappings);
         return super.copy(deep, map, copy);
+    }
+
+    @Override
+    boolean cacheIterator() {
+        // We want values to be cached
+        return true;
     }
 
     /**
@@ -106,8 +112,8 @@ public class TaskNode extends UnaryOperator {
     @Override
     public boolean equals(Object obj) {
         // either the same plan node, or the same plan
-        if (obj instanceof TaskNode) {
-            TaskNode other = (TaskNode) obj;
+        if (obj instanceof TaskOperator) {
+            TaskOperator other = (TaskOperator) obj;
             return other == this || getPlan().equals(other.getPlan());
         }
 

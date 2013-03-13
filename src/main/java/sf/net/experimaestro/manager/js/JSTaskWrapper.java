@@ -71,6 +71,11 @@ public class JSTaskWrapper extends JSBaseObject {
         return new JSNode(task.run(simulate));
     }
 
+    @JSFunction("run")
+    public Object run() throws ValueMismatchException, NoSuchParameter {
+        return new JSNode(task.run(false));
+    }
+
     @JSFunction(value = "run_plan", scope = true)
     public Object runPlan(Context cx, Scriptable scope, String planString) throws Exception {
         return wrap(task.runPlan(planString, false, new JSScriptRunner(scope), false));
