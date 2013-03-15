@@ -24,6 +24,7 @@ import org.mozilla.javascript.Context;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.*;
 
@@ -42,6 +43,11 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
     public JSFileObject(XPMObject xpm, FileObject file) {
         this.xpm = xpm;
         this.file = file;
+    }
+
+    public JSFileObject(XPMObject xpm, String path) throws FileSystemException {
+        this.xpm = xpm;
+        this.file = Scheduler.getVFSManager().resolveFile(path);
     }
 
     @Override

@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
@@ -143,16 +144,18 @@ public class JSNode extends JSBaseObject {
         return getAttribute(nodeList.item(0), Manager.XP_RESOURCE);
     }
 
-    @JSFunction
-    public String path() {
-        return getAttribute(node, Manager.XP_PATH);
+    @JSFunction(scope = true)
+    public JSFileObject path(Context cx, Scriptable scope) throws FileSystemException {
+        XPMObject xpm = XPMObject.getXPMObject(scope);
+        return new JSFileObject(xpm, getAttribute(node, Manager.XP_PATH));
 
     }
 
     @JSFunction(scope = true)
-    public String path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException {
+    public JSFileObject path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
         NodeList nodeList = get_one_node(scope, xpath);
-        return getAttribute(nodeList.item(0), Manager.XP_PATH);
+        XPMObject xpm = XPMObject.getXPMObject(scope);
+        return  new JSFileObject(xpm, getAttribute(nodeList.item(0), Manager.XP_PATH));
     }
 
     @JSFunction(scope = true)

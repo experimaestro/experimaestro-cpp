@@ -28,17 +28,28 @@ import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.*;
+import org.mortbay.jetty.security.Constraint;
+import org.mortbay.jetty.security.ConstraintMapping;
+import org.mortbay.jetty.security.HashUserRealm;
+import org.mortbay.jetty.security.Password;
+import org.mortbay.jetty.security.SecurityHandler;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.thread.ThreadPool;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.server.*;
+import sf.net.experimaestro.server.StreamServer;
+import sf.net.experimaestro.server.ContentServlet;
+import sf.net.experimaestro.server.JSHelpServlet;
+import sf.net.experimaestro.server.StatusServlet;
+import sf.net.experimaestro.server.TasksServlet;
+import sf.net.experimaestro.server.XPMXMLRpcServlet;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
+import java.net.URL;
 import java.util.Iterator;
 
 /**
@@ -49,12 +60,10 @@ import java.util.Iterator;
 @TaskDescription(name = "server", project = {"xpmanager"})
 public class ServerTask extends AbstractTask {
     final static Logger LOGGER = Logger.getLogger();
+    public static final String KEY_SERVER_SOCKET = "server.socket";
 
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
     HierarchicalINIConfiguration configuration;
-
-    /** Our server */
-    private Server server;
 
     /**
      * Server thread
@@ -67,6 +76,7 @@ public class ServerTask extends AbstractTask {
         }
         LOGGER.info("Reading configuration from " + configuration.getFileName());
 
+
         // --- Get the port
         int port = configuration.getInt("server.port", 8080);
         LOGGER.info("Starting server on port %d", port);
@@ -77,16 +87,15 @@ public class ServerTask extends AbstractTask {
             throw new IllegalArgumentException("No 'database' in 'server' section of the configuration file");
 
         File taskmanagerDirectory = new File(property);
-        final Scheduler taskManager = new Scheduler(taskmanagerDirectory);
+        final Scheduler scheduler = new Scheduler(taskmanagerDirectory);
 
         // Main repository
         final Repositories repositories = new Repositories(new ResourceLocator(XPMConnector.getInstance(), ""));
 
-        // TODO: use a UNIX socket for more secure access
-        server = new Server(port);
+        Server webServer = new Server(port);
 //        server.addConnector(new UnixSocketConnector());
 
-        Context context = new Context(server, "/");
+        Context context = new Context(webServer, "/");
 
         // -- Security
         // From
@@ -130,8 +139,8 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the XML RPC servlet
 
-        final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(server,
-                repositories, taskManager);
+        final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(webServer,
+                repositories, scheduler);
 
         xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
@@ -140,13 +149,13 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new StatusServlet(taskManager)),
+        context.addServlet(new ServletHolder(new StatusServlet(scheduler)),
                 "/status/*");
 
         // --- Add the status servlet
 
         context.addServlet(new ServletHolder(new TasksServlet(repositories,
-                taskManager)), "/tasks/*");
+                scheduler)), "/tasks/*");
 
 
         // --- Add the JS Help servlet
@@ -165,8 +174,37 @@ public class ServerTask extends AbstractTask {
 
         // --- start the server
 
-        server.start();
-        server.join();
+        webServer.start();
+        ThreadPool threadPool = webServer.getThreadPool();
+
+        // --- Socket
+        if (configuration.containsKey(KEY_SERVER_SOCKET)) {
+            String libraryPath = System.getProperty("org.newsclub.net.unix.library.path");
+            if (libraryPath == null) {
+                URL url = ServerTask.class.getProtectionDomain().getCodeSource().getLocation();
+                File file = new File(url.toURI());
+                while (file != null && !new File(file, "native-libs").exists()) {
+                    file = file.getParentFile();
+                }
+                if (file == null)
+                    throw new UnsatisfiedLinkError("Cannot find the native-libs directory");
+                file = new File(file, "native-libs");
+
+                LOGGER.info("Using path for junixsocket library [%s]", file);
+                System.setProperty("org.newsclub.net.unix.library.path", file.getAbsolutePath());
+            }
+
+            String socketSpec = configuration.getString(KEY_SERVER_SOCKET);
+            StreamServer streamServer = new StreamServer(threadPool, new File(socketSpec), repositories, scheduler);
+            streamServer.start();
+        }
+
+        // --- Wait for servers to close
+        threadPool.join();
+
+
+        LOGGER.info("Servers are stopped. Clean exit!");
+
         return 0;
     }
 

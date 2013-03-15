@@ -37,6 +37,12 @@
 
     <repositories>
         <repository>
+            <id>ExperimaestroLocalRepo</id>
+            <name>Local experimaestro repository</name>
+            <url>file://${project.basedir}/libs</url>
+        </repository>
+
+        <repository>
             <id>oracleReleases</id>
             <name>Oracle Released Java Packages</name>
             <url>http://download.oracle.com/maven</url>
@@ -213,7 +219,16 @@
     </build>
 
     <dependencies>
-
+        <dependency>
+            <groupId>com.google.code</groupId>
+            <artifactId>junixsocket</artifactId>
+            <version>1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>msgpack</artifactId>
+            <version>0.6.7</version>
+        </dependency>
         <dependency>
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>

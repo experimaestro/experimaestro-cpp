@@ -39,7 +39,7 @@ public class XPMConnector extends SingleHostConnector {
     /**
      * A special connector for DB handled resources
      */
-    public static final String ID = "xpmdb";
+    private static final String ID = "xpmdb";
 
     protected XPMConnector() {
         super(ID + "://");

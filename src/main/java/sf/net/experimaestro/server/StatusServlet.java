@@ -70,12 +70,19 @@ public class StatusServlet extends XPMServlet {
                     for (Resource resource : resources) {
                         resource.init(scheduler);
                         if (resource.getState() == state) {
-                            out.format(
-                                    "<li><a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
-                                    request.getServletPath(),
-                                    urlEncode(resource.getLocator().getConnectorId()),
-                                    urlEncode(resource.getLocator().getPath()),
-                                    resource.getLocator());
+                            try {
+                                ResourceLocator locator = resource.getLocator();
+                                out.format(
+                                        "<li>[%s/%s] <a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
+                                        resource.getId(),
+                                        resource.getData().getID(),
+                                        request.getServletPath(),
+                                        urlEncode(locator.getConnectorId()),
+                                        urlEncode(locator.getPath()),
+                                        locator);
+                            } catch(Throwable t) {
+                                out.format("<li><b>Resource ID %s</b> without locator</li>", resource.getId());
+                            }
                         }
                     }
                 } catch (CloseException e) {

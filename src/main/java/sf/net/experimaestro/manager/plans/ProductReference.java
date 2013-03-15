@@ -18,11 +18,11 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.sun.tools.javac.util.List;
 import org.apache.commons.lang.NotImplementedException;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -56,7 +56,7 @@ public class ProductReference extends NAryOperator {
 
             int index = 0;
             for (Operator input : parents) {
-                inputValues[index] = new Plan.OperatorIterable(List.of(input), map, opMap);
+                inputValues[index] = new Plan.OperatorIterable(Arrays.asList(input), map, opMap);
                 index++;
             }
         }

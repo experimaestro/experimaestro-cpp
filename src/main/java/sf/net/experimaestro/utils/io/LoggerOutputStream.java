@@ -53,9 +53,6 @@ import java.io.OutputStream;
 //
 public class LoggerOutputStream extends OutputStream {
 
-    static Logger myLogger = Logger.getLogger(LoggerOutputStream.class
-            .getName());
-
     /**
      * Used to maintain the contract of [EMAIL PROTECTED] #close()}.
      */

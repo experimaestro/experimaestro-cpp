@@ -1121,7 +1121,7 @@ public class XPMObject {
         public Scriptable getTokenResource(
                 @JSArgument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
-            final ResourceLocator locator = new ResourceLocator(XPMConnector.ID, path);
+            final ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), path);
             final Resource resource = xpm.scheduler.getResource(locator);
             final TokenResource tokenResource;
             if (resource == null) {

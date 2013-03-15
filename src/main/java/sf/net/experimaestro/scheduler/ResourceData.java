@@ -91,4 +91,8 @@ public class ResourceData {
     public void setResourceID(long resourceID) {
         this.resourceId = resourceID;
     }
+
+    public long getID() {
+        return resourceId;
+    }
 }

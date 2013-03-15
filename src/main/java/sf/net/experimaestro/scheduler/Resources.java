@@ -185,7 +185,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
      * @throws ExperimaestroCannotOverwrite If the old resource could not be overriden
      */
     @Override
-    public Resource put(Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
+    synchronized public Resource put(Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Get the group
         LOGGER.debug("Storing resource [%s]", resource);
         groupsTrie.put(DotName.parse(resource.getData().getGroupId()));

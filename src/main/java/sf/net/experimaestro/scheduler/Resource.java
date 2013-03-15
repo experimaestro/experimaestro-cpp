@@ -174,7 +174,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Get the resource data
      */
-    Data getData() {
+    public Data getData() {
         // data should not be null if initialized directly
         if (data == null) {
             assert scheduler != null;
@@ -236,8 +236,10 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * @return true if the resource was replaced, and false if an error occured
      */
     public boolean replace(Resource old) throws ExperimaestroCannotOverwrite {
+        if (!UPDATABLE_STATES.contains(old.state))
+            return false;
         synchronized (old) {
-            assert old.getLocator().equals(getLocator()) : "locators do not match";
+            assert old.getLocator().equals(getLocator()) : String.format("locators %s and %s do not match", old, this);
             if (UPDATABLE_STATES.contains(old.state)) {
                 scheduler.store(this, false);
                 return true;

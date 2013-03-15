@@ -133,6 +133,7 @@ public class JSDocumentation {
         printer.append(functions);
 
 
+        // --- Objects
         printer.append(new Documentation.Title(1, new Documentation.Text("Objects")));
         ArrayList<Class<?>> list = new ArrayList<>();
 
