@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.scheduler;
 
+import java.util.EnumSet;
+
 /**
  * The resource state
  * 
@@ -33,6 +35,11 @@ public enum ResourceState {
 	 * For a job only: the job is waiting for an available thread to launch it
 	 */
 	READY,
+
+    /**
+     * Job is in locking mode (before running)
+     */
+    LOCKING,
 
 	/**
 	 *  For a job only: The job is currently running
@@ -54,6 +61,11 @@ public enum ResourceState {
 	 */
 	DONE;
 
+    /**
+     * States in which a resource can replaced
+     */
+    final static EnumSet<ResourceState> UPDATABLE_STATES
+            = EnumSet.of(READY, ON_HOLD, ERROR, WAITING);
 
     /**
      * Returns true if the resource is not done and
@@ -70,6 +82,12 @@ public enum ResourceState {
      * @return
      */
     public boolean isActive() {
-        return this == WAITING || this == RUNNING || this == READY;
+        return this == WAITING || this == LOCKING ||  this == RUNNING || this == READY;
+    }
+
+
+    @Override
+    public String toString() {
+        return super.toString().toLowerCase();
     }
 }

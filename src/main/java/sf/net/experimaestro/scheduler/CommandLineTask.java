@@ -87,7 +87,7 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * The parameter files
      */
-    public TreeMap<String, String> parameterFiles = new TreeMap<>();
+    public TreeMap<String, byte[]> parameterFiles = new TreeMap<>();
 
 
     protected CommandLineTask() {
@@ -186,10 +186,10 @@ public class CommandLineTask extends Job<JobData> {
 
         // Add files
         TreeMap<String, FileObject> files = new TreeMap<>();
-        for(Map.Entry<String, String> entry: parameterFiles.entrySet()) {
+        for(Map.Entry<String, byte[]> entry: parameterFiles.entrySet()) {
             FileObject inputFile = locator.resolve(connector, "." + entry.getKey() + INPUT_EXTENSION);
             final OutputStream outputStream = inputFile.getContent().getOutputStream();
-            outputStream.write(entry.getValue().getBytes());
+            outputStream.write(entry.getValue());
             outputStream.close();
             files.put(entry.getKey(), inputFile);
         }
@@ -229,7 +229,7 @@ public class CommandLineTask extends Job<JobData> {
         this.jobErrorPath = fileObject.toString();
     }
 
-    public void setParameterFile(String key, String value) {
+    public void setParameterFile(String key, byte[] value) {
         parameterFiles.put(key, value);
     }
 

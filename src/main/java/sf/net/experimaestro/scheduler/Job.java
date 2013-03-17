@@ -177,6 +177,9 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         ArrayList<Lock> locks = new ArrayList<>();
 
         try {
+            // We are running (prevents other task to try to replace ourselves)
+            state = ResourceState.LOCKING;
+
             while (true) {
                 // Check if not done
                 if (isDone()) {
@@ -188,7 +191,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
                 // Try to lock, otherwise wait
                 try {
-                    locks.add(getMainConnector().createLockFile(getLocator().path + LOCK_EXTENSION));
+                    locks.add(getMainConnector().createLockFile(getLocator().path + LOCK_EXTENSION, false));
                 } catch (LockException e) {
                     LOGGER.info("Could not lock job [%s]", this);
                     synchronized (this) {
@@ -204,6 +207,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
+                    state = ResourceState.DONE;
                     storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
@@ -244,6 +248,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
                     state = ResourceState.ERROR;
+                    storeState(true);
                 } finally {
                 }
 
@@ -256,6 +261,12 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
+            // Revert back the state to READY if we failed to lock
+            if (state == ResourceState.LOCKING) {
+                state = ResourceState.READY;
+                storeState(true);
+            }
+
             // Dispose of the locks that we own
             if (locks != null)
                 for (Lock lock : locks)
@@ -416,14 +427,18 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
         if (!getDependencies().isEmpty()) {
             out.format("<h2>Dependencies</h2><ul>");
-            out.format("<div>%d (%d) unsatisfied (holding) dependencie(s)</div>",
+            out.format("<div>%d unsatisfied / %d holding dependencie(s)</div>",
                     nbUnsatisfied, nbHolding);
             for (Dependency dependency : getDependencies()) {
+
+                Resource resource = scheduler.getResource(dependency.getFrom());
+                resource.init(scheduler);
+
                 out.format(
                         "<li><a href=\"%s/resource/%d\">%s</a>: %s</li>",
                         config.detailURL,
                         getId(),
-                        getLocator(),
+                        resource.getLocator(),
                         dependency);
             }
             out.println("</ul>");

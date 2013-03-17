@@ -63,7 +63,7 @@ public class ExclusiveDependency extends Dependency {
         Resource resource = getFrom(scheduler, from);
         try {
             FileObject file = resource.getFileWithExtension(Resource.LOCK_EXTENSION);
-            final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath());
+            final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath(), true);
             return lockFile;
         } catch (FileSystemException e) {
             throw new LockException(e);

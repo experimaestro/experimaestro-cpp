@@ -54,6 +54,10 @@ public class ReadWriteDependency extends Dependency {
         super(from);
     }
 
+    @Override
+    public String toString() {
+        return "Read-Write";
+    }
 
     @Override
     synchronized protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
@@ -157,7 +161,7 @@ public class ReadWriteDependency extends Dependency {
         public void updateStatusFile(SingleHostConnector connector, String path, String pidFrom, String pidTo, boolean writeAccess)
                 throws LockException {
             // --- Lock the resource
-            try (Lock ignored = connector.createLockFile(path + LOCK_EXTENSION)) {
+            try (Lock ignored = connector.createLockFile(path + LOCK_EXTENSION, true)) {
 
                 try {
                     // --- Read the resource state

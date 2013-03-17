@@ -159,13 +159,17 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         try (final EntityCursor<Resource> cursor = resourceByState.entities(null, status, true, status, true, CursorConfig.READ_UNCOMMITTED)) {
             for (Resource resource : cursor) {
                 try {
+                    resource = cached(resource);
                     resource.init(scheduler);
-                    if (updateStatus(resource, false))
-                        cursor.update(resource);
+                    if (updateStatus(resource, false)) {
+                        update(resource);
+                    }
 
                     switch (resource.state) {
                         case READY:
+                            LOGGER.info("Job %s is ready", resource);
                             readyJobs.add((Job<? extends JobData>) resource);
+                            break;
                     }
 
                 } catch (Exception e) {

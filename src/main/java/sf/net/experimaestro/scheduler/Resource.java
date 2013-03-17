@@ -32,7 +32,10 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -224,23 +227,21 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
 
     /**
-     * States in which a resource can replaced
-     */
-    final static EnumSet<ResourceState> UPDATABLE_STATES
-            = EnumSet.of(ResourceState.READY, ResourceState.ON_HOLD, ResourceState.ERROR, ResourceState.WAITING);
-
-    /**
      * Replace this resource
      *
      * @param old
      * @return true if the resource was replaced, and false if an error occured
      */
     public boolean replace(Resource old) throws ExperimaestroCannotOverwrite {
-        if (!UPDATABLE_STATES.contains(old.state))
+        assert old.getLocator().equals(getLocator()) : String.format("locators %s and %s do not match", old, this);
+
+        if (!ResourceState.UPDATABLE_STATES.contains(old.state)) {
             return false;
+        }
+        LOGGER.info("Old [%s] is in state %s", old.getLocator(), old.state);
+
         synchronized (old) {
-            assert old.getLocator().equals(getLocator()) : String.format("locators %s and %s do not match", old, this);
-            if (UPDATABLE_STATES.contains(old.state)) {
+            if (ResourceState.UPDATABLE_STATES.contains(old.state)) {
                 scheduler.store(this, false);
                 return true;
             }
@@ -293,6 +294,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
     /**
      * Update a dependency if we have a cache of it
+     *
      * @param dependency The dependency
      */
     protected void updateDependency(Dependency dependency) {
@@ -348,8 +350,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Update the database after a change in state
      *
-     * @return true if everything went well
      * @param notify
+     * @return true if everything went well
      */
     boolean storeState(boolean notify) {
         try {
@@ -446,6 +448,11 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         @Override
         protected Long getKey(Resource resource) {
             return resource.resourceID;
+        }
+
+        @Override
+        protected void setKey(Long key, Resource resource) {
+            resource.resourceID = key;
         }
     }
 
