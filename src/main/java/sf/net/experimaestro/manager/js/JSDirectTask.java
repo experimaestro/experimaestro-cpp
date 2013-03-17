@@ -97,7 +97,8 @@ public class JSDirectTask extends JSAbstractTask {
             Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
             for (Entry<String, Value> entry : values.entrySet()) {
                 Document input = entry.getValue().get();
-                Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input);
+                // The JS object is set to the document element
+                Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input.getDocumentElement());
                 jsXML.put(entry.getKey(), jsXML, xml);
             }
 
