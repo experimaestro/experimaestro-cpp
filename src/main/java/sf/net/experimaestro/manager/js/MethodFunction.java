@@ -197,8 +197,8 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
         try {
             boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
-            args = transform(cx, scope, argmax, args, argmaxConverters);
-            final Object invoke = argmax.invoke(isStatic ? null : thisObj, args);
+            Object [] transformedArgs = transform(cx, scope, argmax, args, argmaxConverters);
+            final Object invoke = argmax.invoke(isStatic ? null : thisObj, transformedArgs);
             return invoke == null ? Undefined.instance : invoke;
         } catch (XPMRhinoException e) {
             throw e;

@@ -107,7 +107,7 @@ public class SSHConnector extends SingleHostConnector {
         this(username, hostname, SSHD_DEFAULT_PORT);
     }
 
-    public Lock createLockFile(final String path) throws LockException {
+    public Lock createLockFile(final String path, boolean wait) throws LockException {
         try {
             ChannelExec channel = newExecChannel();
             LOGGER.info("Creating SSH lock [%s]", path);

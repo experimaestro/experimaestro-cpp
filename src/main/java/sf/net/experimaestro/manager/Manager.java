@@ -25,6 +25,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -55,7 +56,6 @@ public class Manager {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
         PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
     }
-
 
 
     /**
@@ -128,43 +128,53 @@ public class Manager {
 
     /**
      * Wrap a node into a document
+     *
      * @param node
      * @return
      */
-    public static Document wrap(Node node) {
-        if (node instanceof Document)
-            return (Document) node;
+    public static Document wrap(Object object) {
+        if (object instanceof Document)
+            return (Document) object;
 
         Document document = XMLUtils.newDocument();
-        switch (node.getNodeType()) {
-            case Node.ELEMENT_NODE:
-                document.appendChild(document.adoptNode(node.cloneNode(true)));
-                break;
-
-            case Node.TEXT_NODE:
-            case Node.ATTRIBUTE_NODE:
-                Element element = document.createElementNS(EXPERIMAESTRO_NS, "value");
-                element.setAttributeNS(EXPERIMAESTRO_NS, "value", node.getTextContent());
-                document.appendChild(element);
-                break;
-
-            case Node.DOCUMENT_FRAGMENT_NODE:
-                Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
-                int size = Iterables.size(elements);
-                if (size == 1) {
-                    document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+        if (object instanceof Node) {
+            Node node = (Node) object;
+            switch (node.getNodeType()) {
+                case Node.ELEMENT_NODE:
+                    document.appendChild(document.adoptNode(node.cloneNode(true)));
                     break;
-                }
 
+                case Node.TEXT_NODE:
+                case Node.ATTRIBUTE_NODE:
+                    Element element = document.createElementNS(EXPERIMAESTRO_NS, "value");
+                    element.setAttributeNS(EXPERIMAESTRO_NS, "value", node.getTextContent());
+                    document.appendChild(element);
+                    break;
+
+                case Node.DOCUMENT_FRAGMENT_NODE:
+                    Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
+                    int size = Iterables.size(elements);
+                    if (size == 1) {
+                        document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+                        break;
+                    }
+
+                    throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+
+                default:
+                    throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
+            }
+
+        } else {
+            Iterable<? extends Node> elements = XMLUtils.iterable((NodeList) object);
+            int size = Iterables.size(elements);
+            if (size == 1) {
+                document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+            } else
                 throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
-
-            default:
-                throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
-
         }
 
         return document;
     }
-
 
 }

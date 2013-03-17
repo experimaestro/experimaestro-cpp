@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
 
-    public static final String SHELL_SPECIAL = " \"'<>";
+    public static final String SHELL_SPECIAL = " \"'<>\n";
     public static final String QUOTED_SPECIAL = "\"$";
 
     /**

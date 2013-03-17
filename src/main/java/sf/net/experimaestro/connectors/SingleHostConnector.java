@@ -109,7 +109,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
     public abstract XPMProcessBuilder processBuilder();
 
     /** Lock a file */
-    public abstract Lock createLockFile(String path) throws LockException;
+    public abstract Lock createLockFile(String path, boolean wait) throws LockException;
 
     /** Returns the hostname */
     public abstract String getHostName();

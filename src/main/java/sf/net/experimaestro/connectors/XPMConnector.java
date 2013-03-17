@@ -56,7 +56,7 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
-    public Lock createLockFile(String path) throws LockException {
+    public Lock createLockFile(String path, boolean wait) throws LockException {
         throw new NotImplementedException();
     }
 

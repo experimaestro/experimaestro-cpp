@@ -235,6 +235,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         throw new NotImplementedException();
     }
 
+    public byte[] getBytes() {
+        return toString().getBytes();
+    }
+
     /**
      * The Experimaestro wrap factory to handle special cases
      */

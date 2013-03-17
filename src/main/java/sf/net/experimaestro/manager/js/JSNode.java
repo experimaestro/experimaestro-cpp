@@ -35,6 +35,7 @@ import sf.net.experimaestro.utils.XMLUtils;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
+import java.nio.charset.Charset;
 
 /**
  * A wrapper around a DOM node
@@ -43,6 +44,7 @@ import javax.xml.xpath.XPathExpressionException;
  * @date 6/3/13
  */
 public class JSNode extends JSBaseObject {
+    public static final Charset UTF16 = Charset.forName("UTF-16");
     private final Node node;
 
     public JSNode(Node node) {
@@ -131,6 +133,11 @@ public class JSNode extends JSBaseObject {
     @JSFunction("toSource")
     public String toSource() {
         return XMLUtils.toString(node);
+    }
+
+    @Override
+    public byte[] getBytes() {
+        return XMLUtils.toString(node).getBytes(UTF16);
     }
 
     @JSFunction()

@@ -68,8 +68,8 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public Lock createLockFile(String path) throws LockException {
-        return new FileLock(path);
+    public Lock createLockFile(String path, boolean wait) throws LockException {
+        return new FileLock(path, wait);
     }
 
     @Override

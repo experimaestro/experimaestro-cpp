@@ -95,6 +95,8 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
     public JSFileObject path(String... args) throws FileSystemException {
         FileObject current = file;
         for (int i = 0; i < args.length; i++) {
+            if (args[i] == null || args[i].equals(""))
+                throw new IllegalArgumentException("Undefined element in path");
             String name = Context.toString(args[i]);
             current = current.resolveFile(name);
         }

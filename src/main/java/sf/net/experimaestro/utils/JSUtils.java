@@ -21,6 +21,7 @@ package sf.net.experimaestro.utils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.FunctionObject;
+import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -28,6 +29,7 @@ import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
@@ -140,7 +142,8 @@ public class JSUtils {
     }
 
     public static Document toDocument(Scriptable jsScope, Object returned) {
-        return Manager.wrap(toDOM(jsScope, returned));
+        Object object = toDOM(jsScope, returned);
+        return Manager.wrap(object);
     }
 
     public static Object get(Scriptable scope, String name) {
@@ -170,23 +173,23 @@ public class JSUtils {
     }
 
     /**
-     * Transform objects into an XML node
+     * Transform objects into an XML node or a NodeLsit
      *
      * @param object
      * @return a {@linkplain Node} or a {@linkplain NodeList}
      */
-    public static Node toDOM(Scriptable scope, Object object) {
+    public static Object toDOM(Scriptable scope, Object object) {
         return toDOM(scope, object, new OptionalDocument());
     }
 
-    public static Node toDOM(Scriptable scope, Object object, OptionalDocument document) {
+    public static Object toDOM(Scriptable scope, Object object, OptionalDocument document) {
         // Unwrap if needed
         if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
 
         // It is already a DOM node
         if (object instanceof Node)
-            return (Node) object;
+            return object;
 
         if (object instanceof XMLObject) {
             final XMLObject xmlObject = (XMLObject) object;
@@ -202,7 +205,7 @@ public class JSUtils {
                 DocumentFragment fragment = doc.createDocumentFragment();
 
                 for (int i = 0; i < ids.length; i++) {
-                    Node node = toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject), document);
+                    Node node = (Node) toDOM(scope, xmlObject.get((Integer) ids[i], xmlObject), document);
                     if (node instanceof Document)
                         node = ((Document) node).getDocumentElement();
                     fragment.appendChild(doc.adoptNode(node));
@@ -232,31 +235,71 @@ public class JSUtils {
 
         }
 
+        if (object instanceof NativeArray) {
+            NativeArray array = (NativeArray) object;
+            ArrayNodeList list = new ArrayNodeList();
+            for (Object x : array) {
+                Object o = toDOM(scope, x, document);
+                if (o instanceof Node)
+                    list.add((Node) o);
+                else {
+                    for (Node node : XMLUtils.iterable((NodeList) o)) {
+                        list.add(node);
+                    }
+                }
+            }
+            return list;
+        }
+
         if (object instanceof NativeObject) {
             // JSON case: each key of the JS object is an XML element
             NativeObject json = (NativeObject) object;
-            DocumentFragment fragment = document.get().createDocumentFragment();
+            ArrayNodeList list = new ArrayNodeList();
 
             for (Object _id : json.getIds()) {
 
-                final QName qname = QName.parse(JSUtils.toString(_id), null, new JSNamespaceBinder(scope));
+                String jsQName = JSUtils.toString(_id);
 
-                Element element = qname.hasNamespace() ?
-                        document.get().createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
-                        : document.get().createElement(qname.getLocalPart());
+                if (jsQName.length() == 0) {
+                    final Object seq = toDOM(scope, json.get(jsQName, json), document);
+                    for (Node node : XMLUtils.iterable(seq)) {
+                        if (node instanceof Document)
+                            node = ((Document) node).getDocumentElement();
+                        node = node.cloneNode(true);
+                        list.add(document.get().adoptNode(node));
+                    }
+                } else if (jsQName.charAt(0) == '@') {
+                    final QName qname = QName.parse(jsQName.substring(1), null, new JSNamespaceBinder(scope));
+                    Attr attribute = document.get().createAttributeNS(qname.getNamespaceURI(), qname.getLocalPart());
+                    StringBuilder sb = new StringBuilder();
+                    for (Node node : XMLUtils.iterable(toDOM(scope, json.get(jsQName, json), document))) {
+                        sb.append(node.getTextContent());
+                    }
 
-                fragment.appendChild(element);
+                    attribute.setTextContent(sb.toString());
+                    list.add(attribute);
+                } else {
+                    final QName qname = QName.parse(jsQName, null, new JSNamespaceBinder(scope));
+                    Element element = qname.hasNamespace() ?
+                            document.get().createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
+                            : document.get().createElement(qname.getLocalPart());
 
-                final Object seq = toDOM(scope, json.get(JSUtils.toString(_id), json), document);
-                for (Node node : XMLUtils.iterable(seq)) {
-                    if (node instanceof Document)
-                        node = ((Document) node).getDocumentElement();
-                    node = node.cloneNode(true);
-                    element.appendChild(document.get().adoptNode(node));
+                    list.add(element);
+
+                    final Object seq = toDOM(scope, json.get(jsQName, json), document);
+                    for (Node node : XMLUtils.iterable(seq)) {
+                        if (node instanceof Document)
+                            node = ((Document) node).getDocumentElement();
+                        node = document.get().adoptNode(node.cloneNode(true));
+                        if (node.getNodeType() == Node.ATTRIBUTE_NODE)
+                            element.setAttributeNodeNS((Attr) node);
+                        else
+                            element.appendChild(node);
+                    }
                 }
             }
 
-            return fragment;
+            return list;
         }
 
         if (object instanceof Double) {
@@ -310,39 +353,43 @@ public class JSUtils {
     /**
      * Converts a JavaScript object into an XML document
      *
-     * @param object
-     * @param wrapName If the object is not already a document and has more than one
-     *                 element child (or zero), use this to wrap the elements
+     * @param srcObject The javascript object to convert
+     * @param wrapName  If the object is not already a document and has more than one
+     *                  element child (or zero), use this to wrap the elements
      * @return
      */
-    public static Document toDocument(Scriptable scope, Object object, QName wrapName) {
-        final Node dom = toDOM(scope, object);
+    public static Document toDocument(Scriptable scope, Object srcObject, QName wrapName) {
+        final Object object = toDOM(scope, srcObject);
 
-        if (dom instanceof Document)
-            return (Document) dom;
+        if (object instanceof Document)
+            return (Document) object;
 
         Document document = XMLUtils.newDocument();
 
         // Add a new root element if needed
         NodeList childNodes;
 
+        if (!(object instanceof Node)) {
+            childNodes = (NodeList) object;
+        } else {
+            final Node dom = (Node) object;
+            if (dom.getNodeType() == Node.ELEMENT_NODE) {
+                childNodes = new NodeList() {
+                    @Override
+                    public Node item(int index) {
+                        if (index == 0)
+                            return dom;
+                        throw new IndexOutOfBoundsException(Integer.toString(index) + " out of bounds");
+                    }
 
-        if (dom.getNodeType() == Node.ELEMENT_NODE) {
-            childNodes = new NodeList() {
-                @Override
-                public Node item(int index) {
-                    if (index == 0)
-                        return dom;
-                    throw new IndexOutOfBoundsException(Integer.toString(index) + " out of bounds");
-                }
-
-                @Override
-                public int getLength() {
-                    return 1;
-                }
-            };
-        } else
-            childNodes = dom.getChildNodes();
+                    @Override
+                    public int getLength() {
+                        return 1;
+                    }
+                };
+            } else
+                childNodes = dom.getChildNodes();
+        }
 
         int elementCount = 0;
         for (int i = 0; i < childNodes.getLength(); i++)

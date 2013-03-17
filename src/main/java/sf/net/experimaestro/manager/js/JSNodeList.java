@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.manager.js;
 
+import bpiwowar.argparser.utils.Formatter;
+import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.Lists;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -71,6 +73,21 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
     public Iterator<Node> iterator() {
         return (Iterator<Node>) XMLUtils.iterable(list).iterator();
     }
+
+    @JSFunction("toSource")
+    public String toSource() {
+        return String.format("NodeList(%s)", Output.toString(
+                ", ",
+                XMLUtils.iterable(list),
+                new Formatter<Node>() {
+                    @Override
+                    public String format(Node node) {
+                        return XMLUtils.toString(node);
+                    }
+                }
+        ));
+    }
+
 
     @JSFunction(value = "get_string", scope = true)
     public String getString(Context context, Scriptable scope, String expression) throws XPathExpressionException {

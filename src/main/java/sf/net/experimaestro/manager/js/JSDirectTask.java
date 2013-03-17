@@ -143,8 +143,10 @@ public class JSDirectTask extends JSAbstractTask {
                             Element newRoot = document.createElementNS(input.getNamespace(), entry.getKey());
 
                             NamedNodeMap attributes = element.getAttributes();
-                            for (int i = 0; i < attributes.getLength(); i++)
-                                newRoot.setAttributeNode((Attr) (attributes.item(i).cloneNode(false)));
+                            for (int i = 0; i < attributes.getLength(); i++) {
+                                Attr newAttr = (Attr) (attributes.item(i).cloneNode(false));
+                                newRoot.setAttributeNodeNS(newAttr);
+                            }
 
                             for (Node child : XMLUtils.iterable(element.getChildNodes())) {
                                 newRoot.appendChild(child);

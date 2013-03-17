@@ -21,28 +21,32 @@ package sf.net.experimaestro.utils;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 /**
 * @author B. Piwowarski <benjamin@bpiwowar.net>
 * @date 7/2/13
 */
 public class ArrayNodeList implements NodeList {
 
-    final Node[] _nodes;
-    private final Node[] nodes;
+    ArrayList<Node> nodes = new ArrayList<>();
 
     public ArrayNodeList(Node... nodes) {
-        this.nodes = nodes;
-        _nodes = nodes;
+        this.nodes = new ArrayList(Arrays.asList(nodes));
     }
 
+    public void add(Node node) {
+        nodes.add(node);
+    }
 
     @Override
     public Node item(int index) {
-        return _nodes[index];
+        return nodes.get(index);
     }
 
     @Override
     public int getLength() {
-        return _nodes.length;
+        return nodes.size();
     }
 }

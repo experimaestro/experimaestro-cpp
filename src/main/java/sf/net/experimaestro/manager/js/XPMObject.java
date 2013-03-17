@@ -36,7 +36,6 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.UniqueTag;
 import org.mozilla.javascript.Wrapper;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -49,6 +48,7 @@ import sf.net.experimaestro.connectors.XPMProcessBuilder;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.NSContext;
@@ -84,6 +84,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -676,7 +677,7 @@ public class XPMObject {
      * @throws InterruptedException
      */
     public NativeArray evaluate(Object jsargs, NativeObject options) throws Exception {
-        Map<String, String> pFiles = new TreeMap<>();
+        Map<String, byte[]> pFiles = new TreeMap<>();
         CommandArguments arguments = getCommandArguments(jsargs, pFiles);
 
         // Run the process and captures the output
@@ -687,10 +688,10 @@ public class XPMObject {
         TreeMap<String, FileObject> files = new TreeMap<>();
 
         try {
-            for (Map.Entry<String, String> key2Content : pFiles.entrySet()) {
+            for (Map.Entry<String, byte[]> key2Content : pFiles.entrySet()) {
                 FileObject file = connector.getTemporaryFile(key2Content.getKey() + "_", ".input");
                 files.put(key2Content.getKey(), file);
-                PrintWriter out = new PrintWriter(file.getContent().getOutputStream());
+                OutputStream out = file.getContent().getOutputStream();
                 out.write(key2Content.getValue());
                 out.close();
                 LOGGER.info("Created temporary file %s", file);
@@ -781,7 +782,7 @@ public class XPMObject {
         // of String
         LOGGER.debug("Adding command line job");
 
-        Map<String, String> pFiles = new TreeMap<>();
+        Map<String, byte[]> pFiles = new TreeMap<>();
         final CommandArguments command = getCommandArguments(jsargs, pFiles);
 
         // --- Create the task
@@ -814,7 +815,7 @@ public class XPMObject {
             return new JSResource(scheduler.getResource(locator));
         }
 
-        for (Map.Entry<String, String> entry : pFiles.entrySet())
+        for (Map.Entry<String, byte[]> entry : pFiles.entrySet())
             task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
@@ -929,11 +930,12 @@ public class XPMObject {
     /**
      * Transform an array of JS objects into a command line argument object
      *
+     *
      * @param jsargs         The input array
      * @param parameterFiles (out) A map that will contain the parameter files defined in the command line
      * @return a valid {@linkplain CommandArgument} object
      */
-    private static CommandArguments getCommandArguments(Object jsargs, Map<String, String> parameterFiles) {
+    private static CommandArguments getCommandArguments(Object jsargs, Map<String, byte[]> parameterFiles) {
         final CommandArguments command = new CommandArguments();
 
         if (jsargs instanceof NativeArray) {
@@ -971,7 +973,7 @@ public class XPMObject {
      * Recursive parsing of the command line
      */
     private static void argumentWalkThrough(Scriptable scope, StringBuilder sb, CommandArgument argument, Object object,
-                                            Map<String, String> parameterFiles) {
+                                            Map<String, byte[]> parameterFiles) {
         if (object instanceof JSFileObject)
             object = ((JSFileObject) object).getFile();
 

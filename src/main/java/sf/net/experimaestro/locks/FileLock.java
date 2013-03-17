@@ -79,6 +79,10 @@ public class FileLock implements Lock {
         this(new File(lockFile), true);
     }
 
+    public FileLock(String lockFile, boolean wait) throws LockException {
+        this(new File(lockFile), wait);
+    }
+
     /*
      * (non-Javadoc)
      *

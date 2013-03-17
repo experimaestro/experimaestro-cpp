@@ -79,6 +79,7 @@ public class XMLUtils {
                     .getDOMImplementation("LS");
 
             LSSerializer writer = impl.createLSSerializer();
+
             return writer.writeToString(node);
         } catch (Exception e) {
             return e.toString();
