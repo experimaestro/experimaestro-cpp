@@ -170,6 +170,17 @@ public class JSUtils {
         public boolean has() {
             return document != null;
         }
+
+        /**
+         * Clone and adopt node if not already owned
+         * @param node
+         * @return
+         */
+        public Node cloneAndAdopt(Node node) {
+            if (node.getOwnerDocument() != get())
+                return get().adoptNode(node.cloneNode(true));
+            return node;
+        }
     }
 
     /**
@@ -241,10 +252,10 @@ public class JSUtils {
             for (Object x : array) {
                 Object o = toDOM(scope, x, document);
                 if (o instanceof Node)
-                    list.add((Node) o);
+                    list.add(document.cloneAndAdopt((Node) o));
                 else {
                     for (Node node : XMLUtils.iterable((NodeList) o)) {
-                        list.add(node);
+                        list.add(document.cloneAndAdopt(node));
                     }
                 }
             }
@@ -265,8 +276,7 @@ public class JSUtils {
                     for (Node node : XMLUtils.iterable(seq)) {
                         if (node instanceof Document)
                             node = ((Document) node).getDocumentElement();
-                        node = node.cloneNode(true);
-                        list.add(document.get().adoptNode(node));
+                        list.add(document.cloneAndAdopt(node));
                     }
                 } else if (jsQName.charAt(0) == '@') {
                     final QName qname = QName.parse(jsQName.substring(1), null, new JSNamespaceBinder(scope));

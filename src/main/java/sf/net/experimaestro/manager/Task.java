@@ -263,7 +263,7 @@ public abstract class Task {
      */
     public final void setParameter(DotName id, Document value) throws NoSuchParameter {
         try {
-            getValue(id).set(value);
+            getValue(id).set((Document) value.cloneNode(true));
         } catch (ExperimaestroRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());
         } catch (RuntimeException e) {

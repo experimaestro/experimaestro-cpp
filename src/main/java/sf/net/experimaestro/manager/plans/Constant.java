@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import org.apache.xerces.dom.DocumentImpl;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
@@ -39,12 +40,15 @@ public class Constant extends Operator {
     List<Document> nodes = new ArrayList<>();
 
     public Constant(Document... documents) {
-        nodes.addAll(Arrays.asList(documents));
+        this(Arrays.asList(documents));
     }
 
     public Constant(Iterable<Document> documents) {
-        for (Document document : documents)
+        for (Document document : documents) {
+            if (document instanceof DocumentImpl)
+                ((DocumentImpl) document).setReadOnly(true,true);
             nodes.add(document);
+        }
     }
 
     @Override

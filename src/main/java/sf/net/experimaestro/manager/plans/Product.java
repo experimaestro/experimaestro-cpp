@@ -60,7 +60,7 @@ public class Product extends NAryOperator {
 
         // Computes the output size
         outputSize = 0;
-        for(Operator parent: parents)
+        for (Operator parent : parents)
             outputSize += parent.outputSize();
     }
 
@@ -106,8 +106,12 @@ public class Product extends NAryOperator {
             int offset = 0;
             for (int j = 0; j < contexts.length; j++) {
                 contexts[j] = current[j].context;
-                for (int k = 0, n = current[j].nodes.length; k < n; k++)
-                    nodes[offset++] = current[j].nodes[k];
+                for (int k = 0, n = current[j].nodes.length; k < n; k++) {
+                    nodes[offset] = current[j].nodes[k];
+                    assert nodes[offset].getDocumentElement() != null;
+                    offset++;
+                }
+
             }
 
             return new ReturnValue(new DefaultContexts(contexts), nodes);
