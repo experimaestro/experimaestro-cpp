@@ -176,8 +176,8 @@ class Configuration():
             else:
                 args.server = clients.keys()[0]
 
-        self.remote =  client.get("remote", False) in ["true", "True", "1"]
         self.client = clients.sub(args.server)
+        self.remote = self.client.get("remote", False) in ["true", "True", "1"]
         
     def getServer(self):
         return xmlrpclib.ServerProxy(self.client["url"], verbose=args.verbose)
