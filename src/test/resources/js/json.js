@@ -58,6 +58,7 @@ function test_json_nested()
         inputs: { t: { task: "tests:task-1" } }
     };
     
+    // Task arguments are nested
     var r = tasks("tests:task-2").run({
         t: {
             x: xml("<x>1</x>")

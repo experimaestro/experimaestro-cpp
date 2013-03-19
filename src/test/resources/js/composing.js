@@ -47,7 +47,7 @@ tasks("abc:task") = {
         
 	
 	run: function(inputs) {
-		return inputs.t2("x");
+		return inputs.t2();
 	}
 		
 };
@@ -70,7 +70,7 @@ TODO: ease the composition by
     
     inputs_2: {
         "t2": { task: "abc:task-2", connect: {
-            "x": input("t1").xpath(".")
+            "x": input("t1.x").xpath(".")
         } },
         "t1": { task: "abc:task-1" }
     }

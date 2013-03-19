@@ -53,7 +53,7 @@ var r = task.run();
 // END SNIPPET: main
 
 function test_composing_2() {
-    r = r.get_value("xp:array/x");
+    r = r.get_value("x");
 	if (r == undefined || r != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }

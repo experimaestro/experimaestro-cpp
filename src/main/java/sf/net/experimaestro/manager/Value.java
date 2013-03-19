@@ -29,8 +29,13 @@ import sf.net.experimaestro.manager.xq.ParentPath;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.namespace.QName;
-import javax.xml.xquery.*;
+import javax.xml.xquery.XQConnection;
+import javax.xml.xquery.XQException;
+import javax.xml.xquery.XQExpression;
+import javax.xml.xquery.XQItem;
+import javax.xml.xquery.XQItemType;
+import javax.xml.xquery.XQSequence;
+import javax.xml.xquery.XQStaticContext;
 import java.lang.reflect.Constructor;
 import java.util.Map;
 
@@ -68,18 +73,23 @@ public abstract class Value {
 
     /**
      * Returns the value object corresponding to this path
+     *
      * @param id The ID
      * @return The value
      */
     public abstract Value getValue(DotName id) throws NoSuchParameter;
 
 
-    /** Set to the given value
-     * @param value*/
+    /**
+     * Set to the given value
+     *
+     * @param value
+     */
     public abstract void set(Document value);
 
     /**
      * XPMProcess the value before it can be accessed by a task to run
+     *
      * @param simulate
      */
     public abstract void process(boolean simulate) throws NoSuchParameter, ValueMismatchException;
@@ -130,26 +140,26 @@ public abstract class Value {
                         LOGGER.debug("Binding $%s to empty sequence", varName);
                         queryBuilder.append("declare variable $" + varName + " := (); ");
                     } else {
-                        Node element = XMLUtils.getRootElement(document);
-                        for (int i = 1; i < from.size(); i++) {
-                            boolean found = false;
-                            for (Element child : XMLUtils.elements(element.getChildNodes())) {
-                                final String name = child.getAttributeNS(Manager.EXPERIMAESTRO_NS, "name");
-                                if (name != null && name.equals(from.get(i))) {
-                                    element = child;
-                                    found = true;
-                                }
-                            }
-                            if (!found)
-                                throw new ExperimaestroRuntimeException("Cannot process %s in [%s]", from.get(i), from);
-
-                        }
-
+                        Value bindValue = task.getValue(from);
+                        Element element = bindValue.get().getDocumentElement();
+//                        Node element = XMLUtils.getRootElement(document);
+//                        for (int i = 1; i < from.size(); i++) {
+//                            boolean found = false;
+//                            for (Element child : XMLUtils.elements(element.getChildNodes())) {
+//                                final String name = child.getAttributeNS(Manager.EXPERIMAESTRO_NS, "name");
+//                                if (name != null && name.equals(from.get(i))) {
+//                                    element = child;
+//                                    found = true;
+//                                }
+//                            }
+//
+//                        }
+//
                         LOGGER.debug("Binding $%s to element [%s]", varName, ((Element) element).getTagName());
                         LOGGER.debug(XMLUtils.toString(element));
                         queryBuilder.append("declare variable $" + varName + " external; ");
 
-                        xqje.bindNode(new QName(varName), element, null);
+                        xqje.bindNode(new javax.xml.namespace.QName(varName), element, null);
                     }
                 }
 
