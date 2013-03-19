@@ -48,6 +48,25 @@ function test_json_plan() {
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
 
+function test_json_nested()
+{
+    tasks("tests:task-1") = {
+        inputs: { x: { xml: "x" } }
+    };
+    
+    tasks("tests:task-2") = {
+        inputs: { t: { task: "tests:task-1" } }
+    };
+    
+    var r = tasks("tests:task-2").run({
+        t: {
+            x: xml("<x>1</x>")
+        }
+    });
+    
+    assert(r[0].text("x") == 1);
+    
+}
 
 
 

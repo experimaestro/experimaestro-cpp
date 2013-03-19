@@ -125,7 +125,6 @@ public class JSDirectTask extends JSAbstractTask {
             else
                 root = document.createElementNS(outputType.getNamespaceURI(), outputType.getLocalPart());
 
-            document.appendChild(root);
 
             // Loop over non null inputs
             for (Entry<String, Value> entry : values.entrySet()) {
@@ -164,7 +163,13 @@ public class JSDirectTask extends JSAbstractTask {
                 }
             }
 
+            // Simplify if there was just one input
+            if (values.size() == 1) {
+                root = (Element) root.getFirstChild();
+            }
+            document.appendChild(root);
             result = document;
+
 
         }
 

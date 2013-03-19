@@ -116,6 +116,17 @@ public class JSNode extends JSBaseObject {
         return text == null ? "" : text;
     }
 
+    @JSFunction(value = "text", scope = true)
+    public String getText(Context context, Scriptable scope, String expression) throws XPathExpressionException {
+        XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
+        Node node = (Node) xpath.evaluate(this.node, XPathConstants.NODE);
+        if (node == null)
+            return "";
+
+        String text = node.getTextContent();
+        return text == null ? "" : text;
+    }
+
     private Element getElement() {
         return node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
     }

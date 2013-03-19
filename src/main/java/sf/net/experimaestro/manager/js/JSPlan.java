@@ -75,7 +75,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      */
     public JSPlan(Scriptable scope, TaskFactory factory, NativeObject object) throws XPathExpressionException {
         plan = new Plan(factory);
-        plan.add(getMappings(DotName.EMPTY, object, scope));
+        plan.add(getMappings(object, scope));
     }
 
     public JSPlan(TaskFactory factory) {
@@ -91,8 +91,12 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      * @return
      * @throws XPathExpressionException
      */
-    private PlanInputs getMappings(DotName prefix, NativeObject object, Scriptable scope) throws XPathExpressionException {
+    private PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
         PlanInputs inputs = new PlanInputs();
+        return getMappings(inputs, DotName.EMPTY, object, scope);
+    }
+
+    private PlanInputs getMappings(PlanInputs inputs, DotName prefix, NativeObject object, Scriptable scope) throws XPathExpressionException {
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
             DotName id = new DotName(prefix, DotName.parse(name));
@@ -107,7 +111,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
                         inputs.set(id, getSimple(e, scope));
                     }
                 } else if (value instanceof NativeObject) {
-                    getMappings(id, (NativeObject) value, scope);
+                    getMappings(inputs, id, (NativeObject) value, scope);
                 } else
                     inputs.set(id, getSimple(value, scope));
 
@@ -167,6 +171,9 @@ public class JSPlan extends JSAbstractOperator implements Callable {
             }));
 
         }
+
+        if (value instanceof Document)
+            return new Constant((Document)value);
 
         // --- Plans & transformations
 
@@ -256,7 +263,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
     @JSFunction(value = "add", scope = true)
     public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
-        plan.add(getMappings(DotName.EMPTY, object, scope));
+        plan.add(getMappings(object, scope));
     }
 
     @Override
