@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.server;
 
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
@@ -34,10 +35,14 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.js.JSArgument;
 import sf.net.experimaestro.manager.js.XPMObject;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedWriter;
@@ -46,13 +51,19 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
+ * The operation supported by the stream server
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 15/3/13
  */
+// TODO: migrate (those with high streaming first) rpc calls from {@linkplain RPCHandler}
 public class StreamServerService {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -78,9 +89,65 @@ public class StreamServerService {
         }
     }
 
+    private EnumSet<ResourceState> getStates(Object[] states) {
+        final EnumSet<ResourceState> statesSet;
+
+        if (states == null || states.length == 0)
+            statesSet = EnumSet.allOf(ResourceState.class);
+        else {
+            ResourceState statesArray[] = new ResourceState[states.length];
+            for (int i = 0; i < states.length; i++)
+                statesArray[i] = ResourceState.valueOf(states[i].toString());
+            statesSet = EnumSet.of(statesArray[0], statesArray);
+        }
+        return statesSet;
+    }
 
 
-    public void runJSScript(final Packer packer, Unpacker unpacker, List<FilePointer> files, Map<String, String> environment) {
+    /**
+     * List jobs
+     */
+    @RPCHelp("List the jobs along with their states")
+    public List<Map<String, String>> listJobs(String group, Object[] states) {
+        final EnumSet<ResourceState> set = getStates(states);
+        List<Map<String, String>> list = new ArrayList<>();
+
+        for (Multiset.Entry<String> x : scheduler.subgroups(group).entrySet()) {
+            Map<String, String> map = new HashMap<>();
+            String s = x.getElement();
+            map.put("type", "group");
+            map.put("name", s);
+//            map.put("count", Integer.toString(x.getCount()));
+            list.add(map);
+        }
+
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, false, set, true)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
+                Map<String, String> map = new HashMap<>();
+                map.put("type", resource.getClass().getCanonicalName());
+                map.put("state", resource.getState().toString());
+                map.put("name", resource.getLocator().toString());
+                list.add(map);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
+
+    /**
+     * Run javascript
+     *
+     * @param packer
+     * @param unpacker
+     * @param files
+     * @param environment
+     */
+    @RPCHelp("Run a javascript")
+    public void runJSScript(final Packer packer, Unpacker unpacker,
+                            @JSArgument(name = "files") List<FilePointer> files,
+                            @JSArgument(name = "environment") Map<String, String> environment) {
         final StringWriter errString = new StringWriter();
         final PrintWriter err = new PrintWriter(errString);
         XPMObject jsXPM = null;
@@ -182,9 +249,9 @@ public class StreamServerService {
 
             // Search for innermost rhino exception
             RhinoException rhinoException = null;
-            for(Throwable t = e; t != null; t = t.getCause())
+            for (Throwable t = e; t != null; t = t.getCause())
                 if (t instanceof RhinoException)
-                    rhinoException = (RhinoException)t;
+                    rhinoException = (RhinoException) t;
 
             if (rhinoException != null) {
                 err.append("\n" + rhinoException.getScriptStackTrace());

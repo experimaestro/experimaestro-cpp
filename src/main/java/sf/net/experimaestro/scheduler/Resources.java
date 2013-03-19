@@ -25,14 +25,17 @@ import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
 import com.sleepycat.persist.SecondaryIndex;
+import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.DotName;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.Trie;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.TreeMap;
 
 import static com.sleepycat.je.CursorConfig.READ_UNCOMMITTED;
@@ -234,21 +237,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
 
     /**
-     * Returns resources filtered by state and group
-     *
-     * @param group
-     * @param recursive
-     * @return
-     */
-    public EntityCursor<ResourceData> fromGroup(final String group, EnumSet<ResourceState> states, boolean recursive) {
-        String end = group;
-        if (recursive) {
-            end = group + ".";
-        }
-        return dataByGroup.entities(new GroupId(group), true, new GroupId(end), true);
-    }
-
-    /**
      * Returns subgroups
      *
      * @param group
@@ -377,4 +365,78 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     }
 
 
+    public CloseableIterator<Resource> entities(final EnumSet<ResourceState> states, final boolean init) {
+        return new CloseableIterator<Resource>() {
+            Iterator<ResourceState> stateIterator = states.iterator();
+            EntityCursor<Resource> resources;
+
+            @Override
+            public void close() throws CloseException {
+                if (resources != null)
+                    resources.close();
+            }
+
+
+            @Override
+            protected Resource computeNext() {
+                while (true) {
+                    if (resources == null) {
+                        if (!stateIterator.hasNext()) {
+                            return endOfData();
+                        } else {
+                            ResourceState state = stateIterator.next();
+                            resources = resourceByState.entities(state, true, state, true);
+                        }
+                    }
+                    Resource resource = resources.next();
+                    if (resource != null) {
+                        resource = cached(resource);
+                        if (init)
+                            resource.init(scheduler);
+                        return resource;
+                    }
+                    resources.close();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns resources filtered by state and group
+     *
+     * @param group
+     * @param recursive
+     * @return
+     */
+    public CloseableIterator<Resource> entities(String group, boolean recursive, final EnumSet<ResourceState> states, final boolean init) {
+        if ("".equals(group) && recursive)
+            return entities(states, init);
+
+        final GroupId start = new GroupId(group);
+        final GroupId end = recursive ? GroupId.end(group) : start;
+
+        return new CloseableIterator<Resource>() {
+            EntityCursor<ResourceData> entities = dataByGroup.entities(start, true, end, true);
+
+            @Override
+            public void close() throws CloseException {
+                entities.close();
+            }
+
+            @Override
+            protected Resource computeNext() {
+                ResourceData value;
+                while ((value = entities.next()) != null) {
+                    Resource resource = get(value.resourceId);
+                    if (states.contains(resource.getState())) {
+                        if (init)
+                            resource.init(scheduler);
+                        return resource;
+                    }
+                }
+                return endOfData();
+            }
+        };
+
+    }
 }

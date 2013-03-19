@@ -27,7 +27,6 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.model.AnnotationModel;
 import com.sleepycat.persist.model.EntityModel;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
@@ -37,6 +36,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.je.FileProxy;
@@ -47,7 +47,11 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Timer;
 import java.util.TreeMap;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The scheduler
@@ -218,8 +222,17 @@ final public class Scheduler {
         getResources().store(dependency);
     }
 
-    public CloseableIterable<Resource> resources(String group, boolean recursive, EnumSet<ResourceState> states) {
-        throw new NotImplementedException();
+    /**
+     * Returns resources filtered by group and state
+     *
+     * @param group     The group the resource should belong to
+     * @param recursive If <tt>true</tt>, it will iterate through all subgroups
+     * @param states    The states of the resource
+     * @param init      If true, resources will be initialized with the scheduler
+     * @return
+     */
+    public CloseableIterator<Resource> resources(String group, boolean recursive, EnumSet<ResourceState> states, boolean init) {
+        return resources.entities(group, recursive, states, init);
     }
 
 

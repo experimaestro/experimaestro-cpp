@@ -41,6 +41,12 @@ public class GroupId implements Comparable<GroupId> {
         this.name = group;
     }
 
+
+    public static GroupId end(String group) {
+        return new GroupId(group + ".");
+    }
+
+
     @Override
     public String toString() {
         return name;

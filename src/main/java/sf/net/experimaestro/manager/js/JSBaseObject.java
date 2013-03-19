@@ -36,10 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Base class for all JS objects
- * <p/>
- * TODO: change the base class to this one when possible for cleaner documentation and easier
- * implementation
+ * Base class for all JS objects implementations
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 27/11/12

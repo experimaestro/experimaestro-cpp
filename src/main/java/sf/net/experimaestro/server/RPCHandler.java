@@ -46,7 +46,7 @@ import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -123,8 +123,9 @@ public class RPCHandler {
 
 
         int n = 0;
-        try (final CloseableIterable<Resource> resources = scheduler.resources(group, recursive, statesSet)) {
-            for (Resource resource : resources) {
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, statesSet, false)) {
+            while (resources.hasNext()) {
+                Resource resource  = resources.next();
                 if (resource instanceof Job) {
                     ((Job) resource).stop();
                     n++;
@@ -156,9 +157,9 @@ public class RPCHandler {
         final EnumSet<ResourceState> statesSet = getStates(states);
 
         int nbUpdated = 0;
-        try (final CloseableIterable<Resource> resources = scheduler.resources(group, recursive, statesSet)) {
-            for (Resource resource : resources) {
-                resource.init(scheduler);
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, statesSet, true)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
                 if (resource.updateStatus(true))
                     nbUpdated++;
             }
@@ -266,8 +267,9 @@ public class RPCHandler {
             n = 1;
         } else {
             // TODO order the tasks so that depencies are removed first
-            try (final CloseableIterable<Resource> resources = scheduler.resources(group, false, states)) {
-                for (Resource resource : resources) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(group, false, states, false)) {
+                while (resources.hasNext()) {
+                    Resource resource  = resources.next();
                     try {
                         scheduler.delete(resource);
                     } catch (Exception e) {
@@ -297,12 +299,13 @@ public class RPCHandler {
             list.add(map);
         }
 
-        try (final CloseableIterable<Resource> resources = scheduler.resources(group, false, set)) {
-            for (Resource resource : resources) {
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, false, set, true)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
                 Map<String, String> map = new HashMap<>();
                 map.put("type", resource.getClass().getCanonicalName());
                 map.put("state", resource.getState().toString());
-                map.put("name", resource.toString());
+                map.put("name", resource.getLocator().toString());
                 list.add(map);
             }
         } catch (Exception e) {

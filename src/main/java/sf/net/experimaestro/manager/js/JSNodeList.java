@@ -129,5 +129,9 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         }
         return result;
     }
+
+    public NodeList getList() {
+        return list;
+    }
 }
 

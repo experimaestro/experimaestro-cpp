@@ -40,6 +40,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.manager.js.JSNode;
+import sf.net.experimaestro.manager.js.JSNodeList;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
@@ -340,6 +341,10 @@ public class JSUtils {
                 return document.get().adoptNode(node);
             }
             return node;
+        }
+
+        if (object instanceof JSNodeList) {
+            return ((JSNodeList) object).getList();
         }
 
         if (object instanceof Scriptable) {

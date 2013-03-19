@@ -43,6 +43,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.TreeMap;
 
+/**
+ * A TCP-IP service based on JSON-like data exchanges (through MessagePack)
+ */
 public class StreamServer extends Thread {
     static final private Logger LOGGER = Logger.getLogger();
 

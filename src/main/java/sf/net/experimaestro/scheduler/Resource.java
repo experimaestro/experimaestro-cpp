@@ -43,7 +43,7 @@ import java.util.TreeMap;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
+@Entity(version = 1)
 public abstract class Resource<Data extends ResourceData> implements /*not sure if ID or locator... Comparable<Resource>,*/ Cleaneable {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -88,7 +88,6 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Task manager
      */
     protected transient Scheduler scheduler;
-    private String group;
 
 
     @Override
