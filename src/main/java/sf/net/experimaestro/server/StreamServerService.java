@@ -29,6 +29,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.msgpack.packer.Packer;
 import org.msgpack.unpacker.Unpacker;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -219,7 +220,8 @@ public class StreamServerService {
             else
                 LOGGER.debug("Null result");
 
-            StreamServer.sendReturnCode(packer, 0, result != null && result != Scriptable.NOT_FOUND ? result.toString() : "");
+            StreamServer.sendReturnCode(packer, 0, result != null && result != Scriptable.NOT_FOUND &&
+                    result != Undefined.instance ? result.toString() : "");
 
         } catch (Throwable e) {
             Throwable wrapped = e;

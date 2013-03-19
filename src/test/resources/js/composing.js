@@ -44,9 +44,10 @@ tasks("abc:task") = {
             
             <task ref="abc:task-1" id="t1"/>
         </inputs>,
+        
 	
 	run: function(inputs) {
-		return inputs.t2.get_node("xp:array/xp:value");
+		return inputs.t2("x");
 	}
 		
 };
@@ -56,16 +57,22 @@ tasks("abc:task") = {
 // Run and check
 
 var r = tasks("abc:task").run({"t1.x": 10})[0];
-
 // END SNIPPET: main
 function test_value() {
-    if (r == undefined || r.get_value() != 10)
-    	throw new java.lang.String.format("Value [%s] is different from 10", r);
+    v = typeof(r) == "undefined" ? null : r();
+    if (v != 10)
+    	throw new java.lang.String.format("Value [%s] is different from 10", v);
 }
 	
 /* 
+
 TODO: ease the composition by
-tasks.abc::task = compose({
-    [tasks.abc::task_2, { x: tasks.abc.task_2::x } ]
-});
+    
+    inputs_2: {
+        "t2": { task: "abc:task-2", connect: {
+            "x": input("t1").xpath(".")
+        } },
+        "t1": { task: "abc:task-1" }
+    }
+
 */

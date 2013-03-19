@@ -26,8 +26,8 @@ function test_direct()
         inputs: { 
             x: { value: "xs:integer" },
         },
-        run: function(x, v) {
-            return v.x;
+        run: function(x) {
+            return x.x();
         }
     }
 
@@ -38,21 +38,3 @@ function test_direct()
     assert(r[0].get_value() == 1, "%s is not equal to 1", r[0].get_string());
 }
 
-// function test_direct_xml() 
-{
-    tasks("direct-access-xml") = {
-        inputs: { 
-            a: { xml: "a" },
-        },
-        run: function(x, v) {
-            return v.a.b;
-        }
-    }
-
-    var r = tasks("direct-access-xml").run({
-        a: <a><b xmlns:xp={xp.uri} xp:name="b" xp:value="1"></b></a>
-    });
-    
-    assert(r[0].get_value() == 1, "%s is not equal to 1", r[0].get_string());
-    
-}

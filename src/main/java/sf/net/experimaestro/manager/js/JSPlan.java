@@ -25,10 +25,10 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -75,7 +75,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      */
     public JSPlan(Scriptable scope, TaskFactory factory, NativeObject object) throws XPathExpressionException {
         plan = new Plan(factory);
-        plan.add(getMappings(object, scope));
+        plan.add(getMappings(DotName.EMPTY, object, scope));
     }
 
     public JSPlan(TaskFactory factory) {
@@ -83,11 +83,19 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
 
-    private PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
+    /**
+     * Get the mappings out of a native object
+     *
+     * @param object
+     * @param scope
+     * @return
+     * @throws XPathExpressionException
+     */
+    private PlanInputs getMappings(DotName prefix, NativeObject object, Scriptable scope) throws XPathExpressionException {
         PlanInputs inputs = new PlanInputs();
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
-            DotName id = DotName.parse(name);
+            DotName id = new DotName(prefix, DotName.parse(name));
 
             final Object value = JSUtils.unwrap(object.get(name, object));
 
@@ -98,6 +106,8 @@ public class JSPlan extends JSAbstractOperator implements Callable {
                         final Object e = array.get(i);
                         inputs.set(id, getSimple(e, scope));
                     }
+                } else if (value instanceof NativeObject) {
+                    getMappings(id, (NativeObject) value, scope);
                 } else
                     inputs.set(id, getSimple(value, scope));
 
@@ -244,10 +254,9 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
 
-
     @JSFunction(value = "add", scope = true)
     public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
-        plan.add(getMappings(object, scope));
+        plan.add(getMappings(DotName.EMPTY, object, scope));
     }
 
     @Override

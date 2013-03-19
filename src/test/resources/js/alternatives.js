@@ -35,7 +35,7 @@ tasks.set("abc:alt1", {
 	},
 	
 	run: function(inputs) {
-		return { "abc:alt": inputs.size };
+		return { "abc:alt": inputs.size() };
 	}
 });
 
@@ -56,13 +56,15 @@ var task = tasks.get("abc:task").create();
 task.set("p", "{a.b.c}alt1");
 task.set("p.size", 10);
 var r = task.run();
-var v = r.get_value("abc:alt/size");
+var v = r("abc:alt");
 
 // END SNIPPET: main
 
 function test_value() {
-    if (v == undefined || v != 10)
-    	throw new java.lang.String.format("Value [%s] is different from 10", r.abc::alt.xp::value.@value);
+    if (typeof(v) == "undefined") 
+        v = null;
+    if (v != 10)
+    	throw new java.lang.String.format("Value [%s] is different from 10", v);
 }
 	
 	

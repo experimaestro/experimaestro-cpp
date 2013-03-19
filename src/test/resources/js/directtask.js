@@ -34,7 +34,7 @@ var r = tasks("abc:task").run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {
-	v = r.get_value("/xp:array/xp:value");
+	v = r.get_value("/xp:array/x");
 	if (v == undefined || v != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", v);
 }	

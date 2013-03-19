@@ -257,7 +257,7 @@ tasks("ns:sum")= {
 
     run: function(p) {
         var sum = 0;
-        for each(var a in p.x.xpath("xp:array/*")) {
+        for each(var a in p.x.xpath("*")) {
             sum += a();
         }            
         return sum;
