@@ -820,7 +820,8 @@ public class XPMObject {
 
         // -- Adds default locks
         for (Map.Entry<Resource<?>, Object> lock : defaultLocks.entrySet()) {
-            lock.getKey().createDependency(lock.getValue());
+            Dependency dependency = lock.getKey().createDependency(lock.getValue());
+            task.addDependency(dependency);
         }
 
         // --- Options
