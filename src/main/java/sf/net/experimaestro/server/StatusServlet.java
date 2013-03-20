@@ -45,6 +45,7 @@ public class StatusServlet extends XPMServlet {
     final static private Logger LOGGER = Logger.getLogger();
 
     private static final long serialVersionUID = 1L;
+    public static final String RESOURCE_PATH = "/resource/";
     private final Scheduler scheduler;
 
     public StatusServlet(Scheduler manager) {
@@ -73,12 +74,9 @@ public class StatusServlet extends XPMServlet {
                             try {
                                 ResourceLocator locator = resource.getLocator();
                                 out.format(
-                                        "<li>[%s/%s] <a href=\"%s/resource?id=%s&amp;path=%s\">%s</a></li>",
-                                        resource.getId(),
-                                        resource.getData().getID(),
+                                        "<li><a href=\"%s/resource/%d\">%s</a></li>",
                                         request.getServletPath(),
-                                        urlEncode(locator.getConnectorId()),
-                                        urlEncode(locator.getPath()),
+                                        resource.getId(),
                                         locator);
                             } catch(Throwable t) {
                                 out.format("<li><b>Resource ID %s</b> without locator</li>", resource.getId());
@@ -95,16 +93,14 @@ public class StatusServlet extends XPMServlet {
             return;
         }
 
-        if (localPath.equals("/resource")) {
+        if (localPath.startsWith(RESOURCE_PATH)) {
+            long resourceId = Long.parseLong(localPath.substring("/resource/".length()));
             PrintWriter out = startHTMLResponse(response);
-            String connectorId = request.getParameter("id");
-            String path = request.getParameter("path");
 
-            final ResourceLocator locator = new ResourceLocator(connectorId, path);
-
+            Resource resource = scheduler.getResource(resourceId);
+            ResourceLocator locator = resource.getLocator();
             header(out, String.format("Details of resource %s", locator));
 
-            Resource resource;
             try {
                 resource = scheduler.getResource(locator);
             } catch (DatabaseException e) {

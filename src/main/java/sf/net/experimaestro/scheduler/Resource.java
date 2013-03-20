@@ -284,7 +284,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      */
     protected Map<Long, Dependency> getDependencyMap() {
         if (dependencies == null)
-            if (!stored())
+            if (stored())
                 dependencies = scheduler.getDependencies(resourceID);
             else
                 dependencies = new TreeMap<>();
