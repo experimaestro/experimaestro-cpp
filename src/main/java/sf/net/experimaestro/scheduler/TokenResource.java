@@ -113,6 +113,10 @@ public class TokenResource extends Resource<ResourceData> {
             super(from);
         }
 
+        @Override
+        public String toString() {
+            return "Token";
+        }
 
         @Override
         protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
