@@ -38,6 +38,7 @@ import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.manager.js.JSNode;
 import sf.net.experimaestro.manager.js.JSNodeList;
@@ -195,8 +196,8 @@ public class JSUtils {
     }
 
     public static Object toDOM(Scriptable scope, Object object, OptionalDocument document) {
-        // Unwrap if needed
-        if (object instanceof Wrapper)
+        // Unwrap if needed (if this is not a JSBaseObject)
+        if (object instanceof Wrapper && !(object instanceof JSBaseObject))
             object = ((Wrapper) object).unwrap();
 
         // It is already a DOM node

@@ -895,6 +895,7 @@ public class XPMObject {
             // TODO: if equal, do not try to replace the task
             if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
+                old.init(scheduler);
                 return new JSResource(old);
             } else {
                 getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
