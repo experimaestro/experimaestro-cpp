@@ -52,7 +52,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     /**
      * When did the job start (0 if not started)
      */
-    private long startTimestamp;
+    long startTimestamp;
 
     /**
      * When did the job stop (0 when it did not stop yet)
@@ -90,7 +90,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         super(scheduler, data);
 
         // State is on hold for the moment
-        state = ResourceState.ON_HOLD;
+        setState(ResourceState.ON_HOLD);
     }
 
     private boolean isDone() {
@@ -109,8 +109,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      * Put the state into waiting mode and clean all the output files
      */
     synchronized public void restart() throws Exception {
-        if (!state.isActive()) {
-            set(ResourceState.WAITING);
+        if (!getState().isActive()) {
+            setState(ResourceState.WAITING);
             clean();
             scheduler.store(this, true);
         }
@@ -178,12 +178,12 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
         try {
             // We are running (prevents other task to try to replace ourselves)
-            state = ResourceState.LOCKING;
+            setState(ResourceState.LOCKING);
 
             while (true) {
                 // Check if not done
                 if (isDone()) {
-                    state = ResourceState.DONE;
+                    setState(ResourceState.DONE);
                     storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
@@ -207,7 +207,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
-                    state = ResourceState.DONE;
+                    setState(ResourceState.DONE);
                     storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
@@ -236,7 +236,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 LOGGER.info("Locks are OK. Running task [%s]", this);
                 try {
                     // Change the state
-                    state = ResourceState.RUNNING;
+                    setState(ResourceState.RUNNING);
                     startTimestamp = System.currentTimeMillis();
 
                     // Start the task and transfer locking handling to those
@@ -244,10 +244,11 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     process.adopt(locks);
                     locks = null;
                     storeState(false);
+                    LOGGER.info("Task [%s] is running (start=%d)", this, startTimestamp);
 
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
-                    state = ResourceState.ERROR;
+                    setState(ResourceState.ERROR);
                     storeState(true);
                 } finally {
                 }
@@ -262,8 +263,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
             throw new RuntimeException(e);
         } finally {
             // Revert back the state to READY if we failed to lock
-            if (state == ResourceState.LOCKING) {
-                state = ResourceState.READY;
+            if (getState() == ResourceState.LOCKING) {
+                setState(ResourceState.READY);
                 storeState(true);
             }
 
@@ -299,7 +300,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), eoj.code);
 
                 // Update state
-                state = eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR;
+                setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
                 // Dispose of the job monitor
                 XPMProcess old = process;
                 process = null;
@@ -328,6 +329,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                         LOGGER.error("Received unknown self-message: %s", message);
                 }
             } else if (message instanceof DependencyChangedMessage) {
+                ResourceState oldState = getState();
                 final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
 
                 // Store in cache
@@ -350,17 +352,17 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
                     // Change the state in funciton of the number of unsatified requirements
                     if (nbUnsatisfied == 0) {
-                        if (state == ResourceState.WAITING)
-                            state = ResourceState.READY;
+                        if (getState() == ResourceState.WAITING)
+                            setState(ResourceState.READY);
                     } else {
-                        if (state == ResourceState.READY)
-                            state = ResourceState.WAITING;
+                        if (getState() == ResourceState.READY)
+                            setState(ResourceState.WAITING);
                     }
 
                     // Store the result
                     assert nbHolding >= 0;
                     assert nbUnsatisfied >= nbHolding;
-                    storeState(false);
+                    storeState(getState() != oldState);
                 }
                 LOGGER.debug("Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
             }
@@ -468,12 +470,12 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
         // Check the done file
         final FileObject doneFile = getMainConnector().resolveFile(getLocator().getPath() + DONE_EXTENSION);
-        if (doneFile.exists() && state != ResourceState.DONE) {
+        if (doneFile.exists() && getState() != ResourceState.DONE) {
             changes = true;
             if (this instanceof Job) {
                 ((Job) this).endTimestamp = doneFile.getContent().getLastModifiedTime();
             }
-            this.state = ResourceState.DONE;
+            this.setState(ResourceState.DONE);
         }
 
         // Check dependencies if we are in waiting or ready
@@ -505,7 +507,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 this.nbHolding = nbHolding;
             }
 
-            changes |= set(state);
+            changes |= setState(state);
         }
 
         return changes;
@@ -518,14 +520,14 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         // Process is running
         if (process != null) {
             process.destroy();
-            state = ResourceState.ERROR;
+            setState(ResourceState.ERROR);
             storeState(true);
             return true;
         }
 
         // Process is about to run
-        if (state == ResourceState.READY || state == ResourceState.WAITING) {
-            state = ResourceState.ON_HOLD;
+        if (getState() == ResourceState.READY || getState() == ResourceState.WAITING) {
+            setState(ResourceState.ON_HOLD);
             storeState(true);
             return true;
         }

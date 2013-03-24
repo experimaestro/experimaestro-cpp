@@ -256,11 +256,11 @@ final public class Scheduler {
                     } catch (LockException e) {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                        job.state = ResourceState.WAITING;
+                        job.setState(ResourceState.WAITING);
                         job.storeState(false);
                     } catch (Throwable t) {
                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                        job.state = ResourceState.ERROR;
+                        job.setState(ResourceState.ERROR);
                         job.storeState(false);
                     } finally {
                     }

@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.Output;
 import com.sleepycat.je.DatabaseException;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
@@ -30,9 +31,17 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.Random;
+import java.util.TreeSet;
 
-import static java.lang.Math.*;
+import static java.lang.Math.floor;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
 
 public class SchedulerTest extends XPMEnvironment {
 
@@ -125,36 +134,95 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
 
-    @Test(/*timeOut = 1000,*/ description = "Run jobs generated at random")
-    public void test_complex_dependencies() throws ExperimaestroCannotOverwrite {
-        // Number of jobs
-        final int nbJobs = 20;
+    static public class ComplexDependenciesParameters {
+        String name;
+        Long seed = null;
 
-        final int nbCouples = nbJobs * (nbJobs - 1) / 2;
+        int maxExcutionTime = 50;
+        int minExecutionTime = 10;
+
+        // Number of jobs
+        int nbJobs = 20;
+
 
         // Number of dependencies (among possible ones)
-        final double dependencyRatio = .2;
+        double dependencyRatio = .2;
+
         // Maximum number of dependencies
-        final int maxDependencies = min(200, nbCouples);
+        int maxDeps = 200;
 
         // Failure ratio
-        final double failureRatio = .05;
+        double failureRatio = .05;
+
         // Minimum number of failures
-        final int minFailures = 2;
+        int minFailures = 2;
+
         // Minimum job number for failure
         int minFailureId = 2;
 
+        public ComplexDependenciesParameters(String name, Long seed) {
+            this.seed = seed;
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+
+        public ComplexDependenciesParameters jobs(int nbJobs, int maxExcutionTime, int minExecutionTime) {
+            this.nbJobs = nbJobs;
+            this.maxExcutionTime = maxExcutionTime;
+            this.minExecutionTime = minExecutionTime;
+            return this;
+        }
+
+        public ComplexDependenciesParameters dependencies(double dependencyRatio, int maxDeps) {
+            this.dependencyRatio = dependencyRatio;
+            this.maxDeps = maxDeps;
+            return this;
+        }
+
+        public ComplexDependenciesParameters failures(double failureRatio, int minFailures, int minFailureId) {
+            this.failureRatio = failureRatio;
+            this.minFailures = minFailures;
+            this.minFailureId = minFailureId;
+            return this;
+        }
+    }
+
+    @DataProvider()
+    static ComplexDependenciesParameters[][] complexDependenciesTestProvider() {
+        return new ComplexDependenciesParameters[][]{
+                {
+                        new ComplexDependenciesParameters("complex", -8451050260222287949l)
+                                .jobs(20, 50, 10)
+                                .dependencies(.2, 200)
+                                .failures(0.05, 2, 2)
+                }
+        };
+    }
+
+    @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
+    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite {
+        Random random = new Random();
+        long seed = p.seed == null ? random.nextLong() : p.seed;
+        LOGGER.info("Seed is %d", seed);
+        random.setSeed(seed);
+
+        int nbCouples = p.nbJobs * (p.nbJobs - 1) / 2;
+
+        final int maxDependencies = min(p.maxDeps, nbCouples);
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
 
-        WaitingJob[] jobs = new WaitingJob[nbJobs];
+        WaitingJob[] jobs = new WaitingJob[p.nbJobs];
 
         // --- Generate the dependencies
         TreeSet<Link> dependencies = new TreeSet<>();
 
-        int n = min(min((int) (long) (nbCouples * dependencyRatio * random()), Integer.MAX_VALUE), maxDependencies);
-        Random random = new Random();
+        int n = min(min((int) (long) (nbCouples * p.dependencyRatio * random.nextDouble()), Integer.MAX_VALUE), maxDependencies);
 
         long[] values = new long[n];
         RandomSampler.sample(n, nbCouples, n, 0, values, 0, random);
@@ -163,8 +231,8 @@ public class SchedulerTest extends XPMEnvironment {
             final Link link = new Link(v);
             dependencies.add(link);
             LOGGER.debug("LINK %d to %d [%d]", link.from, link.to, v);
-            assert link.from < nbJobs;
-            assert link.to < nbJobs;
+            assert link.from < p.nbJobs;
+            assert link.to < p.nbJobs;
             assert link.from < link.to;
         }
 
@@ -172,43 +240,64 @@ public class SchedulerTest extends XPMEnvironment {
         ResourceState[] states = new ResourceState[jobs.length];
         for (int i = 0; i < states.length; i++)
             states[i] = ResourceState.DONE;
-        n = (int) max(minFailures, random() * failureRatio * jobs.length);
+        n = (int) max(p.minFailures, random.nextDouble() * p.failureRatio * jobs.length);
         long[] values2 = new long[n];
-        RandomSampler.sample(n, jobs.length - minFailureId, n, minFailureId, values2, 0, random);
+        RandomSampler.sample(n, jobs.length - p.minFailureId, n, p.minFailureId, values2, 0, random);
         for (int i = 0; i < n; i++)
             states[((int) values2[i])] = ResourceState.ERROR;
 
 
         // --- Generate new jobs
+        long duration = 0;
+        int nbHolding = 0;
         for (int i = 0; i < jobs.length; i++) {
 
-            int waitingTime = random.nextInt(500) + 50;
+            int waitingTime = random.nextInt(p.maxExcutionTime - p.minExecutionTime) + p.minExecutionTime;
             jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, waitingTime, states[i] == ResourceState.DONE ? 0 : 1);
+
+            duration += waitingTime;
 
             ArrayList<String> deps = new ArrayList<>();
             for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
                 assert i == link.to;
                 jobs[i].addDependency(jobs[link.from].createDependency(null));
-                if (states[i] != ResourceState.ERROR && states[link.from].isBlocking())
+                if (states[link.from].isBlocking())
                     states[i] = ResourceState.ON_HOLD;
                 deps.add(jobs[link.from].toString());
+            }
 
+            if (states[i] == ResourceState.ON_HOLD) {
+                nbHolding++;
             }
 
             scheduler.store(jobs[i], false);
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
         }
 
-        LOGGER.info("Waiting for jobs to finish");
-        counter.resume();
+        // Timeout is total duration + 100ms per job + 1s for overhead
+        final long timeOut = duration + 100 * p.nbJobs + 1000;
+        LOGGER.info("Waiting for jobs to finish (timeout = %d / holding = %d)", timeOut, nbHolding);
+        counter.resume(0, p.maxExcutionTime + 5000, true);
+        int count = counter.getCount();
+
+        LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
+
+        if (count > 0)
+            LOGGER.error("Time out: %d jobs were not processed", count);
 
         // --- Check
-        for (Link link : dependencies) {
-            if (states[link.from] == ResourceState.DONE && jobs[link.to].state == ResourceState.DONE)
-                checkSequence(jobs[link.from], jobs[link.to]);
-        }
+        LOGGER.info("Checking job states");
+        int errors = 0;
         for (int i = 0; i < jobs.length; i++)
-            checkState(EnumSet.of(states[i]), jobs[i]);
+            errors += checkState(EnumSet.of(states[i]), jobs[i]);
+
+        LOGGER.info("Checking job dependencies");
+        for (Link link : dependencies) {
+            if (states[link.from] == ResourceState.DONE && jobs[link.to].getState() == ResourceState.DONE)
+                errors += checkSequence(jobs[link.from], jobs[link.to]);
+        }
+
+        assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
 
@@ -224,7 +313,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 1500, 0);
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i], false);
         }
@@ -271,17 +360,21 @@ public class SchedulerTest extends XPMEnvironment {
      *
      * @param jobs
      */
-    static private void checkSequence(WaitingJob... jobs) {
+    static private int checkSequence(WaitingJob... jobs) {
+        int errors = 0;
+
         for (int i = 0; i < jobs.length - 1; i++) {
-            assert jobs[i].getEndTimestamp() < jobs[i + 1].readyTimestamp
-                    : String.format("The jobs (%s, end=%d) and (%s, start=%d) did not start one after the other",
-                    jobs[i], jobs[i].getEndTimestamp(),
-                    jobs[i + 1], jobs[i + 1].readyTimestamp);
+            if (jobs[i].getEndTimestamp() >= jobs[i + 1].readyTimestamp) {
+                LOGGER.warn("The jobs (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
+                        jobs[i], System.identityHashCode(jobs[i]), jobs[i].getEndTimestamp(),
+                        jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i + 1].readyTimestamp);
+                errors++;
+            } else
+                LOGGER.warn("The jobs (%s/%x) and (%s/%x) did  start one after the other [%dms]",
+                        jobs[i], System.identityHashCode(jobs[i]), jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i].getEndTimestamp() - jobs[i + 1].readyTimestamp);
 
-            // just to be on the safe side
-            assert jobs[i].getEndTimestamp() < jobs[i + 1].getStartTimestamp();
         }
-
+        return errors;
     }
 
     /**
@@ -290,11 +383,16 @@ public class SchedulerTest extends XPMEnvironment {
      * @param states The state
      * @param jobs   The jobs
      */
-    private void checkState(EnumSet<ResourceState> states, WaitingJob... jobs) {
+    private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) {
+        int errors = 0;
         for (int i = 0; i < jobs.length; i++)
-            assert states.contains(jobs[i].state)
-                    : String.format("The job (%s) is not in one of the states %s but %s", jobs[i], states, jobs[i].state);
-
+            if (!states.contains(jobs[i].getState())) {
+                LOGGER.warn("The job (%s/%x) is not in one of the states %s but [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
+                errors++;
+            } else
+                LOGGER.debug("The job (%s/%x) is in one of the states %s [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
+        return errors;
     }
+
 
 }

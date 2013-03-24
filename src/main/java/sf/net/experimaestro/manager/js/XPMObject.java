@@ -902,7 +902,7 @@ public class XPMObject {
             }
         }
 
-        task.set(ResourceState.WAITING);
+        task.setState(ResourceState.WAITING);
         if (simulate) {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", task.toString());

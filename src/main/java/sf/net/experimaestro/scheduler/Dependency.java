@@ -52,11 +52,6 @@ abstract public class Dependency {
     private long to;
 
     /**
-     * The locking mechanism
-     */
-    LockMode lockMode;
-
-    /**
      * The state of this dependency
      */
     DependencyStatus status;
@@ -86,6 +81,11 @@ abstract public class Dependency {
 
     public long getTo() {
         return to;
+    }
+
+    @Override
+    public String toString() {
+        return status.toString();
     }
 
     /**

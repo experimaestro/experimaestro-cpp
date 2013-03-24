@@ -28,7 +28,8 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author bpiwowar
  */
 public class ThreadCount {
-    final static Logger logger = Logger.getLogger();
+    private final static Logger LOGGER = Logger.getLogger();
+
     volatile int counter;
 
 
@@ -53,26 +54,38 @@ public class ThreadCount {
      * Wait until the count is zero
      */
     public void resume() {
-        resume(0);
+        resume(0, 0, false);
     }
 
     /**
      * Wait until the count is less than a given value
+     *
+     * @param n       The minimum value of the counter
+     * @param timeout The timeout after which we exit
+     * @param reset   Resets the time out each time the counter is changed
      */
-    public void resume(int n) {
-        while (getCount() > n)
+    public void resume(int n, long timeout, boolean reset) {
+        long endTimeout = timeout > 0 ? System.currentTimeMillis() + timeout : Long.MAX_VALUE;
+        LOGGER.debug("Waiting for counter to be <= %d (%d) - time-out to %dms from now", n, getCount(), endTimeout - System.currentTimeMillis());
+
+        while (getCount() > n && System.currentTimeMillis() < endTimeout) {
+            if (reset) {
+                long current = System.currentTimeMillis();
+                endTimeout = timeout > 0 ? current + timeout : Long.MAX_VALUE;
+                LOGGER.debug("Time-out reset to %dms from now [%s]", endTimeout - current, current);
+            }
             try {
                 synchronized (this) {
-                    wait();
+                    wait(timeout);
                 }
             } catch (IllegalMonitorStateException e) {
-                logger.warn("Illegal monitor exception while sleeping (SHOULD NOT HAPPEN)", e);
+                LOGGER.warn("Illegal monitor exception while sleeping (SHOULD NOT HAPPEN)", e);
             } catch (Exception e) {
-                logger.debug("Interrupted while sleeping: %s", e.toString());
-                if (logger.isDebugEnabled()) {
-                    logger.printException(Level.DEBUG, e);
+                LOGGER.debug("Interrupted while sleeping: %s", e.toString());
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.printException(Level.DEBUG, e);
                 }
             }
+        }
     }
-
 }

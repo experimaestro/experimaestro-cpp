@@ -94,7 +94,7 @@ public abstract class XPMProcess {
 
         // Set up the notification thread if needed
         if (notify && job != null) {
-            new Thread(String.format("job monitor [%s]", job.getLocator())) {
+            new Thread(String.format("job monitor [%s]", job.getId())) {
                 @Override
                 public void run() {
                     int code = 0;

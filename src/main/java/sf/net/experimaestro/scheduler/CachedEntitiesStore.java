@@ -157,7 +157,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
         }
 
 
-        // OK, we did updateFromStatusFile
+        // OK, we did update
         return old;
     }
 

@@ -64,7 +64,7 @@ public class TokenResource extends Resource<ResourceData> {
         super(scheduler, data);
         this.limit = limit;
         this.usedTokens = 0;
-        state = ResourceState.DONE;
+        setState(ResourceState.DONE);
     }
 
     /**
@@ -115,7 +115,7 @@ public class TokenResource extends Resource<ResourceData> {
 
         @Override
         public String toString() {
-            return "Token";
+            return "Token/" + super.toString();
         }
 
         @Override

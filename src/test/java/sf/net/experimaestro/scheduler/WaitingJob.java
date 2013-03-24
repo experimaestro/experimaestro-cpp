@@ -73,12 +73,13 @@ public class WaitingJob extends Job<JobData> {
         this.code = code;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        this.state = ResourceState.WAITING;
+        this.setState(ResourceState.WAITING);
     }
 
 
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
+        assert readyTimestamp > 0;
         return new MyXPMProcess(counter, getMainConnector(), this, duration, code);
     }
 
@@ -88,25 +89,18 @@ public class WaitingJob extends Job<JobData> {
         return false;
     }
 
+
     @Override
-    boolean storeState(boolean notify) {
-        final boolean r = super.storeState(notify);
-        if (!state.isActive() && counter != null) {
-            LOGGER.debug("Releasing counter for job " + id);
+    public boolean setState(ResourceState state) {
+        if (state == ResourceState.READY)
+            readyTimestamp = System.currentTimeMillis();
+        else if (!state.isActive() && counter != null) {
+            LOGGER.debug("Releasing counter for job " + id + "/" + (counter.getCount()-1));
             counter.del();
             counter = null;
         }
-        return r;
-    }
 
-    @Override
-    public synchronized void notify(Resource resource, Message message) {
-        super.notify(resource, message);
-        if (resource == null || this == resource) {
-            if (message instanceof DependencyChangedMessage && state == ResourceState.READY) {
-                readyTimestamp = System.currentTimeMillis();
-            }
-        }
+        return super.setState(state);
     }
 
     @Override
@@ -142,9 +136,12 @@ public class WaitingJob extends Job<JobData> {
 
         @Override
         public int waitFor() throws InterruptedException {
+            assert job.getStartTimestamp() > 0;
             synchronized (this) {
+                LOGGER.debug("Starting to wait - " + job);
                 long toWait = duration - (System.currentTimeMillis() - timestamp);
                 if (toWait > 0) wait(toWait);
+                LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
             }
             return code;
         }

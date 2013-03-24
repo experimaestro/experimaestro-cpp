@@ -48,7 +48,12 @@ public enum DependencyStatus {
      * The resource is not ready, and this is due to an error (possibly among
      * dependencies)
      */
-    ERROR, UNACTIVE;
+    ERROR,
+
+    /**
+     * Unactive dependency
+     */
+    UNACTIVE;
 
     public boolean isOK() {
         return this == OK_LOCK || this == OK;

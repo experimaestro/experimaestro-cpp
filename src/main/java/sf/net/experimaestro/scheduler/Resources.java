@@ -168,7 +168,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                         update(resource);
                     }
 
-                    switch (resource.state) {
+                    switch (resource.getState()) {
                         case READY:
                             LOGGER.info("Job %s is ready", resource);
                             readyJobs.add((Job<? extends JobData>) resource);
@@ -194,7 +194,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     @Override
     synchronized public Resource put(Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Get the group
-        LOGGER.debug("Storing resource [%s]", resource);
+        LOGGER.debug("Storing resource %s [%x@%s] in state %s", resource, System.identityHashCode(resource), resource.getId(), resource.getState());
         groupsTrie.put(DotName.parse(resource.getData().getGroupId()));
 
         final boolean newResource = !resource.stored();
@@ -205,7 +205,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
         if (newResource) {
             final long id = resource.getId();
-            LOGGER.debug("Adding a new resource [%s] in database [id=%d]", resource, id);
+            LOGGER.debug("Adding a new resource [%s] in database [id=%d/%x]", resource, id, System.identityHashCode(resource));
 
             // Add the data
             final ResourceData resourceData = resource.getData();
@@ -285,7 +285,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
                                 // Notify the resource that a dependency has changed
                                 depResource.notify(depResource, new DependencyChangedMessage(dep, beforeState, dep.status));
-                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.state, depResource);
+                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.getState(), depResource);
                             }
                         } else {
                             LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);

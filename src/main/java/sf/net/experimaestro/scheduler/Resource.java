@@ -60,7 +60,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * The resource state
      */
     @SecondaryKey(relate = Relationship.MANY_TO_ONE, name = STATE_KEY_NAME)
-    ResourceState state;
+    private ResourceState state;
 
     /**
      * Lock-related data: we don't store it
@@ -155,7 +155,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
             return doUpdateStatus(store);
         } catch (Exception e) {
             LOGGER.error(e, "Exception while updating status");
-            return set(ResourceState.ON_HOLD);
+            return setState(ResourceState.ON_HOLD);
         }
     }
 
@@ -260,19 +260,6 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
 
     /**
-     * Sets the state
-     *
-     * @param state
-     * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
-     */
-    public boolean set(ResourceState state) {
-        if (this.state == state)
-            return false;
-        this.state = state;
-        return true;
-    }
-
-    /**
      * The set of dependencies for this object
      */
     public Collection<Dependency> getDependencies() {
@@ -345,6 +332,19 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         return state;
     }
 
+    /**
+     * Sets the state
+     *
+     * @param state
+     * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
+     */
+    public boolean setState(ResourceState state) {
+        if (this.state == state)
+            return false;
+        this.state = state;
+        LOGGER.debug("Resource %s is now in state %s", this, state);
+        return true;
+    }
 
     /**
      * Update the database after a change in state
