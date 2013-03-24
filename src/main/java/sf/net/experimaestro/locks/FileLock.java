@@ -22,11 +22,16 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.WatchFileMonitor;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 
 
 /**
@@ -58,16 +63,24 @@ public class FileLock implements Lock {
      */
     public FileLock(File lockFile, boolean wait) throws LockException {
         this.lockFile = lockFile;
-        WatchFileMonitor monitor = new WatchFileMonitor(lockFile,
-                WatchFileMonitor.Mode.DELETED);
+
+        // FIXME: this is not reliable... but we rely on it for the moment!
         try {
-            while (!lockFile.createNewFile())
-                if (wait)
-                    monitor.take();
-                else throw new LockException();
-            lockFile.deleteOnExit();
-        } catch (IOException e) {
-            throw new LockException("Could not create the lock file");
+            while (!lockFile.createNewFile()) {
+                try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
+
+                    Path path = Paths.get(lockFile.toURI());
+
+                    WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                    if (wait)
+                        watcher.take();
+                    else throw new LockException();
+                    lockFile.deleteOnExit();
+
+                }
+            }
+        } catch (IOException | InterruptedException e) {
+            throw new LockException(e, "Could not create the lock file");
         }
     }
 
@@ -88,6 +101,7 @@ public class FileLock implements Lock {
      *
      * @see bpiwowar.expmanager.rsrc.Lock#close()
      */
+
     public void close() {
         if (lockFile != null && lockFile.exists()) {
             boolean success = lockFile.delete();
