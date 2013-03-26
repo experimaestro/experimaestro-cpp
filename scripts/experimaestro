@@ -11,7 +11,9 @@ import re
 from icolor import cformat
 import traceback
 import socket
-import msgpack
+import base64
+import websocket
+import json
 
 # --- Set some variables
 
@@ -60,7 +62,7 @@ def start_jar(args, jarargs):
         command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
 
     # print command
-    logging.debug('Runnig command %s' % command)
+    logging.debug('Running command %s' % command)
     subprocess.call(command)
 
 
@@ -180,12 +182,25 @@ class Configuration():
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
         
     def getServer(self):
-        return xmlrpclib.ServerProxy(self.client["url"], verbose=args.verbose)
+        return xmlrpclib.ServerProxy("%s/xmlrpc" % self.client["url"], verbose=args.verbose)
         
-    def getStreamServer(self):
-        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM )
-        client.connect(self.client["socket"])
-        return client
+    def getStreamServer(self):    
+        re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
+        m = re_url.match(self.client["url"])
+        if not m:
+            raise "Client URL is not valid"
+        
+        scheme = "ws"
+        if m.group(1): 
+            secure = "wss"
+        url = "%s://%s/web-socket" % (scheme, m.group(4))
+        
+        header = []
+        if m.group(2) and m.group(3):
+            auth = base64.b64encode("%s:%s" % (m.group(2), m.group(3)))
+            header = [ "Authorization: Basic %s" % auth ]
+        
+        return websocket.create_connection(url, header=header)
 
     
 # --- Server
@@ -224,27 +239,19 @@ def command_run_js(appendrgs):
 
     try:
         code = 0
-        msg = msgpack.packb({"command": "run-javascript", "args": { "files": files, "env": dict(os.environ)}})
+        msg = json.dumps({"command": "run-javascript", "args": { "files": files, "environment": dict(os.environ)}})
         r = client.send(msg)
-        unpacker = msgpack.Unpacker()
-        # client.setblocking(False)
         while client is not None:
-            buf = client.recv(1024**2)
-            if not buf:
-                break
-            unpacker.feed(buf)
-            for o in unpacker:
-                if not o:
-                    client.close()
-                    client = None
-                    break
-
-                if type(o) == str:
-                    sys.stdout.write(o)
-                else:
-                    code = o["code"]
-                    print "Exit code: %s" % o["code"]
+            message = client.recv()
+            o = json.loads(message)
+            if type(o) == dict:
+                code = o["code"]
+                print "Exit code: %s" % o["code"]
+                if "message" in o:
                     print o["message"]
+                break
+            else:
+                print o,
             
         sys.exit(code)
     except xmlrpclib.Fault as e:
