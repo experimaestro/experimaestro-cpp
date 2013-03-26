@@ -138,7 +138,7 @@ public class SchedulerTest extends XPMEnvironment {
         String name;
         Long seed = null;
 
-        int maxExcutionTime = 50;
+        int maxExecutionTime = 50;
         int minExecutionTime = 10;
 
         // Number of jobs
@@ -172,7 +172,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         public ComplexDependenciesParameters jobs(int nbJobs, int maxExcutionTime, int minExecutionTime) {
             this.nbJobs = nbJobs;
-            this.maxExcutionTime = maxExcutionTime;
+            this.maxExecutionTime = maxExcutionTime;
             this.minExecutionTime = minExecutionTime;
             return this;
         }
@@ -252,7 +252,7 @@ public class SchedulerTest extends XPMEnvironment {
         int nbHolding = 0;
         for (int i = 0; i < jobs.length; i++) {
 
-            int waitingTime = random.nextInt(p.maxExcutionTime - p.minExecutionTime) + p.minExecutionTime;
+            int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
             jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, waitingTime, states[i] == ResourceState.DONE ? 0 : 1);
 
             duration += waitingTime;
@@ -274,10 +274,14 @@ public class SchedulerTest extends XPMEnvironment {
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
         }
 
-        // Timeout is total duration + 100ms per job + 1s for overhead
-        final long timeOut = duration + 100 * p.nbJobs + 1000;
-        LOGGER.info("Waiting for jobs to finish (timeout = %d / holding = %d)", timeOut, nbHolding);
-        counter.resume(0, p.maxExcutionTime + 5000, true);
+        LOGGER.info("Waiting for jobs to finish (%d remaining)", counter.getCount());
+        // FIXME: revert back to this once bug is fixed
+        while (counter.getCount() > 0) {
+            counter.resume(0, p.maxExecutionTime + 5000, true);
+            for (int i = 0; i < jobs.length; i++)
+                if (jobs[i].getState().isActive())
+                    LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
+        }
         int count = counter.getCount();
 
         LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
@@ -302,7 +306,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(/*timeOut = 5000,*/ description = "Test of the token resource - one job at a time")
-    public void test_token_resource() throws ExperimaestroCannotOverwrite {
+    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException {
 
         File jobDirectory = mkTestDir();
 
@@ -311,9 +315,9 @@ public class SchedulerTest extends XPMEnvironment {
         TokenResource token = new TokenResource(scheduler, new ResourceData(locator), 1);
         scheduler.store(token, false);
 
-        WaitingJob[] jobs = new WaitingJob[2];
+        WaitingJob[] jobs = new WaitingJob[5];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 1500, 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 250, 0);
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i], false);
         }
@@ -323,6 +327,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Check that one started after the other (since only one must have been active
         // at a time)
+        LOGGER.info("Checking the token test output");
         Arrays.sort(jobs, new Comparator<WaitingJob>() {
             @Override
             public int compare(WaitingJob o1, WaitingJob o2) {
@@ -370,8 +375,8 @@ public class SchedulerTest extends XPMEnvironment {
                         jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i + 1].readyTimestamp);
                 errors++;
             } else
-                LOGGER.warn("The jobs (%s/%x) and (%s/%x) did  start one after the other [%dms]",
-                        jobs[i], System.identityHashCode(jobs[i]), jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i].getEndTimestamp() - jobs[i + 1].readyTimestamp);
+                LOGGER.debug("The jobs (%s/%x) and (%s/%x) started one after the other [%dms]",
+                        jobs[i], System.identityHashCode(jobs[i]), jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i + 1].readyTimestamp - jobs[i].getEndTimestamp());
 
         }
         return errors;

@@ -147,7 +147,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      *
      * @param locks The locks that were taken
      * @return The process corresponding to the job
-     * @throws Throwable If something goes wrong
+     * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
+     *                   return the process
      */
     abstract protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable;
 
@@ -179,6 +180,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         try {
             // We are running (prevents other task to try to replace ourselves)
             setState(ResourceState.LOCKING);
+            LOGGER.debug("Running preparation - locking ourselves [%s]", this);
 
             while (true) {
                 // Check if not done
@@ -204,6 +206,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     continue;
                 }
 
+                LOGGER.debug("Running preparation - locked ourselves [%s]", this);
+
                 // Check if not done (again, but now we have a lock so we
                 // will be sure of the result)
                 if (isDone()) {
@@ -219,14 +223,20 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 // in order to avoid race issues, we sync with
                 // the task manager
                 synchronized (Scheduler.LockSync) {
+                    LOGGER.debug("Running preparation - locking dependencies [%s]", this);
                     for (Dependency dependency : getDependencies()) {
                         try {
+                            LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
                             final Lock lock = dependency.lock(scheduler, null, pid);
                             if (lock != null)
                                 locks.add(lock);
+                            LOGGER.debug("Running preparation - locked dependencies [%s]", dependency);
                         } catch (LockException e) {
-                            dependency.update(scheduler, null, true);
-                            throw new LockException(e, "Could not lock %s", dependency);
+                            // Update & store this dependency
+                            Resource resource = scheduler.getResource(dependency.getFrom());
+                            resource.init(scheduler);
+                            e.addContext("While locking to run %s", resource);
+                            throw e;
                         }
 
                     }
@@ -240,11 +250,13 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     startTimestamp = System.currentTimeMillis();
 
                     // Start the task and transfer locking handling to those
+                    storeState(false);
                     process = startJob(locks);
+
                     process.adopt(locks);
                     locks = null;
-                    storeState(false);
-                    LOGGER.info("Task [%s] is running (start=%d)", this, startTimestamp);
+
+                    LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
 
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
@@ -255,26 +267,19 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
                 break;
             }
-        } catch (DatabaseException e) {
-            throw new RuntimeException(e);
         } catch (LockException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            LOGGER.error(e, "Caught exception for %s", this);
             throw new RuntimeException(e);
         } finally {
-            // Revert back the state to READY if we failed to lock
-            if (getState() == ResourceState.LOCKING) {
-                setState(ResourceState.READY);
-                storeState(true);
-            }
-
             // Dispose of the locks that we own
             if (locks != null)
                 for (Lock lock : locks)
                     try {
                         lock.close();
-                    } catch (Exception e) {
-                        LOGGER.error(e);
+                    } catch (Throwable e) {
+                        LOGGER.error(e, "Could not close lock %s", lock);
                     }
         }
 
@@ -439,7 +444,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 out.format(
                         "<li><a href=\"%s/resource/%d\">%s</a>: %s</li>",
                         config.detailURL,
-                        getId(),
+                        resource.getId(),
                         resource.getLocator(),
                         dependency);
             }

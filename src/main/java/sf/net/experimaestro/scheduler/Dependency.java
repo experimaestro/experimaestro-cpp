@@ -85,7 +85,7 @@ abstract public class Dependency {
 
     @Override
     public String toString() {
-        return status.toString();
+        return String.format("Dep[R%d-R%d]; %s", from, to, status);
     }
 
     /**

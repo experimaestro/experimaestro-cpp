@@ -177,7 +177,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
         // --- Plans & transformations
 
-        // Case of operators or functions of operators
+        // Case of operators or converter of operators
         if (value instanceof JSOperator)
             return ((JSOperator) value).getOperator();
 

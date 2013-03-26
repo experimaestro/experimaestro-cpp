@@ -278,6 +278,10 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
                         if (dep.update(scheduler, resource, false)) {
                             final Resource depResource = get(dep.getTo());
+                            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                                break;
+                            }
 
                             synchronized (depResource) {
                                 // Update the dependency in database

@@ -55,6 +55,6 @@ public class JSOARLauncher extends ScriptableObject implements JSLauncher {
         return launcher;
     }
 
-    // ---- JavaScript functions ----
+    // ---- JavaScript converter ----
 
 }

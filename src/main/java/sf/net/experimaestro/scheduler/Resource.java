@@ -130,9 +130,9 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
     @Override
     public String toString() {
-        if (data != null)
-            return data.locator.toString();
-        return String.format("Resource %x", resourceID);
+        if (resourceID == null)
+            return "R-";
+        return String.format("R%d", resourceID);
     }
 
     /**
@@ -342,7 +342,6 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         if (this.state == state)
             return false;
         this.state = state;
-        LOGGER.debug("Resource %s is now in state %s", this, state);
         return true;
     }
 

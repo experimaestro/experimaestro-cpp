@@ -192,14 +192,14 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
     final synchronized public Value get(Key key) throws DatabaseException {
         Value value = getFromCache(key);
         if (value != null) {
-            LOGGER.debug("Retrieved [%s] from cache [%x]", key, System.identityHashCode(value));
+            LOGGER.debug("Retrieved [%s] from cache [%x]", value, System.identityHashCode(value));
             return value;
         }
 
         // Get from the database
         value = index.get(key);
         if (value != null) {
-            LOGGER.debug("Retrieved [%s] from database [%x]", key, System.identityHashCode(value));
+            LOGGER.debug("Retrieved [%s] from database [%x]", value, System.identityHashCode(value));
             init(value);
             // Store in cache
             cache.put(getKey(value), new SoftReference<>(value));

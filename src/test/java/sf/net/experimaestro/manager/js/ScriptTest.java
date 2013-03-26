@@ -29,7 +29,7 @@ import java.net.URL;
 /**
  * Runs the scripts contained in the directory "test/resources/js"
  * <p/>
- * Tests are defined by matching javascript functions matching "function test_XXXX()"
+ * Tests are defined by matching javascript converter matching "function test_XXXX()"
  */
 public class ScriptTest  {
     static final Logger LOGGER = Logger.getLogger();

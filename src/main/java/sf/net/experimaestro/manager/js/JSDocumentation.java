@@ -107,14 +107,14 @@ public class JSDocumentation {
     }
 
     /**
-     * Retrieves by introspection the functions and objects defined
+     * Retrieves by introspection the converter and objects defined
      * and prints a documentation out of it
      *
      * @param printer
      */
     static public void printJSHelp(Documentation.Printer printer) {
 
-        // --- Document functions
+        // --- Document converter
 
         printer.append(new Documentation.Title(1, new Documentation.Text("Functions")));
 

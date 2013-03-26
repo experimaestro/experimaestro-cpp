@@ -27,24 +27,26 @@ import bpiwowar.experiments.TaskDescription;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.xmlrpc.webserver.XmlRpcServlet;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.Constraint;
-import org.mortbay.jetty.security.ConstraintMapping;
-import org.mortbay.jetty.security.HashUserRealm;
-import org.mortbay.jetty.security.Password;
-import org.mortbay.jetty.security.SecurityHandler;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.thread.ThreadPool;
+import org.eclipse.jetty.security.ConstraintMapping;
+import org.eclipse.jetty.security.ConstraintSecurityHandler;
+import org.eclipse.jetty.security.HashLoginService;
+import org.eclipse.jetty.security.authentication.BasicAuthenticator;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.security.Constraint;
+import org.eclipse.jetty.util.security.Password;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.server.StreamServer;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.JSHelpServlet;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
+import sf.net.experimaestro.server.XPMWebSocketServlet;
 import sf.net.experimaestro.server.XPMXMLRpcServlet;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -61,6 +63,7 @@ import java.util.Iterator;
 public class ServerTask extends AbstractTask {
     final static Logger LOGGER = Logger.getLogger();
     public static final String KEY_SERVER_SOCKET = "server.socket";
+    public static final String XPM_REALM = "xpm-realm";
 
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
     HierarchicalINIConfiguration configuration;
@@ -92,50 +95,42 @@ public class ServerTask extends AbstractTask {
         // Main repository
         final Repositories repositories = new Repositories(new ResourceLocator(XPMConnector.getInstance(), ""));
 
-        Server webServer = new Server(port);
-//        server.addConnector(new UnixSocketConnector());
+        Server webServer = new Server();
 
-        Context context = new Context(webServer, "/");
+        // TCP-IP socket
+        ServerConnector connector=new ServerConnector(webServer);
+        connector.setPort(port);
+        webServer.addConnector(connector);
 
-        // -- Security
-        // From
-        // http://docs.codehaus.org/display/JETTY/How+to+Configure+Security+with+Embedded+Jetty
-        Constraint constraint = new Constraint();
-        constraint.setName(Constraint.__BASIC_AUTH);
-        constraint.setRoles(new String[]{"user"});
-        constraint.setAuthenticate(true);
+        // Unix domain socket
+        if (configuration.containsKey(KEY_SERVER_SOCKET)) {
+            // TODO: move this to the target class
+            String libraryPath = System.getProperty("org.newsclub.net.unix.library.path");
+            if (libraryPath == null) {
+                URL url = ServerTask.class.getProtectionDomain().getCodeSource().getLocation();
+                File file = new File(url.toURI());
+                while (file != null && !new File(file, "native-libs").exists()) {
+                    file = file.getParentFile();
+                }
+                if (file == null)
+                    throw new UnsatisfiedLinkError("Cannot find the native-libs directory");
+                file = new File(file, "native-libs");
 
-        ConstraintMapping cm = new ConstraintMapping();
-        cm.setConstraint(constraint);
-        cm.setPathSpec("/*");
+                LOGGER.info("Using path for junixsocket library [%s]", file);
+                System.setProperty("org.newsclub.net.unix.library.path", file.getAbsolutePath());
+            }
 
-        SecurityHandler sh = new SecurityHandler();
-        String passwordProperty = configuration.getString("passwords");
-        final HashUserRealm userRealm;
-        if (passwordProperty != null) {
-            File passwordFile = new File(passwordProperty);
-            userRealm = new HashUserRealm("xpm-realm", passwordFile
-                    .getAbsolutePath());
-        } else
-            userRealm = new HashUserRealm("xpm-realm");
-
-        // Read passwords
-        final SubnodeConfiguration passwords = configuration.getSection("passwords");
-        final Iterator keys = passwords.getKeys();
-        while (keys.hasNext()) {
-            String user = (String) keys.next();
-            final String[] fields = passwords.getString(user).split("\\s*,\\s*");
-
-            LOGGER.info("Adding user %s", user);
-            userRealm.put(user, new Password(fields[0]));
-            for (int i = 1; i < fields.length; i++)
-                userRealm.addUserToRole(user, fields[i]);
+//            String socketSpec = configuration.getString(KEY_SERVER_SOCKET);
+//            UnixSocketConnector unixSocketConnector = new UnixSocketConnector(webServer, new File(socketSpec));
+//            webServer.addConnector(unixSocketConnector);
         }
 
 
-        sh.setUserRealm(userRealm);
-        sh.setConstraintMappings(new ConstraintMapping[]{cm});
-        context.addHandler(sh);
+        ServletContextHandler context = new ServletContextHandler(webServer, "/");
+        ConstraintSecurityHandler csh = getSecurityHandler();
+
+
+        context.setSecurityHandler(csh);
 
         // --- Add the XML RPC servlet
 
@@ -147,10 +142,17 @@ public class ServerTask extends AbstractTask {
         final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);
         context.addServlet(servletHolder, "/xmlrpc");
 
+        // --- Add the web socket servlet
+        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(scheduler, repositories);
+//        webSocketServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
+
+        final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
+        context.addServlet(webSocketServletHolder, "/web-socket");
+
+
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new StatusServlet(scheduler)),
-                "/status/*");
+        context.addServlet(new ServletHolder(new StatusServlet(scheduler)), "/status/*");
 
         // --- Add the status servlet
 
@@ -167,6 +169,7 @@ public class ServerTask extends AbstractTask {
 
         context.addServlet(new ServletHolder(new ContentServlet()), "/*");
 
+
         // final URL warUrl =
         // this.getClass().getClassLoader().getResource("web");
         // final String warUrlString = warUrl.toExternalForm();
@@ -177,27 +180,7 @@ public class ServerTask extends AbstractTask {
         webServer.start();
         ThreadPool threadPool = webServer.getThreadPool();
 
-        // --- Socket
-        if (configuration.containsKey(KEY_SERVER_SOCKET)) {
-            String libraryPath = System.getProperty("org.newsclub.net.unix.library.path");
-            if (libraryPath == null) {
-                URL url = ServerTask.class.getProtectionDomain().getCodeSource().getLocation();
-                File file = new File(url.toURI());
-                while (file != null && !new File(file, "native-libs").exists()) {
-                    file = file.getParentFile();
-                }
-                if (file == null)
-                    throw new UnsatisfiedLinkError("Cannot find the native-libs directory");
-                file = new File(file, "native-libs");
 
-                LOGGER.info("Using path for junixsocket library [%s]", file);
-                System.setProperty("org.newsclub.net.unix.library.path", file.getAbsolutePath());
-            }
-
-            String socketSpec = configuration.getString(KEY_SERVER_SOCKET);
-            StreamServer streamServer = new StreamServer(threadPool, new File(socketSpec), repositories, scheduler);
-            streamServer.start();
-        }
 
         // --- Wait for servers to close
         threadPool.join();
@@ -206,6 +189,51 @@ public class ServerTask extends AbstractTask {
         LOGGER.info("Servers are stopped. Clean exit!");
 
         return 0;
+    }
+
+    private ConstraintSecurityHandler getSecurityHandler() {
+        // -- Security
+        // From
+        // http://docs.codehaus.org/display/JETTY/How+to+Configure+Security+with+Embedded+Jetty
+
+        Constraint constraint = new Constraint();
+        constraint.setName(Constraint.__BASIC_AUTH);
+        constraint.setRoles(new String[]{"user"});
+        constraint.setAuthenticate(true);
+
+        ConstraintMapping cm = new ConstraintMapping();
+        cm.setConstraint(constraint);
+        cm.setPathSpec("/*");
+
+        String passwordProperty = configuration.getString("passwords");
+        final HashLoginService loginService;
+        if (passwordProperty != null) {
+            File passwordFile = new File(passwordProperty);
+            loginService = new HashLoginService(XPM_REALM, passwordFile
+                    .getAbsolutePath());
+        } else
+            loginService = new HashLoginService(XPM_REALM);
+
+        // Read passwords
+        final SubnodeConfiguration passwords = configuration.getSection("passwords");
+        final Iterator keys = passwords.getKeys();
+        while (keys.hasNext()) {
+            String user = (String) keys.next();
+            final String[] fields = passwords.getString(user).split("\\s*,\\s*", 2);
+            final String[] roles = fields[1].split("\\s*,\\s*");
+
+            LOGGER.info("Adding user %s", user);
+            loginService.putUser(user, new Password(fields[0]), roles);
+        }
+
+        ConstraintSecurityHandler csh = new ConstraintSecurityHandler();
+        csh.setRealmName(XPM_REALM);
+        csh.setAuthenticator(new BasicAuthenticator());
+        csh.setConstraintMappings(new ConstraintMapping[] {cm});
+        csh.addConstraintMapping(cm);
+        csh.setLoginService(loginService);
+
+        return csh;
     }
 
 

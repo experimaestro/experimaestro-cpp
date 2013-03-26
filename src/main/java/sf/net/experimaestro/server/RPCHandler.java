@@ -27,7 +27,7 @@ import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
 import org.apache.xmlrpc.XmlRpcRequest;
 import org.apache.xmlrpc.server.XmlRpcStreamServer;
-import org.mortbay.jetty.Server;
+import org.eclipse.jetty.server.Server;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Scriptable;
@@ -105,7 +105,7 @@ public class RPCHandler {
     /**
      * Kills all the jobs in a group
      */
-    @RPCHelp(value = "Stops a set of jobs under a given group.",
+    @RPCMethod(help = "Stops a set of jobs under a given group.",
             parameters = {
                     "The group to consider", "Whether to kill running tasks",
                     "Whether to put on hold ready/waiting tasks"
@@ -135,7 +135,7 @@ public class RPCHandler {
         return n;
     }
 
-    @RPCHelp("Kill one or more jobs")
+    @RPCMethod(help = "Kill one or more jobs")
     public int kill(Object... JobIds) {
         int n = 0;
         for (Object id : JobIds) {
@@ -151,7 +151,7 @@ public class RPCHandler {
     /**
      * Update the status of jobs
      */
-    @RPCHelp("Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
+    @RPCMethod(help = "Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
             " in a change of state")
     public int updateJobs(String group, boolean recursive, Object[] states) throws Exception {
         final EnumSet<ResourceState> statesSet = getStates(states);
@@ -168,11 +168,11 @@ public class RPCHandler {
         return nbUpdated;
     }
 
-    @RPCHelp("Puts back a job into the waiting queue")
+    @RPCMethod(help = "Puts back a job into the waiting queue")
     public int restartJob(
-            @RPCHelp("The name of the job") String name,
-            @RPCHelp("Whether done jobs should be invalidated") boolean restartDone,
-            @RPCHelp("Whether we should invalidate dependent results when the job was done") boolean recursive
+            @RPCMethod(help = "The name of the job") String name,
+            @RPCMethod(help = "Whether done jobs should be invalidated") boolean restartDone,
+            @RPCMethod(help = "Whether we should invalidate dependent results when the job was done") boolean recursive
     ) throws Exception {
 
         int nbUpdated = 0;
@@ -285,7 +285,7 @@ public class RPCHandler {
     /**
      * List jobs
      */
-    @RPCHelp("List the jobs along with their states")
+    @RPCMethod(help = "List the jobs along with their states")
     public List<Map<String, String>> listJobs(String group, Object[] states) {
         final EnumSet<ResourceState> set = getStates(states);
         List<Map<String, String>> list = new ArrayList<>();
@@ -318,7 +318,7 @@ public class RPCHandler {
     /**
      * Shutdown the server
      */
-    @RPCHelp("Shutdown Experimaestro server")
+    @RPCMethod(help = "Shutdown Experimaestro server")
     public boolean shutdown() {
         // Close the scheduler
         scheduler.close();
@@ -329,7 +329,6 @@ public class RPCHandler {
 
             @Override
             public void run() {
-                server.setGracefulShutdown(1000);
                 boolean stopped = false;
                 try {
                     server.stop();
@@ -404,7 +403,7 @@ public class RPCHandler {
     /**
      * Information about a job
      */
-    @RPCHelp("Returns detailed information about a job (XML format)")
+    @RPCMethod(help = "Returns detailed information about a job (XML format)")
     public String getResourceInformation(String resourceId) {
         final Resource resource = scheduler.getResource(ResourceLocator.parse(resourceId));
         if (resource == null)
@@ -426,7 +425,7 @@ public class RPCHandler {
      * This version is called from python scripts where maps would be marshalled
      * into a string. Instead, we get a list that we transform into a map.
      */
-    @RPCHelp("Runs a JavaScript file on the server")
+    @RPCMethod(help = "Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
                                          Object[] envArray) {
         Map<String, String> environment = arrayToMap(envArray);
@@ -436,7 +435,7 @@ public class RPCHandler {
     /**
      * Run a javascript script (either the file or a string)
      */
-    @RPCHelp("Runs a JavaScript file on the server")
+    @RPCMethod(help = "Runs a JavaScript file on the server")
     public ArrayList<Object> runJSScript(Object[] filenames, Object[] contents,
                                          Map<String, String> environment) {
         if (pRequest instanceof XmlRpcStreamServer) {
@@ -627,9 +626,8 @@ public class RPCHandler {
 //    }
 
 
-    @RPCHelp("Sets alog level")
+    @RPCMethod(help = "Sets a log level")
     public int setLogLevel(String identifier, String level) {
-
         final Logger logger = Logger.getLogger(identifier);
         logger.setLevel(Level.toLevel(level));
         return 0;

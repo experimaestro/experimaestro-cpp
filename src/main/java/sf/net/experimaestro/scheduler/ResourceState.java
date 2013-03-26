@@ -68,6 +68,12 @@ public enum ResourceState {
             = EnumSet.of(READY, ON_HOLD, ERROR, WAITING);
 
     /**
+     * States in which a resource can be notified
+     */
+    final static EnumSet<ResourceState> NOTIFIABLE_STATE
+            = EnumSet.complementOf(EnumSet.of(LOCKING, RUNNING, DONE, ON_HOLD, ERROR));
+
+    /**
      * Returns true if the resource is not done and
      * is blocked (error or hold)
      *

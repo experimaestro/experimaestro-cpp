@@ -56,7 +56,7 @@ public class ReadWriteDependency extends Dependency {
 
     @Override
     public String toString() {
-        return "Read-Write/" + super.toString();
+        return super.toString() + "/RW";
     }
 
     @Override

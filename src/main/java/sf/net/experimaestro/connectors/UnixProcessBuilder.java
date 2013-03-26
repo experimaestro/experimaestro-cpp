@@ -107,7 +107,7 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
             writer.format("cd \"%s\"%n", protect(directory(), QUOTED_SPECIAL));
         }
 
-        writer.format("%n#Checks that the locks are set");
+        writer.format("%n#Checks that the locks are set%n");
         for (String lockFile : lockFiles) {
             writer.format("test -f %s || exit 017%n", lockFile);
         }

@@ -1,55 +1,76 @@
+/*
+ * This file is part of experimaestro.
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package sf.net.experimaestro.server;
 
-import com.jcraft.jsch.agentproxy.AgentProxyException;
-import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
-import org.mortbay.io.Buffer;
-import org.mortbay.jetty.AbstractConnector;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
+import org.newsclub.net.unix.AFUNIXSocketAddress;
+import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.channels.Channel;
+import java.nio.channels.ServerSocketChannel;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 25/1/13
+ * @date 26/3/13
  */
-public class UnixSocketConnector extends AbstractConnector {
-    private final JNAUSocketFactory factory;
+public class UnixSocketConnector extends ServerConnector implements Connector {
+    final static private Logger LOGGER = Logger.getLogger();
+    private final File socketFile;
 
-    public UnixSocketConnector() throws AgentProxyException {
-        factory = new JNAUSocketFactory();
+
+    public UnixSocketConnector(Server server, File socketFile) throws IOException {
+        super(server);
+        this.socketFile = socketFile;
     }
 
-    @Override
-    protected void accept(int acceptorID) throws IOException, InterruptedException {
-
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    protected Buffer newBuffer(int size) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
 
     @Override
     public void open() throws IOException {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
+        if (_acceptChannel == null) {
+            ServerSocketChannel serverChannel = null;
+            if (isInheritChannel()) {
+                Channel channel = System.inheritedChannel();
+                if (channel instanceof ServerSocketChannel)
+                    serverChannel = (ServerSocketChannel) channel;
+                else
+                    LOG.warn("Unable to use System.inheritedChannel() [{}]. Trying a new ServerSocketChannel at {}:{}", channel, getHost(), getPort());
+            }
 
-    @Override
-    public void close() throws IOException {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
+            if (serverChannel == null) {
+                serverChannel = ServerSocketChannel.open();
 
-    @Override
-    public int getLocalPort() {
-        return 0;
-    }
+                AFUNIXSocketAddress socketAddress = new AFUNIXSocketAddress(socketFile);
 
-    @Override
-    public Object getConnection() {
-        try {
-            return factory.open("/tmp/xpm.sock");
-        } catch (IOException e) {
-            throw new RuntimeException("Could not open socket");
+                serverChannel.socket().bind(socketAddress, getAcceptQueueSize());
+                serverChannel.socket().setReuseAddress(getReuseAddress());
+
+                addBean(serverChannel);
+            }
+
+            serverChannel.configureBlocking(true);
+            addBean(serverChannel);
+
+            _acceptChannel = serverChannel;
         }
     }
+
 }

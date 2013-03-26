@@ -46,7 +46,7 @@ public class JSTaskFactoryWrapper extends JSBaseObject {
         }
     }
 
-    // ---- JavaScript functions ----
+    // ---- JavaScript converter ----
 
 
     @JSFunction("run")

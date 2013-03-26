@@ -86,7 +86,7 @@ final public class Scheduler {
      * The list of jobs organised in a heap - with those having all dependencies
      * fulfilled first
      */
-    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>) new Heap<Job<? extends JobData>>(JobComparator.INSTANCE);
+    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>) new Heap<>(JobComparator.INSTANCE);
 
     /**
      * All the resources
@@ -240,8 +240,11 @@ final public class Scheduler {
      * This task runner takes a new task each time
      */
     class JobRunner extends Thread {
+        private final String name;
+
         JobRunner(String name) {
             super(name);
+            this.name = name;
         }
 
         @Override
@@ -249,7 +252,10 @@ final public class Scheduler {
             Job job;
             try {
                 while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
-                    LOGGER.info("Starting %s", job);
+                    // Set the state to LOCKING
+                    job.setState(ResourceState.LOCKING);
+                    LOGGER.info("Launching %s", job);
+                    this.setName(name + "/" + job);
                     try {
                         job.run();
                         LOGGER.info("Job %s has started", job);
@@ -261,10 +267,11 @@ final public class Scheduler {
                     } catch (Throwable t) {
                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                         job.setState(ResourceState.ERROR);
-                        job.storeState(false);
+                        job.storeState(true);
                     } finally {
                     }
-
+                    LOGGER.info("Finished launching %s", job);
+                    this.setName(name);
                 }
             } catch (InterruptedException e) {
                 LOGGER.warn("Shutting down job runner", e);
@@ -325,7 +332,7 @@ final public class Scheduler {
         resources.init(readyJobs);
 
         // Start the thread that start the jobs
-        LOGGER.info("Starting %d threads", nbThreads);
+        LOGGER.info("Starting %d job runner threads", nbThreads);
         for (int i = 0; i < nbThreads; i++) {
             counter.add();
             final JobRunner runner = new JobRunner("JobRunner@" + i);
@@ -398,6 +405,8 @@ final public class Scheduler {
                 }
             }
         }
+
+        LOGGER.info("Scheduler stopped");
     }
 
     // ----
@@ -525,15 +534,24 @@ final public class Scheduler {
 
         // Notify dependencies, using a new process
         if (notify)
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    if (!isStopping()) {
-                        resources.notifyDependencies(resource);
-                    }
-                }
-            });
+            executorService.submit(new Notifier(resource));
     }
 
+    /**
+     * Will notify dependencies
+      */
+    private class Notifier implements Runnable {
+        private final Resource resource;
 
+        public Notifier(Resource resource) {
+            this.resource = resource;
+        }
+
+        @Override
+        public void run() {
+            if (!isStopping()) {
+                resources.notifyDependencies(resource);
+            }
+        }
+    }
 }

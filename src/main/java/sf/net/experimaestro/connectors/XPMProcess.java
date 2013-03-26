@@ -21,7 +21,6 @@ package sf.net.experimaestro.connectors;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
-import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -29,7 +28,11 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -97,19 +100,23 @@ public abstract class XPMProcess {
             new Thread(String.format("job monitor [%s]", job.getId())) {
                 @Override
                 public void run() {
-                    int code = 0;
+                    int code;
                     while (true) {
                         try {
-                            LOGGER.info("Waiting for task %s to finish", job.getIdentifier());
+                            LOGGER.info("Waiting for job [%s] process to finish", job);
                             code = waitFor();
-                            LOGGER.info("Task %s has finished running", job.getIdentifier());
+                            LOGGER.info("Job [%s] process has finished running [code %d]", job, code);
                             break;
                         } catch (InterruptedException e) {
                             LOGGER.error("Interrupted: %s", e);
                         }
                     }
 
-                    job.notify(null, new EndOfJobMessage(code, System.currentTimeMillis()));
+                    try {
+                        job.notify(null, new EndOfJobMessage(code, System.currentTimeMillis()));
+                    } catch(RuntimeException e) {
+                        LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
+                    }
                 }
             }.start();
         }
@@ -178,7 +185,7 @@ public abstract class XPMProcess {
         for (Lock lock : locks) {
             try {
                 lock.changeOwnership(pid);
-            } catch (LockException e) {
+            } catch (Throwable e) {
                 LOGGER.error("Could not adopt lock %s", lock);
             }
         }

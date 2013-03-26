@@ -18,32 +18,34 @@
 
 package sf.net.experimaestro.server;
 
-import com.google.common.collect.Multiset;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
+import org.eclipse.jetty.websocket.api.WebSocketAdapter;
+import org.eclipse.jetty.websocket.api.WebSocketListener;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
-import org.msgpack.packer.Packer;
-import org.msgpack.unpacker.Unpacker;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.js.JSArgument;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedWriter;
@@ -52,43 +54,158 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.ArrayList;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * The operation supported by the stream server
+ * Web socket service
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/3/13
+ * @date 26/3/13
  */
-// TODO: migrate (those with high streaming first) rpc calls from {@linkplain RPCHandler}
-public class StreamServerService {
+public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketListener {
     final static private Logger LOGGER = Logger.getLogger();
 
-    final private Repository repository;
-    final private Scheduler scheduler;
+    private final Scheduler scheduler;
+    private final Repositories repository;
 
-    public StreamServerService(Repository repository, Scheduler scheduler) {
-        this.repository = repository;
+    static public class MethodDescription {
+        Method method;
+        RPCArgument arguments[];
+        Class<?>[] types;
+
+        public MethodDescription(Method method) {
+            this.method = method;
+            types = method.getParameterTypes();
+            Annotation[][] annotations = method.getParameterAnnotations();
+            arguments = new RPCArgument[annotations.length];
+            for (int i = 0; i < annotations.length; i++) {
+                types[i] = ClassUtils.primitiveToWrapper(types[i]);
+                for (int j = 0; j < annotations[i].length && arguments[i] == null; j++) {
+                    if (annotations[i][j] instanceof RPCArgument)
+                        arguments[i] = (RPCArgument) annotations[i][j];
+                }
+
+                if (arguments[i] == null)
+                    throw new ExperimaestroRuntimeException("No annotation for %dth argument of %s", i + 1, method);
+
+            }
+        }
+    }
+
+    private static Multimap<String, MethodDescription> methods = HashMultimap.create();
+
+    static {
+        for (Method method : XPMWebSocketListener.class.getDeclaredMethods()) {
+            final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
+            if (rpcMethod != null) {
+                methods.put("".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name(), new MethodDescription(method));
+            }
+        }
+
+    }
+
+    public XPMWebSocketListener(Scheduler scheduler, Repositories repositories) {
         this.scheduler = scheduler;
+        this.repository = repositories;
     }
 
-    static class FilePointer {
-        String filename;
-        String content;
 
-        FilePointer(String filename, String content) {
-            this.filename = filename;
-            this.content = content;
-        }
+    @Override
+    public void onWebSocketBinary(byte[] payload, int offset, int len) {
+        throw new NotImplementedException("Cannot handle binary frames");
+    }
 
-        public boolean isFile() {
-            return content == null;
+    @Override
+    public void onWebSocketText(String message) {
+        try {
+            try {
+                Object parse = JSONValue.parse(message);
+                JSONObject object = (JSONObject) parse;
+
+                Object command = object.get("command");
+                if (command == null)
+                    throw new RuntimeException("No command in JSON");
+
+                if (!object.containsKey("args") || !(object.get("args") instanceof JSONObject))
+                    throw new RuntimeException("No args in JSON");
+                JSONObject p = (JSONObject) object.get("args");
+
+                Collection<MethodDescription> candidates = methods.get(command.toString());
+                int max = Integer.MIN_VALUE;
+                MethodDescription argmax = null;
+                for (MethodDescription candidate : candidates) {
+                    int score = Integer.MAX_VALUE;
+                    for (int i = 0; i < candidate.types.length && score > max; i++) {
+                        score = convert(p, candidate, score, null, i);
+                    }
+                    if (score > max) {
+                        max = score;
+                        argmax = candidate;
+                    }
+                }
+
+                if (argmax == null)
+                    throw new ExperimaestroRuntimeException("Cannot find a matching method");
+
+                Object[] args = new Object[argmax.arguments.length];
+                for (int i = 0; i < args.length; i++) {
+                    int score = convert(p, argmax, 0, args, i);
+                    assert score > Integer.MIN_VALUE;
+                }
+                argmax.method.invoke(this, args);
+
+
+            } catch (Throwable t) {
+                LOGGER.error(t, "Error while handling JSON request");
+                sendReturnCode(1, t.getMessage());
+                return;
+            }
+
+            sendReturnCode(0, "Hello world");
+        } catch (IOException e) {
+
         }
     }
+
+    private int convert(JSONObject p, MethodDescription description, int score, Object args[], int index) {
+        Object o = p.get(description.arguments[index].name());
+        Class aType = description.types[index];
+
+        if (o == null) {
+            if (description.arguments[index].required())
+                return Integer.MIN_VALUE;
+
+            return score - 10;
+        }
+
+        if (aType.isAssignableFrom(o.getClass())) {
+            if (args != null)
+                args[index] = o;
+            return score;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    @Override
+    public void onWebSocketClose(int statusCode, String reason) {
+        super.onWebSocketClose(statusCode, reason);
+        // TODO: stop the processes
+    }
+
+
+    private void sendReturnCode(int code, String message) throws IOException {
+        JSONObject obj = new JSONObject();
+        obj.put("code", code);
+        if (!"".equals(message)) obj.put("message", message);
+
+        getRemote().sendString(obj.toJSONString());
+    }
+
 
     private EnumSet<ResourceState> getStates(Object[] states) {
         final EnumSet<ResourceState> statesSet;
@@ -104,66 +221,29 @@ public class StreamServerService {
         return statesSet;
     }
 
-
-    /**
-     * List jobs
-     */
-    @RPCHelp("List the jobs along with their states")
-    public List<Map<String, String>> listJobs(String group, Object[] states) {
-        final EnumSet<ResourceState> set = getStates(states);
-        List<Map<String, String>> list = new ArrayList<>();
-
-        for (Multiset.Entry<String> x : scheduler.subgroups(group).entrySet()) {
-            Map<String, String> map = new HashMap<>();
-            String s = x.getElement();
-            map.put("type", "group");
-            map.put("name", s);
-//            map.put("count", Integer.toString(x.getCount()));
-            list.add(map);
-        }
-
-        try (final CloseableIterator<Resource> resources = scheduler.resources(group, false, set, true)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
-                Map<String, String> map = new HashMap<>();
-                map.put("type", resource.getClass().getCanonicalName());
-                map.put("state", resource.getState().toString());
-                map.put("name", resource.getLocator().toString());
-                list.add(map);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return list;
-    }
-
     /**
      * Run javascript
      *
-     * @param packer
-     * @param unpacker
      * @param files
      * @param environment
      */
-    @RPCHelp("Run a javascript")
-    public void runJSScript(final Packer packer, Unpacker unpacker,
-                            @JSArgument(name = "files") List<FilePointer> files,
-                            @JSArgument(name = "environment") Map<String, String> environment) {
+    @RPCMethod(name = "run-javascript", help = "Run a javascript")
+    public void runJSScript(@RPCArgument(name = "files") List<JSONArray> files,
+                            @RPCArgument(name = "environment") Map<String, String> environment) {
         final StringWriter errString = new StringWriter();
         final PrintWriter err = new PrintWriter(errString);
-        XPMObject jsXPM = null;
+        XPMObject jsXPM;
 
         final RootLogger root = new RootLogger(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root);
         BufferedWriter stringWriter = new BufferedWriter(new Writer() {
             @Override
             public void write(char[] cbuf, int off, int len) throws IOException {
-                packer.write(new String(cbuf, off, len));
+                getRemote().sendString(JSONValue.toJSONString(new String(cbuf, off, len)));
             }
 
             @Override
             public void flush() throws IOException {
-                packer.flush();
             }
 
             @Override
@@ -198,11 +278,11 @@ public class StreamServerService {
 
             Object result = null;
             for (int i = 0; i < files.size(); i++) {
+                JSONArray filePointer = files.get(i);
 
-                FilePointer filePointer = files.get(i);
-                boolean isFile = filePointer.isFile();
-                final String content = isFile ? null : filePointer.content;
-                final String filename = filePointer.filename;
+                boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
+                final String content = isFile ? null : filePointer.get(1).toString();
+                final String filename = filePointer.get(0).toString();
 
                 ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
                 jsXPM.setLocator(locator);
@@ -220,7 +300,7 @@ public class StreamServerService {
             else
                 LOGGER.debug("Null result");
 
-            StreamServer.sendReturnCode(packer, 0, result != null && result != Scriptable.NOT_FOUND &&
+            sendReturnCode(0, result != null && result != Scriptable.NOT_FOUND &&
                     result != Undefined.instance ? result.toString() : "");
 
         } catch (Throwable e) {
@@ -264,7 +344,7 @@ public class StreamServerService {
 
             err.flush();
             try {
-                StreamServer.sendReturnCode(packer, 1, errString.toString());
+                sendReturnCode(1, errString.toString());
             } catch (IOException e2) {
                 LOGGER.warn("Could not send error message");
             }

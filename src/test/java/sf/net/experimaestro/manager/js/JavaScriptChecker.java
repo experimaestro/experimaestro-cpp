@@ -117,7 +117,7 @@ public class JavaScriptChecker {
             XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
                     repository, this.environment.scheduler, null, new Cleaner());
 
-            // Adds some special functions available for tests only
+            // Adds some special converter available for tests only
             JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
             context.evaluateReader(scope, new StringReader(content),

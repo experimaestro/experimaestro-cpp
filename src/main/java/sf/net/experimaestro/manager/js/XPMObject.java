@@ -101,7 +101,7 @@ import static java.lang.String.format;
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
 /**
- * This class contains both utility static methods and functions that can be
+ * This class contains both utility static methods and converter that can be
  * called from javascript
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -246,7 +246,7 @@ public class XPMObject {
         final Scriptable jsXML = (Scriptable) scope.get("XML", scope);
         scope.put("ignoreWhitespace", jsXML, false);
 
-        // --- Define functions and classes
+        // --- Define converter and classes
 
         // Define the new classes (scans the package for implementations of ScriptableObject)
         ArrayList<Class<?>> list = new ArrayList<>();
@@ -273,15 +273,15 @@ public class XPMObject {
             JSBaseObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
         }
 
-        // Add functions
+        // Add converter
         for (JSUtils.FunctionDefinition definition : definitions)
             JSUtils.addFunction(scope, definition);
 
-        // Add functions from our Function object
+        // Add converter from our Function object
 
         Map<String, MethodFunction> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class);
-        for (MethodFunction methodFunction : functionsMap.values()) {
-            ScriptableObject.putProperty(scope, methodFunction.name, methodFunction);
+        for (MethodFunction JSMethodFunction : functionsMap.values()) {
+            ScriptableObject.putProperty(scope, JSMethodFunction.name, JSMethodFunction);
         }
 
 

@@ -27,10 +27,12 @@ import java.lang.annotation.RetentionPolicy;
  * @date 15/10/12
  */
 @Retention(RetentionPolicy.RUNTIME)
-@interface RPCHelp {
+@interface RPCMethod {
     /** Help message */
-    String value();
+    String help();
 
     /** Parameters documentation */
     String [] parameters() default {};
+
+    String name() default "";
 }

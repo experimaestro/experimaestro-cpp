@@ -58,12 +58,6 @@ public class WaitingJob extends Job<JobData> {
     protected WaitingJob() {
     }
 
-
-    @Override
-    public String toString() {
-        return id;
-    }
-
     public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration, int code) {
         super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, id).getAbsolutePath())));
         this.counter = counter;

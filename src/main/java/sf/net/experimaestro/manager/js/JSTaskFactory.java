@@ -584,7 +584,7 @@ public class JSTaskFactory extends JSBaseObject {
                 function = JSUtils.get(jsScope, "run", jsObject, null);
                 if (function != null && !(function instanceof Function))
                     throw new RuntimeException(
-                            "Could not find the create or run functions.");
+                            "Could not find the create or run converter.");
 
                 JSDirectTask jdDirectTask = new JSDirectTask(xpm, this, jsScope,
                         jsObject, (Function) function, output);

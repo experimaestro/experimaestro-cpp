@@ -77,11 +77,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                         } else if ("".equals(jsName))
                             jsName = method.getName();
 
-                        MethodFunction methodFunction = methods.get(jsName);
-                        if (methodFunction == null) {
-                            methods.put(jsName, methodFunction = new MethodFunction(jsName));
+                        MethodFunction MethodFunction = methods.get(jsName);
+                        if (MethodFunction == null) {
+                            methods.put(jsName, MethodFunction = new MethodFunction(jsName));
                         }
-                        methodFunction.add(method);
+                        MethodFunction.add(method);
                     }
                 }
 
