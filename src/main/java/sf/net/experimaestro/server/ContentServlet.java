@@ -25,13 +25,12 @@ import org.apache.commons.vfs2.VFS;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.net.URL;
 
 import static java.lang.String.format;
@@ -56,11 +55,18 @@ public class ContentServlet extends XPMServlet {
 				return;
 			}
 
-			response.setContentType("text/html");
+            String filename = url.getFile();
+            if (filename.endsWith(".html"))
+			    response.setContentType("text/html");
+            else if (filename.endsWith(".png"))
+                response.setContentType("image/png");
+            else if (filename.endsWith(".css"))
+                response.setContentType("text/css");
 			response.setStatus(HttpServletResponse.SC_OK);
-			final PrintWriter out = response.getWriter();
-			Reader in = new InputStreamReader(url.openStream());
-			char[] buffer = new char[8192];
+
+			final ServletOutputStream out = response.getOutputStream();
+			InputStream in = url.openStream();
+			byte[] buffer = new byte[8192];
 			int read;
 			while ((read = in.read(buffer)) > 0) {
 				out.write(buffer, 0, read);

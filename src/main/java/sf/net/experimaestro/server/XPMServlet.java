@@ -65,12 +65,26 @@ public abstract class XPMServlet extends HttpServlet {
 
     static void header(PrintWriter out, String title) {
         out.format("<html><head><title>Experimaestro - %s</title>" +
-                "<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/style.css\">\n" +
-                " <script type=\"text/javascript\" src=\"jquery-1.9.1.min.js\"></script>\n" +
+                "<link type=\"text/css\" href=\"/css/jquery-ui-1.10.2.custom.min.css\" rel=\"Stylesheet\" />\n" +
+                "<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/css/style.css\">\n" +
+
+                "<script type=\"text/javascript\" src=\"/js/jquery-1.9.1.js\"></script>\n" +
+                "<script type=\"text/javascript\" src=\"/js/jquery-ui-1.10.2.custom.min.js\"></script>\n" +
+                "<script type=\"text/javascript\" src=\"/js/jquery.xmlrpc.min.js\"></script>\n" +
+                "<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n" +
                 "</head>%n" +
                 "<body>%n" +
+                "<div class='page-title'>Experimaestro</div>" +
                 "<div class='header'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div>",
                 escapeHtml(title));
 
+            }
+
+    public void show404(HttpServletResponse response, String format, Object... objects) throws IOException {
+        response.setContentType("text/html");
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        PrintWriter writer = response.getWriter();
+        header(writer, "Page not found");
+        writer.format("<div class=\"error\">%s</div>", escapeHtml(String.format(format, objects)));
     }
 }

@@ -64,9 +64,22 @@ public class StatusServlet extends XPMServlet {
 
             ArrayList<ResourceState> values = new ArrayList<>(
                     ListAdaptator.create(ResourceState.values()));
+
+            out.println("<div id=\"resources\" class=\"tab\"><ul>");
             for (ResourceState state : values) {
-                out.format("<h1>Resources in state %s</h1>", state);
-                out.println("<ul>");
+                out.format("<li><a href=\"#state-%s\"><span>%s</span> (<span id=\"state-%s-count\">0</span>)</a></li>", state, state, state);
+            }
+            out.println("</ul>");
+
+            for (ResourceState state : values) {
+
+                out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
+                if (state == ResourceState.DONE) {
+                    out.println("<div id='header'>Filtering</div>");
+                    out.println("<ul id=\"list\">");
+                }
+                else
+                    out.println("<ul>");
                 try (final CloseableIterable<Resource> resources = scheduler.resources()) {
                     for (Resource resource : resources) {
                         resource.init(scheduler);
@@ -78,7 +91,7 @@ public class StatusServlet extends XPMServlet {
                                         request.getServletPath(),
                                         resource.getId(),
                                         locator);
-                            } catch(Throwable t) {
+                            } catch (Throwable t) {
                                 out.format("<li><b>Resource ID %s</b> without locator</li>", resource.getId());
                             }
                         }
@@ -86,15 +99,23 @@ public class StatusServlet extends XPMServlet {
                 } catch (CloseException e) {
                     LOGGER.warn("Error while closing the iterator");
                 }
-                out.println("</ul>");
+                out.println("</ul></div>");
             }
+            out.println("</div>");
 
             out.println("</body></html>");
             return;
         }
 
         if (localPath.startsWith(RESOURCE_PATH)) {
-            long resourceId = Long.parseLong(localPath.substring("/resource/".length()));
+            String resourceStringId = localPath.substring("/resource/".length());
+            long resourceId = 0;
+            try {
+                resourceId = Long.parseLong(resourceStringId);
+            } catch (NumberFormatException e) {
+                show404(response, "Resource id [%s] is not a number", resourceStringId);
+                return;
+            }
             PrintWriter out = startHTMLResponse(response);
 
             Resource resource = scheduler.getResource(resourceId);
@@ -111,7 +132,9 @@ public class StatusServlet extends XPMServlet {
                 PrintConfig config = new PrintConfig();
                 config.detailURL = request.getServletPath();
                 resource.init(scheduler);
+                out.format("<div class=\"resource\" name=\"%d\">%n", resourceId);
                 resource.printXML(out, config);
+                out.format("</div>");
             } else {
                 out.format("Could not retrieve resource <b>%s</b>", locator);
             }

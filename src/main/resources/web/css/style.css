@@ -1,2 +1,6 @@
+body {
+    font-size: 12px;
+}
+
 dt { color: blue; }
 dd { padding-bottom: .5em; }
