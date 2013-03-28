@@ -150,9 +150,10 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      * Calls {@linkplain #doUpdateStatus(boolean)}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus(boolean store) {
+    final protected boolean updateStatus(boolean store) {
         try {
-            return doUpdateStatus(store);
+            boolean b = doUpdateStatus(store);
+            return b;
         } catch (Exception e) {
             LOGGER.error(e, "Exception while updating status");
             return setState(ResourceState.ON_HOLD);
@@ -439,7 +440,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         }
 
         @Override
-        protected boolean updateStatus(Resource resource, boolean store) {
+        protected boolean doUpdateStatus(Resource resource, boolean store) {
             return resource.updateStatus(store);
         }
 

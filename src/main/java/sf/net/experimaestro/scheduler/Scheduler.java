@@ -470,8 +470,29 @@ final public class Scheduler {
         return resources.values();
     }
 
-    public Iterable<Job<?>> tasks() {
-        return readyJobs;
+
+    /**
+     * Add/remove a job to the list of jobs ready to be run
+     */
+    void setReady(Job job) {
+        boolean ready = job.getState() == ResourceState.READY;
+        if (ready) {
+            synchronized (readyJobs) {
+                if (job.getIndex() < 0) {
+                    readyJobs.add(job);
+                    readyJobs.notify();
+                    LOGGER.info("Job %s [%d] is ready [notifying], %d", job, job.getIndex(), readyJobs.size());
+                }
+            }
+        } else {
+            synchronized (readyJobs) {
+                if (job.getIndex() >= 0) {
+                    // don't notify since nothing has to be done
+                    LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
+                    readyJobs.remove(job);
+                }
+            }
+        }
     }
 
     /**
@@ -508,27 +529,7 @@ final public class Scheduler {
             }
 
             Job job = (Job) resource;
-            // Update the heap
-            if (resource.getState() == ResourceState.READY) {
-                synchronized (readyJobs) {
-                    if (job.getIndex() < 0)
-                        readyJobs.add(job);
-                    else
-                        readyJobs.update(job);
-
-                    LOGGER.info("Job %s [%d] is ready [notifying], %d", resource, job.getIndex(), readyJobs.size());
-
-                    // Notify job runners
-                    readyJobs.notify();
-                }
-
-            } else if (job.getIndex() >= 0) {
-                // Otherwise, we delete the job from the empty
-                LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
-                synchronized (readyJobs) {
-                    readyJobs.remove(job);
-                }
-            }
+            setReady(job);
 
         }
 
@@ -539,7 +540,7 @@ final public class Scheduler {
 
     /**
      * Will notify dependencies
-      */
+     */
     private class Notifier implements Runnable {
         private final Resource resource;
 

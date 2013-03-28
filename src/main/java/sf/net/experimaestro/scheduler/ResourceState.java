@@ -73,6 +73,14 @@ public enum ResourceState {
     final static EnumSet<ResourceState> NOTIFIABLE_STATE
             = EnumSet.complementOf(EnumSet.of(LOCKING, RUNNING, DONE, ON_HOLD, ERROR));
 
+
+    /**
+     * States in which the job has been started (whatever the outcome)
+     */
+    final static EnumSet<ResourceState> STARTED_STATE
+            = EnumSet.of(DONE, ERROR, RUNNING);
+
+
     /**
      * Returns true if the resource is not done and
      * is blocked (error or hold)

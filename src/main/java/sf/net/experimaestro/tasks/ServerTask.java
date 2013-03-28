@@ -232,7 +232,6 @@ public class ServerTask extends AbstractTask {
         csh.setConstraintMappings(new ConstraintMapping[] {cm});
         csh.addConstraintMapping(cm);
         csh.setLoginService(loginService);
-
         return csh;
     }
 

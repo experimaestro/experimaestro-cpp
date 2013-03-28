@@ -160,7 +160,7 @@ public class RPCHandler {
         try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, statesSet, true)) {
             while (resources.hasNext()) {
                 Resource resource = resources.next();
-                if (resource.updateStatus(true))
+                if (scheduler.getResources().updateStatus(resource))
                     nbUpdated++;
             }
         }
@@ -189,6 +189,8 @@ public class RPCHandler {
         if (rsrcState.isActive())
             return 0;
 
+        if (!restartDone && rsrcState == ResourceState.DONE)
+            return 0;
 
         ((Job) resource).restart();
         nbUpdated++;

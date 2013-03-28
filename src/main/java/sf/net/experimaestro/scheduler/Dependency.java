@@ -18,7 +18,11 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.*;
+import com.sleepycat.persist.model.DeleteAction;
+import com.sleepycat.persist.model.Entity;
+import com.sleepycat.persist.model.PrimaryKey;
+import com.sleepycat.persist.model.Relationship;
+import com.sleepycat.persist.model.SecondaryKey;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
@@ -92,8 +96,7 @@ abstract public class Dependency {
      * Can the dependency be accepted?
      *
      * @param scheduler The scheduler to retrieve data from database
-     * @param from The requirement (to avoid a fetch from database) or null
-     *
+     * @param from      The requirement (to avoid a fetch from database) or null
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
      *         {@link DependencyStatus#WAIT} if it can be satisfied one day
      *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
@@ -111,15 +114,15 @@ abstract public class Dependency {
         LOGGER.debug("From [%d] is in state %s [to=%s]", this.from, from.getState(), to);
 
         // Handle simple cases
-        if (from.getState() == ResourceState.ERROR)
-            return DependencyStatus.HOLD;
-
-        if (from.getState() == ResourceState.ON_HOLD)
-            return DependencyStatus.HOLD;
-
-        // If not done, then we wait
-        if (from.getState() != ResourceState.DONE)
-            return DependencyStatus.WAIT;
+        switch (from.getState()) {
+            case ERROR:
+            case ON_HOLD:
+                return DependencyStatus.HOLD;
+            case DONE:
+                break;
+            default:
+                return DependencyStatus.WAIT;
+        }
 
         return _accept(scheduler, from);
     }
@@ -163,7 +166,6 @@ abstract public class Dependency {
         }
         return lock;
     }
-
 
 
     protected Resource getFrom(Scheduler scheduler, Resource from) {

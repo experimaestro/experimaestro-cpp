@@ -140,12 +140,12 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                 groupsTrie.put(DotName.parse(key.getName()));
         }
 
-        update(ResourceState.RUNNING, readyJobs);
-        update(ResourceState.READY, readyJobs);
+        update(ResourceState.RUNNING);
+        update(ResourceState.READY);
 
         // Now, update waiting tasks (so they can be ready if a job finished but we did not
         // get notified)
-        update(ResourceState.WAITING, readyJobs);
+        update(ResourceState.WAITING);
     }
 
     @Override
@@ -156,24 +156,15 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     }
 
     /**
+     * Called during initialization:
      * Update resources with a given state
      */
-    private void update(ResourceState status, Heap<Job<? extends JobData>> readyJobs) {
+    private void update(ResourceState status) {
         try (final EntityCursor<Resource> cursor = resourceByState.entities(null, status, true, status, true, CursorConfig.READ_UNCOMMITTED)) {
             for (Resource resource : cursor) {
                 try {
                     resource = cached(resource);
-                    resource.init(scheduler);
-                    if (updateStatus(resource, false)) {
-                        update(resource);
-                    }
-
-                    switch (resource.getState()) {
-                        case READY:
-                            LOGGER.info("Job %s is ready", resource);
-                            readyJobs.add((Job<? extends JobData>) resource);
-                            break;
-                    }
+                    updateStatus(resource);
 
                 } catch (Exception e) {
                     LOGGER.error(e, "Error while updating resource %s", resource);
@@ -181,6 +172,26 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
             }
         }
     }
+
+    /**
+     * Update a resource
+     *
+     * @param resource
+     */
+    public boolean updateStatus(Resource resource) {
+        resource.init(scheduler);
+        boolean change = doUpdateStatus(resource, false);
+
+        if (change) {
+            // Update the database
+            update(resource);
+        }
+
+        scheduler.setReady((Job<? extends JobData>) resource);
+
+        return change;
+    }
+
 
 
     /**
@@ -357,7 +368,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Update the status of a resource
      */
-    protected abstract boolean updateStatus(Resource resource, boolean store);
+    protected abstract boolean doUpdateStatus(Resource resource, boolean store);
 
     public void store(Dependency dependency) {
         dependencies.put(dependency);
@@ -443,4 +454,5 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         };
 
     }
+
 }
