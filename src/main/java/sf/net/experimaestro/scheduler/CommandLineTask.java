@@ -21,10 +21,12 @@ package sf.net.experimaestro.scheduler;
 import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -210,6 +212,15 @@ public class CommandLineTask extends Job<JobData> {
         out.format("<div><b>Command</b>: %s</div>", command.toString());
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
         out.format("<div><b>Environment</b>: %s</div>", environment);
+    }
+
+    @Override
+    public JSONObject toJSON() throws IOException {
+        JSONObject info = super.toJSON();
+        info.put("command", command.toString());
+        info.put("working-directory", workingDirectory);
+        info.put("environment", environment);
+        return info;
     }
 
     public void setLauncher(Launcher launcher) {

@@ -20,6 +20,7 @@ package sf.net.experimaestro.server;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.json.simple.parser.ContentHandler;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -56,32 +57,48 @@ public class JsonRPCServlet extends HttpServlet {
         this.repository = repository;
     }
 
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        try {
+            JsonCallHandler handler = new JsonCallHandler(req, resp);
+            Object message = JSONValue.parse(req.getQueryString());
+            handler.handleJSON((JSONObject) message);
+        } catch (RuntimeException e) {
+            LOGGER.error(e, "Error while handling request");
+        } finally {
+            ServletOutputStream outputStream = resp.getOutputStream();
+            outputStream.flush();
+            outputStream.close();
+        }
+    }
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        ServletInputStream inputStream = req.getInputStream();
-        InputStreamReader reader = new InputStreamReader(inputStream);
-
-        JSONParser parser = new JSONParser();
-        JsonStreamHandler handler = new JsonStreamHandler(req, resp);
-
         try {
-            parser.parse(reader, handler, true);
-        } catch (ParseException e) {
-            LOGGER.error(e);
+            ServletInputStream inputStream = req.getInputStream();
+            InputStreamReader reader = new InputStreamReader(inputStream);
+
+            JSONParser parser = new JSONParser();
+            JsonStreamHandler handler = new JsonStreamHandler(new JsonCallHandler(req, resp));
+
+            try {
+                parser.parse(reader, handler, true);
+            } catch (ParseException e) {
+                LOGGER.error(e);
+            }
+
+        } finally {
+            ServletOutputStream outputStream = resp.getOutputStream();
+            outputStream.flush();
+            outputStream.close();
+
         }
-
-        ServletOutputStream outputStream = resp.getOutputStream();
-        outputStream.flush();
-        outputStream.close();
-
     }
 
-    private class JsonStreamHandler implements ContentHandler {
+    private class JsonCallHandler {
         private final JsonRPCMethods jsonRPCMethods;
-        Stack<Object> stack = new Stack<>();
 
-        private JsonStreamHandler(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
+        private JsonCallHandler(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
             ServletOutputStream outputStream = resp.getOutputStream();
             final PrintWriter pw = new PrintWriter(outputStream);
 
@@ -97,6 +114,19 @@ public class JsonRPCServlet extends HttpServlet {
             });
         }
 
+        public void handleJSON(JSONObject message) {
+            jsonRPCMethods.handleJSON(message);
+        }
+    }
+
+    private class JsonStreamHandler implements ContentHandler {
+        private final JsonCallHandler jsonCallHandler;
+        Stack<Object> stack = new Stack<>();
+
+        public JsonStreamHandler(JsonCallHandler jsonCallHandler) {
+            this.jsonCallHandler = jsonCallHandler;
+        }
+
         @Override
         public void startJSON() throws ParseException, IOException {
             assert stack.isEmpty();
@@ -105,7 +135,7 @@ public class JsonRPCServlet extends HttpServlet {
         @Override
         public void endJSON() throws ParseException, IOException {
             assert stack.size() == 1;
-            jsonRPCMethods.handleJSON((JSONObject)stack.pop());
+            jsonCallHandler.handleJSON((JSONObject) stack.pop());
         }
 
         private void checkArray() {

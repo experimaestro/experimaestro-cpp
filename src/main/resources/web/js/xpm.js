@@ -16,6 +16,13 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var baseurl = window.location.origin;
+
+$.jsonRPC.setup({
+  endPoint: '/json-rpc',
+});
+
+
 /*
 // WebSocket
 var socket = new WebSocket("ws://localhost:12346/web-socket");
@@ -30,7 +37,7 @@ socket.close();
 /*
 // XML-RPC call
 
-var r = $.xmlrpc({
+var r = $.getJSON({
     url: 'http://localhost:12346/xmlrpc',
     methodName: 'Server.listJobs',
     params: ['', ['DONE']],
@@ -74,13 +81,32 @@ jQuery.expr[':'].Contains = function(a,i,m){
   }
 
 
+$$ = function(e) {
+    return $(document.createElement(e));
+}
+
 $().ready(function() {
 
     $(".xpm-resource-list a").on("click", function() {
-        // Load the detail into the frame
-        $("#resource-detail").attr("src", this.href);
-        // Activate the ddetail tab
-        $( "#tab-main" ).tabs( "option", "active", 1);
+        $.jsonRPC.request('getResourceInformation', {
+            params: [ $(this).attr("name") ],
+            success: function(result) {
+                // Set the content
+                var r = result.result;
+                var d = $("#resource-detail");
+
+                d.empty();
+                d.append($$('div').append($$("b").text("ID:"))).text(r.id);
+
+//                t.appendtext(JSON.stringify(result.result, undefined, 2));
+
+                // Activate the detail tab
+                $( "#tab-main" ).tabs( "option", "active", 1);
+            },
+            error: function(result) {
+                alert("Error: " + JSON.stringify(result));
+            }
+        });
         return false;
     });
 

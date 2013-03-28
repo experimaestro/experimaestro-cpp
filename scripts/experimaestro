@@ -16,6 +16,7 @@ import base64
 import websocket
 import json
 import argcomplete
+import jsonrpclib
 
 
 # --- Set some variables
@@ -186,8 +187,11 @@ class Configuration():
         
     def getServer(self):
         return xmlrpclib.ServerProxy("%s/xmlrpc" % self.client["url"], verbose=args.verbose)
+
+    def getJsonServer(self):    
+        return jsonrpclib.Server("%s/json-rpc" % self.client["url"], verbose=args.verbose)
         
-    def getStreamServer(self):    
+    def getWebSocketServer(self):    
         re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
         m = re_url.match(self.client["url"])
         if not m:
@@ -220,7 +224,7 @@ def command_stop_server(args):
 
 def command_run_js(appendrgs):
     conf = Configuration(args)
-    client = conf.getStreamServer()
+    client = conf.getWebSocketServer()
     
     # Get the command line
     files = []
@@ -242,19 +246,16 @@ def command_run_js(appendrgs):
 
     try:
         code = 0
-        msg = json.dumps({"command": "run-javascript", "args": { "files": files, "environment": dict(os.environ)}})
+        msg = json.dumps({"id": 1, "method": "run-javascript", "params": { "files": files, "environment": dict(os.environ)}})
         r = client.send(msg)
         while client is not None:
             message = client.recv()
             o = json.loads(message)
             if type(o) == dict:
-                code = o["code"]
-                print "Exit code: %s" % o["code"]
-                if "message" in o:
-                    print o["message"]
-                break
-            else:
-                print o,
+                if o["id"]:
+                    break
+                else:
+                    print o["result"],
             
         sys.exit(code)
     except xmlrpclib.Fault as e:
@@ -298,8 +299,9 @@ def command_list_methods(args):
 
 
 def command_information(args):
-    server = Configuration(args).getServer()
-    print server.Server.getResourceInformation(args.resourceId[0])
+    server = Configuration(args).getJsonServer()
+    print server.getResourceInformation(args.resourceId[0])
+    
 
 
 def command_invalidate(args):

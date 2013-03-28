@@ -83,10 +83,8 @@ public class StatusServlet extends XPMServlet {
                             try {
                                 ResourceLocator locator = resource.getLocator();
                                 out.format(
-                                        "<li><a class=\"xpm-resource-link\" href=\"%s/resource/%d\">%s</a></li>",
-                                        request.getServletPath(),
-                                        resource.getId(),
-                                        locator);
+                                        "<li><a name=\"%s\" href=\"javascript:void(0)\">%s</a></li>",
+                                        resource.getId(), locator);
                             } catch (Throwable t) {
                                 out.format("<li><b>Resource ID %s</b> without locator</li>", resource.getId());
                             }
@@ -99,7 +97,7 @@ public class StatusServlet extends XPMServlet {
             }
             out.println("</div>");
 
-            out.println("<iframe id='resource-detail'></iframe>");
+            out.println("<div id='resource-detail'></div>");
             out.println("</div>"); // end of tab
 
             out.println("</body></html>");

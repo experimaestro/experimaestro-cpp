@@ -254,10 +254,9 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Notifies the resource that something happened
      *
-     * @param resource The original resource to which this message was targetted
      * @param message  The message
      */
-    public void notify(Resource resource, Message message) {
+    public void notify(Message message) {
 
     }
 

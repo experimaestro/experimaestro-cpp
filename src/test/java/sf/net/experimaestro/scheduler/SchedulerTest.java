@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Random;
@@ -160,6 +161,9 @@ public class SchedulerTest extends XPMEnvironment {
         // Minimum job number for failure
         int minFailureId = 2;
 
+        // Tokens
+        int token = 0;
+
         public ComplexDependenciesParameters(String name, Long seed) {
             this.seed = seed;
             this.name = name;
@@ -189,6 +193,11 @@ public class SchedulerTest extends XPMEnvironment {
             this.minFailureId = minFailureId;
             return this;
         }
+
+        public ComplexDependenciesParameters token(int token) {
+            this.token = token;
+            return this;
+        }
     }
 
     @DataProvider()
@@ -196,9 +205,10 @@ public class SchedulerTest extends XPMEnvironment {
         return new ComplexDependenciesParameters[][]{
                 {
                         new ComplexDependenciesParameters("complex", -8451050260222287949l)
-                                .jobs(20, 50, 10)
+                                .jobs(30, 50, 10)
                                 .dependencies(.2, 200)
                                 .failures(0.05, 2, 2)
+                                .token(3)
                 }
         };
     }
@@ -246,28 +256,32 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < n; i++)
             states[((int) values2[i])] = ResourceState.ERROR;
 
+        // --- Generate token resource
+        TokenResource token = null;
+        if (p.token > 0) {
+            ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), "test");
+            token = new TokenResource(scheduler, new ResourceData(locator), p.token);
+            scheduler.store(token, false);
+        }
 
         // --- Generate new jobs
-        long duration = 0;
-        int nbHolding = 0;
         for (int i = 0; i < jobs.length; i++) {
 
             int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
             jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, waitingTime, states[i] == ResourceState.DONE ? 0 : 1);
 
-            duration += waitingTime;
-
             ArrayList<String> deps = new ArrayList<>();
             for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
                 assert i == link.to;
                 jobs[i].addDependency(jobs[link.from].createDependency(null));
+                if (token != null)
+                    jobs[i].addDependency(token.createDependency(null));
                 if (states[link.from].isBlocking())
                     states[i] = ResourceState.ON_HOLD;
                 deps.add(jobs[link.from].toString());
             }
 
             if (states[i] == ResourceState.ON_HOLD) {
-                nbHolding++;
             }
 
             scheduler.store(jobs[i], false);
@@ -282,6 +296,9 @@ public class SchedulerTest extends XPMEnvironment {
                 if (jobs[i].getState().isActive())
                     LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
         }
+
+        waitBeforeCheck();
+
         int count = counter.getCount();
 
         LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
@@ -304,6 +321,16 @@ public class SchedulerTest extends XPMEnvironment {
         assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
+    private void waitBeforeCheck() {
+        synchronized (this)  {
+            try {
+                wait(1000);
+            } catch (InterruptedException e) {
+                LOGGER.error(e, "error while waiting");
+            }
+        }
+    }
+
 
     @Test(/*timeOut = 5000,*/ description = "Test of the token resource - one job at a time")
     public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException {
@@ -316,14 +343,18 @@ public class SchedulerTest extends XPMEnvironment {
         scheduler.store(token, false);
 
         WaitingJob[] jobs = new WaitingJob[5];
+        BitSet failure = new BitSet();
+        failure.set(3);
+
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 250, 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 250, failure.get(i) ? 1 : 0);
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i], false);
         }
 
 
         counter.resume();
+        waitBeforeCheck();
 
         // Check that one started after the other (since only one must have been active
         // at a time)
@@ -335,9 +366,13 @@ public class SchedulerTest extends XPMEnvironment {
             }
         });
 
-        checkSequence(jobs);
 
-        checkState(EnumSet.of(ResourceState.DONE), jobs);
+        int errors = 0;
+        errors += checkSequence(jobs);
+        for (int i = 0; i < jobs.length; i++) {
+            errors += checkState(jobs[i].code != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
+        }
+        assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
 

@@ -53,7 +53,7 @@ public class WaitingJob extends Job<JobData> {
     long duration;
 
     // The code to return
-    private int code;
+    int code;
 
     protected WaitingJob() {
     }

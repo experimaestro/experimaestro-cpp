@@ -40,7 +40,7 @@ public abstract class JSONRPCRequest {
 
     private JSONObject getJSONPartialAnswer(String requestID) {
         JSONObject answer = new JSONObject();
-        answer.put("jsonrpc", 2.0);
+        answer.put("jsonrpc", "2.0");
         answer.put("id", requestID);
         return answer;
     }

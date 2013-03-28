@@ -193,7 +193,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     }
 
 
-
     /**
      * Store a resource
      *
@@ -210,8 +209,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
         final boolean newResource = !resource.stored();
 
-        // Update status before starting
-        resource.updateStatus(false);
         final Resource old = super.put(resource);
 
         if (newResource) {
@@ -278,12 +275,16 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         final long from = resource.getId();
 
         // Notify dependencies in turn
+        LOGGER.info("Notifying dependencies from R%s", from);
         try (final EntityCursor<Dependency> entities = fromDependencies.entities(null, from, true, from, true, READ_UNCOMMITTED)) {
             for (Dependency dep : entities) {
-                if (dep.status != DependencyStatus.UNACTIVE)
+                if (dep.status == DependencyStatus.UNACTIVE) {
+                    LOGGER.debug("We won't notify resource R%s since the dependency is unactive", dep.getTo());
+
+                } else
                     try {
                         // when the dependency status is null, the dependency is not active anymore
-                        LOGGER.debug("Notifying dependency: [%s] to [%s]; current state=%s", from, dep.getTo(), dep.status);
+                        LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", from, dep.getTo(), dep.status);
                         // Preserves the previous state
                         DependencyStatus beforeState = dep.status;
 
@@ -294,13 +295,15 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                                 break;
                             }
 
+                            // We ensure nobody else can modify the resource first
                             synchronized (depResource) {
                                 // Update the dependency in database
                                 store(dep);
 
                                 // Notify the resource that a dependency has changed
-                                depResource.notify(depResource, new DependencyChangedMessage(dep, beforeState, dep.status));
-                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]", beforeState, dep.status, depResource.getState(), depResource);
+                                depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
+                                        beforeState, dep.status, depResource.getState(), depResource);
                             }
                         } else {
                             LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);

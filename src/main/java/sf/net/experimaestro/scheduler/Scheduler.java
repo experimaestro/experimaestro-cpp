@@ -263,6 +263,7 @@ final public class Scheduler {
                         // We could not lock the resources: update the job state
                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                         job.setState(ResourceState.WAITING);
+                        job.updateStatus(true);
                         job.storeState(false);
                     } catch (Throwable t) {
                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
@@ -513,6 +514,9 @@ final public class Scheduler {
             return;
         }
 
+        // If new, update the status
+        if (resource.getId() == 0)
+            resource.updateStatus(false);
 
         // First store the resource
         final Resource old = resources.put(resource);

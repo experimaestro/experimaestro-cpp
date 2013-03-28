@@ -113,7 +113,7 @@ public abstract class XPMProcess {
                     }
 
                     try {
-                        job.notify(null, new EndOfJobMessage(code, System.currentTimeMillis()));
+                        job.notify(new EndOfJobMessage(code, System.currentTimeMillis()));
                     } catch(RuntimeException e) {
                         LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
                     }
@@ -282,7 +282,7 @@ public abstract class XPMProcess {
             LOGGER.debug("End of job [%s]", job);
             final FileObject file = job.getLocator().resolve(connector, Resource.CODE_EXTENSION);
             final long time = file.exists() ? file.getContent().getLastModifiedTime() : -1;
-            job.notify(null, new EndOfJobMessage(exitValue(), time));
+            job.notify(new EndOfJobMessage(exitValue(), time));
             dispose();
         }
     }

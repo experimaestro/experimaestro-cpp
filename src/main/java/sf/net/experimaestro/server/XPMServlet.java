@@ -70,7 +70,7 @@ public abstract class XPMServlet extends HttpServlet {
 
                 "<script type=\"text/javascript\" src=\"/js/jquery-1.9.1.js\"></script>\n" +
                 "<script type=\"text/javascript\" src=\"/js/jquery-ui-1.10.2.custom.min.js\"></script>\n" +
-                "<script type=\"text/javascript\" src=\"/js/jquery.xmlrpc.min.js\"></script>\n" +
+                "<script type=\"text/javascript\" src=\"/js/jquery.jsonrpc.js\"></script>\n" +
                 "<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n" +
                 "</head>%n" +
                 "<body>%n" +

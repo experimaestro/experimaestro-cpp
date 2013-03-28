@@ -118,7 +118,7 @@ public class JsonRPCMethods extends HttpServlet {
         Object o;
         if (p instanceof JSONObject)
             // If p is a map, then use the json name of the argument
-            o = ((JSONObject)p).get(description.arguments[index].name());
+            o = ((JSONObject) p).get(description.arguments[index].name());
         else if (p instanceof JSONArray)
             // if it is an array, then map it
             o = ((JSONArray) p).get(index);
@@ -227,7 +227,14 @@ public class JsonRPCMethods extends HttpServlet {
      */
     @RPCMethod(help = "Returns detailed information about a job (XML format)")
     public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException {
-        final Resource resource = scheduler.getResource(ResourceLocator.parse(resourceId));
+        Resource resource;
+        try {
+            long rid = Long.parseLong(resourceId);
+            resource = scheduler.getResource(rid);
+        } catch (NumberFormatException e) {
+            resource = scheduler.getResource(ResourceLocator.parse(resourceId));
+        }
+
         if (resource == null)
             throw new ExperimaestroRuntimeException("No resource with id [%s]", resourceId);
 
