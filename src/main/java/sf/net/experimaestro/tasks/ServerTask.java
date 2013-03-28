@@ -44,6 +44,7 @@ import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.JSHelpServlet;
+import sf.net.experimaestro.server.JsonRPCServlet;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.server.XPMWebSocketServlet;
@@ -141,6 +142,17 @@ public class ServerTask extends AbstractTask {
 
         final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);
         context.addServlet(servletHolder, "/xmlrpc");
+
+
+        // --- Add the JSON RPC servlet
+
+        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(scheduler, repositories);
+
+        xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
+
+        final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
+        context.addServlet(jsonServletHolder, "/json-rpc");
+
 
         // --- Add the web socket servlet
         final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(scheduler, repositories);

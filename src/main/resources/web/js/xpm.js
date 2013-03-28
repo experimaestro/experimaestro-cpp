@@ -76,8 +76,24 @@ jQuery.expr[':'].Contains = function(a,i,m){
 
 $().ready(function() {
 
+    $(".xpm-resource-list a").on("click", function() {
+        // Load the detail into the frame
+        $("#resource-detail").attr("src", this.href);
+        // Activate the ddetail tab
+        $( "#tab-main" ).tabs( "option", "active", 1);
+        return false;
+    });
+
+//    $("#tab-main").on("tabsactivate",
+//        function( event, ui ) {
+//            if (ui.newPanel.attr("id") == "resource-detail") {
+//                $("#resource-detail");
+//            }
+//        }
+//    );
 
     $(".xpm-resource-list").each(function() { listFilter($(this)); });
+    $("#header .links a").button();
 
     // Tabs as tabs
     $( ".tab" ).tabs();

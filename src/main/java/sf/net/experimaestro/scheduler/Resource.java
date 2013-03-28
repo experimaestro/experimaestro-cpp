@@ -26,11 +26,13 @@ import com.sleepycat.persist.model.Relationship;
 import com.sleepycat.persist.model.SecondaryKey;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Comparator;
@@ -412,12 +414,25 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
      *
      * @param out
      * @param config The configuration for printing
+     * @deprecated Use {@linkplain #toJSON()}
      */
+    @Deprecated
     public void printXML(PrintWriter out, PrintConfig config) {
         out.format("<div><b>Resource id</b>: %s</h2>", getLocator());
         out.format("<div><b>Status</b>: %s</div>", getState());
     }
 
+    /**
+     * Get a JSON reprensentation of the object
+     * @return
+     * @throws IOException
+     */
+    public JSONObject toJSON() throws IOException {
+        JSONObject object = new JSONObject();
+        object.put("id", getId());
+        object.put("status", getState().toString());
+        return object;
+    }
 
     @Override
     public void clean() {

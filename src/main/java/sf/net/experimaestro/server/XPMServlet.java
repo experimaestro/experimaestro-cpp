@@ -74,8 +74,8 @@ public abstract class XPMServlet extends HttpServlet {
                 "<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n" +
                 "</head>%n" +
                 "<body>%n" +
-                "<div class='page-title'>Experimaestro</div>" +
-                "<div class='header'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div>",
+                "<div id=\"header\"><div class='title'>Experimaestro</div>" +
+                "<div class='links'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div></div>",
                 escapeHtml(title));
 
             }

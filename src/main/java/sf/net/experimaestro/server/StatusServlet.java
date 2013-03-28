@@ -65,6 +65,7 @@ public class StatusServlet extends XPMServlet {
             ArrayList<ResourceState> values = new ArrayList<>(
                     ListAdaptator.create(ResourceState.values()));
 
+            out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li></ul>");
             out.println("<div id=\"resources\" class=\"tab\"><ul>");
             for (ResourceState state : values) {
                 out.format("<li><a href=\"#state-%s\"><span>%s</span> (<span id=\"state-%s-count\">0</span>)</a></li>", state, state, state);
@@ -74,12 +75,7 @@ public class StatusServlet extends XPMServlet {
             for (ResourceState state : values) {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
-                if (state == ResourceState.DONE) {
-                    out.println("<div id='header'>Filtering</div>");
-                    out.println("<ul id=\"list\">");
-                }
-                else
-                    out.println("<ul>");
+                out.println("<ul>");
                 try (final CloseableIterable<Resource> resources = scheduler.resources()) {
                     for (Resource resource : resources) {
                         resource.init(scheduler);
@@ -87,7 +83,7 @@ public class StatusServlet extends XPMServlet {
                             try {
                                 ResourceLocator locator = resource.getLocator();
                                 out.format(
-                                        "<li><a href=\"%s/resource/%d\">%s</a></li>",
+                                        "<li><a class=\"xpm-resource-link\" href=\"%s/resource/%d\">%s</a></li>",
                                         request.getServletPath(),
                                         resource.getId(),
                                         locator);
@@ -102,6 +98,9 @@ public class StatusServlet extends XPMServlet {
                 out.println("</ul></div>");
             }
             out.println("</div>");
+
+            out.println("<iframe id='resource-detail'></iframe>");
+            out.println("</div>"); // end of tab
 
             out.println("</body></html>");
             return;
