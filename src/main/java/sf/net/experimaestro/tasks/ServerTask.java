@@ -45,6 +45,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.ContentServlet;
 import sf.net.experimaestro.server.JSHelpServlet;
 import sf.net.experimaestro.server.JsonRPCServlet;
+import sf.net.experimaestro.server.ServerSettings;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.server.XPMWebSocketServlet;
@@ -80,6 +81,8 @@ public class ServerTask extends AbstractTask {
         }
         LOGGER.info("Reading configuration from " + configuration.getFileName());
 
+        // --- Get the server settings
+        ServerSettings serverSettings = new ServerSettings(configuration.subset("server"));
 
         // --- Get the port
         int port = configuration.getInt("server.port", 8080);
@@ -146,7 +149,7 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the JSON RPC servlet
 
-        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(scheduler, repositories);
+        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, scheduler, repositories);
 
         xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
@@ -155,7 +158,7 @@ public class ServerTask extends AbstractTask {
 
 
         // --- Add the web socket servlet
-        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(scheduler, repositories);
+        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories);
 //        webSocketServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
         final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
@@ -164,22 +167,22 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new StatusServlet(scheduler)), "/status/*");
+        context.addServlet(new ServletHolder(new StatusServlet(serverSettings, scheduler)), "/status/*");
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new TasksServlet(repositories,
+        context.addServlet(new ServletHolder(new TasksServlet(serverSettings,repositories,
                 scheduler)), "/tasks/*");
 
 
         // --- Add the JS Help servlet
 
-        context.addServlet(new ServletHolder(new JSHelpServlet()), "/jshelp/*");
+        context.addServlet(new ServletHolder(new JSHelpServlet(serverSettings)), "/jshelp/*");
 
 
         // --- Add the default servlet
 
-        context.addServlet(new ServletHolder(new ContentServlet()), "/*");
+        context.addServlet(new ServletHolder(new ContentServlet(serverSettings)), "/*");
 
 
         // final URL warUrl =

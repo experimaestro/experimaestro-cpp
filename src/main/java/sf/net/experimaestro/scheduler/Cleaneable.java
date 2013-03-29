@@ -10,4 +10,5 @@ package sf.net.experimaestro.scheduler;
 public interface Cleaneable {
     /** Clean before deletion */
     void clean();
+
 }

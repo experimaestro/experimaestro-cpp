@@ -25,7 +25,7 @@ import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -48,7 +48,8 @@ public class StatusServlet extends XPMServlet {
     public static final String RESOURCE_PATH = "/resource/";
     private final Scheduler scheduler;
 
-    public StatusServlet(Scheduler manager) {
+    public StatusServlet(ServerSettings serverSettings, Scheduler manager) {
+        super(serverSettings);
         this.scheduler = manager;
     }
 
@@ -76,17 +77,17 @@ public class StatusServlet extends XPMServlet {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
-                try (final CloseableIterable<Resource> resources = scheduler.resources()) {
-                    for (Resource resource : resources) {
-                        resource.init(scheduler);
+                try (final CloseableIterator<Resource> resources = scheduler.resources(state, true)) {
+                    while (resources.hasNext()) {
+                        Resource resource = resources.next();
                         if (resource.getState() == state) {
+                            out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
                             try {
                                 ResourceLocator locator = resource.getLocator();
-                                out.format(
-                                        "<li><a name=\"%s\" href=\"javascript:void(0)\">%s</a></li>",
-                                        resource.getId(), locator);
+                                out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                                out.format("<a href=\"javascript:void(0)\">%s</a></li>", locator);
                             } catch (Throwable t) {
-                                out.format("<li><b>Resource ID %s</b> without locator</li>", resource.getId());
+                                out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                             }
                         }
                     }
@@ -141,6 +142,6 @@ public class StatusServlet extends XPMServlet {
         }
 
         // Not found
-        ContentServlet.error404(request, response);
+        error404(request, response);
     }
 }

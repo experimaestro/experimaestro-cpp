@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.net.URL;
 
 import static java.lang.String.format;
@@ -39,7 +38,11 @@ public class ContentServlet extends XPMServlet {
 	final static private Logger LOGGER = Logger.getLogger();
 	private static final long serialVersionUID = 1L;
 
-	protected void doGet(HttpServletRequest request,
+    public ContentServlet(ServerSettings serverSettings) {
+        super(serverSettings);
+    }
+
+    protected void doGet(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
 
 		URL url = ContentServlet.class.getResource(format("/web%s",
@@ -81,14 +84,4 @@ public class ContentServlet extends XPMServlet {
 
 	}
 
-	public static void error404(HttpServletRequest request,
-			HttpServletResponse response) throws IOException {
-		response.setContentType("text/html");
-		response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-		final PrintWriter out = response.getWriter();
-        header(out, "Error");
-		out.println("<h1>Page not found</h1>");
-		out.format("<p>This URI was not found: %s</p>", request.getRequestURI());
-		out.println("</body></html>");
-	}
 }

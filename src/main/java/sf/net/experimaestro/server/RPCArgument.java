@@ -22,6 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
+ * An RPC method argument annotation
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/3/13
  */
@@ -30,4 +31,7 @@ public @interface RPCArgument {
     String name();
 
     boolean required() default true;
+
+    /** Help for the argumnent */
+    String help() default "";
 }

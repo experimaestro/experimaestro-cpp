@@ -24,28 +24,15 @@ package sf.net.experimaestro.scheduler;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 30/11/12
  */
-public enum  SimpleMessage {
-    // Resource was stored message
-    STORED_IN_DATABASE;
+public class SimpleMessage extends Message {
+   Resource resource;
 
-    Wrapper wrap() {
-        return new Wrapper(this);
+    public SimpleMessage(Type type, Resource resource) {
+        super(type);
+        this.resource = resource;
     }
 
-    static public class Wrapper extends Message {
-        SimpleMessage message;
-
-        public Wrapper(SimpleMessage message) {
-            this.message = message;
-        }
-
-        SimpleMessage get() {
-            return message;
-        }
-
-        @Override
-        public String toString() {
-            return message.toString();
-        }
+    public Resource getResource() {
+        return resource;
     }
 }

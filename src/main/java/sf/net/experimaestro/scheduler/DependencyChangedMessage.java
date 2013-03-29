@@ -28,6 +28,7 @@ final public class DependencyChangedMessage extends Message {
     DependencyStatus to;
 
     public DependencyChangedMessage(Dependency dependency, DependencyStatus from, DependencyStatus to) {
+        super(Type.DEPENDENCY_CHANGED);
         this.dependency = dependency;
         this.from = from;
         this.to = to;

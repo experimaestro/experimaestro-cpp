@@ -92,8 +92,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     public Job(Scheduler scheduler, Data data) {
         super(scheduler, data);
 
-        // State is on hold for the moment
-        setState(ResourceState.ON_HOLD);
+        setState(ResourceState.WAITING);
     }
 
     private boolean isDone() {
@@ -113,8 +112,12 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      */
     synchronized public void restart() throws Exception {
         if (!getState().isActive()) {
+            // Set state to waiting
             setState(ResourceState.WAITING);
             clean();
+
+            // Update status
+            updateStatus(false);
             scheduler.store(this, true);
         }
     }
@@ -297,78 +300,79 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     synchronized public void notify(Message message) {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
-        // --- Notified of the end of job
-        if (message instanceof EndOfJobMessage) {
-            EndOfJobMessage eoj = (EndOfJobMessage) message;
-            this.endTimestamp = eoj.timestamp;
+        switch (message.getType()) {
+            case END_OF_JOB:
+                EndOfJobMessage eoj = (EndOfJobMessage) message;
+                this.endTimestamp = eoj.timestamp;
 
-            // TODO: copy done & code to main connector if needed
+                // TODO: copy done & code to main connector if needed
 
-            LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), eoj.code);
+                LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), eoj.code);
 
-            // Update state
-            setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
-            // Dispose of the job monitor
-            XPMProcess old = process;
-            process = null;
+                // Update state
+                setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
+                // Dispose of the job monitor
+                XPMProcess old = process;
+                process = null;
 
-            storeState(true);
+                storeState(true);
 
-            try {
-                final Collection<Dependency> deps = getDependencies();
-                for (Dependency dep : deps) {
-                    dep.status = DependencyStatus.UNACTIVE;
-                    scheduler.getResources().store(dep);
-                }
-            } catch (RuntimeException e) {
-                LOGGER.error(e, "Error while unactivating dependencies");
-            }
-
-            try {
-                LOGGER.debug("Disposing of old XPM process [%s]", old);
-                if (old != null) {
-                    old.dispose();
-                }
-            } catch (Exception e) {
-                LOGGER.error("Could not dispose of the old process checker %s", e);
-            }
-        } else if (message instanceof SimpleMessage.Wrapper) {
-            switch (((SimpleMessage.Wrapper) message).get()) {
-                case STORED_IN_DATABASE:
-                    break;
-                default:
-                    LOGGER.error("Received unknown self-message: %s", message);
-            }
-        } else if (message instanceof DependencyChangedMessage) {
-            LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
-            ResourceState oldState = getState();
-            final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
-
-            // Store in cache
-            updateDependency(depChanged.dependency);
-
-            int diff = (depChanged.to.isOK() ? 1 : 0) - (depChanged.from.isOK() ? 1 : 0);
-            int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (depChanged.from.isBlocking() ? 1 : 0);
-
-           if (diff != 0 || diffHold != 0) {
-                nbUnsatisfied -= diff;
-                nbHolding += diffHold;
-
-                // Change the state in funciton of the number of unsatified requirements
-                if (nbUnsatisfied == 0) {
-                    setState(ResourceState.READY);
-                } else {
-                    setState(ResourceState.WAITING);
+                try {
+                    final Collection<Dependency> deps = getDependencies();
+                    for (Dependency dep : deps) {
+                        dep.status = DependencyStatus.UNACTIVE;
+                        scheduler.getResources().store(dep);
+                    }
+                } catch (RuntimeException e) {
+                    LOGGER.error(e, "Error while unactivating dependencies");
                 }
 
-                // Store the result
-                assert nbHolding >= 0;
-                assert nbUnsatisfied >= nbHolding;
-                storeState(getState() != oldState);
-            }
-            LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
-                    diff, diffHold, depChanged.from, depChanged.to);
+                try {
+                    LOGGER.debug("Disposing of old XPM process [%s]", old);
+                    if (old != null) {
+                        old.dispose();
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Could not dispose of the old process checker %s", e);
+                }
+                break;
+
+            case DEPENDENCY_CHANGED:
+                LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
+                ResourceState oldState = getState();
+                final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
+
+                // Store in cache
+                updateDependency(depChanged.dependency);
+
+                int diff = (depChanged.to.isOK() ? 1 : 0) - (depChanged.from.isOK() ? 1 : 0);
+                int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (depChanged.from.isBlocking() ? 1 : 0);
+
+                if (diff != 0 || diffHold != 0) {
+                    nbUnsatisfied -= diff;
+                    nbHolding += diffHold;
+
+                    // Change the state in funciton of the number of unsatified requirements
+                    if (nbUnsatisfied == 0) {
+                        setState(ResourceState.READY);
+                    } else {
+                        setState(ResourceState.WAITING);
+                    }
+
+                    // Store the result
+                    assert nbHolding >= 0;
+                    assert nbUnsatisfied >= nbHolding;
+                    storeState(getState() != oldState);
+                }
+                LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
+                        diff, diffHold, depChanged.from, depChanged.to);
+                break;
+
+            default:
+                LOGGER.error("Received unknown self-message: %s", message);
+
         }
+
     }
 
 

@@ -21,6 +21,7 @@ package sf.net.experimaestro.server;
 import org.apache.commons.lang.StringEscapeUtils;
 
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -31,8 +32,10 @@ public abstract class XPMServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     protected static final String ENCODING = "UTF-8";
+    private final ServerSettings serverSettings;
 
-    public XPMServlet() {
+    public XPMServlet(ServerSettings serverSettings) {
+        this.serverSettings = serverSettings;
     }
 
     public static String urlEncode(String text) {
@@ -63,22 +66,30 @@ public abstract class XPMServlet extends HttpServlet {
         return out;
     }
 
-    static void header(PrintWriter out, String title) {
-        out.format("<html><head><title>Experimaestro - %s</title>" +
-                "<link type=\"text/css\" href=\"/css/jquery-ui-1.10.2.custom.min.css\" rel=\"Stylesheet\" />\n" +
-                "<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/css/style.css\">\n" +
+    void header(PrintWriter out, String title) {
+        out.format("<html><head><title>XPM@%s - %s</title>", escapeHtml(serverSettings.name), escapeHtml(title));
 
-                "<script type=\"text/javascript\" src=\"/js/jquery-1.9.1.js\"></script>\n" +
-                "<script type=\"text/javascript\" src=\"/js/jquery-ui-1.10.2.custom.min.js\"></script>\n" +
-                "<script type=\"text/javascript\" src=\"/js/jquery.jsonrpc.js\"></script>\n" +
-                "<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n" +
-                "</head>%n" +
-                "<body>%n" +
-                "<div id=\"header\"><div class='title'>Experimaestro</div>" +
-                "<div class='links'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div></div>",
-                escapeHtml(title));
+        out.format("<link type=\"text/css\" href=\"/css/%s/jquery-ui-1.10.2.custom.min.css\" rel=\"stylesheet\"></link>%n",
+                serverSettings.style.toString().toLowerCase()
+        );
+        out.format("<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/css/style.css\">\n");
+        out.format("<script type=\"text/javascript\" src=\"/js/jquery-1.9.1.min.js\"></script>\n");
+        out.format("<script type=\"text/javascript\" src=\"/js/jquery-ui-1.10.2.custom.min.js\"></script>\n");
+        out.format("<script type=\"text/javascript\" src=\"/js/jquery.jsonrpc.js\"></script>\n");
 
-            }
+        out.format("<script type=\"text/javascript\" src='/js/noty/jquery.noty.js'></script>%n");
+        out.format("<script type=\"text/javascript\" src='/js/noty/layouts/top.js'></script>%n");
+        out.format("<script type=\"text/javascript\" src='/js/noty/themes/default.js'></script>%n");
+
+        out.format("<script type=\"text/javascript\" src='/js/jquery.history.js'></script>%n");
+
+        out.format("<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n");
+        out.format("</head>%n");
+        out.format("<body>%n");
+        out.format("<div id=\"header\"><div class='title'>Experimaestro - %s</div>", serverSettings.name);
+        out.format("<div class='links'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div></div>");
+
+    }
 
     public void show404(HttpServletResponse response, String format, Object... objects) throws IOException {
         response.setContentType("text/html");
@@ -86,5 +97,16 @@ public abstract class XPMServlet extends HttpServlet {
         PrintWriter writer = response.getWriter();
         header(writer, "Page not found");
         writer.format("<div class=\"error\">%s</div>", escapeHtml(String.format(format, objects)));
+    }
+
+    public void error404(HttpServletRequest request,
+                         HttpServletResponse response) throws IOException {
+        response.setContentType("text/html");
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        final PrintWriter out = response.getWriter();
+        header(out, "Error");
+        out.println("<h1>Page not found</h1>");
+        out.format("<p>This URI was not found: %s</p>", request.getRequestURI());
+        out.println("</body></html>");
     }
 }

@@ -27,6 +27,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
+import org.eclipse.jetty.server.Server;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -40,10 +41,15 @@ import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Listener;
+import sf.net.experimaestro.scheduler.Message;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -58,8 +64,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -67,15 +77,21 @@ import java.util.Map;
  */
 public class JsonRPCMethods extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
+    /**
+     * Server
+     */
+    private Server server;
     private final Scheduler scheduler;
     private final Repositories repository;
     private final JSONRPCRequest mos;
 
-    public JsonRPCMethods(Scheduler scheduler, Repositories repository, JSONRPCRequest mos) {
+    public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) {
+        this.server = server;
         this.scheduler = scheduler;
         this.repository = repository;
         this.mos = mos;
     }
+
 
 
     static public class MethodDescription {
@@ -222,18 +238,30 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
+    private EnumSet<ResourceState> getStates(Object[] states) {
+        final EnumSet<ResourceState> statesSet;
+
+        if (states == null || states.length == 0)
+            statesSet = EnumSet.allOf(ResourceState.class);
+        else {
+            ResourceState statesArray[] = new ResourceState[states.length];
+            for (int i = 0; i < states.length; i++)
+                statesArray[i] = ResourceState.valueOf(states[i].toString());
+            statesSet = EnumSet.of(statesArray[0], statesArray);
+        }
+        return statesSet;
+    }
+
+
+    // -------- RPC METHODS -------
+
+
     /**
      * Information about a job
      */
     @RPCMethod(help = "Returns detailed information about a job (XML format)")
     public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException {
-        Resource resource;
-        try {
-            long rid = Long.parseLong(resourceId);
-            resource = scheduler.getResource(rid);
-        } catch (NumberFormatException e) {
-            resource = scheduler.getResource(ResourceLocator.parse(resourceId));
-        }
+        Resource resource = getResource(resourceId);
 
         if (resource == null)
             throw new ExperimaestroRuntimeException("No resource with id [%s]", resourceId);
@@ -241,6 +269,26 @@ public class JsonRPCMethods extends HttpServlet {
 
         return resource.toJSON();
     }
+
+    private Resource getResource(String resourceId) {
+        Resource resource;
+        try {
+            long rid = Long.parseLong(resourceId);
+            resource = scheduler.getResource(rid);
+        } catch (NumberFormatException e) {
+            resource = scheduler.getResource(ResourceLocator.parse(resourceId));
+        }
+        return resource;
+    }
+
+
+    @RPCMethod(help = "Sets a log level")
+    public int setLogLevel(@RPCArgument(name = "identifier") String identifier, @RPCArgument(name = "level") String level) {
+        final Logger logger = Logger.getLogger(identifier);
+        logger.setLevel(Level.toLevel(level));
+        return 0;
+    }
+
 
     /**
      * Run javascript
@@ -356,9 +404,10 @@ public class JsonRPCMethods extends HttpServlet {
                 if (t instanceof RhinoException)
                     rhinoException = (RhinoException) t;
 
-            if (rhinoException != null) {
+            if (rhinoException != null)
                 err.append("\n" + rhinoException.getScriptStackTrace());
-            } else {
+
+            if (wrapped instanceof RuntimeException) {
                 err.format("Internal error:%n");
                 e.printStackTrace(err);
             }
@@ -372,19 +421,156 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
+    /**
+     * Shutdown the server
+     */
+    @RPCMethod(help = "Shutdown Experimaestro server")
+    public boolean shutdown() {
+        // Close the scheduler
+        scheduler.close();
 
-    private EnumSet<ResourceState> getStates(Object[] states) {
-        final EnumSet<ResourceState> statesSet;
+        // Shutdown jetty (after 1s to allow this thread to finish)
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
 
-        if (states == null || states.length == 0)
-            statesSet = EnumSet.allOf(ResourceState.class);
-        else {
-            ResourceState statesArray[] = new ResourceState[states.length];
-            for (int i = 0; i < states.length; i++)
-                statesArray[i] = ResourceState.valueOf(states[i].toString());
-            statesSet = EnumSet.of(statesArray[0], statesArray);
+            @Override
+            public void run() {
+                boolean stopped = false;
+                try {
+                    server.stop();
+                    stopped = true;
+                } catch (Exception e) {
+                    LOGGER.error(e, "Could not stop properly jetty");
+                }
+                if (!stopped)
+                    synchronized (this) {
+                        try {
+                            wait(10000);
+                        } catch (InterruptedException e) {
+                            LOGGER.error(e);
+                        }
+                        System.exit(1);
+
+                    }
+            }
+        }, 2000);
+
+        // Everything's OK
+        return true;
+    }
+
+
+    // Restart all the job (recursion)
+    private int invalidate(Resource resource) throws Exception {
+        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId()).values();
+
+        if (deps.isEmpty())
+            return 0;
+
+        int nbUpdated = 0;
+
+        for (Dependency dependency : deps) {
+            final long to = dependency.getTo();
+            LOGGER.info("Invalidating %s", to);
+            Resource child = scheduler.getResource(to);
+
+            invalidate(child);
+
+            final ResourceState state = child.getState();
+            if (state == ResourceState.RUNNING)
+                ((Job) child).stop();
+            if (!state.isActive()) {
+                nbUpdated++;
+                // We invalidate grand-children if the child was done
+                if (state == ResourceState.DONE) invalidate(child);
+                ((Job) child).restart();
+            }
         }
-        return statesSet;
+        return nbUpdated;
+    }
+
+    @RPCMethod(help = "Puts back a job into the waiting queue")
+    public int restart(
+            @RPCArgument(name = "id", help = "The id of the job") String id,
+            @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
+            @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
+    ) throws Exception {
+
+        int nbUpdated = 0;
+        Resource resource = getResource(id);
+        if (resource == null)
+            throw new ExperimaestroRuntimeException("Job not found [%s]", id);
+
+        final ResourceState rsrcState = resource.getState();
+
+        if (rsrcState == ResourceState.RUNNING)
+            throw new ExperimaestroRuntimeException("Job is running [%s]", rsrcState);
+
+        // The job is active, so we have nothing to do
+        if (rsrcState.isActive())
+            return 0;
+
+        if (!restartDone && rsrcState == ResourceState.DONE)
+            return 0;
+
+        ((Job) resource).restart();
+        nbUpdated++;
+
+        // If the job was done, we need to restart the dependences
+        if (recursive && rsrcState == ResourceState.DONE) {
+            nbUpdated += invalidate(resource);
+        }
+
+        return nbUpdated;
+    }
+
+
+    HashSet<Listener> listeners = new HashSet<>();
+
+    @RPCMethod(help = "Listen to XPM events")
+    public void listen() {
+        Listener listener = new Listener() {
+            @Override
+            public void notify(Message message) {
+                try {
+                    HashMap<String, Object> map = new HashMap<>();
+                    map.put("event", message.getType().toString());
+                    if (message instanceof SimpleMessage) {
+                        map.put("resource", ((SimpleMessage)message).getResource().getId());
+                        ResourceLocator locator = ((SimpleMessage) message).getResource().getLocator();
+                        if (locator != null)
+                            map.put("locator", locator.toString());
+                    }
+
+                    switch (message.getType()) {
+                        case STATE_CHANGED:
+                            map.put("state", ((SimpleMessage)message).getResource().getState().toString());
+                            break;
+
+                        case RESOURCE_REMOVED:
+                            break;
+
+                        case RESOURCE_ADDED:
+                            map.put("state", ((SimpleMessage)message).getResource().getState().toString());
+                            break;
+                    }
+
+                    mos.message(map);
+                } catch (IOException e) {
+                    LOGGER.error(e, "Could not output");
+                } catch(RuntimeException e) {
+                    LOGGER.error(e, "Error while trying to notify RPC client");
+                }
+            }
+        };
+
+        listeners.add(listener);
+        scheduler.addListener(listener);
+    }
+
+    public void close() {
+        for(Listener listener: listeners)
+            scheduler.removeListener(listener);
     }
 
 }

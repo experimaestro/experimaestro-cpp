@@ -253,6 +253,9 @@ def command_run_js(appendrgs):
             o = json.loads(message)
             if type(o) == dict:
                 if o["id"]:
+                    if "error" in o:
+                        code = o["error"]["code"]
+                        sys.stderr.write("%s\n" % o["error"]["message"])
                     break
                 else:
                     print o["result"],
@@ -331,7 +334,7 @@ def command_rm(args):
 
 def command_log_level(args):
     server = Configuration(args).getServer()
-    server.Server.setLogLevel(args.id, args.level)
+    server.Server.setLogLevel(args.id[0], args.level[0])
 
 # --- Utility functions
 

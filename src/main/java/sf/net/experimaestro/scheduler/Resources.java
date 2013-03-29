@@ -226,6 +226,9 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                 dependency.setTo(id);
                 dependencies.put(dependency);
             }
+
+            // Notify
+            scheduler.notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, resource));
         }
 
 
@@ -414,6 +417,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                         return resource;
                     }
                     resources.close();
+                    resources = null;
                 }
             }
         };

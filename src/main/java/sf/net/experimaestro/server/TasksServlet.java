@@ -57,7 +57,8 @@ public class TasksServlet extends XPMServlet {
         repositories.put(id, repository);
     }
 
-    public TasksServlet(Repository repository, Scheduler manager) {
+    public TasksServlet(ServerSettings serverSettings, Repository repository, Scheduler manager) {
+        super(serverSettings);
         this.defaultRepository = repository;
         this.manager = manager;
     }
@@ -147,7 +148,7 @@ public class TasksServlet extends XPMServlet {
         }
 
 
-        ContentServlet.error404(request, response);
+        error404(request, response);
     }
 
 

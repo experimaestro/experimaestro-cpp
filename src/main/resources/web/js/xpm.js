@@ -16,37 +16,10 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-var baseurl = window.location.origin;
 
 $.jsonRPC.setup({
   endPoint: '/json-rpc',
 });
-
-
-/*
-// WebSocket
-var socket = new WebSocket("ws://localhost:12346/web-socket");
-var p = { command: "run-javascript", args: { files: [ "pre", "logger.info(\"hello world\"" ]} };
-socket.onmessage = function(e){ alert(e); }
-socket.send(JSON.stringify(p));
-socket.close();
-*/
-
-//alert(window.location.hostname);
-
-/*
-// XML-RPC call
-
-var r = $.getJSON({
-    url: 'http://localhost:12346/xmlrpc',
-    methodName: 'Server.listJobs',
-    params: ['', ['DONE']],
-    success: function(response, status, jqXHR) {
-        alert("OK: " + JSON.stringify(response));
-    },
-    error: function(jqXHR, status, error) { alert(error); }
-});
-*/
 
 
 // custom css expression for a case-insensitive contains()
@@ -80,56 +53,176 @@ jQuery.expr[':'].Contains = function(a,i,m){
     });
   }
 
-
-$$ = function(e) {
+/** Create an element */
+$e = function(e) {
     return $(document.createElement(e));
 }
 
-$().ready(function() {
+/** Create a text node */
+$t = function(s) {
+    return $(document.createTextNode(s));
+}
 
-    $(".xpm-resource-list a").on("click", function() {
-        $.jsonRPC.request('getResourceInformation', {
-            params: [ $(this).attr("name") ],
-            success: function(result) {
-                // Set the content
-                var r = result.result;
-                var d = $("#resource-detail");
+/** Transform json into HTML lists */
+json2html = function(json) {
+    if (json == null || typeof(json) != "object")
+        return $t(json);
 
-                d.empty();
-                d.append($$('div').append($$("b").text("ID:"))).text(r.id);
+    var c = $e('ul');
+    for(var key in json) {
+        c.append($e('li').append($e('span').append($e("b").text(key + ": "))).append(json2html(json[key])));
+    }
+    return c;
+}
 
-//                t.appendtext(JSON.stringify(result.result, undefined, 2));
+function safe_tags(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') ;
+}
 
-                // Activate the detail tab
-                $( "#tab-main" ).tabs( "option", "active", 1);
+/** Called when an error occurs with JSON-RPC */
+function jsonrpc_error(r) {
+    noty({text: "Error" +  r.error.code + ": " + r.error.message, type: 'error', timeout: 5000});
+}
+
+
+// --- action: Restart
+var resource_restart_callback = function() {
+    if (this.name == "restart") {
+        $.jsonRPC.request('restart', {
+            params: { "id": $(this).parent().attr("name"), "restart-done": true, "recursive": true },
+            success: function(r) {
+                noty({text: "Succesful restart", type: 'success', timeout: 5000});
             },
-            error: function(result) {
-                alert("Error: " + JSON.stringify(result));
-            }
+            error: jsonrpc_error,
         });
-        return false;
+    }
+}
+
+// --- action: Get the details of a resource
+var resource_link_callback = function() {
+    $.jsonRPC.request('getResourceInformation', {
+        params: [ $(this).parent().attr("name") ],
+        success: function(r) {
+            // Set the content
+            $("#resource-detail").empty().append(json2html(r.result));
+
+            // Activate the detail tab
+            $( "#tab-main" ).tabs( "option", "active", 1);
+
+        },
+        error: jsonrpc_error
     });
+    return false;
+};
 
-//    $("#tab-main").on("tabsactivate",
-//        function( event, ui ) {
-//            if (ui.newPanel.attr("id") == "resource-detail") {
-//                $("#resource-detail");
-//            }
-//        }
-//    );
 
-    $(".xpm-resource-list").each(function() { listFilter($(this)); });
+$().ready(function() {
+    // Links
+    $(".xpm-resource-list img.link").on("click", resource_restart_callback);
+    $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
 
-    // Tabs as tabs
+    // Filter resource lists
+    $(".xpm-resource-list").each(function() { listFilter($(this)); });
+
+    // Tabs
     $( ".tab" ).tabs();
+
+    // Resource counts
     $( "#resources" ).children("div").each(function() {
         var n = $(this).children("ul").children("li").size();
         var tabid = $(this).attr("id");
         $("#" + tabid + "-count").text(n);
     });
 
-    $(".resource").each(function(r) {
-        var rId = $(this).attr("name");
-    });
+    // --- Now, listen to XPM events with a web socket
+    websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
+    websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
+    console.debug("WebSocket: Connecting to " + websocket_url);
+    var websocket = new WebSocket(websocket_url);
+
+    websocket.onmessage = function(e) {
+        var decrement = function(e) {
+            var old_counter_id = e.parents(".xpm-resource-list").attr("id") + "-count";
+            var c = $("#" + old_counter_id);
+            c.text(Number(c.text()) - 1);
+        }
+
+        console.debug("Received: " + e.data);
+        var r = $.parseJSON(e.data);
+        if (r.error) {
+            console.error("Error: " + e.data)
+            return;
+        }
+        if (!r.result)
+            return;
+        r = r.result;
+        if (r.event) switch(r.event) {
+        case "STATE_CHANGED":
+            // Get the resource
+            var e = $("#R" + r.resource);
+
+            // Decrement old
+            decrement(e);
+
+            // Increment new state
+            var c = $("#state-" + r.state + "-count");
+            c.text(Number(c.text()) + 1);
+
+            // Put the item in the list
+            $("#state-" + r.state).children("ul").append(e);
+
+            break;
+
+        case "RESOURCE_REMOVED":
+            // Get the resource
+            var e = $("#R" + r.resource);
+            if (e.length > 0) {
+                decrement(e);
+                e.remove();
+            }
+            break;
+
+        case "RESOURCE_ADDED":
+            var e = $("#R" + r.resource);
+
+            if (e.length > 0) {
+                console.warn("Resource " + r.resource + " already exists!");
+            } else {
+              var list = $("#state-" + r.state).children("ul");
+              var link = $e("a");
+              link.attr("href", "javascript:void(0)").append($t(r.locator));
+              link.on("click", resource_link_callback);
+
+              var img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+              img.on("click", resource_restart_callback);
+
+              var item = $e("li")
+                .append(img)
+                .append(link);
+              item.attr("name", r.locator).attr("id", "R" + r.resource);
+
+              list.append(item);
+
+              var c = $("#state-" + r.state + "-count");
+              c.text(Number(c.text()) + 1);
+            }
+            break;
+
+         default:
+            console.warn("Unhandled notification " + r.event);
+            break;
+        }
+    }
+
+    websocket.onopen = function() {
+        console.debug("Web socket opened");
+        var p = { id:1, method: "listen", params: [] };
+        websocket.send(JSON.stringify(p));
+    }
+
+    websocket.onerror = function(e) { noty({text: "Web socket error: " + e, type: 'information', timeout: 5000}) };
+    websocket.onclose = function(e) { noty({text: "Web socket closed", type: 'information', timeout: 5000}) };
+
+
 });

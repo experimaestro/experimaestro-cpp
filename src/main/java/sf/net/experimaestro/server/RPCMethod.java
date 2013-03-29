@@ -29,7 +29,7 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 @interface RPCMethod {
     /** Help message */
-    String help();
+    String help() default "";
 
     /** Parameters documentation */
     String [] parameters() default {};

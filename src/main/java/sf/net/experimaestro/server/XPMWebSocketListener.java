@@ -19,6 +19,7 @@
 package sf.net.experimaestro.server;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import sf.net.experimaestro.manager.Repositories;
@@ -38,8 +39,8 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     private final JsonRPCMethods methods;
 
 
-    public XPMWebSocketListener(Scheduler scheduler, Repositories repositories) {
-        this.methods = new JsonRPCMethods(scheduler, repositories, new JSONRPCRequest() {
+    public XPMWebSocketListener(Server server, Scheduler scheduler, Repositories repositories) {
+        this.methods = new JsonRPCMethods(server, scheduler, repositories, new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {
                 getRemote().sendString(message);
@@ -64,7 +65,7 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
         super.onWebSocketClose(statusCode, reason);
-        // TODO: stop the processes
+        methods.close();
     }
 
 

@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.server;
 
+import org.eclipse.jetty.server.Server;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -50,9 +51,10 @@ public class JsonRPCServlet extends HttpServlet {
 
     private final Scheduler scheduler;
     private final Repositories repository;
+    private final Server server;
 
-    public JsonRPCServlet(Scheduler scheduler, Repositories repository) {
-
+    public JsonRPCServlet(Server server, Scheduler scheduler, Repositories repository) {
+        this.server = server;
         this.scheduler = scheduler;
         this.repository = repository;
     }
@@ -105,7 +107,7 @@ public class JsonRPCServlet extends HttpServlet {
             resp.setContentType("text/json");
             resp.setStatus(HttpServletResponse.SC_OK);
 
-            jsonRPCMethods = new JsonRPCMethods(scheduler, repository, new JSONRPCRequest() {
+            jsonRPCMethods = new JsonRPCMethods(server, scheduler, repository, new JSONRPCRequest() {
                 @Override
                 public void sendJSONString(String message) throws IOException {
                     pw.print(message);

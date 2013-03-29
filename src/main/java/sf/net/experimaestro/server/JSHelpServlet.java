@@ -35,8 +35,8 @@ import java.io.PrintWriter;
 public class JSHelpServlet extends XPMServlet {
 	private static final long serialVersionUID = 1L;
 
-    public JSHelpServlet() {
-
+    public JSHelpServlet(ServerSettings serverSettings) {
+        super(serverSettings);
     }
 
     protected void doGet(HttpServletRequest request,
@@ -56,7 +56,7 @@ public class JSHelpServlet extends XPMServlet {
 		}
 
 		// Not found
-		ContentServlet.error404(request, response);
+		error404(request, response);
 	}
 
 

@@ -46,7 +46,8 @@ import java.util.TreeMap;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity(version = 1)
-public abstract class Resource<Data extends ResourceData> implements /*not sure if ID or locator... Comparable<Resource>,*/ Cleaneable {
+public abstract class Resource<Data extends ResourceData>
+        implements /*not sure if ID or locator... Comparable<Resource>,*/ Cleaneable, Listener {
     final static private Logger LOGGER = Logger.getLogger();
 
     // --- Resource description
@@ -254,10 +255,15 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
     /**
      * Notifies the resource that something happened
      *
-     * @param message  The message
+     * @param message The message
      */
+    @Override
     public void notify(Message message) {
-
+        switch (message.getType()) {
+            case RESOURCE_REMOVED:
+                resourceID = null;
+                break;
+        }
     }
 
 
@@ -344,6 +350,8 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
         if (this.state == state)
             return false;
         this.state = state;
+        if (this.stored())
+            scheduler.notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
         return true;
     }
 
@@ -423,6 +431,7 @@ public abstract class Resource<Data extends ResourceData> implements /*not sure 
 
     /**
      * Get a JSON reprensentation of the object
+     *
      * @return
      * @throws IOException
      */

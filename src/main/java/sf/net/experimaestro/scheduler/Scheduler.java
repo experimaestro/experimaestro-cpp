@@ -45,6 +45,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Timer;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
@@ -108,6 +109,11 @@ final public class Scheduler {
      * The database environement
      */
     private Environment dbEnvironment;
+
+    /**
+     * Listeners
+     */
+    HashSet<Listener> listeners = new HashSet<>();
 
     /**
      * Scheduler
@@ -206,7 +212,11 @@ final public class Scheduler {
                 throw new ExperimaestroRuntimeException("Cannot delete the running task [%s]", resource);
             if (!resources.retrieveDependentResources(resource.getId()).isEmpty())
                 throw new ExperimaestroRuntimeException("Cannot delete the resource %s: it has dependencies", resource);
+
             resources.delete(resource.getId());
+            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, resource);
+            resource.notify(message);
+            notify(message);
         }
     }
 
@@ -233,6 +243,34 @@ final public class Scheduler {
      */
     public CloseableIterator<Resource> resources(String group, boolean recursive, EnumSet<ResourceState> states, boolean init) {
         return resources.entities(group, recursive, states, init);
+    }
+
+    public CloseableIterator<Resource> resources(ResourceState state, boolean init) {
+        return resources.entities("", true, EnumSet.of(state), init);
+    }
+
+    /**
+     * Add listener
+     * @param listener
+     */
+    public void addListener(Listener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Remove a listener
+     * @param listener
+     */
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Notify
+     */
+    public void notify(Message message) {
+        for(Listener listener: listeners)
+            listener.notify(message);
     }
 
 
