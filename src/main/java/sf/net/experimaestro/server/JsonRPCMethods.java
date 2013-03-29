@@ -407,7 +407,7 @@ public class JsonRPCMethods extends HttpServlet {
             if (rhinoException != null)
                 err.append("\n" + rhinoException.getScriptStackTrace());
 
-            if (wrapped instanceof RuntimeException) {
+            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
                 err.format("Internal error:%n");
                 e.printStackTrace(err);
             }
