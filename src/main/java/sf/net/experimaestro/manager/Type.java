@@ -81,6 +81,9 @@ public class Type {
         if (tagURI == null)
             tagURI = "";
 
+        if (getNamespaceURI().equals(Manager.XMLSCHEMA_NS) && getLocalPart().equals("any"))
+            return;
+
         if (!matches(tagURI, tagName))
             throw new ValueMismatchException("Parameter was set to a value with a wrong type [{%s}%s] - expected [%s]",
                    tagURI, tagName, this);

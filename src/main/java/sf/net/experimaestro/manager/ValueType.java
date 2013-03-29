@@ -151,6 +151,9 @@ public class ValueType extends Type {
                         case "integer":
                             Integer.parseInt(x);
                             break;
+                        case "boolean":
+                            Boolean.parseBoolean(x);
+                            break;
                         default:
                             throw new ExperimaestroRuntimeException("Un-handled type [%s]");
                     }
@@ -200,6 +203,8 @@ public class ValueType extends Type {
                         return Float.parseFloat(x);
                     case "integer":
                         return Integer.parseInt(x);
+                    case "boolean":
+                        return Boolean.parseBoolean(x);
                     default:
                         throw new ExperimaestroRuntimeException("Un-handled type [%s]");
                 }
