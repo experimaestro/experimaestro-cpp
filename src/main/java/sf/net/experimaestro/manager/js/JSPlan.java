@@ -147,6 +147,10 @@ public class JSPlan extends JSAbstractOperator implements Callable {
             return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Double) value));
         }
 
+        if (value instanceof Boolean) {
+            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Boolean) value));
+        }
+
         if (value instanceof String) {
             return new Constant(ValueType.wrapString(Manager.EXPERIMAESTRO_NS, "value", (String) value, null));
         }

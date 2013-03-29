@@ -81,8 +81,6 @@ public abstract class XPMServlet extends HttpServlet {
         out.format("<script type=\"text/javascript\" src='/js/noty/layouts/top.js'></script>%n");
         out.format("<script type=\"text/javascript\" src='/js/noty/themes/default.js'></script>%n");
 
-        out.format("<script type=\"text/javascript\" src='/js/jquery.history.js'></script>%n");
-
         out.format("<script type=\"text/javascript\" src=\"/js/xpm.js\"></script>\n");
         out.format("</head>%n");
         out.format("<body>%n");

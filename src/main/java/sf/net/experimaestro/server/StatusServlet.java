@@ -65,6 +65,7 @@ public class StatusServlet extends XPMServlet {
 
             ArrayList<ResourceState> values = new ArrayList<>(
                     ListAdaptator.create(ResourceState.values()));
+            out.println("<img id='connection' src='/images/disconnect.png' alt='[c]'>");
 
             out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li></ul>");
             out.println("<div id=\"resources\" class=\"tab\"><ul>");

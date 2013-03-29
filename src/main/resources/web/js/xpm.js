@@ -138,91 +138,113 @@ $().ready(function() {
     // --- Now, listen to XPM events with a web socket
     websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
     websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
-    console.debug("WebSocket: Connecting to " + websocket_url);
-    var websocket = new WebSocket(websocket_url);
 
-    websocket.onmessage = function(e) {
-        var decrement = function(e) {
-            var old_counter_id = e.parents(".xpm-resource-list").attr("id") + "-count";
-            var c = $("#" + old_counter_id);
-            c.text(Number(c.text()) - 1);
-        }
+    function create_websocket() {
+        console.debug("WebSocket: Connecting to " + websocket_url);
+        var websocket = new WebSocket(websocket_url);
+        websocket.onmessage = function(e) {
+            var decrement = function(e) {
+                var old_counter_id = e.parents(".xpm-resource-list").attr("id") + "-count";
+                var c = $("#" + old_counter_id);
+                c.text(Number(c.text()) - 1);
+            }
 
-        console.debug("Received: " + e.data);
-        var r = $.parseJSON(e.data);
-        if (r.error) {
-            console.error("Error: " + e.data)
-            return;
-        }
-        if (!r.result)
-            return;
-        r = r.result;
-        if (r.event) switch(r.event) {
-        case "STATE_CHANGED":
-            // Get the resource
-            var e = $("#R" + r.resource);
+            console.debug("Received: " + e.data);
+            var r = $.parseJSON(e.data);
+            if (r.error) {
+                console.error("Error: " + e.data)
+                return;
+            }
+            if (!r.result)
+                return;
+            r = r.result;
+            if (r.event) switch(r.event) {
+            case "STATE_CHANGED":
+                // Get the resource
+                var e = $("#R" + r.resource);
 
-            // Decrement old
-            decrement(e);
-
-            // Increment new state
-            var c = $("#state-" + r.state + "-count");
-            c.text(Number(c.text()) + 1);
-
-            // Put the item in the list
-            $("#state-" + r.state).children("ul").append(e);
-
-            break;
-
-        case "RESOURCE_REMOVED":
-            // Get the resource
-            var e = $("#R" + r.resource);
-            if (e.length > 0) {
+                // Decrement old
                 decrement(e);
-                e.remove();
+
+                // Increment new state
+                var c = $("#state-" + r.state + "-count");
+                c.text(Number(c.text()) + 1);
+
+                // Put the item in the list
+                $("#state-" + r.state).children("ul").append(e);
+
+                break;
+
+            case "RESOURCE_REMOVED":
+                // Get the resource
+                var e = $("#R" + r.resource);
+                if (e.length > 0) {
+                    decrement(e);
+                    e.remove();
+                }
+                break;
+
+            case "RESOURCE_ADDED":
+                var e = $("#R" + r.resource);
+
+                if (e.length > 0) {
+                    console.warn("Resource " + r.resource + " already exists!");
+                } else {
+                  var list = $("#state-" + r.state).children("ul");
+                  var link = $e("a");
+                  link.attr("href", "javascript:void(0)").append($t(r.locator));
+                  link.on("click", resource_link_callback);
+
+                  var img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                  img.on("click", resource_restart_callback);
+
+                  var item = $e("li")
+                    .append(img)
+                    .append(link);
+                  item.attr("name", r.locator).attr("id", "R" + r.resource);
+
+                  list.append(item);
+
+                  var c = $("#state-" + r.state + "-count");
+                  c.text(Number(c.text()) + 1);
+                }
+                break;
+
+             default:
+                console.warn("Unhandled notification " + r.event);
+                break;
             }
-            break;
-
-        case "RESOURCE_ADDED":
-            var e = $("#R" + r.resource);
-
-            if (e.length > 0) {
-                console.warn("Resource " + r.resource + " already exists!");
-            } else {
-              var list = $("#state-" + r.state).children("ul");
-              var link = $e("a");
-              link.attr("href", "javascript:void(0)").append($t(r.locator));
-              link.on("click", resource_link_callback);
-
-              var img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-              img.on("click", resource_restart_callback);
-
-              var item = $e("li")
-                .append(img)
-                .append(link);
-              item.attr("name", r.locator).attr("id", "R" + r.resource);
-
-              list.append(item);
-
-              var c = $("#state-" + r.state + "-count");
-              c.text(Number(c.text()) + 1);
-            }
-            break;
-
-         default:
-            console.warn("Unhandled notification " + r.event);
-            break;
         }
+
+        websocket.onopen = function() {
+            noty({text: "Web socket opened", type: 'information', timeout: 2000})
+            $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
+            var p = { id:1, method: "listen", params: [] };
+            websocket.send(JSON.stringify(p));
+        }
+
+        websocket.onerror = function(e) { noty({text: "Web socket error: " + e, type: 'information', timeout: 5000}) };
+        websocket.onclose = function(e) {
+            noty({text: "Web socket closed", type: 'information', timeout: 2000})
+            $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
+        };
+        return websocket;
     }
 
-    websocket.onopen = function() {
-        console.debug("Web socket opened");
-        var p = { id:1, method: "listen", params: [] };
-        websocket.send(JSON.stringify(p));
-    }
+    var websocket = create_websocket();
 
-    websocket.onerror = function(e) { noty({text: "Web socket error: " + e, type: 'information', timeout: 5000}) };
-    websocket.onclose = function(e) { noty({text: "Web socket closed", type: 'information', timeout: 5000}) };
-
+    $("#connection").on("click", function() {
+        switch(websocket.readyState) {
+            case WebSocket.OPEN:
+                websocket.close();
+                break;
+            case WebSocket.CLOSED:
+                websocket = create_websocket();
+                break;
+            default:
+                // Do nothing: transition between different
+            websocket.onerror = function(e) { noty({text: "Web Socket cannot be modified (closing or opening)", type: 'warning', timeout: 5000}) };
+        }
+    });
 
 });

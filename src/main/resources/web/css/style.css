@@ -28,3 +28,9 @@ dd { padding-bottom: .5em; }
     display: inline;
     margin-right: 5px;
 }
+
+#connection {
+    right: 0;
+    top: 0;
+    position: fixed;
+}

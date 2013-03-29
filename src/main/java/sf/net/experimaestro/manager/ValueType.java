@@ -43,6 +43,8 @@ public class ValueType extends Type {
     static final public QName XS_FLOAT = new QName(Manager.XMLSCHEMA_NS, "float");
     static final public QName XS_INTEGER = new QName(Manager.XMLSCHEMA_NS, "integer");
 
+    static final public QName XS_BOOLEAN = new QName(Manager.XMLSCHEMA_NS, "boolean");
+
     public static final QName XPM_FILE = new QName(Manager.EXPERIMAESTRO_NS, "file");
 
     private QName type;
@@ -85,6 +87,10 @@ public class ValueType extends Type {
 
     static public Document wrap(String namespace, String name, Double value) {
         return wrapString(namespace, name, Double.toString(value), XS_FLOAT);
+    }
+
+    static public Document wrap(String namespace, String name, Boolean value) {
+        return wrapString(namespace, name, Boolean.toString(value), XS_BOOLEAN);
     }
 
     static public Document wrap(String namespace, String name, FileObject value) {
@@ -216,4 +222,5 @@ public class ValueType extends Type {
                 throw new ExperimaestroRuntimeException("Un-handled type [%s]");
         }
     }
+
 }
