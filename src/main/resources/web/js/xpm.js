@@ -220,13 +220,24 @@ $().ready(function() {
             noty({text: "Web socket opened", type: 'information', timeout: 2000})
             $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
             var p = { id:1, method: "listen", params: [] };
-            websocket.send(JSON.stringify(p));
+            this.send(JSON.stringify(p));
+
+            this.ping = setInterval(function() {
+                if (websocket.readyState == WebSocket.OPEN) {
+                    websocket.send(JSON.stringify({id:2, method: "ping", params: []}));
+                    console.debug("Sent ping");
+                } else {
+                    // If not open, remove ourselves
+                    clearInterval(websocket.ping);
+                }
+            }, 120000);
         }
 
         websocket.onerror = function(e) { noty({text: "Web socket error: " + e, type: 'information', timeout: 5000}) };
         websocket.onclose = function(e) {
             noty({text: "Web socket closed", type: 'information', timeout: 2000})
             $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
+            clearInterval(this.ping);
         };
         return websocket;
     }

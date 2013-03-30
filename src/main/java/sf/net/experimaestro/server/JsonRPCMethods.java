@@ -281,6 +281,11 @@ public class JsonRPCMethods extends HttpServlet {
         return resource;
     }
 
+    @RPCMethod(help = "Ping (to maintain a WebSocket)")
+    public String ping() {
+        return "pong";
+    }
+
 
     @RPCMethod(help = "Sets a log level")
     public int setLogLevel(@RPCArgument(name = "identifier") String identifier, @RPCArgument(name = "level") String level) {
