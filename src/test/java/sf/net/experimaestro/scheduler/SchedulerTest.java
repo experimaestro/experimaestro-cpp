@@ -375,6 +375,13 @@ public class SchedulerTest extends XPMEnvironment {
         assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
+    @Test
+    public void test_hold_dependencies() {
+        // If all failed dependencies are restarted, a job should get back to a WAITING state
+        // FIXME: todo
+        assert false;
+    }
+
 
     // ----- Utility methods for scheduler
 

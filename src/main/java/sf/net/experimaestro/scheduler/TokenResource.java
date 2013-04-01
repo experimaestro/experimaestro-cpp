@@ -20,12 +20,13 @@ package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
+import org.json.simple.JSONObject;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.TreeMap;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -88,10 +89,17 @@ public class TokenResource extends Resource<ResourceData> {
     }
 
     @Override
-    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
-        final TreeMap<Long,Dependency> dependencies = scheduler.getDependentResources(getId());
+    public JSONObject toJSON() throws IOException {
+        JSONObject info = super.toJSON();
+        JSONObject tokenInfo = new JSONObject();
+        tokenInfo.put("used", usedTokens);
+        tokenInfo.put("limit", limit);
+        info.put("tokens", tokenInfo);
+        return info;
+    }
 
-        // TODO: should check all the links
+    @Override
+    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
         return false;
     }
 

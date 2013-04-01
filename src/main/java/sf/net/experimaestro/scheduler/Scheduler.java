@@ -553,7 +553,7 @@ final public class Scheduler {
         }
 
         // If new, update the status
-        if (resource.getId() == 0)
+        if (!resource.stored())
             resource.updateStatus(false);
 
         // First store the resource
