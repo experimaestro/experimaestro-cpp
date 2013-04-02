@@ -27,7 +27,7 @@ public class XMLInput extends Input {
 
 	@Override
 	Value newValue() {
-		return new XMLValue(this);
+		return new JsonValue(this);
 	}
 
 }

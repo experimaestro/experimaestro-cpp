@@ -23,7 +23,7 @@ var test = new Namespace("xpm.tests");
 tasks("inputs") = {
      inputs: {
          // Values
-         x_integer: { value: "xs:integer", optional: true },
+         x_integer: { value: "xp:integer", optional: true },
          
          // XML types
          x_xml: { xml: "a", optional: true },
@@ -65,22 +65,22 @@ function assert_ok(plan) {
  
 function test_integer() {
     assert_ok({ x_integer: 1 });
-    assert_ok({ x_integer: <a>1</a> });
+    assert_ok({ x_integer: { "xp:type": "xp:integer", "xp:value": 1 } });
     
     assert_error({ x_integer: 1.2 });        
     assert_error({ x_integer: <a>hello</a> });        
 }
  
-function test_xml() {
-    assert_ok({ x_xml: <a>1</a> });    
-    
-    assert_error({ x_xml: <a xmlns={test.uri}>1</a> });    
-    assert_error({ x_xml: <b>1</b> });    
-}
-
-function test_ns_xml() {
-    assert_ok({ x_ns_xml: <a xmlns={test.uri}>1</a> });    
-    
-    assert_error({ x_ns_xml: <a xmlns="other.ns">1</a> });    
-    assert_error({ x_ns_xml: <b>1</b> });    
-}
+// function test_xml() {
+//     assert_ok({ x_xml: <a>1</a> });    
+//     
+//     assert_error({ x_xml: <a xmlns={test.uri}>1</a> });    
+//     assert_error({ x_xml: <b>1</b> });    
+// }
+// 
+// function test_ns_xml() {
+//     assert_ok({ x_ns_xml: <a xmlns={test.uri}>1</a> });    
+//     
+//     assert_error({ x_ns_xml: <a xmlns="other.ns">1</a> });    
+//     assert_error({ x_ns_xml: <b>1</b> });    
+// }

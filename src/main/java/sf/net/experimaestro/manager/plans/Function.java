@@ -18,8 +18,8 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -30,9 +30,10 @@ public interface Function  {
     /**
      * Apply the function
      *
+     *
      * @param input
      * @return
      */
-    abstract NodeList f(Document input[]);
+    abstract JsonArray f(Json[] input);
 
 }

@@ -18,13 +18,13 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.manager.json.Json;
 
 public class TaskValue extends Value {
 	private Task task;
-	private Document value;
+	private Json value;
 
 	public TaskValue() {
 	}
@@ -44,7 +44,7 @@ public class TaskValue extends Value {
     }
 
     @Override
-    public void set(Document value) {
+    public void set(Json value) {
         this.value = value;
     }
 
@@ -57,7 +57,7 @@ public class TaskValue extends Value {
 	}
 
 	@Override
-	public Document get() {
+	public Json get() {
 		return value;
 	}
 

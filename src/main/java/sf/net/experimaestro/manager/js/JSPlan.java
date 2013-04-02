@@ -18,21 +18,19 @@
 
 package sf.net.experimaestro.manager.js;
 
-import com.google.common.collect.Iterables;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
@@ -110,8 +108,6 @@ public class JSPlan extends JSAbstractOperator implements Callable {
                         final Object e = array.get(i);
                         inputs.set(id, getSimple(e, scope));
                     }
-                } else if (value instanceof NativeObject) {
-                    getMappings(inputs, id, (NativeObject) value, scope);
                 } else
                     inputs.set(id, getSimple(value, scope));
 
@@ -137,47 +133,33 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         // --- Constants
 
         if (value instanceof Integer) {
-            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Integer) value));
+            return new Constant(ValueType.wrap((Integer) value));
         }
 
         if (value instanceof Double) {
             // Because rhino returns doubles for any number
             if ((((Double) value).longValue()) == ((Double) value).doubleValue())
-                return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Long) ((Double) value).longValue()));
-            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Double) value));
+                return new Constant(ValueType.wrap((Long) ((Double) value).longValue()));
+            return new Constant(ValueType.wrap((Double) value));
         }
 
         if (value instanceof Boolean) {
-            return new Constant(ValueType.wrap(Manager.EXPERIMAESTRO_NS, "value", (Boolean) value));
+            return new Constant(ValueType.wrap((Boolean) value));
         }
 
         if (value instanceof String) {
-            return new Constant(ValueType.wrapString(Manager.EXPERIMAESTRO_NS, "value", (String) value, null));
+            return new Constant(new JsonString((String)value));
         }
 
-        if (JSUtils.isXML(value)) {
-            return new Constant(JSUtils.toDocument(null, value));
-        }
-
-        if (value instanceof XMLSerializable)
-            return new Constant(((XMLSerializable) value).serialize());
+        if (value instanceof Json)
+            return new Constant((Json)value);
 
         if (value instanceof JSAbstractOperator) {
             return ((JSAbstractOperator) value).getOperator();
         }
 
-        if (value instanceof JSNodeList) {
-            return new Constant(Iterables.transform((JSNodeList) value, new com.google.common.base.Function<Node, Document>() {
-                @Override
-                public Document apply(Node input) {
-                    return Manager.wrap(input);
-                }
-            }));
-
-        }
-
-        if (value instanceof Document)
-            return new Constant((Document)value);
+        if (value instanceof NativeObject)
+            return new Constant(JSUtils.toJSON(scope, value));
 
         // --- Plans & transformations
 
@@ -200,11 +182,11 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
     private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
-        final Iterator<Node> iterator = plan.run(new RunOptions(simulate));
+        final Iterator<Json> iterator = plan.run(new RunOptions(simulate));
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {
-            values.add(new JSNode(iterator.next()));
+            values.add(new JSJson(iterator.next()));
         }
 
         return context.newArray(scope, values.toArray());

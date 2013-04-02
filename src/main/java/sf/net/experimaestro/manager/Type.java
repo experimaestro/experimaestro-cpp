@@ -19,8 +19,8 @@
 package sf.net.experimaestro.manager;
 
 
-import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.manager.json.Json;
 
 /**
  * An XML type defined by a qualified name
@@ -74,20 +74,11 @@ public class Type {
      *
      * @param element The XML node to validate
      */
-    public void validate(Element element) throws ValueMismatchException {
-        // Check if we have the expected element type
-        final String tagName = element.getLocalName();
-        String tagURI = element.getNamespaceURI();
-        if (tagURI == null)
-            tagURI = "";
-
-        if (getNamespaceURI().equals(Manager.XMLSCHEMA_NS) && getLocalPart().equals("any"))
-            return;
-
-        if (!matches(tagURI, tagName))
-            throw new ValueMismatchException("Parameter was set to a value with a wrong type [{%s}%s] - expected [%s]",
-                   tagURI, tagName, this);
-
+    public void validate(Json element) throws ValueMismatchException {
+        QName type = element.type();
+        if (!type.equals(qname))
+            throw new ValueMismatchException("Parameter was set to a value with a wrong type [%s] - expected [%s]",
+                    type, this);
 
     }
 

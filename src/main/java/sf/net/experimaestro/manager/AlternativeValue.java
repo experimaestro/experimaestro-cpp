@@ -18,12 +18,10 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
@@ -49,7 +47,7 @@ public class AlternativeValue extends Value {
     /**
      * The returned value
      */
-    private Document value = null;
+    private Json value = null;
 
 
     public AlternativeValue() {
@@ -85,18 +83,19 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void set(Document value) {
-        // Check if we have an XML with the valid type
-        final Element element = XMLUtils.getRootElement(value);
-        if (alternativeInput.getType().qname().sameQName(element)) {
-            // Nothing to do
-            LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
-            this.value = value;
+    public void set(Json value) {
+        QName type = value.type();
+        if (!type.equals(ValueType.XP_STRING)) {
+            if (alternativeInput.getType().qname().equals(type)) {
+                // Nothing to do
+                LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
+                this.value = value;
+            }
+            throw new ExperimaestroRuntimeException("Not matching: %s and %s", alternativeInput.getType(), type);
         } else {
+            String key = value.get().toString();
             final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
-            String key = Manager.unwrapToString(element);
-            QName qname = QName.parse(key, element,
-                    Manager.PREDEFINED_PREFIXES);
+            QName qname = QName.parse(key, null, Manager.PREDEFINED_PREFIXES);
             TaskFactory subFactory = factories.get(qname);
             if (subFactory == null)
                 throw new ExperimaestroRuntimeException(
@@ -105,6 +104,7 @@ public class AlternativeValue extends Value {
             task = subFactory.create();
             AlternativeInput.LOGGER.info("Created the task for alternative [%s]", key);
         }
+
     }
 
     @Override
@@ -125,7 +125,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public Document get() {
+    public Json get() {
         return value;
     }
 

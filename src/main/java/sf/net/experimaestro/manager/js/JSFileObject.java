@@ -21,9 +21,8 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
-import org.w3c.dom.Document;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.*;
@@ -138,8 +137,8 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
     }
 
     @Override
-    public Document serialize() {
-        return ValueType.wrapString(Manager.EXPERIMAESTRO_NS, "file", file.toString(), ValueType.XPM_FILE);
+    public Json serialize() {
+        return ValueType.wrapString(file.toString(), ValueType.XPM_FILE);
     }
 
     static class MyPrintWriter extends PrintWriter {

@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import org.apache.commons.lang.ArrayUtils;
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -65,7 +65,7 @@ public class ReorderNodes extends UnaryOperator {
                     return endOfData();
 
                 Value value = inputIterator.next();
-                Document[] nodes = new Document[mapping.length];
+                Json[] nodes = new Json[mapping.length];
                 for (int i = 0; i < mapping.length; i++)
                     nodes[i] = value.nodes[mapping[i]];
                 return new ReturnValue(new DefaultContexts(value.context), nodes);

@@ -23,21 +23,14 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.Value;
-import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map.Entry;
@@ -84,22 +77,22 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     @Override
-    public Document jsrun(boolean simulate) {
+    public Json jsrun(boolean simulate) {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
 
         // Get the inputs
-        Document result = null;
+        Json result = null;
 
         if (runFunction != null) {
             // We have a run function
             Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
             for (Entry<String, Value> entry : values.entrySet()) {
-                Document input = entry.getValue().get();
+                Json input = entry.getValue().get();
                 // The JS object is set to the document element
-                Object xml = input == null ? Scriptable.NOT_FOUND : new JSNode(input.getDocumentElement());
-                jsXML.put(entry.getKey(), jsXML, xml);
+                Object jsJson = input == null ? Scriptable.NOT_FOUND : new JSJson(input);
+                jsXML.put(entry.getKey(), jsXML, jsJson);
             }
 
             boolean old = xpm.simulate;
@@ -113,63 +106,23 @@ public class JSDirectTask extends JSAbstractTask {
                         "Undefined returned by the function run of task [%s]",
                         factory.getId());
 
-            result = JSUtils.toDocument(jsScope, returned);
+            result = JSUtils.toJSON(jsScope, returned);
         } else {
-            // We just copy the inputs as an output
 
-            Document document = XMLUtils.newDocument();
-
-            Element root;
-            if (outputType == null)
-                root = document.createElementNS(Manager.EXPERIMAESTRO_NS, "array");
-            else
-                root = document.createElementNS(outputType.getNamespaceURI(), outputType.getLocalPart());
+            if (values.size() == 1)
+                result = values.values().iterator().next().get();
+            else {
+                // We just copy the inputs as an output
+                JsonObject json = new JsonObject();
 
 
-            // Loop over non null inputs
-            for (Entry<String, Value> entry : values.entrySet()) {
-                Value value = entry.getValue();
-                if (value != null) {
-                    final Node doc = value.get();
-
-
-                    if (doc != null) {
-                        Element element = XMLUtils.getRootElement(doc);
-                        element = (Element) element.cloneNode(true);
-                        document.adoptNode(element);
-
-                        Input input = value.getInput();
-                        if (input != null && input.getType() instanceof ValueType) {
-                            Element newRoot = document.createElementNS(input.getNamespace(), entry.getKey());
-
-                            NamedNodeMap attributes = element.getAttributes();
-                            for (int i = 0; i < attributes.getLength(); i++) {
-                                Attr newAttr = (Attr) (attributes.item(i).cloneNode(false));
-                                newRoot.setAttributeNodeNS(newAttr);
-                            }
-
-                            for (Node child : XMLUtils.iterable(element.getChildNodes())) {
-                                newRoot.appendChild(child);
-                            }
-
-                            element = newRoot;
-                        }
-
-
-                        element.setAttributeNS(Manager.EXPERIMAESTRO_NS, "name",
-                                entry.getKey());
-                        root.appendChild(element);
-                    }
+                // Loop over non null inputs
+                for (Entry<String, Value> entry : values.entrySet()) {
+                    json.put(entry.getKey(), entry.getValue().get());
                 }
-            }
 
-            // Simplify if there was just one input
-            if (values.size() == 1) {
-                root = (Element) root.getFirstChild();
+                result = json;
             }
-            document.appendChild(root);
-            result = document;
-
 
         }
 

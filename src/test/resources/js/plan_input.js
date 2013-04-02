@@ -19,37 +19,16 @@
 include("check_array.inc.js");
 
 function test_simple() {
-    var input = new PlanInput([
-        <a>1</a>,
-        <a>2</a>
-        ]);
+    var input = new PlanInput([ 1, 2 ]);
 
-        tasks("test") = {
-            inputs: { x: { xml: "a" } },
-            run: function(p) {
-                return p.x.text();
-            }
+    tasks("test") = {
+        inputs: { x: { value: "xp:integer" } },
+        run: function(p) {
+            return p.x;
         }
+    }
 
-        var result = tasks("test").run({ x: input });
-        check_array(result, [1, 2]);
+    var result = tasks("test").run({ x: input });
+    check_array(result, [1, 2]);
 }
 
-function test_simple() {
-    var input = new PlanInput([
-        <a><b>10</b><c>1</c><c>2</c></a>,
-        <a><b>20</b><c>3</c></a>
-        ]);
-
-        tasks("plus") = {
-            inputs: { b: { xml: "b" }, c: { xml: "c" } },
-            run: function(p) {
-                return Number(p.b.text()) + Number(p.c.text());
-            }
-        }
-
-        var plan = tasks("plus").plan({ b: input.xpath("/a/b"), c: input.xpath("/a/c") });
-        logger.debug("Plan:%n%s%n", plan.to_dot(true));
-        var result = plan.run();
-        check_array(result, [11, 12, 23]);
-}

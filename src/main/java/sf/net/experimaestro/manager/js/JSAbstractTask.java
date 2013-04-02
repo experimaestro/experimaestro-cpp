@@ -18,19 +18,11 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.XMLUtils;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import sf.net.experimaestro.manager.json.Json;
 
 public abstract class JSAbstractTask extends Task {
     protected Scriptable jsScope;
@@ -49,51 +41,52 @@ public abstract class JSAbstractTask extends Task {
         jsScope = ((JSAbstractTask) other).jsScope;
     }
 
-    protected Document getDocument(Scriptable scope, Object result) {
-        // Get node
-        final Object xmlObject = JSUtils.toDOM(scope, result);
-
-
-        if (xmlObject instanceof Document)
-            return (Document) xmlObject;
-
-        // Just a node - convert do document
-
-        // first of all we request out
-        // DOM-implementation:
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        // then we have to create document-loader:
-        DocumentBuilder loader;
-        try {
-            loader = factory.newDocumentBuilder();
-        } catch (ParserConfigurationException e) {
-            throw new RuntimeException();
-        }
-
-        // creating a new DOM-document...
-        Document document = loader.newDocument();
-        if (xmlObject instanceof Node) {
-            Node node = (Node) xmlObject;
-            XMLUtils.cloneAndAppend(document, node);
-        } else if (xmlObject instanceof NodeList) {
-            for (Node node : XMLUtils.elements((NodeList) xmlObject)) {
-                XMLUtils.cloneAndAppend(document, node);
-            }
-        } else {
-            throw new ExperimaestroRuntimeException("Cannot convert object of type %s to XML", xmlObject.getClass());
-        }
-
-        if (document.getDocumentElement() == null)
-            throw new ExperimaestroRuntimeException("Task did not return a valid XML document (no root)");
-        return document;
+    protected Json getDocument(Scriptable scope, Object result) {
+        throw new NotImplementedException();
+//        // Get node
+//        final Object xmlObject = JSUtils.toDOM(scope, result);
+//
+//
+//        if (xmlObject instanceof Json)
+//            return (Json) xmlObject;
+//
+//        // Just a node - convert do document
+//
+//        // first of all we request out
+//        // DOM-implementation:
+//        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+//        // then we have to create document-loader:
+//        DocumentBuilder loader;
+//        try {
+//            loader = factory.newDocumentBuilder();
+//        } catch (ParserConfigurationException e) {
+//            throw new RuntimeException();
+//        }
+//
+//        // creating a new DOM-document...
+//        Document document = loader.newDocument();
+//        if (xmlObject instanceof Node) {
+//            Node node = (Node) xmlObject;
+//            XMLUtils.cloneAndAppend(document, node);
+//        } else if (xmlObject instanceof NodeList) {
+//            for (Node node : XMLUtils.elements((NodeList) xmlObject)) {
+//                XMLUtils.cloneAndAppend(document, node);
+//            }
+//        } else {
+//            throw new ExperimaestroRuntimeException("Cannot convert object of type %s to XML", xmlObject.getClass());
+//        }
+//
+//        if (document.getDocumentElement() == null)
+//            throw new ExperimaestroRuntimeException("Task did not return a valid XML document (no root)");
+//        return document;
     }
 
     @Override
-    public Document doRun(boolean simulate) {
+    public Json doRun(boolean simulate) {
         return jsrun(simulate);
     }
 
-    abstract protected Document jsrun(boolean simulate);
+    abstract protected Json jsrun(boolean simulate);
 
 
 

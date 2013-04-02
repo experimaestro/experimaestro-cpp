@@ -30,8 +30,8 @@ var logger = xpm.logger("xpm.tests");
 
 tasks("ns:mult")= {
     inputs: {
-        x: { value: "xs:integer" },
-        y: { value: "xs:integer" }
+        x: { value: "xp:integer" },
+        y: { value: "xp:integer" }
     },
 
     run: function(x) {
@@ -42,8 +42,8 @@ tasks("ns:mult")= {
 
 tasks("ns:plus")= {
     inputs: {
-        x: { value: "xs:integer" },
-        y: { value: "xs:integer" }
+        x: { value: "xp:integer" },
+        y: { value: "xp:integer" }
     },
 
     run: function(x) {
@@ -56,30 +56,14 @@ tasks("ns:plus")= {
 tasks("ns:identity")= {
     inputs: {
         x: {
-            value: "xs:integer"
+            value: "xp:integer"
         }
     },
 
     run: function(x) {
-        return x.x();
+        return x.x;
     }
 };
-
-tasks("ns:identity_bis")= {
-    inputs: {
-        x: {
-            value: "xs:integer"
-        }
-    },
-
-    run: function(x) {
-        return <a>{x.x()}</a>;
-    }
-};
-
-
-
-
 
 /**
  * Simple product of two plans
@@ -100,32 +84,13 @@ function test_simple() {
     check_array(result, [3, 5, 6, 10]);
 }
 
-/**
- * Simple product of two plans (with access to output)
- */
-function test_simple_access() {
-    // Plan
-    var plan1 = tasks("ns:identity_bis").plan({
-        x: [1, 2]
-    });
-    var plan2 = tasks("ns:mult").plan({
-        x: plan1.xpath("a/text()"),
-        y: [3, 5]
-    });
-
-    // Optimize and run
-    // Should be an array of XML values 3, 6, 5, 10
-    var result = plan2.run();
-    check_array(result, [3, 5, 6, 10]);
-}
-
 
 
 // We apply some transformation on the output of a task
 
 function test_transform() {
     var f = function(x) {
-        return Number(x.get_value()) + 1;
+        return Number(x()) + 1;
     };
 
     var plan1 = tasks("ns:identity").plan({
@@ -252,13 +217,13 @@ function test_add() {
 
 tasks("ns:sum")= {
     inputs: {
-        x: { value: "xs:integer", sequence: true },
+        x: { value: "xp:integer", sequence: true },
     },
 
     run: function(p) {
         var sum = 0;
-        for each(var a in p.x.xpath("*")) {
-            sum += a();
+        for(var i = 0; i < p.x.length; i++){
+            sum += p.x[i];
         }            
         return sum;
     }

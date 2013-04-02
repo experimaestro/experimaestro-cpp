@@ -215,7 +215,7 @@ public class TasksServlet extends XPMServlet {
             } else {
 
                 if (type instanceof ValueType) {
-                    final QName valueType = ((ValueType) type).getValueType();
+                    final QName valueType = type.qname();
                     out.format("<dt class='%s'><u>%s</u> <b>value</b> (%s)</dt><dd>",
                             optString, entry.getKey(), valueType);
                 } else {

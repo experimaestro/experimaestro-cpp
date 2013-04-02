@@ -21,47 +21,41 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeFunction;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.mozilla.javascript.XPMHelper;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.AlternativeInput;
 import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.ArrayInput;
-import sf.net.experimaestro.manager.Connection;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.SimpleConnection;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskInput;
 import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.XMLInput;
-import sf.net.experimaestro.manager.XQueryConnection;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
-import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import static java.lang.String.format;
 import static sf.net.experimaestro.exceptions.ExperimaestroRuntimeException.SHOULD_NOT_BE_HERE;
 
 /**
@@ -184,13 +178,10 @@ public class JSTaskFactory extends JSBaseObject {
             Object input = JSUtils.get(scope, "inputs", jsObject);
             inputs = new TreeMap<>();
 
-            if (JSUtils.isXML(input)) {
-                Document dom = JSUtils.toDocument(null, input, new QName(Manager.EXPERIMAESTRO_NS, "inputs"));
-                setInputs(repository, dom.getDocumentElement());
-            } else if (input instanceof NativeObject) {
+            if (input instanceof NativeObject) {
                 setInputs(scope, (NativeObject) input);
             } else
-                throw new ExperimaestroRuntimeException("Cannot handle inputs of type %s", inputs.getClass());
+                throw new ExperimaestroRuntimeException("Cannot handle inputs of type %s", input.getClass());
 
 
             // --- Get the task outputs
@@ -252,7 +243,11 @@ public class JSTaskFactory extends JSBaseObject {
             for (Object _id : ids) {
                 String id = JSUtils.toString(_id);
 
-                final Scriptable definition = (Scriptable) jsInput.get(id);
+                Object o = jsInput.get(id);
+                if (!(o instanceof Scriptable))
+                    throw new IllegalArgumentException(format("%s element is not an object", _id));
+
+                final Scriptable definition = (Scriptable) o;
 
                 Set<String> fields = getFields(definition, "value", "alternative", "xml", "task");
                 String type;
@@ -313,20 +308,30 @@ public class JSTaskFactory extends JSBaseObject {
 
                 // Case of default
                 if (definition.has("default", definition)) {
-                    Document document = JSUtils.toDocument(jsInput, definition.get("default", definition));
+                    Json document = JSUtils.toJSON(jsInput, definition.get("default", definition));
                     input.setDefaultValue(document);
                 }
 
                 // Set required/optional flag
                 input.setOptional(optional);
 
+                // Merge
+                boolean merge = JSUtils.toBoolean(scope, definition, "merge");
+                if (merge)
+                    input.setUnnamed(true);
+
                 // Process connections
                 if (definition.has("connect", definition)) {
                     NativeObject connect = (NativeObject) definition.get("connect", definition);
                     for (Map.Entry<Object, Object> connection : connect.entrySet()) {
                         DotName to = DotName.parse(connection.getKey().toString());
-                        String query = JSUtils.toString(connection.getValue());
-                        input.addConnection(new XQueryConnection(to, query));
+                        Object value = connection.getValue();
+                        if (value instanceof NativeFunction) {
+                            NativeFunction f = (NativeFunction) value;
+                            String[] names = XPMHelper.getParamNames(f);
+                            input.addConnection(new JSConnection(new DotName(id, to), scope, f, names));
+                        } else
+                            throw new IllegalArgumentException("Cannot handle object of type " + value.getClass());
                     }
                 }
 
@@ -335,232 +340,10 @@ public class JSTaskFactory extends JSBaseObject {
             }
         }
 
-        /**
-         * Set inputs from XML
-         *
-         * @param repository
-         * @param dom
-         */
-        private void setInputs(Repository repository, Node dom) {
-            NodeList list = dom.getChildNodes();
-            for (int i = 0; i < list.getLength(); i++) {
-                Node item = list.item(i);
-                if (item.getNodeType() != Node.ELEMENT_NODE)
-                    continue;
-                Element el = (Element) item;
-                addInput(el, repository);
-
-            }
-
-            // --- XPMProcess connections
-            for (int i = 0; i < list.getLength(); i++) {
-                Node item = list.item(i);
-                if (item.getNodeType() != Node.ELEMENT_NODE)
-                    continue;
-                Element el = (Element) item;
-                final String inputToId = el.getAttribute("id");
-                final Input inputTo = inputs.get(inputToId);
-                if (inputTo == null)
-                    throw new AssertionError();
-
-                // Add this to the list of inputs
-                for (Element connect : XMLUtils.childIterator(el, new QName(
-                        Manager.EXPERIMAESTRO_NS, "connect"))) {
-                    final String fromAtt = connect.getAttribute("from");
-                    final DotName to = new DotName(inputToId, DotName.parse(connect
-                            .getAttribute("to")));
-
-                    final Connection connection;
-                    if (fromAtt.equals("")) {
-                        // Complex case
-                        final NodeList xqueryList = connect.getElementsByTagNameNS(Manager.EXPERIMAESTRO_NS, "xquery");
-                        if (xqueryList.getLength() == 0)
-                            throw new ExperimaestroRuntimeException("Cannot find a xp:xquery element within connect");
-                        if (xqueryList.getLength() > 1)
-                            throw new ExperimaestroRuntimeException("Too many xp:xquery element within connect");
-
-                        String query = xqueryList.item(0).getTextContent();
-                        XQueryConnection _connection = new XQueryConnection(to, query);
-
-                        for (Element from : XMLUtils.elements(connect.getElementsByTagNameNS(Manager.EXPERIMAESTRO_NS, "from"))) {
-                            final String ref = ensureAttribute(from, "ref", "no @ref attribute");
-                            final String var = ensureAttribute(from, "var", "no @var attribute");
-                            _connection.bind(var, DotName.parse(ref));
-                        }
-                        connection = _connection;
-                    } else {
-                        final DotName from = DotName
-                                .parse(fromAtt);
-                        final String path = ensureAttribute(connect, "path", "Attribute path has to be defined");
-                        LOGGER.info("Found connection between [%s in %s] and [%s]",
-                                path, from, to);
-
-
-                        if (inputs.get(from.get(0)) == null)
-                            throw new ExperimaestroRuntimeException(
-                                    "Could not find input [%s] in [%s]", from.get(0),
-                                    this.id);
-
-                        // TODO: maybe check there is no overloading?
-                        connection = new SimpleConnection(from, path, to);
-                    }
-                    connection.addNamespaces(connect);
-                    inputTo.addConnection(connection);
-
-                }
-            }
-        }
-
-        private String ensureAttribute(Element connect, String name, String message) {
-            final String path = connect.getAttribute(name);
-            if ("".equals(path))
-                throw new ExperimaestroRuntimeException(message);
-            return path;
-        }
-
-        /**
-         * Add an input for this task
-         *
-         * @param el         The XML element to process
-         * @param repository The repository where the task is stored
-         */
-        private void addInput(Element el, Repository repository) {
-            // Get the id
-            String id = el.getAttribute("id");
-            if (id == null)
-                throw new RuntimeException(
-                        String.format("Input without id in %s", this.id));
-
-
-            // By default, the namespace is unspecified
-            String namespace = null;
-            final int colon = id.indexOf(":");
-            if (colon >= 0) {
-                namespace = id.substring(0, colon);
-                id = id.substring(colon + 1);
-            }
-
-
-            LOGGER.debug("New input [%s] for task [%s]", id, this.id);
-
-            // --- Get the type
-
-            final Input input;
-            QName inputType = getTypeQName(el, el.getAttribute("type"));
-            QName inputRef = getTypeQName(el, el.getAttribute("ref"));
-
-            switch (el.getTagName()) {
-                case "xml":
-                case "alternative": { // An XML document
-                    Type type = inputType != null ? repository.getType(inputType) : null;
-                    if (type == null && inputType != null) type = new Type(inputType);
-
-                    if (type != null && type instanceof AlternativeType) {
-                        LOGGER.debug(
-                                "Detected an alternative type configuration for input [%s] of type [%s]",
-                                id, inputType);
-                        input = new AlternativeInput((AlternativeType) type);
-                    } else {
-                        // Simple type
-                        if (el.getTagName().equals("alternative"))
-                            throw new ExperimaestroRuntimeException("Type %s is not an alternative", inputType);
-                        input = new XMLInput(type);
-                    }
-
-                    break;
-                }
-
-
-                case "task": { // A task
-                    if (inputRef == null)
-                        throw new ExperimaestroRuntimeException("There was no @ref attribute for the task input with id [%s]",
-                                el.getAttribute("id"));
-                    TaskFactory factory = repository.getFactory(inputRef);
-                    if (factory == null)
-                        throw new ExperimaestroRuntimeException(
-                                "Could not find task factory [%s] for input [%s]", inputRef, id);
-
-                    // The type of this input is either specified (inputType)
-                    // or it is set to the declared output of the task
-                    Type type = inputType == null ? factory.getOutput() : new Type(inputType);
-                    input = new TaskInput(factory, type);
-                    break;
-                }
-
-                case "value": { // Simple XPM value
-                    final ValueType valueType = inputType == null ? null : new ValueType(inputType);
-                    input = new XMLInput(valueType);
-                    break;
-                }
-
-                default:
-                    throw new IllegalArgumentException("Cannot handle input of type " + el.getTagName());
-            }
-
-
-            input.setNamespace(namespace);
-
-            // Should we merge all the parameters?
-            if ("true".equals(el.getAttribute("merge")))
-                input.setUnnamed(true);
-
-            inputs.put(id, input);
-
-            // Set the optional flag
-            String optional = el.getAttribute("optional");
-            boolean isOptional = optional != null && optional.equals("true");
-            input.setOptional(isOptional);
-
-            // Set the documentation
-            if (el.hasAttribute("help"))
-                input.setDocumentation(el.getAttribute("help"));
-            else {
-                Node child = XMLUtils.getChild(el, new QName(
-                        Manager.EXPERIMAESTRO_NS, "help"));
-                if (child != null)
-                    input.setDocumentation(XMLUtils.toString(child));
-            }
-
-
-            // Set the default value
-            if (el.hasAttribute("default")) {
-                final Document defaultValue = ValueType.wrapString(namespace, id, el.getAttribute("default"),
-                        input.getType() != null ? input.getType().qname() : null);
-                input.setDefaultValue(defaultValue);
-                LOGGER.debug("Default value[" + el.getAttribute("default") + "]: " + XMLUtils.toString(defaultValue));
-
-            } else {
-                Node child = XMLUtils.getChild(el, new QName(
-                        Manager.EXPERIMAESTRO_NS, "default"));
-                if (child != null) {
-                    Document document = XMLUtils.newDocument();
-                    child = child.cloneNode(true);
-                    document.adoptNode(child);
-                    final Iterator<Element> elements = XMLUtils.elements(child.getChildNodes()).iterator();
-                    if (!elements.hasNext()) {
-                        document = ValueType.wrapString(namespace, id, child.getTextContent(), input.getType().qname());
-                    } else {
-                        document.appendChild(elements.next());
-                        if (elements.hasNext())
-                            throw new ExperimaestroRuntimeException("Default value should be either atomic or one element");
-                    }
-                    input.setDefaultValue(document);
-                    LOGGER.debug("Default value: " + XMLUtils.toString(document));
-                }
-            }
-
-        }
-
-        private QName getTypeQName(Element el, String typeAtt) {
-            return !typeAtt.equals("") ? QName.parse(typeAtt, el,
-                    Manager.PREDEFINED_PREFIXES) : null;
-        }
-
 
         @Override
         public String getDocumentation() {
-            final Object object = JSUtils.get(jsScope, "description", jsObject,
-                    null);
+            final Object object = JSUtils.get(jsScope, "description", jsObject, null);
             if (object != null)
                 return object.toString();
             return "";

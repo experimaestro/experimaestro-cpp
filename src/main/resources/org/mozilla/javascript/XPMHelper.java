@@ -16,32 +16,18 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager;
-
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
+package org.mozilla.javascript;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/2/13
+ * @date 2/4/13
  */
-public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "array");
-    private final Type innerType;
-
-    public ArrayType(Type innerType) {
-        super(QNAME);
-        this.innerType = innerType;
+public class XPMHelper {
+    public static String[] getParamNames(NativeFunction f) {
+        int count = f.getParamAndVarCount();
+        String names[] = new String[count];
+        for(int i = 0; i < count; i++)
+            names[i] = f.getParamOrVarName(i);
+        return names;
     }
-
-    @Override
-    public void validate(Json element) throws ValueMismatchException {
-        if (element instanceof JsonArray)
-            return;
-        throw new ExperimaestroRuntimeException("Expected an array and got " + element.getClass());
-    }
-
-
 }

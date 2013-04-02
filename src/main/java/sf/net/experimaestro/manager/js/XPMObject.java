@@ -1339,12 +1339,11 @@ public class XPMObject {
             return new JSTransform(cx, scope, f, operators);
         }
 
-
-        @JSFunction("assert")
-        public static void _assert(boolean condition) {
-            if (!condition)
-                throw new EvaluatorException("assertion failed");
+        @JSFunction
+        public static JSInput input(String name) {
+            return new JSInput(name);
         }
+
         @JSFunction("assert")
         public static void _assert(boolean condition, String format, Object... objects) {
             if (!condition)

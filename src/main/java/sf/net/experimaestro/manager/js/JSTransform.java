@@ -21,13 +21,12 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.plans.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
-import sf.net.experimaestro.utils.ArrayNodeList;
 import sf.net.experimaestro.utils.JSUtils;
 
 /**
@@ -65,11 +64,18 @@ public class JSTransform extends JSAbstractOperator implements Function {
         return "JS function";
     }
 
-    public NodeList f(Document[] parameters) {
+    public JsonArray f(Json[] parameters) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++)
-            args[i] = new JSNode(parameters[i]);
-        return new ArrayNodeList(JSUtils.toDocument(scope, f.call(cx, scope, null, args)));
+            args[i] = new JSJson(parameters[i]);
+        Json result = JSUtils.toJSON(scope, f.call(cx, scope, null, args));
+
+        if (result instanceof JsonArray)
+            return (JsonArray)result;
+
+        JsonArray array = new JsonArray();
+        array.add(result);
+        return array;
     }
 
     @Override

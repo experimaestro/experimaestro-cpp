@@ -16,32 +16,44 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager;
+package sf.net.experimaestro.manager.json;
 
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.ValueType;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 18/2/13
+ * @date 2/4/13
  */
-public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "array");
-    private final Type innerType;
+public class JsonBoolean implements Json {
+    private final boolean value;
 
-    public ArrayType(Type innerType) {
-        super(QNAME);
-        this.innerType = innerType;
+    public JsonBoolean(boolean value) {
+        this.value = value;
     }
 
     @Override
-    public void validate(Json element) throws ValueMismatchException {
-        if (element instanceof JsonArray)
-            return;
-        throw new ExperimaestroRuntimeException("Expected an array and got " + element.getClass());
+    public Json clone() {
+        return new JsonBoolean(value);
     }
 
+    @Override
+    public boolean isSimple() {
+        return true;
+    }
 
+    @Override
+    public Object get() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return Boolean.toString(value);
+    }
+
+    @Override
+    public QName type() {
+        return ValueType.XP_BOOLEAN;
+    }
 }

@@ -22,7 +22,12 @@ import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
-import org.testng.annotations.*;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterTest;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repository;
@@ -37,15 +42,13 @@ import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 30/1/13
-*/
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 30/1/13
+ */
 public class JavaScriptChecker {
 
     private final XPMEnvironment environment;
@@ -54,7 +57,6 @@ public class JavaScriptChecker {
     private Context context;
     private Repository repository;
     private ScriptableObject scope;
-    private boolean initialized;
 
     public JavaScriptChecker(XPMEnvironment environment, FileObject file) throws
             IOException {
@@ -75,19 +77,54 @@ public class JavaScriptChecker {
     }
 
 
-    @DataProvider
-    public Object[][] jsProvider() throws IOException {
-        Pattern testFunctionPattern = Pattern.compile("function\\s+(test_[\\w]+)\\s*\\(");
-        Matcher matcher = testFunctionPattern.matcher(content);
-        ArrayList<Object[]> list = new ArrayList<>();
+    @BeforeClass
+    public void runScript() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
+        // Defines the environment
+        Map<String, String> environment = System.getenv();
+        context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
+        final ResourceLocator currentResourceLocator
+                = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
+        XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
+                repository, this.environment.scheduler, null, new Cleaner());
 
-        // Adds the script
-        list.add(new Object[]{null});
+        // Adds some special converter available for tests only
+        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
-        while (matcher.find()) {
-            list.add(new Object[]{matcher.group(1)});
+        context.evaluateReader(scope, new StringReader(content),
+                file.toString(), 1, null);
+
+    }
+
+    static public class JSTestFunction {
+        private final String name;
+        private final Function function;
+
+        public JSTestFunction(String name, Function function) {
+            this.name = name;
+            this.function = function;
         }
 
+        @Override
+        public String toString() {
+            return "test ["+name+"]";
+        }
+    }
+
+    @DataProvider
+    public Object[][] jsProvider() throws IOException {
+        Object[] ids = scope.getIds();
+        String prefix = "test_";
+        ArrayList<Object[]> list = new ArrayList<>();
+
+        for (Object id : ids) {
+            String name = id.toString();
+            if (name.startsWith(prefix)) {
+                Object o = scope.get(name, scope);
+                if (o instanceof Function)
+                    list.add(new Object[]{ new JSTestFunction(name.substring(prefix.length()), (Function) o) });
+            }
+
+        }
         return list.toArray(new Object[list.size()][]);
     }
 
@@ -104,34 +141,11 @@ public class JavaScriptChecker {
     }
 
     @Test(dataProvider = "jsProvider")
-    public void testScript(String functionName) throws
+    public void testScript(JSTestFunction testFunction) throws
             IOException, SecurityException, IllegalAccessException,
             InstantiationException, InvocationTargetException,
             NoSuchMethodException {
-        if (functionName == null) {
-            initialized = false;
-            // Defines the environment
-            Map<String, String> environment = System.getenv();
-            final ResourceLocator currentResourceLocator
-                    = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
-            XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
-                    repository, this.environment.scheduler, null, new Cleaner());
-
-            // Adds some special converter available for tests only
-            JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
-
-            context.evaluateReader(scope, new StringReader(content),
-                    file.toString(), 1, null);
-            initialized = true;
-        } else {
-            assert initialized : "Not running test since initialization did not work";
-            Object object = scope.get(functionName, scope);
-            assert object instanceof Function : format(
-                    "%s is not a function", functionName);
-            Function function = (Function) object;
-            context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
-            function.call(context, scope, null, new Object[]{});
-        }
+        testFunction.function.call(context, scope, null, new Object[]{});
     }
 
 

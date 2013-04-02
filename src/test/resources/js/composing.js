@@ -28,24 +28,21 @@
 var abc = new Namespace("a.b.c");
 
 tasks("abc:task-1") = {
-	inputs: <inputs xmlns={xp.uri}><value type="xs:integer" id="x"/></inputs>,		
+	inputs: { x: { value: "xp:integer" } }
 };
 
 tasks("abc:task-2") = {
-	inputs: <inputs xmlns={xp.uri}><value type="xs:integer" id="x"/></inputs>,	
+	inputs: { x: { value: "xp:integer"} }
 };
 
 tasks("abc:task") = {
-	inputs: 
-        <inputs xmlns:abc="a.b.c" xmlns:xp={xp.uri} xmlns={xp.uri}>
-            <task ref="abc:task-2" id="t2">
-                <connect from="t1.x" path="." to="x"/>
-            </task>
-            
-            <task ref="abc:task-1" id="t1"/>
-        </inputs>,
-        
-	
+	inputs: {
+	    t1: { task: "abc:task-1" },
+        t2: { task: "abc:task-2", 
+            connect: { x: function(t1) { return t1; } } 
+        }
+    },
+
 	run: function(inputs) {
 		return inputs.t2();
 	}
@@ -63,16 +60,3 @@ function test_value() {
     if (v != 10)
     	throw new java.lang.String.format("Value [%s] is different from 10", v);
 }
-	
-/* 
-
-TODO: ease the composition by
-    
-    inputs_2: {
-        "t2": { task: "abc:task-2", connect: {
-            "x": input("t1.x").xpath(".")
-        } },
-        "t1": { task: "abc:task-1" }
-    }
-
-*/

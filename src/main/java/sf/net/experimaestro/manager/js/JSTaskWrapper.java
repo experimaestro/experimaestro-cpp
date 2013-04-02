@@ -21,15 +21,15 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
-import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSUtils;
 
-import java.util.List;
+import java.util.ArrayList;
 
 /**
  * A JS wrapper around a task
@@ -60,21 +60,17 @@ public class JSTaskWrapper extends JSBaseObject {
     @JSFunction(value = "set", scope = true)
     public void set(Context cx, Scriptable scope, String id, Object value) throws NoSuchParameter {
         DotName qid = DotName.parse(id);
-        if (JSUtils.isXML(value)) {
-            task.setParameter(qid, JSUtils.toDocument(scope, value));
-        } else {
-            task.setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
-        }
+        task.setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
     }
 
     @JSFunction("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
-        return new JSNode(task.run(simulate));
+        return new JSJson(task.run(simulate));
     }
 
     @JSFunction("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
-        return new JSNode(task.run(false));
+        return new JSJson(task.run(false));
     }
 
     @JSFunction(value = "run_plan", scope = true)
@@ -83,10 +79,10 @@ public class JSTaskWrapper extends JSBaseObject {
     }
 
 
-    static NativeArray wrap(List<Document> result) {
+    static NativeArray wrap(ArrayList<Json> result) {
         NativeArray array = new NativeArray(result.size());
         for (int index = 0; index < result.size(); index++)
-            array.put(index, array, new JSNode(result.get(index)));
+            array.put(index, array, new JSJson(result.get(index)));
         return array;
     }
 }

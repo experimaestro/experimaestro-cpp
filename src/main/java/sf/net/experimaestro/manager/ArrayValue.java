@@ -1,7 +1,8 @@
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -9,7 +10,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
  */
 public class ArrayValue extends Value {
     /** The input nodes */
-    Document array;
+    JsonArray array;
 
     public ArrayValue(ArrayInput input) {
         this.input = input;
@@ -24,20 +25,8 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void set(Document value) {
-        this.array = value;
-//        if (value instanceof DocumentFragment) {
-//            array = value;
-//
-//        }
-//
-//        else if (value instanceof Document) {
-//            array = ((Document) value).createDocumentFragment();
-//            array.appendChild(((Document) value).getDocumentElement());
-//        }
-//
-//        else
-//            throw new IllegalArgumentException(String.format("Cannot handle type %s", value.getClass()));
+    public void set(Json value) {
+        this.array = (JsonArray)value;
     }
 
     @Override
@@ -45,7 +34,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public Document get() {
+    public Json get() {
         return array;
     }
 }
