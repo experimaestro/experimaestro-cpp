@@ -25,11 +25,11 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -124,15 +124,15 @@ public class Plan extends Operator {
      * @param runOptions
      * @return An iterator over the generated XML nodes
      */
-    public Iterator<Node> run(RunOptions runOptions) throws XPathExpressionException {
+    public Iterator<Json> run(RunOptions runOptions) throws XPathExpressionException {
         Operator operator = prepare(true, true);
 
         // Now run
         final Iterator<Value> iterator = operator.iterator(runOptions);
 
-        return Iterators.transform(iterator, new Function<Value, Node>() {
+        return Iterators.transform(iterator, new Function<Value, Json>() {
             @Override
-            public Node apply(Value from) {
+            public Json apply(Value from) {
                 assert from.getNodes().length == 1;
                 return from.getNodes()[0];
             }

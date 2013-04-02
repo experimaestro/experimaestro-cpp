@@ -22,7 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.xerces.dom.DocumentImpl;
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,14 +37,14 @@ import java.util.Map;
  * @date 21/2/13
  */
 public class Constant extends Operator {
-    List<Document> nodes = new ArrayList<>();
+    List<Json> nodes = new ArrayList<>();
 
-    public Constant(Document... documents) {
+    public Constant(Json... documents) {
         this(Arrays.asList(documents));
     }
 
-    public Constant(Iterable<Document> documents) {
-        for (Document document : documents) {
+    public Constant(Iterable<Json> documents) {
+        for (Json document : documents) {
             if (document instanceof DocumentImpl)
                 ((DocumentImpl) document).setReadOnly(true,true);
             nodes.add(document);
@@ -58,9 +58,9 @@ public class Constant extends Operator {
 
     @Override
     protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
-        return Iterators.transform(nodes.iterator(), new Function<Document, ReturnValue>() {
+        return Iterators.transform(nodes.iterator(), new Function<Json, ReturnValue>() {
             @Override
-            public ReturnValue apply(Document input) {
+            public ReturnValue apply(Json input) {
                 return new ReturnValue(null, input);
             }
         });
@@ -86,7 +86,7 @@ public class Constant extends Operator {
         nodes.addAll(source.nodes);
     }
 
-    public void add(Document document) {
+    public void add(Json document) {
         nodes.add(document);
     }
 }

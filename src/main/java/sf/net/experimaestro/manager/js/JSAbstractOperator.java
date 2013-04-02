@@ -3,19 +3,16 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.GroupBy;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Order;
 import sf.net.experimaestro.manager.plans.OrderBy;
 import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.manager.plans.Value;
-import sf.net.experimaestro.manager.plans.XPathFunction;
 import sf.net.experimaestro.utils.JSNamespaceContext;
-import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
@@ -34,14 +31,14 @@ public abstract class JSAbstractOperator extends JSBaseObject {
      */
     abstract Operator getOperator();
 
-    @JSFunction(scope = true)
-    @JSHelp("Runs an XQuery against the input: each returned item is a new input")
-    public JSAbstractOperator xpath(Context context, Scriptable scope, String xpath) throws XPathExpressionException {
-        XPathFunction function = new XPathFunction(xpath, JSUtils.getNamespaceContext(scope));
-        Operator operator = new FunctionOperator(function);
-        operator.addParent(this.getOperator());
-        return new JSOperator(operator);
-    }
+//    @JSFunction(scope = true)
+//    @JSHelp("Runs an XQuery against the input: each returned item is a new input")
+//    public JSAbstractOperator xpath(Context context, Scriptable scope, String xpath) throws XPathExpressionException {
+//        XPathFunction function = new XPathFunction(xpath, JSUtils.getNamespaceContext(scope));
+//        Operator operator = new FunctionOperator(function);
+//        operator.addParent(this.getOperator());
+//        return new JSOperator(operator);
+//    }
 
     @JSFunction
     public JSOperator group_by(JSAbstractOperator... operators) {
@@ -130,7 +127,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         RunOptions runOptions = new RunOptions(simulate);
         runOptions.counts(details);
 
-        ArrayList<Node> result = new ArrayList<>();
+        ArrayList<Json> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
         final Iterator<Value> nodes = operator.iterator(runOptions);

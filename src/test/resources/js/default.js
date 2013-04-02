@@ -21,31 +21,15 @@ include("utils.inc.js");
 // START SNIPPET: main
 var abc = new Namespace("a.b.c");
 
-var task = {
-	id: qname("a.b.c", "task"),
-
-	inputs: <inputs xmlns={xp.uri}>
-	        <!-- a has a default value of 10 -->
-            <value type="xs:integer" id="a" default="10"/>
-
-            <!-- b has a default value given by the contained XML -->
-            <value id="b" type="xs:integer">
-                <default>20</default>
-            </value>
-        </inputs>,
+tasks("abc:default") = {
+	inputs: {
+        a: { value: "xp:integer", default: 10 },
+	}
 };
 
-xpm.add_task_factory(task);
-
-var task = xpm.get_task(task.id);
-var r = task.run();
 // END SNIPPET: main
 
-
-function test_default_attribute() {
-	assert_equals(r.get_value("xp:array/a"), 10);
+function test_default() {
+    var r = tasks("abc:default").run({});
+	assert_equals(r[0](), 10);
 }
-
-function test_default_element() {
-	assert_equals(r.get_value("xp:array/b"), 20);
-}	

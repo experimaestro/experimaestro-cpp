@@ -22,12 +22,12 @@ import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
-import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.json.Json;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -80,7 +80,7 @@ public class TaskOperator extends UnaryOperator {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator(runOptions) : ImmutableList.of(new Value(new Document[0])).iterator();
+                    input.iterator(runOptions) : ImmutableList.of(new Value(new Json[0])).iterator();
 
             @Override
             protected ReturnValue computeNext() {

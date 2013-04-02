@@ -18,15 +18,9 @@
 
 package sf.net.experimaestro.manager;
 
-import com.google.common.collect.Iterables;
 import org.apache.commons.lang.NotImplementedException;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Text;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.XMLUtils;
 
 import javax.xml.xquery.XQException;
@@ -50,12 +44,16 @@ public class Manager {
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
     public static final QName XP_RESOURCE = new QName(EXPERIMAESTRO_NS, "resource");
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
-    public static final QName XP_NAME = new QName(EXPERIMAESTRO_NS, "name");
+    public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
+
+    public static final QName XP_TYPE = new QName(EXPERIMAESTRO_NS, "type");
+    public static final QName XP_VALUE = new QName(EXPERIMAESTRO_NS, "value");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
         PREDEFINED_PREFIXES.put("xs", XMLSCHEMA_NS);
     }
+
 
 
     /**
@@ -73,108 +71,57 @@ public class Manager {
         return map;
     }
 
-
     /**
-     * Unwraps the value from XML to an object
+     * Wrap a node into a JSON object
      *
-     * @param node
+     * @param object
      * @return
      */
-    static public Object unwrapToObject(Node node) {
-        if (node instanceof DocumentFragment && node.getChildNodes().getLength() == 1) {
-            node = node.getFirstChild();
-        }
-        if (node instanceof Text || node instanceof Attr)
-            return node.getTextContent();
+    public static Json wrap(Object object) {
+        if (object instanceof Json)
+            return (Json) object;
 
-        if (node instanceof Document)
-            node = ((Document) node).getDocumentElement();
+        throw new NotImplementedException();
 
-        // Check if we have an associated value...
-        Element element = (Element) node;
-        if (element.hasAttributeNS(EXPERIMAESTRO_NS, "value")) {
-            return ValueType.unwrap(element);
-        }
-
-        // ... otherwise, returns the text content
-        return element.getTextContent();
-    }
-
-    /**
-     * Unwraps the value from XML to a string
-     *
-     * @param node
-     * @return
-     */
-    static public String unwrapToString(Node node) {
-        if (node instanceof DocumentFragment && node.getChildNodes().getLength() == 1) {
-            node = node.getFirstChild();
-        }
-        if (node instanceof Text || node instanceof Attr)
-            return node.getTextContent();
-
-        if (node instanceof Document)
-            node = ((Document) node).getDocumentElement();
-
-        // Check if we have an associated value...
-        Element element = (Element) node;
-        if (ValueType.VALUE.isAttribute(element)) {
-            return ValueType.VALUE.getAttribute(element);
-        }
-
-        // ... otherwise, returns the text content
-        return element.getTextContent();
-    }
-
-    /**
-     * Wrap a node into a document
-     *
-     * @param node
-     * @return
-     */
-    public static Document wrap(Object object) {
-        if (object instanceof Document)
-            return (Document) object;
-
-        Document document = XMLUtils.newDocument();
-        if (object instanceof Node) {
-            Node node = (Node) object;
-            switch (node.getNodeType()) {
-                case Node.ELEMENT_NODE:
-                    document.appendChild(document.adoptNode(node.cloneNode(true)));
-                    break;
-
-                case Node.TEXT_NODE:
-                case Node.ATTRIBUTE_NODE:
-                    Element element = document.createElementNS(EXPERIMAESTRO_NS, "value");
-                    element.setAttributeNS(EXPERIMAESTRO_NS, "value", node.getTextContent());
-                    document.appendChild(element);
-                    break;
-
-                case Node.DOCUMENT_FRAGMENT_NODE:
-                    Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
-                    int size = Iterables.size(elements);
-                    if (size == 1) {
-                        document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
-                        break;
-                    }
-
-                    throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
-
-                default:
-                    throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
-            }
-
-        } else {
-            Iterable<? extends Node> elements = XMLUtils.iterable((NodeList) object);
-            int size = Iterables.size(elements);
-            if (size == 1) {
-                document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
-            } else
-                throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
-        }
-
-        return document;
+//        Document document = XMLUtils.newDocument();
+//        if (object instanceof Node) {
+//            Node node = (Node) object;
+//            switch (node.getNodeType()) {
+//                case Node.ELEMENT_NODE:
+//                    document.appendChild(document.adoptNode(node.cloneNode(true)));
+//                    break;
+//
+//                case Node.TEXT_NODE:
+//                case Node.ATTRIBUTE_NODE:
+//                    Element element = document.createElementNS(EXPERIMAESTRO_NS, "value");
+//                    element.setAttributeNS(EXPERIMAESTRO_NS, "value", node.getTextContent());
+//                    document.appendChild(element);
+//                    break;
+//
+//                case Node.DOCUMENT_FRAGMENT_NODE:
+//                    Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
+//                    int size = Iterables.size(elements);
+//                    if (size == 1) {
+//                        document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+//                        break;
+//                    }
+//
+//                    throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+//
+//                default:
+//                    throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
+//            }
+//
+//        } else {
+//            Iterable<? extends Node> elements = XMLUtils.iterable((NodeList) object);
+//            int size = Iterables.size(elements);
+//            if (size == 1) {
+//                document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
+//            } else
+//                throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+//        }
+//
+//        return document;
     }
 
 }

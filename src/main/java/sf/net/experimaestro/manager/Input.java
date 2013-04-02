@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
@@ -50,7 +50,7 @@ public abstract class Input {
 	/**
 	 * Default value
 	 */
-	Document defaultValue;
+	Json defaultValue;
 
 	/**
 	 * Unnamed option
@@ -108,7 +108,7 @@ public abstract class Input {
 		out.println(documentation);
 	}
 
-	public void setDefaultValue(Document defaultValue) {
+	public void setDefaultValue(Json defaultValue) {
 		this.defaultValue = defaultValue;
 	}
 
@@ -129,10 +129,6 @@ public abstract class Input {
 	public void setUnnamed(boolean unnamed) {
 		this.unnamed = unnamed;
 	}
-
-    public String getNamespace() {
-        return namespace;
-    }
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;

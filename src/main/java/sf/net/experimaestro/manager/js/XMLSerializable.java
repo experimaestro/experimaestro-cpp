@@ -19,11 +19,12 @@
 package sf.net.experimaestro.manager.js;
 
 import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/3/13
  */
 public interface XMLSerializable {
-    Document serialize();
+    Json serialize();
 }

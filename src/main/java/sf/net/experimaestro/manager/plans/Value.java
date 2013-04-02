@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 
 /**
 * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -38,23 +38,23 @@ public class Value {
     /**
      * The produced node
      */
-    Document[] nodes;
+    Json[] nodes;
 
     /**
      * The context
      */
     long context[];
 
-    public Value(Document... nodes) {
+    public Value(Json... nodes) {
         this.nodes = nodes;
     }
 
-    public Value(long[] context, Document... nodes) {
+    public Value(long[] context, Json... nodes) {
         this.context = context;
         this.nodes = nodes;
     }
 
-    public Document[] getNodes() {
+    public Json[] getNodes() {
         return nodes;
     }
 }

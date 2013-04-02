@@ -20,10 +20,8 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.manager.json.Json;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -54,7 +52,7 @@ public class FunctionOperator extends UnaryOperator {
     protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> iterator = input.iterator(runOptions);
-            public Iterator<? extends Node> innerIterator = Iterators.emptyIterator();
+            public Iterator<? extends Json> innerIterator = Iterators.emptyIterator();
             DefaultContexts contexts;
 
             @Override
@@ -66,8 +64,7 @@ public class FunctionOperator extends UnaryOperator {
                         return endOfData();
 
                     Value value = iterator.next();
-                    NodeList list = function.f(value.nodes);
-                    innerIterator = XMLUtils.iterable(list).iterator();
+                    innerIterator = function.f(value.nodes).iterator();
 
                     contexts = new DefaultContexts(value.context);
                 }

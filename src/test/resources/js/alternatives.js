@@ -31,11 +31,11 @@ tasks.set("abc:alt1", {
 	alternative: altName,
 	
 	inputs: {
-	    size: { value: "xs:integer", help: "The parameter" }
+	    x: { value: "xp:integer", help: "The parameter" }
 	},
 	
 	run: function(inputs) {
-		return { "abc:alt": inputs.size() };
+		return { "x": inputs.x, "xp:type": "abc:alt" };
 	}
 });
 
@@ -51,16 +51,17 @@ tasks.set("abc:task", {
 	}
 });
 
-/** Run and output */
-var task = tasks.get("abc:task").create();
-task.set("p", "{a.b.c}alt1");
-task.set("p.size", 10);
-var r = task.run();
-var v = r("abc:alt");
-
 // END SNIPPET: main
 
 function test_value() {
+    var task = tasks.get("abc:task").create();
+    
+    task.set("p", "{a.b.c}alt1");
+    task.set("p.x", 10);
+    
+    var r = task.run();
+    var v = r.x;
+
     if (typeof(v) == "undefined") 
         v = null;
     if (v != 10)

@@ -24,7 +24,7 @@ var abc = new Namespace("a.b.c");
 
 var task_1 = {
 	id: qname("a.b.c", "task-1"),
-	inputs: <inputs><value type="xs:integer" id="p"/></inputs>,
+	inputs: { p: { value: "xp:integer" } },
 	
 	run: function(inputs) {
 		return inputs.p;
@@ -36,7 +36,7 @@ xpm.add_task_factory(task_1);
 
 var task_2 = {
 	id: qname("a.b.c", "task-2"),
-	inputs: <inputs xmlns:abc="a.b.c"><task ref="abc:task-1" id="t1"/></inputs>,
+	inputs: { t1: { task: "abc:task-1" } },
 	
 	run: function(inputs) {
 		return inputs.t1;
@@ -49,11 +49,11 @@ xpm.add_task_factory(task_2);
 /** Run and check */
 
 var task = xpm.get_task(task_2.id);
-task.set("t1.p", "10");
+task.set("t1.p", 10);
 var r = task.run();
 
 // END SNIPPET: main
-if (r == undefined || r.get_value() != 10)
+if (r == undefined || r() != 10)
 	throw new java.lang.String.format("Value [%s] is different from 10", r);
 	
 	

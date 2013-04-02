@@ -18,12 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Element;
-
-import javax.xml.xquery.XQException;
-import javax.xml.xquery.XQStaticContext;
-import java.util.HashMap;
-import java.util.Map;
+import sf.net.experimaestro.exceptions.NoSuchParameter;
+import sf.net.experimaestro.manager.json.Json;
 
 /**
  * Defines a connection to between one or more output values and one input
@@ -31,8 +27,6 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class Connection {
-    private Map<String, String> namespaces = new HashMap<>();
-
     /** The destination */
     final DotName to;
 
@@ -43,32 +37,16 @@ public abstract class Connection {
         this.to = to;
     }
 
-    public void addNamespaces(Element element) {
-        namespaces.putAll(Manager.getNamespaces(element));
-    }
+    /**
+     * Get the list of the input variables
+     * @return
+     */
+    abstract public Iterable<String> inputs();
 
     /**
-     * Set the defined namespaces during XQuery
-     * @param xqsc
-     * @throws XQException
+     * Compute the value
+     * @param task
+     * @return
      */
-    public void setNamespaces(XQStaticContext xqsc) throws XQException {
-        for (Map.Entry<String, String> mapping : namespaces.entrySet()) {
-            Input.LOGGER.debug("Setting default namespace mapping [%s] to [%s]",
-                    mapping.getKey(), mapping.getValue());
-            xqsc.declareNamespace(mapping.getKey(), mapping.getValue());
-        }
-    }
-
-    /**
-     * Get the mapping between variable names and inputs
-     * @return An iterable object
-     */
-    abstract public Iterable<? extends Map.Entry<String, DotName>> getInputs();
-
-    public abstract String getXQuery();
-
-    public boolean isRequired() {
-        return required;
-    }
+    public abstract Json computeValue(Task task) throws NoSuchParameter;
 }

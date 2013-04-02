@@ -19,8 +19,8 @@
 package sf.net.experimaestro.manager;
 
 
-import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.manager.json.Json;
 
 public class TaskInput extends Input {
 
@@ -32,7 +32,7 @@ public class TaskInput extends Input {
 	}
 
 	@Override
-	public void setDefaultValue(Document defaultValue) {
+	public void setDefaultValue(Json defaultValue) {
 		throw new ExperimaestroRuntimeException(
 				"Default value must not be set for task inputs");
 	}

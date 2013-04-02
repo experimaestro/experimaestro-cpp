@@ -44,7 +44,7 @@ public class DotName extends AbstractList<String> implements Comparable<DotName>
     /**
      * Construction
      */
-    public DotName(String[] array) {
+    public DotName(String... array) {
         super();
         this.array = array;
     }

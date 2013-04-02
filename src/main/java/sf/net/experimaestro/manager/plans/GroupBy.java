@@ -25,11 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.mutable.MutableInt;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
@@ -122,15 +120,13 @@ public class GroupBy extends UnaryOperator {
                     return endOfData();
 
 
-                Document document = XMLUtils.newDocument();
-                Element array = document.createElementNS(wrapperQName.getNamespaceURI(), wrapperQName.getLocalPart());
-                document.appendChild(array);
+                JsonArray array = new JsonArray();
 
                 Value value = iterator.next();
                 for (int i : indices)
                     positions[i] = value.context[i];
 
-                ReturnValue rv = new ReturnValue(new DefaultContexts(value.context), document);
+                ReturnValue rv = new ReturnValue(new DefaultContexts(value.context), array);
                 add(array, value);
 
                 main:
@@ -148,14 +144,12 @@ public class GroupBy extends UnaryOperator {
 
             }
 
-            private void add(Element array, Value value) {
-                Node node = value.nodes[0];
+            private void add(JsonArray array, Value value) {
+                Json node = value.nodes[0];
                 assert value.nodes.length == 1;
-                if (node instanceof Document)
-                    node = (((Document) node).getDocumentElement());
 
-                node = array.getOwnerDocument().adoptNode(node.cloneNode(true));
-                array.appendChild(node);
+                node = node.clone();
+                array.add(node);
             }
         };
     }

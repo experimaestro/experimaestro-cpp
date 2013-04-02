@@ -34,7 +34,7 @@ public class JSPlanInput extends JSAbstractOperator {
         Constant constant = new Constant();
         this.operator = constant;
         for (Object o : array) {
-            constant.add(JSUtils.toDocument(null, o));
+            constant.add(JSUtils.toJSON(null, o));
         }
     }
 

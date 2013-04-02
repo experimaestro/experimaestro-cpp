@@ -23,12 +23,12 @@ var task = {
     id: qname("a.b.c", "task"),
     
     // One input of type xp:integer
-    inputs: <inputs><value type="xs:integer" id="x"/></inputs>,
+    inputs: { x: { value: "xp:integer" }},
     
     // The function that will be called when the task is run
 	run: function(inputs) {
         v = xpm.evaluate(["python", python_script]);
-		return { output: v[1] };
+		return v[1];
 	}
 		
 };

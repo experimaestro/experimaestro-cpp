@@ -85,29 +85,6 @@ public class JSNode extends JSBaseObject {
         return new JSNode(node);
     }
 
-
-    @JSFunction(value = "get_value")
-    public Object getValue() {
-        return Manager.unwrapToObject(node);
-    }
-    @JSFunction(call = true)
-    public Object call() {
-        return getValue();
-    }
-
-    @JSFunction(value = "get_value", scope = true)
-    public Object getValue(Context context, Scriptable scope, String expression) throws XPathExpressionException {
-        XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
-        Node node = (Node) xpath.evaluate(this.node, XPathConstants.NODE);
-        if (node == null)
-            return NOT_FOUND;
-        return Manager.unwrapToObject(node);
-    }
-    @JSFunction(call = true, scope = true)
-    public Object call(Context context, Scriptable scope, String expression) throws XPathExpressionException {
-        return getValue(context, scope, expression);
-    }
-
     @JSFunction("text")
     public String getText() {
         if (node == null)

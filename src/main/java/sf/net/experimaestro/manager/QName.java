@@ -202,7 +202,7 @@ public class QName implements Comparable<QName> {
 
     @Override
     public String toString() {
-        if (uri == null)
+        if (uri == null || "".equals(uri))
             return localName;
         return format("{%s}%s", uri, localName);
     }

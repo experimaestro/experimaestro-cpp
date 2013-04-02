@@ -19,7 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -101,14 +101,14 @@ public class Product extends NAryOperator {
         }
 
         ReturnValue getReturnValue(Value[] current) {
-            Document[] nodes = new Document[Product.this.outputSize()];
+            Json[] nodes = new Json[Product.this.outputSize()];
             final long[][] contexts = new long[parents.size()][];
             int offset = 0;
             for (int j = 0; j < contexts.length; j++) {
                 contexts[j] = current[j].context;
                 for (int k = 0, n = current[j].nodes.length; k < n; k++) {
                     nodes[offset] = current[j].nodes[k];
-                    assert nodes[offset].getDocumentElement() != null;
+                    assert nodes[offset] != null;
                     offset++;
                 }
 

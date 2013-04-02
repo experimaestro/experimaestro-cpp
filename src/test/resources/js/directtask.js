@@ -22,7 +22,7 @@
 var abc = Namespace("a.b.c");
 tasks("abc:task") = {
     // One input of type xp:integer
-    inputs: { x: { value: "xs:integer" } }
+    inputs: { x: { value: "xp:integer" } }
 };
 // END SNIPPET: task
 
@@ -34,8 +34,7 @@ var r = tasks("abc:task").run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {
-	v = r.get_value("x");
-	if (v == undefined || v != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", v);
+	if (r == undefined || r != 10)
+		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }	
 	

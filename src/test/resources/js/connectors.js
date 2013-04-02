@@ -24,7 +24,7 @@ var repository_path = script_path.path("connectors.inc.js");
 
 // Check the answer
 function check(r) {
-	var v = r.text();
+	var v = r();
 	var expected = "experimaestro rocks";
 	if (v != expected) 
 		throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
@@ -39,7 +39,7 @@ function check(r) {
 function test_local() {
 	include_repository(repository_path);
 	var task = xpm.get_task("a.b.c", "task");
-	task.set("x", "10");
+	task.set("x", 10);
 	var r = task.run();
 	check(r);
 }
@@ -65,7 +65,7 @@ function test_ssh() {
 	include_repository(big_ssh, repository_path.get_path());
 
 	var task = xpm.get_task(qname("a.b.c", "task"));
-	task.set("x", "10");
+	task.set("x", 10);
 	var r = task.run();
 	check(r);
 }

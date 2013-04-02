@@ -23,8 +23,8 @@
 var abc = new Namespace("a.b.c");
 
 // First task
-tasks("abc:sub_task") = {
-	inputs: <inputs><value type="xs:integer" id="x"/></inputs>,	
+tasks("abc:sub-task") = {
+	inputs: { x: { value: "xp:integer" } }
 };
 
 // Third task
@@ -32,10 +32,9 @@ tasks("abc:task") = {
 	/*
 	    Connects the value returned by t1 to the input of x for t2
 	*/
-	inputs:
-        <inputs xmlns:abc="a.b.c" xmlns:xp={xp.uri} xmlns={xp.uri}>
-            <task ref="abc:sub_task" id="subtask" merge="true"/>
-        </inputs>,
+	inputs: {
+	    subtask: { task: "abc:sub-task", merge: true}
+	},
 	
 	run: function(inputs) {
 		return inputs.subtask;
@@ -46,14 +45,12 @@ tasks("abc:task") = {
 // Get the task
 var task = tasks("abc:task").create();
 // Without merging, we would use "subtask.x"
-task.set("x", "10");
-// <outputs>10</outputs>
+task.set("x", 10);
 var r = task.run();
 
 // END SNIPPET: main
 
-function test_composing_2() {
-    r = r.get_value("x");
+function test_merging() {
 	if (r == undefined || r != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }

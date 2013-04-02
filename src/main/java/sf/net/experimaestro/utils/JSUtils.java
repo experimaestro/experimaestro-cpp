@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.utils;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.FunctionObject;
@@ -39,12 +40,20 @@ import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JSJson;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.manager.js.JSNode;
 import sf.net.experimaestro.manager.js.JSNodeList;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.json.JsonInteger;
+import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonReal;
+import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
+import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -143,10 +152,6 @@ public class JSUtils {
         return cx.newObject(scope, "XML", new Node[]{node});
     }
 
-    public static Document toDocument(Scriptable jsScope, Object returned) {
-        Object object = toDOM(jsScope, returned);
-        return Manager.wrap(object);
-    }
 
     public static Object get(Scriptable scope, String name) {
         Scriptable _scope = scope;
@@ -157,6 +162,73 @@ public class JSUtils {
         }
 
         return Scriptable.NOT_FOUND;
+    }
+
+    /**
+     * Transform an object to JSON
+     *
+     * @param scope The javascript scope for evaluating expressions
+     * @param value The object to transform
+     * @return
+     */
+    public static Json toJSON(Scriptable scope, Object value) {
+        value = unwrap(value);
+
+        // --- Simple cases
+        if (value instanceof Json)
+            return (Json) value;
+
+        if (value instanceof JSJson)
+            return ((JSJson) value).getJson();
+
+        if (value instanceof String)
+            return new JsonString((String) value);
+
+        if (value instanceof Double) {
+            if ((double)((Double) value).longValue() == (double)value)
+                return new JsonInteger(((Double) value).longValue());
+            return new JsonReal((Double) value);
+        }
+        if (value instanceof Float) {
+            if ((double)((Float) value).longValue() == (float)value)
+                return new JsonInteger(((Float) value).longValue());
+            return new JsonReal((Float) value);
+        }
+
+        if (value instanceof Integer)
+            return new JsonInteger((Integer) value);
+        if (value instanceof Long)
+            return new JsonInteger((Long) value);
+
+
+        // --- A JS object
+        if (value instanceof NativeObject) {
+            JsonObject json = new JsonObject();
+            for (Map.Entry<Object, Object> entry : ((NativeObject) value).entrySet()) {
+                JSNamespaceContext nsContext = new JSNamespaceContext(scope);
+                QName qname = QName.parse(JSUtils.toString(entry.getKey()), nsContext);
+                Object pValue = entry.getValue();
+
+                if (qname.equals(Manager.XP_TYPE))
+                    pValue = QName.parse(JSUtils.toString(pValue), nsContext).toString();
+
+                String key = qname.toString();
+                json.put(key, toJSON(scope, pValue));
+            }
+            return json;
+        }
+
+        // -- An array
+        if (value instanceof NativeArray) {
+            NativeArray array = (NativeArray) value;
+            JsonArray json = new JsonArray();
+            for (int i = 0; i < array.getLength(); i++)
+                json.add(toJSON(scope, array.get(i)));
+            return json;
+        }
+
+
+        throw new NotImplementedException("Cannot handle object of type " + value.getClass());
     }
 
 
@@ -175,6 +247,7 @@ public class JSUtils {
 
         /**
          * Clone and adopt node if not already owned
+         *
          * @param node
          * @return
          */

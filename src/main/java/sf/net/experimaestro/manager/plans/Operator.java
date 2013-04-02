@@ -27,7 +27,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
-import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -193,10 +193,10 @@ public abstract class Operator {
     }
 
     static public class ReturnValue {
-        Document[] nodes;
+        Json nodes[];
         Contexts contexts;
 
-        public ReturnValue(Contexts contexts, Document... nodes) {
+        public ReturnValue(Contexts contexts, Json... nodes) {
             this.nodes = nodes;
             this.contexts = contexts;
         }

@@ -18,26 +18,17 @@
 
 package sf.net.experimaestro.manager;
 
-import net.sf.saxon.xqj.SaxonXQDataSource;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.manager.xq.ParentPath;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xquery.XQConnection;
 import javax.xml.xquery.XQException;
 import javax.xml.xquery.XQExpression;
 import javax.xml.xquery.XQItem;
-import javax.xml.xquery.XQItemType;
 import javax.xml.xquery.XQSequence;
-import javax.xml.xquery.XQStaticContext;
 import java.lang.reflect.Constructor;
-import java.util.Map;
 
 /**
  * Represents a value that can be set
@@ -85,7 +76,7 @@ public abstract class Value {
      *
      * @param value
      */
-    public abstract void set(Document value);
+    public abstract void set(Json value);
 
     /**
      * XPMProcess the value before it can be accessed by a task to run
@@ -101,7 +92,7 @@ public abstract class Value {
      *
      * @return A valid XML document or null if not set
      */
-    public abstract Document get();
+    public abstract Json get();
 
     /**
      * This method is called once by a {@link Task} after {@link #process(boolean)}.
@@ -113,108 +104,9 @@ public abstract class Value {
         // Do not process if we do not have connections...
         for (Connection connection : input.connections) {
             LOGGER.debug("Processing connection [%s]", connection);
-            final String xQuery = connection.getXQuery();
-            final StringBuilder queryBuilder = new StringBuilder();
-
-            try {
-
-                SaxonXQDataSource xqjd = new SaxonXQDataSource();
-                xqjd.registerExtensionFunction(new ParentPath());
-                XQConnection xqjc = xqjd.getConnection();
-                XQStaticContext xqsc = xqjc.getStaticContext();
-                connection.setNamespaces(xqsc);
-                final XQExpression xqje = xqjc.createExpression(xqsc);
-
-                // Collect the inputs and set the appropriate context
-                for (Map.Entry<String, DotName> pair : connection.getInputs()) {
-                    final String varName = pair.getKey();
-                    final DotName from = pair.getValue();
-
-                    final Value value = task.getValues().get(from.get(0));
-                    final Node document = value.get();
-
-                    // Search for the appropriate output
-
-                    if (document == null) {
-                        // If this input was not set, bind to empty sequence
-                        LOGGER.debug("Binding $%s to empty sequence", varName);
-                        queryBuilder.append("declare variable $" + varName + " := (); ");
-                    } else {
-                        Value bindValue = task.getValue(from);
-                        Element element = bindValue.get().getDocumentElement();
-//                        Node element = XMLUtils.getRootElement(document);
-//                        for (int i = 1; i < from.size(); i++) {
-//                            boolean found = false;
-//                            for (Element child : XMLUtils.elements(element.getChildNodes())) {
-//                                final String name = child.getAttributeNS(Manager.EXPERIMAESTRO_NS, "name");
-//                                if (name != null && name.equals(from.get(i))) {
-//                                    element = child;
-//                                    found = true;
-//                                }
-//                            }
-//
-//                        }
-//
-                        LOGGER.debug("Binding $%s to element [%s]", varName, ((Element) element).getTagName());
-                        LOGGER.debug(XMLUtils.toString(element));
-                        queryBuilder.append("declare variable $" + varName + " external; ");
-
-                        xqje.bindNode(new javax.xml.namespace.QName(varName), element, null);
-                    }
-                }
-
-
-                // --- Evaluate the XQuery
-                queryBuilder.append(xQuery);
-                final String query = queryBuilder.toString();
-                LOGGER.debug("Evaluated XQuery is %s", query);
-                XQItem xqItem = evaluateSingletonExpression(query, xqje);
-                if (xqItem == null) {
-                    if (connection.isRequired())
-                        throw new ExperimaestroRuntimeException("Could not connect");
-                    continue;
-                }
-
-                Value destination = task.getValue(connection.to);
-                Node item;
-                final int itemKind = xqItem.getItemType().getItemKind();
-                switch (itemKind) {
-                    case XQItemType.XQITEMKIND_ATOMIC:
-                        item = ValueType.wrapString(destination.input.getNamespace(), connection.to.getName(), xqItem.getAtomicValue(), null);
-                        break;
-                    case XQItemType.XQITEMKIND_ELEMENT:
-                        item = xqItem.getNode();
-                        break;
-                    case XQItemType.XQITEMKIND_ATTRIBUTE:
-                    case XQItemType.XQITEMKIND_TEXT:
-                        item = ValueType.wrapString(destination.input.getNamespace(), connection.to.getName(), xqItem.getNode().getTextContent(), null);
-                        break;
-                    default:
-                        throw new ExperimaestroRuntimeException(
-                                "Cannot handle XQuery type [%s]", xqItem.getItemType());
-                }
-
-                // --- Now connects
-
-                LOGGER.debug("Answer is [%s of type %d]",
-                        XMLUtils.toStringObject(item), item.getNodeType());
-                Document newDoc = XMLUtils.newDocument();
-                if (item instanceof Document)
-                    item = ((Document) item).getDocumentElement();
-
-                item = item.cloneNode(true);
-                newDoc.adoptNode(item);
-                newDoc.appendChild(item);
-                LOGGER.debug("Setting parameter [%s] in [%s]", connection.to, task);
-                destination.set(newDoc);
-                xqjc.close();
-
-            } catch (XQException e) {
-                final ExperimaestroRuntimeException exception = new ExperimaestroRuntimeException(e,
-                        "Cannot evaluate XPath [%s] when connecting to [%s]", xQuery, connection.to);
-                exception.addContext("Internal error: " + e.toString());
-                throw exception;
-            }
+            Value destination = task.getValue(connection.to);
+            Json json = connection.computeValue(task);
+            destination.set(json);
         }
     }
 

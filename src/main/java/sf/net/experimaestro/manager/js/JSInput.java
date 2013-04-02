@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,27 +14,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
-// Test the direct JS access
+package sf.net.experimaestro.manager.js;
 
+/**
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 2/4/13
+ */
+public class JSInput {
+    private final String name;
 
-function test_direct() 
-{
-    
-    tasks("direct-access") = {
-        inputs: { 
-            x: { value: "xs:integer" },
-        },
-        run: function(x) {
-            return x.x();
-        }
+    public JSInput(String name) {
+        this.name = name;
     }
-
-    var r = tasks("direct-access").run({
-        x: 1
-    });
-    
-    assert(r[0].get_value() == 1, "%s is not equal to 1", r[0].get_string());
 }
-

@@ -18,12 +18,11 @@
 
 package sf.net.experimaestro.manager;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.utils.Output;
@@ -127,7 +126,7 @@ public abstract class Task {
      * @param simulate
      * @return An XML description of the output
      */
-    public abstract Document doRun(boolean simulate);
+    public abstract Json doRun(boolean simulate);
 
     /**
      * Run this task.
@@ -136,7 +135,7 @@ public abstract class Task {
      *
      * @param simulate
      */
-    final public Document run(boolean simulate) throws NoSuchParameter, ValueMismatchException {
+    final public Json run(boolean simulate) throws NoSuchParameter, ValueMismatchException {
         LOGGER.debug("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter
@@ -172,7 +171,7 @@ public abstract class Task {
                 final Type type = input.getType();
 
                 if (type != null && value.isSet()) {
-                    Element element = value.get().getDocumentElement();
+                    Json element = value.get();
                     assert element != null;
                     type.validate(element);
                 }
@@ -213,8 +212,7 @@ public abstract class Task {
             final Input input = entry.getValue().input;
             if (input.connections != null)
                 for (Connection connection : input.connections)
-                    for (Entry<String, DotName> pair : connection.getInputs()) {
-                        String from = pair.getValue().get(0);
+                    for (String from  : connection.inputs()) {
                         LOGGER.debug("[build] Adding edge from %s to %s", from, to);
                         addEdge(forward_edges, from, to);
                         addEdge(backwards_edges, to, from);
@@ -262,11 +260,12 @@ public abstract class Task {
      * @param value The value to be set (this should be an XML fragment)
      * @return True if the parameter was set and false otherwise
      */
-    public final void setParameter(DotName id, Document value) throws NoSuchParameter {
+    public final void setParameter(DotName id, Json value) throws NoSuchParameter {
         try {
-            getValue(id).set((Document) value.cloneNode(true));
+            getValue(id).set(value.clone());
         } catch (ExperimaestroRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());
+            throw e;
         } catch (RuntimeException e) {
             final ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException(e);
             e2.addContext("While setting parameter %s of %s", id, factory.getId());
@@ -284,8 +283,7 @@ public abstract class Task {
      */
     public void setParameter(DotName id, String value) throws NoSuchParameter {
         final Value v = getValue(id);
-        final String ns = v.input.getNamespace();
-        final Document doc = ValueType.wrapString(ns, id.getName(), value, null);
+        final Json doc = ValueType.wrapString(value, null);
         v.set(doc);
     }
 
@@ -379,17 +377,18 @@ public abstract class Task {
     /**
      * Run an experimental plan
      *
+     *
      * @param planString The plan string
      * @param singlePlan If the plan should be composed of only one plan
      * @param simulate
      * @throws ParseException
      */
-    public ArrayList<Document> runPlan(String planString, boolean singlePlan, ScriptRunner runner, boolean simulate) throws Exception {
+    public ArrayList<Json> runPlan(String planString, boolean singlePlan, ScriptRunner runner, boolean simulate) throws Exception {
         PlanParser planParser = new PlanParser(new StringReader(planString));
         sf.net.experimaestro.plan.Node plans = planParser.plan();
         final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
 
-        ArrayList<Document> results = new ArrayList<>();
+        ArrayList<Json> results = new ArrayList<Json>();
 
         LOGGER.info("Plan is %s", plans.toString());
         while (iterator.hasNext()) {
@@ -413,8 +412,8 @@ public abstract class Task {
                     if (runner == null)
                         throw new ExperimaestroRuntimeException("Could not run the script [%s]", text);
                     final Object result = runner.evaluate(text);
-                    if (result instanceof Document)
-                        task.setParameter(name, (Document) result);
+                    if (result instanceof Json)
+                        task.setParameter(name, (Json)result);
                     else
                         task.setParameter(name, result.toString());
                 } else

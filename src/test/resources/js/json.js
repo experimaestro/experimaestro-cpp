@@ -30,13 +30,10 @@ var tests = new Namespace("xpm.tests");
 // Add the task to the list of available factories
 tasks("tests:task") = {
     inputs: {
-        x: { value: "xs:integer", default: 3 }      
-        // could be xml: "...", alternative: ...,   
+        x: { value: "xp:integer", default: 3 }      
     },
     run: function(p) {
-        // Without unwrap, it would create an XML
-        // like <tests:x><x>VALUE</x></tests:x>
-        return {  "tests:x": p.x.get_value() }
+        return p.x
     }
 };
 
@@ -44,30 +41,30 @@ tasks("tests:task") = {
 function test_json_plan() {
     var r = tasks("tests:task").run({x: 10});
     r = r[0];
-	if (r == undefined || r.get_value() != 10)
+	if (r == undefined || r() != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
 
-function test_json_nested()
-{
-    tasks("tests:task-1") = {
-        inputs: { x: { xml: "x" } }
-    };
-    
-    tasks("tests:task-2") = {
-        inputs: { t: { task: "tests:task-1" } }
-    };
-    
-    // Task arguments are nested
-    var r = tasks("tests:task-2").run({
-        t: {
-            x: xml("<x>1</x>")
-        }
-    });
-    
-    assert(r[0].text("x") == 1);
-    
-}
+// function test_json_nested()
+// {
+//     tasks("tests:task-1") = {
+//         inputs: { x: { } }
+//     };
+//     
+//     tasks("tests:task-2") = {
+//         inputs: { t: { task: "tests:task-1" } }
+//     };
+//     
+//     // Task arguments are nested
+//     var r = tasks("tests:task-2").run({
+//         t: {
+//             x: {}
+//         }
+//     });
+//     
+//     assert(r[0].text("x") == 1);
+//     
+// }
 
 
 
