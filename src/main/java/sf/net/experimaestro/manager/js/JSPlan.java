@@ -24,6 +24,7 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.WrappedException;
+import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.DotName;
@@ -160,6 +161,13 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
         if (value instanceof NativeObject)
             return new Constant(JSUtils.toJSON(scope, value));
+
+        if (JSUtils.isXML(value)) {
+            return new Constant(new JSNode(JSUtils.toDocument(scope, value, null)));
+        }
+
+        if (value instanceof Node)
+            return new Constant(new JSNode((Node)value));
 
         // --- Plans & transformations
 

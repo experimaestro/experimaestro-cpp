@@ -42,6 +42,7 @@ public class ValueType extends Type {
     static final public QName XP_BOOLEAN = new QName(Manager.EXPERIMAESTRO_NS, "boolean");
 
     public static final QName XPM_FILE = new QName(Manager.EXPERIMAESTRO_NS, "file");
+    public static final QName XP_XML = new QName(Manager.EXPERIMAESTRO_NS, "xml");
 
     public ValueType(QName type) {
         super(type);

@@ -121,6 +121,11 @@ public class CommandArgument {
                 throw new ExperimaestroRuntimeException("Could not retrieve parameter file with key [%s]", key);
             return connector.resolve(file);
         }
+
+        @Override
+        public java.lang.String toString() {
+            return java.lang.String.format("ParameterFile(%s)", key);
+        }
     }
 
 

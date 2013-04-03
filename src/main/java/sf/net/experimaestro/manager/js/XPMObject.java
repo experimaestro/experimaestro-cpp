@@ -87,6 +87,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
@@ -279,9 +280,11 @@ public class XPMObject {
 
         // Add converter from our Function object
 
-        Map<String, MethodFunction> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class);
-        for (MethodFunction JSMethodFunction : functionsMap.values()) {
-            ScriptableObject.putProperty(scope, JSMethodFunction.name, JSMethodFunction);
+        Map<String, ArrayList<Method>> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class);
+        for (Map.Entry<String, ArrayList<Method>> entry : functionsMap.entrySet()) {
+            MethodFunction function = new MethodFunction(entry.getKey());
+            function.add(null, entry.getValue());
+            ScriptableObject.putProperty(scope, entry.getKey(), function);
         }
 
 
@@ -290,8 +293,6 @@ public class XPMObject {
         // namespace
         addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
                 Manager.EXPERIMAESTRO_NS});
-        addNewObject(context, scope, "xs", "Namespace", new Object[]{"xs",
-                Manager.XMLSCHEMA_NS});
 
         // xpm object
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
@@ -976,6 +977,10 @@ public class XPMObject {
      */
     private static void argumentWalkThrough(Scriptable scope, StringBuilder sb, CommandArgument argument, Object object,
                                             Map<String, byte[]> parameterFiles) {
+
+        if (object == null)
+            throw new IllegalArgumentException(String.format("Null argument in command line"));
+
         if (object instanceof JSFileObject)
             object = ((JSFileObject) object).getFile();
 

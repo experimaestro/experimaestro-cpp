@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.utils;
 
-import org.apache.commons.lang.NotImplementedException;
+import com.google.common.collect.AbstractIterator;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.FunctionObject;
@@ -53,6 +53,8 @@ import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
+import java.util.AbstractMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -172,7 +174,8 @@ public class JSUtils {
      * @return
      */
     public static Json toJSON(Scriptable scope, Object value) {
-        value = unwrap(value);
+        // No unwrap for JSBaseObject
+        value = value instanceof JSBaseObject ? value : unwrap(value);
 
         // --- Simple cases
         if (value instanceof Json)
@@ -204,7 +207,7 @@ public class JSUtils {
         // --- A JS object
         if (value instanceof NativeObject) {
             JsonObject json = new JsonObject();
-            for (Map.Entry<Object, Object> entry : ((NativeObject) value).entrySet()) {
+            for (Map.Entry<Object, Object> entry : JSUtils.iterable(((NativeObject) value))) {
                 JSNamespaceContext nsContext = new JSNamespaceContext(scope);
                 QName qname = QName.parse(JSUtils.toString(entry.getKey()), nsContext);
                 Object pValue = entry.getValue();
@@ -228,7 +231,27 @@ public class JSUtils {
         }
 
 
-        throw new NotImplementedException("Cannot handle object of type " + value.getClass());
+        return new JsonString(value.toString());
+    }
+
+    private static Iterable<? extends Map.Entry<Object, Object>> iterable(final NativeObject object) {
+        final Object[] ids = object.getIds();
+        return new Iterable<Map.Entry<Object, Object>>() {
+            @Override
+            public Iterator<Map.Entry<Object, Object>> iterator() {
+                return new AbstractIterator<Map.Entry<Object, Object>>() {
+                    int i = 0;
+
+                    @Override
+                    protected Map.Entry<Object, Object> computeNext() {
+                        if (i >= ids.length)
+                            return endOfData();
+                        String key = ids[i++].toString();
+                        return new AbstractMap.SimpleImmutableEntry<Object, Object>(key, object.get(key.toString(), object));
+                    }
+                };
+            }
+        };
     }
 
 

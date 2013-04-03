@@ -81,7 +81,6 @@ public class JavaScriptChecker {
     public void runScript() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
         // Defines the environment
         Map<String, String> environment = System.getenv();
-        context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
         final ResourceLocator currentResourceLocator
                 = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
         XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,

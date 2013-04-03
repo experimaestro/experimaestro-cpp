@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -31,7 +32,7 @@ import java.io.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSBaseObject implements XMLSerializable {
+public class JSFileObject extends JSBaseObject implements Json {
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
     private XPMObject xpm;
@@ -95,7 +96,7 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
         FileObject current = file;
         for (int i = 0; i < args.length; i++) {
             if (args[i] == null || args[i].equals(""))
-                throw new IllegalArgumentException("Undefined element in path");
+                throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
             String name = Context.toString(args[i]);
             current = current.resolveFile(name);
         }
@@ -136,9 +137,25 @@ public class JSFileObject extends JSBaseObject implements XMLSerializable {
         return new JSFileObject(xpm, file.getParent().resolveFile(baseName));
     }
 
+
     @Override
-    public Json serialize() {
-        return ValueType.wrapString(file.toString(), ValueType.XPM_FILE);
+    public Json clone() {
+        return new JSFileObject(xpm, file);
+    }
+
+    @Override
+    public boolean isSimple() {
+        return true;
+    }
+
+    @Override
+    public Object get() {
+       return this;
+    }
+
+    @Override
+    public QName type() {
+        return ValueType.XPM_FILE;
     }
 
     static class MyPrintWriter extends PrintWriter {

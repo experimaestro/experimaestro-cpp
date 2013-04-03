@@ -249,7 +249,7 @@ public class JSTaskFactory extends JSBaseObject {
 
                 final Scriptable definition = (Scriptable) o;
 
-                Set<String> fields = getFields(definition, "value", "alternative", "xml", "task");
+                Set<String> fields = getFields(definition, "value", "alternative", "json", "xml", "task");
                 String type;
                 if (fields.size() == 1) {
                     type = fields.iterator().next();
@@ -273,6 +273,9 @@ public class JSTaskFactory extends JSBaseObject {
                         break;
 
                     case "xml":
+                        xpm.getRootLogger().warn("xml is *strongly* deprecated: use json [%s]", id);
+
+                    case "json":
                         input = new XMLInput(new Type(inputType));
                         break;
 

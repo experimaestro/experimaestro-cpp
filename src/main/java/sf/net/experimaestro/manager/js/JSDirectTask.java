@@ -24,6 +24,7 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Type;
@@ -108,13 +109,14 @@ public class JSDirectTask extends JSAbstractTask {
 
             result = JSUtils.toJSON(jsScope, returned);
         } else {
-
-            if (values.size() == 1)
+            Type output = getFactory().getOutput();
+            if (output == null && values.size() == 1)
                 result = values.values().iterator().next().get();
             else {
                 // We just copy the inputs as an output
                 JsonObject json = new JsonObject();
-
+                if (output != null)
+                    json.put(Manager.XP_TYPE.toString(), output.toString());
 
                 // Loop over non null inputs
                 for (Entry<String, Value> entry : values.entrySet()) {

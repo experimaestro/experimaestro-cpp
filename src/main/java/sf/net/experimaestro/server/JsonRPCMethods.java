@@ -412,10 +412,11 @@ public class JsonRPCMethods extends HttpServlet {
             if (rhinoException != null)
                 err.append("\n" + rhinoException.getScriptStackTrace());
 
-            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
-                err.format("Internal error:%n");
-                e.printStackTrace(err);
-            }
+            // FIXME: We should have something better
+//            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
+//                err.format("Internal error:%n");
+//                e.printStackTrace(err);
+//            }
 
             err.flush();
             throw new RuntimeException(errString.toString());

@@ -28,8 +28,8 @@ import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.WrappedException;
+import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 
 import java.lang.reflect.Array;
@@ -40,21 +40,45 @@ import java.util.ArrayList;
 import static java.lang.StrictMath.min;
 
 /**
- * Wraps a method of an object
+ * Represents all the methods with the same name within the same object
  */
 class MethodFunction implements Callable, org.mozilla.javascript.Function {
     String name;
-    private ArrayList<Method> methods = new ArrayList<>();
+    ArrayList<Group> groups = new ArrayList<>();
+
+    public boolean isEmpty() {
+        return groups.isEmpty();
+    }
+
+    static class Group {
+        JSBaseObject thisObject;
+        ArrayList<Method> methods = new ArrayList<>();
+
+        Group(JSBaseObject thisObject, ArrayList<Method> methods) {
+            this.thisObject = thisObject;
+            this.methods = methods;
+        }
+    }
+
 
     public MethodFunction(String name) {
         this.name = name;
     }
 
-    void add(Method method) {
-        methods.add(method);
+    static private final Function IDENTITY = Functions.identity();
+    static private class Unwrapper implements Function {
+        private final Function converter;
+
+        public Unwrapper(Function converter) {
+            this.converter = converter;
+        }
+
+        @Override
+        public Object apply(Object input) {
+            return converter.apply(((Wrapper)input).unwrap());
+        }
     }
 
-    static private final Function IDENTITY = com.google.common.base.Functions.identity();
 
     @Override
     public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
@@ -160,21 +184,25 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
         Method argmax = null;
+        JSBaseObject argmaxObject = null;
+
         int max = Integer.MIN_VALUE;
 
         Function argmaxConverters[] = new Function[args.length];
         Function converters[] = new Function[args.length];
 
-        for (Method method : methods) {
-            int score = score(method, args, converters);
-            if (score > max) {
-                max = score;
-                argmax = method;
-                Function tmp[] = argmaxConverters;
-                argmaxConverters = converters;
-                converters = tmp;
+        for (Group group : groups)
+            for (Method method : group.methods) {
+                int score = score(method, args, converters);
+                if (score > max) {
+                    max = score;
+                    argmax = method;
+                    argmaxObject = group.thisObject;
+                    Function tmp[] = argmaxConverters;
+                    argmaxConverters = converters;
+                    converters = tmp;
+                }
             }
-        }
 
         if (argmax == null) {
             String context = "";
@@ -197,8 +225,8 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
         try {
             boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
-            Object [] transformedArgs = transform(cx, scope, argmax, args, argmaxConverters);
-            final Object invoke = argmax.invoke(isStatic ? null : thisObj, transformedArgs);
+            Object[] transformedArgs = transform(cx, scope, argmax, args, argmaxConverters);
+            final Object invoke = argmax.invoke(isStatic ? null : argmaxObject, transformedArgs);
             return invoke == null ? Undefined.instance : invoke;
         } catch (XPMRhinoException e) {
             throw e;
@@ -208,8 +236,8 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     }
 
-    public void addAll(MethodFunction other) {
-        methods.addAll(other.methods);
+    public void add(JSBaseObject thisObj, ArrayList<Method> methods) {
+        groups.add(new Group(thisObj, methods));
     }
 
 
@@ -246,6 +274,12 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
                 return Functions.toStringFunction();
             }
 
+            if (o instanceof Wrapper) {
+                score -= 1;
+                Function converter = converter(((Wrapper) o).unwrap(), type);
+                return converter != null ? new Unwrapper(converter) : null;
+
+            }
             score = Integer.MIN_VALUE;
             return null;
         }
@@ -253,6 +287,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
         public boolean isOK() {
             return score != Integer.MIN_VALUE;
         }
+
     }
 
     private int score(Method method, Object[] args, Function[] converters) {
@@ -283,7 +318,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
         // Normal arguments
         for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
-            final Object o = JSUtils.unwrap(args[i]);
+            final Object o = args[i];
             converters[i] = converter.converter(o, types[i + offset]);
         }
 
@@ -292,7 +327,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
             Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
-                final Object o = JSUtils.unwrap(args[nbArgs + i]);
+                final Object o = args[nbArgs + i];
                 converters[nbArgs + i] = converter.converter(o, type);
             }
         }
@@ -327,7 +362,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
         final int length = types.length - (method.isVarArgs() ? 1 : 0) - offset;
         int size = min(length, args.length);
         for (int i = 0; i < size; i++) {
-            methodArgs[i + offset] = converters[i].apply(JSUtils.unwrap(args[i]));
+            methodArgs[i + offset] = converters[i].apply(args[i]);
         }
 
         // --- Deals with the vararg pararameters
@@ -336,7 +371,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
             int nbVarargs = args.length - length;
             final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
             for (int i = 0; i < nbVarargs; i++) {
-                array[i] = converters[i + length].apply(JSUtils.unwrap(args[i + length]));
+                array[i] = converters[i + length].apply(args[i + length]);
             }
             methodArgs[methodArgs.length - 1] = array;
         }

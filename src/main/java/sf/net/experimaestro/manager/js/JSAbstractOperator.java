@@ -6,6 +6,7 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.GroupBy;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Order;
@@ -39,6 +40,16 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 //        operator.addParent(this.getOperator());
 //        return new JSOperator(operator);
 //    }
+
+    @JSFunction(scope = true)
+    @JSHelp("Runs an XQuery against the input: each returned item is a new input")
+    public JSAbstractOperator select(Context context, Scriptable scope, String query) throws XPathExpressionException {
+        JsonPathFunction function = new JsonPathFunction(query, scope);
+        Operator operator = new FunctionOperator(function);
+        operator.addParent(this.getOperator());
+        return new JSOperator(operator);
+    }
+
 
     @JSFunction
     public JSOperator group_by(JSAbstractOperator... operators) {

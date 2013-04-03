@@ -24,6 +24,7 @@ import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonInteger;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonReal;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 
 import static com.google.common.collect.Ranges.closed;
@@ -37,6 +38,8 @@ public class JSJson extends JSBaseObject {
 
     public JSJson(Json json) {
         this.json = json;
+        if (json instanceof JSBaseObject)
+            setPrototype((Scriptable) json);
     }
 
     public Json getJson() {
@@ -80,8 +83,15 @@ public class JSJson extends JSBaseObject {
                 return new JSJson(value);
         }
 
-
         return super.get(name, start);
+    }
+
+    @Override
+    public void put(String name, Scriptable start, Object value) {
+        if (json instanceof JsonObject) {
+            ((JsonObject) json).put(name, JSUtils.toJSON(start, value));
+        }
+        super.put(name, start, value);
     }
 
     @Override

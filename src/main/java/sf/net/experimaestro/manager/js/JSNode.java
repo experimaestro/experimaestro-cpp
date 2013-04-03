@@ -21,13 +21,15 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -43,7 +45,7 @@ import java.nio.charset.Charset;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 6/3/13
  */
-public class JSNode extends JSBaseObject {
+public class JSNode extends JSBaseObject implements Json {
     public static final Charset UTF16 = Charset.forName("UTF-16");
     private final Node node;
 
@@ -178,5 +180,25 @@ public class JSNode extends JSBaseObject {
 
     public Node getNode() {
         return node;
+    }
+
+    @Override
+    public Json clone() {
+        return new JSNode(node);
+    }
+
+    @Override
+    public boolean isSimple() {
+        return true;
+    }
+
+    @Override
+    public Object get() {
+        return node;
+    }
+
+    @Override
+    public QName type() {
+        return ValueType.XP_XML;
     }
 }

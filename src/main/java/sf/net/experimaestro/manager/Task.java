@@ -201,8 +201,8 @@ public abstract class Task {
         ArrayList<String> list = new ArrayList<>();
         ArrayList<String> graph = new ArrayList<>(values.keySet());
 
-        Map<String, TreeSet<String>> forward_edges = new TreeMap<String, TreeSet<String>>();
-        Map<String, TreeSet<String>> backwards_edges = new TreeMap<String, TreeSet<String>>();
+        Map<String, TreeSet<String>> forward_edges = new TreeMap<>();
+        Map<String, TreeSet<String>> backwards_edges = new TreeMap<>();
 
         // Build the edge maps
         for (Entry<String, Value> entry : values.entrySet()) {
