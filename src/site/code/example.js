@@ -10,17 +10,12 @@ logging.info("Index and perform IR ad-hoc experiments on TREC 1992 & 1993");
 
 tasks.mg4j::adhoc.run({
     // Defines the collection
-    collection: {
-        id: ["trec/1992/adhoc", "trec/1993/adhoc"],
-        restrict: "trec.ap8889"
-    },
+    "collection.id": ["trec/1992/adhoc", "trec/1993/adhoc"],
     
     // Defines the output directory
-    outdir: "index",
+    "outdir": "index",
     
     // defines the model to use
-    model: {
-      "@": mg4j::bm25,  
-      k1: 5
-    }
+    "model": "mg4j:bm25",
+    "model.k1": 5
 });
