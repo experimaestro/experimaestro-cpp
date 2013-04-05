@@ -243,7 +243,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object[] getIds() {
-        throw new UnsupportedOperationException("Enumerate JS object: " + getClassName());
+        return new Object[] {};
     }
 
     @Override

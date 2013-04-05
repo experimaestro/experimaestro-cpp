@@ -1187,7 +1187,7 @@ public class XPMObject {
 
         @JSFunction("get_script_file")
         public Scriptable getScriptFile() throws FileSystemException {
-            return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
+                return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
         }
 
         /**

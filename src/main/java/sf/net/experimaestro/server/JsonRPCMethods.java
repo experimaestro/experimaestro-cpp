@@ -28,10 +28,12 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -91,7 +93,6 @@ public class JsonRPCMethods extends HttpServlet {
         this.repository = repository;
         this.mos = mos;
     }
-
 
 
     static public class MethodDescription {
@@ -303,7 +304,8 @@ public class JsonRPCMethods extends HttpServlet {
      */
     @RPCMethod(name = "run-javascript", help = "Run a javascript")
     public String runJSScript(@RPCArgument(name = "files") List<JSONArray> files,
-                              @RPCArgument(name = "environment") Map<String, String> environment) {
+                              @RPCArgument(name = "environment") Map<String, String> environment,
+                              @RPCArgument(name = "debug", required = false) Integer debugPort) {
         final StringWriter errString = new StringWriter();
         final PrintWriter err = new PrintWriter(errString);
         XPMObject jsXPM;
@@ -330,11 +332,25 @@ public class JsonRPCMethods extends HttpServlet {
         WriterAppender appender = new WriterAppender(layout, stringWriter);
         root.addAppender(appender);
 
+
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
+        RhinoDebugger debugger = null;
         try (Cleaner cleaner = new Cleaner()) {
-            Context jsContext = Context
-                    .enter();
+
+
+            // --- Debugging via JSDT
+            // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
+            ContextFactory factory = new ContextFactory();
+
+            if (debugPort != null) {
+                debugger = new RhinoDebugger("transport=socket,suspend=y,address=" + debugPort);
+                debugger.start();
+                factory.addListener(debugger);
+            }
+            // --- End (Debugging via JSDT)
+
+            Context jsContext = factory.enterContext();
 
             // Initialize the standard objects (Object, Function, etc.)
             // This must be done before scripts can be executed. Returns
@@ -422,6 +438,13 @@ public class JsonRPCMethods extends HttpServlet {
             throw new RuntimeException(errString.toString());
 
         } finally {
+            // Stop debugger
+            if (debugger != null)
+                try {
+                    debugger.stop();
+                } catch (Exception e) {
+                    LOGGER.error(e);
+                }
             // Exit context
             Context.exit();
         }
@@ -542,7 +565,7 @@ public class JsonRPCMethods extends HttpServlet {
                     HashMap<String, Object> map = new HashMap<>();
                     map.put("event", message.getType().toString());
                     if (message instanceof SimpleMessage) {
-                        map.put("resource", ((SimpleMessage)message).getResource().getId());
+                        map.put("resource", ((SimpleMessage) message).getResource().getId());
                         ResourceLocator locator = ((SimpleMessage) message).getResource().getLocator();
                         if (locator != null)
                             map.put("locator", locator.toString());
@@ -550,21 +573,21 @@ public class JsonRPCMethods extends HttpServlet {
 
                     switch (message.getType()) {
                         case STATE_CHANGED:
-                            map.put("state", ((SimpleMessage)message).getResource().getState().toString());
+                            map.put("state", ((SimpleMessage) message).getResource().getState().toString());
                             break;
 
                         case RESOURCE_REMOVED:
                             break;
 
                         case RESOURCE_ADDED:
-                            map.put("state", ((SimpleMessage)message).getResource().getState().toString());
+                            map.put("state", ((SimpleMessage) message).getResource().getState().toString());
                             break;
                     }
 
                     mos.message(map);
                 } catch (IOException e) {
                     LOGGER.error(e, "Could not output");
-                } catch(RuntimeException e) {
+                } catch (RuntimeException e) {
                     LOGGER.error(e, "Error while trying to notify RPC client");
                 }
             }
@@ -575,7 +598,7 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     public void close() {
-        for(Listener listener: listeners)
+        for (Listener listener : listeners)
             scheduler.removeListener(listener);
     }
 

@@ -30,8 +30,10 @@ import java.lang.annotation.RetentionPolicy;
 public @interface RPCArgument {
     String name();
 
+    /** Required argument */
     boolean required() default true;
 
     /** Help for the argumnent */
     String help() default "";
+
 }

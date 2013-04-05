@@ -87,8 +87,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     @Override
     public String getClassName() {
-        // TODO: implement getClassName
-        throw new NotImplementedException();
+        return "MethodFunction";
     }
 
     @Override
@@ -105,8 +104,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     @Override
     public boolean has(String name, Scriptable start) {
-        // TODO: implement has
-        throw new NotImplementedException();
+        return false;
     }
 
     @Override
@@ -141,8 +139,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     @Override
     public Scriptable getPrototype() {
-        // TODO: implement getPrototype
-        throw new NotImplementedException();
+        return null;
     }
 
     @Override
@@ -165,8 +162,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     @Override
     public Object[] getIds() {
-        // TODO: implement getIds
-        throw new NotImplementedException();
+        return new Object[] {};
     }
 
     @Override
@@ -272,6 +268,17 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
                     score -= 10;
                 }
                 return Functions.toStringFunction();
+            }
+
+            if (type == Integer.class && o instanceof Number) {
+                if ((((Number) o).intValue()) == ((Number) o).doubleValue()) {
+                    return new Function() {
+                        @Override
+                        public Object apply(java.lang.Object input) {
+                           return ((Number)input).intValue();
+                        }
+                    };
+                }
             }
 
             if (o instanceof Wrapper) {
