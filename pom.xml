@@ -152,6 +152,9 @@
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
+                        <manifestEntries>
+                            <xpm.version>${project.version}</xpm.version>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>

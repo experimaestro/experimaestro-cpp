@@ -29,7 +29,6 @@ public class NSContext implements NamespaceContext {
 	final static private Logger LOGGER = Logger.getLogger();
 
 	public NSContext(Node node) {
-		// FIXME: would be good to take the map and leave the element
 		this.node = node;
 	}
 
