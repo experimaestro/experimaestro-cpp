@@ -34,8 +34,10 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -279,9 +281,12 @@ public abstract class Resource<Data extends ResourceData>
      */
     protected Map<Long, Dependency> getDependencyMap() {
         if (dependencies == null)
-            if (stored())
-                dependencies = scheduler.getDependencies(resourceID);
-            else
+            if (stored()) {
+                ArrayList<Dependency> required = scheduler.getDependencies(resourceID);
+                dependencies = new HashMap<>();
+                for(Dependency from: required)
+                    dependencies.put(from.getDatabaseId(), from);
+            } else
                 dependencies = new TreeMap<>();
         return dependencies;
     }

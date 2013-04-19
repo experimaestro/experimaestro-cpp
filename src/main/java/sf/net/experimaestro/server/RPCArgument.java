@@ -35,5 +35,4 @@ public @interface RPCArgument {
 
     /** Help for the argumnent */
     String help() default "";
-
 }

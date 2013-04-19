@@ -20,8 +20,12 @@ package sf.net.experimaestro.manager.json;
 
 import sf.net.experimaestro.manager.QName;
 
+import java.io.IOException;
+import java.io.Writer;
+
 /**
  * Bsae class for all JSON objects
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 1/4/13
  */
@@ -35,6 +39,7 @@ public interface Json {
 
     /**
      * Returns the simple value underlying this object
+     *
      * @return
      */
     Object get();
@@ -43,4 +48,15 @@ public interface Json {
      * Get the XPM type
      */
     QName type();
+
+
+    /**
+     * Write a JSON representation
+     *
+     * @param out
+     * @throws IOException
+     */
+    public void toJSONString(Writer out) throws IOException;
+
+
 }

@@ -33,12 +33,10 @@ import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.Trie;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.TreeMap;
-
-import static com.sleepycat.je.CursorConfig.READ_UNCOMMITTED;
 
 /**
  * A set of resources
@@ -187,7 +185,8 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
             update(resource);
         }
 
-        scheduler.setReady((Job<? extends JobData>) resource);
+        if (resource instanceof Job)
+            scheduler.setReady((Job<? extends JobData>) resource);
 
         return change;
     }
@@ -204,12 +203,16 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     @Override
     synchronized public Resource put(Resource resource) throws DatabaseException, ExperimaestroCannotOverwrite {
         // Get the group
-        LOGGER.debug("Storing resource %s [%x@%s] in state %s", resource, System.identityHashCode(resource), resource.getId(), resource.getState());
         groupsTrie.put(DotName.parse(resource.getData().getGroupId()));
 
         final boolean newResource = !resource.stored();
+        if (newResource) {
+            resource.updateStatus(false);
+        }
 
         final Resource old = super.put(resource);
+
+        LOGGER.debug("Storing resource %s [%x@%s] in state %s", resource, System.identityHashCode(resource), resource.getId(), resource.getState());
 
         if (newResource) {
             final long id = resource.getId();
@@ -225,6 +228,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
             for (Dependency dependency : deps) {
                 dependency.setTo(id);
                 dependencies.put(dependency);
+                LOGGER.debug("Added new dependency %s [%d]", dependency, dependency.getDatabaseId());
             }
 
             // Notify
@@ -278,43 +282,43 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         final long from = resource.getId();
 
         // Notify dependencies in turn
-        LOGGER.info("Notifying dependencies from R%s", from);
-        try (final EntityCursor<Dependency> entities = fromDependencies.entities(null, from, true, from, true, READ_UNCOMMITTED)) {
-            for (Dependency dep : entities) {
-                if (dep.status == DependencyStatus.UNACTIVE) {
-                    LOGGER.debug("We won't notify resource R%s since the dependency is unactive", dep.getTo());
+        Collection<Dependency> dependencies = retrieveDependentResources(from);
+        LOGGER.info("Notifying dependencies from R%s [%d]", from, dependencies.size());
 
-                } else
-                    try {
-                        // when the dependency status is null, the dependency is not active anymore
-                        LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", from, dep.getTo(), dep.status);
-                        // Preserves the previous state
-                        DependencyStatus beforeState = dep.status;
+        for (Dependency dep : dependencies) {
+            if (dep.status == DependencyStatus.UNACTIVE) {
+                LOGGER.debug("We won't notify [R%s] to [R%s] since the dependency is unactive", from, dep.getTo());
 
-                        if (dep.update(scheduler, resource, false)) {
-                            final Resource depResource = get(dep.getTo());
-                            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                break;
-                            }
+            } else
+                try {
+                    // when the dependency status is null, the dependency is not active anymore
+                    LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", from, dep.getTo(), dep.status);
+                    // Preserves the previous state
+                    DependencyStatus beforeState = dep.status;
 
-                            // We ensure nobody else can modify the resource first
-                            synchronized (depResource) {
-                                // Update the dependency in database
-                                store(dep);
-
-                                // Notify the resource that a dependency has changed
-                                depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
-                                        beforeState, dep.status, depResource.getState(), depResource);
-                            }
-                        } else {
-                            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+                    if (dep.update(scheduler, resource, false)) {
+                        final Resource depResource = get(dep.getTo());
+                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                            continue;
                         }
-                    } catch (RuntimeException e) {
-                        LOGGER.error(e, "Got an exception while notifying [%s]", resource);
+
+                        // We ensure nobody else can modify the resource first
+                        synchronized (depResource) {
+                            // Update the dependency in database
+                            store(dep);
+
+                            // Notify the resource that a dependency has changed
+                            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+                            LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
+                                    beforeState, dep.status, depResource.getState(), depResource);
+                        }
+                    } else {
+                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }
-            }
+                } catch (RuntimeException e) {
+                    LOGGER.error(e, "Got an exception while notifying [%s]", resource);
+                }
         }
 
     }
@@ -323,20 +327,22 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Retrieves resources on which the given resource depends
      *
+     *
      * @param to The resource
      * @return A map of dependencies
      */
-    public TreeMap<Long, Dependency> retrieveDependencies(long to) {
+    public ArrayList<Dependency> retrieveDependencies(long to) {
         return getDependencies(to, toDependencies);
     }
 
     /**
      * Retrieves resources that depend upon the given resource
      *
+     *
      * @param from The resource
      * @return A map of dependencies
      */
-    public TreeMap<Long, Dependency> retrieveDependentResources(long from) {
+    public ArrayList<Dependency> retrieveDependentResources(long from) {
         return getDependencies(from, fromDependencies);
     }
 
@@ -345,15 +351,16 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
      * Retrieve the dependencies from a given secondary index, and fills a {@link java.util.Map}
      * from it
      *
+     *
      * @param id    The key
      * @param index The index
      * @return
      */
-    private TreeMap<Long, Dependency> getDependencies(Long id, SecondaryIndex<Long, Long, Dependency> index) {
-        TreeMap<Long, Dependency> deps = new TreeMap<>();
+    private ArrayList<Dependency> getDependencies(Long id, SecondaryIndex<Long, Long, Dependency> index) {
+        ArrayList<Dependency> deps = new ArrayList<>();
         try (final EntityCursor<Dependency> entities = index.entities(id, true, id, true)) {
             for (Dependency dependency : entities)
-                deps.put(dependency.getFrom(), dependency);
+                deps.add(dependency);
         }
         return deps;
     }
@@ -423,6 +430,7 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
         };
     }
 
+
     /**
      * Returns resources filtered by state and group
      *
@@ -450,6 +458,8 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
                 ResourceData value;
                 while ((value = entities.next()) != null) {
                     Resource resource = get(value.resourceId);
+                    if (resource == null)
+                        continue;
                     if (states.contains(resource.getState())) {
                         if (init)
                             resource.init(scheduler);

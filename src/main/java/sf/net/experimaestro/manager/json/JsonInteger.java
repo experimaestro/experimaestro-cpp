@@ -18,8 +18,12 @@
 
 package sf.net.experimaestro.manager.json;
 
+import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+
+import java.io.IOException;
+import java.io.Writer;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -56,5 +60,11 @@ public class JsonInteger implements Json {
     public QName type() {
         return ValueType.XP_INTEGER;
     }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        JSONValue.writeJSONString(value, out);
+    }
+
 
 }

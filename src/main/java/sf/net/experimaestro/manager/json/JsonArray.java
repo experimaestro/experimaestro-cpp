@@ -20,9 +20,14 @@ package sf.net.experimaestro.manager.json;
 
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.utils.Output;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static java.lang.String.format;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -41,9 +46,28 @@ public class JsonArray extends ArrayList<Json> implements Json {
     }
 
     @Override
+    public String toString() {
+        return format("[%s]", Output.toString(", ", this));
+    }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        out.write('[');
+        boolean first = true;
+        for (Json json : this) {
+            if (first)
+                first = false;
+            else
+                out.write(", ");
+            json.toJSONString(out);
+        }
+        out.write('[');
+    }
+
+    @Override
     public Json clone() {
         JsonArray array = new JsonArray();
-        for(Json json: this)
+        for (Json json : this)
             array.add(json.clone());
         return array;
     }

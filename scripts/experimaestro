@@ -11,7 +11,6 @@ import logging
 import re
 from icolor import cformat
 import traceback
-import socket
 import base64
 import websocket
 import json
@@ -28,10 +27,7 @@ jarname = "experimaestro-%s.jar" % version
 logging.basicConfig(level=logging.INFO)
 
 
-    
 # --- Check paths
-
-
 def jarpaths():
     """Returns the different paths where the JAR file can be located"""
     yield os.path.join(dir, jarname)
@@ -94,10 +90,10 @@ class Properties:
 
     def __str__(self):
         return "Properties (%s)" % self.map.__str__()
-        
+
     def __iter__(self):
-        for k,v in self.map[1].iteritems():
-            yield k,Properties(v)
+        for k, v in self.map[1].iteritems():
+            yield k, Properties(v)
 
     def sub(self, name, default=None):
         c = self.map
@@ -152,10 +148,11 @@ def getProperties(filename):
     propFile.close()
     return props
 
+
 class Configuration():
     def __init__(self, args):
         """Get the configuration from command line and configuration file"""
-    
+
         # Get the configuration
         configfile = os.path.expanduser(args.config)
 
@@ -166,50 +163,49 @@ class Configuration():
         if clients is None:
             raise Exception("No client section in configuration file")
 
-        
         if args.server is None:
             if len(clients) > 1:
                 args.server = None
-                for name,client in clients:
+                for name, client in clients:
                     if client.get("default", False) == "true":
                         if args.server is None:
                             args.server = name
                         else:
                             raise Exception("More than one client defined as default in configuration file")
                 if args.server is None:
-                    raise Exception("More than one client [%d] in configuration file (%s): use the --server option or make one client the default" 
-                        % (len(clients), ",".join(clients.keys())))
+                    raise Exception("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
+                                    % (len(clients), ",".join(clients.keys())))
             else:
                 args.server = clients.keys()[0]
 
         self.client = clients.sub(args.server)
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
-        
+
     def getServer(self):
         return xmlrpclib.ServerProxy("%s/xmlrpc" % self.client["url"], verbose=args.verbose)
 
-    def getJsonServer(self):    
+    def getJsonServer(self):
         return jsonrpclib.Server("%s/json-rpc" % self.client["url"], verbose=args.verbose)
-        
-    def getWebSocketServer(self):    
+
+    def getWebSocketServer(self):
         re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
         m = re_url.match(self.client["url"])
         if not m:
             raise "Client URL is not valid"
-        
+
         scheme = "ws"
-        if m.group(1): 
-            secure = "wss"
+        if m.group(1):
+            scheme = "wss"
         url = "%s://%s/web-socket" % (scheme, m.group(4))
-        
+
         header = []
         if m.group(2) and m.group(3):
             auth = base64.b64encode("%s:%s" % (m.group(2), m.group(3)))
-            header = [ "Authorization: Basic %s" % auth ]
-        
+            header = ["Authorization: Basic %s" % auth]
+
         return websocket.create_connection(url, header=header)
 
-    
+
 # --- Server
 
 
@@ -225,12 +221,12 @@ def command_stop_server(args):
 def command_run_js(appendrgs):
     conf = Configuration(args)
     client = conf.getWebSocketServer()
-    
+
     # Get the command line
     files = []
 
     if args.pre:
-        files.append(["<pre>", args.pre]);
+        files.append(["<pre>", args.pre])
 
     for filename in args.files:
         filepath = os.path.abspath(filename)
@@ -240,14 +236,14 @@ def command_run_js(appendrgs):
             files.append([filepath, file(filepath).read()])
 
     if args.post:
-        files.append(["<post>", args.post]);
+        files.append(["<post>", args.post])
 
     logging.debug("Running JS scripts %s" % [s[0] for s in files])
 
     try:
         code = 0
-        msg = json.dumps({"id": 1, "method": "run-javascript", "params": { "files": files, "environment": dict(os.environ)}})
-        r = client.send(msg)
+        msg = json.dumps({"id": 1, "method": "run-javascript", "params": {"files": files, "environment": dict(os.environ)}})
+        client.send(msg)
         while client is not None:
             message = client.recv()
             o = json.loads(message)
@@ -259,7 +255,7 @@ def command_run_js(appendrgs):
                     break
                 else:
                     print o["result"],
-            
+
         sys.exit(code)
     except xmlrpclib.Fault as e:
         print e
@@ -291,6 +287,13 @@ def command_ls(args):
             print l
 
 
+def command_ping(args):
+    r = Configuration(args).getJsonServer().ping([])
+    if r == "pong":
+        sys.exit(0)
+    sys.exit(1)
+
+
 def command_list_methods(args):
     server = Configuration(args).getServer()
     for method in server.system.listMethods():
@@ -304,7 +307,6 @@ def command_list_methods(args):
 def command_information(args):
     server = Configuration(args).getJsonServer()
     print server.getResourceInformation(args.resourceId[0])
-    
 
 
 def command_invalidate(args):
@@ -319,7 +321,7 @@ def command_kill(args):
 
 
 def command_rm(args):
-    server = Configuration(args).getServer()
+    server = Configuration(args).getJsonServer()
     if len(args.jobid) == 0:
         args.jobid = [""]
 
@@ -328,7 +330,7 @@ def command_rm(args):
         args.group = ""
 
     for jobid in args.jobid:
-        n = server.Server.remove(args.group, jobid, states)
+        n = server.remove(group=args.group, id=jobid, states=states, recursive=args.recursive, regexp=args.regexp)
         print "Removed %d resources" % n
 
 
@@ -386,14 +388,17 @@ p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification]
 subparsers.add_parser("list-methods", help="List XML-RPC methods")
 
 p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
+p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
 p_invalidate.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
+p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
 p_rm.add_argument('--states', dest="states", help="States")
 p_rm.add_argument('--group', dest="group")
+p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
 p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 p_kill = subparsers.add_parser("kill", help="Kill a job")
@@ -402,6 +407,8 @@ p_kill.add_argument('jobid', nargs="+", help="The job URIs")
 p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
 p_log_level.add_argument('id', nargs=1, help='The logger ID')
 p_log_level.add_argument('level', nargs=1, choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
+
+subparsers.add_parser("ping", help="Ping the server")
 
 # Parse arguments
 args = parser.parse_args()

@@ -82,21 +82,25 @@ public abstract class XPMProcess {
     /**
      * Creates a new job monitor from a process
      *
-     * @param job    The attached job (If any)
-     * @param pid    The process ID
-     * @param notify If a notification should be put in place using {@linkplain java.lang.Process#waitFor()}.
-     *               Otherwise, it is the caller job to set it up.
+     * @param job The attached job (If any)
+     * @param pid The process ID
      */
-    protected XPMProcess(SingleHostConnector connector, String pid, final Job job, boolean notify) {
+    protected XPMProcess(SingleHostConnector connector, String pid, final Job job) {
         this.connector = connector;
         this.pid = pid;
         this.job = job;
         this.connectorId = connector.getIdentifier();
+    }
 
+    /**
+     * Set up a notifiction using {@linkplain java.lang.Process#waitFor()}.
+     */
+
+    protected void startWaitProcess() {
         LOGGER.debug("XPM Process %s constructed", connectorId);
 
         // Set up the notification thread if needed
-        if (notify && job != null) {
+        if (job != null) {
             new Thread(String.format("job monitor [%s]", job.getId())) {
                 @Override
                 public void run() {
@@ -114,7 +118,7 @@ public abstract class XPMProcess {
 
                     try {
                         job.notify(new EndOfJobMessage(code, System.currentTimeMillis()));
-                    } catch(RuntimeException e) {
+                    } catch (RuntimeException e) {
                         LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
                     }
                 }
@@ -126,7 +130,7 @@ public abstract class XPMProcess {
      * Constructs a XPMProcess without an underlying process
      */
     protected XPMProcess(SingleHostConnector connector, final Job job, String pid) {
-        this(connector, pid, job, false);
+        this(connector, pid, job);
     }
 
 

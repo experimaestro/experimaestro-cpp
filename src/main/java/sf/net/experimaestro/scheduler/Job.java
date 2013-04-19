@@ -301,6 +301,10 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
+            case RESOURCE_REMOVED:
+                clean();
+                break;
+
             case END_OF_JOB:
                 EndOfJobMessage eoj = (EndOfJobMessage) message;
                 this.endTimestamp = eoj.timestamp;
@@ -356,7 +360,10 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     if (nbUnsatisfied == 0) {
                         setState(ResourceState.READY);
                     } else {
-                        setState(ResourceState.WAITING);
+                        if (nbHolding > 0)
+                            setState(ResourceState.ON_HOLD);
+                        else
+                            setState(ResourceState.WAITING);
                     }
 
                     // Store the result

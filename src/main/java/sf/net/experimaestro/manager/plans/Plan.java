@@ -122,7 +122,7 @@ public class Plan extends Operator {
      * Run this plan
      *
      * @param runOptions
-     * @return An iterator over the generated XML nodes
+     * @return An iterator over the generated XML values
      */
     public Iterator<Json> run(RunOptions runOptions) throws XPathExpressionException {
         Operator operator = prepare(true, true);

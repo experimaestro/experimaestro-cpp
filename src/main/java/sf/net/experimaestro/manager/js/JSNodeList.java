@@ -23,11 +23,11 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.Lists;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
@@ -76,8 +76,8 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
 
     @JSFunction("toSource")
     public String toSource() {
-        return String.format("NodeList(%s)", Output.toString(
-                ", ",
+        return Output.toString(
+                "",
                 XMLUtils.iterable(list),
                 new Formatter<Node>() {
                     @Override
@@ -85,7 +85,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
                         return XMLUtils.toString(node);
                     }
                 }
-        ));
+        );
     }
 
 

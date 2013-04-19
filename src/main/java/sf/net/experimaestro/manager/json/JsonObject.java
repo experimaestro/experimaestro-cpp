@@ -19,11 +19,15 @@
 package sf.net.experimaestro.manager.json;
 
 import org.apache.commons.vfs2.FileSystemException;
+import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.Output;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,6 +51,33 @@ public class JsonObject extends HashMap<String, Json> implements Json {
 
     public JsonObject(Map<? extends String, ? extends Json> m) {
         super(m);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("{%s}", Output.toString(", ", this.entrySet(), new Output.Formatter<Map.Entry<String, Json>>() {
+            @Override
+            public String format(Map.Entry<String, Json> entry) {
+                return String.format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue());
+            }
+        }));
+    }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        out.write('{');
+        boolean first = true;
+        for(Map.Entry<String, Json> entry: this.entrySet()) {
+            if (first)
+                first = false;
+            else
+                out.write(", ");
+
+            out.write(JSONValue.toJSONString(entry.getKey()));
+            out.write(":");
+            entry.getValue().toJSONString(out);
+        }
+        out.write('}');
     }
 
     @Override

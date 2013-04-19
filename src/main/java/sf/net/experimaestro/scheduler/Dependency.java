@@ -46,7 +46,7 @@ abstract public class Dependency {
      * The resource.
      * We abort its deletion if there is a dependency.
      */
-    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE, onRelatedEntityDelete = DeleteAction.ABORT)
+    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.ABORT)
     private long from;
 
     /**
@@ -78,6 +78,10 @@ abstract public class Dependency {
         return this;
     }
 
+
+    public long getDatabaseId() {
+        return id;
+    }
 
     public long getFrom() {
         return from;

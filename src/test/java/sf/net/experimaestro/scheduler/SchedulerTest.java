@@ -43,13 +43,14 @@ import static java.lang.Math.floor;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
+import static sf.net.experimaestro.scheduler.WaitingJob.Action;
 
 public class SchedulerTest extends XPMEnvironment {
 
     final static private Logger LOGGER = Logger.getLogger();
 
 
-    @Test(/*timeOut = 1000,*/ description = "Run two jobs - one depend on the other to start")
+    @Test(description = "Run two jobs - one depend on the other to start")
     public void test_simple_dependency() throws
             DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
@@ -59,19 +60,19 @@ public class SchedulerTest extends XPMEnvironment {
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, 0, 0));
             if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i], false);
         }
 
-        counter.resume();
+        waitToFinish(0, counter, jobs, 1500, 5);
         checkSequence(jobs);
         checkState(EnumSet.of(ResourceState.DONE), jobs);
     }
 
 
-    @Test(/*timeOut = 1000,*/ description = "Run two jobs - one depend on the other to start, the first fails")
+    @Test(description = "Run two jobs - one depend on the other to start, the first fails")
     public void test_failed_dependency() throws
             DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
@@ -81,13 +82,13 @@ public class SchedulerTest extends XPMEnvironment {
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 500, i == 0 ? 1 : 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i], false);
         }
 
-        counter.resume();
+        waitToFinish(0, counter, jobs, 1500, 5);
 
         checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
         checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
@@ -205,9 +206,9 @@ public class SchedulerTest extends XPMEnvironment {
         return new ComplexDependenciesParameters[][]{
                 {
                         new ComplexDependenciesParameters("complex", -8451050260222287949l)
-                                .jobs(30, 50, 10)
+                                .jobs(50, 50, 10)
                                 .dependencies(.2, 200)
-                                .failures(0.05, 2, 2)
+                                .failures(0.10, 3, 2)
                                 .token(3)
                 }
         };
@@ -268,7 +269,7 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
 
             int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, waitingTime, states[i] == ResourceState.DONE ? 0 : 1);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(waitingTime, states[i] == ResourceState.DONE ? 0 : 1, 0));
 
             ArrayList<String> deps = new ArrayList<>();
             for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
@@ -281,21 +282,14 @@ public class SchedulerTest extends XPMEnvironment {
                 deps.add(jobs[link.from].toString());
             }
 
-            if (states[i] == ResourceState.ON_HOLD) {
-            }
-
             scheduler.store(jobs[i], false);
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
         }
 
         LOGGER.info("Waiting for jobs to finish (%d remaining)", counter.getCount());
-        // FIXME: revert back to this once bug is fixed
-        while (counter.getCount() > 0) {
-            counter.resume(0, p.maxExecutionTime + 5000, true);
-            for (int i = 0; i < jobs.length; i++)
-                if (jobs[i].getState().isActive())
-                    LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
-        }
+
+        int timeout = p.maxExecutionTime + 5000;
+        waitToFinish(0, counter, jobs, timeout, 5);
 
         waitBeforeCheck();
 
@@ -321,6 +315,20 @@ public class SchedulerTest extends XPMEnvironment {
         assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
+    private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, int timeout, int tries) {
+        int loop = 0;
+        while (counter.getCount() > limit && loop++ < tries) {
+            counter.resume(limit, timeout, true);
+            int count = counter.getCount();
+            if (count <= limit) break;
+
+            LOGGER.info("Waiting to finish - %d active jobs > %d [%d]", count, limit, loop);
+            for (int i = 0; i < jobs.length; i++)
+                if (jobs[i].getState().isActive())
+                    LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
+        }
+    }
+
     private void waitBeforeCheck() {
         synchronized (this)  {
             try {
@@ -332,7 +340,7 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
 
-    @Test(/*timeOut = 5000,*/ description = "Test of the token resource - one job at a time")
+    @Test(description = "Test of the token resource - one job at a time")
     public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException {
 
         File jobDirectory = mkTestDir();
@@ -347,13 +355,13 @@ public class SchedulerTest extends XPMEnvironment {
         failure.set(3);
 
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, 250, failure.get(i) ? 1 : 0);
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i], false);
         }
 
 
-        counter.resume();
+        waitToFinish(0, counter, jobs, 1500, 5);
         waitBeforeCheck();
 
         // Check that one started after the other (since only one must have been active
@@ -370,16 +378,39 @@ public class SchedulerTest extends XPMEnvironment {
         int errors = 0;
         errors += checkSequence(jobs);
         for (int i = 0; i < jobs.length; i++) {
-            errors += checkState(jobs[i].code != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
+            errors += checkState(jobs[i].finalCode() != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
         }
         assert errors == 0 : "Detected " + errors + " errors after running jobs";
     }
 
-    @Test
-    public void test_hold_dependencies() {
+    @Test()
+    public void test_hold_dependencies() throws Exception {
         // If all failed dependencies are restarted, a job should get back to a WAITING state
-        // FIXME: todo
-        assert false;
+        WaitingJob[] jobs = new WaitingJob[3];
+        ThreadCount counter = new ThreadCount();
+        File jobDirectory = mkTestDir();
+
+        counter.add();
+
+        for(int i = 0; i < jobs.length; i++) {
+            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
+            if (i > 0) {
+                jobs[i].addDependency(jobs[i-1].createDependency(null));
+            }
+            scheduler.store(jobs[i], false);
+        }
+
+        // Wait
+        LOGGER.info("Waiting for job 0 to fail");
+        waitToFinish(2, counter, jobs, 1500, 5);
+        checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
+        checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
+
+        // We wait until the two jobs are stopped
+        LOGGER.info("Restarting job 0 with happy ending");
+        jobs[0].restart(new Action(500, 0, 0));
+        waitToFinish(0, counter, jobs, 1500, 5);
+        checkState(EnumSet.of(ResourceState.DONE), jobs);
     }
 
 

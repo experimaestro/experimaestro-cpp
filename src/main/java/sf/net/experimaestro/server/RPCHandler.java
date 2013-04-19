@@ -186,7 +186,7 @@ public class RPCHandler {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId()).values();
+        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId());
 
         if (deps.isEmpty())
             return 0;
@@ -228,44 +228,7 @@ public class RPCHandler {
         return statesSet;
     }
 
-    /**
-     * Remove resources specified with the given filter
-     *
-     * @param group      The group of the resource (or none if no filter)
-     * @param id        The URI of the resource to delete
-     * @param stateNames The states of the resource to delete
-     */
-    public int remove(String group, String id, Object[] stateNames) throws Exception {
-        int n = 0;
-        EnumSet<ResourceState> states = getStates(stateNames);
-        if (!"".equals(id)) {
-            final Resource resource = scheduler.getResource(ResourceLocator.parse(id));
-            if (resource == null)
-                throw new ExperimaestroRuntimeException("Cannot find resource [%s]", id);
-            if (!resource.getGroup().startsWith(group))
-                throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
-                        resource, resource.getGroup(), group);
-            if (!states.contains(resource.getState()))
-                throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
-                        resource, resource.getState(), states);
-            scheduler.delete(resource);
-            n = 1;
-        } else {
-            // TODO order the tasks so that depencies are removed first
-            try (final CloseableIterator<Resource> resources = scheduler.resources(group, false, states, false)) {
-                while (resources.hasNext()) {
-                    Resource resource  = resources.next();
-                    try {
-                        scheduler.delete(resource);
-                    } catch (Exception e) {
-                        // TODO should output this to the caller
-                    }
-                    n++;
-                }
-            }
-        }
-        return n;
-    }
+
 
     /**
      * List jobs

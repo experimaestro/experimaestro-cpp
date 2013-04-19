@@ -122,7 +122,7 @@ public class LocalhostConnector extends SingleHostConnector {
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
         public LocalProcess(Job job, Process process, boolean detach) {
-            super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job, true);
+            super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job);
             this.process = process;
             if (!detach) {
                 // If we need to destroy this process
@@ -134,6 +134,8 @@ public class LocalhostConnector extends SingleHostConnector {
                 };
                 Runtime.getRuntime().addShutdownHook(destroyThread);
             }
+
+            startWaitProcess();
         }
 
         @Override

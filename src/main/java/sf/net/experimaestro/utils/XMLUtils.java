@@ -72,15 +72,16 @@ public class XMLUtils {
      * @return A string representing the XML element
      */
     static public final String toString(Node node) {
-        try {
-            DOMImplementationRegistry registry = DOMImplementationRegistry
-                    .newInstance();
+        return toString(node, false);
+    }
 
-            DOMImplementationLS impl = (DOMImplementationLS) registry
-                    .getDOMImplementation("LS");
+    static public final String toString(Node node, boolean declaration) {
+        try {
+            DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
+            DOMImplementationLS impl = (DOMImplementationLS) registry.getDOMImplementation("LS");
 
             LSSerializer writer = impl.createLSSerializer();
-
+            writer.getDomConfig().setParameter("xml-declaration", declaration);
             return writer.writeToString(node);
         } catch (Exception e) {
             return e.toString();
@@ -312,14 +313,13 @@ public class XMLUtils {
 
     /**
      * Returns the "root" element if it exists.
-     *
+     * <p/>
      * More precisely, for types
      * <ul>
-     *     <li>Document: returns the document element</li>
-     *     <li>Element: returns the element</li>
-     *     <li>Other: ensures there is only one child element and returns it</li>
+     * <li>Document: returns the document element</li>
+     * <li>Element: returns the element</li>
+     * <li>Other: ensures there is only one child element and returns it</li>
      * </ul>
-     *
      *
      * @param node
      * @return
@@ -333,7 +333,8 @@ public class XMLUtils {
         Element element = null;
         if (node instanceof Document) {
             element = ((Document) node).getDocumentElement();
-        } if (node instanceof Element) {
+        }
+        if (node instanceof Element) {
             return (Element) node;
         } else {
             final Iterator<Element> iterator = elements(node.getChildNodes()).iterator();
@@ -362,36 +363,45 @@ public class XMLUtils {
         return xpath.compile(expression);
     }
 
-    /** Tranform a node list into a document fragment */
+    /**
+     * Tranform a node list into a document fragment
+     */
     public static Node toDocumentFragment(NodeList list) {
         if (list.getLength() == 1 && list.item(0) instanceof Document)
             return list.item(0);
 
         Document document = newDocument();
         DocumentFragment fragment = document.createDocumentFragment();
-        for(int i = 0; i < list.getLength(); i++)
+        for (int i = 0; i < list.getLength(); i++)
             fragment.appendChild(document.adoptNode(list.item(i).cloneNode(true)));
         return fragment;
     }
 
     /**
      * Returns the node type name from the node type code
+     *
      * @param nodeType
      * @return
      */
     public static String getTypeName(short nodeType) {
         switch (nodeType) {
-            case Node.ELEMENT_NODE: return "element";
-            case Node.DOCUMENT_NODE: return "document";
-            case Node.TEXT_NODE: return "text";
-            case Node.ATTRIBUTE_NODE: return "attribute";
-            case Node.CDATA_SECTION_NODE: return "cdata";
+            case Node.ELEMENT_NODE:
+                return "element";
+            case Node.DOCUMENT_NODE:
+                return "document";
+            case Node.TEXT_NODE:
+                return "text";
+            case Node.ATTRIBUTE_NODE:
+                return "attribute";
+            case Node.CDATA_SECTION_NODE:
+                return "cdata";
         }
         return "Unknown[" + nodeType + "]";
     }
 
     /**
      * Parse a string into an XML document
+     *
      * @param s The string to parse
      * @return A valid XML document
      * @throws ParserConfigurationException

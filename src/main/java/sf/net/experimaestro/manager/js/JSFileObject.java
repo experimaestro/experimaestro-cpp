@@ -20,13 +20,20 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Scheduler;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -156,6 +163,11 @@ public class JSFileObject extends JSBaseObject implements Json {
     @Override
     public QName type() {
         return ValueType.XPM_FILE;
+    }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        out.write(JSONValue.escape(this.toString()));
     }
 
     static class MyPrintWriter extends PrintWriter {

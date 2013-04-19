@@ -97,6 +97,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
 
     /**
      * Update a previously stored value
+     *
      * @param value The value to update
      */
     protected void update(final Value value) {
@@ -150,8 +151,9 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
         // and then in cache
         // Clean the old task
         if (old != value && old != null && value instanceof Cleaneable) {
-            try {  ((Cleaneable) old).clean(); }
-            catch(RuntimeException e) {
+            try {
+                ((Cleaneable) old).clean();
+            } catch (RuntimeException e) {
                 LOGGER.error(e, "Error while cleaning old task");
             }
         }
@@ -163,9 +165,10 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
 
     /**
      * Set the key of the value
-     *
+     * <p/>
      * Only called when the key is generated.
-     * @param key The key
+     *
+     * @param key   The key
      * @param value The value
      */
     protected void setKey(Key key, Value value) {
@@ -174,6 +177,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
 
     /**
      * Returns the same value
+     *
      * @param value
      * @return
      */
@@ -209,6 +213,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
 
     /**
      * Get a value from cache
+     *
      * @param key The key of the resource
      * @return
      */
@@ -231,9 +236,21 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
     }
 
 
-    public void delete(Key key) {
-        index.delete(key);
-        cache.remove(key);
+    public boolean delete(Key key) {
+        try {
+            // Remove from disk
+            boolean delete = index.delete(key);
+
+            // Remove from cache
+            if (!delete)
+                return false;
+
+            cache.remove(key);
+            return true;
+        } catch (RuntimeException e) {
+            LOGGER.error(e, "Cannot delete object with ID %s", key);
+        }
+        return false;
     }
 
     /**

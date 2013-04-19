@@ -27,6 +27,9 @@ import sf.net.experimaestro.manager.json.JsonReal;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 
+import java.io.IOException;
+import java.io.StringWriter;
+
 import static com.google.common.collect.Ranges.closed;
 
 /**
@@ -55,6 +58,18 @@ public class JSJson extends JSBaseObject {
     public String toString() {
         return json.toString();
     }
+
+    @JSFunction
+    public String toSource() {
+        StringWriter writer = new StringWriter();
+        try {
+            json.toJSONString(writer);
+        } catch (IOException e) {
+            throw new AssertionError("Should not happen: I/O error while serializing to a StringWriter");
+        }
+        return writer.toString();
+    }
+
 
     @Override
     public Object getDefaultValue(Class<?> hint) {

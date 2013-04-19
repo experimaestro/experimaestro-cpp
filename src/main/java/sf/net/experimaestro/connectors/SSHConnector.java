@@ -188,8 +188,9 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
-            super(connector, null, job, true);
+            super(connector, null, job);
             this.channel = channel;
+            startWaitProcess();
         }
 
         @Override

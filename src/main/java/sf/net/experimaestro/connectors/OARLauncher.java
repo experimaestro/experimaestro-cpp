@@ -149,7 +149,8 @@ public class OARLauncher implements Launcher {
         }
 
         public OARProcess(Job job, String pid, SingleHostConnector connector) {
-            super(connector, String.format("oar:%s", connector.getHostName(), pid), job, true);
+            super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
+            startWaitProcess();
         }
 
 

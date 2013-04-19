@@ -18,8 +18,12 @@
 
 package sf.net.experimaestro.manager.json;
 
+import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+
+import java.io.IOException;
+import java.io.Writer;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -49,8 +53,14 @@ public class JsonBoolean implements Json {
 
     @Override
     public String toString() {
-        return Boolean.toString(value);
+        return JSONValue.toJSONString(value);
     }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        JSONValue.writeJSONString(value, out);
+    }
+
 
     @Override
     public QName type() {

@@ -132,9 +132,9 @@ public class TrieNode {
                     }
                 } else {
 
-                    // Check if we need a new parent for both nodes
+                    // Check if we need a new parent for both values
                     if (intersection.size() != size) {
-                        // Create a new parent that will contain both nodes
+                        // Create a new parent that will contain both values
                         Parent newParent = new Parent(intersection, new TrieNode());
                         newParent.node.parents.add(parent);
                         newParent.node.weight += parent.node.weight;

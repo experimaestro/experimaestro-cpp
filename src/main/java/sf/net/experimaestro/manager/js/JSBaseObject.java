@@ -273,6 +273,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
             if (obj instanceof FileObject)
                 return new JSFileObject(XPMObject.getXPMObject(scope), (FileObject) obj);
+            if (obj instanceof Node)
+                return new JSNode((Node)obj);
 
             return super.wrap(cx, scope, obj, staticType);
         }

@@ -53,6 +53,7 @@ import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -72,6 +73,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Pattern;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -95,10 +97,18 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    static public class MethodDescription {
+    static public interface Arguments {
+        public abstract RPCArgument getArgument(int i);
+
+        public abstract Class<?> getType(int i);
+
+        public abstract int size();
+    }
+
+    static public class MethodDescription implements Arguments {
         Method method;
-        RPCArgument arguments[];
-        Class<?>[] types;
+        private RPCArgument[] arguments;
+        private Class<?>[] types;
 
         public MethodDescription(Method method) {
             this.method = method;
@@ -117,6 +127,21 @@ public class JsonRPCMethods extends HttpServlet {
 
             }
         }
+
+        @Override
+        public RPCArgument getArgument(int i) {
+            return arguments[i];
+        }
+
+        @Override
+        public Class<?> getType(int i) {
+            return types[i];
+        }
+
+        @Override
+        public int size() {
+            return arguments.length;
+        }
     }
 
     private static Multimap<String, MethodDescription> methods = HashMultimap.create();
@@ -131,11 +156,33 @@ public class JsonRPCMethods extends HttpServlet {
 
     }
 
-    private int convert(Object p, MethodDescription description, int score, Object args[], int index) {
+    static public class RPCArrayArgument implements RPCArgument {
+        @Override
+        public String name() {
+            return null;
+        }
+
+        @Override
+        public boolean required() {
+            return true;
+        }
+
+        @Override
+        public String help() {
+            return "Array element";
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return RPCArgument.class;
+        }
+    }
+
+    private int convert(Object p, Arguments description, int score, Object args[], int index) {
         Object o;
         if (p instanceof JSONObject)
             // If p is a map, then use the json name of the argument
-            o = ((JSONObject) p).get(description.arguments[index].name());
+            o = ((JSONObject) p).get(description.getArgument(index).name());
         else if (p instanceof JSONArray)
             // if it is an array, then map it
             o = ((JSONArray) p).get(index);
@@ -146,13 +193,41 @@ public class JsonRPCMethods extends HttpServlet {
             o = p;
         }
 
-        Class aType = description.types[index];
+        final Class aType = description.getType(index);
 
         if (o == null) {
-            if (description.arguments[index].required())
+            if (description.getArgument(index).required())
                 return Integer.MIN_VALUE;
 
             return score - 10;
+        }
+
+        if (aType.isArray()) {
+            if (o instanceof JSONArray) {
+                final JSONArray array = (JSONArray) o;
+                final Object[] arrayObjects = args != null ? new Object[array.size()] : null;
+                Arguments arguments = new Arguments() {
+                    @Override
+                    public RPCArgument getArgument(int i) {
+                        return new RPCArrayArgument();
+                    }
+
+                    @Override
+                    public Class<?> getType(int i) {
+                        return aType.getComponentType();
+                    }
+
+                    @Override
+                    public int size() {
+                        return array.size();
+                    }
+                };
+                for (int i = 0; i < array.size() && score > Integer.MIN_VALUE; i++) {
+                    score = convert(array.get(i), arguments, score, arrayObjects, i);
+                }
+                return score;
+            }
+            return Integer.MIN_VALUE;
         }
 
         if (aType.isAssignableFrom(o.getClass())) {
@@ -491,7 +566,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId()).values();
+        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId());
 
         if (deps.isEmpty())
             return 0;
@@ -551,6 +626,65 @@ public class JsonRPCMethods extends HttpServlet {
         }
 
         return nbUpdated;
+    }
+
+    /**
+     * Remove resources specified with the given filter
+     *
+     * @param group       The group of the resource (or none if no filter)
+     * @param id          The URI of the resource to delete
+     * @param statesNames The states of the resource to delete
+     */
+    @RPCMethod(name = "remove", help = "Remove jobs")
+    public int remove(@RPCArgument(name = "group", required = false) String group,
+                      @RPCArgument(name = "id", required = false) String id,
+                      @RPCArgument(name = "regexp") Boolean _idIsRegexp,
+                      @RPCArgument(name = "states", required = false) String[] statesNames,
+                      @RPCArgument(name = "recursive", required = false) Boolean _recursive
+    ) throws Exception {
+        int n = 0;
+        EnumSet<ResourceState> states = getStates(statesNames);
+        boolean recursive = _recursive != null ? _recursive : false;
+
+        Pattern idPattern =  _idIsRegexp != null && _idIsRegexp ?
+                Pattern.compile(id) : null;
+
+        if (id != null && !id.equals("") && idPattern == null) {
+            final Resource resource = scheduler.getResource(ResourceLocator.parse(id));
+            if (resource == null)
+                throw new ExperimaestroRuntimeException("Cannot find resource [%s]", id);
+            if (!resource.getGroup().startsWith(group))
+                throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
+                        resource, resource.getGroup(), group);
+            if (!states.contains(resource.getState()))
+                throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
+                        resource, resource.getState(), states);
+            scheduler.delete(resource, recursive);
+            n = 1;
+        } else {
+            // TODO order the tasks so that depencies are removed first
+            HashSet<Resource> toRemove = new HashSet<>();
+            try (final CloseableIterator<Resource> resources = scheduler.getResources().entities(group, recursive, states, true)) {
+                while (resources.hasNext()) {
+                    Resource resource = resources.next();
+                    if (idPattern != null) {
+                        if (!idPattern.matcher(resource.getIdentifier()).matches())
+                            continue;
+                    }
+                    try {
+                        toRemove.add(resource);
+                    } catch (Exception e) {
+                        // TODO should output this to the caller
+                    }
+                    n++;
+                }
+            }
+
+            for(Resource resource: toRemove)
+                scheduler.delete(resource, recursive);
+
+        }
+        return n;
     }
 
 

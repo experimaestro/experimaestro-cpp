@@ -32,4 +32,9 @@ public class EndOfJobMessage extends Message {
         this.code = code;
         this.timestamp = timestamp;
     }
+
+    @Override
+    public String toString() {
+        return String.format("end-of-job(%d)", code);
+    }
 }

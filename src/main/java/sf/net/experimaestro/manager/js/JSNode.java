@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.vfs2.FileSystemException;
+import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.w3c.dom.Document;
@@ -37,6 +38,8 @@ import sf.net.experimaestro.utils.XMLUtils;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
+import java.io.IOException;
+import java.io.Writer;
 import java.nio.charset.Charset;
 
 /**
@@ -122,7 +125,12 @@ public class JSNode extends JSBaseObject implements Json {
 
     @JSFunction("toSource")
     public String toSource() {
-        return XMLUtils.toString(node);
+        return XMLUtils.toString(node, false);
+    }
+
+    @JSFunction("toSource")
+    public String toSource(boolean declaration) {
+        return XMLUtils.toString(node, declaration);
     }
 
     @Override
@@ -152,7 +160,7 @@ public class JSNode extends JSBaseObject implements Json {
     public JSFileObject path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
         NodeList nodeList = get_one_node(scope, xpath);
         XPMObject xpm = XPMObject.getXPMObject(scope);
-        return  new JSFileObject(xpm, getAttribute(nodeList.item(0), Manager.XP_PATH));
+        return new JSFileObject(xpm, getAttribute(nodeList.item(0), Manager.XP_PATH));
     }
 
     @JSFunction(scope = true)
@@ -200,5 +208,10 @@ public class JSNode extends JSBaseObject implements Json {
     @Override
     public QName type() {
         return ValueType.XP_XML;
+    }
+
+    @Override
+    public void toJSONString(Writer out) throws IOException {
+        out.write(JSONValue.escape(XMLUtils.toString(node)));
     }
 }

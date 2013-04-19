@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.plans;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import org.apache.xerces.dom.DocumentImpl;
 import sf.net.experimaestro.manager.json.Json;
 
 import java.util.ArrayList;
@@ -31,23 +30,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A constant in a plan just generate nodes
+ * A constant in a plan just generate json values
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
 public class Constant extends Operator {
-    List<Json> nodes = new ArrayList<>();
+    List<Json> values = new ArrayList<>();
 
-    public Constant(Json... documents) {
-        this(Arrays.asList(documents));
+    public Constant(Json... values) {
+        this(Arrays.asList(values));
     }
 
-    public Constant(Iterable<Json> documents) {
-        for (Json document : documents) {
-            if (document instanceof DocumentImpl)
-                ((DocumentImpl) document).setReadOnly(true,true);
-            nodes.add(document);
+    public Constant(Iterable<Json> values) {
+        for (Json json : values) {
+            this.values.add(json);
         }
     }
 
@@ -58,7 +55,7 @@ public class Constant extends Operator {
 
     @Override
     protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
-        return Iterators.transform(nodes.iterator(), new Function<Json, ReturnValue>() {
+        return Iterators.transform(values.iterator(), new Function<Json, ReturnValue>() {
             @Override
             public ReturnValue apply(Json input) {
                 return new ReturnValue(null, input);
@@ -74,19 +71,19 @@ public class Constant extends Operator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        return new Constant(nodes);
+        return new Constant(values);
     }
 
     @Override
     protected String getName() {
-        return String.format("XML (%d)", nodes.size());
+        return String.format("JSON (#=%d)", values.size());
     }
 
     public void add(Constant source) {
-        nodes.addAll(source.nodes);
+        values.addAll(source.values);
     }
 
     public void add(Json document) {
-        nodes.add(document);
+        values.add(document);
     }
 }

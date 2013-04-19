@@ -105,9 +105,13 @@ public class JSPlan extends JSAbstractOperator implements Callable {
             try {
                 if (value instanceof NativeArray) {
                     final NativeArray array = (NativeArray) value;
-                    for (int i = 0; i < array.getLength(); i++) {
-                        final Object e = array.get(i);
-                        inputs.set(id, getSimple(e, scope));
+                    if (array.getLength() == 0) {
+                        inputs.set(id, new Constant());
+                    } else {
+                        for (int i = 0; i < array.getLength(); i++) {
+                            final Object e = array.get(i);
+                            inputs.set(id, getSimple(e, scope));
+                        }
                     }
                 } else
                     inputs.set(id, getSimple(value, scope));
@@ -149,11 +153,11 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         }
 
         if (value instanceof String) {
-            return new Constant(new JsonString((String)value));
+            return new Constant(new JsonString((String) value));
         }
 
         if (value instanceof Json)
-            return new Constant((Json)value);
+            return new Constant((Json) value);
 
         if (value instanceof JSAbstractOperator) {
             return ((JSAbstractOperator) value).getOperator();
@@ -167,7 +171,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         }
 
         if (value instanceof Node)
-            return new Constant(new JSNode((Node)value));
+            return new Constant(new JSNode((Node) value));
 
         // --- Plans & transformations
 

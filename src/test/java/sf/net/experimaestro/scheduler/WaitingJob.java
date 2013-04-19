@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
@@ -30,6 +31,10 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A job that just waits a bit
@@ -40,6 +45,7 @@ import java.util.ArrayList;
 @Persistent
 public class WaitingJob extends Job<JobData> {
     final static private Logger LOGGER = Logger.getLogger();
+    private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     transient private ThreadCount counter;
 
@@ -49,32 +55,76 @@ public class WaitingJob extends Job<JobData> {
     // id for debugging
     private String id;
 
-    // Duration before exiting
-    long duration;
 
+    @Persistent
+    static public class Action {
+        // Duration before exiting
+        long duration;
+
+        // Exit code
+        int code;
+
+        // Waiting time before restart (0 = no restart)
+        long restart;
+
+        Action() {
+        }
+
+        Action(long duration, int code, long restart) {
+            this.duration = duration;
+            this.code = code;
+            this.restart = restart;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Action(duration=%dms, code=%d, restart=%dms)", duration, code, restart);
+        }
+    }
     // The code to return
-    int code;
+
+    ArrayList<Action> actions;
+    int currentIndex;
+    transient Action current;
 
     protected WaitingJob() {
     }
 
-    public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, long duration, int code) {
+    public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, Action... actions) {
         super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, id).getAbsolutePath())));
         this.counter = counter;
         this.id = id;
-        this.duration = duration;
-        counter.add();
-        this.code = code;
+        counter.add(actions.length);
+
+        this.actions = new ArrayList<>(Arrays.asList(actions));
+        currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
         this.setState(ResourceState.WAITING);
     }
 
+    public void restart(Action... actions) throws Exception {
+        this.actions = new ArrayList<>(Arrays.asList(actions));
+        currentIndex = 0;
+        restart();
+    }
+
+
+    @Override
+    public boolean init(Scheduler scheduler) throws DatabaseException {
+        current = currentIndex < actions.size() ? actions.get(currentIndex) : null;
+        return super.init(scheduler);
+    }
 
     @Override
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
         assert readyTimestamp > 0;
-        return new MyXPMProcess(counter, getMainConnector(), this, duration, code);
+        if (currentIndex >= actions.size()) {
+            throw new AssertionError("No next action");
+        }
+
+        current = actions.get(currentIndex++);
+        return new MyXPMProcess(counter, getMainConnector(), this, current);
     }
 
     @Override
@@ -88,13 +138,42 @@ public class WaitingJob extends Job<JobData> {
     public boolean setState(ResourceState state) {
         if (state == ResourceState.READY)
             readyTimestamp = System.currentTimeMillis();
-        else if (!state.isActive() && counter != null) {
-            LOGGER.debug("Releasing counter for job " + id + "/" + (counter.getCount()-1));
+
+        ResourceState oldState
+                = getState();
+        if (!super.setState(state))
+            return false;
+
+        boolean old_active = oldState != null && oldState.isActive();
+        LOGGER.debug("State going from %s [%b] to %s [%b] for job %s", oldState, old_active, state, state.isActive(), id);
+
+        // If we go to a non active state, release the counter
+        if (old_active && !state.isActive() && counter != null) {
+            LOGGER.debug("Releasing counter for job %s : counter=%d", id, counter.getCount() - 1);
             counter.del();
-            counter = null;
+            if (state == ResourceState.ERROR || state == ResourceState.DONE) {
+                if (current.restart > 0) {
+                    if (currentIndex < actions.size())
+                        scheduler.schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                LOGGER.debug("Restarting job %s[%d]", id);
+                                try {
+                                    restart();
+                                } catch (Exception e) {
+                                    throw new AssertionError("Could not restart job", e);
+                                }
+                            }
+                        }, current.restart, TimeUnit.MILLISECONDS);
+                    else {
+                        LOGGER.error("Not restarting since there is no next action");
+                    }
+                }
+            }
         }
 
-        return super.setState(state);
+
+        return true;
     }
 
     @Override
@@ -103,25 +182,36 @@ public class WaitingJob extends Job<JobData> {
         return b;
     }
 
+    public int finalCode() {
+        return actions.get(actions.size() - 1).code;
+    }
+
 
     @Persistent
     static private class MyXPMProcess extends XPMProcess {
         private long timestamp;
-        private long duration;
         private transient ThreadCount counter;
-        int code;
+        Action action;
 
         public MyXPMProcess() {
-
+            LOGGER.debug("Default constructor for MyXPMProcess");
         }
 
-        public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, long duration, int code) {
-            super(connector, "1", job, true);
+        @Override
+        public void init(Job job) throws DatabaseException {
+            LOGGER.debug("Initialized with job %s", job);
+        }
+
+        public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, Action action) {
+            super(connector, "1", job);
+            assert action != null;
             this.timestamp = System.currentTimeMillis();
-            this.duration = duration;
             this.counter = counter;
-            this.code = code;
+            this.action = action;
+            LOGGER.debug("XPM Process initialized for job " + job + " with action " + action);
+            startWaitProcess();
         }
+
 
         @Override
         public void dispose() {
@@ -132,17 +222,17 @@ public class WaitingJob extends Job<JobData> {
         public int waitFor() throws InterruptedException {
             assert job.getStartTimestamp() > 0;
             synchronized (this) {
-                LOGGER.debug("Starting to wait - " + job);
-                long toWait = duration - (System.currentTimeMillis() - timestamp);
+                LOGGER.debug("Starting to wait - " + job + " - " + action);
+                long toWait = action.duration - (System.currentTimeMillis() - timestamp);
                 if (toWait > 0) wait(toWait);
                 LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
             }
-            return code;
+            return action.code;
         }
 
         @Override
         public boolean isRunning() throws Exception {
-            return duration < System.currentTimeMillis() - timestamp;
+            return action.duration < System.currentTimeMillis() - timestamp;
         }
 
         @Override

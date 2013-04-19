@@ -487,7 +487,7 @@ public abstract class Operator {
      * Print a node
      *
      * @param out       The output stream
-     * @param planNodes The nodes already processed (case of shared ancestors)
+     * @param planNodes The values already processed (case of shared ancestors)
      */
     public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
         if (planNodes.contains(this))

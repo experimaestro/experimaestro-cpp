@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Timer;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -184,39 +183,54 @@ final public class Scheduler {
     /**
      * Retrieves resources on which the given resource depends
      *
+     *
      * @param to The resource
      * @return A map of dependencies
      */
-    public TreeMap<Long, Dependency> getDependencies(long to) {
+    public ArrayList<Dependency> getDependencies(long to) {
         return resources.retrieveDependencies(to);
     }
 
     /**
      * Retrieves resources that depend upon the given resource
      *
+     *
      * @param from The resource
      * @return A map of dependencies
      */
-    public TreeMap<Long, Dependency> getDependentResources(long from) {
+    public ArrayList<Dependency> getDependentResources(long from) {
         return resources.retrieveDependentResources(from);
     }
 
     /**
      * Delete a resource
      *
-     * @param resource The resource to delete
+     * @param resource  The resource to delete
+     * @param recursive Delete dependent resources
      */
-    public void delete(Resource resource) {
+    public void delete(Resource resource, boolean recursive) {
         synchronized (resource) {
             if (resource.getState() == ResourceState.RUNNING)
                 throw new ExperimaestroRuntimeException("Cannot delete the running task [%s]", resource);
-            if (!resources.retrieveDependentResources(resource.getId()).isEmpty())
-                throw new ExperimaestroRuntimeException("Cannot delete the resource %s: it has dependencies", resource);
+            ArrayList<Dependency> dependencies = resources.retrieveDependentResources(resource.getId());
+            if (!dependencies.isEmpty()) {
+                if (recursive) {
+                    for (Dependency dependency : dependencies) {
+                        Resource dep = getResource(dependency.getTo());
+                        if (dep != null)
+                            delete(dep, true);
+                    }
+                } else
+                    throw new ExperimaestroRuntimeException("Cannot delete the resource %s: it has dependencies", resource);
+            }
 
-            resources.delete(resource.getId());
-            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, resource);
-            resource.notify(message);
-            notify(message);
+            if (resources.delete(resource.getId())) {
+                SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, resource);
+                resource.notify(message);
+                notify(message);
+            } else {
+                LOGGER.error("Could not delete resource %s", resource);
+            }
         }
     }
 
@@ -251,6 +265,7 @@ final public class Scheduler {
 
     /**
      * Add listener
+     *
      * @param listener
      */
     public void addListener(Listener listener) {
@@ -259,6 +274,7 @@ final public class Scheduler {
 
     /**
      * Remove a listener
+     *
      * @param listener
      */
     public void removeListener(Listener listener) {
@@ -269,7 +285,7 @@ final public class Scheduler {
      * Notify
      */
     public void notify(Message message) {
-        for(Listener listener: listeners)
+        for (Listener listener : listeners)
             listener.notify(message);
     }
 
