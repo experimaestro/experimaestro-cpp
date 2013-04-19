@@ -28,26 +28,26 @@ include("check_array.inc.js");
 ns = new Namespace("xpm.tests");
 var logger = xpm.logger("xpm.tests");
 
-tasks("ns:mult")= {
+tasks("ns:mult") = {
     inputs: {
         x: { value: "xp:integer" },
         y: { value: "xp:integer" }
     },
 
     run: function(x) {
-		logger.debug("Task mult: got x=%s and y=%s: %s", x.x(), x.y(), x.x() * x.y())
+        logger.debug("Task mult: got x=%s and y=%s: %s", x.x(), x.y(), x.x() * x.y())
         return x.x() * x.y();
     }
 };
 
-tasks("ns:plus")= {
+tasks("ns:plus") = {
     inputs: {
         x: { value: "xp:integer" },
         y: { value: "xp:integer" }
     },
 
     run: function(x) {
-		logger.debug("Task plus: got x=%s and y=%s: %s", x.x(), x.y(), x.x() + x.y())
+        logger.debug("Task plus: got x=%s and y=%s: %s", x.x(), x.y(), x.x() + x.y())
         return x.x() + x.y()
     }
 };

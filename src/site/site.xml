@@ -38,7 +38,7 @@
 
         <menu name="Manager">
             <item name="Introduction" href="manager/index.html"/>
-            <item name="XML Input/Output" href="manager/xml.html"/>
+            <item name="Json Input/Output" href="manager/json.html"/>
             <item name="Tasks" href="manager/tasks.html"/>
             <item name="JavaScript scripts" href="manager/javascript.html"/>
         </menu>
