@@ -296,9 +296,10 @@ public abstract class Resource<Data extends ResourceData>
      *
      * @param dependency The dependency
      */
-    protected void updateDependency(Dependency dependency) {
+    protected Dependency updateDependency(Dependency dependency) {
         if (dependencies != null)
-            dependencies.put(dependency.getFrom(), dependency);
+            return dependencies.put(dependency.getFrom(), dependency);
+        return null;
     }
 
 

@@ -20,6 +20,11 @@ dd { padding-bottom: .5em; }
     margin: 1em;
 }
 
+#delete-confirm {
+    display: none;
+}
+
+/* Restart */
 .xpm-resource-list img[name="restart"] {
     display: none;
 }
@@ -27,6 +32,16 @@ dd { padding-bottom: .5em; }
 .xpm-resource-list#state-error img[name="restart"] {
     display: inline;
     margin-right: 5px;
+}
+
+/* Delete */
+.xpm-resource-list img[name="delete"] {
+    display: inline;
+    margin-right: 5px;
+}
+
+.xpm-resource-list#state-running img[name="delete"] {
+    display: none;
 }
 
 #connection {

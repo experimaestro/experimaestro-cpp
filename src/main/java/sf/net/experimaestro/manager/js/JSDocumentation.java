@@ -23,9 +23,17 @@ import static java.lang.String.format;
  */
 public class JSDocumentation {
     static void documentMethod(Documentation.DefinitionList methods, Method method, String name) {
+        sf.net.experimaestro.manager.js.JSFunction xpmjsfunction = method.getAnnotation(sf.net.experimaestro.manager.js.JSFunction.class);
+        if (xpmjsfunction != null) {
+            if (!xpmjsfunction.value().equals(""))
+                name = xpmjsfunction.value();
+        }
+
         if (name == null) {
             final JSFunction annotation = method.getAnnotation(JSFunction.class);
-            if (annotation == null) return;
+            if (annotation == null) {
+                return;
+            }
             name = annotation.value();
         }
 
@@ -148,11 +156,13 @@ public class JSDocumentation {
             for (Method method : clazz.getDeclaredMethods()) {
                 String name = null;
                 if (ScriptableObject.class.isAssignableFrom(clazz)) {
-                    if (clazz.getAnnotation(JSFunction.class) != null)
-                        if (method.getName().startsWith("js_"))
+                    if (clazz.getAnnotation(JSFunction.class) != null) {
+                        if (method.getName().startsWith("js_")) {
                             name = method.getName();
-                        else
+                        } else {
                             continue;
+                        }
+                    }
                 } else {
                     if (!Modifier.isPublic(method.getModifiers()))
                         continue;

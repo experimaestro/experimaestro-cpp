@@ -23,7 +23,7 @@ $.jsonRPC.setup({
 
 
 // custom css expression for a case-insensitive contains()
-jQuery.expr[':'].Contains = function(a,i,m){
+$.expr[':'].Contains = function(a,i,m){
   return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase())>=0;
 };
 
@@ -85,7 +85,8 @@ function jsonrpc_error(r) {
 }
 
 
-// --- action: Restart
+// --- actions on jobs: restart, remove
+// TODO: invalidate a job (potentially recursively)
 var resource_restart_callback = function() {
     if (this.name == "restart") {
         $.jsonRPC.request('restart', {
@@ -95,7 +96,30 @@ var resource_restart_callback = function() {
             },
             error: jsonrpc_error,
         });
-    }
+    } else if (this.name == "delete") {
+        var rsrcid = $(this).parent().attr("name");
+
+        $( "#delete-confirm" ).dialog({
+            resizable: false,
+            height:140,
+            modal: true,
+            buttons: {
+            "Yes, I understand": function() {
+                $( this ).dialog( "close" );
+                $.jsonRPC.request('remove', {
+                  params: { "id": rsrcid, "recursive": false },
+                  success: function(r) {
+                      noty({text: "Successful delete", type: 'success', timeout: 5000});
+                  },
+                  error: jsonrpc_error,
+              });
+            },
+            "Cancel": function() {
+                $( this ).dialog( "close" );
+            }
+        }
+        });
+  }
 }
 
 // --- action: Get the details of a resource
@@ -109,11 +133,15 @@ var resource_link_callback = function() {
             // Activate the detail tab
             $( "#tab-main" ).tabs( "option", "active", 1);
 
+            //history.pushState();
+
         },
         error: jsonrpc_error
     });
     return false;
 };
+
+
 
 
 $().ready(function() {

@@ -115,13 +115,14 @@ public class LocalhostConnector extends SingleHostConnector {
         transient private Process process;
         transient private Thread destroyThread;
 
-        public LocalProcess() {
+        @SuppressWarnings("unused")
+		public LocalProcess() {
         }
 
         // Check on Windows:
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
-        public LocalProcess(Job job, Process process, boolean detach) {
+        public LocalProcess(Job<?> job, Process process, boolean detach) {
             super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job);
             this.process = process;
             if (!detach) {
@@ -236,10 +237,18 @@ public class LocalhostConnector extends SingleHostConnector {
             java.lang.ProcessBuilder builder = new java.lang.ProcessBuilder();
 
             // Set the environment
-            Map<String,String> environment = builder.environment();
-            if (environment() != null)
-                for(Map.Entry<String,String> entry: environment().entrySet())
-                    environment.put(entry.getKey(), entry.getValue());
+            Map<String,String> builderEnvironment = builder.environment();
+
+            if (this.environment() != null)
+                for(Map.Entry<String,String> entry:  this.environment().entrySet()) {
+                    builderEnvironment.put(entry.getKey(), entry.getValue());
+                }
+
+            if (LOGGER.isDebugEnabled()) {
+                for(Map.Entry<String,String> entry:  builderEnvironment.entrySet()) {
+                    LOGGER.debug("[*] %s=%s", entry.getKey(), entry.getValue());
+                }
+            }
 
             builder.redirectError(convert(error));
             builder.redirectOutput(convert(output));

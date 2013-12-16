@@ -1,11 +1,12 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.GroupBy;
 import sf.net.experimaestro.manager.plans.Operator;
@@ -92,6 +93,40 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return new JSOperator(getOperator().copy(true));
     }
 
+    @JSFunction(scope = true)
+    public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
+        if (objects.length == 0)
+            return this;
+
+        Object allObjects[] = new Object[objects.length+1];
+        System.arraycopy(objects, 0, allObjects, 1, objects.length);
+        allObjects[0] = this;
+        return JSTasks.merge(cx, scope, outputType, allObjects);
+    }
+
+    @JSFunction(scope = true)
+    public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, String key, Object... objects) {
+        Object allObjects[] = new Object[objects.length+1];
+        System.arraycopy(objects, 0, allObjects, 1, objects.length);
+
+        NativeObject jsobject = new NativeObject();
+        jsobject.put(key, jsobject, this);
+        allObjects[0] = jsobject;
+        return JSTasks.merge(cx, scope, outputType, allObjects);
+    }
+
+
+    @JSFunction("to_dot")
+    public String toDot(boolean simplify) throws XPathExpressionException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        Operator operator = getOperator().prepare();
+        if (simplify)
+            operator = Operator.simplify(operator);
+        operator.printDOT(ps);
+        return baos.toString();
+    }
+
 
     @JSFunction("to_dot")
     public String toDOT(boolean simplify, boolean initialize) throws XPathExpressionException {
@@ -138,23 +173,23 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         RunOptions runOptions = new RunOptions(simulate);
         runOptions.counts(details);
 
-        ArrayList<Json> result = new ArrayList<>();
+        ArrayList<JSJson> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
         final Iterator<Value> nodes = operator.iterator(runOptions);
         while (nodes.hasNext()) {
-            result.add(nodes.next().getNodes()[0]);
+            result.add(new JSJson(nodes.next().getNodes()[0]));
         }
 
         if (!details)
-            return result;
+            return result.toArray(new JSJson[result.size()]);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
         operator.printDOT(ps, runOptions.counts());
         ps.flush();
 
-        return new Object[]{result, baos.toString()};
-
+        return new NativeArray(new Object[]{result, baos.toString()});
     }
+
 }

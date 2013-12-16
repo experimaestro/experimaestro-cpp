@@ -19,9 +19,9 @@
 package sf.net.experimaestro.manager;
 
 
-public class XMLInput extends Input {
+public class JsonInput extends Input {
 
-	public XMLInput(Type type) {
+	public JsonInput(Type type) {
 		super(type);
 	}
 

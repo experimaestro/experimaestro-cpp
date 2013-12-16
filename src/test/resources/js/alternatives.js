@@ -35,7 +35,7 @@ tasks.set("abc:alt1", {
 	},
 	
 	run: function(inputs) {
-		return { "x": inputs.x, "xp:type": "abc:alt" };
+		return { "x": inputs.x, "type": "abc:alt" };
 	}
 });
 
@@ -60,7 +60,7 @@ function test_value() {
     task.set("p.x", 10);
     
     var r = task.run();
-    var v = r.x;
+    var v = r.x();
 
     if (typeof(v) == "undefined") 
         v = null;

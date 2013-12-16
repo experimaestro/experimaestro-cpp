@@ -65,7 +65,7 @@ function assert_ok(plan) {
  
 function test_integer() {
     assert_ok({ x_integer: 1 });
-    assert_ok({ x_integer: { "xp:type": "xp:integer", "xp:value": 1 } });
+    assert_ok({ x_integer: { "type": "xp:integer", "xp:value": 1 } });
     
     assert_error({ x_integer: 1.2 });        
     assert_error({ x_integer: <a>hello</a> });        

@@ -40,8 +40,6 @@ import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -56,6 +54,10 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      * The wrapped operators
      */
     Plan plan;
+
+    protected JSPlan() {
+
+    }
 
     /**
      * Builds a wrapper around a operators
@@ -90,12 +92,12 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      * @return
      * @throws XPathExpressionException
      */
-    private PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
+    static public PlanInputs getMappings(NativeObject object, Scriptable scope) throws XPathExpressionException {
         PlanInputs inputs = new PlanInputs();
         return getMappings(inputs, DotName.EMPTY, object, scope);
     }
 
-    private PlanInputs getMappings(PlanInputs inputs, DotName prefix, NativeObject object, Scriptable scope) throws XPathExpressionException {
+    static private PlanInputs getMappings(PlanInputs inputs, DotName prefix, NativeObject object, Scriptable scope) throws XPathExpressionException {
         for (Object _id : object.getIds()) {
             final String name = JSUtils.toString(_id);
             DotName id = new DotName(prefix, DotName.parse(name));
@@ -132,7 +134,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      * @param scope
      * @return The object (String or XML fragment) or <tt>null</tt>
      */
-    Operator getSimple(Object value, Scriptable scope) throws XPathExpressionException {
+    static Operator getSimple(Object value, Scriptable scope) throws XPathExpressionException {
         value = JSUtils.unwrap(value);
 
         // --- Constants
@@ -226,16 +228,6 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         }
     }
 
-    @JSFunction("to_dot")
-    public String toDot(boolean simplify) throws XPathExpressionException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(baos);
-        Operator operator = plan.prepare();
-        if (simplify)
-            operator = Operator.simplify(operator);
-        operator.printDOT(ps);
-        return baos.toString();
-    }
 
     private Plan[][] getPlanPaths(Object[] args) {
         Plan paths[][] = new Plan[args.length][];

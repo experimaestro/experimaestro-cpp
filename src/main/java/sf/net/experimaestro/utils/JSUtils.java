@@ -46,6 +46,7 @@ import sf.net.experimaestro.manager.js.JSNode;
 import sf.net.experimaestro.manager.js.JSNodeList;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.json.JsonBoolean;
 import sf.net.experimaestro.manager.json.JsonInteger;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonReal;
@@ -200,9 +201,12 @@ public class JSUtils {
 
         if (value instanceof Integer)
             return new JsonInteger((Integer) value);
+
         if (value instanceof Long)
             return new JsonInteger((Long) value);
 
+        if (value instanceof Boolean)
+            return new JsonBoolean((Boolean) value);
 
         // --- A JS object
         if (value instanceof NativeObject) {

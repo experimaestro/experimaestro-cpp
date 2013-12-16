@@ -45,8 +45,8 @@ public class Manager {
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
 
-    public static final QName XP_TYPE = new QName(EXPERIMAESTRO_NS, "type");
-    public static final QName XP_VALUE = new QName(EXPERIMAESTRO_NS, "value");
+    public static final QName XP_TYPE = new QName(null, "type");
+    public static final QName XP_VALUE = new QName(null, "value");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);

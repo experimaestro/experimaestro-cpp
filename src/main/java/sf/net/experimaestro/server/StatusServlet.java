@@ -67,6 +67,10 @@ public class StatusServlet extends XPMServlet {
                     ListAdaptator.create(ResourceState.values()));
             out.println("<img id='connection' src='/images/disconnect.png' alt='[c]'>");
 
+            out.println("<div id=\"delete-confirm\" title=\"Delete this job?\">\n" +
+                    "<p><span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>\n" +
+                    "</div>\n");
+
             out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li></ul>");
             out.println("<div id=\"resources\" class=\"tab\"><ul>");
             for (ResourceState state : values) {
@@ -86,6 +90,7 @@ public class StatusServlet extends XPMServlet {
                             try {
                                 ResourceLocator locator = resource.getLocator();
                                 out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                                out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
                                 out.format("<a href=\"javascript:void(0)\">%s</a></li>", locator);
                             } catch (Throwable t) {
                                 out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());

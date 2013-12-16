@@ -29,6 +29,7 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.WrapFactory;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.manager.json.Json;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -267,6 +268,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         public final static XPMWrapFactory INSTANCE = new XPMWrapFactory();
 
         private XPMWrapFactory() {
+            setJavaPrimitiveWrap(false);
         }
 
         @Override
@@ -275,6 +277,9 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 return new JSFileObject(XPMObject.getXPMObject(scope), (FileObject) obj);
             if (obj instanceof Node)
                 return new JSNode((Node)obj);
+            if (obj instanceof Json) {
+                return new JSJson((Json) obj);
+            }
 
             return super.wrap(cx, scope, obj, staticType);
         }
@@ -286,6 +291,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
             if (obj instanceof JSTasks.TaskRef) {
                 return (Scriptable) ((JSTasks.TaskRef) obj).get(cx);
+            }
+
+            if (obj instanceof Json) {
+                return new JSJson((Json) obj);
             }
 
             if (obj instanceof Node)

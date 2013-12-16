@@ -113,7 +113,8 @@ public class Join extends Product {
             reference.contextIndices = new int[parents.size()];
             for (int i = 0; i < parentStreams.size(); i++) {
                 Map<Operator, Integer> map = parentStreams.get(i);
-                reference.contextIndices[i] = map.get(reference.operator).intValue();
+                Integer index = map.get(reference.operator);
+                reference.contextIndices[i] = index.intValue();
             }
         }
 

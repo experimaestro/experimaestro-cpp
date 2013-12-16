@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import sf.net.experimaestro.utils.WrappedResult;
 
 import java.util.ArrayList;
@@ -189,8 +190,12 @@ public class Order<T> implements Iterable<Set<T>> {
 
     public void flatten() {
         List<Set<T>> newList = new ArrayList<>();
-        for (T t : items())
-            newList.add(ImmutableSet.of(t));
+        for (T t : items()) {
+            ImmutableSet.of(t);
+            Set<T> set = new ObjectArraySet<>(1);
+            set.add(t);
+            newList.add(set);
+        }
         list = newList;
     }
 }

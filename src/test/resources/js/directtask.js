@@ -34,7 +34,7 @@ var r = tasks("abc:task").run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {
-	if (r == undefined || r != 10)
+	if (r == undefined || r() != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }	
 	

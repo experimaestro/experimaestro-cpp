@@ -18,14 +18,21 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.vfs2.FileDepthSelector;
+import org.apache.commons.vfs2.FileFilter;
+import org.apache.commons.vfs2.FileFilterSelector;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSystemException;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,12 +41,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
 public class JSFileObject extends JSBaseObject implements Json {
+    final static Logger LOGGER = Logger.getLogger();
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
     private XPMObject xpm;
@@ -99,17 +109,43 @@ public class JSFileObject extends JSBaseObject implements Json {
     @JSHelp(value = "Returns a file object corresponding to the path given in the arguments. " +
             "Each name given corresponds to a new path component starting from this file object.",
             arguments = @JSArguments({@JSArgument(type = "String", name = "name"), @JSArgument(name = "...")}))
-    public JSFileObject path(String... args) throws FileSystemException {
+    public JSFileObject path(Object... args) throws FileSystemException {
         FileObject current = file;
         for (int i = 0; i < args.length; i++) {
-            if (args[i] == null || args[i].equals(""))
-                throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
-            String name = Context.toString(args[i]);
-            current = current.resolveFile(name);
+            current = path(current, i, args[i]);
         }
 
         return new JSFileObject(xpm, current);
     }
+
+    private FileObject path(FileObject current, int i, Object arg) throws FileSystemException {
+        if (arg == null)
+            throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
+
+        if (arg instanceof NativeArray)
+            return path(current, (NativeArray)arg);
+
+        if (arg instanceof JSJson) {
+            Json json = ((JSJson)arg).getJson();
+            if (json instanceof JsonArray)
+            return path(current, (JsonArray)json);
+        }
+
+        String name = Context.toString(arg);
+        current = current.resolveFile(name);
+        return current;
+    }
+
+    private FileObject path(FileObject current, List array) throws FileSystemException {
+        for (int i = 0; i < array.size(); i++) {
+            Object value = array.get(i);
+            current = path(current, i, value);
+        }
+        return current;
+    }
+
+
+
 
     @JSFunction("mkdirs")
     @JSHelp("Creates this folder, if it does not exist.  Also creates any ancestor\n" +
@@ -140,10 +176,32 @@ public class JSFileObject extends JSBaseObject implements Json {
     public Object remove_extension(String extension) throws FileSystemException {
         String baseName = file.getName().getBaseName();
         if (baseName.endsWith(extension))
-            baseName = baseName.substring(0, baseName.length()-extension.length());
+            baseName = baseName.substring(0, baseName.length() - extension.length());
         return new JSFileObject(xpm, file.getParent().resolveFile(baseName));
     }
 
+    @JSFunction
+    @JSHelp("Find all the matching files within this folder")
+    public JSJson find_matching_files(@JSArgument(name = "regexp", help = "The regular expression") String regexp) throws FileSystemException {
+        final Pattern pattern = Pattern.compile(regexp);
+        final JsonArray array = new JsonArray();
+        FileObject[] files = file.findFiles(new FileFilterSelector(new FileFilter() {
+            @Override
+            public boolean accept(FileSelectInfo fileSelectInfo) {
+                LOGGER.info("Looking at %s", fileSelectInfo.getFile().getName());
+                return pattern.matcher(fileSelectInfo.getFile().getName().getBaseName()).matches();
+            }
+        }));
+        for(FileObject file: files) {
+            array.add(new JSFileObject(xpm, file));
+        }
+        return new JSJson(array);
+    }
+
+    @JSFunction
+    public void copy_to(@JSArgument(name="destination") JSFileObject destination) throws FileSystemException {
+        destination.file.copyFrom(file, new FileDepthSelector(0, 0));
+    }
 
     @Override
     public Json clone() {
@@ -157,7 +215,7 @@ public class JSFileObject extends JSBaseObject implements Json {
 
     @Override
     public Object get() {
-       return this;
+        return this;
     }
 
     @Override

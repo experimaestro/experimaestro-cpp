@@ -78,6 +78,9 @@ abstract public class Dependency {
         return this;
     }
 
+    public boolean hasLock() {
+    	return lock != null;
+    }
 
     public long getDatabaseId() {
         return id;
@@ -93,7 +96,7 @@ abstract public class Dependency {
 
     @Override
     public String toString() {
-        return String.format("Dep[R%d-R%d]; %s", from, to, status);
+        return String.format("Dep[R%d-R%d]; %s; %b", from, to, status, hasLock());
     }
 
     /**
@@ -177,4 +180,9 @@ abstract public class Dependency {
     }
 
 
+    public void unactivate() {
+        lock.close();
+        lock = null;
+        status = DependencyStatus.UNACTIVE;
+    }
 }

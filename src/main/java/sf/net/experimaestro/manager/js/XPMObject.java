@@ -31,6 +31,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
@@ -56,6 +57,8 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.CommandArgument;
 import sf.net.experimaestro.scheduler.CommandArguments;
 import sf.net.experimaestro.scheduler.CommandLineTask;
@@ -684,7 +687,8 @@ public class XPMObject {
         // Run the process and captures the output
         final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
         XPMProcessBuilder builder = connector.processBuilder();
-
+        
+        
 
         TreeMap<String, FileObject> files = new TreeMap<>();
 
@@ -708,6 +712,9 @@ public class XPMObject {
 
 
             builder.detach(false);
+            
+            builder.environment(environment);
+            
             XPMProcess p = builder.start();
             BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
@@ -739,9 +746,16 @@ public class XPMObject {
      */
     public void log(String format, Object... objects) {
         rootLogger.info(format, objects);
-        LOGGER.debug(format, objects);
     }
 
+    /**
+     * Log a message to be returned to the client
+     */
+    public void warning(String format, Object... objects) {
+        RhinoException rhinoException = new XPMRhinoException();
+
+        rootLogger.warn(String.format(format, objects) + " in " + rhinoException.getScriptStack()[0]);
+    }
 
     /**
      * Get a QName
@@ -825,6 +839,10 @@ public class XPMObject {
             task.addDependency(dependency);
         }
 
+        
+        // --- Environment
+        task.environment = new TreeMap<>(environment);
+        
         // --- Options
 
         if (options != null) {
@@ -885,6 +903,8 @@ public class XPMObject {
                 }
 
             }
+            
+            
 
         }
 
@@ -932,7 +952,6 @@ public class XPMObject {
 
     /**
      * Transform an array of JS objects into a command line argument object
-     *
      *
      * @param jsargs         The input array
      * @param parameterFiles (out) A map that will contain the parameter files defined in the command line
@@ -1115,6 +1134,7 @@ public class XPMObject {
         }
 
         @JSFunction("set_default_group")
+        @JSHelp("Set the default group for new tasks")
         public void setDefaultGroup(String name) {
             xpm.defaultGroup = name;
         }
@@ -1187,7 +1207,7 @@ public class XPMObject {
 
         @JSFunction("get_script_file")
         public Scriptable getScriptFile() throws FileSystemException {
-                return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
+            return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.getFile());
         }
 
         /**
@@ -1303,6 +1323,16 @@ public class XPMObject {
         public boolean simulate() {
             return xpm.simulate;
         }
+        
+        @JSFunction
+        public String env(String key, String value) {
+        	return xpm. environment.put(key, value);
+        }
+
+        @JSFunction
+        public String env(String key) {
+        	return xpm.environment.get(key);
+        }
 
         private void output(Node node) {
             switch (node.getNodeType()) {
@@ -1324,15 +1354,28 @@ public class XPMObject {
 
     static class XPMFunctions {
         @JSFunction("merge")
-        static public NativeObject merge(NativeObject... objects) {
+        static public NativeObject merge(Object... objects) {
             NativeObject returned = new NativeObject();
-            for (NativeObject object : objects) {
-                for (Map.Entry<Object, Object> entry : object.entrySet()) {
-                    Object key = entry.getKey();
-                    if (returned.has(key.toString(), returned))
-                        throw new XPMRhinoException("Conflicting id in merge: %s", key);
-                    returned.put(key.toString(), returned, entry.getValue());
-                }
+
+            for (Object object : objects) {
+                if (object instanceof NativeObject) {
+                    NativeObject nativeObject = (NativeObject) object;
+                    for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
+                        Object key = entry.getKey();
+                        if (returned.has(key.toString(), returned))
+                            throw new XPMRhinoException("Conflicting id in merge: %s", key);
+                        returned.put(key.toString(), returned, entry.getValue());
+                    }
+                } else if (object instanceof JSJson) {
+                    Json json = ((JSJson) object).getJson();
+                    if (!(json instanceof JsonObject))
+                        throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
+                    JsonObject jsonObject = (JsonObject)json;
+                    for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
+                        returned.put(entry.getKey(), returned, new JSJson(entry.getValue()));
+                    }
+
+                } else throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
 
             }
             return returned;
@@ -1347,6 +1390,15 @@ public class XPMObject {
         @JSFunction
         public static JSInput input(String name) {
             return new JSInput(name);
+        }
+
+        @JSFunction("_")
+        public static Object get_value(Object object) {
+            object = unwrap(object);
+            if (object instanceof Json)
+                return ((Json) object).get();
+
+            return object;
         }
 
         @JSFunction("assert")

@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager;
 
 import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonBoolean;
 import sf.net.experimaestro.manager.json.JsonInteger;
@@ -113,7 +114,24 @@ public class ValueType extends Type {
         return true;
     }
 
-//
+    @Override
+    public void validate(Json element) throws ValueMismatchException {
+        if (qname().equals(Manager.XP_ANY))
+            return;
+
+        QName type = element.type();
+
+        if (type.equals(qname()))
+            return;
+
+        if (qname().equals(XP_REAL) && type.equals(XP_INTEGER))
+            return;
+
+        throw new ValueMismatchException("Parameter was set to a value with a wrong type [%s] - expected [%s]",
+                type, this);
+    }
+
+    //
 //    @Override
 //    public void validate(Json element) {
 //        if (element.type()

@@ -218,7 +218,7 @@ def command_stop_server(args):
     server.Server.shutdown()
 
 
-def command_run_js(appendrgs):
+def command_run_js(args):
     conf = Configuration(args)
     client = conf.getWebSocketServer()
 
@@ -240,9 +240,13 @@ def command_run_js(appendrgs):
 
     logging.debug("Running JS scripts %s" % [s[0] for s in files])
 
+    params = {"files": files, "environment": dict(os.environ)}  
+    if args.debug_port > 0:
+        params["debug"] = args.debug_port
+
     try:
         code = 0
-        msg = json.dumps({"id": 1, "method": "run-javascript", "params": {"files": files, "environment": dict(os.environ)}})
+        msg = json.dumps({"id": 1, "method": "run-javascript", "params": params})
         client.send(msg)
         while client is not None:
             message = client.recv()
@@ -370,6 +374,7 @@ subparser = subparsers.add_parser("start-server", help="Start the experimaestro 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
 p_run_js.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
 p_run_js.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")

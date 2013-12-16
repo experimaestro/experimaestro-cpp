@@ -18,12 +18,12 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonInteger;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonReal;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 
@@ -36,7 +36,7 @@ import static com.google.common.collect.Ranges.closed;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 1/4/13
  */
-public class JSJson extends JSBaseObject {
+public class JSJson extends JSBaseObject implements Wrapper {
     private final Json json;
 
     public JSJson(Json json) {
@@ -49,12 +49,14 @@ public class JSJson extends JSBaseObject {
         return json;
     }
 
-    @JSFunction(call = true)
-    public Object call() {
-        return json.get();
+    @JSFunction(call = true, scope = true)
+    public Object call(Context cx, Scriptable scope) {
+        XPMObject.getXPMObject(scope).warning("Calling a Json object is strongly deprecated: use _ function instead");
+        return JSBaseObject.XPMWrapFactory.INSTANCE.wrap(cx, scope, json.get(), null);
     }
 
     @Override
+    @JSFunction
     public String toString() {
         return json.toString();
     }
@@ -73,24 +75,24 @@ public class JSJson extends JSBaseObject {
 
     @Override
     public Object getDefaultValue(Class<?> hint) {
-        if (hint == null)
-            if (json.isSimple())
-                return json.get();
+        if (hint == String.class)
+            return toString();
 
-        if (hint == Number.class) {
-            if (json instanceof JsonInteger || json instanceof JsonReal)
-                return json.get();
-            return Double.parseDouble(json.toString());
-        }
-
-        return json.toString();
+    	// We don't return the value since otherwise hidden bug could be introduced in scripts:
+    	// scripts should always access json value through calling it
+        return "Json";
     }
 
 
     @Override
     public Object get(String name, Scriptable start) {
-        if (json instanceof JsonArray && "length".equals(name))
-            return ((JsonArray) json).size();
+        if (json instanceof JsonArray) {
+            switch(name) {
+                case "length":
+                    return ((JsonArray) json).size();
+            }
+
+        }
 
         if (json instanceof JsonObject) {
             Json value = ((JsonObject) json).get(name);
@@ -124,4 +126,8 @@ public class JSJson extends JSBaseObject {
         return super.getIds();
     }
 
+    @Override
+    public Object unwrap() {
+        return json;
+    }
 }

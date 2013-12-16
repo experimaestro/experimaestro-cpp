@@ -55,7 +55,7 @@ public final class DebugShell {
     	boolean suspend = false;
     	boolean trace = true;
     	
-    	ArrayList argList = new ArrayList();
+    	ArrayList<String> argList = new ArrayList<>();
     	for (int i = 0; i < args.length; i++) {
     		String arg = args[i];
     		if (ARG_PORT.equals(arg)) {

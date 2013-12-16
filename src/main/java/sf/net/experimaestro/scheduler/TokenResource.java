@@ -26,7 +26,6 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -81,13 +80,6 @@ public class TokenResource extends Resource<ResourceData> {
         storeState(true);
     }
 
-
-    @Override
-    public void printXML(PrintWriter out, PrintConfig config) {
-        super.printXML(out, config);
-        out.format("<div>Used tokens: %d out of %d</div>", usedTokens, limit);
-    }
-
     @Override
     public JSONObject toJSON() throws IOException {
         JSONObject info = super.toJSON();
@@ -100,6 +92,22 @@ public class TokenResource extends Resource<ResourceData> {
 
     @Override
     synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+        LOGGER.debug("Updating token resource");
+    	int used = 0;
+    	for(Dependency dependency: scheduler.getDependentResources(getId())) {
+    		if (dependency.hasLock()) {
+                LOGGER.debug("Dependency [%s] has lock", dependency);
+    			used++;
+            }
+    	}
+    	
+    	if (used != this.usedTokens) {
+    		this.usedTokens = used;
+    		if (store)
+    			scheduler.store(this, true);
+    		return true;
+    	}
+    	
         return false;
     }
 

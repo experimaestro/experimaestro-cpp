@@ -33,6 +33,7 @@ import sf.net.experimaestro.manager.AlternativeType;
 import sf.net.experimaestro.manager.ArrayInput;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Input;
+import sf.net.experimaestro.manager.JsonInput;
 import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
@@ -41,7 +42,6 @@ import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskInput;
 import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.XMLInput;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
@@ -175,13 +175,9 @@ public class JSTaskFactory extends JSBaseObject {
                 setModule(module);
 
             // --- Get the task inputs
-            Object input = JSUtils.get(scope, "inputs", jsObject);
             inputs = new TreeMap<>();
-
-            if (input instanceof NativeObject) {
-                setInputs(scope, (NativeObject) input);
-            } else
-                throw new ExperimaestroRuntimeException("Cannot handle inputs of type %s", input.getClass());
+            setInputs(scope, jsObject, "inputs");
+            setInputs(scope, jsObject, "parameters");
 
 
             // --- Get the task outputs
@@ -220,6 +216,18 @@ public class JSTaskFactory extends JSBaseObject {
 
         }
 
+        private void setInputs(Scriptable scope, NativeObject jsObject, String name) throws ValueMismatchException {
+            Object input = JSUtils.get(scope, name, jsObject, true);
+
+            if (input == null)
+                return;
+
+            if (input instanceof NativeObject) {
+                setJSInputs(scope, (NativeObject) input);
+            } else
+                throw new ExperimaestroRuntimeException("Cannot handle inputs of type %s", input.getClass());
+        }
+
         static public Set<String> getFields(Scriptable object, String... keys) {
             Set<String> selected = new HashSet<>();
             for (String key : keys) {
@@ -236,7 +244,7 @@ public class JSTaskFactory extends JSBaseObject {
          * @param scope   The current JS scope
          * @param jsInput The JS input object
          */
-        private void setInputs(final Scriptable scope, final NativeObject jsInput) throws ValueMismatchException {
+        private void setJSInputs(final Scriptable scope, final NativeObject jsInput) throws ValueMismatchException {
             String2String prefixes = new JSNamespaceBinder(scope);
 
             final Object[] ids = jsInput.getIds();
@@ -269,14 +277,14 @@ public class JSTaskFactory extends JSBaseObject {
                 switch (type) {
                     case "value":
                         final ValueType valueType = inputType == null ? null : new ValueType(inputType);
-                        input = new XMLInput(valueType);
+                        input = new JsonInput(valueType);
                         break;
 
                     case "xml":
                         xpm.getRootLogger().warn("xml is *strongly* deprecated: use json [%s]", id);
 
                     case "json":
-                        input = new XMLInput(new Type(inputType));
+                        input = new JsonInput(new Type(inputType));
                         break;
 
                     case "alternative":
@@ -372,10 +380,10 @@ public class JSTaskFactory extends JSBaseObject {
                     throw new RuntimeException(
                             "Could not find the create or run converter.");
 
-                JSDirectTask jdDirectTask = new JSDirectTask(xpm, this, jsScope,
+                JSDirectTask jsDirectTask = new JSDirectTask(xpm, this, jsScope,
                         jsObject, (Function) function, output);
-                jdDirectTask.init();
-                return jdDirectTask;
+                jsDirectTask.init();
+                return jsDirectTask;
             }
 
             // Call it

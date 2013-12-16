@@ -185,6 +185,9 @@ public class CommandLineTask extends Job<JobData> {
             builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         builder.redirectInput(jobInput);
+        
+        if (environment != null)
+        	builder.environment(environment);
 
         // Add files
         TreeMap<String, FileObject> files = new TreeMap<>();

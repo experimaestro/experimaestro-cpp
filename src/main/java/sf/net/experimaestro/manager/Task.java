@@ -268,7 +268,7 @@ public abstract class Task {
             throw e;
         } catch (RuntimeException e) {
             final ExperimaestroRuntimeException e2 = new ExperimaestroRuntimeException(e);
-            e2.addContext("While setting parameter %s of %s", id, factory.getId());
+            e2.addContext("While setting parameter %s of %s", id, factory == null ? "[null]" : factory.getId());
             throw e2;
         }
     }

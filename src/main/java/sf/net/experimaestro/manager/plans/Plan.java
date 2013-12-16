@@ -42,7 +42,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.TreeMap;
 
 /**
@@ -328,37 +327,15 @@ public class Plan extends Operator {
 
         @Override
         public Iterator<Operator> iterator() {
-            // We unroll everything below
-            final Stack<Iterator<? extends Operator>> iterators = new Stack<>();
-
-
-            iterators.add(collection.iterator());
+            final Iterator<Operator> iterator = collection.iterator();
 
             return new AbstractIterator<Operator>() {
-
-                // We put all "simple" (constants) values in a big constant to simplify the plan
-                Constant constant = null;
-
                 @Override
                 protected Operator computeNext() {
-                    while (true) {
-                        // Search for a valid iterator in the stack
-                        while (true) {
-                            if (iterators.peek().hasNext()) break;
-                            iterators.pop();
-                            if (iterators.empty())
-                                if (constant == null)
-                                    return endOfData();
-                                else {
-                                    Constant r = constant;
-                                    constant = null;
-                                    iterators.push(Iterators.<Operator>emptyIterator());
-                                    return r;
-                                }
-                        }
+                    if (iterator.hasNext()) {
 
                         // Get the next item and process
-                        Operator source = iterators.peek().next();
+                        Operator source = iterator.next();
 
                         // Transform the operator (in case it is a plan reference)
                         try {
@@ -367,15 +344,9 @@ public class Plan extends Operator {
                             throw new ExperimaestroRuntimeException(e);
                         }
 
-                        if (source instanceof Constant) {
-                            if (constant == null)
-                                constant = new Constant();
-                            constant.add((Constant) source);
-                            continue;
-                        }
-
                         return source;
                     }
+                    return endOfData();
                 }
             };
         }

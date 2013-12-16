@@ -31,6 +31,7 @@ import javax.xml.xpath.XPathExpressionException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class OrderBy extends UnaryOperator {
      */
     public OrderBy(Order<Operator> order, Set<Operator> operators) {
         this.order = order;
-        this.operators = operators;
+        this.operators = operators == null ? null: new HashSet<>(operators);
     }
 
     public OrderBy() {
@@ -145,6 +146,8 @@ public class OrderBy extends UnaryOperator {
         };
         for (Operator operator : Iterables.filter(order.items(), predicate)) {
             Integer contextIndex = inputContext.get(operator);
+            if (contextIndex == null)
+                throw new AssertionError("The context index is null");
             contextOrder.add(contextIndex);
         }
         this.contextOrder = contextOrder.toIntArray();

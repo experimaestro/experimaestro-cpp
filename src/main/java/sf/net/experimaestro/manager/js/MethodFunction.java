@@ -248,8 +248,11 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
             // Assignable: OK
             type = ClassUtils.primitiveToWrapper(type);
-            if (type.isAssignableFrom(o.getClass()))
+            if (type.isAssignableFrom(o.getClass())) {
+                if (o.getClass() != type)
+                    score--;
                 return IDENTITY;
+            }
 
             // Case of string: anything can be converted, but with different
             // scores

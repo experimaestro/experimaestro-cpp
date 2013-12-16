@@ -100,7 +100,7 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
         writer.println();
         if (environment() != null) {
             for (Map.Entry<String, String> pair : environment().entrySet())
-                writer.format("%s=%s%n", pair.getKey(), pair.getValue());
+                writer.format("export %s=\"%s\"%n", pair.getKey(), protect(pair.getValue(), QUOTED_SPECIAL));
         }
 
         if (directory() != null) {

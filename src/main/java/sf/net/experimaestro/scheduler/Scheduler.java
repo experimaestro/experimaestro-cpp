@@ -408,7 +408,7 @@ final public class Scheduler {
     }
 
     // List of threads we started
-    ArrayList<Thread> threads = new ArrayList<Thread>();
+    ArrayList<Thread> threads = new ArrayList<>();
 
     private Timer resourceCheckTimer;
 

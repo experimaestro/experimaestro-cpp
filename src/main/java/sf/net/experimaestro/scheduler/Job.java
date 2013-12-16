@@ -324,7 +324,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 try {
                     final Collection<Dependency> deps = getDependencies();
                     for (Dependency dep : deps) {
-                        dep.status = DependencyStatus.UNACTIVE;
+                        dep.unactivate();
+
                         scheduler.getResources().store(dep);
                     }
                 } catch (RuntimeException e) {
@@ -347,10 +348,13 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
 
                 // Store in cache
-                updateDependency(depChanged.dependency);
+                Dependency cachedValue = updateDependency(depChanged.dependency);
 
-                int diff = (depChanged.to.isOK() ? 1 : 0) - (depChanged.from.isOK() ? 1 : 0);
-                int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (depChanged.from.isBlocking() ? 1 : 0);
+                // Use the cached value if we have one since it is most actual
+                DependencyStatus fromStatus = cachedValue == null ? depChanged.from : cachedValue.status;
+
+                int diff = (depChanged.to.isOK() ? 1 : 0) - (fromStatus.isOK() ? 1 : 0);
+                int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (fromStatus.isBlocking() ? 1 : 0);
 
                 if (diff != 0 || diffHold != 0) {
                     nbUnsatisfied -= diff;

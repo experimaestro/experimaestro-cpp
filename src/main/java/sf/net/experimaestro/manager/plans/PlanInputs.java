@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import sf.net.experimaestro.manager.DotName;
 
@@ -29,6 +30,10 @@ import sf.net.experimaestro.manager.DotName;
 */
 public class PlanInputs {
     Multimap<DotName, Operator> map = ArrayListMultimap.create();
+
+    public Multimap<DotName, Operator> getMap() {
+        return ImmutableMultimap.copyOf(map);
+    }
 
     public void set(DotName id, Operator object) {
         map.put(id, object);

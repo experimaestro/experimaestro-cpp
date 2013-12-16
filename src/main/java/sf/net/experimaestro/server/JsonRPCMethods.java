@@ -235,6 +235,13 @@ public class JsonRPCMethods extends HttpServlet {
                 args[index] = o;
             return score;
         }
+        
+        if (o.getClass() == Long.class && aType == Integer.class) {
+        	if (args != null)
+        		args[index] = ((Long)o).intValue();
+        	return score - 1;
+        }
+        
         return Integer.MIN_VALUE;
     }
 
@@ -595,7 +602,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     @RPCMethod(help = "Puts back a job into the waiting queue")
     public int restart(
-            @RPCArgument(name = "id", help = "The id of the job") String id,
+            @RPCArgument(name = "id", help = "The id of the job (string or integer)") String id,
             @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
             @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
     ) throws Exception {
@@ -638,7 +645,7 @@ public class JsonRPCMethods extends HttpServlet {
     @RPCMethod(name = "remove", help = "Remove jobs")
     public int remove(@RPCArgument(name = "group", required = false) String group,
                       @RPCArgument(name = "id", required = false) String id,
-                      @RPCArgument(name = "regexp") Boolean _idIsRegexp,
+                      @RPCArgument(name = "regexp", required = false) Boolean _idIsRegexp,
                       @RPCArgument(name = "states", required = false) String[] statesNames,
                       @RPCArgument(name = "recursive", required = false) Boolean _recursive
     ) throws Exception {
@@ -650,12 +657,14 @@ public class JsonRPCMethods extends HttpServlet {
                 Pattern.compile(id) : null;
 
         if (id != null && !id.equals("") && idPattern == null) {
-            final Resource resource = scheduler.getResource(ResourceLocator.parse(id));
+            final Resource resource = getResource(id);
             if (resource == null)
-                throw new ExperimaestroRuntimeException("Cannot find resource [%s]", id);
-            if (!resource.getGroup().startsWith(group))
+                throw new ExperimaestroRuntimeException("Job not found [%s]", id);
+
+            if (group != null && !resource.getGroup().startsWith(group))
                 throw new ExperimaestroRuntimeException("Resource [%s] group [%s] does not match [%s]",
                         resource, resource.getGroup(), group);
+
             if (!states.contains(resource.getState()))
                 throw new ExperimaestroRuntimeException("Resource [%s] state [%s] not in [%s]",
                         resource, resource.getState(), states);

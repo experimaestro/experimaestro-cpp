@@ -88,7 +88,7 @@ public class TrieNode {
      *                 represented by this trie node
      * @param operator The operator to add
      */
-    boolean add(BitSet set, Operator operator) {
+    protected boolean add(BitSet set, Operator operator) {
         // Check if we are not the node corresponding to the bitset
         int size = set.cardinality();
         if (size == 0) {
@@ -101,6 +101,7 @@ public class TrieNode {
 
 
         // try to find a parent with some intersection
+        // Below, N is the current set and P is the parent
         for (int p = 0; p < parents.size(); p++) {
             Parent parent = parents.get(p);
             IntSet intersection = new IntArraySet(size);
@@ -111,9 +112,9 @@ public class TrieNode {
 
             // If the parent intersection is not empty
             if (!intersection.isEmpty()) {
-                // Case where set contains or is equal the parent set
-                if (intersection.size() == size && intersection.size() == parent.set.size()) {
-                    // Equality
+                // N is contained by P
+                if (intersection.size() == size) {
+                    // N == P [equality]
                     if (size == parent.set.size()) {
                         if (parent.node.operators.add(operator)) {
                             parent.node.weight++;
@@ -122,19 +123,22 @@ public class TrieNode {
                         }
                         return false;
                     } else {
-                        // Strictly contains
+                        // N < P [parent strictly contains set]
                         Parent newParent = new Parent(intersection, new TrieNode(operator));
                         newParent.node.parents.add(parent);
+                        parent.set.removeAll(intersection);
                         newParent.node.weight += parent.node.weight;
                         parents.set(p, newParent);
                         weight++;
                         return true;
                     }
                 } else {
+                    // Case where N is not contained in P. Two possibilities:
+                    // (1) P is contained by N: add N as a parent of P
+                    // (2) P is not contained by N: create a new parent that will contain P and N
 
-                    // Check if we need a new parent for both values
-                    if (intersection.size() != size) {
-                        // Create a new parent that will contain both values
+                    // If N is different from P, then we create a new parent
+                    if (size != parent.set.size()) {
                         Parent newParent = new Parent(intersection, new TrieNode());
                         newParent.node.parents.add(parent);
                         newParent.node.weight += parent.node.weight;
@@ -142,6 +146,7 @@ public class TrieNode {
                         parent = newParent;
                     }
 
+                    // Add our selves
                     for (int id : parent.set)
                         set.clear(id);
                     boolean added = parent.node.add(set, operator);

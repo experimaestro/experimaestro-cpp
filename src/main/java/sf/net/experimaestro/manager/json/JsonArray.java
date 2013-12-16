@@ -61,7 +61,7 @@ public class JsonArray extends ArrayList<Json> implements Json {
                 out.write(", ");
             json.toJSONString(out);
         }
-        out.write('[');
+        out.write(']');
     }
 
     @Override
@@ -79,7 +79,7 @@ public class JsonArray extends ArrayList<Json> implements Json {
 
     @Override
     public Object get() {
-        throw new UnsupportedOperationException();
+    	return this;
     }
 
     @Override
