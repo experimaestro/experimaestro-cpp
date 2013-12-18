@@ -87,7 +87,7 @@ function jsonrpc_error(r) {
 
 // --- actions on jobs: restart, remove
 // TODO: invalidate a job (potentially recursively)
-var resource_restart_callback = function() {
+var resource_action_callback = function() {
     if (this.name == "restart") {
         $.jsonRPC.request('restart', {
             params: { "id": $(this).parent().attr("name"), "restart-done": true, "recursive": true },
@@ -146,7 +146,7 @@ var resource_link_callback = function() {
 
 $().ready(function() {
     // Links
-    $(".xpm-resource-list img.link").on("click", resource_restart_callback);
+    $(".xpm-resource-list img.link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
 
@@ -223,11 +223,15 @@ $().ready(function() {
                   link.attr("href", "javascript:void(0)").append($t(r.locator));
                   link.on("click", resource_link_callback);
 
-                  var img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-                  img.on("click", resource_restart_callback);
+                  var restart_img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                  restart_img.on("click", resource_action_callback);
+
+                  var remove_img = $("<img class='link' name='restart' alt='restart' src='/images/delete.png'/>");
+                  remove_img.on("click", resource_action_callback);
 
                   var item = $e("li")
-                    .append(img)
+                    .append(restart_img)
+                    .append(remove_img)
                     .append(link);
                   item.attr("name", r.locator).attr("id", "R" + r.resource);
 
