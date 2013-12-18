@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -52,7 +53,7 @@ public class JSTaskFactoryWrapper extends JSBaseObject {
     @JSFunction("run")
     public List<Object> run(String plan) throws Exception {
         Task task = factory.create();
-        return JSTaskWrapper.wrap(task.runPlan(plan, true, new JSScriptRunner(this), false));
+        return JSTaskWrapper.wrap(task.runPlan(plan, true, new JSScriptRunner(this), new TaskContext().simulate(false)));
     }
 
     @JSFunction("create")

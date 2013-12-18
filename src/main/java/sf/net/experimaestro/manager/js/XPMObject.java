@@ -55,6 +55,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.NSContext;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.manager.json.Json;
@@ -183,7 +184,7 @@ public class XPMObject {
     /**
      * Simulate flags: jobs will not be submitted (but commands will be evaluated)
      */
-    boolean simulate;
+    boolean _simulate;
 
     /**
      * The resource cleaner
@@ -202,6 +203,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
     };
+    private TaskContext taskContext;
 
 
     /**
@@ -331,7 +333,7 @@ public class XPMObject {
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashMap<>(this.submittedJobs);
-        clone.simulate = simulate;
+        clone._simulate = _simulate;
         return clone;
     }
 
@@ -346,6 +348,10 @@ public class XPMObject {
 
     public Logger getRootLogger() {
         return rootLogger;
+    }
+
+    private boolean simulate() {
+        return _simulate || taskContext.simulate();
     }
 
     /**
@@ -687,8 +693,7 @@ public class XPMObject {
         // Run the process and captures the output
         final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
         XPMProcessBuilder builder = connector.processBuilder();
-        
-        
+
 
         TreeMap<String, FileObject> files = new TreeMap<>();
 
@@ -712,9 +717,9 @@ public class XPMObject {
 
 
             builder.detach(false);
-            
+
             builder.environment(environment);
-            
+
             XPMProcess p = builder.start();
             BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
@@ -825,7 +830,7 @@ public class XPMObject {
 
         if (submittedJobs.containsKey(locator)) {
             getRootLogger().info("Not submitting %s [duplicate]", locator);
-            if (simulate)
+            if (simulate())
                 return new JSResource(submittedJobs.get(locator));
             return new JSResource(scheduler.getResource(locator));
         }
@@ -834,15 +839,17 @@ public class XPMObject {
             task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
-        for (Map.Entry<Resource<?>, Object> lock : defaultLocks.entrySet()) {
+        Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
+                ? taskContext.defaultLocks() : defaultLocks;
+        for (Map.Entry<? extends Resource, ?> lock : _defaultLocks.entrySet()) {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
             task.addDependency(dependency);
         }
 
-        
+
         // --- Environment
         task.environment = new TreeMap<>(environment);
-        
+
         // --- Options
 
         if (options != null) {
@@ -891,20 +898,19 @@ public class XPMObject {
                     final Object o = array.get(1, array);
                     LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, o);
                     if (resource == null)
-                        if (simulate) {
+                        if (simulate()) {
                             if (!submittedJobs.containsKey(depLocator))
                                 LOGGER.error("The dependency [%s] cannot be found", depLocator);
                         } else throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
 
-                    if (!simulate) {
+                    if (!simulate()) {
                         final Dependency dependency = resource.createDependency(o);
                         task.addDependency(dependency);
                     }
                 }
 
             }
-            
-            
+
 
         }
 
@@ -924,7 +930,7 @@ public class XPMObject {
         }
 
         task.setState(ResourceState.WAITING);
-        if (simulate) {
+        if (simulate()) {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", task.toString());
             pw.format("Command: %s%n", task.getCommand().toString());
@@ -936,6 +942,7 @@ public class XPMObject {
 
         return new JSResource(task);
     }
+
 
     private static FileObject getFileObject(Connector connector, Object stdout) throws FileSystemException {
         if (stdout instanceof String || stdout instanceof ConsString)
@@ -1108,6 +1115,9 @@ public class XPMObject {
         this.currentResourceLocator = locator;
     }
 
+    public void setTaskContext(TaskContext taskContext) {
+        this.taskContext = taskContext;
+    }
 
     // --- Javascript methods
 
@@ -1314,24 +1324,24 @@ public class XPMObject {
         @JSFunction
         @JSHelp("Set the simulate flag: When true, the jobs are not submitted but just output")
         public boolean simulate(boolean simulate) {
-            boolean old = xpm.simulate;
-            xpm.simulate = simulate;
+            boolean old = xpm._simulate;
+            xpm._simulate = simulate;
             return simulate;
         }
 
         @JSFunction
         public boolean simulate() {
-            return xpm.simulate;
+            return xpm._simulate;
         }
-        
+
         @JSFunction
         public String env(String key, String value) {
-        	return xpm. environment.put(key, value);
+            return xpm.environment.put(key, value);
         }
 
         @JSFunction
         public String env(String key) {
-        	return xpm.environment.get(key);
+            return xpm.environment.get(key);
         }
 
         private void output(Node node) {
@@ -1370,7 +1380,7 @@ public class XPMObject {
                     Json json = ((JSJson) object).getJson();
                     if (!(json instanceof JsonObject))
                         throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
-                    JsonObject jsonObject = (JsonObject)json;
+                    JsonObject jsonObject = (JsonObject) json;
                     for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
                         returned.put(entry.getKey(), returned, new JSJson(entry.getValue()));
                     }

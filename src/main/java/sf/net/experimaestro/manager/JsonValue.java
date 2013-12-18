@@ -41,7 +41,7 @@ public class JsonValue extends Value {
 	}
 
 	@Override
-	public void process(boolean simulate) {
+	public void process(TaskContext taskContext) {
 		// If there is no value, takes the default
 		if (value == null && input.defaultValue != null) {
 			LOGGER.debug("Setting default value [%s]", input.defaultValue);

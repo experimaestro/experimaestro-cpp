@@ -12,6 +12,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.Value;
@@ -88,7 +89,7 @@ public class JSCopy extends JSPlan {
         }
 
         @Override
-        public Json doRun(boolean simulate) {
+        public Json doRun(TaskContext taskContext) {
             // We just copy the inputs as an output
             JsonObject json = new JsonObject();
             json.put(Manager.XP_TYPE.toString(), outputType.qname().toString());

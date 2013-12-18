@@ -30,7 +30,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void process(boolean simulate) {
+    public void process(TaskContext taskContext) {
     }
 
     @Override

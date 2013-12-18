@@ -108,7 +108,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void process(boolean simulate) throws NoSuchParameter, ValueMismatchException {
+    public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
         // If the value has not been set
         if (value == null) {
             // If the task has not been set, try to use default value
@@ -120,7 +120,7 @@ public class AlternativeValue extends Value {
                         "Alternative task has not been set");
             LOGGER.info("Running the alternative task [%s]",
                     task.factory != null ? "n/a" : task.factory.id);
-            value = task.run(simulate);
+            value = task.run(taskContext);
         }
     }
 

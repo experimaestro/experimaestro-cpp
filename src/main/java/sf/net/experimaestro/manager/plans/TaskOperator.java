@@ -99,7 +99,8 @@ public class TaskOperator extends UnaryOperator {
                 }
 
                 try {
-                    return new ReturnValue(new DefaultContexts(value.context), task.run(runOptions.simulate));
+                    final Json result = task.run(runOptions.getTaskContext());
+                    return new ReturnValue(new DefaultContexts(value.context), result);
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);
                 }

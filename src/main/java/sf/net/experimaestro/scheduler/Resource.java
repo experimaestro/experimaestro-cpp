@@ -503,12 +503,12 @@ public abstract class Resource<Data extends ResourceData>
     /**
      * Extension for the file containing the return code
      */
-    public static final String CODE_EXTENSION = ".code";
+    public static final String CODE_EXTENSION = ".xpm.code";
 
     /**
      * Extension for the file containing the script to run
      */
-    public static final String RUN_EXTENSION = ".run";
+    public static final String RUN_EXTENSION = ".xpm.run";
 
     /**
      * Extension for the standard output of a job

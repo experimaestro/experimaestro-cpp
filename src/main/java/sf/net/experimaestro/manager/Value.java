@@ -79,23 +79,23 @@ public abstract class Value {
     public abstract void set(Json value);
 
     /**
-     * XPMProcess the value before it can be accessed by a task to run
+     * Process the value before it can be accessed by a task to run
      *
-     * @param simulate
+     * @param taskContext
      */
-    public abstract void process(boolean simulate) throws NoSuchParameter, ValueMismatchException;
+    public abstract void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException;
 
     /**
      * Get the value
      * <p/>
-     * This method is called by a {@link Task} after {@link #process(boolean)}.
+     * This method is called by a {@link Task} after {@link #process(TaskContext)}.
      *
      * @return A valid XML document or null if not set
      */
     public abstract Json get();
 
     /**
-     * This method is called once by a {@link Task} after {@link #process(boolean)}.
+     * This method is called once by a {@link Task} after {@link #process(TaskContext)}.
      *
      * @param task
      */

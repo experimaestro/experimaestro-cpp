@@ -38,6 +38,7 @@ import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.TaskInput;
 import sf.net.experimaestro.manager.Type;
@@ -123,7 +124,7 @@ public class JSTaskFactory extends JSBaseObject {
     @JSFunction("run_plan")
     public List<Object> runPlan(String plan) throws Exception {
         Task task = factory.create();
-        return JSTaskWrapper.wrap(task.runPlan(plan, false, new JSScriptRunner(this), false));
+        return JSTaskWrapper.wrap(task.runPlan(plan, false, new JSScriptRunner(this), new TaskContext()));
     }
 
 

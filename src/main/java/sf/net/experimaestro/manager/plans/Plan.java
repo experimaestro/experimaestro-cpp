@@ -206,6 +206,7 @@ public class Plan extends Operator {
 
             // Create a new operator
             TaskOperator self = new TaskOperator(this);
+            self.scope = this.scope;
 
             Operator inputOperators[] = new Operator[inputValues.length];
             BitSet[] joins = new BitSet[inputOperators.length];

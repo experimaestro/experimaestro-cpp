@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.manager.TaskContext;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,28 +30,68 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/3/13
  */
-public class RunOptions {
-    /**
-     * Whether the jobs are submitted to the scheduler or not
-     */
-    boolean simulate;
+final public class RunOptions {
+
+    /** Static context */
+    final static public class Context {
+        /**
+         * Whether the jobs are submitted to the scheduler or not
+         */
+        private boolean simulate;
+
+        /**
+         * Counts the number of items output by an operator; null if not used
+         */
+        private Map<Operator, MutableInt> counts;
+
+        public Context(boolean simulate) {
+            this.simulate = simulate;
+        }
+    }
 
     /**
-     * Counts the number of items output by an operator; null if not used
+     * The static context
      */
-    Map<Operator, MutableInt> counts;
+    Context context;
+
+    /**
+     * The dynamic context
+     */
+    PlanScope scope;
+
+
+    private RunOptions(Context context) {
+        this.context = context;
+    }
 
     public RunOptions(boolean simulate) {
-        this.simulate = simulate;
+        context = new Context(simulate);
     }
 
     public RunOptions counts(boolean flag) {
-        if (flag) counts = new HashMap<>();
-        else counts = null;
+        if (flag) context.counts = new HashMap<>();
+        else context.counts = null;
         return this;
     }
 
     public Map<Operator, MutableInt> counts() {
-        return counts;
+        return context.counts;
     }
+
+    public boolean simulate() {
+        return context.simulate;
+    }
+
+    public RunOptions add(PlanScope scope) {
+        RunOptions options = new RunOptions(context);
+        options.scope = scope.clone(scope);
+        return options;
+    }
+
+    public TaskContext getTaskContext() {
+        return new TaskContext()
+                .simulate(simulate())
+                .defaultLocks(scope.defaultLocks);
+    }
+
 }

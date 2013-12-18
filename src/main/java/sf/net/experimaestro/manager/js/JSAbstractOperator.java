@@ -1,5 +1,7 @@
 package sf.net.experimaestro.manager.js;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
@@ -12,8 +14,10 @@ import sf.net.experimaestro.manager.plans.GroupBy;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Order;
 import sf.net.experimaestro.manager.plans.OrderBy;
+import sf.net.experimaestro.manager.plans.PlanScope;
 import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.manager.plans.Value;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -22,6 +26,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -141,6 +146,15 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return baos.toString();
     }
 
+    @JSFunction(value = "set_default_locks", optional = 1)
+    public void setDefaultLock(Object locks) {
+        if (locks != null) {
+            throw new NotImplementedException("Set default lock on operators");
+        }
+        Map<Resource, String> _empty = ImmutableMap.of();
+        getOperator().setDefaultLocks(_empty);
+    }
+
 
     private Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
         Operator operator = getOperator();
@@ -176,6 +190,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         ArrayList<JSJson> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
+        PlanScope scope = new PlanScope();
         final Iterator<Value> nodes = operator.iterator(runOptions);
         while (nodes.hasNext()) {
             result.add(new JSJson(nodes.next().getNodes()[0]));

@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -174,6 +175,14 @@ public abstract class Operator {
             parent.getAncestors(ancestors);
     }
 
+    public void setDefaultLocks(Map<Resource, String> defaultLocks) {
+        scope.defaultLocks = new HashMap<>(defaultLocks);
+    }
+
+    public Map<Resource, String> getDefaultLocks() {
+        return scope.defaultLocks;
+    }
+
 
     public interface Contexts {
         long get(int stream, int index);
@@ -210,19 +219,23 @@ public abstract class Operator {
 
         OperatorIterator(RunOptions runOptions) {
             iterator = _iterator(runOptions);
-            if (runOptions.counts != null)
-                runOptions.counts.put(Operator.this, this.counter = new MutableInt(0));
+            if (runOptions.counts() != null)
+                runOptions.counts().put(Operator.this, this.counter = new MutableInt(0));
             else
                 this.counter = null;
         }
 
         @Override
         final protected Value computeNext() {
+            // End of stream
             if (!iterator.hasNext())
                 return endOfData();
 
+            // Increment the counter (if used)
             if (counter != null)
                 counter.increment();
+
+            // Get the next value and sets its id
             ReturnValue next = iterator.next();
             Value value = new Value(next.nodes);
             value.id = id++;
@@ -246,6 +259,7 @@ public abstract class Operator {
     /**
      * Creates a new iterator
      *
+     *
      * @param runOptions Options
      * @return A new iterator over return values
      */
@@ -255,8 +269,11 @@ public abstract class Operator {
 //    LinkedIterable<Value> cachedIterable;
 //    RunOptions cachedOptions;
 
+    public PlanScope scope = new PlanScope();
+
+    // TODO: implement the cache
     public Iterator<Value> iterator(RunOptions runOptions) {
-        return new OperatorIterator(runOptions);
+        return new OperatorIterator(runOptions.add(scope));
 //        if (!cacheIterator())
 //            return new OperatorIterator(runOptions);
 //        if (cachedIterable == null || cachedIterable.started() || cachedOptions != runOptions) {

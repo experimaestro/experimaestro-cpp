@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSUtils;
@@ -65,17 +66,17 @@ public class JSTaskWrapper extends JSBaseObject {
 
     @JSFunction("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(simulate));
+        return new JSJson(task.run(new TaskContext().simulate(simulate)));
     }
 
     @JSFunction("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(false));
+        return new JSJson(task.run(new TaskContext().simulate(false)));
     }
 
     @JSFunction(value = "run_plan", scope = true)
     public Object runPlan(Context cx, Scriptable scope, String planString) throws Exception {
-        return wrap(task.runPlan(planString, false, new JSScriptRunner(scope), false));
+        return wrap(task.runPlan(planString, false, new JSScriptRunner(scope), new TaskContext().simulate(true)));
     }
 
 

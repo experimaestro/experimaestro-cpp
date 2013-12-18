@@ -23,6 +23,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSUtils;
@@ -83,9 +84,9 @@ public class JSTask extends JSAbstractTask {
      * Run a task
      *
      * @return
-     * @param simulate
+     * @param taskContext
      */
-    public Json jsrun(boolean simulate) {
+    public Json jsrun(TaskContext taskContext) {
         LOGGER.debug("[Running] task: %s", factory.getId());
         Scriptable result = (Scriptable) runFunction.call(
                 Context.getCurrentContext(), jsScope, jsObject,

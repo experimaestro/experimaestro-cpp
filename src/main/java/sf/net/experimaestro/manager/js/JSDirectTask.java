@@ -26,6 +26,7 @@ import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.Type;
 import sf.net.experimaestro.manager.Value;
@@ -78,7 +79,7 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     @Override
-    public Json jsrun(boolean simulate) {
+    public Json jsrun(TaskContext taskContext) {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
@@ -96,11 +97,10 @@ public class JSDirectTask extends JSAbstractTask {
                 jsXML.put(entry.getKey(), jsXML, jsJson);
             }
 
-            boolean old = xpm.simulate;
-            xpm.simulate = simulate | xpm.simulate;
+            xpm.setTaskContext(taskContext);
             final Object returned = runFunction.call(cx, jsScope, jsFactory,
                     new Object[]{jsXML});
-            xpm.simulate = old;
+            xpm.setTaskContext(null);
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)
                 throw new ExperimaestroRuntimeException(

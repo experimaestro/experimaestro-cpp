@@ -49,10 +49,10 @@ public class TaskValue extends Value {
     }
 
     @Override
-	public void process(boolean simulate) throws NoSuchParameter, ValueMismatchException {
+	public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
         if (value == null) {
             // Run unless a value was set
-		    value = task.run(simulate);
+		    value = task.run(taskContext);
         }
 	}
 
