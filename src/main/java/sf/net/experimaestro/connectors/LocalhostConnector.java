@@ -185,6 +185,7 @@ public class LocalhostConnector extends SingleHostConnector {
         @Override
         public void destroy() {
             if (process != null) {
+                LOGGER.info("Killing job [%s] with PID [%s]", getJob(), getPID());
                 // TODO: send a signal first?
                 process.destroy();
 
