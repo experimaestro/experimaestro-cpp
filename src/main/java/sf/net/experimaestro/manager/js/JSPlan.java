@@ -31,6 +31,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
@@ -180,6 +181,18 @@ public class JSPlan extends JSAbstractOperator implements Callable {
         // Case of operators or converter of operators
         if (value instanceof JSOperator)
             return ((JSOperator) value).getOperator();
+
+        // Case of a native array: we wrap its values
+        if (value instanceof NativeArray) {
+            NativeArray narray = (NativeArray) value;
+            JsonArray array = new JsonArray();
+            for (int i = 0; i < narray.getLength(); i++) {
+                final Object e = narray.get(i);
+                array.add(ValueType.wrap(e));
+            }
+
+            return new Constant(new Json[] { array });
+        }
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
 

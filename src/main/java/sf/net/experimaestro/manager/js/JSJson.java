@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Context;
+import com.google.common.base.Joiner;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.json.Json;
@@ -49,10 +49,13 @@ public class JSJson extends JSBaseObject implements Wrapper {
         return json;
     }
 
-    @JSFunction(call = true, scope = true)
-    public Object call(Context cx, Scriptable scope) {
-        XPMObject.getXPMObject(scope).warning("Calling a Json object is strongly deprecated: use _ function instead");
-        return JSBaseObject.XPMWrapFactory.INSTANCE.wrap(cx, scope, json.get(), null);
+
+    @JSFunction
+    public String join(String separator) {
+        if (!(json instanceof JsonArray)) {
+            throw new IllegalArgumentException("Can only join JSON arrays");
+        }
+        return Joiner.on(separator).join((JsonArray) json);
     }
 
     @Override
@@ -91,7 +94,6 @@ public class JSJson extends JSBaseObject implements Wrapper {
                 case "length":
                     return ((JsonArray) json).size();
             }
-
         }
 
         if (json instanceof JsonObject) {
