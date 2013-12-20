@@ -40,6 +40,8 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 
+import static java.lang.String.format;
+
 /**
  * A local host connector provides access to the current machine
  *
@@ -194,6 +196,18 @@ public class LocalhostConnector extends SingleHostConnector {
                       Runtime.getRuntime().removeShutdownHook(destroyThread);
                     } catch(IllegalStateException e) {/* Ignore */}
                 process = null;
+            } else {
+                LOGGER.info("Process was not started by server: killing it externally with PID %s", getPID());
+                XPMProcessBuilder killingProcessBuilder = getInstance().processBuilder();
+                killingProcessBuilder.command("kill", getPID()).detach(false);
+                try {
+                    final XPMProcess killingProcess = killingProcessBuilder.start();
+                    int code = killingProcess.waitFor();
+                    if (code != 0)
+                        throw new RuntimeException(format("Could not kill local process [%s]: error code %d", getPID(), code));
+                } catch (LaunchException | IOException | InterruptedException e) {
+                    throw new RuntimeException(format("Could not kill local process [%s]", getPID()), e);
+                }
             }
 
             // TODO: finish the implementation ???
