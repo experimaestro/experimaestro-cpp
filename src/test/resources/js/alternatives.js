@@ -60,7 +60,7 @@ function test_value() {
     task.set("p.x", 10);
     
     var r = task.run();
-    var v = r.x();
+    var v = _(r.x);
 
     if (typeof(v) == "undefined") 
         v = null;

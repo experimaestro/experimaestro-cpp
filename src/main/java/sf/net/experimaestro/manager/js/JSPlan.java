@@ -36,8 +36,8 @@ import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanContext;
 import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.manager.plans.RunOptions;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -209,7 +209,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
     private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
-        final Iterator<Json> iterator = plan.run(new RunOptions(simulate));
+        final Iterator<Json> iterator = plan.run(new PlanContext(simulate));
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {

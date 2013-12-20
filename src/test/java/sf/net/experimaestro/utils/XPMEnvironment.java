@@ -35,20 +35,41 @@ public class XPMEnvironment {
 
     private int count = 0;
 
+    /**
+     * Make a directory corresponding to the caller
+     *
+     * @return
+     */
+    protected File mkTestDir() {
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        // we get the caller method name
+        StackTraceElement e = stacktrace[2];
+        String methodName = e.getMethodName();
+        File jobDirectory = new File(directory.getFile(), methodName);
+
+        jobDirectory.mkdirs();
+        return jobDirectory;
+    }
+
+
     @BeforeClass
     public void init() throws IOException {
-        if (count++ == 0) {
-            directory = new TemporaryDirectory("scheduler-tests", "dir");
-            final File dbFile = new File(directory.getFile(), "db");
-            dbFile.mkdir();
-            scheduler = new Scheduler(dbFile);
+        synchronized (this) {
+            if (count++ == 0) {
+                directory = new TemporaryDirectory("scheduler-tests", "dir");
+                final File dbFile = new File(directory.getFile(), "db");
+                dbFile.mkdir();
+                scheduler = new Scheduler(dbFile);
+            }
         }
     }
 
     @AfterClass
     public void close() {
-        if (--count == 0)
-            scheduler.close();
+        synchronized (this) {
+            if (--count == 0)
+                scheduler.close();
+        }
     }
 
 

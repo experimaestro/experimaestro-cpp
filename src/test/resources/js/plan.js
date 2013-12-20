@@ -36,7 +36,7 @@ tasks("abc:task") = {
     // The function that will be called when the task is run_plan
 	run: function(inputs) {
         // Returns something
-		return inputs.x() * inputs.y();
+		return _(inputs.x) * _(inputs.y);
 	}
 		
 };
@@ -48,8 +48,8 @@ tasks("abc:task") = {
 function check(results, expected) {
     results.sort(function(x,y) { return x - y; });
     for(var i = 0; i < expected.length; i++) {
-        if (expected[i] != results[i])
-            throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], results[i], i);
+        if (expected[i] != _(results[i]))
+            throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], _(results[i]), i);
     }
 }
 

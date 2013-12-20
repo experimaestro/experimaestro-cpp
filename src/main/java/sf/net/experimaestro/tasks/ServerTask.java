@@ -48,6 +48,7 @@ import sf.net.experimaestro.server.JsonRPCServlet;
 import sf.net.experimaestro.server.ServerSettings;
 import sf.net.experimaestro.server.StatusServlet;
 import sf.net.experimaestro.server.TasksServlet;
+import sf.net.experimaestro.server.UnixSocketConnector;
 import sf.net.experimaestro.server.XPMWebSocketServlet;
 import sf.net.experimaestro.server.XPMXMLRpcServlet;
 import sf.net.experimaestro.utils.log.Logger;
@@ -124,9 +125,10 @@ public class ServerTask extends AbstractTask {
                 System.setProperty("org.newsclub.net.unix.library.path", file.getAbsolutePath());
             }
 
-//            String socketSpec = configuration.getString(KEY_SERVER_SOCKET);
-//            UnixSocketConnector unixSocketConnector = new UnixSocketConnector(webServer, new File(socketSpec));
-//            webServer.addConnector(unixSocketConnector);
+            String socketSpec = configuration.getString(KEY_SERVER_SOCKET);
+            UnixSocketConnector unixSocketConnector = new UnixSocketConnector(webServer);
+            unixSocketConnector.setSocketFile(new File(socketSpec));
+            webServer.addConnector(unixSocketConnector);
         }
 
 

@@ -53,7 +53,7 @@ task.set("t1.p", 10);
 var r = task.run();
 
 // END SNIPPET: main
-if (r == undefined || r() != 10)
+if (r == undefined || _(r) != 10)
 	throw new java.lang.String.format("Value [%s] is different from 10", r);
 	
 	

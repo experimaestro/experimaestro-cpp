@@ -48,7 +48,7 @@ tasks("ns:plus") = {
 
     run: function(x) {
         logger.debug("Task plus: got x=%s and y=%s: %s", x.x(), x.y(), x.x() + x.y())
-        return x.x() + x.y()
+        return _(x.x) + _(x.y)
     }
 };
 // END SNIPPET: task

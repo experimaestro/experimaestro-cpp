@@ -15,7 +15,7 @@ import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Order;
 import sf.net.experimaestro.manager.plans.OrderBy;
 import sf.net.experimaestro.manager.plans.PlanScope;
-import sf.net.experimaestro.manager.plans.RunOptions;
+import sf.net.experimaestro.manager.plans.PlanContext;
 import sf.net.experimaestro.manager.plans.Value;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSNamespaceContext;
@@ -184,14 +184,14 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     private Object doRun(boolean simulate, boolean details) throws XPathExpressionException {
-        RunOptions runOptions = new RunOptions(simulate);
-        runOptions.counts(details);
+        PlanContext planContext = new PlanContext(simulate);
+        planContext.counts(details);
 
         ArrayList<JSJson> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
         PlanScope scope = new PlanScope();
-        final Iterator<Value> nodes = operator.iterator(runOptions);
+        final Iterator<Value> nodes = operator.iterator(planContext);
         while (nodes.hasNext()) {
             result.add(new JSJson(nodes.next().getNodes()[0]));
         }
@@ -201,7 +201,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
-        operator.printDOT(ps, runOptions.counts());
+        operator.printDOT(ps, planContext.counts());
         ps.flush();
 
         return new NativeArray(new Object[]{result, baos.toString()});

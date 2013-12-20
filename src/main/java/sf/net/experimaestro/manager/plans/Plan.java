@@ -120,14 +120,14 @@ public class Plan extends Operator {
     /**
      * Run this plan
      *
-     * @param runOptions
+     * @param planContext
      * @return An iterator over the generated XML values
      */
-    public Iterator<Json> run(RunOptions runOptions) throws XPathExpressionException {
+    public Iterator<Json> run(PlanContext planContext) throws XPathExpressionException {
         Operator operator = prepare(true, true);
 
         // Now run
-        final Iterator<Value> iterator = operator.iterator(runOptions);
+        final Iterator<Value> iterator = operator.iterator(planContext);
 
         return Iterators.transform(iterator, new Function<Value, Json>() {
             @Override
@@ -307,7 +307,7 @@ public class Plan extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
         throw new UnsupportedOperationException();
     }
 

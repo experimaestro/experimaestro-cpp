@@ -29,6 +29,7 @@ import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -217,10 +218,10 @@ public abstract class Operator {
         Iterator<ReturnValue> iterator;
         private final MutableInt counter;
 
-        OperatorIterator(RunOptions runOptions) {
-            iterator = _iterator(runOptions);
-            if (runOptions.counts() != null)
-                runOptions.counts().put(Operator.this, this.counter = new MutableInt(0));
+        OperatorIterator(PlanContext planContext) {
+            iterator = _iterator(planContext);
+            if (planContext.counts() != null)
+                planContext.counts().put(Operator.this, this.counter = new MutableInt(0));
             else
                 this.counter = null;
         }
@@ -260,27 +261,39 @@ public abstract class Operator {
      * Creates a new iterator
      *
      *
-     * @param runOptions Options
+     * @param planContext Options
      * @return A new iterator over return values
      */
-    protected abstract Iterator<ReturnValue> _iterator(RunOptions runOptions);
+    protected abstract Iterator<ReturnValue> _iterator(PlanContext planContext);
 
 
-//    LinkedIterable<Value> cachedIterable;
-//    RunOptions cachedOptions;
+//    CachedIterable<Value> cachedIterable;
+//    PlanContext cachedOptions;
 
     public PlanScope scope = new PlanScope();
 
     // TODO: implement the cache
-    public Iterator<Value> iterator(RunOptions runOptions) {
-        return new OperatorIterator(runOptions.add(scope));
-//        if (!cacheIterator())
-//            return new OperatorIterator(runOptions);
-//        if (cachedIterable == null || cachedIterable.started() || cachedOptions != runOptions) {
-//            cachedIterable = new LinkedIterable<>(new OperatorIterator(runOptions));
-//            cachedOptions = runOptions;
-//        }
-//        return cachedIterable.iterator();
+    public Iterator<Value> iterator(PlanContext planContext) {
+        // Update the context with the operator environment
+        planContext = planContext.add(scope);
+
+        // No cache: just return the iterator
+        if (!cacheIterator())
+            return new OperatorIterator(planContext);
+
+        // Retrieve the cached iterable or retrieve it
+        CachedIterable<Value> cachedIterable = planContext.getCachedIterable(this);
+
+        if (cachedIterable == null) {
+            LOGGER.debug("Setting up a cached iterator");
+            cachedIterable = new CachedIterable<>(new OperatorIterator(planContext));
+            planContext.setCachedIterable(this, cachedIterable);
+        } else {
+            // Use the cached values
+            LOGGER.debug("Using cached iterator");
+        }
+
+        return cachedIterable.iterator();
     }
 
     /**

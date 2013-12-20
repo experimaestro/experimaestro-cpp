@@ -262,6 +262,9 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     process.adopt(locks);
                     locks = null;
 
+                    // Store the current state
+                    storeState(false);
+
                     LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
 
                 } catch (Throwable e) {

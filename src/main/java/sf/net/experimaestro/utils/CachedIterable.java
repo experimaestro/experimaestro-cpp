@@ -19,33 +19,18 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * Makes an iterable from an iterator
+ * Caches the result of an iterator in order to make an iterable from it
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/3/13
  */
 public class CachedIterable<T> implements Iterable<T> {
-    LinkedValue<T> current;
-
-    static public class LinkedValue<T> {
-        T value;
-        LinkedValue<T> next;
-
-        public LinkedValue(T value, LinkedValue current) {
-            this.value = value;
-            if (current != null)
-                current.next = this;
-        }
-
-        public boolean eos() {
-            return next == this;
-        }
-    }
+    ArrayList<T> cache = new ArrayList<>();
 
     private final Iterator<T> iterator;
 
@@ -53,37 +38,22 @@ public class CachedIterable<T> implements Iterable<T> {
         this.iterator = iterator;
     }
 
-    public boolean started() {
-        return current != null;
-    }
-
     @Override
     public Iterator<T> iterator() {
-        if (started())
-            throw new ExperimaestroRuntimeException("Cannot iterate over a started CachedIterable");
-
         return new AbstractIterator<T>() {
+            int index = 0;
+
             @Override
             protected T computeNext() {
-                if (current == null)
-                    current = new LinkedValue<>(null, null);
-
-                // If a next is stored, use it
-                if (current.next != null) {
-                    if (current.eos())
+                if (index >= cache.size()) {
+                    if (!iterator.hasNext()) {
                         return endOfData();
-
-                    current = current.next;
-                    return current.value;
+                    }
+                    cache.add(iterator.next());
                 }
 
-                if (!iterator.hasNext()) {
-                    current.next = current;
-                    return endOfData();
-                }
-
-                current = new LinkedValue(iterator.next(), current);
-                return current.value;
+                // Return current object
+                return cache.get(index++);
             }
         };
     }

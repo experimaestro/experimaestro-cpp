@@ -44,7 +44,7 @@ tasks("abc:task") = {
     },
 
 	run: function(inputs) {
-		return inputs.t2();
+		return _(inputs.t2);
 	}
 		
 };
@@ -54,9 +54,10 @@ tasks("abc:task") = {
 // Run and check
 
 var r = tasks("abc:task").run({"t1.x": 10})[0];
+
 // END SNIPPET: main
 function test_value() {
-    v = typeof(r) == "undefined" ? null : r();
+    v = typeof(r) == "undefined" ? null : _(r);
     if (v != 10)
     	throw new java.lang.String.format("Value [%s] is different from 10", v);
 }

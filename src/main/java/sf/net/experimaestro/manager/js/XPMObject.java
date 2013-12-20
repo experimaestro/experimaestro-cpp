@@ -351,7 +351,7 @@ public class XPMObject {
     }
 
     private boolean simulate() {
-        return _simulate || taskContext.simulate();
+        return _simulate || (taskContext != null && taskContext.simulate());
     }
 
     /**

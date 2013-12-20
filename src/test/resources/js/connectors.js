@@ -24,7 +24,7 @@ var repository_path = script_path.path("connectors.inc.js");
 
 // Check the answer
 function check(r) {
-	var v = r();
+	var v = _(r);
 	var expected = "experimaestro rocks";
 	if (v != expected) 
 		throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);

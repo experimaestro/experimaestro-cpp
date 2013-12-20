@@ -73,14 +73,14 @@ public class TaskOperator extends UnaryOperator {
 
     /**
      * Creates an iterator
-     * @param runOptions
+     * @param planContext
      */
     @Override
-    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator(runOptions) : ImmutableList.of(new Value(new Json[0])).iterator();
+                    input.iterator(planContext) : ImmutableList.of(new Value(new Json[0])).iterator();
 
             @Override
             protected ReturnValue computeNext() {
@@ -99,7 +99,7 @@ public class TaskOperator extends UnaryOperator {
                 }
 
                 try {
-                    final Json result = task.run(runOptions.getTaskContext());
+                    final Json result = task.run(planContext.getTaskContext());
                     return new ReturnValue(new DefaultContexts(value.context), result);
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new ExperimaestroRuntimeException(e);

@@ -53,8 +53,8 @@ public class Join extends Product {
     ArrayList<JoinReference> joins = new ArrayList<>();
 
     @Override
-    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
-        return new JoinIterator(runOptions);
+    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
+        return new JoinIterator(planContext);
     }
 
     @Override
@@ -156,7 +156,7 @@ public class Join extends Product {
             }
         }
 
-        private JoinIterator(RunOptions simulate) {
+        private JoinIterator(PlanContext simulate) {
             super(simulate);
         }
 

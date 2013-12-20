@@ -54,7 +54,7 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
         return Iterators.transform(values.iterator(), new Function<Json, ReturnValue>() {
             @Override
             public ReturnValue apply(Json input) {

@@ -416,21 +416,6 @@ public class SchedulerTest extends XPMEnvironment {
 
     // ----- Utility methods for scheduler
 
-    /**
-     * Make a directory corresponding to the caller
-     *
-     * @return
-     */
-    private File mkTestDir() {
-        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
-        // we get the caller method name
-        StackTraceElement e = stacktrace[2];
-        String methodName = e.getMethodName();
-        File jobDirectory = new File(directory.getFile(), methodName);
-
-        jobDirectory.mkdirs();
-        return jobDirectory;
-    }
 
 
     /**

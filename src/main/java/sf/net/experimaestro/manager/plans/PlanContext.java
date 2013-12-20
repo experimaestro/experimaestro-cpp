@@ -20,12 +20,17 @@ package sf.net.experimaestro.manager.plans;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.TaskContext;
+import sf.net.experimaestro.utils.CachedIterable;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
- * Options when running a plan
+ * Context when running a plan
+ *
+ * This class hides away what is part of the static context and
+ * what if part of the dynamic one
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/3/13
@@ -33,7 +38,7 @@ import java.util.Map;
 final public class PlanContext {
 
     /** Static context */
-    final static public class Context {
+    final static public class StaticContext {
         /**
          * Whether the jobs are submitted to the scheduler or not
          */
@@ -44,15 +49,16 @@ final public class PlanContext {
          */
         private Map<Operator, MutableInt> counts;
 
-        public Context(boolean simulate) {
-            this.simulate = simulate;
-        }
+        /**
+         * Cached iterators
+         */
+        private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
     }
 
     /**
      * The static context
      */
-    Context context;
+    StaticContext staticContext;
 
     /**
      * The dynamic context
@@ -60,30 +66,31 @@ final public class PlanContext {
     PlanScope scope;
 
 
-    private PlanContext(Context context) {
-        this.context = context;
+    private PlanContext(StaticContext staticContext) {
+        this.staticContext = staticContext;
     }
 
     public PlanContext(boolean simulate) {
-        context = new Context(simulate);
+        staticContext = new StaticContext();
+        staticContext.simulate = simulate;
     }
 
     public PlanContext counts(boolean flag) {
-        if (flag) context.counts = new HashMap<>();
-        else context.counts = null;
+        if (flag) staticContext.counts = new HashMap<>();
+        else staticContext.counts = null;
         return this;
     }
 
     public Map<Operator, MutableInt> counts() {
-        return context.counts;
+        return staticContext.counts;
     }
 
     public boolean simulate() {
-        return context.simulate;
+        return staticContext.simulate;
     }
 
     public PlanContext add(PlanScope scope) {
-        PlanContext options = new PlanContext(context);
+        PlanContext options = new PlanContext(staticContext);
         options.scope = scope.clone(scope);
         return options;
     }
@@ -92,6 +99,14 @@ final public class PlanContext {
         return new TaskContext()
                 .simulate(simulate())
                 .defaultLocks(scope.defaultLocks);
+    }
+
+    public void setCachedIterable(Object key, CachedIterable<Value> cachedIterable) {
+        staticContext.cachedIterables.put(key, cachedIterable);
+    }
+
+    public CachedIterable<Value> getCachedIterable(Object key) {
+        return staticContext.cachedIterables.get(key);
     }
 
 }

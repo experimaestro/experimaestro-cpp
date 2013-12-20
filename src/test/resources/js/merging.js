@@ -51,7 +51,7 @@ var r = task.run();
 // END SNIPPET: main
 
 function test_merging() {
-	if (r == undefined || r != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", r);
+	if (r == undefined || _(r) != 10)
+		throw new java.lang.String.format("Value [%s] is different from 10", _(r));
 }
 	

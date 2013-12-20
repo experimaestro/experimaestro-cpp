@@ -84,7 +84,7 @@ public class OrderBy extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
         return new AbstractIterator<ReturnValue>() {
             public Iterator<Value> iterator;
 
@@ -93,7 +93,7 @@ public class OrderBy extends UnaryOperator {
                 if (iterator == null) {
                     ObjectArrayList<Value> list = new ObjectArrayList<>(new Value[0]);
                     {
-                        Iterator<Value> iterator = input.iterator(runOptions);
+                        Iterator<Value> iterator = input.iterator(planContext);
                         while (iterator.hasNext()) {
                             list.add(iterator.next());
                         }

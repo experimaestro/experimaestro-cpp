@@ -55,9 +55,9 @@ public class ReorderNodes extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
         return new AbstractIterator<ReturnValue>() {
-            Iterator<Value> inputIterator = input.iterator(runOptions);
+            Iterator<Value> inputIterator = input.iterator(planContext);
 
             @Override
             protected ReturnValue computeNext() {

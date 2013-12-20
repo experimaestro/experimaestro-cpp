@@ -41,7 +41,7 @@ tasks("tests:task") = {
 function test_json_plan() {
     var r = tasks("tests:task").run({x: 10});
     r = r[0];
-	if (r == undefined || r() != 10)
+	if (r == undefined || _(r) != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }
 

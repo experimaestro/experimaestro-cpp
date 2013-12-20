@@ -38,7 +38,7 @@ public class TrieNodeTest {
         }
 
         @Override
-        protected Iterator<ReturnValue> _iterator(RunOptions runOptions) {
+        protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
             // TODO: implement _iterator
             throw new NotImplementedException();
         }

@@ -49,9 +49,9 @@ public class FunctionOperator extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final RunOptions runOptions) {
+    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
         return new AbstractIterator<ReturnValue>() {
-            Iterator<Value> iterator = input.iterator(runOptions);
+            Iterator<Value> iterator = input.iterator(planContext);
             public Iterator<? extends Json> innerIterator = Iterators.emptyIterator();
             DefaultContexts contexts;
 
