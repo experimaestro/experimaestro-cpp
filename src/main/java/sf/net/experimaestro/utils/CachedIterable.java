@@ -29,7 +29,7 @@ import java.util.Iterator;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/3/13
  */
-public class LinkedIterable<T> implements Iterable<T> {
+public class CachedIterable<T> implements Iterable<T> {
     LinkedValue<T> current;
 
     static public class LinkedValue<T> {
@@ -49,7 +49,7 @@ public class LinkedIterable<T> implements Iterable<T> {
 
     private final Iterator<T> iterator;
 
-    public LinkedIterable(Iterator<T> iterator) {
+    public CachedIterable(Iterator<T> iterator) {
         this.iterator = iterator;
     }
 
@@ -60,7 +60,7 @@ public class LinkedIterable<T> implements Iterable<T> {
     @Override
     public Iterator<T> iterator() {
         if (started())
-            throw new ExperimaestroRuntimeException("Cannot iterate over a started LinkedIterable");
+            throw new ExperimaestroRuntimeException("Cannot iterate over a started CachedIterable");
 
         return new AbstractIterator<T>() {
             @Override

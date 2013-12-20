@@ -673,7 +673,7 @@ public class JsonRPCMethods extends HttpServlet {
         } else {
             // TODO order the tasks so that depencies are removed first
             HashSet<Resource> toRemove = new HashSet<>();
-            try (final CloseableIterator<Resource> resources = scheduler.getResources().entities(group, recursive, states, true)) {
+            try (final CloseableIterator<Resource> resources = scheduler.getResources().entities(group, true, states, true)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     if (idPattern != null) {

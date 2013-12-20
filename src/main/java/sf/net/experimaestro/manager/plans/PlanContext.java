@@ -30,7 +30,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/3/13
  */
-final public class RunOptions {
+final public class PlanContext {
 
     /** Static context */
     final static public class Context {
@@ -60,15 +60,15 @@ final public class RunOptions {
     PlanScope scope;
 
 
-    private RunOptions(Context context) {
+    private PlanContext(Context context) {
         this.context = context;
     }
 
-    public RunOptions(boolean simulate) {
+    public PlanContext(boolean simulate) {
         context = new Context(simulate);
     }
 
-    public RunOptions counts(boolean flag) {
+    public PlanContext counts(boolean flag) {
         if (flag) context.counts = new HashMap<>();
         else context.counts = null;
         return this;
@@ -82,8 +82,8 @@ final public class RunOptions {
         return context.simulate;
     }
 
-    public RunOptions add(PlanScope scope) {
-        RunOptions options = new RunOptions(context);
+    public PlanContext add(PlanScope scope) {
+        PlanContext options = new PlanContext(context);
         options.scope = scope.clone(scope);
         return options;
     }
