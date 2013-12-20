@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # PYTHON_ARGCOMPLETE_OK
 
+import os
 import os.path
 import sys
 import subprocess
@@ -16,11 +17,13 @@ import websocket
 import json
 import argcomplete
 import jsonrpclib
-
+import socket
+import daemon
 
 # --- Set some variables
 
-dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
+
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
 
@@ -30,13 +33,21 @@ logging.basicConfig(level=logging.INFO)
 # --- Check paths
 def jarpaths():
     """Returns the different paths where the JAR file can be located"""
-    yield os.path.join(dir, jarname)
-    yield os.path.join(dir, "target", "experimaestro-%s-bin" % version, jarname)
+    yield os.path.join(xpmdir, jarname)
+    yield os.path.join(xpmdir, "target", "experimaestro-%s-bin" % version, jarname)
 
 
 def start_jar(args, jarargs):
+    # --- See
+    # http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
+    # http://www.python.org/dev/peps/pep-3143/#python-daemon
+    # --- in order to create a daemon
+
+    raise Exception("Not implemented")
+    
+
     # Check what if we start using maven
-    mvnFile = os.path.join(dir, "pom.xml")
+    mvnFile = os.path.join(xpmdir, "pom.xml")
     if not os.path.exists(mvnFile):
         mvnFile = None
 
@@ -209,7 +220,18 @@ class Configuration():
 # --- Server
 
 
-def command_server_start(args):
+def ping(json_server):
+    try:
+        return json_server.ping([]) == "pong"
+    except socket.error, e:
+        return False
+
+def command_start_server(args):
+    json_server = Configuration(args).getJsonServer()
+    if ping(json_server):
+        logging.info("Server already started")
+        return 0
+
     start_jar(args, ["server"])
 
 
@@ -359,7 +381,7 @@ def get_states(states):
 # create the top-level parser
 parser = argparse.ArgumentParser(description='experimaestro script.')
 subparsers = parser.add_subparsers(help='Command', dest='command')
-parser.set_defaults(dir=dir)
+parser.set_defaults(dir=xpmdir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
                     choices=["debug", "info", "warn"], default="info")
 parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
