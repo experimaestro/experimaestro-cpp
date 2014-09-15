@@ -285,13 +285,6 @@
         </dependency>
 
 
-        <!-- python -->
-        <dependency>
-            <groupId>org.python</groupId>
-            <artifactId>jython</artifactId>
-            <version>2.7-b3</version>
-        </dependency>
-
         <!-- Javascript -->
         <dependency>
             <groupId>org.mozilla</groupId>
@@ -402,11 +395,6 @@
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
             <version>1.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.python</groupId>
-            <artifactId>jython</artifactId>
-            <version>2.7-b1</version>
         </dependency>
 
     </dependencies>

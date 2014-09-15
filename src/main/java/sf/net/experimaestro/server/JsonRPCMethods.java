@@ -34,14 +34,11 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.*;
-import org.python.core.*;
-import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.manager.python.XPM;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -355,64 +352,6 @@ public class JsonRPCMethods extends HttpServlet {
         final Logger logger = Logger.getLogger(identifier);
         logger.setLevel(Level.toLevel(level));
         return 0;
-    }
-
-    /**
-     * Run Python
-     */
-    @RPCMethod(name = "run-python", help = "Run a python script")
-    public String runPython(
-            @RPCArgument(name = "files") List<JSONArray> files,
-            @RPCArgument(name = "environment") Map<String, String> environment) throws ScriptException, FileNotFoundException {
-        final Hierarchy loggerRepository = getScriptLogger();
-
-        PythonInterpreter engine = new PythonInterpreter();
-        org.apache.log4j.Logger scriptLogger = loggerRepository.getRootLogger();
-
-        engine.setOut(getRequestOutputStream());
-        engine.setErr(getRequestErrorStream());
-
-        XPM.prepare(engine);
-
-        for (int i = 0; i < files.size(); i++) {
-            JSONArray filePointer = files.get(i);
-
-            boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
-            final String content = isFile ? null : filePointer.get(1).toString();
-            final String filename = filePointer.get(0).toString();
-
-            ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
-//            jsXPM.setLocator(locator);
-            LOGGER.info("Script locator is %s", locator);
-
-            // Compile
-            final PyCode pyCode;
-            if (isFile) {
-                pyCode = engine.compile(new FileReader(filename));
-            } else {
-                pyCode = engine.compile(content);
-            }
-
-            // Evaluate
-            try {
-                engine.eval(pyCode);
-                PyList locals = ((PyStringMap) engine.getLocals()).items();
-                for(Object x: locals) {
-                    PyTuple y = (PyTuple) x;
-                    if (y.get(1) instanceof PyClass) {
-                        PyClass aClass = (PyClass) y.get(1);
-                        scriptLogger.info(String.format("Hello: %s", y));
-                    }
-                }
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Throwable t) {
-                throw new RuntimeException(t);
-            }
-
-        }
-
-        return "0";
     }
 
     /**

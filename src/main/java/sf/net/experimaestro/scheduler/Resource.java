@@ -500,7 +500,7 @@ public abstract class Resource<Data extends ResourceData>
      */
     public static final String CODE_EXTENSION = ".xpm.code";
 
-    /**
+    /**S
      * Extension for the file containing the script to run
      */
     public static final String RUN_EXTENSION = ".xpm.run";
