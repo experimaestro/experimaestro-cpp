@@ -1,8 +1,9 @@
 package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.utils.Documentation;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
@@ -10,6 +11,7 @@ import sf.net.experimaestro.utils.Output;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -29,16 +31,28 @@ public class JSDocumentation {
                 name = xpmjsfunction.value();
         }
 
-        if (name == null) {
-            final JSFunction annotation = method.getAnnotation(JSFunction.class);
-            if (annotation == null) {
-                return;
-            }
-            name = annotation.value();
+        JSFunction jsfunction = method.getAnnotation(JSFunction.class);
+        if (name == null && jsfunction != null) {
+            name = jsfunction.value();
+            if (name.equals(""))
+                name = method.getName();
         }
+
+
+        if (name == null) {
+            final org.mozilla.javascript.annotations.JSFunction annotation = method.getAnnotation(org.mozilla.javascript.annotations.JSFunction.class);
+            if (annotation != null)
+                name = annotation.value();
+        }
+
 
         if (name == null) {
             name = method.getName();
+        }
+
+        String prefix = "";
+        if (method.getAnnotation(JSDeprecated.class) != null) {
+            prefix = "[deprecated]";
         }
 
         Documentation.Container help = new Documentation.Container();
@@ -56,41 +70,42 @@ public class JSDocumentation {
             names = container;
 
             for (JSArguments arguments : jsHelp.arguments()) {
-                final String s = Output.toString(", ", arguments.value(), new Output.Formatter<JSArgument>() {
-                    @Override
-                    public String format(JSArgument o) {
-                        if (o.help() != null) {
-                            pHelp.add(new Documentation.Text(o.name()), new Documentation.Text(o.help()));
-                        }
-                        return String.format("%s %s", o.type(), o.name());
+                final String s = Output.toString(", ", arguments.value(), o -> {
+                    if (o.help() != null) {
+                        pHelp.add(new Documentation.Text(o.name()), new Documentation.Text(o.help()));
                     }
+                    return format("%s %s", o.type(), o.name());
                 });
                 String returnType = arguments.returnType();
                 if ("".equals(returnType))
-                    returnType = method.getReturnType().toString();
+                    returnType = javascriptName(method.getReturnType());
                 container.add(new Documentation.Division(
-                        new Documentation.Text(format("%s %s(%s)\n", returnType, name, s))));
+                        new Documentation.Text(format("%s%s %s(%s)\n", prefix, returnType, name, s))));
                 help.add(pHelp);
             }
         } else {
+            // No JSHelp
             final Documentation.Text text = new Documentation.Text();
             names = text;
             final JSArgument returnAnnotation = method.getAnnotation(JSArgument.class);
-            String returnType = returnAnnotation != null ? returnAnnotation.type() : method.getReturnType().toString();
+            String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
-            text.format("%s %s(", returnType, name);
+            text.format("%s%s %s(", prefix, returnType, name);
 
-            final Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-            final Class<?>[] parameterTypes = method.getParameterTypes();
+            int startAt = 0;
+            if (jsfunction != null && jsfunction.scope())
+                startAt = 2;
+
+            Parameter[] parameters = method.getParameters();
             boolean first = true;
-            for (int i = 0; i < parameterTypes.length; i++) {
-                String argName = "";
+            for (int i = startAt; i < parameters.length; i++) {
+                String argName = parameters[i].getName();
                 String argType = null;
 
-                for (Annotation a : parameterAnnotations[i]) {
+                for (Annotation a : parameters[i].getAnnotations()) {
                     if (a instanceof JSArgument) {
                         final JSArgument jsArg = (JSArgument) a;
-                        argName = jsArg.name();
+                        argName = jsArg.equals("") ? argName : jsArg.name();
                         argType = jsArg.type();
                         if (jsArg.help() != null)
                             pHelp.add(new Documentation.Text(jsArg.name()), new Documentation.Text(jsArg.help()));
@@ -101,17 +116,40 @@ public class JSDocumentation {
                 else
                     first = false;
 
-                if (argType == null) {
-                    Class<?> pClass = (Class<?>) parameterTypes[i];
-                    argType = pClass.toString();
+                if (argType == null || "".equals(argType)) {
+                    Class<?> pClass = parameters[i].getType();
+                    argType = javascriptName(pClass);
                 }
 
+                if (argName.equals("")) argName = "arg_" + i;
                 text.format("%s %s", argType, argName);
             }
             text.append(")");
         }
 
         methods.add(names, help);
+    }
+
+    private static String javascriptName(Class<?> aClass) {
+        if (JSBaseObject.class.isAssignableFrom(aClass)) {
+            return JSBaseObject.getClassName(aClass);
+        }
+
+        if (aClass.isArray())
+            return javascriptName(aClass.getComponentType()) + "[]";
+
+        if (aClass.isPrimitive() || aClass == String.class || aClass == Boolean.class
+                || aClass == Integer.class || aClass == Long.class || aClass == Object.class
+                || aClass == String.class)
+            return aClass.getSimpleName();
+
+        if (aClass == NativeArray.class)
+            return "Array";
+
+        if (aClass == Scriptable.class)
+            return "Object";
+
+        return "NA/" + aClass.getCanonicalName();
     }
 
     /**
@@ -155,8 +193,17 @@ public class JSDocumentation {
 
             for (Method method : clazz.getDeclaredMethods()) {
                 String name = null;
+
+                // A javascript object based on JSBaseObject
+                if (JSBaseObject.class.isAssignableFrom(clazz)) {
+                    JSFunction annotation = method.getAnnotation(JSFunction.class);
+                    if (annotation != null)
+                        documentMethod(methods, method, name);
+                    continue;
+                }
+
                 if (ScriptableObject.class.isAssignableFrom(clazz)) {
-                    if (clazz.getAnnotation(JSFunction.class) != null) {
+                    if (method.getAnnotation(JSFunction.class) != null) {
                         if (method.getName().startsWith("js_")) {
                             name = method.getName();
                         } else {

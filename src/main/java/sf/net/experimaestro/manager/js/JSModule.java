@@ -47,11 +47,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
+import java.io.*;
 
 public class JSModule extends JSBaseObject {
     final static private Logger LOGGER = Logger.getLogger();
@@ -65,10 +61,11 @@ public class JSModule extends JSBaseObject {
      * @param jsScope  The scope where the object was created
      * @param jsObject The object itself
      */
+    @JSFunction
     public JSModule(XPMObject xpm, Repository repository, Scriptable jsScope,
                     NativeObject jsObject) {
         this.xpm = xpm;
-        module = new Module((QName) JSUtils.get(jsScope, "id", jsObject));
+        module = new Module(JSUtils.get(jsScope, "id", jsObject));
 
         module.setName(JSUtils.toString(JSUtils.get(jsScope, "name", jsObject)));
         module.setDocumentation(JSUtils

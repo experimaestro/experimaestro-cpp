@@ -171,7 +171,7 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         return new ShLauncher.ProcessBuilder(scriptFile, connector);
     }
 
@@ -371,7 +371,7 @@ public class SSHConnector extends SingleHostConnector {
 
     public class SSHProcessBuilder extends XPMProcessBuilder {
 
-        private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) {
+        private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) throws FileSystemException {
             final Redirect.Type type = output == null ? Redirect.Type.INHERIT : output.type();
 
             switch (type) {

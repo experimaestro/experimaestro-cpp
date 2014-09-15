@@ -8,16 +8,16 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport.packet;
 
+import org.eclipse.wst.jsdt.debug.transport.Connection;
+import org.eclipse.wst.jsdt.debug.transport.exception.DisconnectedException;
+import org.eclipse.wst.jsdt.debug.transport.exception.TimeoutException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-
-import org.eclipse.wst.jsdt.debug.transport.Connection;
-import org.eclipse.wst.jsdt.debug.transport.exception.DisconnectedException;
-import org.eclipse.wst.jsdt.debug.transport.exception.TimeoutException;
 
 /**
  * Default implementation of {@link PacketManager} for receiving packets from the 

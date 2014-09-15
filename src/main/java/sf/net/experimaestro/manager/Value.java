@@ -24,10 +24,6 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xquery.XQException;
-import javax.xml.xquery.XQExpression;
-import javax.xml.xquery.XQItem;
-import javax.xml.xquery.XQSequence;
 import java.lang.reflect.Constructor;
 
 /**
@@ -110,21 +106,6 @@ public abstract class Value {
         }
     }
 
-    private static XQItem evaluateSingletonExpression(String query, XQExpression xqje) throws XQException {
-        XQSequence result = xqje.executeQuery(query);
-
-        if (!result.next()) {
-            LOGGER.debug("No answer for XQuery [%s]", query);
-            return null;
-        }
-
-        XQItem xqItem = result.getItem();
-        if (result.next())
-            throw new ExperimaestroRuntimeException(
-                    "Too many answers (%d) for XPath [%s]", query);
-
-        return xqItem;
-    }
 
 
     final public Value copy() {

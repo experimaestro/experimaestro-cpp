@@ -8,13 +8,13 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoRequest;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoResponse;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Rhino request handler used to craft response bodies for given JSON requests

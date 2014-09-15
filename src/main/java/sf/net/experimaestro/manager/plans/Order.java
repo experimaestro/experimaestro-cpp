@@ -23,11 +23,7 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import sf.net.experimaestro.utils.WrappedResult;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

@@ -8,22 +8,18 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
-
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.EventPacket;
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoRequest;
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoResponse;
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoTransportService;
+import org.eclipse.wst.jsdt.debug.internal.rhino.transport.*;
 import org.eclipse.wst.jsdt.debug.transport.Connection;
 import org.eclipse.wst.jsdt.debug.transport.DebugSession;
 import org.eclipse.wst.jsdt.debug.transport.ListenerKey;
 import org.eclipse.wst.jsdt.debug.transport.TransportService;
 import org.eclipse.wst.jsdt.debug.transport.exception.DisconnectedException;
 import org.eclipse.wst.jsdt.debug.transport.exception.TimeoutException;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringTokenizer;
 
 /**
  * Delegate for {@link DebugSession} communication

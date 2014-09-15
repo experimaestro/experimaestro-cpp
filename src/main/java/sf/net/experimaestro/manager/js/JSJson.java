@@ -19,6 +19,8 @@
 package sf.net.experimaestro.manager.js;
 
 import com.google.common.base.Joiner;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.json.Json;
@@ -30,14 +32,21 @@ import sf.net.experimaestro.utils.RangeUtils;
 import java.io.IOException;
 import java.io.StringWriter;
 
-import static com.google.common.collect.Ranges.closed;
+import static com.google.common.collect.Range.closed;
 
 /**
+ * Wraps the Json objects
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 1/4/13
  */
-public class JSJson extends JSBaseObject implements Wrapper {
+public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     private final Json json;
+
+    @JSFunction(scope = true)
+    public JSJson(Context sc, Scriptable scope, NativeObject object) {
+        this.json = JSUtils.toJSON(scope, object);
+    }
 
     public JSJson(Json json) {
         this.json = json;
@@ -48,7 +57,6 @@ public class JSJson extends JSBaseObject implements Wrapper {
     public Json getJson() {
         return json;
     }
-
 
     @JSFunction
     public String join(String separator) {
@@ -68,7 +76,7 @@ public class JSJson extends JSBaseObject implements Wrapper {
     public String toSource() {
         StringWriter writer = new StringWriter();
         try {
-            json.toJSONString(writer);
+            json.write(writer);
         } catch (IOException e) {
             throw new AssertionError("Should not happen: I/O error while serializing to a StringWriter");
         }
@@ -125,7 +133,32 @@ public class JSJson extends JSBaseObject implements Wrapper {
         if (json instanceof JsonArray)
             return RangeUtils.toIntegerArray(closed(0, ((JsonArray) json).size()));
 
+        if (json instanceof JsonObject)
+            return ((JsonObject) json).keySet().toArray();
+
         return super.getIds();
+    }
+
+    @Override
+    public boolean has(String name, Scriptable start) {
+        if (json instanceof JsonObject)
+            return ((JsonObject) json).containsKey(name);
+        return super.has(name, start);
+    }
+
+    @Override
+    public boolean has(int index, Scriptable start) {
+        if (json instanceof JsonArray)
+            return index >= 0 && index < ((JsonArray) json).size();
+
+        return super.has(index, start);
+    }
+
+    @JSFunction
+    public String get_descriptor() throws IOException {
+        StringWriter writer = new StringWriter();
+        json.writeDescriptorString(writer);
+        return writer.toString();
     }
 
     @Override

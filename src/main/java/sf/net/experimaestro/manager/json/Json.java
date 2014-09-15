@@ -18,13 +18,16 @@
 
 package sf.net.experimaestro.manager.json;
 
+import com.google.common.collect.ImmutableSet;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Set;
 
 /**
- * Bsae class for all JSON objects
+ * Base class for all JSON objects
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 1/4/13
@@ -35,7 +38,7 @@ public interface Json {
     /**
      * Returns true if this Json object is a simple type
      */
-    boolean isSimple();
+    default boolean isSimple() { return true; }
 
     /**
      * Returns the simple value underlying this object
@@ -49,6 +52,19 @@ public interface Json {
      */
     QName type();
 
+    default boolean canIgnore(Set<QName> ignore) { return false; }
+
+    public static Set<QName> DEFAULT_IGNORE = ImmutableSet.of(ValueType.XP_RESOURCE, ValueType.XP_FILE);
+
+    /**
+     * Write a normalized version of the JSON
+     */
+    default void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException { write(writer); }
+
+    /**
+     * Write a normalized version of the JSON
+     */
+    default void writeDescriptorString(Writer writer) throws IOException { writeDescriptorString(writer, DEFAULT_IGNORE); }
 
     /**
      * Write a JSON representation
@@ -56,7 +72,7 @@ public interface Json {
      * @param out
      * @throws IOException
      */
-    public void toJSONString(Writer out) throws IOException;
+    public void write(Writer out) throws IOException;
 
 
 }

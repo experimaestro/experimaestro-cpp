@@ -25,16 +25,16 @@ import net.sf.saxon.Configuration;
 import net.sf.saxon.expr.XPathContext;
 import net.sf.saxon.lib.ExtensionFunctionCall;
 import net.sf.saxon.lib.ExtensionFunctionDefinition;
-import net.sf.saxon.om.SequenceIterator;
+import net.sf.saxon.om.Sequence;
 import net.sf.saxon.om.StructuredQName;
 import net.sf.saxon.query.DynamicQueryContext;
 import net.sf.saxon.query.StaticQueryContext;
 import net.sf.saxon.query.XQueryExpression;
 import net.sf.saxon.trans.XPathException;
-import net.sf.saxon.tree.iter.SingletonIterator;
 import net.sf.saxon.tree.tiny.TinyElementImpl;
 import net.sf.saxon.value.BooleanValue;
 import net.sf.saxon.value.SequenceType;
+import net.sf.saxon.value.SingletonItem;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -83,7 +83,7 @@ public class Main {
 
 		if ("xquery".equals(task)) {
 			Configuration config = new Configuration();
-			config.setAllowExternalFunctions(true);
+//			config.setAllowExternalFunctions(true);
 			config.registerExtensionFunction(new TestFunctionDefinition());
 			StaticQueryContext staticContext = config.newStaticQueryContext();
 			// staticContext.declareGlobalVariable(qName, type, value,
@@ -160,13 +160,12 @@ public class Main {
 			return new ExtensionFunctionCall() {
 				private static final long serialVersionUID = 1L;
 
-				@Override
-				public SequenceIterator call(SequenceIterator[] arguments,
-						XPathContext context) throws XPathException {
-					logger.info("Calling!");
-					return SingletonIterator.makeIterator(BooleanValue.TRUE);
-				}
-			};
+                @Override
+                public Sequence call(XPathContext xPathContext, Sequence[] sequences) throws XPathException {
+                    logger.info("Calling!");
+                    return new SingletonItem(BooleanValue.TRUE);
+                }
+            };
 		}
 
 		@Override

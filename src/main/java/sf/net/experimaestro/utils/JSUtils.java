@@ -19,41 +19,20 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.FunctionObject;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.UniqueTag;
-import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
-import org.w3c.dom.Element;
+import org.w3c.dom.*;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JSJson;
-import sf.net.experimaestro.manager.js.JSNamespaceBinder;
-import sf.net.experimaestro.manager.js.JSNode;
-import sf.net.experimaestro.manager.js.JSNodeList;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonBoolean;
-import sf.net.experimaestro.manager.json.JsonInteger;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonReal;
-import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.js.*;
+import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
+import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -179,6 +158,9 @@ public class JSUtils {
         value = value instanceof JSBaseObject ? value : unwrap(value);
 
         // --- Simple cases
+        if (value == null)
+            return JsonNull.getSingleton();
+
         if (value instanceof Json)
             return (Json) value;
 
@@ -234,6 +216,17 @@ public class JSUtils {
             return json;
         }
 
+        if (value.getClass().isArray()) {
+            final int length = Array.getLength(value);
+            JsonArray json = new JsonArray();
+            for (int i = 0; i < length; i++)
+                json.add(toJSON(scope, Array.get(value, i)));
+            return json;
+        }
+
+        // -- Undefined
+        if (value instanceof Undefined)
+            return JsonNull.getSingleton();
 
         return new JsonString(value.toString());
     }

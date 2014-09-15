@@ -8,17 +8,6 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.EventPacket;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONUtil;
@@ -28,6 +17,11 @@ import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.debug.DebugFrame;
 import org.mozilla.javascript.debug.DebuggableScript;
 import org.mozilla.javascript.debug.Debugger;
+
+import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
 
 /**
  * Rhino implementation of {@link Debugger}

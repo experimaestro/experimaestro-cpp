@@ -18,12 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.WrappedException;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
@@ -33,11 +28,7 @@ import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.plans.Constant;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.Plan;
-import sf.net.experimaestro.manager.plans.PlanContext;
-import sf.net.experimaestro.manager.plans.PlanInputs;
+import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -65,6 +56,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      *
      * @param plan
      */
+    @JSFunction
     public JSPlan(Plan plan) {
         this.plan = plan;
     }
@@ -146,8 +138,8 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
         if (value instanceof Double) {
             // Because rhino returns doubles for any number
-            if ((((Double) value).longValue()) == ((Double) value).doubleValue())
-                return new Constant(ValueType.wrap((Long) ((Double) value).longValue()));
+            if ((((Double) value).longValue()) == (Double) value)
+                return new Constant(ValueType.wrap(((Double) value).longValue()));
             return new Constant(ValueType.wrap((Double) value));
         }
 
@@ -177,10 +169,6 @@ public class JSPlan extends JSAbstractOperator implements Callable {
             return new Constant(new JSNode((Node) value));
 
         // --- Plans & transformations
-
-        // Case of operators or converter of operators
-        if (value instanceof JSOperator)
-            return ((JSOperator) value).getOperator();
 
         // Case of a native array: we wrap its values
         if (value instanceof NativeArray) {

@@ -55,7 +55,7 @@ public class LocalhostConnector extends SingleHostConnector {
     static private LocalhostConnector singleton = new LocalhostConnector();
 
     public LocalhostConnector() {
-        super("local://");
+        super("file://");
     }
 
     @Override
@@ -101,7 +101,7 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         return new ShLauncher.ProcessBuilder(scriptFile, connector);
     }
 
@@ -132,7 +132,11 @@ public class LocalhostConnector extends SingleHostConnector {
                 destroyThread = new Thread() {
                     @Override
                     public void run() {
-                        LocalProcess.this.destroy();
+                        try {
+                            LocalProcess.this.destroy();
+                        } catch (FileSystemException e) {
+                            LOGGER.error("Process %s could not be destroyed", LocalProcess.this);
+                        }
                     }
                 };
                 Runtime.getRuntime().addShutdownHook(destroyThread);
@@ -185,7 +189,7 @@ public class LocalhostConnector extends SingleHostConnector {
         }
 
         @Override
-        public void destroy() {
+        public void destroy() throws FileSystemException {
             if (process != null) {
                 LOGGER.info("Killing job [%s] with PID [%s]", getJob(), getPID());
                 // TODO: send a signal first?

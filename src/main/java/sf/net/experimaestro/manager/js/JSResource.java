@@ -18,19 +18,28 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Wrapper;
-import org.mozilla.javascript.annotations.JSFunction;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Set;
+
+import static java.lang.String.format;
 
 /**
  * A resource
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSResource extends JSBaseObject implements Wrapper {
+public class JSResource extends JSBaseObject implements Json {
 
     private Resource resource;
 
+    @sf.net.experimaestro.manager.js.JSFunction
     public JSResource(Resource resource) {
         this.resource = resource;
     }
@@ -40,15 +49,54 @@ public class JSResource extends JSBaseObject implements Wrapper {
         return "Resource";
     }
 
-    @Override
-    public Resource unwrap() {
-        return resource;
-    }
 
     @Override
     @JSFunction("toString")
     public String toString() {
-        return resource == null ? "[null]" : resource.getLocator().toString();
+        return resource == null ? "[null]" : ("[Resource " + resource.getLocator().toString() + "]");
     }
+
+    @JSFunction
+    public JSDependency lock(String lockType) {
+        return new JSDependency(resource.createDependency(lockType));
+    }
+
+    @Override
+    public Json clone() {
+        return new JSResource(resource);
+    }
+
+    @Override
+    public Object get() {
+        return this;
+    }
+
+    @Override
+    public QName type() {
+        return ValueType.XP_RESOURCE;
+    }
+
+    @Override
+    public boolean canIgnore(Set<QName> ignore) {
+        return ignore.contains(ValueType.XP_RESOURCE);
+    }
+
+    @Override
+    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+        if (ignore.contains(ValueType.XP_RESOURCE)) {
+            writer.write("null");
+        } else {
+            write(writer);
+        }
+    }
+
+    @Override
+    public void write(Writer out) throws IOException {
+        out.write(format("{ \"id\": \"%s\", \"xp_type\": \"%s\" }",
+                resource.getLocator().toString(),
+                ValueType.XP_RESOURCE.toString()
+        ));
+    }
+
 
 }

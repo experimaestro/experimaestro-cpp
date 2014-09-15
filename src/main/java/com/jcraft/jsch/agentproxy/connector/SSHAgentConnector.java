@@ -29,9 +29,9 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package com.jcraft.jsch.agentproxy.connector;
 
-import com.jcraft.jsch.agentproxy.Connector;
-import com.jcraft.jsch.agentproxy.Buffer;
 import com.jcraft.jsch.agentproxy.AgentProxyException;
+import com.jcraft.jsch.agentproxy.Buffer;
+import com.jcraft.jsch.agentproxy.Connector;
 import com.jcraft.jsch.agentproxy.USocketFactory;
 
 import java.io.IOException;

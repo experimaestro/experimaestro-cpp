@@ -31,18 +31,9 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.Random;
-import java.util.TreeSet;
+import java.util.*;
 
-import static java.lang.Math.floor;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.lang.Math.sqrt;
+import static java.lang.Math.*;
 import static sf.net.experimaestro.scheduler.WaitingJob.Action;
 
 public class SchedulerTest extends XPMEnvironment {

@@ -41,6 +41,7 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.Set;
 
 /**
  * A wrapper around a DOM node
@@ -140,13 +141,13 @@ public class JSNode extends JSBaseObject implements Json {
 
     @JSFunction()
     public String resource() {
-        return getAttribute(node, Manager.XP_RESOURCE);
+        return getAttribute(node, ValueType.XP_RESOURCE);
     }
 
     @JSFunction(scope = true)
     public String resource(Context cx, Scriptable scope, String xpath) throws XPathExpressionException {
         NodeList nodeList = get_one_node(scope, xpath);
-        return getAttribute(nodeList.item(0), Manager.XP_RESOURCE);
+        return getAttribute(nodeList.item(0), ValueType.XP_RESOURCE);
     }
 
     @JSFunction(scope = true)
@@ -211,7 +212,17 @@ public class JSNode extends JSBaseObject implements Json {
     }
 
     @Override
-    public void toJSONString(Writer out) throws IOException {
+    public boolean canIgnore(Set<QName> ignore) {
+        return false;
+    }
+
+    @Override
+    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+        write(writer);
+    }
+
+    @Override
+    public void write(Writer out) throws IOException {
         out.write(JSONValue.escape(XMLUtils.toString(node)));
     }
 }

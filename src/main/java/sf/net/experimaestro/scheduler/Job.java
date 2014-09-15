@@ -584,7 +584,12 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     synchronized public boolean stop() {
         // Process is running
         if (process != null) {
-            process.destroy();
+            try {
+                process.destroy();
+            } catch (FileSystemException e) {
+                LOGGER.error(e, "The process could not be stopped");
+                return false;
+            }
             setState(ResourceState.ERROR);
             storeState(true);
             return true;

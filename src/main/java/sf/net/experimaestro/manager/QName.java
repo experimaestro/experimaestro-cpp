@@ -87,7 +87,7 @@ public class QName implements Comparable<QName> {
             // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
             QNAME_PATTERN =
                     Pattern
-                            .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.])+)");
+                            .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.$])+)");
         } catch (PatternSyntaxException e) {
             LOGGER.error("Could not initialise the pattern: %s", e);
             throw e;

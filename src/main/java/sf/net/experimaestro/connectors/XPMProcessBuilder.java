@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
@@ -64,12 +65,12 @@ abstract public class XPMProcessBuilder {
     /** Whether this process should be bound to the Java process */
     boolean detach;
 
-    public XPMProcessBuilder command(List<String> command) {
+    public XPMProcessBuilder command(List<String> command) throws FileSystemException {
         this.command = command;
         return this;
     }
 
-    final public XPMProcessBuilder command(String... command) {
+    final public XPMProcessBuilder command(String... command) throws FileSystemException {
         return command(ListAdaptator.create(command));
     }
 

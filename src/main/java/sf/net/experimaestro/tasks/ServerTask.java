@@ -42,15 +42,7 @@ import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.server.ContentServlet;
-import sf.net.experimaestro.server.JSHelpServlet;
-import sf.net.experimaestro.server.JsonRPCServlet;
-import sf.net.experimaestro.server.ServerSettings;
-import sf.net.experimaestro.server.StatusServlet;
-import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.server.UnixSocketConnector;
-import sf.net.experimaestro.server.XPMWebSocketServlet;
-import sf.net.experimaestro.server.XPMXMLRpcServlet;
+import sf.net.experimaestro.server.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -76,7 +68,7 @@ public class ServerTask extends AbstractTask {
      */
     public int execute() throws Throwable {
         if (configuration == null || configuration.getFile() == null) {
-            final File file = new File(System.getProperty("user.home"), ".experimaestro");
+            final File file = new File(new File(System.getProperty("user.home"), ".experimaestro"), "settings.ini");
             LOGGER.info("Using the default configuration file " + file);
             configuration = new HierarchicalINIConfiguration(file);
         }

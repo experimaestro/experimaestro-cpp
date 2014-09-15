@@ -8,18 +8,12 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport.socket;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
-import java.net.Socket;
-
 import org.eclipse.wst.jsdt.debug.transport.Connection;
 import org.eclipse.wst.jsdt.debug.transport.Constants;
 import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
+
+import java.io.*;
+import java.net.Socket;
 
 /**
  * A specialized {@link Connection} that communicates using {@link Socket}s

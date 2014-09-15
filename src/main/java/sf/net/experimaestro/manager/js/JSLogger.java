@@ -35,6 +35,7 @@ public class JSLogger extends JSBaseObject {
     private Logger logger;
     private XPMObject xpm;
 
+    @JSFunction
     public JSLogger(XPMObject xpm, String name) {
         this.xpm = xpm;
         logger = Logger.getLogger(xpm.loggerRepository, name);

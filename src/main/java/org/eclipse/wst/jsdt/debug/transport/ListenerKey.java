@@ -10,9 +10,9 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport;
 
-import java.net.Socket;
-
 import org.eclipse.wst.jsdt.debug.transport.socket.SocketListenerKey;
+
+import java.net.Socket;
 
 /**
  * Describes a key for a {@link TransportService} that uniquely identifies an address to communicate with.

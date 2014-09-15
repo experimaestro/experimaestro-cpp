@@ -56,20 +56,20 @@ public class JsonPathFunction implements Function {
 
         JsonArray current = new JsonArray();
         current.add(input[0]);
-        for (int i = 0; i < path.length; i++) {
-            boolean any = path[i].equals("*");
+        for (String aPath : path) {
+            boolean any = aPath.equals("*");
             JsonArray next = new JsonArray();
             for (Json json : current) {
                 if (json instanceof JsonArray) {
                     if (any)
-                        for(Json e: (JsonArray)json)
+                        for (Json e : (JsonArray) json)
                             next.add(e);
                 } else if (json instanceof JsonObject) {
                     if (any) {
-                        for(Json e: ((JsonObject)json).values())
+                        for (Json e : ((JsonObject) json).values())
                             next.add(e);
                     } else {
-                        Json value = ((JsonObject) json).get(path[i]);
+                        Json value = ((JsonObject) json).get(aPath);
                         if (value != null)
                             next.add(value);
                     }

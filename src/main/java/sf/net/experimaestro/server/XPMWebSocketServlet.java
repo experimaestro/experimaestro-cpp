@@ -19,9 +19,6 @@
 package sf.net.experimaestro.server;
 
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.websocket.api.UpgradeRequest;
-import org.eclipse.jetty.websocket.api.UpgradeResponse;
-import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import sf.net.experimaestro.manager.Repositories;
@@ -44,11 +41,6 @@ public class XPMWebSocketServlet extends WebSocketServlet {
 
     @Override
     public void configure(WebSocketServletFactory factory) {
-        factory.setCreator(new WebSocketCreator() {
-            @Override
-            public Object createWebSocket(UpgradeRequest req, UpgradeResponse resp) {
-                return new XPMWebSocketListener(server, scheduler, repositories);
-            }
-        });
+        factory.setCreator((req, resp) -> new XPMWebSocketListener(server, scheduler, repositories));
     }
 }

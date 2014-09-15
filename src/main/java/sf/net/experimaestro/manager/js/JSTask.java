@@ -68,7 +68,7 @@ public class JSTask extends JSAbstractTask {
         this.jsObject = jsObject;
 
         // Get the run function
-        runFunction = (Function) JSUtils.get(jsScope, "run", jsObject, null);
+        runFunction = JSUtils.get(jsScope, "run", jsObject, null);
         if (runFunction == null) {
             throw new RuntimeException(
                     format("Could not find the function run() in the object"));

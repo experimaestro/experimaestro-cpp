@@ -8,11 +8,11 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport;
 
-import java.io.IOException;
-import java.net.Socket;
-
 import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
 import org.eclipse.wst.jsdt.debug.transport.socket.SocketConnection;
+
+import java.io.IOException;
+import java.net.Socket;
 
 /**
  * Describes a connection to a debugger.

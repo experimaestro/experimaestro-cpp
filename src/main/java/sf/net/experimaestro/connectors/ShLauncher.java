@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
 
 import java.io.IOException;
@@ -43,18 +44,18 @@ public class ShLauncher implements Launcher {
 
 
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
         return new ProcessBuilder(null, connector);
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         return new ProcessBuilder(scriptFile, connector);
     }
 
     static public class ProcessBuilder extends UnixProcessBuilder {
 
-        public ProcessBuilder(FileObject file, SingleHostConnector connector) {
+        public ProcessBuilder(FileObject file, SingleHostConnector connector) throws FileSystemException {
             super(file, connector);
         }
 

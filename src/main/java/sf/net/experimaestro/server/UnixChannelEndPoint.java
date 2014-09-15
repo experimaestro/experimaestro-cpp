@@ -20,7 +20,6 @@ package sf.net.experimaestro.server;
 
 import jnr.unixsocket.UnixSocketChannel;
 import org.eclipse.jetty.io.EofException;
-import org.eclipse.jetty.io.SocketBased;
 import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
@@ -36,7 +35,7 @@ import java.nio.channels.GatheringByteChannel;
  * Channel End Point.
  * <p>Holds the channel and socket for an NIO endpoint.
  */
-public class UnixChannelEndPoint extends UnixAbstractEndPoint implements SocketBased
+public class UnixChannelEndPoint extends UnixAbstractEndPoint //implements SocketBased
 {
     private static final Logger LOG = Log.getLogger(UnixChannelEndPoint.class);
 
@@ -209,7 +208,7 @@ public class UnixChannelEndPoint extends UnixAbstractEndPoint implements SocketB
         return _channel;
     }
 
-    @Override
+//    @Override
     public Socket getSocket()
     {
         return null;

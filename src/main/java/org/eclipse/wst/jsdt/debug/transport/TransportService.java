@@ -8,10 +8,10 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport;
 
+import org.eclipse.wst.jsdt.debug.transport.socket.SocketTransportService;
+
 import java.io.IOException;
 import java.net.Socket;
-
-import org.eclipse.wst.jsdt.debug.transport.socket.SocketTransportService;
 
 /**
  * A transport service is used to attach and / or listen to a 

@@ -85,4 +85,7 @@ public class Type {
 
     }
 
+    public boolean matches(QName type) {
+        return matches(type.getNamespaceURI(), type.getLocalPart());
+    }
 }

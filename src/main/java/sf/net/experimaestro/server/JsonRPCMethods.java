@@ -19,6 +19,7 @@
 package sf.net.experimaestro.server;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
@@ -32,47 +33,26 @@ import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
+import org.python.core.*;
+import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Listener;
-import sf.net.experimaestro.scheduler.Message;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleMessage;
+import sf.net.experimaestro.manager.python.XPM;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.script.ScriptException;
 import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -235,13 +215,13 @@ public class JsonRPCMethods extends HttpServlet {
                 args[index] = o;
             return score;
         }
-        
+
         if (o.getClass() == Long.class && aType == Integer.class) {
-        	if (args != null)
-        		args[index] = ((Long)o).intValue();
-        	return score - 1;
+            if (args != null)
+                args[index] = ((Long) o).intValue();
+            return score - 1;
         }
-        
+
         return Integer.MIN_VALUE;
     }
 
@@ -377,6 +357,63 @@ public class JsonRPCMethods extends HttpServlet {
         return 0;
     }
 
+    /**
+     * Run Python
+     */
+    @RPCMethod(name = "run-python", help = "Run a python script")
+    public String runPython(
+            @RPCArgument(name = "files") List<JSONArray> files,
+            @RPCArgument(name = "environment") Map<String, String> environment) throws ScriptException, FileNotFoundException {
+        final Hierarchy loggerRepository = getScriptLogger();
+
+        PythonInterpreter engine = new PythonInterpreter();
+        org.apache.log4j.Logger scriptLogger = loggerRepository.getRootLogger();
+
+        engine.setOut(getRequestOutputStream());
+        engine.setErr(getRequestErrorStream());
+
+        XPM.prepare(engine);
+
+        for (int i = 0; i < files.size(); i++) {
+            JSONArray filePointer = files.get(i);
+
+            boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
+            final String content = isFile ? null : filePointer.get(1).toString();
+            final String filename = filePointer.get(0).toString();
+
+            ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
+//            jsXPM.setLocator(locator);
+            LOGGER.info("Script locator is %s", locator);
+
+            // Compile
+            final PyCode pyCode;
+            if (isFile) {
+                pyCode = engine.compile(new FileReader(filename));
+            } else {
+                pyCode = engine.compile(content);
+            }
+
+            // Evaluate
+            try {
+                engine.eval(pyCode);
+                PyList locals = ((PyStringMap) engine.getLocals()).items();
+                for(Object x: locals) {
+                    PyTuple y = (PyTuple) x;
+                    if (y.get(1) instanceof PyClass) {
+                        PyClass aClass = (PyClass) y.get(1);
+                        scriptLogger.info(String.format("Hello: %s", y));
+                    }
+                }
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Throwable t) {
+                throw new RuntimeException(t);
+            }
+
+        }
+
+        return "0";
+    }
 
     /**
      * Run javascript
@@ -388,31 +425,12 @@ public class JsonRPCMethods extends HttpServlet {
     public String runJSScript(@RPCArgument(name = "files") List<JSONArray> files,
                               @RPCArgument(name = "environment") Map<String, String> environment,
                               @RPCArgument(name = "debug", required = false) Integer debugPort) {
+
         final StringWriter errString = new StringWriter();
         final PrintWriter err = new PrintWriter(errString);
         XPMObject jsXPM;
 
-        final RootLogger root = new RootLogger(Level.INFO);
-        final Hierarchy loggerRepository = new Hierarchy(root);
-        BufferedWriter stringWriter = new BufferedWriter(new Writer() {
-            @Override
-            public void write(char[] cbuf, int off, int len) throws IOException {
-                mos.message(new String(cbuf, off, len));
-            }
-
-            @Override
-            public void flush() throws IOException {
-            }
-
-            @Override
-            public void close() throws IOException {
-                throw new UnsupportedOperationException();
-            }
-        });
-
-        PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
-        WriterAppender appender = new WriterAppender(layout, stringWriter);
-        root.addAppender(appender);
+        final Hierarchy loggerRepository = getScriptLogger();
 
 
         // Creates and enters a Context. The Context stores information
@@ -446,7 +464,7 @@ public class JsonRPCMethods extends HttpServlet {
 
             ScriptableObject.defineProperty(scope, "env", new RPCHandler.JSGetEnv(environment), 0);
             jsXPM = new XPMObject(null, jsContext, environment, scope, repositories,
-                    scheduler, loggerRepository, cleaner);
+                    scheduler, loggerRepository, cleaner, null);
 
             Object result = null;
             for (int i = 0; i < files.size(); i++) {
@@ -530,6 +548,61 @@ public class JsonRPCMethods extends HttpServlet {
             // Exit context
             Context.exit();
         }
+    }
+
+    private Hierarchy getScriptLogger() {
+        final RootLogger root = new RootLogger(Level.INFO);
+        final Hierarchy loggerRepository = new Hierarchy(root);
+        BufferedWriter stringWriter = getRequestErrorStream();
+
+        PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
+        WriterAppender appender = new WriterAppender(layout, stringWriter);
+        root.addAppender(appender);
+        return loggerRepository;
+    }
+
+
+    /**
+     * Return the output stream for the request
+     */
+    private BufferedWriter getRequestOutputStream() {
+        return getRequestStream("out");
+    }
+
+    /**
+     * Return the error stream for the request
+     */
+    private BufferedWriter getRequestErrorStream() {
+        return getRequestStream("err");
+    }
+
+    HashMap<String, BufferedWriter> writers = new HashMap<>();
+
+    /**
+     * Return a stream with the given ID
+     */
+    private BufferedWriter getRequestStream(final String id) {
+        BufferedWriter bufferedWriter = writers.get(id);
+        if (bufferedWriter == null) {
+            bufferedWriter = new BufferedWriter(new Writer() {
+                @Override
+                public void write(char[] cbuf, int off, int len) throws IOException {
+                    ImmutableMap<String, String> map = ImmutableMap.of("stream", id, "value", new String(cbuf, off, len));
+                    mos.message(map);
+                }
+
+                @Override
+                public void flush() throws IOException {
+                }
+
+                @Override
+                public void close() throws IOException {
+                    throw new UnsupportedOperationException();
+                }
+            });
+            writers.put(id, bufferedWriter);
+        }
+        return bufferedWriter;
     }
 
     /**
@@ -653,7 +726,7 @@ public class JsonRPCMethods extends HttpServlet {
         EnumSet<ResourceState> states = getStates(statesNames);
         boolean recursive = _recursive != null ? _recursive : false;
 
-        Pattern idPattern =  _idIsRegexp != null && _idIsRegexp ?
+        Pattern idPattern = _idIsRegexp != null && _idIsRegexp ?
                 Pattern.compile(id) : null;
 
         if (id != null && !id.equals("") && idPattern == null) {
@@ -689,7 +762,7 @@ public class JsonRPCMethods extends HttpServlet {
                 }
             }
 
-            for(Resource resource: toRemove)
+            for (Resource resource : toRemove)
                 scheduler.delete(resource, recursive);
 
         }

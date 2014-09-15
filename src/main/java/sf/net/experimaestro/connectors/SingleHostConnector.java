@@ -95,8 +95,15 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
 
     /**
      * Resolve a FileObject to a local path
+     *
+     * Throws an exception when the file name cannot be resolved, i.e. when
+     * the file object is not
      */
-    public String resolve(FileObject file) {
+    public String resolve(FileObject file) throws FileSystemException {
+        if (file.getFileSystem() != this.getFileSystem()) {
+            throw new FileSystemException("Cannot resolve %s from %s", file, this);
+        }
+
         return file.getName().getPath();
     }
 

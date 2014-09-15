@@ -8,11 +8,11 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.transport;
 
+import org.eclipse.wst.jsdt.debug.transport.packet.Response;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.eclipse.wst.jsdt.debug.transport.packet.Response;
 
 /**
  * Default {@link RhinoResponse} implementation using JSON

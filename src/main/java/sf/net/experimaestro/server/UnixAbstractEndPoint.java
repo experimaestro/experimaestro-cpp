@@ -19,11 +19,7 @@
 package sf.net.experimaestro.server;
 
 import jnr.unixsocket.UnixSocketAddress;
-import org.eclipse.jetty.io.Connection;
-import org.eclipse.jetty.io.EndPoint;
-import org.eclipse.jetty.io.FillInterest;
-import org.eclipse.jetty.io.IdleTimeout;
-import org.eclipse.jetty.io.WriteFlusher;
+import org.eclipse.jetty.io.*;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
@@ -115,7 +111,6 @@ public abstract class UnixAbstractEndPoint extends IdleTimeout implements EndPoi
     @Override
     public void close()
     {
-        super.close();
     }
 
     @Override

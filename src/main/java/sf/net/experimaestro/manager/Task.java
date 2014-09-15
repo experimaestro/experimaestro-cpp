@@ -30,13 +30,8 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.StringReader;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * The abstract Task object

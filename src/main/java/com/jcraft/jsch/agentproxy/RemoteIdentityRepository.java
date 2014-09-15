@@ -29,9 +29,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package com.jcraft.jsch.agentproxy;
 
-import java.util.Vector;
 import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSchException;
+
+import java.util.Vector;
 
 public class RemoteIdentityRepository implements IdentityRepository {
 

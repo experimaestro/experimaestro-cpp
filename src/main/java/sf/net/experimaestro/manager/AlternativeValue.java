@@ -90,6 +90,7 @@ public class AlternativeValue extends Value {
                 // Nothing to do
                 LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
                 this.value = value;
+                return;
             }
             throw new ExperimaestroRuntimeException("Not matching: %s and %s", alternativeInput.getType(), type);
         } else {

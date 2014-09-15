@@ -41,6 +41,7 @@ public class JSTaskFactoryWrapper extends JSBaseObject {
 
     TaskFactory factory;
 
+    @JSFunction
     public JSTaskFactoryWrapper(Scriptable information) {
         if (information != null) {
             this.factory = ((JSTaskFactory) information).factory;

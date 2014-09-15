@@ -18,23 +18,18 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
+import org.apache.commons.vfs2.FileObject;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
 
 public class JSDirectTask extends JSAbstractTask {
@@ -44,12 +39,32 @@ public class JSDirectTask extends JSAbstractTask {
      * The run function
      */
     private Function runFunction;
-    private Type outputType;
 
     /**
-     * The object?
+     * The wrapper for the javascript object
      */
-    private NativeObject jsFactory;
+    private JSTask jsObject;
+
+    public class JSTask extends JSBaseObject {
+        /**
+         * The object?
+         */
+        private NativeObject jsFactory;
+
+        @JSFunction
+        public JSTask(NativeObject jsFactory) {
+            this.jsFactory = jsFactory;
+        }
+
+        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        public JSFileObject unique_directory(Context cx, Scriptable scope, FileObject basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+        }
+    }
 
     /**
      * The XPM object
@@ -63,19 +78,17 @@ public class JSDirectTask extends JSAbstractTask {
                         NativeObject jsFactory, Function runFunction, Type outputType) {
         super(taskFactory, jsScope);
         this.xpm = xpm;
-        this.jsFactory = jsFactory;
+        this.jsObject = new JSTask(jsFactory);
         this.runFunction = runFunction;
-        this.outputType = outputType;
     }
 
     @Override
     protected void init(Task _other) {
         JSDirectTask other = (JSDirectTask) _other;
         super.init(other);
-        jsFactory = other.jsFactory;
+        jsObject = other.jsObject;
         runFunction = other.runFunction;
         xpm = other.xpm;
-        outputType = other.outputType;
     }
 
     @Override
@@ -85,52 +98,59 @@ public class JSDirectTask extends JSAbstractTask {
         final Context cx = Context.getCurrentContext();
 
         // Get the inputs
-        Json result = null;
+        JsonObject resultObject = new JsonObject();
+        Type outputType = getFactory().getOutput();
+
+        // Handles the type
+        if (outputType != null) {
+            // If the output is a generic object, modify the value
+            resultObject.put(Manager.XP_TYPE.toString(), new JsonString(outputType.toString()));
+        }
+
+        // Copy the requested outputs
+        for (Entry<String, Input> namedInput : getInputs().entrySet()) {
+            final String copyTo = namedInput.getValue().getCopyTo();
+            if (copyTo != null || runFunction == null) {
+                String key = namedInput.getKey();
+                Value value = values.get(key);
+                resultObject.put(copyTo, value.get());
+            }
+        }
+
 
         if (runFunction != null) {
             // We have a run function
-            Scriptable jsXML = cx.newObject(jsScope, "Object", new Object[]{});
+            Scriptable jsoninput = cx.newObject(jsScope, "Object", new Object[]{});
             for (Entry<String, Value> entry : values.entrySet()) {
                 Json input = entry.getValue().get();
                 // The JS object is set to the document element
                 Object jsJson = input == null ? Scriptable.NOT_FOUND : new JSJson(input);
-                jsXML.put(entry.getKey(), jsXML, jsJson);
+                jsoninput.put(entry.getKey(), jsoninput, jsJson);
             }
 
             xpm.setTaskContext(taskContext);
-            final Object returned = runFunction.call(cx, jsScope, jsFactory,
-                    new Object[]{jsXML});
+            final Object returned = runFunction.call(cx, jsScope, jsObject,
+                    new Object[]{jsoninput, resultObject});
             xpm.setTaskContext(null);
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)
                 throw new ExperimaestroRuntimeException(
                         "Undefined returned by the function run of task [%s]",
                         factory.getId());
+            LOGGER.debug("[/Running] task: %s", factory.getId());
 
-            result = JSUtils.toJSON(jsScope, returned);
-        } else {
-            Type output = getFactory().getOutput();
-            if (output == null && values.size() == 1)
-                result = values.values().iterator().next().get();
-            else {
-                // We just copy the inputs as an output
-                JsonObject json = new JsonObject();
-                if (output != null)
-                    json.put(Manager.XP_TYPE.toString(), output.toString());
-
-                // Loop over non null inputs
-                for (Entry<String, Value> entry : values.entrySet()) {
-                    json.put(entry.getKey(), entry.getValue().get());
-                }
-
-                result = json;
-            }
+            return JSUtils.toJSON(jsScope, returned);
 
         }
 
 
-        LOGGER.debug("[/Running] task: %s", factory.getId());
+        // Simplify the output if needed
+        if (outputType == null && values.size() == 1) {
+            LOGGER.debug("[/Running] task: %s", factory.getId());
+            return values.values().iterator().next().get();
+        }
 
-        return result;
+        LOGGER.debug("[/Running] task: %s", factory.getId());
+        return resultObject;
     }
 }

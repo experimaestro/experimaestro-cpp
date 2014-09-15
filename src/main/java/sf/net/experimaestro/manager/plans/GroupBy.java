@@ -31,11 +31,7 @@ import sf.net.experimaestro.manager.json.JsonArray;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.StrictMath.max;
 

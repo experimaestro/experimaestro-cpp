@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.w3c.dom.Document;
 import sf.net.experimaestro.manager.json.Json;
 
 /**

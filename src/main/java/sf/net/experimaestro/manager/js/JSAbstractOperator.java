@@ -9,14 +9,7 @@ import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
-import sf.net.experimaestro.manager.plans.GroupBy;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.Order;
-import sf.net.experimaestro.manager.plans.OrderBy;
-import sf.net.experimaestro.manager.plans.PlanScope;
-import sf.net.experimaestro.manager.plans.PlanContext;
-import sf.net.experimaestro.manager.plans.Value;
+import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 

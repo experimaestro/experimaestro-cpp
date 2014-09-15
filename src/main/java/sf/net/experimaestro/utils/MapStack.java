@@ -20,12 +20,7 @@ package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
 
-import java.util.AbstractMap;
-import java.util.AbstractSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A Map backed up by a stack of maps

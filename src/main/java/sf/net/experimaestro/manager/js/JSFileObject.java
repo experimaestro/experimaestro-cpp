@@ -19,14 +19,13 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.vfs2.FileDepthSelector;
-import org.apache.commons.vfs2.FileFilter;
 import org.apache.commons.vfs2.FileFilterSelector;
 import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSystemException;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
@@ -34,21 +33,16 @@ import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Writer;
+import java.io.*;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSBaseObject implements Json {
+public class JSFileObject extends JSBaseObject implements Json, Wrapper {
     final static Logger LOGGER = Logger.getLogger();
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
@@ -57,11 +51,13 @@ public class JSFileObject extends JSBaseObject implements Json {
     public JSFileObject() {
     }
 
+    @JSFunction
     public JSFileObject(XPMObject xpm, FileObject file) {
         this.xpm = xpm;
         this.file = file;
     }
 
+    @JSFunction
     public JSFileObject(XPMObject xpm, String path) throws FileSystemException {
         this.xpm = xpm;
         this.file = Scheduler.getVFSManager().resolveFile(path);
@@ -182,15 +178,12 @@ public class JSFileObject extends JSBaseObject implements Json {
 
     @JSFunction
     @JSHelp("Find all the matching files within this folder")
-    public JSJson find_matching_files(@JSArgument(name = "regexp", help = "The regular expression") String regexp) throws FileSystemException {
+    public JSJson find_matching_files(@JSArgument(name = "regexp", type="String", help = "The regular expression") String regexp) throws FileSystemException {
         final Pattern pattern = Pattern.compile(regexp);
         final JsonArray array = new JsonArray();
-        FileObject[] files = file.findFiles(new FileFilterSelector(new FileFilter() {
-            @Override
-            public boolean accept(FileSelectInfo fileSelectInfo) {
-                LOGGER.info("Looking at %s", fileSelectInfo.getFile().getName());
-                return pattern.matcher(fileSelectInfo.getFile().getName().getBaseName()).matches();
-            }
+        FileObject[] files = file.findFiles(new FileFilterSelector(fileSelectInfo -> {
+            LOGGER.info("Looking at %s", fileSelectInfo.getFile().getName());
+            return pattern.matcher(fileSelectInfo.getFile().getName().getBaseName()).matches();
         }));
         for(FileObject file: files) {
             array.add(new JSFileObject(xpm, file));
@@ -220,12 +213,30 @@ public class JSFileObject extends JSBaseObject implements Json {
 
     @Override
     public QName type() {
-        return ValueType.XPM_FILE;
+        return ValueType.XP_FILE;
     }
 
     @Override
-    public void toJSONString(Writer out) throws IOException {
+    public boolean canIgnore(Set<QName> ignore) {
+        return ignore.contains(ValueType.XP_FILE);
+    }
+
+    @Override
+    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+        if (ignore.contains(ValueType.XP_FILE)) {
+
+            write(writer);
+        }
+    }
+
+    @Override
+    public void write(Writer out) throws IOException {
         out.write(JSONValue.escape(this.toString()));
+    }
+
+    @Override
+    public Object unwrap() {
+        return file;
     }
 
     static class MyPrintWriter extends PrintWriter {
@@ -278,7 +289,10 @@ public class JSFileObject extends JSBaseObject implements Json {
     }
 
     @JSFunction("get_path")
+    @JSHelp("Get the file path, ignoring the file scheme")
     public String get_path() {
         return file.getName().getPath();
     }
+
+
 }

@@ -23,7 +23,6 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.agentproxy.AgentProxyException;
 import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
 import com.jcraft.jsch.agentproxy.USocketFactory;
-import com.jcraft.jsch.agentproxy.connector.PageantConnector;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.sleepycat.persist.model.Persistent;
@@ -111,8 +110,8 @@ public class SSHOptions extends ConnectorOptions  {
             try {
                 usf = new JNAUSocketFactory();
                 com.jcraft.jsch.agentproxy.Connector agent = new SSHAgentConnector(usf);
-                if (PageantConnector.isConnectorAvailable())
-                    agent = new PageantConnector();
+//                if (PageantConnector.isConnectorAvailable())
+//                    agent = new PageantConnector();
                 IdentityRepository irepo = new RemoteIdentityRepository(agent);
                 return new RemoteIdentityRepository(agent);
             } catch (AgentProxyException e) {

@@ -10,16 +10,11 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.debug.DebugFrame;
+
+import java.util.*;
 
 /**
  * Rhino implementation of thread data

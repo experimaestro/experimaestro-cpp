@@ -49,8 +49,10 @@ public class JSHelpServlet extends XPMServlet {
 			final PrintWriter out = startHTMLResponse(response);
             header(out, "JavaScript Help");
 
+            out.println("<div id='jsdocumentation'>");
             final Documentation.Printer printer = new Documentation.HTMLPrinter(out);
             JSDocumentation.printJSHelp(printer);
+            out.println("</div>");
             out.println("</body></html>");
             return;
 		}

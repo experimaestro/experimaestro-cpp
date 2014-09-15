@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
@@ -37,16 +38,17 @@ import java.io.*;
 
 /**
  * A command line launcher with OAR
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
 public class OARLauncher implements Launcher {
     static private final Logger LOGGER = Logger.getLogger();
 
-    // Command to start
+    /** oarsub command */
     private String oarCommand = "oarsub";
 
-    // Prefix for the PID of the job
+    /** Prefix for the PID of the job */
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     /** Construction from a connector */
@@ -83,12 +85,12 @@ public class OARLauncher implements Launcher {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+    public XPMProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
         return new ProcessBuilder(null, connector);
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         return new ProcessBuilder(scriptFile, connector);
     }
 
@@ -100,7 +102,7 @@ public class OARLauncher implements Launcher {
         // The associated connector
         private SingleHostConnector connector;
 
-        public ProcessBuilder(FileObject scriptFile, SingleHostConnector connector) {
+        public ProcessBuilder(FileObject scriptFile, SingleHostConnector connector) throws FileSystemException {
             super(scriptFile, connector);
             this.connector = connector;
         }

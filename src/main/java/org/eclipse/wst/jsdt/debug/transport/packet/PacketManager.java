@@ -8,9 +8,9 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport.packet;
 
-import java.io.IOException;
-
 import org.eclipse.wst.jsdt.debug.transport.Connection;
+
+import java.io.IOException;
 
 /**
  * Default manager for sending / receiving packets to / from the connected {@link VirtualMachine}

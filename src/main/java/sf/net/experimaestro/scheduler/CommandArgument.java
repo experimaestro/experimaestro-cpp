@@ -115,7 +115,7 @@ public class CommandArgument {
         }
 
         @Override
-        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) {
+        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
             final FileObject file = files.get(key);
             if (file == null)
                 throw new ExperimaestroRuntimeException("Could not retrieve parameter file with key [%s]", key);

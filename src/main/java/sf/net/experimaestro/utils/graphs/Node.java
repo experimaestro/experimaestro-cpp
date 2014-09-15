@@ -1,7 +1,5 @@
 package sf.net.experimaestro.utils.graphs;
 
-import java.util.List;
-
 /**
  * A node in a graph
  * @author B. Piwowarski <benjamin@bpiwowar.net>

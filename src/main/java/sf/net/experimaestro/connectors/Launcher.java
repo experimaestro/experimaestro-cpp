@@ -19,6 +19,7 @@
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 
 /**
  * sf.net.experimaestro.connectors
@@ -31,10 +32,10 @@ public interface Launcher {
      *
      * @return A process builder
      */
-    XPMProcessBuilder processBuilder(SingleHostConnector connector);
+    XPMProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
 
     /**
      * Returns a script process builder that can be run
      */
-    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile);
+    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException;
 }

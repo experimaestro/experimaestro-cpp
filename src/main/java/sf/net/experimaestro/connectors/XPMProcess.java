@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -28,11 +29,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -337,7 +334,7 @@ public abstract class XPMProcess {
     /**
      * @see {@linkplain Process#destroy()}
      */
-    abstract public void destroy();
+    abstract public void destroy() throws FileSystemException;
 
     public String getPID() {
         return pid;

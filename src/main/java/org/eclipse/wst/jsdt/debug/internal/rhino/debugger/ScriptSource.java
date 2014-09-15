@@ -8,19 +8,13 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.Constants;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
 import org.mozilla.javascript.debug.DebuggableScript;
 import org.mozilla.javascript.debug.Debugger;
+
+import java.net.URI;
+import java.util.*;
 
 /**
  * Rhino script implementation

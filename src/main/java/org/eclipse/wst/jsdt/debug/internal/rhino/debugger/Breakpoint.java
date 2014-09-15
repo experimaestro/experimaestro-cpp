@@ -8,9 +8,9 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.debugger;
 
-import java.util.HashMap;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONConstants;
+
+import java.util.HashMap;
 
 
 /**

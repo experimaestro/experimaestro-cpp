@@ -20,12 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Ref;
-import org.mozilla.javascript.RefCallable;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
@@ -45,6 +40,7 @@ import javax.xml.xpath.XPathExpressionException;
 public class JSTasks extends JSBaseObject implements RefCallable {
     XPMObject xpm;
 
+    @JSFunction
     public JSTasks(XPMObject xpm) {
         this.xpm = xpm;
     }

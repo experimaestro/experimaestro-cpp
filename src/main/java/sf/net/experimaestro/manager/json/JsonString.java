@@ -24,6 +24,7 @@ import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Set;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -62,7 +63,17 @@ public class JsonString implements Json {
     }
 
     @Override
-    public void toJSONString(Writer out) throws IOException {
+    public boolean canIgnore(Set<QName> ignore) {
+        return false;
+    }
+
+    @Override
+    public void write(Writer out) throws IOException {
         JSONValue.writeJSONString(string, out);
+    }
+
+    @Override
+    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+        write(writer);
     }
 }

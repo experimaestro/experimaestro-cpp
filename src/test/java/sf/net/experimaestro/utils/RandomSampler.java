@@ -18,7 +18,6 @@
 package sf.net.experimaestro.utils;
 
 import java.util.Random;
-import java.lang.Math;
 
 /**
  * Space and time efficiently computes a sorted <i>Simple Random Sample Without Replacement

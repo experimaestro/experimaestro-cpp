@@ -21,11 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import org.apache.commons.lang.NotImplementedException;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A fake operator that will be replaced by a succession of

@@ -8,16 +8,16 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport.socket;
 
+import org.eclipse.wst.jsdt.debug.transport.Connection;
+import org.eclipse.wst.jsdt.debug.transport.Constants;
+import org.eclipse.wst.jsdt.debug.transport.ListenerKey;
+import org.eclipse.wst.jsdt.debug.transport.TransportService;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.eclipse.wst.jsdt.debug.transport.Connection;
-import org.eclipse.wst.jsdt.debug.transport.Constants;
-import org.eclipse.wst.jsdt.debug.transport.ListenerKey;
-import org.eclipse.wst.jsdt.debug.transport.TransportService;
 
 /**
  * Implementation of a {@link TransportService} that using a {@link Socket} for communication

@@ -24,6 +24,7 @@ import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Set;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -57,13 +58,23 @@ public class JsonReal implements Json {
     }
 
     @Override
-    public void toJSONString(Writer out) throws IOException {
+    public void write(Writer out) throws IOException {
         JSONValue.writeJSONString(value, out);
     }
 
     @Override
     public QName type() {
         return ValueType.XP_REAL;
+    }
+
+    @Override
+    public boolean canIgnore(Set<QName> ignore) {
+        return false;
+    }
+
+    @Override
+    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+        write(writer);
     }
 
 }

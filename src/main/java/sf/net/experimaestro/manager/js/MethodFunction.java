@@ -18,40 +18,26 @@
 
 package sf.net.experimaestro.manager.js;
 
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import org.apache.commons.lang.ClassUtils;
+import com.google.common.collect.Iterables;
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
-import org.mozilla.javascript.WrappedException;
-import org.mozilla.javascript.Wrapper;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.utils.Output;
 
-import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.AbstractList;
 import java.util.ArrayList;
-
-import static java.lang.StrictMath.min;
 
 /**
  * Represents all the methods with the same name within the same object
  */
-class MethodFunction implements Callable, org.mozilla.javascript.Function {
-    String name;
-    ArrayList<Group> groups = new ArrayList<>();
-
-    public boolean isEmpty() {
-        return groups.isEmpty();
-    }
-
+class MethodFunction extends GenericFunction implements org.mozilla.javascript.Function {
+    /**
+     * Represent all the methods from a given ancestor (or self)
+     */
     static class Group {
-        JSBaseObject thisObject;
+        final JSBaseObject thisObject;
         ArrayList<Method> methods = new ArrayList<>();
 
         Group(JSBaseObject thisObject, ArrayList<Method> methods) {
@@ -60,25 +46,60 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
         }
     }
 
+    final String name;
+    final ArrayList<Group> groups = new ArrayList<>();
+
+    static public class MethodDeclaration extends Declaration<Method> {
+        final JSBaseObject baseObject;
+        final Method method;
+
+        public MethodDeclaration(JSBaseObject baseObject, Method method) {
+            super(method);
+            this.baseObject = baseObject;
+            this.method = method;
+        }
+
+        @Override
+        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+            boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
+            return method.invoke(isStatic ? null : baseObject, transformedArgs);
+        }
+    }
+
+    public boolean isEmpty() {
+        return groups.isEmpty();
+    }
+
+    @Override
+    protected String getName() {
+        return name;
+    }
+
+    @Override
+    protected Iterable<MethodDeclaration> declarations() {
+        return Iterables.concat(new AbstractList<Iterable<MethodDeclaration>>() {
+            @Override
+            public Iterable<MethodDeclaration> get(final int index) {
+                Group group = groups.get(index);
+                return Iterables.transform(group.methods,
+                        m -> new MethodDeclaration(group.thisObject, m));
+            }
+
+            @Override
+            public int size() {
+                return groups.size();
+            }
+        });
+    }
+
 
     public MethodFunction(String name) {
         this.name = name;
     }
 
-    static private final Function IDENTITY = Functions.identity();
-    static private class Unwrapper implements Function {
-        private final Function converter;
-
-        public Unwrapper(Function converter) {
-            this.converter = converter;
-        }
-
-        @Override
-        public Object apply(Object input) {
-            return converter.apply(((Wrapper)input).unwrap());
-        }
+    public void add(JSBaseObject thisObj, ArrayList<Method> methods) {
+        groups.add(new Group(thisObj, methods));
     }
-
 
     @Override
     public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
@@ -162,7 +183,7 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
 
     @Override
     public Object[] getIds() {
-        return new Object[] {};
+        return new Object[]{};
     }
 
     @Override
@@ -175,218 +196,6 @@ class MethodFunction implements Callable, org.mozilla.javascript.Function {
     public boolean hasInstance(Scriptable instance) {
         // TODO: implement hasInstance
         throw new NotImplementedException();
-    }
-
-    @Override
-    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        Method argmax = null;
-        JSBaseObject argmaxObject = null;
-
-        int max = Integer.MIN_VALUE;
-
-        Function argmaxConverters[] = new Function[args.length];
-        Function converters[] = new Function[args.length];
-
-        for (Group group : groups)
-            for (Method method : group.methods) {
-                int score = score(method, args, converters);
-                if (score > max) {
-                    max = score;
-                    argmax = method;
-                    argmaxObject = group.thisObject;
-                    Function tmp[] = argmaxConverters;
-                    argmaxConverters = converters;
-                    converters = tmp;
-                }
-            }
-
-        if (argmax == null) {
-            String context = "";
-            if (thisObj instanceof JSBaseObject)
-                context = " in an object of class " + JSBaseObject.getClassName(thisObj.getClass());
-
-            throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)%s",
-                    name,
-                    Output.toString(", ", args, new Output.Formatter<Object>() {
-                        @Override
-                        public String format(Object o) {
-                            return o.getClass().toString();
-                        }
-                    }),
-                    context
-            ));
-        }
-
-        // Call the method
-
-        try {
-            boolean isStatic = (argmax.getModifiers() & Modifier.STATIC) != 0;
-            Object[] transformedArgs = transform(cx, scope, argmax, args, argmaxConverters);
-            final Object invoke = argmax.invoke(isStatic ? null : argmaxObject, transformedArgs);
-            return invoke == null ? Undefined.instance : invoke;
-        } catch (XPMRhinoException e) {
-            throw e;
-        } catch (Throwable e) {
-            throw new WrappedException(new XPMRhinoException(e));
-        }
-
-    }
-
-    public void add(JSBaseObject thisObj, ArrayList<Method> methods) {
-        groups.add(new Group(thisObj, methods));
-    }
-
-
-    static public class Converter {
-        int score = Integer.MAX_VALUE;
-
-        Function converter(Object o, Class<?> type) {
-            if (o == null) {
-                score--;
-                return IDENTITY;
-            }
-
-            // Assignable: OK
-            type = ClassUtils.primitiveToWrapper(type);
-            if (type.isAssignableFrom(o.getClass())) {
-                if (o.getClass() != type)
-                    score--;
-                return IDENTITY;
-            }
-
-            // Case of string: anything can be converted, but with different
-            // scores
-            if (type == String.class) {
-                if (o instanceof Scriptable) {
-                    switch (((Scriptable) o).getClassName()) {
-                        case "String":
-                        case "ConsString":
-                            return Functions.toStringFunction();
-                        default:
-                            score -= 10;
-                    }
-                } else if (o instanceof CharSequence) {
-                    score--;
-                } else {
-                    score -= 10;
-                }
-                return Functions.toStringFunction();
-            }
-
-            if (type == Integer.class && o instanceof Number) {
-                if ((((Number) o).intValue()) == ((Number) o).doubleValue()) {
-                    return new Function() {
-                        @Override
-                        public Object apply(java.lang.Object input) {
-                           return ((Number)input).intValue();
-                        }
-                    };
-                }
-            }
-
-            if (o instanceof Wrapper) {
-                score -= 1;
-                Function converter = converter(((Wrapper) o).unwrap(), type);
-                return converter != null ? new Unwrapper(converter) : null;
-
-            }
-            score = Integer.MIN_VALUE;
-            return null;
-        }
-
-        public boolean isOK() {
-            return score != Integer.MIN_VALUE;
-        }
-
-    }
-
-    private int score(Method method, Object[] args, Function[] converters) {
-        // Get the annotations
-        JSFunction annotation = method.getAnnotation(JSFunction.class);
-        final boolean scope = annotation.scope();
-        int optional = annotation.optional();
-
-        // Start the scoring
-        Converter converter = new Converter();
-        int offset = (scope ? 2 : 0);
-
-        final Class<?>[] types = method.getParameterTypes();
-
-        // Number of "true" arguments (not scope, not vararg)
-        final int nbArgs = types.length - offset - (method.isVarArgs() ? 1 : 0);
-
-        // The number of arguments should be in:
-        // [nbArgs - optional, ...] if varargs
-        // [nbArgs - optional, nbArgs] otherwise
-
-        if (args.length < nbArgs - optional)
-            return Integer.MIN_VALUE;
-
-        if (!method.isVarArgs() && args.length > nbArgs)
-            return Integer.MIN_VALUE;
-
-
-        // Normal arguments
-        for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
-            final Object o = args[i];
-            converters[i] = converter.converter(o, types[i + offset]);
-        }
-
-        // Var args
-        if (method.isVarArgs()) {
-            Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
-            int nbVarArgs = args.length - nbArgs;
-            for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
-                final Object o = args[nbArgs + i];
-                converters[nbArgs + i] = converter.converter(o, type);
-            }
-        }
-
-        return converter.score;
-    }
-
-    /**
-     * Transform the arguments
-     *
-     * @param cx
-     * @param scope
-     * @param method
-     * @param args
-     * @return
-     */
-    private Object[] transform(Context cx, Scriptable scope, Method method, Object[] args, Function[] converters) {
-        final Class<?>[] types = method.getParameterTypes();
-        Object methodArgs[] = new Object[types.length];
-
-        // --- Add context and scope if needed
-        JSFunction annotation = method.getAnnotation(JSFunction.class);
-
-        final boolean useScope = annotation.scope();
-        int offset = useScope ? 2 : 0;
-        if (useScope) {
-            methodArgs[0] = cx;
-            methodArgs[1] = scope;
-        }
-
-        // --- Copy the non vararg parameters
-        final int length = types.length - (method.isVarArgs() ? 1 : 0) - offset;
-        int size = min(length, args.length);
-        for (int i = 0; i < size; i++) {
-            methodArgs[i + offset] = converters[i].apply(args[i]);
-        }
-
-        // --- Deals with the vararg pararameters
-        if (method.isVarArgs()) {
-            final Class<?> varargType = types[types.length - 1].getComponentType();
-            int nbVarargs = args.length - length;
-            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
-            for (int i = 0; i < nbVarargs; i++) {
-                array[i] = converters[i + length].apply(args[i + length]);
-            }
-            methodArgs[methodArgs.length - 1] = array;
-        }
-
-        return methodArgs;
     }
 
 

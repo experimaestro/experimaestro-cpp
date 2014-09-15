@@ -7,11 +7,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.utils.Output;
 
-import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

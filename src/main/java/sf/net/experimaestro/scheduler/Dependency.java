@@ -18,11 +18,7 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.DeleteAction;
-import com.sleepycat.persist.model.Entity;
-import com.sleepycat.persist.model.PrimaryKey;
-import com.sleepycat.persist.model.Relationship;
-import com.sleepycat.persist.model.SecondaryKey;
+import com.sleepycat.persist.model.*;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;

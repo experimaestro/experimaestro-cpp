@@ -8,18 +8,12 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.transport;
 
+import org.mozilla.javascript.Undefined;
+
 import java.math.BigDecimal;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import org.mozilla.javascript.Undefined;
+import java.util.*;
 
 
 /**

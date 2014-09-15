@@ -63,6 +63,11 @@ public abstract class Input {
     private String namespace;
 
     /**
+     * Whether the input should be copied into the output structure
+     */
+    private String copyTo;
+
+    /**
 	 * Returns whether the input is optional or not
 	 * 
 	 * @return
@@ -132,5 +137,13 @@ public abstract class Input {
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
+    }
+
+    public void setCopyTo(String copyTo) {
+        this.copyTo= copyTo;
+    }
+
+    public String getCopyTo() {
+        return copyTo;
     }
 }

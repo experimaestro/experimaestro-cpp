@@ -23,7 +23,6 @@ import org.w3c.dom.Element;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.XMLUtils;
 
-import javax.xml.xquery.XQException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -40,25 +39,26 @@ public class Manager {
     public static final String EXPERIMAESTRO_PREFIX = "xp";
 
     public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
-    public static final QName XP_RESOURCE = new QName(EXPERIMAESTRO_NS, "resource");
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
 
-    public static final QName XP_TYPE = new QName(null, "type");
-    public static final QName XP_VALUE = new QName(null, "value");
+    public static final QName XP_TYPE = new QName(null, "xp_type");
+
+    /// The simple value of the object
+    public static final QName XP_VALUE = new QName(null, "xp_value");
+
+    /// Ignored value
+    public static final QName XP_IGNORE = new QName(null, "xp_ignore");
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
     }
 
-
-
     /**
      * Get the namespaces (default and element based)
      *
      * @param element
-     * @throws XQException
      */
     public static Map<String, String> getNamespaces(Element element) {
         TreeMap<String, String> map = new TreeMap<>();

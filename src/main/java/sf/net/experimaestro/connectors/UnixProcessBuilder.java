@@ -19,6 +19,7 @@
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 
@@ -80,7 +81,7 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
      */
     private String donePath;
 
-    public UnixProcessBuilder(FileObject file, SingleHostConnector connector) {
+    public UnixProcessBuilder(FileObject file, SingleHostConnector connector) throws FileSystemException {
         super(connector, file);
     }
 
@@ -167,12 +168,12 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
     protected abstract XPMProcess doStart() throws LaunchException, IOException;
 
     @Override
-    public void removeLock(FileObject lockFile) {
+    public void removeLock(FileObject lockFile) throws FileSystemException {
         lockFiles.add(protect(connector.resolve(lockFile), SHELL_SPECIAL));
     }
 
     @Override
-    public XPMProcessBuilder command(List<String> command) {
+    public XPMProcessBuilder command(List<String> command) throws FileSystemException {
         StringBuilder commandBuilder = new StringBuilder();
 
         switch (input.type()) {
@@ -226,12 +227,12 @@ public abstract class UnixProcessBuilder extends XPMScriptProcessBuilder {
 
 
     @Override
-    public void exitCodeFile(FileObject exitCodeFile) {
+    public void exitCodeFile(FileObject exitCodeFile) throws FileSystemException {
         exitCodePath = connector.resolve(exitCodeFile);
     }
 
     @Override
-    public void doneFile(FileObject doneFile) {
+    public void doneFile(FileObject doneFile) throws FileSystemException {
         donePath = connector.resolve(doneFile);
     }
 }

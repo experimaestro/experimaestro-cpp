@@ -27,6 +27,7 @@ import sf.net.experimaestro.manager.plans.Operator;
 public class JSOperator extends JSAbstractOperator {
     private final Operator operator;
 
+    @JSFunction
     public JSOperator(Operator operator) {
         this.operator = operator;
     }

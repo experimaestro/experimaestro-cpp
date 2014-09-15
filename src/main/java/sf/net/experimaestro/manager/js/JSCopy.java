@@ -5,23 +5,14 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.JsonInput;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.JSNamespaceContext;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.util.HashMap;
@@ -83,9 +74,10 @@ public class JSCopy extends JSPlan {
     private class AnonymousTask extends Task {
         public AnonymousTask(AnonymousTaskFactory factory) {
             super(factory);
-            for (Map.Entry<String, Input> entry : factory.getInputs().entrySet()) {
-
-            }
+            throw new NotImplementedException();
+//            for (Map.Entry<String, Input> entry : factory.getInputs().entrySet()) {
+//
+//            }
         }
 
         @Override

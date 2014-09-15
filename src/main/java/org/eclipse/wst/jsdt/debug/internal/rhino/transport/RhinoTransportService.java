@@ -8,13 +8,13 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.transport;
 
-import java.io.IOException;
-import java.net.Socket;
-
 import org.eclipse.wst.jsdt.debug.transport.Connection;
 import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
 import org.eclipse.wst.jsdt.debug.transport.socket.SocketConnection;
 import org.eclipse.wst.jsdt.debug.transport.socket.SocketTransportService;
+
+import java.io.IOException;
+import java.net.Socket;
 
 /**
  * Implementation of a transport service that using a {@link Socket} for communication

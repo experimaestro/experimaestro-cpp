@@ -22,12 +22,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repository;
@@ -84,7 +79,7 @@ public class JavaScriptChecker {
         final ResourceLocator currentResourceLocator
                 = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
         XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
-                repository, this.environment.scheduler, null, new Cleaner());
+                repository, this.environment.scheduler, null, new Cleaner(), null);
 
         // Adds some special converter available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});

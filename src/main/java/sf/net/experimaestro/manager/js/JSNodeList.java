@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.Lists;
 import org.mozilla.javascript.Context;
@@ -28,7 +27,7 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -40,7 +39,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.google.common.collect.Ranges.closed;
+import static com.google.common.collect.Range.closed;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -79,12 +78,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         return Output.toString(
                 "",
                 XMLUtils.iterable(list),
-                new Formatter<Node>() {
-                    @Override
-                    public String format(Node node) {
-                        return XMLUtils.toString(node);
-                    }
-                }
+                node -> XMLUtils.toString(node)
         );
     }
 
@@ -114,7 +108,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         List<Node> list = evaluate_xpath(scope, expression);
         if (list.size() != 1)
             throw new XPMRhinoException("XPath expression %s gave more than one result (%d)", expression, list.size());
-        return JSNode.getAttribute(list.get(0), Manager.XP_RESOURCE);
+        return JSNode.getAttribute(list.get(0), ValueType.XP_RESOURCE);
     }
 
     public List<Node> evaluate_xpath(Scriptable scope, String expression) throws XPathExpressionException {

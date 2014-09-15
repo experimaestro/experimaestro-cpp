@@ -23,84 +23,38 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.ConsString;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
-import org.mozilla.javascript.UniqueTag;
-import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.connectors.XPMConnector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.connectors.XPMProcessBuilder;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.AlternativeType;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.NSContext;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.scheduler.CommandArgument;
-import sf.net.experimaestro.scheduler.CommandArguments;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceData;
-import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.TokenResource;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.MessageDigestWriter;
 import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-import javax.xml.xpath.XPathFunctionResolver;
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.xpath.*;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.nio.charset.Charset;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -117,6 +71,25 @@ import static sf.net.experimaestro.utils.JSUtils.unwrap;
  */
 public class XPMObject {
 
+    /** The filename used to the store the signature in generated directory names */
+    public static final String XPM_SIGNATURE = ".xpm-signature";
+
+    static public class Holder<T> {
+        private T value;
+
+        Holder(T value) {
+            this.value = value;
+        }
+
+        T get() {
+            return value;
+        }
+
+        void set(T value) {
+            this.value = value;
+        }
+    }
+
     final static private Logger LOGGER = Logger.getLogger();
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
 
@@ -129,6 +102,11 @@ public class XPMObject {
      * Our scope (global among javascripts)
      */
     private final Scriptable scope;
+
+    /**
+     * The current work dir
+     */
+    private Holder<FileObject> workdir;
 
     /**
      * The context (local)
@@ -188,9 +166,15 @@ public class XPMObject {
 
     /**
      * The resource cleaner
+     * <p/>
+     * Used to close objects at the end of the execution of a script
      */
     private final Cleaner cleaner;
 
+
+    /**
+     * The global functions
+     */
     static final JSUtils.FunctionDefinition[] definitions = {
             new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
             new JSUtils.FunctionDefinition(XPMObject.class, "include", null),
@@ -202,6 +186,7 @@ public class XPMObject {
             new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
+            new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir", null),
     };
     private TaskContext taskContext;
 
@@ -216,6 +201,7 @@ public class XPMObject {
      * @param repository             The task repository
      * @param scheduler              The job scheduler
      * @param loggerRepository       The logger for the script
+     * @param workdir
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
@@ -229,7 +215,8 @@ public class XPMObject {
                      Repository repository,
                      Scheduler scheduler,
                      Hierarchy loggerRepository,
-                     Cleaner cleaner)
+                     Cleaner cleaner,
+                     Holder<FileObject> workdir)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentResourceLocator);
@@ -241,6 +228,7 @@ public class XPMObject {
         this.scheduler = scheduler;
         this.loggerRepository = loggerRepository;
         this.cleaner = cleaner;
+        this.workdir = workdir == null ? new Holder<>(null) : workdir;
         this.rootLogger = Logger.getLogger(loggerRepository);
 
 
@@ -263,29 +251,28 @@ public class XPMObject {
             final Enumeration<URL> urls = XPMObject.class.getClassLoader().getResources(resourceName);
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
-                Introspection.addClasses(new Introspection.Checker() {
-                    @Override
-                    public boolean accepts(Class<?> aClass) {
-                        return (ScriptableObject.class.isAssignableFrom(aClass) || JSConstructable.class.isAssignableFrom(aClass) || JSBaseObject.class.isAssignableFrom(aClass))
-                                && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0);
-                    }
-                }, list, packageName, -1, url);
+                Introspection.addClasses(
+                        aClass -> (ScriptableObject.class.isAssignableFrom(aClass)
+                                || JSConstructable.class.isAssignableFrom(aClass)
+                                || JSBaseObject.class.isAssignableFrom(aClass))
+                                && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0), list, packageName, -1, url);
             }
         } catch (IOException e) {
             LOGGER.error(e, "While trying to grab resources");
         }
 
+        // Add the classes to javascript
         for (Class<?> aClass : list) {
             JSBaseObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
         }
 
-        // Add converter
+        // Add global functions
         for (JSUtils.FunctionDefinition definition : definitions)
             JSUtils.addFunction(scope, definition);
 
         // Add converter from our Function object
 
-        Map<String, ArrayList<Method>> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class);
+        Map<String, ArrayList<Method>> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class).methods;
         for (Map.Entry<String, ArrayList<Method>> entry : functionsMap.entrySet()) {
             MethodFunction function = new MethodFunction(entry.getKey());
             function.add(null, entry.getValue());
@@ -329,7 +316,7 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(ResourceLocator scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner);
+        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir);
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashMap<>(this.submittedJobs);
@@ -391,7 +378,7 @@ public class XPMObject {
     }
 
     /**
-     * Final method called for inclusion of a script
+     * Final constructor called for inclusion of a script
      *
      * @param scriptpath
      * @param repositoryMode If true, runs in a separate environement
@@ -442,7 +429,7 @@ public class XPMObject {
 
 
     /**
-     * Javascript method calling {@linkplain #include(String, boolean)}
+     * Javascript constructor calling {@linkplain #include(String, boolean)}
      */
     static public Map<String, Object> js_include_repository(Context cx, Scriptable thisObj, Object[] args,
                                                             Function funObj) throws Exception {
@@ -452,7 +439,7 @@ public class XPMObject {
     }
 
     /**
-     * Javascript method calling {@linkplain #include(String, boolean)}
+     * Javascript constructor calling {@linkplain #include(String, boolean)}
      */
     static public void js_include(Context cx, Scriptable thisObj, Object[] args,
                                   Function funObj) throws Exception {
@@ -477,7 +464,7 @@ public class XPMObject {
     @JSHelp("Returns a FileObject corresponding to the path")
     static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         if (args.length != 1)
-            throw new IllegalArgumentException("xpath() needs one argument");
+            throw new IllegalArgumentException("path() needs one argument");
 
         XPMObject xpm = getXPM(thisObj);
 
@@ -498,6 +485,13 @@ public class XPMObject {
         throw new ExperimaestroRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
 
+    @JSHelp(
+            value = "Format a string",
+            arguments = @JSArguments({
+                    @JSArgument(name = "format", type = "String", help = "The string used to format"),
+                    @JSArgument(name = "arguments...", type = "Object", help = "A list of objects")
+            })
+    )
     static public String js_format(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         if (args.length == 0)
             return "";
@@ -517,8 +511,7 @@ public class XPMObject {
      */
     static public Object js_value(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         if (args.length != 1)
-            if (args.length != 1)
-                throw new IllegalArgumentException("value() needs one argument");
+            throw new IllegalArgumentException("value() needs one argument");
         final Object object = unwrap(args[0]);
 
         Document doc = XMLUtils.newDocument();
@@ -527,6 +520,14 @@ public class XPMObject {
 
     }
 
+
+    /**
+     * Sets the current workdir
+     */
+    static public void js_set_workdir(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+        XPMObject xpm = getXPM(thisObj);
+        xpm.workdir.set(((JSFileObject) js_path(cx, thisObj, args, funObj)).getFile());
+    }
 
     /**
      * Returns the current script location
@@ -548,7 +549,7 @@ public class XPMObject {
             throw new IllegalArgumentException("file() takes only one argument");
         final String arg = JSUtils.toString(args[0]);
         return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
-                new Object[]{xpm, xpm.currentResourceLocator.resolvePath(arg).getFile()});
+                new Object[]{xpm, xpm.currentResourceLocator.getFile().getParent().resolveFile(arg)});
     }
 
 
@@ -590,7 +591,7 @@ public class XPMObject {
 
     public static Object get(Scriptable scope, final String name) {
         Object object = scope.get(name, scope);
-        if (object == null && object == Undefined.instance)
+        if (object != null && object == Undefined.instance)
             object = null;
         else if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
@@ -636,7 +637,6 @@ public class XPMObject {
      * @param xml
      * @return
      * @throws javax.xml.xpath.XPathExpressionException
-     *
      */
     static public Object js_xpath(String path, Object xml)
             throws XPathExpressionException {
@@ -725,7 +725,7 @@ public class XPMObject {
 
             int len = 0;
             char[] buffer = new char[8192];
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             while ((len = input.read(buffer, 0, buffer.length)) >= 0)
                 sb.append(buffer, 0, len);
             input.close();
@@ -866,7 +866,10 @@ public class XPMObject {
                 final Object stdin = unwrap(options.get("stdin", options));
                 if (stdin instanceof String || stdin instanceof ConsString) {
                     task.setInput(stdin.toString());
-                } else throw new ExperimaestroRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
+                } else if (stdin instanceof FileObject) {
+                    task.setInput((FileObject)stdin);
+                } else
+                    throw new ExperimaestroRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
             }
 
             // --- Redirect standard output
@@ -884,27 +887,37 @@ public class XPMObject {
 
             // --- Resources to lock
             if (options.has("lock", options)) {
-                NativeArray resources = (NativeArray) options.get("lock", options);
-                for (int i = (int) resources.getLength(); --i >= 0; ) {
-                    NativeArray array = (NativeArray) resources.get(i, resources);
-                    if (array.getLength() != 2)
-                        throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
-//                    final String connectorId = Context.toString(array.get(0, array));
-                    final String rsrcPath = Context.toString(array.get(0, array));
+                NativeArray locks = (NativeArray) options.get("lock", options);
+                for (int i = (int) locks.getLength(); --i >= 0; ) {
+                    Object lock_i = JSUtils.unwrap(locks.get(i, locks));
+                    final Dependency dependency;
 
-                    ResourceLocator depLocator = ResourceLocator.parse(rsrcPath);
-                    Resource resource = scheduler.getResource(depLocator);
+                    if (lock_i instanceof Dependency) {
+                        dependency = (Dependency) lock_i;
+                    } else if (lock_i instanceof NativeArray) {
+                        NativeArray array = (NativeArray) lock_i;
+                        if (array.getLength() != 2)
+                            throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+                        final String rsrcPath = Context.toString(array.get(0, array));
 
-                    final Object o = array.get(1, array);
-                    LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, o);
-                    if (resource == null)
-                        if (simulate()) {
-                            if (!submittedJobs.containsKey(depLocator))
-                                LOGGER.error("The dependency [%s] cannot be found", depLocator);
-                        } else throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
+                        ResourceLocator depLocator = ResourceLocator.parse(rsrcPath);
+                        Resource resource = scheduler.getResource(depLocator);
+
+                        final Object lockType = array.get(1, array);
+                        LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
+                        if (resource == null)
+                            if (simulate()) {
+                                if (!submittedJobs.containsKey(depLocator))
+                                    LOGGER.error("The dependency [%s] cannot be found", depLocator);
+                            } else throw new ExperimaestroRuntimeException("Resource [%s] was not found", rsrcPath);
+
+                        dependency = resource.createDependency(lockType);
+                    } else {
+                        throw new ExperimaestroRuntimeException("Element %d for option 'lock' is not a dependency but %s",
+                                i, lock_i.getClass());
+                    }
 
                     if (!simulate()) {
-                        final Dependency dependency = resource.createDependency(o);
                         task.addDependency(dependency);
                     }
                 }
@@ -1119,11 +1132,78 @@ public class XPMObject {
         this.taskContext = taskContext;
     }
 
+    /**
+     * Creates a unique (up to the collision probability) ID based on the hash
+     *
+     *
+     * @param basedir
+     * @param prefix The prefix for the directory
+     * @param id    The task ID or any other QName
+     * @param jsonValues the JSON object from which the hash is computed
+     * @return
+     */
+    public JSFileObject uniqueDirectory(Scriptable scope, FileObject basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
+        if (basedir == null) {
+            if (workdir.get() == null)
+                throw new ExperimaestroRuntimeException("Working directory was not set before unique_directory() is called");
+
+            basedir = workdir.get();
+        }
+
+        JsonObject json = new JsonObject();
+        json.put("task", id.toString());
+        json.put("values", JSUtils.toJSON(scope, jsonValues));
+
+        String digest = getDigest(json);
+
+        FileObject file = basedir.resolveFile(format("%s-%s", prefix, digest));
+
+        file.createFolder();
+
+        // Create the signature
+        FileObject signature = file.resolveFile(XPM_SIGNATURE);
+        String descriptor = getDescriptor(json);
+
+        if (!signature.exists()) {
+            // Write the signature in the
+            try (PrintWriter writer = new PrintWriter(signature.getContent().getOutputStream())) {
+                writer.write(descriptor);
+            }
+        } else {
+            // Check that the signature is the same
+            // @TODO more efficient comparison by avoiding to compute the whole signature
+            char buffer[] = new char[1024];
+            int offset = 0;
+            try (InputStreamReader reader = new InputStreamReader(signature.getContent().getInputStream())) {
+                int read;
+                while ((read = reader.read(buffer)) > 0) {
+                    if (offset + read > descriptor.length()) {
+                        throw new RuntimeException("Signature JSON do not match in " + signature.toString());
+                    }
+
+                    for (int i = 0; i < read; ++i) {
+                        if (buffer[i] != descriptor.charAt(offset + i)) {
+                            throw new ExperimaestroRuntimeException("Signature JSON do not match in %s: at offset %d, %s <> %s",
+                                    signature.toString(), i + offset, buffer[i], descriptor.charAt(i + offset));
+                        }
+                    }
+
+                    offset += read;
+
+                }
+
+            }
+        }
+
+        return new JSFileObject(this, file);
+    }
+
     // --- Javascript methods
 
     static public class JSXPM extends JSBaseObject {
         XPMObject xpm;
 
+        @JSFunction
         public JSXPM() {
         }
 
@@ -1280,7 +1360,13 @@ public class XPMObject {
 
 
         @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = "Schedule a command line job")
+        @JSHelp(value = "Schedule a command line job.<br>The options are <dl>" +
+                "<dt>launcher</dt><dd></dd>" +
+                "<dt>stdin</dt><dd></dd>" +
+                "<dt>stdout</dt><dd></dd>" +
+                "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
+                "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
+                "")
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
                                          @JSArgument(type = "Array", name = "command") NativeArray jsargs,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
@@ -1363,21 +1449,27 @@ public class XPMObject {
 
 
     static class XPMFunctions {
-        @JSFunction("merge")
-        static public NativeObject merge(Object... objects) {
+        @JSFunction
+        public XPMFunctions() {
+        }
+
+        @JSFunction(scope = true, value = "merge")
+        static public NativeObject merge(Context cx, Scriptable scope, Object... objects) {
             NativeObject returned = new NativeObject();
 
             for (Object object : objects) {
+                object = JSUtils.unwrap(object);
                 if (object instanceof NativeObject) {
                     NativeObject nativeObject = (NativeObject) object;
                     for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
                         Object key = entry.getKey();
                         if (returned.has(key.toString(), returned))
                             throw new XPMRhinoException("Conflicting id in merge: %s", key);
-                        returned.put(key.toString(), returned, entry.getValue());
+                        returned.put(key.toString(), returned,
+                                JSBaseObject.XPMWrapFactory.INSTANCE.wrap(cx, scope, entry.getValue(), Object.class));
                     }
-                } else if (object instanceof JSJson) {
-                    Json json = ((JSJson) object).getJson();
+                } else if (object instanceof JsonObject) {
+                    Json json = (Json) object;
                     if (!(json instanceof JsonObject))
                         throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
                     JsonObject jsonObject = (JsonObject) json;
@@ -1391,6 +1483,19 @@ public class XPMObject {
             return returned;
         }
 
+
+        @JSFunction(scope = true)
+        public static String digest(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
+            Json json = JSUtils.toJSON(scope, jsons);
+            return getDigest(json);
+        }
+
+        @JSFunction(scope = true)
+        public static String descriptor(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
+            Json json = JSUtils.toJSON(scope, jsons);
+            return getDescriptor(json);
+        }
+
         @JSFunction(scope = true)
         @JSHelp(value = "Transform plans outputs with a function")
         public static Scriptable transform(Context cx, Scriptable scope, Callable f, JSAbstractOperator... operators) throws FileSystemException {
@@ -1402,7 +1507,13 @@ public class XPMObject {
             return new JSInput(name);
         }
 
-        @JSFunction("_")
+        @JSFunction(value = "_")
+        @JSDeprecated
+        public static Object _get_value(Object object) {
+            return get_value(object);
+        }
+
+        @JSFunction("$")
         public static Object get_value(Object object) {
             object = unwrap(object);
             if (object instanceof Json)
@@ -1417,5 +1528,23 @@ public class XPMObject {
                 throw new EvaluatorException("assertion failed: " + String.format(format, objects));
         }
 
+    }
+
+    private static String getDescriptor(Json json) throws IOException {
+        StringWriter writer = new StringWriter();
+        json.writeDescriptorString(writer);
+        return writer.getBuffer().toString();
+    }
+
+    /**
+     * Get the hash of a given json
+     */
+    private static String getDigest(Json json) throws NoSuchAlgorithmException, IOException {
+        // Other options: SHA-256, SHA-512
+        MessageDigestWriter writer = new MessageDigestWriter(Charset.forName("UTF-8"), "MD5");
+        json.writeDescriptorString(writer);
+        writer.close();
+
+        return DatatypeConverter.printHexBinary(writer.getDigest());
     }
 }

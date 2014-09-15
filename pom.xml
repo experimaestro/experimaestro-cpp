@@ -31,8 +31,8 @@
         <izpack-standalone.version>4.3.1</izpack-standalone.version>
         <staging.dir>${project.build.directory}/staging</staging.dir>
 
-        <jna.version>3.4.0</jna.version>
-        <jetty.version>9.0.7.v20131107</jetty.version>
+        <jna.version>4.1.0</jna.version>
+        <jetty.version>9.2.3.v20140905</jetty.version>
     </properties>
 
 
@@ -78,10 +78,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <compilerArgument>-parameters</compilerArgument>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
 
@@ -284,6 +285,13 @@
         </dependency>
 
 
+        <!-- python -->
+        <dependency>
+            <groupId>org.python</groupId>
+            <artifactId>jython</artifactId>
+            <version>2.7-b3</version>
+        </dependency>
+
         <!-- Javascript -->
         <dependency>
             <groupId>org.mozilla</groupId>
@@ -298,10 +306,11 @@
             <artifactId>commons-vfs2</artifactId>
             <version>2.1-SNAPSHOT</version>
         </dependency>
+
         <dependency>
             <groupId>net.bpiwowar</groupId>
             <artifactId>argj</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.1</version>
         </dependency>
 
         <dependency>
@@ -315,7 +324,7 @@
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.48</version>
+            <version>0.1.51</version>
         </dependency>
 
         <!--        <dependency>
@@ -339,7 +348,7 @@
         <dependency>
             <groupId>net.sf.saxon</groupId>
             <artifactId>Saxon-HE</artifactId>
-            <version>9.4</version>
+            <version>9.5.1-6</version>
         </dependency>
 
         <!-- SSH server for testing -->
@@ -353,7 +362,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>13.0.1</version>
+            <version>18.0</version>
         </dependency>
 
         <!-- Relax NG support -->
@@ -374,7 +383,7 @@
         <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
-            <version>6.4.4</version>
+            <version>6.5.15</version>
         </dependency>
 
         <dependency>
@@ -393,6 +402,11 @@
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
             <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.python</groupId>
+            <artifactId>jython</artifactId>
+            <version>2.7-b1</version>
         </dependency>
 
     </dependencies>

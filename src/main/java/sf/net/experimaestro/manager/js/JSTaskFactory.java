@@ -19,30 +19,11 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeFunction;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.XPMHelper;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.AlternativeInput;
-import sf.net.experimaestro.manager.AlternativeType;
-import sf.net.experimaestro.manager.ArrayInput;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.JsonInput;
-import sf.net.experimaestro.manager.Module;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.TaskInput;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
@@ -50,11 +31,7 @@ import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.exceptions.ExperimaestroRuntimeException.SHOULD_NOT_BE_HERE;
@@ -69,20 +46,22 @@ public class JSTaskFactory extends JSBaseObject {
     final static private Logger LOGGER = Logger.getLogger();
     FactoryImpl factory;
 
+    @JSFunction
     public JSTaskFactory(Scriptable scope, NativeObject jsObject,
                          Repository repository) throws ValueMismatchException {
         this(getQName(scope, jsObject, "id", false), scope, jsObject, repository);
     }
 
+    @JSFunction
     public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                          Repository repository) throws ValueMismatchException {
         factory = new FactoryImpl(qname, scope, jsObject, repository);
     }
 
+    @JSFunction
     public JSTaskFactory(FactoryImpl factory) {
         this.factory = factory;
     }
-
 
     private static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
         Object o = JSUtils.get(scope, key, jsObject, allowNull);
@@ -107,7 +86,6 @@ public class JSTaskFactory extends JSBaseObject {
     public Object run(Context context, Scriptable scope, NativeObject object) throws XPathExpressionException {
         return plan(context, scope, object).run(context, scope);
     }
-
 
     @JSHelp("Creates a plan from this task")
     @JSFunction(value = "plan", scope = true)
@@ -171,7 +149,7 @@ public class JSTaskFactory extends JSBaseObject {
 
             // --- Look up the module
             Module module = JSModule.getModule(repository,
-                    JSUtils.get(jsScope, "module", (NativeObject) jsObject, null));
+                    JSUtils.get(jsScope, "module", jsObject, null));
             if (module != null)
                 setModule(module);
 
@@ -183,8 +161,9 @@ public class JSTaskFactory extends JSBaseObject {
 
             // --- Get the task outputs
             QName outQName = getQName(scope, jsObject, "output", true);
-            if (outQName != null)
+            if (outQName != null) {
                 output = new Type(outQName);
+            }
 
 
             // --- Are we an alternative?
@@ -210,6 +189,7 @@ public class JSTaskFactory extends JSBaseObject {
                             : outQName.toString());
 
                 ((AlternativeType) type).add(id, this);
+                output = type;
                 return;
             }
 
@@ -324,6 +304,15 @@ public class JSTaskFactory extends JSBaseObject {
                     input.setDefaultValue(document);
                 }
 
+                if (definition.has("copy", definition)) {
+                    final Object copyTo = definition.get("copy", definition);
+                    if (copyTo instanceof Boolean) {
+                        input.setCopyTo(id);
+                    } else {
+                        input.setCopyTo(JSUtils.toString(copyTo));
+                    }
+                }
+
                 // Set required/optional flag
                 input.setOptional(optional);
 
@@ -369,7 +358,7 @@ public class JSTaskFactory extends JSBaseObject {
 
         @Override
         public JSAbstractTask create() {
-            // Get the "create" method
+            // Get the "create" constructor
             Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
             // If we don't have one, then it might be a "direct" task, i.e.

@@ -230,9 +230,16 @@ public class CommandLineTask extends Job<JobData> {
         this.launcher = launcher;
     }
 
+    /** Sets the input for the command line to be a string content */
     public void setInput(String jobInput) {
         this.jobInputPath = null;
         this.jobInputString = jobInput;
+    }
+
+    /** Sets the input to be a file */
+    public void setInput(FileObject fileObject) {
+        this.jobInputPath = fileObject.toString();
+        this.jobInputString = null;
     }
 
     public void setOutput(FileObject fileObject) {

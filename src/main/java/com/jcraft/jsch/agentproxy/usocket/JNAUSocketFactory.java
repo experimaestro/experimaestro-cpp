@@ -31,13 +31,13 @@ package com.jcraft.jsch.agentproxy.usocket;
 
 import com.jcraft.jsch.agentproxy.AgentProxyException;
 import com.jcraft.jsch.agentproxy.USocketFactory;
-
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 import java.io.IOException;
+import java.util.List;
 
 public class JNAUSocketFactory implements USocketFactory {
 
@@ -54,6 +54,11 @@ public class JNAUSocketFactory implements USocketFactory {
   public static class SockAddr extends Structure {
     public short sun_family;
     public byte[] sun_path;
+
+      @Override
+      protected List getFieldOrder() {
+          return null;
+      }
   }
 
   public JNAUSocketFactory() throws AgentProxyException {

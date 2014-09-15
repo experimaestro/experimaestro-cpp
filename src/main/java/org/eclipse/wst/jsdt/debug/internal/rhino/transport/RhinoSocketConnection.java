@@ -8,16 +8,16 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.transport;
 
+import org.eclipse.wst.jsdt.debug.transport.Connection;
+import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
+import org.eclipse.wst.jsdt.debug.transport.socket.SocketConnection;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.Socket;
 import java.util.Map;
-
-import org.eclipse.wst.jsdt.debug.transport.Connection;
-import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
-import org.eclipse.wst.jsdt.debug.transport.socket.SocketConnection;
 
 /**
  * A specialized {@link Connection} that communicates using {@link Socket}s

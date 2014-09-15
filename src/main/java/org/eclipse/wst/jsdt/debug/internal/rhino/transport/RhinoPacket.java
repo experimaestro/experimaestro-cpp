@@ -8,10 +8,10 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.internal.rhino.transport;
 
+import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import org.eclipse.wst.jsdt.debug.transport.packet.Packet;
 
 /**
  * Abstract description of a packet for sending / receiving information to the debug client

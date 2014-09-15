@@ -19,7 +19,7 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.ContiguousSet;
-import com.google.common.collect.DiscreteDomains;
+import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Range;
 
 /**
@@ -29,7 +29,7 @@ import com.google.common.collect.Range;
 public class RangeUtils {
     /** Transforms a range into an array of {@linkplain Integer} */
     public static Integer[] toIntegerArray(Range<Integer> closed) {
-        ContiguousSet<Integer> integers = closed.asSet(DiscreteDomains.integers());
+        ContiguousSet<Integer> integers = ContiguousSet.create(closed, DiscreteDomain.integers());
         return integers.toArray(new Integer[integers.size()]);
     }
 }

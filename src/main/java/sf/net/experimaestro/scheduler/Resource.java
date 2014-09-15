@@ -34,12 +34,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a

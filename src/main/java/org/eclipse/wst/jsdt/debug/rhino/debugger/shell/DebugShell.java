@@ -8,14 +8,14 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.rhino.debugger.shell;
 
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-
 import org.eclipse.wst.jsdt.debug.internal.rhino.debugger.RhinoDebuggerImpl;
 import org.eclipse.wst.jsdt.debug.internal.rhino.transport.RhinoTransportService;
 import org.eclipse.wst.jsdt.debug.transport.TransportService;
 import org.mozilla.javascript.tools.shell.Main;
+
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 
 /**
  * Entry point for launching a Rhino debugger

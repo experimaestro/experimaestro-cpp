@@ -8,13 +8,13 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.debug.transport.packet;
 
+import org.eclipse.wst.jsdt.debug.transport.Connection;
+import org.eclipse.wst.jsdt.debug.transport.exception.DisconnectedException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.eclipse.wst.jsdt.debug.transport.Connection;
-import org.eclipse.wst.jsdt.debug.transport.exception.DisconnectedException;
 
 
 

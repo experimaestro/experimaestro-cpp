@@ -20,23 +20,22 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeJavaClass;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.WrapFactory;
+import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.scheduler.Resource;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.lang.String.format;
 
 /**
  * Base class for all JS objects implementations
@@ -45,7 +44,15 @@ import java.util.Map;
  * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
-    final static private HashMap<Class<?>, Map<String, ArrayList<Method>>> METHODS = new HashMap<>();
+    static public class ClassDescription {
+        /** The constructors */
+        ArrayList<Constructor<?>> constructors = new ArrayList<>();
+
+        /** The class methods */
+        Map<String, ArrayList<Method>> methods = new HashMap<>();
+    }
+
+    final static private HashMap<Class<?>, ClassDescription> CLASS_DESCRIPTION = new HashMap<>();
 
     private Map<String, ArrayList<Method>> methods;
     private Scriptable prototype;
@@ -53,21 +60,26 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     public JSBaseObject() {
         final Class<? extends JSBaseObject> aClass = getClass();
-        methods = analyzeClass(aClass);
+        methods = analyzeClass(aClass).methods;
     }
 
     /**
-     * Analyze a class and returns the map
+     * Analyze a class and returns the multi-map of names to methods
+     *
+     * Any constructor annotated with JSFunction is a valid functoin
      *
      * @param aClass
      * @return
      */
-    static Map<String, ArrayList<Method>> analyzeClass(Class<?> aClass) {
-        Map<String, ArrayList<Method>> map = METHODS.get(aClass);
-        synchronized (METHODS) {
-            if (map == null) {
-                map = new HashMap<>();
-                METHODS.put(aClass, map);
+    static ClassDescription analyzeClass(Class<?> aClass) {
+        ClassDescription description = CLASS_DESCRIPTION.get(aClass);
+        Map<String, ArrayList<Method>> map;
+        synchronized (CLASS_DESCRIPTION) {
+            if (description == null) {
+                description = new ClassDescription();
+                CLASS_DESCRIPTION.put(aClass, description);
+
+                map = description.methods;
                 for (Method method : aClass.getDeclaredMethods()) {
                     final JSFunction annotation = method.getAnnotation(JSFunction.class);
 
@@ -89,9 +101,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                     }
                 }
 
+                // Adds all the ancestors methods
                 Class<?> superclass = aClass.getSuperclass();
                 if (JSBaseObject.class.isAssignableFrom(superclass)) {
-                    Map<String, ArrayList<Method>> superclassMethods = analyzeClass(superclass);
+                    Map<String, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
                     for (Map.Entry<String, ArrayList<Method>> entry : superclassMethods.entrySet()) {
                         ArrayList<Method> previous = map.get(entry.getKey());
                         if (previous != null)
@@ -99,12 +112,26 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                         else
                             map.put(entry.getKey(), entry.getValue());
                     }
+                }
 
+                // Add constructors
+                for(Constructor<?> constructor: aClass.getConstructors()) {
+                    final JSFunction annotation = constructor.getAnnotation(JSFunction.class);
+                    if (annotation != null) {
+                        description.constructors.add(constructor);
+                    }
+                }
+                if (description.constructors.isEmpty()) {
+                    try {
+                        description.constructors.add(aClass.getConstructor());
+                    } catch (NoSuchMethodException e) {
+                        throw new ExperimaestroRuntimeException("Could not find any constructor in %s", aClass);
+                    }
                 }
 
             }
         }
-        return map;
+        return description;
     }
 
 
@@ -116,7 +143,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         if (annotation != null && !"".equals(annotation.name()))
             return annotation.name();
 
-        assert aClass.getSimpleName().startsWith("JS");
+        if (!aClass.getSimpleName().startsWith("JS"))
+            throw new AssertionError(format("Class %s does not start with JS as it should", aClass.getName()));
         return aClass.getSimpleName().substring(2);
     }
 
@@ -275,12 +303,15 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
             if (obj instanceof FileObject)
                 return new JSFileObject(XPMObject.getXPMObject(scope), (FileObject) obj);
-            if (obj instanceof Node)
-                return new JSNode((Node)obj);
+            if (obj instanceof Node) {
+                return new JSNode((Node) obj);
+            }
             if (obj instanceof Json) {
                 return new JSJson((Json) obj);
             }
-
+            if (obj instanceof Resource) {
+                return new JSResource((Resource) obj);
+            }
             return super.wrap(cx, scope, obj, staticType);
         }
 
@@ -302,6 +333,9 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
             if (obj instanceof FileObject)
                 return new JSFileObject(XPMObject.getXPMObject(scope), (FileObject) obj);
+
+            if (obj instanceof Resource)
+                return new JSResource((Resource) obj);
 
 
             return super.wrapNewObject(cx, scope, obj);
@@ -327,7 +361,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-            return super.construct(cx, scope, args);
+            ClassDescription description = analyzeClass((Class)javaObject);
+            String className = JSBaseObject.getClassName((Class) javaObject);
+            ConstructorFunction constructorFunction = new ConstructorFunction(className, description.constructors);
+            Object object = constructorFunction.call(cx, scope, null, args);
+            return (Scriptable)object;
+
         }
     }
 }

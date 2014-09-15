@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 
 import os
@@ -7,7 +7,6 @@ import sys
 import subprocess
 import argparse
 import string
-import xmlrpclib
 import logging
 import re
 from icolor import cformat
@@ -18,7 +17,7 @@ import json
 import argcomplete
 import jsonrpclib
 import socket
-import daemon
+# import daemon
 
 # --- Set some variables
 
@@ -63,7 +62,7 @@ def start_jar(args, jarargs):
     else:
         jarpath = None
         for f in jarpaths():
-            print "Trying %s" % f
+            print("Trying %s" % f)
             if os.path.isfile(f):
                 jarpath = f
                 break
@@ -103,7 +102,7 @@ class Properties:
         return "Properties (%s)" % self.map.__str__()
 
     def __iter__(self):
-        for k, v in self.map[1].iteritems():
+        for k, v in self.map[1].items():
             yield k, Properties(v)
 
     def sub(self, name, default=None):
@@ -128,7 +127,7 @@ class Properties:
 def getProperties(filename):
     """Get a dictionnary from a property file
    """
-    propFile = file(filename, "rU")
+    propFile = open(filename, "rU")
 
     re_comment = re.compile(r"""[#;].*""")
     re_section = re.compile(r"""^\[(\w+)\]$""")
@@ -192,8 +191,6 @@ class Configuration():
         self.client = clients.sub(args.server)
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
 
-    def getServer(self):
-        return xmlrpclib.ServerProxy("%s/xmlrpc" % self.client["url"], verbose=args.verbose)
 
     def getJsonServer(self):
         return jsonrpclib.Server("%s/json-rpc" % self.client["url"], verbose=args.verbose)
@@ -208,12 +205,10 @@ class Configuration():
         if m.group(1):
             scheme = "wss"
         url = "%s://%s/web-socket" % (scheme, m.group(4))
-
         header = []
         if m.group(2) and m.group(3):
-            auth = base64.b64encode("%s:%s" % (m.group(2), m.group(3)))
+            auth = base64.b64encode(bytes("%s:%s" % (m.group(2), m.group(3)), "ascii")).decode("ascii")
             header = ["Authorization: Basic %s" % auth]
-
         return websocket.create_connection(url, header=header)
 
 
@@ -223,7 +218,7 @@ class Configuration():
 def ping(json_server):
     try:
         return json_server.ping([]) == "pong"
-    except socket.error, e:
+    except socket.error as e:
         return False
 
 def command_start_server(args):
@@ -236,9 +231,62 @@ def command_start_server(args):
 
 
 def command_stop_server(args):
-    server = Configuration(args).getServer()
-    server.Server.shutdown()
+    server = Configuration(args).getJsonServer()
+    server.shutdown({})
 
+
+def command_run_python(args):
+    conf = Configuration(args)
+    client = conf.getWebSocketServer()
+
+    # Get the command line
+    files = []
+
+    if args.pre:
+        files.append(["<pre>", args.pre])
+
+    for filename in args.files:
+        filepath = os.path.abspath(filename)
+        if not conf.remote:
+            files.append([filepath, None])
+        else:
+            files.append([filepath, open(filepath).read()])
+
+    if args.post:
+        files.append(["<post>", args.post])
+
+    logging.debug("Running python scripts %s" % [s[0] for s in files])
+
+    params = {"files": files, "environment": dict(os.environ)}
+    # if args.debug_port > 0:
+    #     params["debug"] = args.debug_port
+
+    try:
+        code = 0
+        msg = json.dumps({"id": 1, "method": "run-python", "params": params})
+        client.send(msg)
+        while client is not None:
+            message = client.recv()
+            o = json.loads(message)
+            if type(o) == dict:
+                if o["id"]:
+                    if o["error"]:
+                        code = o["error"]["code"]
+                        sys.stderr.write("%s\n" % o["error"]["message"])
+                    break
+                else:
+                    result = o["result"]
+                    if result["stream"] == "out":
+                        sys.stdout.write(result["value"])
+                    elif result["stream"] == "err":
+                        sys.stderr.write(result["value"])
+                    else:
+                        sys.stderr.write("Cannot interpret stream %s" % result["stream"])
+
+        sys.exit(code)
+    except Exception as e:
+        print(e)
+        sys.exit(1)
 
 def command_run_js(args):
     conf = Configuration(args)
@@ -255,7 +303,7 @@ def command_run_js(args):
         if not conf.remote:
             files.append([filepath, None])
         else:
-            files.append([filepath, file(filepath).read()])
+            files.append([filepath, open(filepath).read()])
 
     if args.post:
         files.append(["<post>", args.post])
@@ -280,20 +328,21 @@ def command_run_js(args):
                         sys.stderr.write("%s\n" % o["error"]["message"])
                     break
                 else:
-                    print o["result"],
+                    result = o["result"]
+                    if result["stream"] == "out":
+                        sys.stdout.write(result["value"])
+                    else:
+                        sys.stdout.write(result["value"])
 
         sys.exit(code)
-    except xmlrpclib.Fault as e:
-        print e
-        sys.exit(1)
     except Exception as e:
-        print e
+        print(e)
         sys.exit(1)
 
 
 def command_update(args):
     server = Configuration(args).getServer()
-    print "%d updated job(s)" % server.Server.updateJobs(args.group, args.recursive, get_states(args.states))
+    print("%d updated job(s)" % server.Server.updateJobs(args.group, args.recursive, get_states(args.states)))
 
 
 def command_ls(args):
@@ -302,15 +351,15 @@ def command_ls(args):
     for l in response:
         state = l.get("state", "?").upper()
         if state == 'ERROR':
-            print cformat("#RED;%s" % l)
+            print(cformat("#RED;%s" % l))
         elif state == 'DONE':
-            print cformat("#GREEN;%s" % l)
+            print(cformat("#GREEN;%s" % l))
         elif state == 'RUNNING':
-            print cformat("#CYAN;%s" % l)
+            print(cformat("#CYAN;%s" % l))
         elif state == 'ON_HOLD':
-            print cformat("#YELLOW;%s" % l)
+            print(cformat("#YELLOW;%s" % l))
         else:
-            print l
+            print(l)
 
 
 def command_ping(args):
@@ -325,25 +374,25 @@ def command_list_methods(args):
     for method in server.system.listMethods():
         if not method.startswith("system"):
             print("# %s" % method)
-            print server.system.methodSignature(method)
-            print server.system.methodHelp(method)
+            print(server.system.methodSignature(method))
+            print(server.system.methodHelp(method))
             print
 
 
 def command_information(args):
     server = Configuration(args).getJsonServer()
-    print server.getResourceInformation(args.resourceId[0])
+    print(server.getResourceInformation(args.resourceId[0]))
 
 
 def command_invalidate(args):
     server = Configuration(args).getServer()
-    print server.Server.invalidateJob(args.resourceId[0], args.recursive)
+    print(server.Server.invalidateJob(args.resourceId[0], args.recursive))
 
 
 def command_kill(args):
     server = Configuration(args).getServer()
     n = server.Server.kill(args.jobid)
-    print "Killed %d jobs" % n
+    print("Killed %d jobs" % n)
 
 
 def command_rm(args):
@@ -357,7 +406,7 @@ def command_rm(args):
 
     for jobid in args.jobid:
         n = server.remove(group=args.group, id=jobid, states=states, recursive=args.recursive, regexp=args.regexp)
-        print "Removed %d resources" % n
+        print("Removed %d resources" % n)
 
 
 def command_log_level(args):
@@ -387,7 +436,7 @@ parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
 parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
-parser.add_argument("--config", dest="config", default="~/.experimaestro", action="store",
+parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
                     help="Experimaestro configuration file")
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
@@ -402,6 +451,11 @@ p_run_js.add_argument("--pre", dest="pre", help="Execute this javascript before 
 p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
 p_run_js.add_argument('files', nargs='*', help='')
 
+
+p_run_python = subparsers.add_parser("run-python", help="Run one or more python scripts on the server")
+p_run_python.add_argument("--pre", dest="pre", help="Execute this python code before the files")
+p_run_python.add_argument("--post", dest="post", help="Execute this python code after the files")
+p_run_python.add_argument('files', nargs='*', help='')
 
 job_specification = argparse.ArgumentParser(add_help=False)
 job_specification.add_argument('--states', dest="states", help="States")
@@ -449,7 +503,7 @@ try:
     fname = "command_%s" % args.command.replace("-", "_")
     locals()[fname](args)
 except Exception as e:
-    print e
+    print(e)
     if args.debug:
-        print traceback.format_exc()
+        print(traceback.format_exc())
     sys.exit(1)

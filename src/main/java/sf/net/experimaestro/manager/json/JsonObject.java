@@ -23,13 +23,16 @@ import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * A JSON object (associates a key to a json value)
@@ -37,15 +40,9 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 1/4/13
  */
-public class JsonObject extends HashMap<String, Json> implements Json {
-    public JsonObject(int initialCapacity, float loadFactor) {
-        super(initialCapacity, loadFactor);
-    }
-
-    public JsonObject(int initialCapacity) {
-        super(initialCapacity);
-    }
-
+public class JsonObject
+        extends TreeMap<String, Json> /* Warning: we depend on the map being sorted (for hash string) */
+        implements Json {
     public JsonObject() {
     }
 
@@ -55,29 +52,8 @@ public class JsonObject extends HashMap<String, Json> implements Json {
 
     @Override
     public String toString() {
-        return String.format("{%s}", Output.toString(", ", this.entrySet(), new Output.Formatter<Map.Entry<String, Json>>() {
-            @Override
-            public String format(Map.Entry<String, Json> entry) {
-                return String.format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue());
-            }
-        }));
-    }
-
-    @Override
-    public void toJSONString(Writer out) throws IOException {
-        out.write('{');
-        boolean first = true;
-        for(Map.Entry<String, Json> entry: this.entrySet()) {
-            if (first)
-                first = false;
-            else
-                out.write(", ");
-
-            out.write(JSONValue.toJSONString(entry.getKey()));
-            out.write(":");
-            entry.getValue().toJSONString(out);
-        }
-        out.write('}');
+        return String.format("{%s}", Output.toString(", ", this.entrySet(),
+                entry -> String.format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
     }
 
     @Override
@@ -87,7 +63,11 @@ public class JsonObject extends HashMap<String, Json> implements Json {
 
     @Override
     public boolean isSimple() {
-        return false;
+        if (!containsKey(Manager.XP_VALUE.toString())) {
+            return false;
+        }
+
+        return ValueType.ATOMIC_TYPES.contains(type());
     }
 
     @Override
@@ -153,6 +133,89 @@ public class JsonObject extends HashMap<String, Json> implements Json {
             throw new IllegalArgumentException("No type in the Json object");
 
         return QName.parse(type.toString());
+    }
+
+    @Override
+    public void write(Writer out) throws IOException {
+        out.write('{');
+        boolean first = true;
+        for (Map.Entry<String, Json> entry : this.entrySet()) {
+            if (first)
+                first = false;
+            else
+                out.write(", ");
+
+            out.write(JSONValue.toJSONString(entry.getKey()));
+            out.write(":");
+            entry.getValue().write(out);
+        }
+        out.write('}');
+    }
+
+    @Override
+    public boolean canIgnore(Set<QName> ignore) {
+        if (ignore.contains(type())) {
+            return true;
+        }
+
+        if (this.containsKey(Manager.XP_IGNORE.toString())) {
+            Json value = this.get(Manager.XP_IGNORE.toString());
+            if (value instanceof JsonBoolean) {
+                if (((JsonBoolean) value).getBoolean()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public void writeDescriptorString(Writer out, Set<QName> ignore) throws IOException {
+        if (canIgnore(ignore)) {
+            out.write("null");
+            return;
+        }
+
+        if (isSimple()) {
+            get(Manager.XP_VALUE.toString()).writeDescriptorString(out, ignore);
+            return;
+        }
+
+        Set<String> ignored_keys = new HashSet<>();
+        ignored_keys.add(Manager.XP_IGNORE.toString());
+        if (this.containsKey(Manager.XP_IGNORE.toString())) {
+            Json value = this.get(Manager.XP_IGNORE.toString());
+            if (value instanceof JsonString) {
+                ignored_keys.add(((JsonString) value).string);
+            } else if (value instanceof JsonArray) {
+                for (Json s : (JsonArray) value) {
+                    ignored_keys.add(s.toString());
+                }
+            } else {
+                throw new ExperimaestroRuntimeException("Cannot handle xp_ignore of type %s", value.getClass());
+            }
+
+        }
+
+        out.write('{');
+        boolean first = true;
+        for (Map.Entry<String, Json> entry : this.entrySet()) {
+            Json value = entry.getValue();
+            String key = entry.getKey();
+            if (value == null || value.canIgnore(ignore) || key.startsWith("$") || ignored_keys.contains(key))
+                continue;
+
+            if (first)
+                first = false;
+            else
+                out.write(",");
+
+            out.write(JSONValue.toJSONString(key));
+            out.write(":");
+            value.writeDescriptorString(out, ignore);
+        }
+        out.write('}');
     }
 
 }

@@ -23,11 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import sf.net.experimaestro.manager.json.Json;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A constant in a plan just generate json values

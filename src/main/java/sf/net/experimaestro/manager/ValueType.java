@@ -20,13 +20,10 @@ package sf.net.experimaestro.manager;
 
 import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonBoolean;
-import sf.net.experimaestro.manager.json.JsonInteger;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonReal;
-import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.util.HashSet;
 
 /**
  * Represents an atomic value
@@ -37,13 +34,25 @@ import sf.net.experimaestro.utils.log.Logger;
 public class ValueType extends Type {
     final static private Logger LOGGER = Logger.getLogger();
 
-    static final public QName XP_STRING = new QName(Manager.EXPERIMAESTRO_NS, "string");
-    static final public QName XP_REAL = new QName(Manager.EXPERIMAESTRO_NS, "real");
-    static final public QName XP_INTEGER = new QName(Manager.EXPERIMAESTRO_NS, "integer");
-    static final public QName XP_BOOLEAN = new QName(Manager.EXPERIMAESTRO_NS, "boolean");
+    // Set of all atomic types
+    public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
 
-    public static final QName XPM_FILE = new QName(Manager.EXPERIMAESTRO_NS, "file");
-    public static final QName XP_XML = new QName(Manager.EXPERIMAESTRO_NS, "xml");
+    private static QName registerAtomicType(String ns, String local) {
+        QName qName = new QName(ns, local);
+        ATOMIC_TYPES.add(qName);
+        return qName;
+    }
+
+    static final public QName XP_STRING = registerAtomicType(Manager.EXPERIMAESTRO_NS, "string");
+    static final public QName XP_REAL = registerAtomicType(Manager.EXPERIMAESTRO_NS, "real");
+    static final public QName XP_INTEGER = registerAtomicType(Manager.EXPERIMAESTRO_NS, "integer");
+    static final public QName XP_BOOLEAN = registerAtomicType(Manager.EXPERIMAESTRO_NS, "boolean");
+    static final public QName XP_RESOURCE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "resource");
+
+    public static final QName XP_FILE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "file");
+    public static final QName XP_XML = registerAtomicType(Manager.EXPERIMAESTRO_NS, "xml");
+
+
 
     public ValueType(QName type) {
         super(type);
@@ -84,7 +93,7 @@ public class ValueType extends Type {
     }
 
     static public Json wrap(FileObject value) {
-        return wrapString(value.toString(), XPM_FILE);
+        return wrapString(value.toString(), XP_FILE);
     }
 
     public static Json wrapObject(Object value) {

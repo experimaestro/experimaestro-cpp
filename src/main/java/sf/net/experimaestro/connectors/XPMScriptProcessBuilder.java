@@ -19,6 +19,7 @@
 package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 
 /**
  * An abstract class that allows building scripts in different scripting languages
@@ -40,15 +41,15 @@ public abstract class XPMScriptProcessBuilder extends XPMProcessBuilder {
     /** Local path to the script file */
     protected String path;
 
-    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         this.connector = connector;
         this.scriptFile = scriptFile;
         this.path = connector.resolve(scriptFile);
     }
 
-    public abstract void removeLock(FileObject lockFile);
+    public abstract void removeLock(FileObject lockFile) throws FileSystemException;
 
-    public abstract void exitCodeFile(FileObject exitCodeFile);
+    public abstract void exitCodeFile(FileObject exitCodeFile) throws FileSystemException;
 
-    public abstract void doneFile(FileObject doneFile);
+    public abstract void doneFile(FileObject doneFile) throws FileSystemException;
 }

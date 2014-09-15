@@ -29,12 +29,18 @@ import java.lang.annotation.RetentionPolicy;
 public @interface JSFunction {
     String value() default "";
 
-    /** Whether the method takes scope & context */
+    /** Whether the constructor takes scope & context */
     boolean scope() default false;
 
-    /** Number of arguments that are optional */
-    int optional() default 0;
 
     /** Marks a function that is used when the object is called */
     boolean call() default false;
+
+    /**
+     * Number of arguments that are optional.
+     */
+    int optional() default 0;
+
+    /** Optional arguments are at the beginning when true */
+    boolean optionalsAtStart() default false;
 }

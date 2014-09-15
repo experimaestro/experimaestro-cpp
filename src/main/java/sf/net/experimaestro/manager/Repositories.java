@@ -36,9 +36,6 @@ public class Repositories extends Repository {
     /** Our repositories */
     TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<>();
 
-    /** The repository to which anything is added */
-    RepositoryInformation localRepository;
-
     /**
      * Creates a new set of repositories
      */

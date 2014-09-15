@@ -21,12 +21,11 @@ package sf.net.experimaestro.manager.xq;
 import net.sf.saxon.expr.XPathContext;
 import net.sf.saxon.lib.ExtensionFunctionCall;
 import net.sf.saxon.lib.ExtensionFunctionDefinition;
-import net.sf.saxon.lib.ExtensionFunctionDefinition;
-import net.sf.saxon.om.SequenceIterator;
-import net.sf.saxon.tree.iter.SingletonIterator;
+import net.sf.saxon.om.Sequence;
 import net.sf.saxon.om.StructuredQName;
 import net.sf.saxon.trans.XPathException;
 import net.sf.saxon.value.SequenceType;
+import net.sf.saxon.value.SingletonItem;
 import sf.net.experimaestro.manager.Manager;
 
 import java.io.File;
@@ -66,14 +65,14 @@ public class ParentPath extends ExtensionFunctionDefinition {
 		return new ExtensionFunctionCall() {
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			public SequenceIterator call(SequenceIterator[] arguments, XPathContext xpc)
-					throws XPathException {
-				String path = arguments[0].next().getStringValue();
-				final String parentPath = new File(path).getParentFile().toString();
-				return SingletonIterator.makeIterator(new net.sf.saxon.value.StringValue(parentPath));
-			}
-		};
+
+            @Override
+            public Sequence call(XPathContext xPathContext, Sequence[] sequences) throws XPathException {
+                String path = sequences[0].head().getStringValue();
+                final String parentPath = new File(path).getParentFile().toString();
+                return new SingletonItem<>(new net.sf.saxon.value.StringValue(parentPath));
+            }
+        };
 	}
 
 }

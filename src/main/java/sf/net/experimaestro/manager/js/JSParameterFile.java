@@ -1,5 +1,7 @@
 package sf.net.experimaestro.manager.js;
 
+import java.io.UnsupportedEncodingException;
+
 /**
  * A parameter file
  *
@@ -10,18 +12,28 @@ public class JSParameterFile extends JSBaseObject {
     String key;
     public byte[] value;
 
+
+    @JSFunction
     public JSParameterFile(String key, byte[] value) {
         this.key = key;
         this.value = value;
     }
 
+    @JSFunction
     public JSParameterFile(String key, JSBaseObject object) {
         this(key, object.getBytes());
     }
 
-    public JSParameterFile(String key, String value) {
-        this(key, value.getBytes());
+    @JSFunction
+    public JSParameterFile(String key, String value, String encoding) throws UnsupportedEncodingException {
+        this(key, value.getBytes(encoding));
     }
+
+    @JSFunction
+    public JSParameterFile(String key, String value) throws UnsupportedEncodingException {
+        this(key, value, "UTF-8");
+    }
+
 
     @Override
     public String toString() {
