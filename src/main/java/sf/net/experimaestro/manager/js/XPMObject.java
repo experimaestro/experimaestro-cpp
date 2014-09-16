@@ -19,6 +19,8 @@
 package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Hierarchy;
@@ -38,10 +40,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.MessageDigestWriter;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -71,7 +70,9 @@ import static sf.net.experimaestro.utils.JSUtils.unwrap;
  */
 public class XPMObject {
 
-    /** The filename used to the store the signature in generated directory names */
+    /**
+     * The filename used to the store the signature in generated directory names
+     */
     public static final String XPM_SIGNATURE = ".xpm-signature";
 
     static public class Holder<T> {
@@ -786,6 +787,7 @@ public class XPMObject {
         return XMLUtils.toString(node);
     }
 
+    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
 
     /**
      * Creates a new command line job
@@ -852,7 +854,16 @@ public class XPMObject {
 
         // --- Options
 
+
         if (options != null) {
+
+            final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
+            if (!unmatched.isEmpty()) {
+                throw new IllegalArgumentException(format("Some options are not allowed: %s",
+                        Output.toString(", ", unmatched)));
+            }
+
+
             // --- XPMProcess launcher
             if (options.has("launcher", options)) {
                 final Object launcher = options.get("launcher", options);
@@ -867,7 +878,7 @@ public class XPMObject {
                 if (stdin instanceof String || stdin instanceof ConsString) {
                     task.setInput(stdin.toString());
                 } else if (stdin instanceof FileObject) {
-                    task.setInput((FileObject)stdin);
+                    task.setInput((FileObject) stdin);
                 } else
                     throw new ExperimaestroRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
             }
@@ -1135,10 +1146,9 @@ public class XPMObject {
     /**
      * Creates a unique (up to the collision probability) ID based on the hash
      *
-     *
      * @param basedir
-     * @param prefix The prefix for the directory
-     * @param id    The task ID or any other QName
+     * @param prefix     The prefix for the directory
+     * @param id         The task ID or any other QName
      * @param jsonValues the JSON object from which the hash is computed
      * @return
      */
