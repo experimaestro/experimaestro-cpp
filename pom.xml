@@ -156,7 +156,7 @@
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                         <manifestEntries>
-                            <xpm.version>${project.version}</xpm.version>
+                            <xpm-version>${project.version}</xpm-version>
                         </manifestEntries>
                     </archive>
                 </configuration>
