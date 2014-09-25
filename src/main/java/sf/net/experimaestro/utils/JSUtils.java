@@ -19,6 +19,7 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
+import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
@@ -154,6 +155,9 @@ public class JSUtils {
      * @return
      */
     public static Json toJSON(Scriptable scope, Object value) {
+        if (value instanceof Json)
+            return (Json) value;
+
         // No unwrap for JSBaseObject
         value = value instanceof JSBaseObject ? value : unwrap(value);
 
@@ -202,7 +206,8 @@ public class JSUtils {
                     pValue = QName.parse(JSUtils.toString(pValue), nsContext).toString();
 
                 String key = qname.toString();
-                json.put(key, toJSON(scope, pValue));
+                final Json key_value = toJSON(scope, pValue);
+                json.put(key, key_value);
             }
             return json;
         }
@@ -224,6 +229,9 @@ public class JSUtils {
             return json;
         }
 
+        if (value instanceof FileObject)
+            return new JSFileObject(XPMObject.getXPM(scope), (FileObject)value);
+
         // -- Undefined
         if (value instanceof Undefined)
             return JsonNull.getSingleton();
@@ -243,8 +251,10 @@ public class JSUtils {
                     protected Map.Entry<Object, Object> computeNext() {
                         if (i >= ids.length)
                             return endOfData();
-                        String key = ids[i++].toString();
-                        return new AbstractMap.SimpleImmutableEntry<Object, Object>(key, object.get(key.toString(), object));
+                        final Object id = ids[i++];
+                        String key = id.toString();
+                        final Object value = object.get(id);
+                        return new AbstractMap.SimpleImmutableEntry<>(key, value);
                     }
                 };
             }

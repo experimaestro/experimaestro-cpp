@@ -19,10 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import com.google.common.base.Joiner;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -45,6 +42,11 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
 
     @JSFunction(scope = true)
     public JSJson(Context sc, Scriptable scope, NativeObject object) {
+        this.json = JSUtils.toJSON(scope, object);
+    }
+
+    @JSFunction(scope = true)
+    public JSJson(Context sc, Scriptable scope, NativeArray object) {
         this.json = JSUtils.toJSON(scope, object);
     }
 
@@ -125,6 +127,10 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     public Object get(int index, Scriptable start) {
         if (json instanceof JsonArray)
             return new JSJson(((JsonArray) json).get(index));
+
+        if (json instanceof JsonObject) {
+            return get(Integer.toString(index), start);
+        }
         return super.get(index, start);
     }
 
@@ -141,8 +147,10 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
 
     @Override
     public boolean has(String name, Scriptable start) {
-        if (json instanceof JsonObject)
-            return ((JsonObject) json).containsKey(name);
+        if (json instanceof JsonObject) {
+            final JsonObject jsonObject = (JsonObject) json;
+            return jsonObject.containsKey(name);
+        }
         return super.has(name, start);
     }
 

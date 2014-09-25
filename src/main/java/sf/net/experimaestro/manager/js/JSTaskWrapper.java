@@ -38,7 +38,7 @@ import java.util.ArrayList;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 6/3/13
  */
-@JSObjectDescription()
+@JSObjectDescription(name = "TaskWrapper")
 public class JSTaskWrapper extends JSBaseObject {
     private final Task task;
 

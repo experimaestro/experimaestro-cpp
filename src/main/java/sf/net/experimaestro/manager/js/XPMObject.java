@@ -294,6 +294,9 @@ public class XPMObject {
         // xml object (to construct XML easily)
         addNewObject(context, scope, "xml", "XMLConstructor", new Object[]{});
 
+        // Adds a Pipe object
+        addNewObject(context, scope, "PIPE", "Pipe", new Object[]{});
+
         // tasks object
         addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
 
@@ -398,7 +401,11 @@ public class XPMObject {
 
             }
 
-            Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), scriptpath.toString(), 1, null);
+            // Avoid adding the protocol if this is a local file
+            final String sourceName = scriptpath.getConnector() == LocalhostConnector.getInstance()
+                    ? scriptpath.getPath() : scriptpath.toString();
+
+            Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
         }
@@ -424,7 +431,7 @@ public class XPMObject {
     /**
      * Retrievs the XPMObject from the JavaScript context
      */
-    private static XPMObject getXPM(Scriptable thisObj) {
+    public static XPMObject getXPM(Scriptable thisObj) {
         return ((JSXPM) thisObj.get("xpm", thisObj)).xpm;
     }
 
