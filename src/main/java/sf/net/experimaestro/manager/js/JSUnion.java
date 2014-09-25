@@ -28,6 +28,7 @@ import sf.net.experimaestro.manager.plans.Union;
 public class JSUnion extends JSAbstractOperator {
     Union union = new Union();
 
+    @JSFunction
     public JSUnion(JSAbstractOperator... operators) {
         for (JSAbstractOperator operator : operators)
             union.addParent(operator.getOperator());
