@@ -39,6 +39,7 @@ public class JSTransform extends JSAbstractOperator implements Function {
 
     private final FunctionOperator operator;
 
+    @JSFunction
     public JSTransform(Context cx, Scriptable scope, Callable f, JSAbstractOperator[] operators) {
         this.cx = cx;
         this.scope = scope;

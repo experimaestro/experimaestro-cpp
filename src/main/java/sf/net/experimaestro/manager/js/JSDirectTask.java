@@ -113,7 +113,7 @@ public class JSDirectTask extends JSAbstractTask {
             if (copyTo != null || runFunction == null) {
                 String key = namedInput.getKey();
                 Value value = values.get(key);
-                resultObject.put(copyTo, value.get());
+                resultObject.put(copyTo == null ? key : copyTo, value.get());
             }
         }
 

@@ -29,6 +29,7 @@ public class JSCopy extends JSPlan {
     private final Map<String, Input> inputs = new HashMap<>();
 
 
+    @JSFunction
     public JSCopy(Context cx, Scriptable scope, String outputType, NativeObject plan) throws XPathExpressionException {
         this.outputType = new Type(QName.parse(outputType, new JSNamespaceContext(scope)));
         this.plan = new Plan(new AnonymousTaskFactory());
@@ -74,10 +75,6 @@ public class JSCopy extends JSPlan {
     private class AnonymousTask extends Task {
         public AnonymousTask(AnonymousTaskFactory factory) {
             super(factory);
-            throw new NotImplementedException();
-//            for (Map.Entry<String, Input> entry : factory.getInputs().entrySet()) {
-//
-//            }
         }
 
         @Override

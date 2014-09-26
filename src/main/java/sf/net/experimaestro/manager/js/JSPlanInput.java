@@ -30,6 +30,7 @@ import sf.net.experimaestro.utils.JSUtils;
 public class JSPlanInput extends JSAbstractOperator {
     Operator operator;
 
+    @JSFunction
     public JSPlanInput(NativeArray array) {
         Constant constant = new Constant();
         this.operator = constant;

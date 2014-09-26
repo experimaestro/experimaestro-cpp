@@ -48,8 +48,10 @@ tasks("abc:task") = {
 function check(results, expected) {
     results.sort(function(x,y) { return x - y; });
     for(var i = 0; i < expected.length; i++) {
-        if (expected[i] != _(results[i]))
-            throw new java.lang.String.format("Expected %s and got %s at %s", expected[i], _(results[i]), i);
+        if (expected[i] != _(results[i])) {
+            logger.info("Expected %s and got %s at %s", expected[i], _(results[i]), i);
+            throw 1;
+        }
     }
 }
 

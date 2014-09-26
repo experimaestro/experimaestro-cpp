@@ -35,8 +35,8 @@ tasks("ns:mult") = {
     },
 
     run: function(x) {
-        logger.debug("Task mult: got x=%s and y=%s: %s", x.x(), x.y(), x.x() * x.y())
-        return x.x() * x.y();
+        logger.debug("Task mult: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) * $(x.y))
+        return $(x.x) * $(x.y);
     }
 };
 
@@ -47,8 +47,8 @@ tasks("ns:plus") = {
     },
 
     run: function(x) {
-        logger.debug("Task plus: got x=%s and y=%s: %s", x.x(), x.y(), x.x() + x.y())
-        return _(x.x) + _(x.y)
+        logger.debug("Task plus: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) + $(x.y))
+        return $(x.x) + $(x.y)
     }
 };
 // END SNIPPET: task
@@ -90,7 +90,7 @@ function test_simple() {
 
 function test_transform() {
     var f = function(x) {
-        return Number(x()) + 1;
+        return Number($(x)) + 1;
     };
 
     var plan1 = tasks("ns:identity").plan({
@@ -103,7 +103,7 @@ function test_transform() {
 
     // Optimize and run
     // Should be an array of XML values 3, 6, 5, 10
-    var result = plan2();
+    var result = plan2.run();
     check_array(result, [3, 5, 6, 10]);
 }
 

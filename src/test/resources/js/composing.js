@@ -44,7 +44,7 @@ tasks("abc:task") = {
     },
 
 	run: function(inputs) {
-		return _(inputs.t2);
+		return $(inputs.t2);
 	}
 		
 };

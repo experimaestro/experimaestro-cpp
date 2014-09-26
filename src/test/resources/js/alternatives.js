@@ -35,7 +35,7 @@ tasks.set("abc:alt1", {
 	},
 	
 	run: function(inputs) {
-		return { "x": inputs.x, "type": "abc:alt" };
+		return { "x": inputs.x, "xp_type": "abc:alt" };
 	}
 });
 

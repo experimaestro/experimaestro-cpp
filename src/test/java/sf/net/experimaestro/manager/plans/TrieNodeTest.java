@@ -23,19 +23,16 @@ public class TrieNodeTest {
 
         @Override
         public List<Operator> getParents() {
-            // TODO: implement getParents
             throw new NotImplementedException();
         }
 
         @Override
         protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-            // TODO: implement doCopy
             throw new NotImplementedException();
         }
 
         @Override
         protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
-            // TODO: implement _iterator
             throw new NotImplementedException();
         }
     }
@@ -50,8 +47,9 @@ public class TrieNodeTest {
 
         HashSet<Triplet> set = new HashSet<>();
         unroll(root, new IntOpenHashSet(), set);
-        for(Triplet triplet: set)
+        for(Triplet triplet: set) {
             System.err.println(triplet);
+        }
 
         for (int i = 0; i < 3; i++) {
             // {} - {i} [i]

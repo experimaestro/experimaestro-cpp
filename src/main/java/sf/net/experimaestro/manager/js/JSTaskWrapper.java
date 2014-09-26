@@ -48,6 +48,7 @@ public class JSTaskWrapper extends JSBaseObject {
         return "Task";
     }
 
+    @JSFunction
     public JSTaskWrapper(Task task) {
         this.task = task;
     }

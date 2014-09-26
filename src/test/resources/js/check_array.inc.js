@@ -26,9 +26,11 @@ function check_array(results, expected) {
     
     // Sort the results
     logger.debug("Results: %s", results.toSource());
-    results.sort(function(x,y) { return _(x) - _(y); });
+    results.sort(function(x,y) { return $(x) - $(y); });
     for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != Number(_(results[i])))
-			throw new java.lang.String.format("Expected %s and got %s at %s", expected[i].toSource(), _(results[i]), i);
+        if (expected[i] != Number(_(results[i]))) {
+            logger.error("Expected %s and got %s at %s", expected[i].toSource(), _(results[i]), i);
+			throw 1;
+	    }
     }
 }

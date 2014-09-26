@@ -50,6 +50,7 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         this.json = JSUtils.toJSON(scope, object);
     }
 
+    @JSFunction
     public JSJson(Json json) {
         this.json = json;
         if (json instanceof JSBaseObject)
