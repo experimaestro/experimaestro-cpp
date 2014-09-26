@@ -19,13 +19,12 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.TreeMap;
+import java.util.Iterator;
 
 /**
  * A command argument that can be processed depending on where the command is running.
@@ -45,89 +44,8 @@ import java.util.TreeMap;
  * @date 18/10/12
  */
 @Persistent
-public class CommandArgument {
-    private ArrayList<Component> components = new ArrayList<>();
-
-
-
-    static public interface Component {
-        java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException;
-    }
-
-    @Persistent
-    static public class String implements Component {
-        java.lang.String string;
-
-        private String() {}
-
-        public String(java.lang.String string) {
-            this.string = string;
-        }
-
-        @Override
-        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) {
-            return string;
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return string;
-        }
-    }
-
-
-    @Persistent
-    static public class Path implements Component {
-
-        private java.lang.String filename;
-
-        private Path() {}
-
-        public Path(FileObject file) {
-            filename = file.getName().getPath();
-        }
-
-        public Path(java.lang.String filename) {
-            this.filename = filename;
-        }
-
-        @Override
-        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
-            FileObject object = Scheduler.getVFSManager().resolveFile(filename);
-            return connector.resolve(object);
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return java.lang.String.format("<xp:path>%s</xp:path>", filename);
-        }
-    }
-
-    @Persistent
-    static public class ParameterFile implements Component {
-        java.lang.String key;
-
-        private ParameterFile() {
-        }
-
-        public ParameterFile(java.lang.String key) {
-            this.key = key;
-        }
-
-        @Override
-        public java.lang.String resolve(SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
-            final FileObject file = files.get(key);
-            if (file == null)
-                throw new ExperimaestroRuntimeException("Could not retrieve parameter file with key [%s]", key);
-            return connector.resolve(file);
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return java.lang.String.format("ParameterFile(%s)", key);
-        }
-    }
-
+public class CommandArgument extends AbstractCommandArgument implements Iterable<CommandComponent> {
+    private ArrayList<CommandComponent> components = new ArrayList<>();
 
     public CommandArgument(java.lang.String string) {
         add(string);
@@ -137,25 +55,23 @@ public class CommandArgument {
     }
 
     public void add(java.lang.String string) {
-        components.add(new String(string));
+        components.add(new CommandComponent.String(string));
     }
 
-    public void add(Component component) {
+    public void add(CommandComponent component) {
         components.add(component);
     }
 
-    public java.lang.String resolve(final SingleHostConnector connector, TreeMap<java.lang.String, FileObject> files) throws FileSystemException {
+    public java.lang.String prepare(CommandEnvironment environment) throws IOException {
         StringBuilder sb = new StringBuilder();
-        for(Component component: components)
-            sb.append(component.resolve(connector, files));
+        for(CommandComponent component: components)
+            sb.append(component.prepare(environment));
         return sb.toString();
     }
 
     @Override
-    public java.lang.String toString() {
-        StringBuilder sb = new StringBuilder();
-        for(Component component: components)
-            sb.append(component.toString());
-        return sb.toString();
+    public Iterator<CommandComponent> iterator() {
+        return components.iterator();
     }
 }
+

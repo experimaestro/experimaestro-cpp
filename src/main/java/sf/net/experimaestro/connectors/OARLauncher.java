@@ -63,7 +63,7 @@ public class OARLauncher implements Launcher {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
-        XPMProcessBuilder builder = connector.processBuilder();
+        AbstractProcessBuilder builder = connector.processBuilder();
         builder.command(command);
         builder.detach(false);
         return dBuilder.parse(builder.start().getInputStream());
@@ -85,39 +85,39 @@ public class OARLauncher implements Launcher {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
-        return new ProcessBuilder(null, connector);
+    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
+        return new ProcessBuilder(connector);
     }
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return new ProcessBuilder(scriptFile, connector);
+        return new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
     }
 
-
-    static public class ProcessBuilder extends UnixProcessBuilder {
+    /**
+     * Process builder for OAR
+     */
+    static public class ProcessBuilder extends AbstractProcessBuilder {
         // Command to start
         private String oarCommand = "oarsub";
 
         // The associated connector
         private SingleHostConnector connector;
 
-        public ProcessBuilder(FileObject scriptFile, SingleHostConnector connector) throws FileSystemException {
-            super(scriptFile, connector);
+        public ProcessBuilder(SingleHostConnector connector) {
             this.connector = connector;
         }
 
         @Override
-        public XPMProcess doStart() throws LaunchException, IOException {
-
+        public XPMProcess start() throws LaunchException, IOException {
             final String path = job.getLocator().getPath();
-            final String id = protect(path, "\"");
+            final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
             String [] command = new String[] { oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run" };
 
             LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
 
-            XPMProcessBuilder processBuilder = connector.processBuilder();
+            AbstractProcessBuilder processBuilder = connector.processBuilder();
             processBuilder.command(command);
             processBuilder.redirectOutput(Redirect.PIPE);
             processBuilder.redirectError(Redirect.PIPE);
@@ -135,8 +135,7 @@ public class OARLauncher implements Launcher {
 
             LOGGER.info("Started OAR job with PID %s", pid);
 
-            return new OARProcess(job, pid, connector);
-        }
+            return new OARProcess(job, pid, connector);        }
     }
 
 

@@ -101,7 +101,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
      */
     public String resolve(FileObject file) throws FileSystemException {
         if (file.getFileSystem() != this.getFileSystem()) {
-            throw new FileSystemException("Cannot resolve %s from %s", file, this);
+            throw new FileSystemException("Cannot prepare %s from %s", file, this);
         }
 
         return file.getName().getPath();
@@ -113,7 +113,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
 
 
     /** Returns a process builder */
-    public abstract XPMProcessBuilder processBuilder();
+    public abstract AbstractProcessBuilder processBuilder();
 
     /** Lock a file */
     public abstract Lock createLockFile(String path, boolean wait) throws LockException;
@@ -122,7 +122,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
     public abstract String getHostName();
 
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
         if (connector != this)
             throw new ExperimaestroRuntimeException("");
 

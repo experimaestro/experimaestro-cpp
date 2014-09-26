@@ -20,31 +20,48 @@ package sf.net.experimaestro.connectors;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import sf.net.experimaestro.scheduler.Commands;
+
+import java.util.Map;
 
 /**
  * An abstract class that allows building scripts in different scripting languages
  * (sh, etc.)
  *
- * It differs from the {@linkplain XPMProcessBuilder} by the fact that
- * {@linkplain #command(String...)} can be called several times. Each
- * time it resets the redirection and append the command to the list of commands to
- * be executed
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 10/9/12
  */
-public abstract class XPMScriptProcessBuilder extends XPMProcessBuilder {
+public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     protected SingleHostConnector connector;
 
+    /** The process builder */
+    protected final AbstractProcessBuilder processBuilder;
+
+    /**  The environment */
+    private Map<String, String> environment;
+
+    /** The script file */
     protected FileObject scriptFile;
 
     /** Local path to the script file */
     protected String path;
 
-    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
+    /** Commands */
+    private Commands commands;
+
+    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile, AbstractProcessBuilder processBuilder) throws FileSystemException {
         this.connector = connector;
         this.scriptFile = scriptFile;
         this.path = connector.resolve(scriptFile);
+        this.processBuilder = processBuilder == null ? connector.processBuilder() : processBuilder;
+    }
+
+    /** Sets the commands */
+    public void commands(Commands commands) {
+        this.commands = commands;
+    }
+    public Commands commands() {
+        return commands;
     }
 
     public abstract void removeLock(FileObject lockFile) throws FileSystemException;

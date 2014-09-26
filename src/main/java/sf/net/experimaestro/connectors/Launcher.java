@@ -32,7 +32,7 @@ public interface Launcher {
      *
      * @return A process builder
      */
-    XPMProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
+    AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
 
     /**
      * Returns a script process builder that can be run

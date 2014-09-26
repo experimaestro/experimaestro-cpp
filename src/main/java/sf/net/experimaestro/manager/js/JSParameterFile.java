@@ -9,14 +9,14 @@ import java.io.UnsupportedEncodingException;
  * @date 24/1/13
  */
 public class JSParameterFile extends JSBaseObject {
-    String key;
-    public byte[] value;
+    private String key;
+    private byte[] value;
 
 
     @JSFunction
     public JSParameterFile(String key, byte[] value) {
-        this.key = key;
-        this.value = value;
+        this.setKey(key);
+        this.setValue(value);
     }
 
     @JSFunction
@@ -37,6 +37,22 @@ public class JSParameterFile extends JSBaseObject {
 
     @Override
     public String toString() {
+        return getKey();
+    }
+
+    public String getKey() {
         return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public byte[] getValue() {
+        return value;
+    }
+
+    public void setValue(byte[] value) {
+        this.value = value;
     }
 }

@@ -20,6 +20,8 @@ package sf.net.experimaestro.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -27,15 +29,14 @@ import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.*;
@@ -695,37 +696,32 @@ public class XPMObject {
      * @throws InterruptedException
      */
     public NativeArray evaluate(Object jsargs, NativeObject options) throws Exception {
-        Map<String, byte[]> pFiles = new TreeMap<>();
-        CommandArguments arguments = getCommandArguments(jsargs, pFiles);
+        Command command = JSCommand.getCommand(jsargs);
 
         // Run the process and captures the output
         final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
-        XPMProcessBuilder builder = connector.processBuilder();
+        AbstractProcessBuilder builder = connector.processBuilder();
 
 
-        TreeMap<String, FileObject> files = new TreeMap<>();
+        try (CommandEnvironment commandEnv = new CommandEnvironment.Temporary(connector)) {
+            // Transform the list
+            builder.command(Lists.newArrayList(Iterables.transform(command, argument -> {
+                try {
+                    return ((CommandArgument) argument).prepare(commandEnv);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            })));
 
-        try {
-            for (Map.Entry<String, byte[]> key2Content : pFiles.entrySet()) {
-                FileObject file = connector.getTemporaryFile(key2Content.getKey() + "_", ".input");
-                files.put(key2Content.getKey(), file);
-                OutputStream out = file.getContent().getOutputStream();
-                out.write(key2Content.getValue());
-                out.close();
-                LOGGER.info("Created temporary file %s", file);
-            }
-
-            builder.command(arguments.toStrings(connector, files));
             if (options != null && options.has("stdout", options)) {
                 FileObject stdout = getFileObject(connector, unwrap(options.get("stdout", options)));
-                builder.redirectOutput(XPMProcessBuilder.Redirect.to(stdout));
+                builder.redirectOutput(AbstractCommandBuilder.Redirect.to(stdout));
             } else {
-                builder.redirectOutput(XPMProcessBuilder.Redirect.PIPE);
+                builder.redirectOutput(AbstractCommandBuilder.Redirect.PIPE);
             }
 
 
             builder.detach(false);
-
             builder.environment(environment);
 
             XPMProcess p = builder.start();
@@ -740,16 +736,6 @@ public class XPMObject {
 
             int error = p.waitFor();
             return new NativeArray(new Object[]{error, sb.toString()});
-        } finally {
-            // Remove temporary files
-            for (FileObject file : files.values()) {
-                try {
-                    file.delete();
-                } catch (Throwable t) {
-                    LOGGER.warn("Could not delete temporary file %s [%s]", file, t);
-                }
-            }
-
         }
     }
 
@@ -796,23 +782,21 @@ public class XPMObject {
 
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
 
+
     /**
      * Creates a new command line job
      *
-     * @param path    The identifier for this job
-     * @param jsargs  The command line
-     * @param options The options
+     * @param path     The identifier for this job
+     * @param commands The command line(s)
+     * @param options  The options
      * @return
      * @throws Exception
      */
-    public JSResource commandlineJob(Object path, NativeArray jsargs, NativeObject options) throws Exception {
+    public JSResource commandlineJob(Object path, Commands commands, NativeObject options) throws Exception {
         CommandLineTask task = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
-
-        Map<String, byte[]> pFiles = new TreeMap<>();
-        final CommandArguments command = getCommandArguments(jsargs, pFiles);
 
         // --- Create the task
 
@@ -835,7 +819,7 @@ public class XPMObject {
             path = connector.getMainConnector().resolve(path.toString());
 
         final ResourceLocator locator = new ResourceLocator(connector.getMainConnector(), path.toString());
-        task = new CommandLineTask(scheduler, locator, command);
+        task = new CommandLineTask(scheduler, locator, commands);
 
         if (submittedJobs.containsKey(locator)) {
             getRootLogger().info("Not submitting %s [duplicate]", locator);
@@ -843,9 +827,6 @@ public class XPMObject {
                 return new JSResource(submittedJobs.get(locator));
             return new JSResource(scheduler.getResource(locator));
         }
-
-        for (Map.Entry<String, byte[]> entry : pFiles.entrySet())
-            task.setParameterFile(entry.getKey(), entry.getValue());
 
         // -- Adds default locks
         Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
@@ -964,7 +945,7 @@ public class XPMObject {
         if (simulate()) {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-            pw.format("Command: %s%n", task.getCommand().toString());
+            pw.format("Command: %s%n", task.getCommands().toString());
             pw.format("Locator: %s", locator.toString());
             pw.flush();
         } else {
@@ -986,148 +967,6 @@ public class XPMObject {
             return (FileObject) stdout;
 
         throw new ExperimaestroRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
-    }
-
-    /**
-     * Transform an array of JS objects into a command line argument object
-     *
-     * @param jsargs         The input array
-     * @param parameterFiles (out) A map that will contain the parameter files defined in the command line
-     * @return a valid {@linkplain CommandArgument} object
-     */
-    private static CommandArguments getCommandArguments(Object jsargs, Map<String, byte[]> parameterFiles) {
-        final CommandArguments command = new CommandArguments();
-
-        if (jsargs instanceof NativeArray) {
-            NativeArray array = ((NativeArray) jsargs);
-
-            for (Object _object : array) {
-                final CommandArgument argument = new CommandArgument();
-                Object object = unwrap(_object);
-                StringBuilder sb = new StringBuilder();
-
-                // XML argument (deprecated -- too many problems with E4X!)
-                if (JSUtils.isXML(object)) {
-
-                    // Walk through
-                    for (Node child : xmlAsList(JSUtils.toDOM(array, object)))
-                        argumentWalkThrough(sb, argument, child);
-
-                } else {
-                    argumentWalkThrough(array, sb, argument, object, parameterFiles);
-                }
-
-                if (sb.length() > 0)
-                    argument.add(sb.toString());
-
-                command.add(argument);
-            }
-
-        } else
-            throw new RuntimeException(format(
-                    "Cannot handle an array of type %s", jsargs.getClass()));
-        return command;
-    }
-
-    /**
-     * Recursive parsing of the command line
-     */
-    private static void argumentWalkThrough(Scriptable scope, StringBuilder sb, CommandArgument argument, Object object,
-                                            Map<String, byte[]> parameterFiles) {
-
-        if (object == null)
-            throw new IllegalArgumentException(String.format("Null argument in command line"));
-
-        if (object instanceof JSFileObject)
-            object = ((JSFileObject) object).getFile();
-
-        if (object instanceof FileObject) {
-            if (sb.length() > 0) {
-                argument.add(sb.toString());
-                sb.delete(0, sb.length());
-            }
-            argument.add(new CommandArgument.Path((FileObject) object));
-        } else if (object instanceof NativeArray) {
-            for (Object child : (NativeArray) object)
-                argumentWalkThrough(scope, sb, argument, unwrap(child), parameterFiles);
-        } else if (JSUtils.isXML(object)) {
-            final Object node = JSUtils.toDOM(scope, object);
-            for (Node child : xmlAsList(node))
-                argumentWalkThrough(sb, argument, child);
-        } else if (object instanceof JSParameterFile) {
-            final JSParameterFile pFile = (JSParameterFile) object;
-            argument.add(new CommandArgument.ParameterFile(pFile.key));
-            parameterFiles.put(pFile.key, pFile.value);
-
-        } else {
-            sb.append(JSUtils.toString(object));
-        }
-    }
-
-    /**
-     * Walk through a node hierarchy to build a command argument
-     *
-     * @param sb
-     * @param argument
-     * @param node
-     */
-    private static void argumentWalkThrough(StringBuilder sb, CommandArgument argument, Node node) {
-        switch (node.getNodeType()) {
-            case Node.TEXT_NODE:
-                sb.append(node.getTextContent());
-                break;
-
-            case Node.ATTRIBUTE_NODE:
-                if (Manager.XP_PATH.sameQName(node)) {
-                    argument.add(new CommandArgument.Path(node.getNodeValue()));
-                } else
-                    sb.append(node.getTextContent());
-                break;
-
-            case Node.DOCUMENT_NODE:
-                argumentWalkThrough(sb, argument, ((Document) node).getDocumentElement());
-                break;
-
-            case Node.ELEMENT_NODE:
-                Element element = (Element) node;
-                if (XMLUtils.is(Manager.XP_PATH, element)) {
-                    if (sb.length() > 0) {
-                        argument.add(sb.toString());
-                        sb.delete(0, sb.length());
-                    }
-                    argument.add(new CommandArgument.Path(element.getTextContent()));
-                } else {
-                    for (Node child : XMLUtils.children(node))
-                        argumentWalkThrough(sb, argument, child);
-                }
-
-                break;
-            default:
-                throw new ExperimaestroRuntimeException("Unhandled command XML node  " + node.toString());
-        }
-
-    }
-
-    /**
-     * Transforms an XML related object into a list
-     *
-     * @param object
-     * @return
-     */
-    private static Iterable<? extends Node> xmlAsList(Object object) {
-
-        if (object instanceof Node) {
-            Node node = (Node) object;
-            return (node.getNodeType() == Node.ELEMENT_NODE && node.getChildNodes().getLength() > 1)
-                    || node.getNodeType() == Node.DOCUMENT_FRAGMENT_NODE ?
-
-                    XMLUtils.children(node) : Arrays.asList(node);
-        }
-
-        if (object instanceof NodeList)
-            return XMLUtils.iterable((NodeList) object);
-
-        throw new AssertionError("Cannot handle object of type " + object.getClass());
     }
 
     public void register(Closeable closeable) {
@@ -1387,7 +1226,23 @@ public class XPMObject {
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
                                          @JSArgument(type = "Array", name = "command") NativeArray jsargs,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
-            JSResource jsResource = xpm.commandlineJob(path, jsargs, jsoptions);
+            Commands commands = new Commands(JSCommand.getCommand(jsargs));
+            JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
+            return jsResource;
+        }
+
+        @JSFunction(value = "command_line_job", optional = 1)
+        @JSHelp(value = "Schedule a command line job.<br>The options are <dl>" +
+                "<dt>launcher</dt><dd></dd>" +
+                "<dt>stdin</dt><dd></dd>" +
+                "<dt>stdout</dt><dd></dd>" +
+                "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
+                "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
+                "")
+        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object jobId,
+                                         Commands commands,
+                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+            JSResource jsResource = xpm.commandlineJob(jobId, commands, jsoptions);
             return jsResource;
         }
 
@@ -1412,7 +1267,7 @@ public class XPMObject {
         @JSFunction("output_e4x")
         @JSHelp("Outputs the E4X XML object")
         public void outputE4X(@JSArgument(name = "xml", help = "The XML object") Object xml) {
-            final Iterable<? extends Node> list = XPMObject.xmlAsList(JSUtils.toDOM(null, xml));
+            final Iterable<? extends Node> list = JSCommand.xmlAsList(JSUtils.toDOM(null, xml));
             for (Node node : list) {
                 output(node);
             }

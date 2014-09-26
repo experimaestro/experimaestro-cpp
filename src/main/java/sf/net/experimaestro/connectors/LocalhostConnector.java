@@ -59,7 +59,7 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder() {
+    public AbstractProcessBuilder processBuilder() {
         return new ProcessBuilder();
     }
 
@@ -89,7 +89,7 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
         return new ProcessBuilder();
     }
 
@@ -102,7 +102,7 @@ public class LocalhostConnector extends SingleHostConnector {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return new ShLauncher.ProcessBuilder(scriptFile, connector);
+        return new UnixScriptProcessBuilder(scriptFile, connector);
     }
 
 
@@ -118,7 +118,7 @@ public class LocalhostConnector extends SingleHostConnector {
         transient private Thread destroyThread;
 
         @SuppressWarnings("unused")
-		public LocalProcess() {
+        public LocalProcess() {
         }
 
         // Check on Windows:
@@ -197,12 +197,12 @@ public class LocalhostConnector extends SingleHostConnector {
 
                 if (destroyThread != null)
                     try {
-                      Runtime.getRuntime().removeShutdownHook(destroyThread);
-                    } catch(IllegalStateException e) {/* Ignore */}
+                        Runtime.getRuntime().removeShutdownHook(destroyThread);
+                    } catch (IllegalStateException e) {/* Ignore */}
                 process = null;
             } else {
                 LOGGER.info("Process was not started by server: killing it externally with PID %s", getPID());
-                XPMProcessBuilder killingProcessBuilder = getInstance().processBuilder();
+                AbstractProcessBuilder killingProcessBuilder = getInstance().processBuilder();
                 killingProcessBuilder.command("kill", getPID()).detach(false);
                 try {
                     final XPMProcess killingProcess = killingProcessBuilder.start();
@@ -224,7 +224,7 @@ public class LocalhostConnector extends SingleHostConnector {
     /**
      * Localhost process builder
      */
-    static private class ProcessBuilder extends XPMProcessBuilder {
+    static private class ProcessBuilder extends AbstractProcessBuilder {
 
         static private File convert(FileObject file) throws FileSystemException {
             URL url = file.getURL();
@@ -236,7 +236,7 @@ public class LocalhostConnector extends SingleHostConnector {
         static private java.lang.ProcessBuilder.Redirect convert(Redirect redirect) throws FileSystemException {
             if (redirect == null) redirect = Redirect.INHERIT;
 
-            switch(redirect.type()) {
+            switch (redirect.type()) {
                 case PIPE:
                     return java.lang.ProcessBuilder.Redirect.PIPE;
                 case INHERIT:
@@ -251,20 +251,21 @@ public class LocalhostConnector extends SingleHostConnector {
             throw new AssertionError("Should not be here - enum not handled: " + redirect.type());
         }
 
+
         @Override
         public XPMProcess start() throws LaunchException, IOException {
             java.lang.ProcessBuilder builder = new java.lang.ProcessBuilder();
 
             // Set the environment
-            Map<String,String> builderEnvironment = builder.environment();
+            Map<String, String> builderEnvironment = builder.environment();
 
             if (this.environment() != null)
-                for(Map.Entry<String,String> entry:  this.environment().entrySet()) {
+                for (Map.Entry<String, String> entry : this.environment().entrySet()) {
                     builderEnvironment.put(entry.getKey(), entry.getValue());
                 }
 
             if (LOGGER.isDebugEnabled()) {
-                for(Map.Entry<String,String> entry:  builderEnvironment.entrySet()) {
+                for (Map.Entry<String, String> entry : builderEnvironment.entrySet()) {
                     LOGGER.debug("[*] %s=%s", entry.getKey(), entry.getValue());
                 }
             }
@@ -281,4 +282,7 @@ public class LocalhostConnector extends SingleHostConnector {
             return new LocalProcess(job, process, detach());
         }
     }
+
+
 }
+

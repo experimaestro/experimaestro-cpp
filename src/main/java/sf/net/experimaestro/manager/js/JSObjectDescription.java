@@ -27,5 +27,5 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JSObjectDescription {
-    String name();
+    String name() default "";
 }

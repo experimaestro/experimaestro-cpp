@@ -19,52 +19,32 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 18/10/12
  */
 @Persistent
-public class CommandArguments {
-    ArrayList<CommandArgument> list;
+public class Command implements Iterable<AbstractCommandArgument> {
+    ArrayList<AbstractCommandArgument> list;
 
-    public CommandArguments(int initialCapacity) {
-        list = new ArrayList<>(initialCapacity);
-    }
-
-    public CommandArguments() {
+    public Command() {
         list = new ArrayList<>();
     }
 
-    public CommandArguments(Collection<? extends CommandArgument> c) {
+    public Command(Collection<? extends CommandArgument> c) {
         list = new ArrayList<>(c);
     }
 
-    public void add(CommandArgument c) {
-        list.add(c);
-    }
-
-    public List<String> toStrings(final SingleHostConnector connector, TreeMap<String, FileObject> files) throws FileSystemException {
-        ArrayList<String> strings = new ArrayList<>();
-        for(CommandArgument argument: list)
-            strings.add(argument.resolve(connector, files));
-        return strings;
-    }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean first = true;
-        for(CommandArgument argument: list) {
+        for(AbstractCommandArgument argument: list) {
             sb.append('\'');
             sb.append(argument.toString());
             sb.append('\'');
@@ -75,5 +55,19 @@ public class CommandArguments {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+
+    public int size() {
+        return list.size();
+    }
+
+    @Override
+    public Iterator<AbstractCommandArgument> iterator() {
+        return list.iterator();
+    }
+
+    public void add(AbstractCommandArgument argument) {
+        list.add(argument);
     }
 }

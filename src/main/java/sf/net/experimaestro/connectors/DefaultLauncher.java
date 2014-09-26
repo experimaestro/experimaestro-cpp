@@ -30,7 +30,7 @@ import org.apache.commons.vfs2.FileSystemException;
 @Persistent
 public class DefaultLauncher implements Launcher {
     @Override
-    public XPMProcessBuilder processBuilder(SingleHostConnector connector) {
+    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
         return connector.processBuilder(connector);
     }
 

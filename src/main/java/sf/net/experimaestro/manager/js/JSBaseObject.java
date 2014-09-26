@@ -27,10 +27,7 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,27 +42,36 @@ import static java.lang.String.format;
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
     static public class ClassDescription {
-        /** The constructors */
+        /**
+         * The constructors
+         */
         ArrayList<Constructor<?>> constructors = new ArrayList<>();
 
-        /** The class methods */
+        /**
+         * The class methods
+         */
         Map<String, ArrayList<Method>> methods = new HashMap<>();
+
+        /**
+         * Properties
+         */
+        Map<String, Field> fields = new HashMap<>();
     }
 
     final static private HashMap<Class<?>, ClassDescription> CLASS_DESCRIPTION = new HashMap<>();
 
-    private Map<String, ArrayList<Method>> methods;
+    private ClassDescription classDescription;
     private Scriptable prototype;
     private Scriptable parentScope;
 
     public JSBaseObject() {
         final Class<? extends JSBaseObject> aClass = getClass();
-        methods = analyzeClass(aClass).methods;
+        this.classDescription = analyzeClass(aClass);
     }
 
     /**
      * Analyze a class and returns the multi-map of names to methods
-     *
+     * <p/>
      * Any constructor annotated with JSFunction is a valid functoin
      *
      * @param aClass
@@ -115,7 +121,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 }
 
                 // Add constructors
-                for(Constructor<?> constructor: aClass.getConstructors()) {
+                for (Constructor<?> constructor : aClass.getConstructors()) {
                     final JSFunction annotation = constructor.getAnnotation(JSFunction.class);
                     if (annotation != null) {
                         description.constructors.add(constructor);
@@ -126,6 +132,16 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                         description.constructors.add(aClass.getConstructor());
                     } catch (NoSuchMethodException e) {
                         throw new ExperimaestroRuntimeException("Could not find any constructor in %s", aClass);
+                    }
+                }
+
+
+                // Add fields
+                for (Field field : aClass.getFields()) {
+                    JSProperty annotation = field.getAnnotation(JSProperty.class);
+                    if (annotation != null) {
+                        final String name = annotation.value().equals("") ? field.getName() : annotation.value();
+                        description.fields.put(name, field);
                     }
                 }
 
@@ -158,7 +174,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      * @param aClass
      * @throws IllegalAccessException
      * @throws java.lang.reflect.InvocationTargetException
-     *
      * @throws InstantiationException
      */
     public static void defineClass(Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
@@ -189,31 +204,42 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object get(String name, Scriptable start) {
+        // Search for a function
         MethodFunction function = getMethodFunction(name);
+        if (!function.isEmpty())
+            return function;
 
-        if (function.isEmpty())
-            return NOT_FOUND;
-        return function;
+        // Search for a property
+        final Field field = classDescription.fields.get(name);
+        if (field != null) {
+            try {
+                return field.get(this);
+            } catch (IllegalAccessException e) {
+                throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
+            }
+        }
+        return NOT_FOUND;
     }
 
     private MethodFunction getMethodFunction(String name) {
         MethodFunction function = new MethodFunction(name);
 
-        ArrayList<Method> methods = this.methods.get(name);
+        ArrayList<Method> methods = this.classDescription.methods.get(name);
         if (methods != null && !methods.isEmpty())
             function.add(this, methods);
 
         // Walk the prototype chain
-        for(Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
+        for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
             if (prototype instanceof JSBaseObject) {
                 JSBaseObject jsPrototype = (JSBaseObject) prototype;
-                methods = jsPrototype.methods.get(name);
+                methods = jsPrototype.classDescription.methods.get(name);
                 if (methods != null && !methods.isEmpty())
                     function.add(jsPrototype, methods);
             }
         }
         return function;
     }
+
 
     @Override
     public Object get(int index, Scriptable start) {
@@ -222,7 +248,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public boolean has(String name, Scriptable start) {
-        return methods.containsKey(name);
+        return classDescription.methods.containsKey(name) || classDescription.fields.containsKey(name);
     }
 
     @Override
@@ -232,7 +258,19 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        throw new UnsupportedOperationException("Setting the value of a sealed object (" + getClassName() + ")");
+        final Field field = classDescription.fields.get(name);
+        if (field != null) {
+            if (classDescription.fields.containsKey(name)) {
+                try {
+                    field.set(this, value);
+                    return;
+                } catch (IllegalAccessException e) {
+                    throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
+                }
+            }
+        }
+
+        throw new XPMRhinoException("Setting the value of a sealed object (" + getClassName() + ")");
     }
 
     @Override
@@ -272,7 +310,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object[] getIds() {
-        return new Object[] {};
+        return new Object[]{};
     }
 
     @Override
@@ -361,11 +399,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-            ClassDescription description = analyzeClass((Class)javaObject);
+            ClassDescription description = analyzeClass((Class) javaObject);
             String className = JSBaseObject.getClassName((Class) javaObject);
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.constructors);
             Object object = constructorFunction.call(cx, scope, null, args);
-            return (Scriptable)object;
+            return (Scriptable) object;
 
         }
     }

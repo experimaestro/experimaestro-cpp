@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line task (executed with the default shell)
@@ -54,7 +54,7 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * The command to execute
      */
-    private CommandArguments command;
+    private Commands commands;
 
     /**
      * The environment
@@ -86,37 +86,31 @@ public class CommandLineTask extends Job<JobData> {
      */
     private String jobErrorPath;
 
-    /**
-     * The parameter files
-     */
-    public TreeMap<String, byte[]> parameterFiles = new TreeMap<>();
-
-
     protected CommandLineTask() {
     }
 
     /**
-     * Constructs the command line
+     * Constructs the commands line
      *
-     * @param scheduler  The scheduler for this command
-     * @param command    The command with arguments
+     * @param scheduler  The scheduler for this commands
+     * @param commands    The commands with arguments
      */
     public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
-                           CommandArguments command, Map<String, String> environment, String workingDirectory) {
+                           Commands commands, Map<String, String> environment, String workingDirectory) {
 
         super(scheduler, new JobData(locator));
 
         launcher = new DefaultLauncher();
 
-        LOGGER.info("Command is %s", command.toString());
+        LOGGER.info("Command is %s", commands.toString());
 
         // Copy the environment
         if (environment != null)
             this.environment = new TreeMap<>(environment);
         this.workingDirectory = workingDirectory;
 
-        // Construct command
-        this.command = command;
+        // Construct commands
+        this.commands = commands;
     }
 
     /**
@@ -124,22 +118,18 @@ public class CommandLineTask extends Job<JobData> {
      *
      * @param scheduler  The scheduler
      * @param locator    The resource locator
-     * @param command    The command to run
+     * @param commands    The commands to run
      */
     public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
-                           CommandArguments command) {
-        this(scheduler, locator, command, null, null);
+                           Commands commands) {
+        this(scheduler, locator, commands, null, null);
     }
 
     /**
      * Get a full command line from an array of arguments
      */
     public static String getCommandLine(List<String> args) {
-        return bpiwowar.argparser.utils.Output.toString(" ", args, new Formatter<String>() {
-            public String format(String t) {
-                return protect(t, UnixProcessBuilder.SHELL_SPECIAL);
-            }
-        });
+        return bpiwowar.argparser.utils.Output.toString(" ", args, t -> protect(t, UnixScriptProcessBuilder.SHELL_SPECIAL));
     }
 
 
@@ -160,7 +150,7 @@ public class CommandLineTask extends Job<JobData> {
 
 
         // Write the input if needed
-        XPMProcessBuilder.Redirect jobInput = XPMProcessBuilder.Redirect.INHERIT;
+        AbstractProcessBuilder.Redirect jobInput = AbstractCommandBuilder.Redirect.INHERIT;
 
         if (jobInputString != null) {
             FileObject inputFile = locator.resolve(connector, INPUT_EXTENSION);
@@ -171,36 +161,27 @@ public class CommandLineTask extends Job<JobData> {
         }
 
         if (jobInputPath != null)
-            jobInput = XPMProcessBuilder.Redirect.from(getMainConnector().resolveFile(jobInputPath));
+            jobInput = AbstractCommandBuilder.Redirect.from(getMainConnector().resolveFile(jobInputPath));
 
         if (jobOutputPath != null)
-            builder.redirectOutput(XPMProcessBuilder.Redirect.to(getMainConnector().resolveFile(jobOutputPath)));
+            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobOutputPath)));
         else
-            builder.redirectOutput(XPMProcessBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
+            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
 
         // Redirect output & error streams into corresponding files
         if (jobErrorPath != null)
-            builder.redirectError(XPMProcessBuilder.Redirect.to(getMainConnector().resolveFile(jobErrorPath)));
+            builder.redirectError(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobErrorPath)));
         else
-            builder.redirectError(XPMProcessBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
+            builder.redirectError(AbstractCommandBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         builder.redirectInput(jobInput);
         
         if (environment != null)
         	builder.environment(environment);
 
-        // Add files
-        TreeMap<String, FileObject> files = new TreeMap<>();
-        for(Map.Entry<String, byte[]> entry: parameterFiles.entrySet()) {
-            FileObject inputFile = locator.resolve(connector, "." + entry.getKey() + INPUT_EXTENSION);
-            final OutputStream outputStream = inputFile.getContent().getOutputStream();
-            outputStream.write(entry.getValue());
-            outputStream.close();
-            files.put(entry.getKey(), inputFile);
-        }
-
         // Add commands
-        builder.command(command.toStrings(connector, files));
+        builder.commands(commands);
+
         builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
         builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
         builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
@@ -212,7 +193,7 @@ public class CommandLineTask extends Job<JobData> {
     @Override
     public void printXML(PrintWriter out, PrintConfig config) {
         super.printXML(out, config);
-        out.format("<div><b>Command</b>: %s</div>", command.toString());
+        out.format("<div><b>Command</b>: %s</div>", commands.toString());
         out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
         out.format("<div><b>Environment</b>: %s</div>", environment);
     }
@@ -220,7 +201,7 @@ public class CommandLineTask extends Job<JobData> {
     @Override
     public JSONObject toJSON() throws IOException {
         JSONObject info = super.toJSON();
-        info.put("command", command.toString());
+        info.put("command", commands.toString());
         info.put("working-directory", workingDirectory);
         info.put("environment", environment);
         return info;
@@ -249,12 +230,7 @@ public class CommandLineTask extends Job<JobData> {
     public void setError(FileObject fileObject) {
         this.jobErrorPath = fileObject.toString();
     }
-
-    public void setParameterFile(String key, byte[] value) {
-        parameterFiles.put(key, value);
-    }
-
-    public CommandArguments getCommand() {
-        return command;
+    public Commands getCommands() {
+        return commands;
     }
 }

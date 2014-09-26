@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
+import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -194,17 +195,15 @@ public abstract class Task {
     private ArrayList<String> getOrderedInputs() {
         // (1) Order the values to avoid dependencies
         // See http://en.wikipedia.org/wiki/Topological_sorting
-        ArrayList<String> list = new ArrayList<>();
-        ArrayList<String> graph = new ArrayList<>(values.keySet());
+        ArrayList<String> nodes = new ArrayList<>(values.keySet());
 
         Map<String, TreeSet<String>> forward_edges = new TreeMap<>();
         Map<String, TreeSet<String>> backwards_edges = new TreeMap<>();
 
+
         // Build the edge maps
         for (Entry<String, Value> entry : values.entrySet()) {
             final String to = entry.getKey();
-
-
             final Input input = entry.getValue().input;
             if (input.connections != null)
                 for (Connection connection : input.connections)
@@ -216,37 +215,12 @@ public abstract class Task {
         }
 
         // Get the free nodes
-        boolean done = false;
-        while (!done) {
-            done = true;
-            Iterator<String> iterator = graph.iterator();
-            while (iterator.hasNext()) {
-                String n1 = iterator.next();
-                final TreeSet<String> inSet = backwards_edges.get(n1);
-                LOGGER.debug("Node %s has %d incoming edges", n1,
-                        inSet == null ? 0 : inSet.size());
-                if (inSet == null || inSet.isEmpty()) {
-                    LOGGER.debug("Removing node %s", n1);
-                    done = false;
-                    list.add(n1);
-                    iterator.remove();
-
-                    // Remove the edges from n1
-                    final TreeSet<String> nodes = forward_edges.get(n1);
-                    if (nodes != null)
-                        for (String n2 : nodes) {
-                            LOGGER.debug("Removing edge from %s to %s", n1, n2);
-                            backwards_edges.get(n2).remove(n1);
-                        }
-                }
-            }
-        }
-
-        if (!graph.isEmpty())
+        ArrayList<String> sorted_nodes = Graph.topologicalSort(nodes, forward_edges, backwards_edges);
+        if (!nodes.isEmpty())
             throw new ExperimaestroRuntimeException("Loop in the graph for task [%s]",
                     factory.id);
 
-        return list;
+        return sorted_nodes;
     }
 
     /**

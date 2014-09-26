@@ -51,7 +51,7 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder() {
+    public AbstractProcessBuilder processBuilder() {
         throw new NotImplementedException();
     }
 

@@ -45,7 +45,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
 
-import static sf.net.experimaestro.connectors.UnixProcessBuilder.protect;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -85,7 +85,7 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMProcessBuilder processBuilder() {
+    public AbstractProcessBuilder processBuilder() {
         return new SSHProcessBuilder();
     }
 
@@ -172,7 +172,7 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return new ShLauncher.ProcessBuilder(scriptFile, connector);
+        return new UnixScriptProcessBuilder(scriptFile, connector);
     }
 
 
@@ -369,7 +369,7 @@ public class SSHConnector extends SingleHostConnector {
     }
 
 
-    public class SSHProcessBuilder extends XPMProcessBuilder {
+    public class SSHProcessBuilder extends AbstractProcessBuilder {
 
         private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) throws FileSystemException {
             final Redirect.Type type = output == null ? Redirect.Type.INHERIT : output.type();
