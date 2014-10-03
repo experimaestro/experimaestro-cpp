@@ -4,3 +4,4 @@ project.properties
 .idea
 *.iml
 *.pyc
+/target
