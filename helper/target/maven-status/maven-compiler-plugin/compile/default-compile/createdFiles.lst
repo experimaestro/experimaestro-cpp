@@ -1,0 +1,5 @@
+net/bpiwowar/experimaestro/tasks/JsonArgument.class
+net/bpiwowar/experimaestro/tasks/TaskDescription.class
+net/bpiwowar/experimaestro/tasks/ValueArgument.class
+net/bpiwowar/experimaestro/tasks/Runner.class
+net/bpiwowar/experimaestro/tasks/AbstractTask.class
