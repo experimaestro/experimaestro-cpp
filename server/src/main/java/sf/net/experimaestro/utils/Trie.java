@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.utils;
 
+import com.google.common.collect.ImmutableSet;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
@@ -99,7 +101,7 @@ public class Trie<C extends Comparable, O extends List<? extends C>> {
 
     public Iterable<C> childrenKeys() {
         if (children == null)
-            return new EmptyIterable<>();
+            return ImmutableSet.of();
         return children.keySet();
     }
 }

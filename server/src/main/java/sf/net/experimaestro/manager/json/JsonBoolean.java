@@ -24,7 +24,6 @@ import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Set;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -71,12 +70,7 @@ public class JsonBoolean implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
-        return false;
-    }
-
-    @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 }

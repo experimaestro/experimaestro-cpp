@@ -1,13 +1,12 @@
 package sf.net.experimaestro.utils.introspection;
 
 import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,6 +22,11 @@ import static java.lang.String.format;
  * http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html
  */
 public class ClassInfo implements AnnotatedElement {
+    /**
+     * The class info loader
+     */
+    private final ClassInfoLoader classInfoLoader;
+
     /**
      * Class name
      */
@@ -60,25 +64,37 @@ public class ClassInfo implements AnnotatedElement {
     private ClassInfo superclass;
 
     /**
+     * The matching class
+     */
+    private Class<?> theClass;
+
+    /**
      * This class was encountered on the classpath.
      */
-    public ClassInfo(String name) {
+    public ClassInfo(ClassInfoLoader cil, String name) {
+        this.classInfoLoader = cil;
         this.name = name;
         this.loaded = false;
     }
 
-    public ClassInfo(ClassInfoLoader pool, FileObject file) throws IOException {
-        this(pool, file.getContent().getInputStream());
+    public ClassInfo(ClassInfoLoader classInfoLoader, FileObject file) throws IOException {
+        this(classInfoLoader, file.getContent().getInputStream());
     }
 
-    public boolean isSubclass(Class<?> aclass) {
+    public boolean belongs(Class<?> aclass) {
+        if (aclass.isPrimitive()) {
+            resolve();
+            return aclass == theClass;
+        }
+
         if (aclass.getName().equals(this.name))
             return true;
 
+        resolve();
         if (superclass == null)
             return false;
 
-        return superclass.isSubclass(aclass);
+        return superclass.belongs(aclass);
     }
 
     public String getName() {
@@ -88,8 +104,9 @@ public class ClassInfo implements AnnotatedElement {
     /**
      * Read class information from disk.
      */
-    public ClassInfo(ClassInfoLoader pool, final InputStream stream) throws IOException {
-        readFromInputStream(pool, stream);
+    public ClassInfo(ClassInfoLoader classInfoLoader, final InputStream stream) throws IOException {
+        this.classInfoLoader = classInfoLoader;
+        readFromInputStream(stream);
     }
 
 
@@ -110,7 +127,7 @@ public class ClassInfo implements AnnotatedElement {
     /**
      * Directly examine contents of classfile binary header.
      */
-    private void readFromInputStream(ClassInfoLoader cl, final InputStream inputStream) throws IOException {
+    private void readFromInputStream(final InputStream inputStream) throws IOException {
         DataInputStream inp = new DataInputStream(new BufferedInputStream(inputStream, 1024));
 
         // Magic
@@ -186,12 +203,12 @@ public class ClassInfo implements AnnotatedElement {
                 throw new IllegalStateException(format("Class name %s and %s do not match", name, this.name));
         }
         // Superclass name, with slashes replaced with dots
-        superclass = cl.get(readRefdString(inp, constantPool).replace('/', '.'));
+        superclass = classInfoLoader.get(readRefdString(inp, constantPool).replace('/', '.'));
 
         // Interfaces
         int interfaceCount = inp.readUnsignedShort();
         for (int i = 0; i < interfaceCount; i++) {
-            interfaces.add(cl.get(readRefdString(inp, constantPool).replace('/', '.')));
+            interfaces.add(classInfoLoader.get(readRefdString(inp, constantPool).replace('/', '.')));
         }
 
         // Fields
@@ -199,10 +216,15 @@ public class ClassInfo implements AnnotatedElement {
         for (int i = 0; i < fieldCount; i++) {
             inp.skipBytes(2); // access_flags
             final String fieldName = readRefdString(inp, constantPool);// name_index,
-            final FieldInfo fieldInfo = new FieldInfo(fieldName);
+
+            String fieldDescriptor = readRefdString(inp, constantPool);// name_index,
+            if (fieldDescriptor.startsWith("L") && fieldDescriptor.endsWith(";")) {
+                fieldDescriptor = fieldDescriptor.substring(1, fieldDescriptor.length() - 1).replace("/", ".");
+            }
+
+            final FieldInfo fieldInfo = new FieldInfo(fieldName, classInfoLoader.get(fieldDescriptor));
             fields.put(fieldName, fieldInfo);
 
-            inp.skipBytes(2); // descriptor_index
             int attributesCount = inp.readUnsignedShort();
             for (int j = 0; j < attributesCount; j++) {
                 String attributeName = readRefdString(inp, constantPool);
@@ -210,7 +232,7 @@ public class ClassInfo implements AnnotatedElement {
                 if ("RuntimeVisibleAnnotations".equals(attributeName)) {
                     int annotationCount = inp.readUnsignedShort();
                     for (int m = 0; m < annotationCount; m++) {
-                        AnnotationInfo annotation = readAnnotation(cl, inp, constantPool);
+                        AnnotationInfo annotation = readAnnotation(inp, constantPool);
                         fieldInfo.annotations.put(annotation.annotationClass.getName(), annotation);
                     }
                 } else {
@@ -239,7 +261,7 @@ public class ClassInfo implements AnnotatedElement {
             if ("RuntimeVisibleAnnotations".equals(attributeName)) {
                 int annotationCount = inp.readUnsignedShort();
                 for (int m = 0; m < annotationCount; m++) {
-                    AnnotationInfo annotation = readAnnotation(cl, inp, constantPool);
+                    AnnotationInfo annotation = readAnnotation(inp, constantPool);
                     annotations.put(annotation.annotationClass.getName(), annotation);
                 }
             } else {
@@ -251,7 +273,7 @@ public class ClassInfo implements AnnotatedElement {
     /**
      * Read annotation entry from classfile.
      */
-    private static AnnotationInfo readAnnotation(final ClassInfoLoader cl, final DataInputStream inp, Object[] constantPool) throws IOException {
+    private AnnotationInfo readAnnotation(final DataInputStream inp, Object[] constantPool) throws IOException {
         String annotationFieldDescriptor = readRefdString(inp, constantPool);
         String annotationClassName;
         if (annotationFieldDescriptor.charAt(0) == 'L'
@@ -264,12 +286,12 @@ public class ClassInfo implements AnnotatedElement {
             annotationClassName = annotationFieldDescriptor;
         }
 
-        AnnotationInfo annotation = new AnnotationInfo(cl.get(annotationClassName));
+        AnnotationInfo annotation = new AnnotationInfo(classInfoLoader.get(annotationClassName));
 
         int numElementValuePairs = inp.readUnsignedShort();
         for (int i = 0; i < numElementValuePairs; i++) {
             String name = readRefdString(inp, constantPool);
-            final Object value = readAnnotationElementValue(cl, inp, constantPool);
+            final Object value = readAnnotationElementValue(inp, constantPool);
             annotation.setAttribute(name, value);
         }
 
@@ -279,7 +301,7 @@ public class ClassInfo implements AnnotatedElement {
     /**
      * Read annotation element value from classfile.
      */
-    private static Object readAnnotationElementValue(final ClassInfoLoader cl, final DataInputStream inp, Object[] constantPool)
+    private Object readAnnotationElementValue(final DataInputStream inp, Object[] constantPool)
             throws IOException {
         int tag = inp.readUnsignedByte();
         switch (tag) {
@@ -307,13 +329,13 @@ public class ClassInfo implements AnnotatedElement {
                 break;
             case '@':
                 // Complex (nested) annotation
-                return readAnnotation(cl, inp, constantPool);
+                return readAnnotation(inp, constantPool);
             case '[':
                 // array_value
                 final int count = inp.readUnsignedShort();
                 for (int l = 0; l < count; ++l) {
                     // Nested annotation element value
-                    readAnnotationElementValue(cl, inp, constantPool);
+                    readAnnotationElementValue(inp, constantPool);
                 }
                 break;
             default:
@@ -325,6 +347,69 @@ public class ClassInfo implements AnnotatedElement {
     @Override
     public String toString() {
         return name;
+    }
+
+
+    /**
+     * Read the full class information
+     *
+     * @return The object
+     */
+    public ClassInfo resolve() {
+        if (loaded) {
+            return this;
+        }
+
+        if (isArray()) {
+            loaded = true;
+            return this;
+        }
+
+        // Simple cases
+        switch (name) {
+            case "B":
+                theClass = Byte.TYPE;
+                break;
+            case "C":
+                theClass = Character.TYPE;
+                break;
+            case "D":
+                theClass = Double.TYPE;
+                break;
+            case "F":
+                theClass = Float.TYPE;
+                break;
+            case "I":
+                theClass = Integer.TYPE;
+                break;
+            case "J":
+                theClass = Long.TYPE;
+                break;
+            case "S":
+                theClass = Short.TYPE;
+                break;
+            case "Z":
+                theClass = Boolean.TYPE;
+                break;
+            default:
+                final InputStream stream = classInfoLoader.getStream(name);
+                if (stream != null) {
+                    try {
+                        readFromInputStream(stream);
+                    } catch (IOException e) {
+                        throw new XPMRuntimeException(e, "Could not read class %s", name);
+                    }
+                } else {
+                    try {
+                        theClass = classInfoLoader.classLoader.loadClass(name);
+                    } catch (ClassNotFoundException e) {
+                        throw new XPMRuntimeException(e, "Could not find class %s", name);
+                    }
+                }
+        }
+
+        loaded = true;
+        return this;
     }
 
 
@@ -341,4 +426,19 @@ public class ClassInfo implements AnnotatedElement {
     public Collection<FieldInfo> getDeclaredFields() {
         return fields.values();
     }
+
+    public boolean isArray() {
+        if (theClass != null)
+            return theClass.isArray();
+
+        return name.startsWith("[");
+    }
+
+    public ClassInfo getComponentType() {
+        if (!isArray())
+            return null;
+
+        return classInfoLoader.get(name.substring(1));
+    }
+
 }

@@ -18,8 +18,6 @@
 
 package sf.net.experimaestro.server;
 
-import org.apache.xerces.impl.xs.XSElementDecl;
-import org.apache.xerces.xs.*;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
@@ -44,23 +42,20 @@ public class TasksServlet extends XPMServlet {
     final static private Logger LOGGER = Logger.getLogger();
 
     private static final long serialVersionUID = 1L;
-
+    private static Map<String, Repository> repositories = new TreeMap<>();
     @SuppressWarnings("unused")
     private final Scheduler manager;
-
     private final Repository defaultRepository;
 
-    private static Map<String, Repository> repositories = new TreeMap<>();
-
-
-    static public void updateRepository(String id, Repository repository) {
-        repositories.put(id, repository);
-    }
 
     public TasksServlet(ServerSettings serverSettings, Repository repository, Scheduler manager) {
         super(serverSettings);
         this.defaultRepository = repository;
         this.manager = manager;
+    }
+
+    static public void updateRepository(String id, Repository repository) {
+        repositories.put(id, repository);
     }
 
     protected void doGet(HttpServletRequest request,
@@ -107,15 +102,7 @@ public class TasksServlet extends XPMServlet {
             header(out, String.format("browser (type 7%s)", moduleName));
             out.format("<h1>Type %s</h1>", type);
 
-            XSElementDeclaration xmlElement = repository.getXMLElement(QName.parse(type));
-            if (xmlElement != null) {
-                XSTypeDefinition definition = xmlElement.getTypeDefinition();
-                if (definition != null) {
-                    print(out, definition);
-                }
-            } else {
-                out.println("<div style='text-color: red'>Unknown type</div>");
-            }
+            out.println("<div style='text-color: red'>Unknown type</div>");
             out.println("</body></html>");
 
             return;
@@ -218,17 +205,6 @@ public class TasksServlet extends XPMServlet {
                     final QName valueType = type.qname();
                     out.format("<dt class='%s'><u>%s</u> <b>value</b> (%s)</dt><dd>",
                             optString, entry.getKey(), valueType);
-                } else {
-                    XSElementDecl declaration = repository.getXMLElement(type.qname());
-                    if (declaration == null)
-                        out.format("<dt class='%s'><u>%s</u> %s</dt><dd>",
-                                optString, entry.getKey(), type);
-                    else
-                        out.format(
-                                "<dt class='%s'><a href=\"%s\"><u>%s</u> %s</a></dt><dd>",
-                                optString,
-                                status.makeURI("/type", "type", type.toString()),
-                                entry.getKey(), type);
                 }
             }
 
@@ -275,41 +251,6 @@ public class TasksServlet extends XPMServlet {
             return sb.toString();
         }
 
-    }
-
-
-    private void print(PrintWriter out, XSTypeDefinition definition) {
-        out.println(definition);
-        if (definition instanceof XSComplexTypeDefinition) {
-            XSComplexTypeDefinition complex = (XSComplexTypeDefinition) definition;
-
-            final XSObjectList attributes = complex.getAttributeUses();
-            out.println("<ul>");
-            for (int i = 0; i < attributes.getLength(); i++) {
-                out.println("<li>");
-                XSAttributeUse attribute = (XSAttributeUse) attributes.item(i);
-                final XSAttributeDeclaration decl = attribute.getAttrDeclaration();
-                out.println(decl.getNamespace());
-                out.println(decl.getName());
-                out.println("</li>");
-            }
-            out.println("</ul>");
-
-            final XSTerm particle = complex.getParticle().getTerm();
-            if (particle instanceof XSModelGroup) {
-                out.println("<ol>");
-                final XSObjectList particles = ((XSModelGroup) particle).getParticles();
-                for (int i = 0; i < particles.getLength(); i++) {
-                    final XSObject item = particles.item(i);
-                    out.println("<li>");
-                    out.println(item);
-                    out.println("</li>");
-                }
-                out.println("</ol>");
-            }
-        } else {
-            out.format("<b>Unknown type %s</b>", definition.getClass());
-        }
     }
 
 }

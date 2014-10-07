@@ -33,13 +33,13 @@ import static sf.net.experimaestro.scheduler.Scheduler.getVFSManager;
 /**
  *
  */
-public class JavaTasks {
+public class JavaTasksIntrospection {
     final static Logger LOGGER = Logger.getLogger();
     public static final String META_INF_PATH = "META-INF/net.bpiwowar.experimaestro/tasks.json";
 
     FileObject[] classpath;
 
-    public JavaTasks(FileObject[] classpath) {
+    public JavaTasksIntrospection(FileObject[] classpath) {
         this.classpath = classpath;
     }
 
@@ -62,9 +62,9 @@ public class JavaTasks {
             }
         }).toArray(n -> new FileObject[n]);
 
-        final JavaTasks javaTasks = new JavaTasks(classpath);
-        final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, getVFSManager(), JavaTasks.class.getClassLoader());
-        javaTasks.addToRepository(repository, classLoader, connector);
+        final JavaTasksIntrospection javaTasksIntrospection = new JavaTasksIntrospection(classpath);
+        final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, getVFSManager(), JavaTasksIntrospection.class.getClassLoader());
+        javaTasksIntrospection.addToRepository(repository, classLoader, connector);
     }
 
     private void addToRepository(Repository repository, ClassInfoLoader cl, Connector connector) throws ExperimaestroException, IOException {
@@ -126,7 +126,7 @@ public class JavaTasks {
             final Consumer<Introspection.ClassFile> action = t -> {
                 try {
                     final ClassInfo classInfo = new ClassInfo(cl, t.file);
-                    if (classInfo.isSubclass(AbstractTask.class)) {
+                    if (classInfo.belongs(AbstractTask.class)) {
                         f.apply(classInfo, description);
                     }
                 } catch (IOException e) {

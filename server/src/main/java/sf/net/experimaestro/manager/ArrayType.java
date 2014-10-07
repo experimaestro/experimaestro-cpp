@@ -18,8 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 

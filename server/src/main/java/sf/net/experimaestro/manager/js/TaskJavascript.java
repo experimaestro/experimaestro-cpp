@@ -36,7 +36,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSTask extends JSAbstractTask {
+public class TaskJavascript extends JSAbstractTask {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -49,7 +49,7 @@ public class JSTask extends JSAbstractTask {
      */
     private Function runFunction;
 
-    public JSTask() {
+    public TaskJavascript() {
     }
 
 
@@ -61,8 +61,8 @@ public class JSTask extends JSAbstractTask {
      * @param jsScope     The scope for evaluating JavaScript code
      * @param jsObject    The JavaScript object
      */
-    public JSTask(TaskFactory taskFactory, Context jsContext,
-                  Scriptable jsScope, NativeObject jsObject) {
+    public TaskJavascript(TaskFactory taskFactory, Context jsContext,
+                          Scriptable jsScope, NativeObject jsObject) {
         super(taskFactory, jsScope);
 
         this.jsObject = jsObject;
@@ -98,7 +98,7 @@ public class JSTask extends JSAbstractTask {
 
     @Override
     protected void init(Task _other) {
-        JSTask other = (JSTask) _other;
+        TaskJavascript other = (TaskJavascript) _other;
         super.init(other);
         jsObject = other.jsObject;
         runFunction = other.runFunction;

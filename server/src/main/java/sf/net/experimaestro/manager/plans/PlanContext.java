@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager.plans;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.CachedIterable;
 
 import java.util.HashMap;

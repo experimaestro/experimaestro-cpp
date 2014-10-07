@@ -4,7 +4,6 @@ import sf.net.experimaestro.manager.QName;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Set;
 
 /**
  * Created by bpiwowar on 10/9/14.
@@ -40,12 +39,12 @@ public class JsonNull implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
+    public boolean canIgnore(JsonWriterOptions options) {
         return true;
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
         writer.write("null");
     }
 

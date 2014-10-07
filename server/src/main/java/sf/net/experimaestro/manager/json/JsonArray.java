@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Set;
 
 import static java.lang.String.format;
 
@@ -89,12 +88,12 @@ public class JsonArray extends ArrayList<Json> implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
+    public boolean canIgnore(JsonWriterOptions options) {
         return size() == 0;
     }
 
     @Override
-    public void writeDescriptorString(Writer out, Set<QName> ignore) throws IOException {
+    public void writeDescriptorString(Writer out, JsonWriterOptions options) throws IOException {
         out.write('[');
         boolean first = true;
         for (Json json : this) {
@@ -102,7 +101,7 @@ public class JsonArray extends ArrayList<Json> implements Json {
                 first = false;
             else
                 out.write(", ");
-            json.writeDescriptorString(out, ignore);
+            json.writeDescriptorString(out, options);
         }
         out.write(']');
     }

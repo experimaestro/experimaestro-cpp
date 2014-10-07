@@ -145,7 +145,7 @@ public class Manager {
 
         JsonObject json = new JsonObject();
         json.put("task", id.toString());
-        json.put("values", jsonValues);
+        json.put("value", jsonValues);
 
         String digest = getDigest(json);
 

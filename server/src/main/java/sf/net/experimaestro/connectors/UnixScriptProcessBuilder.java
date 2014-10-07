@@ -87,16 +87,23 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     final public XPMProcess start() throws LaunchException, IOException {
-        final FileObject basepath = connector.resolveFile(path).getParent();
+        final FileObject runFile = connector.resolveFile(path);
+        final FileObject basepath = runFile.getParent();
+        final String baseName = runFile.getName().getBaseName();
 
-        try (CommandEnvironment env = new CommandEnvironment.FolderEnvironment(connector, basepath)) {
+        try (CommandEnvironment env = new CommandEnvironment.FolderEnvironment(connector, basepath, baseName)) {
             // First generate the run file
-            final FileObject runFile = connector.resolveFile(path);
             PrintWriter writer = new PrintWriter(runFile.getContent().getOutputStream());
 
             writer.format("#!%s%n", shPath);
 
             writer.format("# Experimaestro generated task: %s%n", path);
+            writer.println();
+
+            // A command fails if any of the piped commands fail
+            writer.println("set -o pipefail");
+            writer.println();
+
             writer.println();
             if (environment() != null) {
                 for (Map.Entry<String, String> pair : environment().entrySet())
@@ -153,7 +160,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 for (CommandComponent argument : command.list()) {
                     writer.print(' ');
                     if (argument instanceof Command.Pipe) {
-                        writer.print("| ");
+                        writer.print(" | ");
                     } else {
                         writer.print(protect(argument.prepare(env), SHELL_SPECIAL));
                     }

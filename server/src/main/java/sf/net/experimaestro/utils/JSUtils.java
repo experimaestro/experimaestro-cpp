@@ -230,7 +230,7 @@ public class JSUtils {
         }
 
         if (value instanceof FileObject)
-            return new JSFileObject((FileObject)value);
+            return new JsonFileObject((FileObject)value);
 
         // -- Undefined
         if (value instanceof Undefined)
@@ -593,7 +593,7 @@ public class JSUtils {
         public FunctionDefinition(Class<?> clazz, String name, Class<?>... arguments) {
             this.clazz = clazz;
             this.name = name;
-            if (arguments == null)
+            if (arguments == null || arguments.length == 0)
                 this.arguments = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
             else
                 this.arguments = arguments;

@@ -18,10 +18,6 @@
 
 package sf.net.experimaestro.manager;
 
-import org.apache.xerces.impl.xs.XSElementDecl;
-import org.apache.xerces.xs.XSConstants;
-import org.apache.xerces.xs.XSModel;
-import org.apache.xerces.xs.XSNamedMap;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -58,11 +54,6 @@ public class Repository extends AbstractRepository {
 	 */
 	Map<QName, Module> modules = new HashMap<>();
 	
-	/**
-	 * List of XML types
-	 */
-	Map<QName, XSElementDecl> xmlElements = new TreeMap<>();
-
     /**
      * The Experimaestro default module
      */
@@ -146,31 +137,6 @@ public class Repository extends AbstractRepository {
 		return defaultModule;
 	}
 
-	
-	/**
-	 * Add a new XML Schema declaration
-	 * 
-	 * @param module
-	 * @param xsModel
-	 */
-	public void addSchema(Module module, XSModel xsModel) {
-		// Add the schema to the module
-		module.addSchema(xsModel);
-
-		// Add the different elements
-		XSNamedMap components = xsModel.getComponents(XSConstants.ELEMENT_DECLARATION);
-
-		for (int i = 0; i < components.getLength(); i++) {
-			final XSElementDecl item = (XSElementDecl) components.item(i);
-			QName qName = new QName(item.getNamespace(), item.getName());
-			LOGGER.debug("New XML element [%s]", qName);
-			xmlElements.put(qName, item);
-		}
-	}
-
-	public XSElementDecl getXMLElement(QName type) {
-		return xmlElements.get(type);
-	}
 
 	/**
 	 * Close the repository 

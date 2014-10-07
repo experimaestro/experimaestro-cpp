@@ -19,9 +19,9 @@
 package sf.net.experimaestro.manager;
 
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.plan.ParseException;
 import sf.net.experimaestro.plan.PlanParser;
@@ -347,7 +347,7 @@ public abstract class Task {
     /**
      * Run an experimental plan
      *
-     *
+     * FIXME: should belong to TaskFactory (and the copy() should also be removed)
      * @param planString The plan string
      * @param singlePlan If the plan should be composed of only one plan
      * @param taskContext The context wh
@@ -397,4 +397,4 @@ public abstract class Task {
         return results;
     }
 
-}
+ }

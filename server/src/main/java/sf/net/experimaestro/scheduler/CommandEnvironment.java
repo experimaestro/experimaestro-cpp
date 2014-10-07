@@ -23,6 +23,7 @@ public abstract class CommandEnvironment implements Closeable {
 
     ArrayList<FileObject> files = new ArrayList<>();
 
+
     public CommandEnvironment(SingleHostConnector connector) {
         this.connector = connector;
     }
@@ -32,6 +33,8 @@ public abstract class CommandEnvironment implements Closeable {
     }
 
     abstract FileObject getAuxiliaryFile(String prefix, String suffix) throws FileSystemException;
+
+    abstract public String getWorkingDirectory() throws FileSystemException;
 
     /**
      * A temporary environment: all the auxiliary files will be deleted
@@ -46,6 +49,11 @@ public abstract class CommandEnvironment implements Closeable {
             final FileObject temporaryFile = connector.getTemporaryFile(prefix, suffix);
             files.add(temporaryFile);
             return temporaryFile;
+        }
+
+        @Override
+        public String getWorkingDirectory() {
+            return null;
         }
 
         @Override
@@ -67,15 +75,20 @@ public abstract class CommandEnvironment implements Closeable {
         /** The base name for generated files */
         private final String name;
 
-        public FolderEnvironment(SingleHostConnector connector, FileObject basepath) throws FileSystemException {
+        public FolderEnvironment(SingleHostConnector connector, FileObject basepath, String name) throws FileSystemException {
             super(connector);
-            this.folder = basepath.getParent();
-            this.name = basepath.getName().getBaseName();
+            this.folder = basepath;
+            this.name = name;
         }
 
         @Override
         FileObject getAuxiliaryFile(String prefix, String suffix) throws FileSystemException {
             return folder.resolveFile(format("%s.%s%s", name, prefix, suffix));
+        }
+
+        @Override
+        public String getWorkingDirectory() throws FileSystemException {
+            return connector.resolve(folder);
         }
 
         @Override

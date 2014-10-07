@@ -12,7 +12,6 @@ import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.JSNamespaceContext;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.util.HashMap;

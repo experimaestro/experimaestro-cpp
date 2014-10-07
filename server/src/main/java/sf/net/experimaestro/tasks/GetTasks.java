@@ -3,7 +3,6 @@ package sf.net.experimaestro.tasks;
 import bpiwowar.argparser.OrderedArgument;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
-import sf.net.experimaestro.manager.java.JavaTasks;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -36,7 +35,7 @@ public class GetTasks extends AbstractTask {
         ClassLoader cl = new URLClassLoader(urls);
 
         // Get the implementing class
-        ArrayList<Class<?>> list = new ArrayList<>();// JavaTasks.getTaskClasses(cl);
+        ArrayList<Class<?>> list = new ArrayList<>();// JavaTasksIntrospection.getTaskClasses(cl);
 
         for (Class<?> aClass : list) {
             System.err.println("--- " + aClass);

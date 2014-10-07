@@ -160,8 +160,8 @@ public class JsonObject
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
-        if (ignore.contains(type())) {
+    public boolean canIgnore(JsonWriterOptions options) {
+        if (options.ignore.contains(type())) {
             return true;
         }
 
@@ -178,14 +178,14 @@ public class JsonObject
     }
 
     @Override
-    public void writeDescriptorString(Writer out, Set<QName> ignore) throws IOException {
-        if (canIgnore(ignore)) {
+    public void writeDescriptorString(Writer out, JsonWriterOptions options) throws IOException {
+        if (canIgnore(options)) {
             out.write("null");
             return;
         }
 
-        if (isSimple()) {
-            get(Manager.XP_VALUE.toString()).writeDescriptorString(out, ignore);
+        if (isSimple() && options.simplifyValues) {
+            get(Manager.XP_VALUE.toString()).writeDescriptorString(out, options);
             return;
         }
 
@@ -214,8 +214,8 @@ public class JsonObject
             // - its value is null or can be ignored
             // - it starts with "$" and is not XP_TYPE or XP_VALUE
             // - it is in the $$ignore key
-            if (value == null || value.canIgnore(ignore)
-                    || (key.startsWith("$") && !key.equals(XP_TYPE_STRING) && !key.equals(XP_VALUE_STRING) )
+            if (value == null || value.canIgnore(options)
+                    || (options.ignore$ && key.startsWith("$") && !key.equals(XP_TYPE_STRING) && !key.equals(XP_VALUE_STRING))
                     || ignored_keys.contains(key))
                 continue;
 
@@ -226,7 +226,7 @@ public class JsonObject
 
             out.write(JSONValue.toJSONString(key));
             out.write(":");
-            value.writeDescriptorString(out, ignore);
+            value.writeDescriptorString(out, options);
         }
         out.write('}');
     }

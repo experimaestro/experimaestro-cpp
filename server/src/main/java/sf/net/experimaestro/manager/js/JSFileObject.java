@@ -22,27 +22,24 @@ import org.apache.commons.vfs2.FileDepthSelector;
 import org.apache.commons.vfs2.FileFilterSelector;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Wrapper;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.json.JsonFileObject;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSFileObject extends JSBaseObject implements Json, Wrapper {
+public class JSFileObject extends JSBaseObject implements Wrapper {
     final static Logger LOGGER = Logger.getLogger();
     public static final String JSCLASSNAME = "FileObject";
     private FileObject file;
@@ -183,7 +180,7 @@ public class JSFileObject extends JSBaseObject implements Json, Wrapper {
             return pattern.matcher(fileSelectInfo.getFile().getName().getBaseName()).matches();
         }));
         for(FileObject file: files) {
-            array.add(new JSFileObject(file));
+            array.add(new JsonFileObject(file));
         }
         return new JSJson(array);
     }
@@ -191,46 +188,6 @@ public class JSFileObject extends JSBaseObject implements Json, Wrapper {
     @JSFunction
     public void copy_to(@JSArgument(name="destination") JSFileObject destination) throws FileSystemException {
         destination.file.copyFrom(file, new FileDepthSelector(0, 0));
-    }
-
-    @Override
-    public Json clone() {
-        final JSFileObject object = new JSFileObject(file);
-        object.xpm = xpm;
-        return object;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
-    }
-
-    @Override
-    public Object get() {
-        return this;
-    }
-
-    @Override
-    public QName type() {
-        return ValueType.XP_FILE;
-    }
-
-    @Override
-    public boolean canIgnore(Set<QName> ignore) {
-        return ignore.contains(ValueType.XP_FILE);
-    }
-
-    @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
-        if (ignore.contains(ValueType.XP_FILE)) {
-
-            write(writer);
-        }
-    }
-
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write(JSONValue.escape(this.toString()));
     }
 
     @Override

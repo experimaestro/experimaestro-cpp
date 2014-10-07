@@ -19,13 +19,11 @@
 package sf.net.experimaestro.manager.js;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.java.JavaTaskFactory;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.MergeFunction;
 import sf.net.experimaestro.manager.plans.ProductReference;

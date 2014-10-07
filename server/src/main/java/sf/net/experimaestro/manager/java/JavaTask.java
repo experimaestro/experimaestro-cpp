@@ -1,23 +1,20 @@
 package sf.net.experimaestro.manager.java;
 
-import net.bpiwowar.experimaestro.tasks.Runner;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
-import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonFileObject;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -31,47 +28,38 @@ public class JavaTask extends Task {
         this.javaFactory = factory;
     }
 
+
+
     @Override
     public Json doRun(TaskContext taskContext) {
         // Copy the parameters
         JsonObject json = new JsonObject();
         for (Map.Entry<String, Value> entry : values.entrySet()) {
-            json.put(entry.getKey(), entry.getValue().get());
+            if (entry.getValue().isSet())
+                json.put(entry.getKey(), entry.getValue().get());
         }
 
         // Computes the running directory
         ResourceLocator locator;
+        FileObject uniqueDir;
         try {
             final FileObject file = taskContext.workingDirectory;
             if (file == null)
                 throw new XPMRuntimeException("Working directory is not set");
-            final FileObject uniqueDir = Manager.uniqueDirectory(file, factory.getId().getLocalPart(), factory.getId(), json);
+            uniqueDir = Manager.uniqueDirectory(file, factory.getId().getLocalPart(), factory.getId(), json);
             final SingleHostConnector connector = javaFactory.connector.getConnector(new ComputationalRequirements() {
             });
-            locator = new ResourceLocator(connector, connector.resolve(uniqueDir));
+            locator = new ResourceLocator(connector, connector.resolve(uniqueDir.resolveFile("task")));
         } catch (Throwable e) {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");
         }
 
-        final Command command = new Command();
-
-        Command classpath = new Command();
-        Arrays.asList(javaFactory.javaTasks.classpath).stream().forEach(f -> {
-            classpath.add(new Command.Path(f));
-            classpath.add(new Command.String(":"));
-        });
-
-        command.add("java", "-cp");
-        command.add(classpath);
-        command.add(Runner.class.getName());
-        command.add(new Command.Path(taskContext.workingDirectory));
-        final byte[] s = json.toString().getBytes(Manager.UTF8_CHARSET);
-        final Command.ParameterFile jsonInput = new Command.ParameterFile("input", s);
-        command.add(jsonInput);
-
-        Commands commands = new Commands(command);
+        // --- Build the command
+        CommandPart commandPart = javaFactory.command(taskContext.getScheduler(), json);
+        Commands commands = new Commands(commandPart.command());
 
         final CommandLineTask commandLineTask = new CommandLineTask(taskContext.getScheduler(), locator, commands);
+        commandPart.dependencies().forEach(d -> commandLineTask.addDependency(d));
 
         commandLineTask.setState(ResourceState.WAITING);
         if (taskContext.simulate()) {
@@ -88,9 +76,19 @@ public class JavaTask extends Task {
             }
         }
 
+        // --- Fill some fields in returned json
 
-        // Fill
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
+        json.put(Manager.XP_RESOURCE.toString(), commandLineTask.getIdentifier());
+
+        for(PathArgument path: javaFactory.pathArguments) {
+            try {
+                FileObject relativePath = uniqueDir.resolveFile(path.relativePath);
+                json.put(path.jsonName, new JsonFileObject(relativePath));
+            } catch (FileSystemException e) {
+                throw new XPMRuntimeException(e, "Could not resolve file path [%s]", path.relativePath);
+            }
+        }
 
         return json;
     }

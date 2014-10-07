@@ -21,11 +21,11 @@ package sf.net.experimaestro.manager.js;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.scheduler.Resource;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Set;
 
 import static java.lang.String.format;
 
@@ -77,13 +77,13 @@ public class JSResource extends JSBaseObject implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
-        return ignore.contains(ValueType.XP_RESOURCE);
+    public boolean canIgnore(JsonWriterOptions options) {
+        return options.ignore.contains(ValueType.XP_RESOURCE);
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
-        if (ignore.contains(ValueType.XP_RESOURCE)) {
+    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+        if (options.ignore.contains(ValueType.XP_RESOURCE)) {
             writer.write("null");
         } else {
             write(writer);

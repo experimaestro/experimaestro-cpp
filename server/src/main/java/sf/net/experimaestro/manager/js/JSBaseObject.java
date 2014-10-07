@@ -22,8 +22,10 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.annotations.Expose;
+import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
 
@@ -41,43 +43,31 @@ import static java.lang.String.format;
  * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
-    /** Create a new JS object */
-    public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
-        return (T) cx.newObject(scope, getClassName(aClass), args);
-    }
-
-    static public class ClassDescription {
-        /**
-         * The constructors
-         */
-        ArrayList<Constructor<?>> constructors = new ArrayList<>();
-
-        /**
-         * The class methods
-         */
-        Map<String, ArrayList<Method>> methods = new HashMap<>();
-
-        /**
-         * Properties
-         */
-        Map<String, Field> fields = new HashMap<>();
-    }
-
     final static private HashMap<Class<?>, ClassDescription> CLASS_DESCRIPTION = new HashMap<>();
-
+    protected XPMObject xpm;
     private ClassDescription classDescription;
     private Scriptable prototype;
     private Scriptable parentScope;
-    protected XPMObject xpm;
 
     public JSBaseObject() {
         final Class<? extends JSBaseObject> aClass = getClass();
         this.classDescription = analyzeClass(aClass);
     }
 
+    public JSBaseObject(Class<?> wrappedClass) {
+        this.classDescription = analyzeClass(wrappedClass);
+    }
+
+    /**
+     * Create a new JS object
+     */
+    public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
+        return (T) cx.newObject(scope, getClassName(aClass), args);
+    }
+
     /**
      * Analyze a class and returns the multi-map of names to methods
-     * <p/>
+     * <p>
      * Any constructor annotated with JSFunction is a valid functoin
      *
      * @param aClass
@@ -93,24 +83,22 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
                 map = description.methods;
                 for (Method method : aClass.getDeclaredMethods()) {
-                    final JSFunction annotation = method.getAnnotation(JSFunction.class);
+                    // Js function case
+                    final JSFunction jsFunction = method.getAnnotation(JSFunction.class);
 
-                    if (annotation != null) {
-                        if ((method.getModifiers() & Modifier.PUBLIC) == 0)
-                            throw new AssertionError("The method " + method + " is not public");
-                        String jsName = annotation.value();
-                        if (annotation.call()) {
-                            assert jsName.equals("");
-                            jsName = null;
-                        } else if ("".equals(jsName))
-                            jsName = method.getName();
-
-                        ArrayList<Method> methods = map.get(jsName);
-                        if (methods == null) {
-                            map.put(jsName, methods = new ArrayList<>());
-                        }
-                        methods.add(method);
+                    if (jsFunction != null) {
+                        addMethod(map, method, jsFunction.value(), jsFunction.call());
+                        continue;
                     }
+
+                    // Exposed case
+                    final Expose expose = method.getAnnotation(Expose.class);
+                    if (expose != null) {
+                        addMethod(map, method, expose.value(), false);
+                        continue;
+                    }
+
+
                 }
 
                 // Adds all the ancestors methods
@@ -133,7 +121,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                         description.constructors.add(constructor);
                     }
                 }
-                if (description.constructors.isEmpty()) {
+                if (description.constructors.isEmpty() && JSBaseObject.class.isAssignableFrom(aClass)) {
                     try {
                         description.constructors.add(aClass.getConstructor());
                     } catch (NoSuchMethodException e) {
@@ -156,6 +144,31 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return description;
     }
 
+    /**
+     * @param map    The list of methods
+     * @param method The method
+     * @param name   The name of the method (or empty if using the method name)
+     * @param call   Whether this method is used when the object is "called"
+     */
+    private static void addMethod(Map<String, ArrayList<Method>> map, Method method, String name, boolean call) {
+        if ((method.getModifiers() & Modifier.PUBLIC) == 0)
+            throw new AssertionError("The method " + method + " is not public");
+        if (call) {
+            if (!name.equals("")) {
+                throw new AssertionError("Method " + method + " should not defined a name since" +
+                        "it is will be called directly.");
+            }
+            name = null;
+        } else if ("".equals(name)) {
+            name = method.getName();
+        }
+
+        ArrayList<Method> methods = map.get(name);
+        if (methods == null) {
+            map.put(name, methods = new ArrayList<>());
+        }
+        methods.add(method);
+    }
 
     /**
      * Returns the class name
@@ -172,7 +185,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     /**
      * Defines a new class.
-     * <p/>
+     * <p>
      * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
      * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
      *
@@ -232,7 +245,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         ArrayList<Method> methods = this.classDescription.methods.get(name);
         if (methods != null && !methods.isEmpty())
-            function.add(this, methods);
+            function.add(thisObject(), methods);
 
         // Walk the prototype chain
         for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
@@ -246,6 +259,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return function;
     }
 
+    /**
+     * Returns the underlying object
+     * @return An object
+     */
+    protected Object thisObject() { return this; }
 
     @Override
     public Object get(int index, Scriptable start) {
@@ -333,6 +351,28 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return toString().getBytes();
     }
 
+    protected JSBaseObject setXPM(XPMObject xpm) {
+        this.xpm = xpm;
+        return this;
+    }
+
+    static public class ClassDescription {
+        /**
+         * The constructors
+         */
+        ArrayList<Constructor<?>> constructors = new ArrayList<>();
+
+        /**
+         * The class methods
+         */
+        Map<String, ArrayList<Method>> methods = new HashMap<>();
+
+        /**
+         * Properties
+         */
+        Map<String, Field> fields = new HashMap<>();
+    }
+
     /**
      * The Experimaestro wrap factory to handle special cases
      */
@@ -366,6 +406,9 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof Resource) {
                 return new JSResource((Resource) obj).setXPM(XPMObject.getXPM(scope));
             }
+            if (obj.getClass().getAnnotation(Exposed.class) != null) {
+                return new WrappedJavaObject(cx, scope, obj);
+            }
             return super.wrap(cx, scope, obj, staticType);
         }
 
@@ -398,11 +441,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     }
 
-    protected JSBaseObject setXPM(XPMObject xpm) {
-        this.xpm = xpm;
-        return this;
-    }
-
     static private class MyNativeJavaObject extends NativeJavaObject {
         private MyNativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
             super(scope, javaObject, staticType, isAdapter);
@@ -431,7 +469,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
             // Sets xpm if the object is running
             if (object instanceof JSBaseObject) {
-                ((JSBaseObject)object).xpm = xpm;
+                ((JSBaseObject) object).xpm = xpm;
             }
             return (Scriptable) object;
 

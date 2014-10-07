@@ -24,11 +24,10 @@ import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Set;
 
 /**
+ * A JSON string
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 1/4/13
  */
 public class JsonString implements Json {
     String string;
@@ -63,7 +62,7 @@ public class JsonString implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
+    public boolean canIgnore(JsonWriterOptions options) {
         return false;
     }
 
@@ -73,7 +72,7 @@ public class JsonString implements Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 }

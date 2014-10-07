@@ -20,8 +20,8 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.ValueType;

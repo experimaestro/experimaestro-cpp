@@ -33,7 +33,7 @@ import org.w3c.dom.Node;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.java.JavaTasks;
+import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -74,6 +74,13 @@ public class XPMObject {
      * The filename used to the store the signature in generated directory names
      */
     public static final String XPM_SIGNATURE = ".xpm-signature";
+    public static final String COMMAND_LINE_JOB_HELP = "Schedule a command line job.<br>The options are <dl>" +
+            "<dt>launcher</dt><dd></dd>" +
+            "<dt>stdin</dt><dd></dd>" +
+            "<dt>stdout</dt><dd></dd>" +
+            "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
+            "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
+            "";
 
     /**
      * Task context for this XPM object
@@ -184,16 +191,16 @@ public class XPMObject {
      */
     static final JSUtils.FunctionDefinition[] definitions = {
             new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include", null),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include_repository", null),
-            new JSUtils.FunctionDefinition(XPMObject.class, "script_file", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "include"),
+            new JSUtils.FunctionDefinition(XPMObject.class, "include_repository"),
+            new JSUtils.FunctionDefinition(XPMObject.class, "script_file"),
             new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "path", null),
-            new JSUtils.FunctionDefinition(XPMObject.class, "value", null),
-            new JSUtils.FunctionDefinition(XPMObject.class, "file", null),
-            new JSUtils.FunctionDefinition(XPMObject.class, "format", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "path"),
+            new JSUtils.FunctionDefinition(XPMObject.class, "value"),
+            new JSUtils.FunctionDefinition(XPMObject.class, "file"),
+            new JSUtils.FunctionDefinition(XPMObject.class, "format"),
             new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir", null),
+            new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir"),
     };
 
 
@@ -295,9 +302,6 @@ public class XPMObject {
         // xpm object
         addNewObject(context, scope, "xpm", "XPM", new Object[]{});
         ((JSXPM) get(scope, "xpm")).set(this);
-
-        // xml object (to construct XML easily)
-        addNewObject(context, scope, "xml", "XMLConstructor", new Object[]{});
 
         // Adds a Pipe object
         addNewObject(context, scope, "PIPE", "Pipe", new Object[]{});
@@ -621,8 +625,8 @@ public class XPMObject {
     public Scriptable getTaskFactory(String namespace, String id) {
         TaskFactory factory = repository.getFactory(new QName(namespace, id));
         LOGGER.debug("Creating a new JS task factory %s", factory.getId());
-        return context.newObject(scope, "XPMTaskFactory",
-                new Object[]{this, Context.javaToJS(factory, scope)});
+        return context.newObject(scope, "TaskFactory",
+                new Object[]{Context.javaToJS(factory, scope)});
     }
 
     /**
@@ -699,7 +703,7 @@ public class XPMObject {
      * @throws IOException
      * @throws InterruptedException
      */
-    public NativeArray evaluate(Object jsargs, NativeObject options) throws Exception {
+    public String evaluate(Object jsargs, NativeObject options) throws Exception {
         Command command = JSCommand.getCommand(jsargs);
 
         // Run the process and captures the output
@@ -750,7 +754,10 @@ public class XPMObject {
             input.close();
 
             int error = p.waitFor();
-            return new NativeArray(new Object[]{error, sb.toString()});
+            if (error != 0) {
+                throw new XPMRhinoException("Error while evaluating command");
+            }
+            return sb.toString();
         }
     }
 
@@ -827,7 +834,7 @@ public class XPMObject {
         // Store connector in database
         scheduler.put(connector);
 
-        // Resolve the xpath for the given connector
+        // Resolve the path for the given connector
         if (path instanceof FileObject) {
             path = connector.getMainConnector().resolve((FileObject) path);
         } else
@@ -901,9 +908,9 @@ public class XPMObject {
 
             // --- Resources to lock
             if (options.has("lock", options)) {
-                NativeArray locks = (NativeArray) options.get("lock", options);
-                for (int i = (int) locks.getLength(); --i >= 0; ) {
-                    Object lock_i = JSUtils.unwrap(locks.get(i, locks));
+                List locks = (List) options.get("lock", options);
+                for (int i = (int) locks.size(); --i >= 0; ) {
+                    Object lock_i = JSUtils.unwrap(locks.get(i));
                     final Dependency dependency;
 
                     if (lock_i instanceof Dependency) {
@@ -1155,8 +1162,8 @@ public class XPMObject {
         public Scriptable add_task_factory(NativeObject object) throws ValueMismatchException {
             JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
             xpm.repository.addFactory(factory.factory);
-            return xpm.context.newObject(xpm.scope, "XPMTaskFactory",
-                    new Object[]{this.xpm, factory});
+            return xpm.context.newObject(xpm.scope, "TaskFactory",
+                    new Object[]{factory});
         }
 
         @JSFunction("get_task")
@@ -1173,7 +1180,7 @@ public class XPMObject {
 
 
         @JSFunction(value = "evaluate", optional = 1)
-        public NativeArray evaluate(
+        public String evaluate(
                 NativeArray command,
                 NativeObject options
         ) throws Exception {
@@ -1194,13 +1201,7 @@ public class XPMObject {
 
 
         @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = "Schedule a command line job.<br>The options are <dl>" +
-                "<dt>launcher</dt><dd></dd>" +
-                "<dt>stdin</dt><dd></dd>" +
-                "<dt>stdout</dt><dd></dd>" +
-                "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
-                "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
-                "")
+        @JSHelp(value = COMMAND_LINE_JOB_HELP)
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
                                          @JSArgument(type = "Array", name = "command") NativeArray jsargs,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
@@ -1210,13 +1211,17 @@ public class XPMObject {
         }
 
         @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = "Schedule a command line job.<br>The options are <dl>" +
-                "<dt>launcher</dt><dd></dd>" +
-                "<dt>stdin</dt><dd></dd>" +
-                "<dt>stdout</dt><dd></dd>" +
-                "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
-                "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
-                "")
+        @JSHelp(value = COMMAND_LINE_JOB_HELP)
+        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
+                                         @JSArgument(type = "Array", name = "command") Command command,
+                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+            Commands commands = new Commands(command);
+            JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
+            return jsResource;
+        }
+
+        @JSFunction(value = "command_line_job", optional = 1)
+        @JSHelp(value = COMMAND_LINE_JOB_HELP)
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object jobId,
                                          Commands commands,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
@@ -1399,7 +1404,7 @@ public class XPMObject {
         public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
             if (connector == null)
                 connector = LocalhostConnector.getInstance();
-            JavaTasks.addToRepository(xpm.repository, connector, paths);
+            JavaTasksIntrospection.addToRepository(xpm.repository, connector, paths);
         }
 
     }

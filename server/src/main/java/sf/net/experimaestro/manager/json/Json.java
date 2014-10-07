@@ -18,13 +18,10 @@
 
 package sf.net.experimaestro.manager.json;
 
-import com.google.common.collect.ImmutableSet;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Set;
 
 /**
  * Base class for all JSON objects
@@ -52,19 +49,17 @@ public interface Json {
      */
     QName type();
 
-    default boolean canIgnore(Set<QName> ignore) { return false; }
-
-    public static Set<QName> DEFAULT_IGNORE = ImmutableSet.of(ValueType.XP_RESOURCE, ValueType.XP_FILE);
+    default boolean canIgnore(JsonWriterOptions options) { return false; }
 
     /**
      * Write a normalized version of the JSON
      */
-    default void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException { write(writer); }
+    default void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException { write(writer); }
 
     /**
      * Write a normalized version of the JSON
      */
-    default void writeDescriptorString(Writer writer) throws IOException { writeDescriptorString(writer, DEFAULT_IGNORE); }
+    default void writeDescriptorString(Writer writer) throws IOException { writeDescriptorString(writer, JsonWriterOptions.DEFAULT_OPTIONS); }
 
     /**
      * Write a JSON representation

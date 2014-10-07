@@ -113,13 +113,11 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
 
     @Override
     public Object get(String name, Scriptable start) {
-        // TODO: implement get
         throw new NotImplementedException();
     }
 
     @Override
     public Object get(int index, Scriptable start) {
-        // TODO: implement get
         throw new NotImplementedException();
     }
 
@@ -130,31 +128,26 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
 
     @Override
     public boolean has(int index, Scriptable start) {
-        // TODO: implement has
         throw new NotImplementedException();
     }
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        // TODO: implement put
         throw new NotImplementedException();
     }
 
     @Override
     public void put(int index, Scriptable start, Object value) {
-        // TODO: implement put
         throw new NotImplementedException();
     }
 
     @Override
     public void delete(String name) {
-        // TODO: implement delete
         throw new NotImplementedException();
     }
 
     @Override
     public void delete(int index) {
-        // TODO: implement delete
         throw new NotImplementedException();
     }
 
@@ -165,19 +158,16 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
 
     @Override
     public void setPrototype(Scriptable prototype) {
-        // TODO: implement setPrototype
         throw new NotImplementedException();
     }
 
     @Override
     public Scriptable getParentScope() {
-        // TODO: implement getParentScope
         throw new NotImplementedException();
     }
 
     @Override
     public void setParentScope(Scriptable parent) {
-        // TODO: implement setParentScope
         throw new NotImplementedException();
     }
 
@@ -188,13 +178,11 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
 
     @Override
     public Object getDefaultValue(Class<?> hint) {
-        // TODO: implement getDefaultValue
         throw new NotImplementedException();
     }
 
     @Override
     public boolean hasInstance(Scriptable instance) {
-        // TODO: implement hasInstance
         throw new NotImplementedException();
     }
 

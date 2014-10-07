@@ -18,16 +18,17 @@
 
 package sf.net.experimaestro.plan;
 
-import sf.net.experimaestro.utils.EmptyIterator;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.Iterator;
 import java.util.Map;
 
 abstract public class Node implements Iterable<Map<String, Value>> {
-	static final public Node EMPTY = new Node() {
-		@Override
-		public Iterator<Map<String, Value>> iterator() {
-			return EmptyIterator.create();
-		}
-	};
+    static final public Node EMPTY = new Node() {
+        @Override
+        public Iterator<Map<String, Value>> iterator() {
+            return ImmutableSet.<Map<String, Value>>of().iterator();
+        }
+    };
 }

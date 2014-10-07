@@ -1,15 +1,27 @@
 package sf.net.experimaestro.manager.java;
 
-import net.bpiwowar.experimaestro.tasks.JsonArgument;
+import com.google.common.collect.ImmutableSet;
+import net.bpiwowar.experimaestro.tasks.Argument;
+import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
-import net.bpiwowar.experimaestro.tasks.ValueArgument;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
 import javax.xml.namespace.NamespaceContext;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,55 +29,91 @@ import java.util.Map;
  * Task factory created from java reflection
  */
 public class JavaTaskFactory extends TaskFactory {
+    public static final String JVM_OPTIONS = "$jvm";
+
     private final Type output;
-    final JavaTasks javaTasks;
+    final JavaTasksIntrospection javaTasksIntrospection;
     final Connector connector;
+    final String taskClassname;
+    final ArrayList<PathArgument> pathArguments = new ArrayList<>();
 
     Map<String, Input> inputs = new HashMap<>();
 
     /**
      * Initialise a task
-     * @param javaTasks
+     * @param javaTasksIntrospection
      * @param connector
      * @param repository The repository
-     * @param aClass     The java class from which to build a task factory
+     * @param classInfo     The java class from which to build a task factory
      */
-    public JavaTaskFactory(JavaTasks javaTasks, Connector connector, Repository repository, ClassInfo aClass, NamespaceContext namespaces) {
+    public JavaTaskFactory(JavaTasksIntrospection javaTasksIntrospection, Connector connector, Repository repository, ClassInfo classInfo, NamespaceContext namespaces) {
         super(repository);
-        this.javaTasks = javaTasks;
+        this.javaTasksIntrospection = javaTasksIntrospection;
         this.connector = connector;
+        this.taskClassname = classInfo.getName();
 
-        final TaskDescription description = aClass.getAnnotation(TaskDescription.class);
+        final TaskDescription description = classInfo.getAnnotation(TaskDescription.class);
         if (description == null) {
-            throw new XPMRuntimeException("The class %s has no TaskDescription annotation", aClass);
+            throw new XPMRuntimeException("The class %s has no TaskDescription annotation", classInfo);
         }
 
         this.id = QName.parse(description.id(), namespaces);
-        this.output = getType(namespaces, description.output());
+        this.output = new Type(QName.parse(description.output(), namespaces));
 
-        for (FieldInfo field : aClass.getDeclaredFields()) {
+        for (FieldInfo field : classInfo.getDeclaredFields()) {
             //final Object jsonArgument = field.getAnnotation(jsonArgumentClass.class);
-            final JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
-            final ValueArgument valueArgument = field.getAnnotation(ValueArgument.class);
+            final Argument argument = field.getAnnotation(Argument.class);
 
             // TODO: add default values, etc.
-            if (jsonArgument != null) {
-                Input input = new JsonInput(getType(namespaces, jsonArgument.type()));
-                input.setDocumentation(jsonArgument.help());
-                input.setOptional(jsonArgument.required());
-                inputs.put(jsonArgument.name(), input);
-            } else if (valueArgument != null) {
-                Input input = new JsonInput(getType(namespaces, valueArgument.type()));
-                input.setDocumentation(valueArgument.help());
-                input.setOptional(valueArgument.required());
-                inputs.put(valueArgument.name(), input);
+            String fieldName = field.getName();
+            if (argument != null) {
+                Input input = new JsonInput(getType(namespaces, argument, field));
+                input.setDocumentation(argument.help());
+                input.setOptional(!argument.required());
+                String name = getString(argument.name(), fieldName);
+                inputs.put(name, input);
             }
 
+            final Path path = field.getAnnotation(Path.class);
+            if (path != null) {
+                String copy = getString(path.copy(), fieldName);
+                String relativePath = getString(path.value(), fieldName);
+                pathArguments.add(new PathArgument(copy, relativePath));
+            }
         }
+
+        // Adds JVM
+        JsonInput input = new JsonInput(new Type(Manager.XP_OBJECT));
+        input.setOptional(true);
+        inputs.put(JVM_OPTIONS, input);
     }
 
-    private Type getType(NamespaceContext namespaces, String output1) {
-        return new Type(QName.parse(output1, namespaces));
+    private static String getString(String value, String defaultValue) {
+        return "".equals(value) ? defaultValue : value;
+    }
+
+    private Type getType(NamespaceContext namespaces, Argument argument, FieldInfo field) {
+        final ClassInfo type = field.getType();
+        if (type.isArray()) {
+
+        }
+
+        if (type.belongs(java.lang.Integer.class) || type.belongs(Integer.TYPE)
+                || type.belongs(java.lang.Long.class) || type.belongs(Long.TYPE)
+                || type.belongs(Short.class) || type.belongs(Short.TYPE)) {
+            return new ValueType(ValueType.XP_INTEGER);
+        }
+
+        if (type.belongs(java.lang.Double.class) || type.belongs(java.lang.Float.class)) {
+            return new ValueType(ValueType.XP_REAL);
+        }
+
+        if (type.belongs(String.class))
+            return new ValueType(ValueType.XP_STRING);
+
+
+        // Otherwise, just return any
+        return new ValueType(Manager.XP_ANY);
     }
 
     @Override
@@ -83,5 +131,73 @@ public class JavaTaskFactory extends TaskFactory {
         final JavaTask task = new JavaTask(this);
         task.init();
         return task;
+    }
+
+    @Override
+    public CommandPart command(Scheduler scheduler, JsonObject json) {
+        final Command command = new Command();
+
+        Command classpath = new Command();
+        final CommandPart commandPart = new CommandPart(command);
+
+        Arrays.asList(javaTasksIntrospection.classpath).stream().forEach(f -> {
+            classpath.add(new Command.Path(f));
+            classpath.add(new Command.String(":"));
+        });
+
+        command.add("java", "-cp");
+        command.add(classpath);
+
+        // Sets JVM options
+        final Json jvm = json.get(JVM_OPTIONS);
+        if (jvm != null && jvm instanceof JsonObject) {
+            final Json memory = ((JsonObject) jvm).get("memory");
+            if (memory instanceof JsonString) {
+                final Object s = (String)memory.get();
+                command.add("-Xmx" + s);
+            }
+        }
+
+        // Runner class name
+        command.add(Runner.class.getName());
+
+        // Task class name
+        command.add(taskClassname);
+
+        // Working directory
+        command.add(Command.WorkingDirectory.INSTANCE);
+
+        // Parameter file
+        final ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
+        OutputStreamWriter jsonWriter = new OutputStreamWriter(jsonBytes, Manager.UTF8_CHARSET);
+        try {
+            final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
+                    .ignore$(false)
+                    .simplifyValues(true);
+            json.writeDescriptorString(jsonWriter, options);
+            jsonWriter.flush();
+        } catch (IOException e) {
+            throw new XPMRuntimeException(e, "Could not write JSON string for java task");
+        }
+        final Command.ParameterFile jsonInput = new Command.ParameterFile("json", jsonBytes.toByteArray());
+        command.add(jsonInput);
+
+        // Check dependencies
+        for(Json element: json.values()) {
+            if (element instanceof JsonObject) {
+                JsonObject object = (JsonObject) element;
+                final Json r = object.get(Manager.XP_RESOURCE.toString());
+                if (r == null) continue;
+                final ResourceLocator locator = ResourceLocator.parse(r.get().toString());
+                final Resource resource = scheduler.getResource(locator);
+                if (resource == null) {
+                    throw new XPMRuntimeException("Cannot find resource %s", locator);
+                }
+                final Dependency lock = resource.createDependency("READ");
+                commandPart.addDependency(lock);
+            }
+        }
+
+        return commandPart;
     }
 }

@@ -31,6 +31,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -41,7 +42,6 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
-import java.util.Set;
 
 /**
  * A wrapper around a DOM node
@@ -211,12 +211,13 @@ public class JSNode extends JSBaseObject implements Json {
     }
 
     @Override
-    public boolean canIgnore(Set<QName> ignore) {
+    public boolean
+    canIgnore(JsonWriterOptions options) {
         return false;
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, Set<QName> ignore) throws IOException {
+    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 
