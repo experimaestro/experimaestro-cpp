@@ -20,7 +20,6 @@ package sf.net.experimaestro.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.xerces.jaxp.DocumentBuilderFactoryImpl;
 import org.w3c.dom.*;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
@@ -214,9 +213,7 @@ public class XMLUtils {
     }
 
 
-    public static final Class<DocumentBuilderFactoryImpl> DOCUMENT_BUILDER_FACTORY_CLASS = DocumentBuilderFactoryImpl.class;
-    private final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory
-            .newInstance(DOCUMENT_BUILDER_FACTORY_CLASS.getName(), DocumentBuilderFactoryImpl.class.getClassLoader());
+    private final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
     private static DocumentBuilder documentBuilder;
 
     static {
