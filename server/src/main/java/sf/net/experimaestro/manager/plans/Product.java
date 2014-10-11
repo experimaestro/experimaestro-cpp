@@ -32,7 +32,6 @@ import java.util.Map;
  * Cartesian product of inputs
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
  */
 public class Product extends NAryOperator {
     final static private Logger LOGGER = Logger.getLogger();
@@ -55,7 +54,7 @@ public class Product extends NAryOperator {
     }
 
     @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
         super.doPostInit(parentStreams);
 
         // Computes the output size
@@ -100,6 +99,7 @@ public class Product extends NAryOperator {
             return true;
         }
 
+        /** Compute the next value to return */
         ReturnValue getReturnValue(Value[] current) {
             Json[] nodes = new Json[Product.this.outputSize()];
             final long[][] contexts = new long[parents.size()][];
@@ -118,7 +118,7 @@ public class Product extends NAryOperator {
         }
     }
 
-    private class ProductIterator extends AbstractProductIterator {
+    class ProductIterator extends AbstractProductIterator {
         public ProductIterator(PlanContext planContext) {
             super(planContext);
         }

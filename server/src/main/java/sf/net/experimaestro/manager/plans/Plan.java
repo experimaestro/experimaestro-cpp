@@ -19,10 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -30,6 +27,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonNull;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -92,8 +90,6 @@ public class Plan extends Operator {
     }
 
 
-
-
     @Override
     public Plan doCopy(boolean deep, Map<Object, Object> map) {
         Plan copy = new Plan(factory);
@@ -133,7 +129,7 @@ public class Plan extends Operator {
 
     private Operator prepare(boolean simplify, boolean initialize) throws XPathExpressionException {
         // Creates the TaskOperator
-        Operator operator = prepare(new HashMap<Operator, Operator>(), new OperatorMap());
+        Operator operator = prepare(new HashMap<>(), new OperatorMap());
         if (LOGGER.isTraceEnabled())
             try (LoggerPrintStream out = new LoggerPrintStream(LOGGER, Level.TRACE)) {
                 out.println("After creation");
@@ -168,7 +164,7 @@ public class Plan extends Operator {
      * @param map The current plan path (containg joins in input, and operators in output)
      * @return The node that is the root (sink) of the DAG
      */
-    public synchronized Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) throws XPathExpressionException {
+    public synchronized Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) {
         // Check if a plan was not already generated
         Operator old = map.get(this);
         if (old != null)
@@ -180,79 +176,89 @@ public class Plan extends Operator {
         ArrayList<Operator> outputs = new ArrayList<>();
 
         for (Multimap<DotName, Operator> inputs : inputsList) {
-
-
-            // --- Loop over the cartesian product of the inputs
-            DotName ids[] = new DotName[inputs.keySet().size()];
-            OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
-            {
-
-                int index = 0;
-                for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
-                    ids[index] = input.getKey();
-                    inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
-                    index++;
-                }
-                assert index == ids.length;
-            }
-
-            // Create a new operator
             TaskOperator self = new TaskOperator(this);
             self.scope = this.scope;
 
-            Operator inputOperators[] = new Operator[inputValues.length];
-            BitSet[] joins = new BitSet[inputOperators.length];
+            if (inputs.isEmpty()) {
+                self.addParent(new Constant(JsonNull.getSingleton()));
+                self.setMappings(ImmutableMap.of());
+                outputs.add(self);
+            } else {
+                // --- Loop over the cartesian product of the inputs
+                DotName ids[] = new DotName[inputs.keySet().size()];
+                OperatorIterable inputValues[] = new OperatorIterable[inputs.keySet().size()];
+                {
 
-            for (int i = inputValues.length; --i >= 0; ) {
-                OperatorIterable values = inputValues[i];
-                Union union = new Union();
-                for (Operator operator : values) {
-                    union.addParent(operator);
+                    int index = 0;
+                    for (Map.Entry<DotName, Collection<Operator>> input : inputs.asMap().entrySet()) {
+                        ids[index] = input.getKey();
+                        inputValues[index] = new OperatorIterable(input.getValue(), map, opMap);
+                        index++;
+                    }
+                    assert index == ids.length;
                 }
 
-                if (union.getParents().size() == 1)
-                    inputOperators[i] = union.getParent(0);
-                else
-                    inputOperators[i] = union;
+                // Create a new operator
+;
 
-                joins[i] = new BitSet();
-                opMap.add(inputOperators[i]);
+                Operator inputOperators[] = new Operator[inputValues.length];
 
-            }
+                for (int i = inputValues.length; --i >= 0; ) {
+                    OperatorIterable values = inputValues[i];
+                    Union union = new Union();
+                    for (Operator operator : values) {
+                        union.addParent(operator);
+                    }
 
-            // Find LCAs and store them in a map operator ID -> inputs
-            for (int i = 0; i < ids.length - 1; i++) {
-                for (int j = i + 1; j < ids.length; j++) {
-                    ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
-                    for (Operator operator : lca) {
-                        int key = opMap.get(operator);
-                        joins[i].set(key);
-                        joins[j].set(key);
+                    if (union.getParents().size() == 1)
+                        inputOperators[i] = union.getParent(0);
+                    else
+                        inputOperators[i] = union;
+
+                    opMap.add(inputOperators[i]);
+
+                }
+
+
+                // Find LCAs and store them in a map operator ID -> inputs
+                // joins contains the list of pairwise LCAs in the operator
+                // graph above
+                BitSet[] joins = new BitSet[inputOperators.length];
+                for (int i = 0; i < joins.length; i++) {
+                    joins[i] = new BitSet();
+                }
+
+                for (int i = 0; i < ids.length - 1; i++) {
+                    for (int j = i + 1; j < ids.length; j++) {
+                        ArrayList<Operator> lca = opMap.findLCAs(inputOperators[i], inputOperators[j]);
+                        for (Operator operator : lca) {
+                            int key = opMap.get(operator);
+                            joins[i].set(key);
+                            joins[j].set(key);
+                        }
                     }
                 }
+
+                Lattice lattice = new Lattice(opMap);
+                for (int i = 0; i < joins.length; i++) {
+                    lattice.add(joins[i], inputOperators[i]);
+                }
+                LatticeNode.MergeResult merge = lattice.merge();
+
+                self.addParent(merge.operator);
+
+                // Associate streams with names
+                Map<DotName, Integer> mappings = new TreeMap<>();
+                for (int i = 0; i < ids.length; i++) {
+                    mappings.put(ids[i], merge.map.get(inputOperators[i]));
+                }
+                self.setMappings(mappings);
+
+
+                // --- Handle group by
+
+                outputs.add(self);
             }
-
-
-            // Build the trie structure for product/joins
-            TrieNode trie = new TrieNode();
-            for (int i = 0; i < joins.length; i++) {
-                trie.add(joins[i], inputOperators[i]);
-            }
-
-            TrieNode.MergeResult merge = trie.merge(opMap);
-            self.addParent(merge.operator);
-
-            // Associate streams with names
-            Map<DotName, Integer> mappings = new TreeMap<>();
-            for (int i = 0; i < ids.length; i++) {
-                mappings.put(ids[i], merge.map.get(inputOperators[i]));
-            }
-            self.setMappings(mappings);
-
-
-            // --- Handle group by
-
-            outputs.add(self);
         }
 
         // End of loop over inputs
@@ -331,11 +337,7 @@ public class Plan extends Operator {
                         Operator source = iterator.next();
 
                         // Transform the operator (in case it is a plan reference)
-                        try {
-                            source = source.prepare(map, opMap);
-                        } catch (XPathExpressionException e) {
-                            throw new XPMRuntimeException(e);
-                        }
+                        source = source.prepare(map, opMap);
 
                         return source;
                     }

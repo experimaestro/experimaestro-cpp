@@ -146,7 +146,7 @@ public class Documentation {
         ArrayList<Pair<Content, Content>> items = new ArrayList<>();
 
         public void add(Content term, Content definition) {
-            items.add(Pair.create(term, definition));
+            items.add(Pair.of(term, definition));
         }
 
         @Override

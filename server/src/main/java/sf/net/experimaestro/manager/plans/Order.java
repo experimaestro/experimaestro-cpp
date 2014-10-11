@@ -26,8 +26,16 @@ import sf.net.experimaestro.utils.WrappedResult;
 import java.util.*;
 
 /**
+ * Represents an abstraction of an order by a list of set of object/indices.
+ *
+ * This is useful to choose an order compatible with several orders, and is used by
+ * OrderBy.
+ *
+ * For instance,  {1, 2}, {3, 4, 5} means that we could have an order 1,2,3,4,5 or 2,1,3,4,5 or ...
+ *
+ * The {@linkplain #flatten()} method is used an order
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 5/3/13
  */
 public class Order<T> implements Iterable<Set<T>> {
     List<Set<T>> list = new ArrayList<>();
@@ -49,6 +57,14 @@ public class Order<T> implements Iterable<Set<T>> {
         if (list.isEmpty() || newSet)
             list.add(new HashSet<T>());
         list.get(list.size() - 1).add(t);
+    }
+
+    /**
+     * Add an operator to the last set
+     * @param t
+     */
+    public void add(T t) {
+        add(t, false);
     }
 
     /**

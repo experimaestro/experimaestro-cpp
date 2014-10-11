@@ -19,16 +19,20 @@
 package sf.net.experimaestro.manager.plans;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 26/2/13
-*/
-public class StreamReference {
-    int streamIndex;
-    int contextIndex;
+ * Gives the position of a stream within the inputs
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ */
+final public class StreamReference {
+    /** The index of the input */
+    final int inputIndex;
 
-    public StreamReference(int streamIndex, int contextIndex) {
+    /** The index within the input stream */
+    final int contextIndex;
+
+    public StreamReference(int inputIndex, int contextIndex) {
         this.contextIndex = contextIndex;
-        this.streamIndex = streamIndex;
+        this.inputIndex = inputIndex;
     }
 
     @Override
@@ -39,14 +43,14 @@ public class StreamReference {
         StreamReference that = (StreamReference) o;
 
         if (contextIndex != that.contextIndex) return false;
-        if (streamIndex != that.streamIndex) return false;
+        if (inputIndex != that.inputIndex) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = streamIndex;
+        int result = inputIndex;
         result = 31 * result + contextIndex;
         return result;
     }

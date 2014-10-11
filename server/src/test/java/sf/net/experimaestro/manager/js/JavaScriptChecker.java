@@ -41,8 +41,9 @@ import java.util.Map;
 import static java.lang.String.format;
 
 /**
+ * Unit tests using javascript files
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 30/1/13
  */
 public class JavaScriptChecker {
 
@@ -78,7 +79,7 @@ public class JavaScriptChecker {
         Map<String, String> environment = System.getenv();
         final ResourceLocator currentResourceLocator
                 = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
-        XPMObject jsXPM = new XPMObject(currentResourceLocator, context, environment, scope,
+        new XPMObject(currentResourceLocator, context, environment, scope,
                 repository, this.environment.scheduler, null, new Cleaner(), null);
 
         // Adds some special functions available for tests only
@@ -148,12 +149,11 @@ public class JavaScriptChecker {
         InputStreamReader reader = new InputStreamReader(file.getContent()
                 .getInputStream());
         char[] cbuf = new char[8192];
-        int read = 0;
+        int read;
         StringBuilder builder = new StringBuilder();
         while ((read = reader.read(cbuf, 0, cbuf.length)) > 0)
             builder.append(cbuf, 0, read);
-        String s = builder.toString();
-        return s;
+        return builder.toString();
     }
 
 }

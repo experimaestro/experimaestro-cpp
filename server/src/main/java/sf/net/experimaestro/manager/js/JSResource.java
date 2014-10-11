@@ -92,7 +92,7 @@ public class JSResource extends JSBaseObject implements Json {
 
     @Override
     public void write(Writer out) throws IOException {
-        out.write(format("{ \"id\": \"%s\", \"$$type\": \"%s\" }",
+        out.write(format("{ \"id\": \"%s\", \"$type\": \"%s\" }",
                 resource.getLocator().toString(),
                 ValueType.XP_RESOURCE.toString()
         ));

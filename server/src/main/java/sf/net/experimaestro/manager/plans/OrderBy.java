@@ -26,8 +26,10 @@ import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.mutable.MutableInt;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -40,16 +42,16 @@ public class OrderBy extends UnaryOperator {
     /** The order over streams (might be shared by different order-by before a join */
     Order<Operator> order;
 
-    /** The subset of order operators that we use to sort here */
+    /** The subset of order operators that we use to sort here. Null if using them all. */
     Set<Operator> operators;
 
-    /** The order for the context, computed when intializing this operator */
+    /** The order for the context, computed when initializing this operator */
     int contextOrder[];
 
     /**
-     *
-     * @param order
-     * @param operators A subset of operators from order or <tt>null</tt>
+     * New order by operator
+     * @param order The order shared by different order by operators
+     * @param operators A subset of operators from order or <tt>null</tt> for all
      */
     public OrderBy(Order<Operator> order, Set<Operator> operators) {
         this.order = order;
@@ -93,16 +95,13 @@ public class OrderBy extends UnaryOperator {
                     }
 
                     Value values[] = list.toArray(new Value[list.size()]);
-                    Arrays.sort(values, new Comparator<Value>() {
-                        @Override
-                        public int compare(Value o1, Value o2) {
-                            for (int index : contextOrder) {
-                                int z = Long.compare(o1.context[index], o2.context[index]);
-                                if (z != 0)
-                                    return z;
-                            }
-                            return 0;
+                    Arrays.sort(values, (o1, o2) -> {
+                        for (int index : contextOrder) {
+                            int z = Long.compare(o1.context[index], o2.context[index]);
+                            if (z != 0)
+                                return z;
                         }
+                        return 0;
                     });
                     iterator = Arrays.asList(values).iterator();
                 }
@@ -117,6 +116,15 @@ public class OrderBy extends UnaryOperator {
 
 
     @Override
+    public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
+        if (super.printDOT(out, planNodes, counts)) {
+            for (Operator operator: order.items())
+                out.format("p%s -> p%s [style=\"dashed\", color=\"#ddddff\"];%n", System.identityHashCode(operator), System.identityHashCode(this));
+        }
+        return false;
+    }
+
+    @Override
     protected String getName() {
         if (contextOrder != null) {
             return String.format("OrderBy (%s)", Output.toString(", ", ArrayUtils.toObject(contextOrder)));
@@ -125,22 +133,21 @@ public class OrderBy extends UnaryOperator {
     }
 
     @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
+        outputSize = getParent(0).outputSize();
+
         IntArrayList contextOrder = new IntArrayList();
         Map<Operator, Integer> inputContext = parentStreams.get(0);
 
         order.flatten();
 
-        Predicate<Operator> predicate = new Predicate<Operator>() {
-            @Override
-            public boolean apply(Operator input) {
-                return operators == null || operators.contains(input);
-            }
-        };
+        // Loop over the operators we have to sort on, and get their index
+        Predicate<Operator> predicate = input -> operators == null || operators.contains(input);
         for (Operator operator : Iterables.filter(order.items(), predicate)) {
             Integer contextIndex = inputContext.get(operator);
-            if (contextIndex == null)
+            if (contextIndex == null) {
                 throw new AssertionError("The context index is null");
+            }
             contextOrder.add(contextIndex);
         }
         this.contextOrder = contextOrder.toIntArray();
@@ -170,6 +177,5 @@ public class OrderBy extends UnaryOperator {
         // TODO: we might do better by adding some information from children orders?
         return order;
     }
-
 
 }

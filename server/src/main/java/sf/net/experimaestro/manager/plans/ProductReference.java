@@ -23,6 +23,8 @@ import org.apache.commons.lang.NotImplementedException;
 import javax.xml.xpath.XPathExpressionException;
 import java.util.*;
 
+import static sf.net.experimaestro.manager.plans.LatticeNode.*;
+
 /**
  * A fake operator that will be replaced by a succession of
  * joins & products
@@ -45,7 +47,7 @@ public class ProductReference extends NAryOperator {
     }
 
     @Override
-    public Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) throws XPathExpressionException {
+    public Operator prepare(Map<Operator, Operator> map, OperatorMap opMap) {
         // --- Loop over the cartesian product of the inputs
         Plan.OperatorIterable inputValues[] = new Plan.OperatorIterable[parents.size()];
         {
@@ -61,6 +63,7 @@ public class ProductReference extends NAryOperator {
         Operator inputOperators[] = new Operator[inputValues.length];
         BitSet[] joins = new BitSet[inputOperators.length];
 
+        // Process union of operators
         for (int i = inputValues.length; --i >= 0; ) {
             Plan.OperatorIterable values = inputValues[i];
             Union union = new Union();
@@ -78,6 +81,12 @@ public class ProductReference extends NAryOperator {
 
         }
 
+        // TODO: build a simplified graph of operators:
+        // for each input, we only have LCAs (organized in a hierarchy)
+
+
+        // Process this simplified graph step-wise, by merging
+
         // Find LCAs and store them in a map operator ID -> inputs
         for (int i = 0; i < inputOperators.length - 1; i++) {
             for (int j = i + 1; j < inputOperators.length; j++) {
@@ -90,17 +99,19 @@ public class ProductReference extends NAryOperator {
             }
         }
 
-        // Build the trie structure for product/joins
-        TrieNode trie = new TrieNode();
+        // Build the lattice of operators
+        Lattice lattice = new Lattice(opMap);
         for (int i = 0; i < joins.length; i++) {
-            trie.add(joins[i], inputOperators[i]);
+            lattice.add(joins[i], inputOperators[i]);
         }
+        MergeResult merge = lattice.merge();
 
-        TrieNode.MergeResult merge = trie.merge(opMap);
+        // Build the trie structure for product/joins
 
         int[] mapping = new int[inputOperators.length];
-        for(int i = 0; i < parents.size(); i++)
+        for(int i = 0; i < parents.size(); i++) {
             mapping[i] = merge.map.get(inputOperators[i]);
+        }
 
         ReorderNodes reorder = new ReorderNodes(mapping);
         reorder.addParent(merge.operator);

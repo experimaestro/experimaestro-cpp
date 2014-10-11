@@ -72,7 +72,7 @@ public class GroupBy extends UnaryOperator {
     }
 
     @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
         super.doPostInit(parentStreams);
         assert parentStreams.size() == 1;
 

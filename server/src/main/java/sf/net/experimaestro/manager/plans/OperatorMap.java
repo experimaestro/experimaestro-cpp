@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.plans;
 
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import java.util.ArrayList;
@@ -28,8 +29,16 @@ import static java.lang.Math.min;
 
 /**
  * Keeps track of who is a descendent of who
+ *
+ * <ul>
+ * <li>Each operator is associated to one ID (contiguous)</li>
+ * <li>If x is an ancestor of y, id(x) < id(y)</li>
+ * <li>The ancestor-descendant relationship is kept in a bitset: it exists
+ * if </li>
+ * </ul>
  */
 public class OperatorMap {
+    /** The node to ID */
     Object2IntOpenHashMap<Operator> operators = new Object2IntOpenHashMap<>();
 
     {
@@ -41,10 +50,10 @@ public class OperatorMap {
 
     /**
      * Add a new operator (and its ancestors)
-     * <b>Waring: operators can only be inserted in topological order (ancestors first)</b>
+     * <b>Warning: operators can only be inserted in topological order (ancestors first)</b>
      *
      * @param operator
-     * @return
+     * @return The index of the node
      */
     public int add(Operator operator) {
         // Check if not registered
@@ -66,24 +75,46 @@ public class OperatorMap {
 
         // Set the ancestors
         for (int parentId = 0; parentId < parentIds.length; parentId++)
-            setChild(parentIds[parentId], id);
+            markAncestors(parentIds[parentId], id);
 
         return id;
     }
 
 
+    /**
+     * Returns true if a node is a descendant of another one
+     *
+     * @param node The node to test
+     * @param ancestor The ancestor to test
+     * @return True if {@code ancestor} is an ancestor of {@code node}
+     */
     boolean isDescendant(int node, int ancestor) {
         if (node <= ancestor)
             return false;
         return ancestors.get(getIndex(ancestor, node));
     }
 
-    private int getIndex(int ancestor, int node) {
-        assert ancestor <= node;
-        return (node * (node - 1)) / 2 + ancestor;
+    /**
+     * Get the index of the bit for an ancestor-descendant relationship
+     * @param ancestor The ancestor
+     * @param descendant The descendant
+     * @return The index of the bit
+     */
+    private int getIndex(int ancestor, int descendant) {
+        assert ancestor <= descendant;
+        return (descendant * (descendant - 1)) / 2 + ancestor;
     }
 
-    void setChild(int parentIndex, int childIndex) {
+    /**
+     * Set the bits to mark all the ancestors of a child.
+     *
+     * We suppose that the ancestors of the parent have already been marked,
+     * which should be the case since we add nodes in topological order.
+     *
+     * @param parentIndex The index of the parent
+     * @param childIndex The index of the child
+     */
+    void markAncestors(int parentIndex, int childIndex) {
         assert childIndex > parentIndex;
         ancestors.set(getIndex(parentIndex, childIndex));
 
@@ -106,14 +137,28 @@ public class OperatorMap {
         return ancestors.get(index, index + id);
     }
 
+    /**
+     * Get ancestors of a given operator
+     *
+     * @param id The ID of the operator
+     * @param maxLength The maximum ID to consider (exclusive)
+     * @return A bitset reprenting the ancestors
+     */
     BitSet getAncestors(int id, int maxLength) {
         int index = getIndex(0, id);
         return ancestors.get(index, index + min(maxLength, id));
     }
 
 
+    /**
+     * Find the least common ancestors of a pair of operators
+     * @param op1 The first operator
+     * @param op2 The second operator
+     * @return
+     */
     ArrayList<Operator> findLCAs(Operator op1, Operator op2) {
-        // Get the indices of the two operators, and ensures from1 < id2
+        // Get the indices of the two operators, and ensures id1 < id2
+        // id1 > id2 => id1 ancestors (and self) are the only candidates
         int id1 = operators.getInt(op1);
         int id2 = operators.getInt(op2);
         if (id2 < id1) {
@@ -125,10 +170,19 @@ public class OperatorMap {
         assert id1 >= 0;
         assert id2 >= 0;
 
-        // Get the list of common ancestors
+        // --- Generate the list of common ancestors
+
+        // Get (1) ancestors
         BitSet candidates = getAncestors(id1);
+
+        // Add the id1 node
         candidates.set(id1);
+
+        // Intersects with ancestors of id2 (restrict to those that can be ancestors or self of id1)
         candidates.and(getAncestors(id2, id1+1));
+
+
+        // --- Remove the ancestors which are not the least ancestors
 
         // For each ancestor X, starting with the last, remove
         // all the ancestors of X
@@ -153,5 +207,42 @@ public class OperatorMap {
      */
     public int get(Operator operator) {
         return operators.get(operator);
+    }
+
+    /**
+     * Computes an LCA sub-graph of operators, i.e. a graph where
+     * only the pairwise LCA between any two operator are preserved,
+     * and where the LCA sub graph preserve the topological order
+     *
+     * @param operators The list of operators
+     */
+    public void computeLCAs(List<Operator> operators) {
+        class OpId {
+            Operator op;
+            int id;
+            IntSet lcas;
+
+            OpId(Operator op, int id) {
+                this.op = op;
+                this.id = id;
+            }
+        }
+        final OpId[] opIds = operators.stream()
+                .map(op -> new OpId(op, get(op)))
+                .sorted((a, b) -> Integer.compare(a.id, b.id))
+                .toArray(n -> new OpId[n]);
+    }
+
+    /**
+     * Returns a bitset corresponding to a set of operators
+     * @param operators The operators
+     * @return A bitset
+     */
+    public BitSet setOf(Operator... operators) {
+        BitSet set = new BitSet();
+        for (Operator operator : operators) {
+            set.set(get(operator));
+        }
+        return set;
     }
 }

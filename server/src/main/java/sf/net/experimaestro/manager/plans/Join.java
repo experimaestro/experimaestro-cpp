@@ -18,29 +18,31 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.log4j.Level;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.*;
 
 import static java.lang.StrictMath.max;
+import static java.lang.System.identityHashCode;
 
 /**
- * Join
+ * Join various inputs together on a common subset of operators
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 3/3/13
  */
 public class Join extends Product {
     final static private Logger LOGGER = Logger.getLogger();
 
+    /**
+     * The list of streams on which we join
+     */
     ArrayList<JoinReference> joins = new ArrayList<>();
 
     @Override
@@ -69,14 +71,14 @@ public class Join extends Product {
     public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
         if (super.printDOT(out, planNodes, counts)) {
             for (JoinReference join : joins)
-                out.format("p%s -> p%s [style=\"dotted\"];%n", System.identityHashCode(join.operator), System.identityHashCode(this));
+                out.format("p%s -> p%s [style=\"dotted\"];%n", identityHashCode(join.operator), identityHashCode(this));
 
         }
         return false;
     }
 
     @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
         super.doPostInit(parentStreams);
 
         // Order the joins in function of the orders of streams
@@ -89,12 +91,7 @@ public class Join extends Product {
             rankMap.put(operator, rank++);
         }
 
-        Collections.sort(joins, new Comparator<JoinReference>() {
-            @Override
-            public int compare(JoinReference o1, JoinReference o2) {
-                return Integer.compare(rankMap.get(o1.operator), rankMap.get(o2.operator));
-            }
-        });
+        Collections.sort(joins, (o1, o2) -> Integer.compare(rankMap.get(o1.operator), rankMap.get(o2.operator)));
 
 
         // Get the context index for each join & stream
@@ -112,9 +109,27 @@ public class Join extends Product {
 
     }
 
+    /**
+     * Add a new operator to join on
+     *
+     * @param operator The operator
+     */
+    public void addJoin(Operator operator) {
+        joins.add(new JoinReference(operator));
+    }
+
+    /**
+     * The object representing the join
+     */
     static public class JoinReference {
         int rank;
+
+        // The operator
         Operator operator;
+
+        /**
+         * The indices in the various inputs
+         */
         int[] contextIndices;
 
         public JoinReference(Operator operator) {
@@ -122,18 +137,16 @@ public class Join extends Product {
         }
     }
 
-    /**
-     * Add a new operator to joins
-     *
-     * @param operator
-     */
-    public void addJoin(Operator operator) {
-        joins.add(new JoinReference(operator));
-    }
-
     private class JoinIterator extends Product.AbstractProductIterator {
+        // An iterator
         Iterator<Value[]> productIterator = ImmutableList.<Value[]>of().iterator();
+
+        /**
+         * Positions for the various joined stream
+         * The index corresponds to that of {@link #joins}
+         */
         long positions[];
+
         boolean last = false;
 
         /**
@@ -174,18 +187,22 @@ public class Join extends Product {
             TreeSet<Value> set = stored[streamIndex];
 
             // Clean up unuseful values
-            set.headSet(new Value(positions), true).clear();
+            long[] streamPositions = new long[parents.get(streamIndex).contextMappings.size()];
+            for (int i = 0; i < joins.size(); i++) {
+                JoinReference reference = joins.get(i);
+                final int ix = reference.contextIndices[streamIndex];
+                streamPositions[ix] = positions[i];
+            }
 
-            return Iterables.filter(set, new Predicate<Value>() {
-                @Override
-                public boolean apply(Value input) {
-                    for (JoinReference reference : joins) {
-                        long pos = input.context[reference.contextIndices[streamIndex]];
-                        if (pos != -1 && pos != positions[reference.rank])
-                            return false;
-                    }
-                    return true;
+            set.headSet(new Value(streamPositions), true).clear();
+
+            return Iterables.filter(set, input -> {
+                for (JoinReference reference : joins) {
+                    long pos = input.context[reference.contextIndices[streamIndex]];
+                    if (pos != -1 && pos != positions[reference.rank])
+                        return false;
                 }
+                return true;
             });
         }
 
@@ -220,25 +237,46 @@ public class Join extends Product {
 
                     for (int streamIndex = 0; streamIndex < parents.size(); streamIndex++) {
                         int contextIndex = join.contextIndices[streamIndex];
-                        LOGGER.debug("Context %d of stream %d is %d (position = %d)", contextIndex, streamIndex, current[streamIndex].context[contextIndex], positions[joinIndex]);
+                        LOGGER.debug("[%s] Context %d of stream %d is %d (position = %d)",
+                                identityHashCode(Join.this),
+                                contextIndex, streamIndex, current[streamIndex].context[contextIndex],
+                                positions[joinIndex]);
+
+                        if (current[streamIndex].context[contextIndex] > positions[joinIndex]) {
+                            int minRank = checkChanges(streamIndex, positions, joinIndex + 1);
+                            assert minRank >= 0;
+                            joinIndex = minRank;
+                            LOGGER.trace("[%s] Restarting the join with context: ",
+                                    identityHashCode(Join.this),
+                                    Arrays.toString(positions));
+                            continue joinLoop;
+                        }
+
                         while (current[streamIndex].context[contextIndex] < positions[joinIndex]) {
                             if (!next(streamIndex))
                                 return endOfData();
 
-                            int minRank = checkChanges(streamIndex, positions, joinIndex);
+                            int minRank = checkChanges(streamIndex, positions, joinIndex + 1);
 
                             // A join current index changed: go back to the main loop on joins
                             if (minRank != -1) {
                                 joinIndex = minRank;
                                 if (LOGGER.isTraceEnabled())
-                                    LOGGER.trace("Restarting the join with context: ", Arrays.toString(positions));
+                                    LOGGER.trace("[%s] Restarting the join with context: ",
+                                            identityHashCode(Join.this),
+                                            Arrays.toString(positions));
                                 continue joinLoop;
                             }
 
-                            LOGGER.debug("Context[a] %d of stream %d is %d (position = %d)", contextIndex, streamIndex, current[streamIndex].context[contextIndex], positions[joinIndex]);
+                            LOGGER.debug("[%s] Context[a] %d of stream %d is %d (position = %d)",
+                                    identityHashCode(Join.this),
+                                    contextIndex, streamIndex, current[streamIndex].context[contextIndex],
+                                    positions[joinIndex]);
                         }
 
 
+
+                        // Asserts that we arrived at the right position
                         assert current[streamIndex].context[contextIndex] == positions[joinIndex];
                     }
 
@@ -272,11 +310,12 @@ public class Join extends Product {
                 }
 
                 if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("Selected context: %s", Arrays.toString(positions));
+                    LOGGER.debug("[%s] Selected context: %s", identityHashCode(Join.this), Arrays.toString(positions));
                 if (LOGGER.isTraceEnabled()) {
                     for (int streamIndex = 0; streamIndex < parents.size(); streamIndex++) {
                         for (Value value : lists[streamIndex]) {
-                            LOGGER.trace("[%d] %d: %s", streamIndex, value.id, Arrays.toString(value.context));
+                            LOGGER.trace("[%s] stream %d, %s with value id %d", identityHashCode(Join.this),
+                                    streamIndex, Arrays.toString(value.context), value.id);
                         }
                     }
                 }
@@ -300,9 +339,11 @@ public class Join extends Product {
          */
         private int checkChanges(int streamIndex, long[] newPositions, int maxRank) {
             int minRank = -1;
+            final Value value = current[streamIndex];
+
             for (int i = maxRank; --i >= 0; ) {
                 JoinReference join = joins.get(i);
-                long resultId = current[streamIndex].context[join.contextIndices[streamIndex]];
+                long resultId = value.context[join.contextIndices[streamIndex]];
                 if (this.positions[i] < resultId) {
                     newPositions[i] = resultId;
                     minRank = i;

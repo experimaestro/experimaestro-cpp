@@ -85,6 +85,6 @@ public class Union extends NAryOperator {
     }
 
     @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) throws XPathExpressionException {
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
     }
 }

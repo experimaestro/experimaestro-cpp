@@ -30,7 +30,7 @@ public class Pair<T, U> implements Serializable, Map.Entry<T, U> {
     protected T first;
     protected U second;
 
-    public static <T, U> Pair<T, U> create(T t, U u) {
+    public static <T, U> Pair<T, U> of(T t, U u) {
         return new Pair<T, U>(t, u);
     }
 
