@@ -26,8 +26,9 @@ var repository_path = script_path.path("connectors.inc.js");
 function check(r) {
 	var v = _(r);
 	var expected = "experimaestro rocks";
-	if (v != expected) 
+	if (v != expected) {
 		throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
+    }
 }
 
 /*
@@ -54,7 +55,7 @@ function test_local() {
 
 // --- One SSH host
 
-function test_ssh() {
+function disabled_test_ssh() {
 	var sshOptions = SSHOptions();
 	sshOptions.password = "user";
 
@@ -71,7 +72,7 @@ function test_ssh() {
 }
 
 // --- Use a group of machines (disabled)
-function t_est_ssh_group() {
+function disabled_test_ssh_group() {
 	var ssh1 = new Connector("ssh://localhost:223");
 	var ssh2 = new Connector("ssh://localhost:2132");
 

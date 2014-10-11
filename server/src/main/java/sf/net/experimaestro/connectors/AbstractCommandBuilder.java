@@ -79,8 +79,9 @@ public abstract class AbstractCommandBuilder {
         return detach;
     }
 
-    public void detach(boolean detach) {
+    public AbstractCommandBuilder detach(boolean detach) {
         this.detach = detach;
+        return this;
     }
 
     public AbstractCommandBuilder redirectOutput(Redirect destination) {

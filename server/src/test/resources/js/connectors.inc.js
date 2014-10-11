@@ -28,7 +28,7 @@ var task = {
     // The function that will be called when the task is run
 	run: function(inputs) {
         v = xpm.evaluate(["python", python_script]);
-		return v[1];
+		return v;
 	}
 		
 };

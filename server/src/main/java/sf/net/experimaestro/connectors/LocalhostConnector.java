@@ -205,7 +205,7 @@ public class LocalhostConnector extends SingleHostConnector {
                 AbstractProcessBuilder killingProcessBuilder = getInstance().processBuilder();
                 killingProcessBuilder.command("kill", getPID()).detach(false);
                 try {
-                    final XPMProcess killingProcess = killingProcessBuilder.start();
+                    final XPMProcess killingProcess = killingProcessBuilder.detach(false).start();
                     int code = killingProcess.waitFor();
                     if (code != 0)
                         throw new RuntimeException(format("Could not kill local process [%s]: error code %d", getPID(), code));
