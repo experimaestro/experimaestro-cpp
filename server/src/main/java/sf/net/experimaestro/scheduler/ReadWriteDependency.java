@@ -40,7 +40,6 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
  * One can write, many can read
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
  */
 @Persistent
 public class ReadWriteDependency extends Dependency {

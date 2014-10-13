@@ -26,6 +26,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -80,9 +81,9 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
         return new JSTaskWrapper(factory.create(), xpm);
     }
 
-    @JSFunction("command")
-    public CommandPart command(JsonObject json) {
-        return factory.command(xpm.getScheduler(), json);
+    @JSFunction("commands")
+    public Commands commands(JsonObject json) {
+        return factory.commands(xpm.getScheduler(), json);
     }
 
     @JSFunction(value = "run", scope = true)

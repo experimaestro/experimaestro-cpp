@@ -18,9 +18,8 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.util.Map;
@@ -141,7 +140,7 @@ public abstract class TaskFactory {
 		module.addFactory(this);
 	}
 
-    public CommandPart command(Scheduler scheduler, JsonObject json) {
+    public Commands commands(Scheduler scheduler, JsonObject json) {
         throw new IllegalAccessError(format("This task factory [%s] cannot generate a command", this.getClass()));
     }
 }

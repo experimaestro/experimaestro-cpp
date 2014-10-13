@@ -28,7 +28,10 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -42,6 +45,7 @@ public class Command implements CommandComponent {
 
     ArrayList<CommandComponent> list;
 
+    @Expose
     public Command() {
         list = new ArrayList<>();
     }
@@ -58,6 +62,14 @@ public class Command implements CommandComponent {
     @Override
     public Stream<? extends CommandComponent> allComponents() {
         return list.parallelStream().flatMap(CommandComponent::allComponents);
+    }
+
+    public void forEachDependency(Consumer<Dependency> consumer) {
+        for(CommandComponent c: list) {
+            if (c instanceof SubCommand) {
+                ((SubCommand)c).forEachDependency(consumer);
+            }
+        }
     }
 
     @Override
@@ -86,6 +98,11 @@ public class Command implements CommandComponent {
     @Expose
     public void add(CommandComponent... arguments) {
         list.addAll(Arrays.asList(arguments));
+    }
+
+    @Expose("add_subcommand")
+    public void addSubCommand(Commands commands) {
+        list.add(new SubCommand(commands));
     }
 
     @Expose
@@ -219,21 +236,7 @@ public class Command implements CommandComponent {
         }
     }
 
-    @Persistent
-    static public class Pipe implements CommandComponent {
-        static private Pipe PIPE = new Pipe();
 
-        private Pipe() {}
-
-        public static Pipe getInstance() {
-            return PIPE;
-        }
-
-        @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
-            return null;
-        }
-    }
 
     @Persistent
     public static class WorkingDirectory implements CommandComponent {
@@ -244,6 +247,53 @@ public class Command implements CommandComponent {
         @Override
         public java.lang.String prepare(CommandEnvironment environment) throws IOException {
             return environment.getWorkingDirectory();
+        }
+    }
+
+    /**
+     * A pipe
+     */
+    @Persistent
+    static public class Pipe implements CommandComponent {
+        static private Pipe PIPE = new Pipe();
+
+        private Pipe() {}
+
+        public static Pipe getInstance() {
+            return PIPE;
+        }
+    }
+
+    /**
+     * A sub-command whose output / input can be globally set
+     */
+    @Persistent
+    static public class SubCommand implements CommandComponent {
+        /** The commands */
+        Commands commands;
+
+        // Just for serialization
+        private SubCommand() {}
+
+        SubCommand(Commands commands) {
+            this.commands = commands;
+        }
+
+        Commands getCommands() {
+            return commands;
+        }
+
+        @Override
+        public Stream<? extends CommandComponent> allComponents() {
+            return commands.commands.parallelStream().flatMap(CommandComponent::allComponents);
+        }
+
+        public void forEachDependency(Consumer<Dependency> consumer) {
+            commands.forEachDependency(consumer);
+        }
+
+        public Commands commands() {
+            return commands;
         }
     }
 }

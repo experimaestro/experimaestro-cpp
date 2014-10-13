@@ -279,6 +279,8 @@ public class XPMObject {
             JSBaseObject.defineClass(this, scope, (Class<? extends Scriptable>) aClass);
         }
 
+        JSBaseObject.defineClass(this, scope, Command.class);
+
         // Add global functions
         for (JSUtils.FunctionDefinition definition : definitions)
             JSUtils.addFunction(scope, definition);

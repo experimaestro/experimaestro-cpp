@@ -55,11 +55,9 @@ public class JavaTask extends Task {
         }
 
         // --- Build the command
-        CommandPart commandPart = javaFactory.command(taskContext.getScheduler(), json);
-        Commands commands = new Commands(commandPart.command());
+        Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
 
         final CommandLineTask commandLineTask = new CommandLineTask(taskContext.getScheduler(), locator, commands);
-        commandPart.dependencies().forEach(d -> commandLineTask.addDependency(d));
 
         commandLineTask.setState(ResourceState.WAITING);
         if (taskContext.simulate()) {

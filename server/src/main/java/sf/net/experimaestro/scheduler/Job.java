@@ -523,8 +523,11 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         // when storing the resource
         dependency.status = DependencyStatus.WAIT;
         nbUnsatisfied++;
-        getDependencyMap().put(dependency.getFrom(), dependency);
-
+        // FIXME: handle the case where a dependency is overwritten
+        final Dependency old = getDependencyMap().put(dependency.getFrom(), dependency);
+        if (old != null) {
+            LOGGER.warn("Overwritten dependency: %s", dependency);
+        }
     }
 
     @Override

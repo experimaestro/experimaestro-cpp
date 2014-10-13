@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static sf.net.experimaestro.scheduler.Command.SubCommand;
+
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/9/12
@@ -152,22 +154,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             writer.println("(");
 
-            // Fist reorder
-            commands().reorder();
-
             // The prepare all the commands
-            for (Command command : commands()) {
-                for (CommandComponent argument : command.list()) {
-                    writer.print(' ');
-                    if (argument instanceof Command.Pipe) {
-                        writer.print(" | ");
-                    } else {
-                        writer.print(protect(argument.prepare(env), SHELL_SPECIAL));
-                    }
-                }
-                // Stop if an error occured
-                writer.println(" || exit $?");
-            }
+            writeCommands(env, writer, commands());
 
             writer.print(") ");
 
@@ -224,6 +212,28 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             throw new LaunchException(e);
         }
 
+    }
+
+    private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
+        commands.reorder();
+
+        for (Command command : commands) {
+            for (CommandComponent argument : command.list()) {
+                writer.print(' ');
+                if (argument instanceof Command.Pipe) {
+                    writer.print(" | ");
+                } else if (argument instanceof SubCommand) {
+                    writer.println(" (");
+                    writeCommands(env, writer, ((SubCommand) argument).commands());
+                    writer.println();
+                    writer.print(" )");
+                } else {
+                    writer.print(protect(argument.prepare(env), SHELL_SPECIAL));
+                }
+            }
+            // Stop if an error occured
+            writer.println(" || exit $?");
+        }
     }
 
 

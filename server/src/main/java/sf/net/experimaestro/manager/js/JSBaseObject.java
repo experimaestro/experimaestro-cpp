@@ -119,7 +119,16 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                     final JSFunction annotation = constructor.getAnnotation(JSFunction.class);
                     if (annotation != null) {
                         description.constructors.add(constructor);
+                        continue;
                     }
+
+                    // Exposed case
+                    final Expose expose = constructor.getAnnotation(Expose.class);
+                    if (expose != null) {
+                        description.constructors.add(constructor);
+                        continue;
+                    }
+
                 }
                 if (description.constructors.isEmpty() && JSBaseObject.class.isAssignableFrom(aClass)) {
                     try {
@@ -178,8 +187,15 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         if (annotation != null && !"".equals(annotation.name()))
             return annotation.name();
 
-        if (!aClass.getSimpleName().startsWith("JS"))
+        Exposed exposed = aClass.getAnnotation(Exposed.class);
+        if (exposed != null) {
+            return aClass.getSimpleName();
+        }
+
+        if (!aClass.getSimpleName().startsWith("JS")) {
             throw new AssertionError(format("Class %s does not start with JS as it should", aClass.getName()));
+        }
+
         return aClass.getSimpleName().substring(2);
     }
 
@@ -195,18 +211,24 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      * @throws java.lang.reflect.InvocationTargetException
      * @throws InstantiationException
      */
-    public static void defineClass(XPMObject xpm, Scriptable scope, Class<? extends Scriptable> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
-        // If not a JSObject descendent, we handle this with standard JS procedure
-        if (JSConstructable.class.isAssignableFrom(aClass)) {
-            // Use our own constructor
-            final String name = JSBaseObject.getClassName(aClass);
-            scope = ScriptableObject.getTopLevelScope(scope);
-            final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(xpm, scope, aClass);
-            scope.put(name, scope, nativeJavaClass);
+    public static void defineClass(XPMObject xpm, Scriptable scope, Class<?> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        if (Scriptable.class.isAssignableFrom(aClass)) {
+            // If not a JSObject descendent, we handle this with standard JS procedure
+            if (JSConstructable.class.isAssignableFrom(aClass)) {
+                // Use our own constructor
+                final String name = JSBaseObject.getClassName(aClass);
+                scope = ScriptableObject.getTopLevelScope(scope);
+                final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(xpm, scope, (Class<? extends Scriptable>) aClass);
+                scope.put(name, scope, nativeJavaClass);
+            } else {
+                ScriptableObject.defineClass(scope, (Class<? extends Scriptable>)aClass);
+            }
         } else {
-            ScriptableObject.defineClass(scope, aClass);
+            final String name = JSBaseObject.getClassName(aClass);
+            scope.put(name, scope, new WrappedJavaObject.WrappedClass(aClass));
         }
     }
+
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {

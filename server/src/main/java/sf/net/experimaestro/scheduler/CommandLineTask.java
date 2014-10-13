@@ -111,6 +111,9 @@ public class CommandLineTask extends Job<JobData> {
 
         // Construct commands
         this.commands = commands;
+
+        // Adds all dependencies
+        this.commands.forEachDependency(d -> addDependency(d));
     }
 
     /**

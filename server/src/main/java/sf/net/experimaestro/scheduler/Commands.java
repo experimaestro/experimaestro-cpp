@@ -1,14 +1,19 @@
 package sf.net.experimaestro.scheduler;
 
 import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.annotations.Expose;
+import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.utils.Graph;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * A full command
  */
+@Exposed
 @Persistent
 public class Commands implements Iterable<Command> {
     /**
@@ -17,6 +22,14 @@ public class Commands implements Iterable<Command> {
      * The commands can refer to each other
      */
     ArrayList<Command> commands = new ArrayList<>();
+
+    /**
+     * List of dependencies attached to this command
+     *
+     * The dependencies are not saved during serialization since this will be handled
+     * by the resource
+     */
+    transient private ArrayList<Dependency> dependencies = new ArrayList<>();
 
     /**
      * Default constructor (for DB serialization)
@@ -42,7 +55,7 @@ public class Commands implements Iterable<Command> {
         for (Command command : commands) {
             command.allComponents().forEach(argument -> {
                 if (argument instanceof Command.CommandOutput) {
-                    // FIXME Implmenents command output component
+                    // FIXME Implements command output component
                     throw new NotImplementedException();
                 }
 
@@ -55,6 +68,19 @@ public class Commands implements Iterable<Command> {
         commands = ordered_objects;
     }
 
+    @Expose("add_dependency")
+    public void addDependency(Dependency dependency) {
+        dependencies.add(dependency);
+    }
+
+    public void forEachDependency(Consumer<Dependency> consumer) {
+        // Process our dependencies
+        for(Dependency dependency: dependencies) {
+            consumer.accept(dependency);
+        }
+
+        commands.stream().forEach(c -> c.forEachDependency(consumer));
+    }
 
     @Override
     public Iterator<Command> iterator() {

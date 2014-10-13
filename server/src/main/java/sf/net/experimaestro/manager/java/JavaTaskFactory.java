@@ -134,11 +134,11 @@ public class JavaTaskFactory extends TaskFactory {
     }
 
     @Override
-    public CommandPart command(Scheduler scheduler, JsonObject json) {
+    public Commands commands(Scheduler scheduler, JsonObject json) {
         final Command command = new Command();
 
         Command classpath = new Command();
-        final CommandPart commandPart = new CommandPart(command);
+        final Commands commands = new Commands(command);
 
         Arrays.asList(javaTasksIntrospection.classpath).stream().forEach(f -> {
             classpath.add(new Command.Path(f));
@@ -194,10 +194,10 @@ public class JavaTaskFactory extends TaskFactory {
                     throw new XPMRuntimeException("Cannot find resource %s", locator);
                 }
                 final Dependency lock = resource.createDependency("READ");
-                commandPart.addDependency(lock);
+                commands.addDependency(lock);
             }
         }
 
-        return commandPart;
+        return commands;
     }
 }

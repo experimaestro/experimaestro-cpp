@@ -25,10 +25,11 @@ public interface CommandComponent {
      * Returns the path to the file of this component
      *
      * @param environment Binds identifiers to file objects
-     * @return A string representing the path to the file for this component
+     * @return A string representing the path to the file for this component, or null if this
+     * command component has no direct string representation
      * @throws org.apache.commons.vfs2.FileSystemException
      */
-    String prepare(CommandEnvironment environment) throws IOException;
+    default String prepare(CommandEnvironment environment) throws IOException { return null; }
 
     default Stream<? extends CommandComponent> allComponents() {
         return Stream.of(this);
