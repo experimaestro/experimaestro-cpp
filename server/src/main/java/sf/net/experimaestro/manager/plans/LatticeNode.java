@@ -331,6 +331,8 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
             if (parents.isEmpty() && isRootParent()) {
                 heap.remove(this);
+            } else {
+                heap.update(this);
             }
         } else {
             // merge with one of the children (the first one)
