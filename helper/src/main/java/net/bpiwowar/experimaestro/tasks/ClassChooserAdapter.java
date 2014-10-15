@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.TypeAdapter;
 import com.google.gson.internal.bind.JsonTreeReader;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
 import java.io.IOException;
@@ -50,6 +51,16 @@ public class ClassChooserAdapter extends ReaderTypeAdapter {
 
     @Override
     public Object read(JsonReader in) throws IOException {
+        // If string, use this
+        if (in.peek() == JsonToken.STRING) {
+            final String type = in.nextString();
+            final Class<?> aClass = types.get(type);
+            if (aClass == null) {
+                throw new JsonParseException("No type " + type + " defined");
+            }
+            return gson.fromJson(new JsonObject(), aClass);
+        }
+
         // Get the Json object
         final JsonObject json;
         if (in instanceof JsonTreeReader) {

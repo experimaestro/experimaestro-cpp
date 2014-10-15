@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
  * Marks a JSON argument
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Argument {
+public @interface JsonArgument {
     /**
      * The name of the argument (leave empty if using the field name)
      * @return The name of the argument

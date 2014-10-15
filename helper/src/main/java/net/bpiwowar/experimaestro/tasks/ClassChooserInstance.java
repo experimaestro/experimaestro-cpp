@@ -17,4 +17,10 @@ public @interface ClassChooserInstance {
      * @return Object.class when using the annotated class
      */
     Class<?> instance() default Object.class;
+
+    /**
+     * Documentation
+     * @return A help string
+     */
+    String description() default "";
 }

@@ -7,8 +7,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.Optional;
 
 /**
  * Runs an XPM task
@@ -83,7 +81,7 @@ public class Runner {
 
             task.workingDirectory = workdir;
 
-            // Set the @path annotated fields
+            // Set the @Path annotated fields
             for(Field field: task.getClass().getDeclaredFields()) {
                 Path path = field.getAnnotation(Path.class);
                 if (path != null) {
@@ -122,7 +120,7 @@ public class Runner {
     private static class XPMExclusionStrategy implements ExclusionStrategy {
         @Override
         public boolean shouldSkipField(FieldAttributes f) {
-            return f.getAnnotation(Argument.class) == null;
+            return f.getAnnotation(JsonArgument.class) == null;
         }
 
         @Override
@@ -135,7 +133,7 @@ public class Runner {
         @Override
         public String translateName(Field f) {
             // Get the name from the annotation
-            final Argument annotation = f.getAnnotation(Argument.class);
+            final JsonArgument annotation = f.getAnnotation(JsonArgument.class);
             if (annotation != null && !annotation.name().equals("")) {
                 return annotation.name();
             }

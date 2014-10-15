@@ -9,10 +9,22 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 
 public @interface TaskDescription {
+    /**
+     * The ID of the task
+     * @return A string namespace:URI
+     */
     String id();
 
+    /**
+     * The type of the output
+     * @return A string namespace:URI
+     */
     String output();
 
+    /**
+     * Description of the task
+     * @return Help string
+     */
     String help() default "";
 
     /**
