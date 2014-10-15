@@ -8,11 +8,13 @@ import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.js.JSResource;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonFileObject;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.util.Map;
@@ -21,6 +23,8 @@ import java.util.Map;
  * Created by bpiwowar on 1/10/14.
  */
 public class JavaTask extends Task {
+    final static private Logger LOGGER = Logger.getLogger();
+
     private final JavaTaskFactory javaFactory;
 
     public JavaTask(JavaTaskFactory factory) {
@@ -57,18 +61,28 @@ public class JavaTask extends Task {
         // --- Build the command
         Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
 
-        final CommandLineTask commandLineTask = new CommandLineTask(taskContext.getScheduler(), locator, commands);
+        final CommandLineTask task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
 
-        commandLineTask.setState(ResourceState.WAITING);
+        task.setState(ResourceState.WAITING);
         if (taskContext.simulate()) {
             PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", commandLineTask.toString());
-            pw.format("Command: %s%n", commandLineTask.getCommands().toString());
+            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+            pw.format("Command: %s%n", task.getCommands().toString());
             pw.format("Locator: %s", locator.toString());
             pw.flush();
         } else {
             try {
-                taskContext.getScheduler().store(commandLineTask, false);
+                final Resource old = taskContext.getScheduler().getResource(locator);
+                if (old != null) {
+                    // TODO: if equal, do not try to replace the task
+                    if (task.replace(old)) {
+                        taskContext.getLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
+                        taskContext.getScheduler().store(task, false);
+                    } else {
+                        taskContext.getLogger().warn("Cannot override resource [%s]", task.getIdentifier());
+                        old.init(taskContext.getScheduler());
+                    }
+                }
             } catch (ExperimaestroCannotOverwrite e) {
                 throw new XPMRuntimeException(e).addContext("while lauching command");
             }
@@ -77,7 +91,7 @@ public class JavaTask extends Task {
         // --- Fill some fields in returned json
 
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
-        json.put(Manager.XP_RESOURCE.toString(), commandLineTask.getIdentifier());
+        json.put(Manager.XP_RESOURCE.toString(), task.getIdentifier());
 
         for(PathArgument path: javaFactory.pathArguments) {
             try {
