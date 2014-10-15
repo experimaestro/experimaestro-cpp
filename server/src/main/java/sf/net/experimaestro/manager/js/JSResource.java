@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
@@ -35,7 +36,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSResource extends JSBaseObject implements Json {
+public class JSResource extends JSBaseObject implements Json, Wrapper {
 
     private Resource resource;
 
@@ -99,4 +100,8 @@ public class JSResource extends JSBaseObject implements Json {
     }
 
 
+    @Override
+    public Object unwrap() {
+        return resource;
+    }
 }

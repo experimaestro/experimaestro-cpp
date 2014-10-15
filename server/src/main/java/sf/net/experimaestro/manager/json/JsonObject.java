@@ -214,7 +214,8 @@ public class JsonObject
             // - its value is null or can be ignored
             // - it starts with "$" and is not XP_TYPE or XP_VALUE
             // - it is in the $$ignore key
-            if (value == null || value.canIgnore(options)
+            if ((value == null && options.ignoreNull)
+                    || value.canIgnore(options)
                     || (options.ignore$ && key.startsWith("$") && !key.equals(XP_TYPE_STRING) && !key.equals(XP_VALUE_STRING))
                     || ignored_keys.contains(key))
                 continue;

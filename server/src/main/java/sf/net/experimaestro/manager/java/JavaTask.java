@@ -33,7 +33,6 @@ public class JavaTask extends Task {
     }
 
 
-
     @Override
     public Json doRun(TaskContext taskContext) {
         // Copy the parameters
@@ -58,34 +57,40 @@ public class JavaTask extends Task {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");
         }
 
-        // --- Build the command
-        Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
+        // --- Check if this wasn't already done
+        final Resource old = taskContext.getScheduler().getResource(locator);
+        CommandLineTask task;
+        if (old == null && old.canBeReplaced()) {
+            // --- Build the command
+            Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
 
-        final CommandLineTask task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
+            task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
 
-        task.setState(ResourceState.WAITING);
-        if (taskContext.simulate()) {
-            PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-            pw.format("Command: %s%n", task.getCommands().toString());
-            pw.format("Locator: %s", locator.toString());
-            pw.flush();
-        } else {
-            try {
-                final Resource old = taskContext.getScheduler().getResource(locator);
-                if (old != null) {
-                    // TODO: if equal, do not try to replace the task
-                    if (task.replace(old)) {
-                        taskContext.getLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
-                        taskContext.getScheduler().store(task, false);
-                    } else {
-                        taskContext.getLogger().warn("Cannot override resource [%s]", task.getIdentifier());
-                        old.init(taskContext.getScheduler());
+            task.setState(ResourceState.WAITING);
+            if (taskContext.simulate()) {
+                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
+                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+                pw.format("Command: %s%n", task.getCommands().toString());
+                pw.format("Locator: %s", locator.toString());
+                pw.flush();
+            } else {
+                try {
+                    if (old != null) {
+                        // TODO: if equal, do not try to replace the task
+                        if (task.replace(old)) {
+                            taskContext.getLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
+                            taskContext.getScheduler().store(task, false);
+                        } else {
+                            taskContext.getLogger().warn("Cannot override resource [%s]", task.getIdentifier());
+                            old.init(taskContext.getScheduler());
+                        }
                     }
+                } catch (ExperimaestroCannotOverwrite e) {
+                    throw new XPMRuntimeException(e).addContext("while lauching command");
                 }
-            } catch (ExperimaestroCannotOverwrite e) {
-                throw new XPMRuntimeException(e).addContext("while lauching command");
             }
+        } else {
+            task = (CommandLineTask) old;
         }
 
         // --- Fill some fields in returned json
@@ -93,7 +98,7 @@ public class JavaTask extends Task {
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
         json.put(Manager.XP_RESOURCE.toString(), task.getIdentifier());
 
-        for(PathArgument path: javaFactory.pathArguments) {
+        for (PathArgument path : javaFactory.pathArguments) {
             try {
                 FileObject relativePath = uniqueDir.resolveFile(path.relativePath);
                 json.put(path.jsonName, new JsonFileObject(relativePath));

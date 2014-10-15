@@ -125,7 +125,7 @@ abstract public class CachedEntitiesStore<Key, Value> implements AutoCloseable {
 
 
         if (old != null && !canOverride(old, value))
-            throw new ExperimaestroCannotOverwrite("Resource %s", key);
+            throw new ExperimaestroCannotOverwrite("Resource with key %s", getKey(old));
 
 
         // Store in database...

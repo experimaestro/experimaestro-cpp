@@ -235,9 +235,7 @@ public abstract class Resource<Data extends ResourceData>
     public boolean replace(Resource old) throws ExperimaestroCannotOverwrite {
         assert old.getLocator().equals(getLocator()) : String.format("locators %s and %s do not match", old, this);
 
-        if (!ResourceState.UPDATABLE_STATES.contains(old.state)) {
-            return false;
-        }
+        if (!old.canBeReplaced()) return false;
         LOGGER.info("Old [%s] is in state %s", old.getLocator(), old.state);
 
         synchronized (old) {
@@ -247,6 +245,15 @@ public abstract class Resource<Data extends ResourceData>
             }
         }
         return false;
+    }
+
+    /**
+     * Checks whether this resource can be replaced
+     *
+     * @return
+     */
+    public boolean canBeReplaced() {
+        return ResourceState.UPDATABLE_STATES.contains(state);
     }
 
     /**

@@ -17,6 +17,7 @@ public class JsonWriterOptions {
     public Set<QName> ignore = DEFAULT_IGNORE;
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
+    public boolean ignoreNull = true;
 
     public JsonWriterOptions(Set<QName> ignore) {
         this.ignore = ignore;
@@ -27,6 +28,11 @@ public class JsonWriterOptions {
 
     public JsonWriterOptions ignore$(boolean ignore$) {
         this.ignore$ = ignore$;
+        return this;
+    }
+
+    public JsonWriterOptions ignoreNull(boolean ignoreNull) {
+        this.ignoreNull = ignoreNull;
         return this;
     }
 
