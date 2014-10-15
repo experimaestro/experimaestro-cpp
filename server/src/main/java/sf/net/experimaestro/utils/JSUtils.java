@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.*;
 import sf.net.experimaestro.manager.json.*;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
@@ -231,6 +232,9 @@ public class JSUtils {
 
         if (value instanceof FileObject)
             return new JsonFileObject((FileObject)value);
+
+        if (value instanceof Resource)
+            return new JSResource((Resource) value);
 
         // -- Undefined
         if (value instanceof Undefined)

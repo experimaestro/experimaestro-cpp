@@ -1368,7 +1368,10 @@ public class XPMObject {
             if (json instanceof JsonObject) {
                 JsonObject jsObj = (JsonObject) json;
                 if (jsObj.containsKey(Manager.XP_RESOURCE.toString())) {
-                    final String uri = (String) jsObj.get(Manager.XP_RESOURCE.toString()).get();
+                    final Object o = jsObj.get(Manager.XP_RESOURCE.toString()).get();
+                    if (o instanceof JSResource)
+                        return o;
+                    final String uri = (String) o;
                     if (xpm.simulate())
                         return new JSResource(xpm.submittedJobs.get(uri));
                     return new JSResource(xpm.scheduler.getResource(ResourceLocator.parse(uri)));
