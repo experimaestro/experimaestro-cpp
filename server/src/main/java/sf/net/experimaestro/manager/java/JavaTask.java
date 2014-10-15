@@ -60,7 +60,7 @@ public class JavaTask extends Task {
         // --- Check if this wasn't already done
         final Resource old = taskContext.getScheduler().getResource(locator);
         CommandLineTask task;
-        if (old == null && old.canBeReplaced()) {
+        if (old == null || old.canBeReplaced()) {
             // --- Build the command
             Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
 
@@ -79,11 +79,12 @@ public class JavaTask extends Task {
                         // TODO: if equal, do not try to replace the task
                         if (task.replace(old)) {
                             taskContext.getLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
-                            taskContext.getScheduler().store(task, false);
                         } else {
                             taskContext.getLogger().warn("Cannot override resource [%s]", task.getIdentifier());
                             old.init(taskContext.getScheduler());
                         }
+                    } else {
+                        taskContext.getScheduler().store(task, false);
                     }
                 } catch (ExperimaestroCannotOverwrite e) {
                     throw new XPMRuntimeException(e).addContext("while lauching command");

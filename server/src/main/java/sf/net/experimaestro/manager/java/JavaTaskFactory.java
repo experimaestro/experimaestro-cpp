@@ -191,7 +191,8 @@ public class JavaTaskFactory extends TaskFactory {
                 final ResourceLocator locator = ResourceLocator.parse(r.get().toString());
                 final Resource resource = scheduler.getResource(locator);
                 if (resource == null) {
-                    throw new XPMRuntimeException("Cannot find resource %s", locator);
+                    throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                            locator, getId());
                 }
                 final Dependency lock = resource.createDependency("READ");
                 commands.addDependency(lock);
