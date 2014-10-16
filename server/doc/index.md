@@ -1,10 +1,13 @@
 <head><title>Home</title></head>
+
+# Presentation
+
 Experimaestro is an experiment manager, and is composed of 
 
-1. A job scheduler that handles dependencies between jobs and provides locking mechanisms
+1. A [job scheduler](scheduler/index.md) that handles dependencies between jobs and provides locking mechanisms
    The job scheduler can be controlled via command line (`experimaestro` script) or via the web (where
    you can easily monitor jobs in real time)
-2. A modular experiment description framework, that allows easy description of the various parts of experiments:
+2. A [modular experiment description framework](manager/index.md), that allows easy description of the various parts of experiments:
     - Experiments are written in JavaScript 
     - Tasks describe the components that can be used, take as input json objects and produce json objets as output
     - Tasks can be composed through the definition of an experimental plan
