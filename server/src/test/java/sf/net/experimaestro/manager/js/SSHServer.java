@@ -50,11 +50,11 @@ import java.util.List;
  */
 public class SSHServer {
     static final private Logger LOGGER = Logger.getLogger();
+    static TemporaryDirectory directory;
     /**
      * Our SSH server port
      */
     private static int socketPort = -1;
-    static TemporaryDirectory directory;
 
     synchronized static public int js_sshd_server() throws IOException {
         if (socketPort > 0)
@@ -88,18 +88,8 @@ public class SSHServer {
             }
         });
         Server.setSubsystemFactories(list);
-        Server.setPasswordAuthenticator(new PasswordAuthenticator() {
-            @Override
-            public boolean authenticate(String username, String password, ServerSession session) {
-                return username != null && username.equals(password);
-            }
-        });
-        Server.setPublickeyAuthenticator(new PublickeyAuthenticator() {
-            public boolean authenticate(String username, PublicKey key, ServerSession session) {
-                // File f = new File("/Users/" + username + "/.ssh/authorized_keys");
-                return true;
-            }
-        });
+        Server.setPasswordAuthenticator((username, password, session) -> username != null && username.equals(password));
+        Server.setPublickeyAuthenticator((username, key, session) -> true);
         Server.setForwardingFilter(new ForwardingFilter() {
             public boolean canConnect(InetSocketAddress address, ServerSession session) {
                 return true;
@@ -148,6 +138,30 @@ public class SSHServer {
         }
     }
 
+    /**
+     * Asynchronous copy stream
+     *
+     * @param inputStream
+     * @param out
+     */
+    static private void copyStream(final InputStream inputStream, final OutputStream out) {
+        new Thread("Stream copy") {
+            @Override
+            public void run() {
+                try {
+                    IOUtils.copy(inputStream, out);
+                } catch (IOException e) {
+                    throw new AssertionError("I/O error", e);
+                } finally {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        throw new AssertionError("I/O error", e);
+                    }
+                }
+            }
+        }.start();
+    }
 
     /**
      * The command factory for the SSH server:
@@ -195,17 +209,20 @@ public class SSHServer {
                     final Process process = builder.start();
 
 
-                    if (out != null)
+                    if (out != null) {
                         copyStream(process.getInputStream(), out);
-                    if (err != null)
-                        copyStream(process.getErrorStream(), err);
+                    }
 
+                    if (err != null) {
+                        copyStream(process.getErrorStream(), err);
+                    }
 
                     new Thread() {
                         @Override
                         public void run() {
                             try {
-                                callback.onExit(process.waitFor());
+                                final int exitValue = process.waitFor();
+                                callback.onExit(exitValue);
                             } catch (InterruptedException e) {
                                 callback.onExit(-1);
                                 throw new AssertionError("Error while waiting for the process to end", e);
@@ -220,30 +237,6 @@ public class SSHServer {
                 }
             };
         }
-    }
-
-    /**
-     * Asynchronous copy stream
-     * @param inputStream
-     * @param out
-     */
-    static private void copyStream(final InputStream inputStream, final OutputStream out) {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    IOUtils.copy(inputStream, out);
-                } catch (IOException e) {
-                    throw new AssertionError("I/O error", e);
-                } finally {
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        throw new AssertionError("I/O error", e);
-                    }
-                }
-            }
-        }.start();
     }
 
 }

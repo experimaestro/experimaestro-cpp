@@ -181,14 +181,14 @@ public class Command implements CommandComponent {
 
     @Persistent
     public static class Path implements CommandComponent {
-
+        /** An URI */
         private java.lang.String filename;
 
         private Path() {
         }
 
         public Path(FileObject file) {
-            filename = file.getName().getPath();
+            filename = file.getName().getURI();
         }
 
         public Path(java.lang.String filename) {

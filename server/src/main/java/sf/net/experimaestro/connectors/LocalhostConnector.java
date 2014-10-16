@@ -22,6 +22,7 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.provider.local.LocalFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
@@ -67,6 +68,11 @@ public class LocalhostConnector extends SingleHostConnector {
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
         return Scheduler.getVFSManager().resolveFile("file://").getFileSystem();
+    }
+
+    @Override
+    protected boolean contains(FileSystem fileSystem) {
+        return fileSystem instanceof LocalFileSystem;
     }
 
     @Override
@@ -116,6 +122,9 @@ public class LocalhostConnector extends SingleHostConnector {
          */
         transient private Process process;
         transient private Thread destroyThread;
+
+        /** Stores the exit value */
+        transient private Integer exitValue;
 
         @SuppressWarnings("unused")
         public LocalProcess() {
@@ -181,15 +190,21 @@ public class LocalhostConnector extends SingleHostConnector {
         @Override
         public int waitFor() throws InterruptedException {
             if (process != null) {
-                final int exitCode = process.waitFor();
-                process = null;
-                return exitCode;
+                exitValue = process.waitFor();
+                return exitValue;
+            }
+            if (exitValue != null) {
+                return exitValue;
             }
             return super.waitFor();
         }
 
         @Override
         public void destroy() throws FileSystemException {
+            if (exitValue != null) {
+                return;
+            }
+
             if (process != null) {
                 LOGGER.info("Killing job [%s] with PID [%s]", getJob(), getPID());
                 // TODO: send a signal first?

@@ -48,8 +48,9 @@ import java.util.HashMap;
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
+ * SSH connector backed up by commons VFS
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/6/12
  */
 @Persistent
 public class SSHConnector extends SingleHostConnector {
@@ -149,6 +150,16 @@ public class SSHConnector extends SingleHostConnector {
         final FileSystem fileSystem = VFS.getManager()
                 .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
         return fileSystem;
+    }
+
+    @Override
+    protected boolean contains(FileSystem fileSystem) throws FileSystemException {
+        if (fileSystem instanceof SftpFileSystem) {
+            SftpFileSystem sftpFS = (SftpFileSystem) fileSystem;
+            // FIXME: not really nice
+            return sftpFS.getRootURI().equals(getFileSystem().getRootURI());
+        }
+        return false;
     }
 
     /**

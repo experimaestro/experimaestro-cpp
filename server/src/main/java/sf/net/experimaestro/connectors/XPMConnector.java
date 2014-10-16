@@ -51,6 +51,11 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
+    protected boolean contains(FileSystem fileSystem) {
+        return false;
+    }
+
+    @Override
     public AbstractProcessBuilder processBuilder() {
         throw new NotImplementedException();
     }

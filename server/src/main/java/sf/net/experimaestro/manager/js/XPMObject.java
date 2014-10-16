@@ -710,22 +710,23 @@ public class XPMObject {
 
             XPMProcess p = builder.start();
 
-            new Thread() {
+            new Thread("stderr") {
                 BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
                 @Override
                 public void run() {
                     errorStream.lines().forEach(line -> getRootLogger().info(line));
                 }
-            }.run();
+            }.start();
 
 
             BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
             int len = 0;
             char[] buffer = new char[8192];
             StringBuilder sb = new StringBuilder();
-            while ((len = input.read(buffer, 0, buffer.length)) >= 0)
+            while ((len = input.read(buffer, 0, buffer.length)) >= 0) {
                 sb.append(buffer, 0, len);
+            }
             input.close();
 
             int error = p.waitFor();

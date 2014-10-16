@@ -37,6 +37,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 public class JNAUSocketFactory implements USocketFactory {
@@ -57,7 +58,7 @@ public class JNAUSocketFactory implements USocketFactory {
 
       @Override
       protected List getFieldOrder() {
-          return null;
+          return Arrays.asList(new String[] { "sun_family", "sun_path" } );
       }
   }
 

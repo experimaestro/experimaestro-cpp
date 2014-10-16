@@ -100,12 +100,15 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
      * the file object is not
      */
     public String resolve(FileObject file) throws FileSystemException {
-        if (file.getFileSystem() != this.getFileSystem()) {
-            throw new FileSystemException("Cannot prepare %s from %s", file, this);
+        if (!contains(file.getFileSystem())) {
+            throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
         }
 
         return file.getName().getPath();
     }
+
+    /** Returns true if the filesystem matches */
+    protected abstract boolean contains(FileSystem fileSystem) throws FileSystemException;
 
     public String resolve(String path) throws FileSystemException {
         return resolve(resolveFile(path));

@@ -55,17 +55,18 @@ function test_local() {
 
 // --- One SSH host
 
-function disabled_test_ssh() {
+function test_ssh() {
 	var sshOptions = SSHOptions();
 	sshOptions.password = "user";
 
 	var port = sshd_server();
 	logger.info("SSH server on port " + port);
 
-	var big_ssh = new Connector("ssh://user@localhost" + ":" + port );
+	var big_ssh = new Connector("ssh://user@localhost" + ":" + port);
 	include_repository(big_ssh, repository_path.get_path());
+    logger.info("Included repository");
 
-	var task = xpm.get_task(qname("a.b.c", "task"));
+	var task = tasks("{a.b.c}task").create();
 	task.set("x", 10);
 	var r = task.run();
 	check(r);

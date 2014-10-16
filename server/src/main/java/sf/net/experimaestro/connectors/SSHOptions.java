@@ -110,8 +110,9 @@ public class SSHOptions extends ConnectorOptions  {
             try {
                 usf = new JNAUSocketFactory();
                 com.jcraft.jsch.agentproxy.Connector agent = new SSHAgentConnector(usf);
-                if (SSHAgentConnector.isConnectorAvailable())
+                if (SSHAgentConnector.isConnectorAvailable()) {
                     agent = new SSHAgentConnector(new JNAUSocketFactory());
+                }
                 IdentityRepository irepo = new RemoteIdentityRepository(agent);
                 return new RemoteIdentityRepository(agent);
             } catch (AgentProxyException e) {
