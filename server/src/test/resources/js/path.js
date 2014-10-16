@@ -28,5 +28,5 @@ xpm.command_line_job("/tmp/a",["/bin/ls"]);
 xpm.command_line_job("/tmp/a",[path("/bin/ls")]);
 
 // Test with Several components
-var arg = <>{path("/Users/bpiwowar/workspace/experimaestro")}/resources</>;
+var arg = [ path("/Users/bpiwowar/workspace/experimaestro"), "/resources"];
 xpm.command_line_job("/tmp/b",[path("/bin/ls"), arg]);

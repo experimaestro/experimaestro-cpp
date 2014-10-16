@@ -26,7 +26,7 @@ var results = [];
 var abc = new Namespace("a.b.c");
 
 // The task
-tasks("abc:task") = {    
+tasks.add("abc:task", {
     // One input of type xs:integer
     inputs: {
         x: { value: "xp:integer" },
@@ -36,17 +36,20 @@ tasks("abc:task") = {
     // The function that will be called when the task is run_plan
 	run: function(inputs) {
         // Returns something
-		return _(inputs.x) * _(inputs.y);
+		return $(inputs.x) * $(inputs.y);
 	}
 		
-};
+});
 
 // END SNIPPET: main
 
 /** Run and check */
 
 function check(results, expected) {
-    results.sort(function(x,y) { return x - y; });
+    results = results.sort(function(x,y) {
+        return $(x) - $(y);
+    });
+    logger.info("Sorted: %s", results.toSource());
     for(var i = 0; i < expected.length; i++) {
         if (expected[i] != _(results[i])) {
             logger.info("Expected %s and got %s at %s", expected[i], _(results[i]), i);
@@ -61,7 +64,7 @@ function test_plan_1() {
             x: [1, 2],
             y: [5, 7]        
     });
-    logger.info("The task returned %s\n", results.toSource());
+    logger.info("The task returned %s", results.toSource());
     // END SNIPPET: check
     check(results, [5, 7, 10, 14]);
 }

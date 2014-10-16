@@ -85,7 +85,7 @@ public class JSTasks extends JSBaseObject implements RefCallable {
 
         return new TaskRef(id);
     }
-    
+
     @JSFunction(scope = true)
     public void add(Context cx, Scriptable scope, String qname, NativeObject taskDescription) {
         QName id = QName.parse(JSUtils.toString(qname), JSUtils.getNamespaceContext(scope));

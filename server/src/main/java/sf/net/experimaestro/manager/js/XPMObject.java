@@ -318,6 +318,10 @@ public class XPMObject {
      * Retrievs the XPMObject from the JavaScript context
      */
     public static XPMObject getXPM(Scriptable thisObj) {
+        if (thisObj instanceof NativeCall) {
+            // XPM cannot be found if the scope is a native call object
+            thisObj = thisObj.getParentScope();
+        }
         return ((JSXPM) thisObj.get("xpm", thisObj)).xpm;
     }
 
@@ -363,10 +367,10 @@ public class XPMObject {
             return o;
 
         if (o instanceof FileObject)
-            return xpm.newObject(JSFileObject.class, xpm, o);
+            return xpm.newObject(JSFileObject.class, o);
 
         if (o instanceof String)
-            return xpm.newObject(JSFileObject.class, xpm, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
+            return xpm.newObject(JSFileObject.class, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
 
         throw new XPMRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }

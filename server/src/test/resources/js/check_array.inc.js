@@ -25,11 +25,11 @@ function check_array(results, expected) {
 		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
     
     // Sort the results
-    logger.debug("Results: %s", results.toSource());
+    logger.info("Results: %s", results.toSource());
     results.sort(function(x,y) { return $(x) - $(y); });
     for (var i = 0; i < expected.length; i++) {
-        if (expected[i] != Number(_(results[i]))) {
-            logger.error("Expected %s and got %s at %s", expected[i].toSource(), _(results[i]), i);
+        if (expected[i] != Number($(results[i]))) {
+            logger.error("Expected %s and got %s at %s", expected[i].toSource(), $(results[i]), i);
 			throw 1;
 	    }
     }

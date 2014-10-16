@@ -1,4 +1,4 @@
-/*
+5/*
  * This file is part of experimaestro.
  * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
@@ -223,7 +223,7 @@ tasks("ns:sum")= {
     run: function(p) {
         var sum = 0;
         for(var i = 0; i < p.x.length; i++){
-            sum += p.x[i];
+            sum += $(p.x[i]);
         }            
         return sum;
     }
