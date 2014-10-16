@@ -25,7 +25,7 @@ public @interface TaskDescription {
      * Description of the task
      * @return Help string
      */
-    String help() default "";
+    String description() default "";
 
     /**
      * A list of registry classes

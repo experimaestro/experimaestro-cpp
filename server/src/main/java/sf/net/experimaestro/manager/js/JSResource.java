@@ -36,7 +36,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
-public class JSResource extends JSBaseObject implements Json, Wrapper {
+public class JSResource extends JSBaseObject implements Wrapper {
 
     private Resource resource;
 
@@ -60,43 +60,6 @@ public class JSResource extends JSBaseObject implements Json, Wrapper {
     @JSFunction
     public JSDependency lock(String lockType) {
         return new JSDependency(resource.createDependency(lockType));
-    }
-
-    @Override
-    public Json clone() {
-        return new JSResource(resource);
-    }
-
-    @Override
-    public Object get() {
-        return this;
-    }
-
-    @Override
-    public QName type() {
-        return ValueType.XP_RESOURCE;
-    }
-
-    @Override
-    public boolean canIgnore(JsonWriterOptions options) {
-        return options.ignore.contains(ValueType.XP_RESOURCE);
-    }
-
-    @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        if (options.ignore.contains(ValueType.XP_RESOURCE)) {
-            writer.write("null");
-        } else {
-            write(writer);
-        }
-    }
-
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write(format("{ \"id\": \"%s\", \"$type\": \"%s\" }",
-                resource.getLocator().toString(),
-                ValueType.XP_RESOURCE.toString()
-        ));
     }
 
 

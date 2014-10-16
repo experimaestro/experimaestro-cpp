@@ -19,16 +19,14 @@ import static java.lang.String.format;
 import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_HERE;
 
 /**
-* A task factory defined by a javascript object
-*/
+ * A task factory defined by a javascript object
+ */
 public class TaskFactoryJavascript extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
-
     /**
-     * The scope
+     * Our XPM object
      */
-    Scriptable jsScope;
-
+    private final XPMObject xpm;
     /**
      * The server
      */
@@ -38,16 +36,14 @@ public class TaskFactoryJavascript extends TaskFactory {
      * The inputs
      */
     protected Map<String, Input> inputs;
-
+    /**
+     * The scope
+     */
+    Scriptable jsScope;
     /**
      * The outputs
      */
     private Type output;
-
-    /**
-     * Our XPM object
-     */
-    private final XPMObject xpm;
 
 
     /**
@@ -113,6 +109,16 @@ public class TaskFactoryJavascript extends TaskFactory {
 
     }
 
+    static public Set<String> getFields(Scriptable object, String... keys) {
+        Set<String> selected = new HashSet<>();
+        for (String key : keys) {
+            if (object.has(key, object))
+                selected.add(key);
+
+        }
+        return selected;
+    }
+
     private void setInputs(Scriptable scope, NativeObject jsObject, String name) throws ValueMismatchException {
         Object input = JSUtils.get(scope, name, jsObject, true);
 
@@ -123,16 +129,6 @@ public class TaskFactoryJavascript extends TaskFactory {
             setJSInputs(scope, (NativeObject) input);
         } else
             throw new XPMRuntimeException("Cannot handle inputs of type %s", input.getClass());
-    }
-
-    static public Set<String> getFields(Scriptable object, String... keys) {
-        Set<String> selected = new HashSet<>();
-        for (String key : keys) {
-            if (object.has(key, object))
-                selected.add(key);
-
-        }
-        return selected;
     }
 
     /**
@@ -154,16 +150,16 @@ public class TaskFactoryJavascript extends TaskFactory {
 
             final Scriptable definition = (Scriptable) o;
 
-            Set<String> fields = getFields(definition, "value", "alternative", "json", "xml", "task");
+            Set<String> fields = getFields(definition, "value", "array", "alternative", "json", "xml", "task");
             String type;
             if (fields.size() == 1) {
                 type = fields.iterator().next();
             } else if (fields.size() == 2 && fields.contains("xml") && fields.contains("task")) {
                 type = "task";
-            } else
-                throw new ValueMismatchException("Cannot create task factory: expected value, alternative, xml, or" +
-                        "task values in input definition");
-
+            } else {
+                throw new ValueMismatchException("Cannot create task factory: expected value, alternative, xml, array or " +
+                        "task values in input definition [got "+ definition.getIds() + "]");
+            }
 
             boolean sequence = JSUtils.toBoolean(scope, definition, "sequence");
             boolean optional = JSUtils.toBoolean(scope, definition, "optional");
@@ -182,6 +178,10 @@ public class TaskFactoryJavascript extends TaskFactory {
 
                 case "json":
                     input = new JsonInput(new Type(inputType));
+                    break;
+
+                case "array":
+                    input = new ArrayInput(new Type(inputType));
                     break;
 
                 case "alternative":
@@ -265,8 +265,6 @@ public class TaskFactoryJavascript extends TaskFactory {
             return object.toString();
         return "";
     }
-
-
 
 
     @Override

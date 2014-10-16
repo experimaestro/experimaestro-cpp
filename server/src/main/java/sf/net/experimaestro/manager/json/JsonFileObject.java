@@ -48,7 +48,9 @@ public class JsonFileObject implements Json {
         if (options.ignore.contains(ValueType.XP_FILE)) {
             writer.write("null");
         } else {
-            write(writer);
+            writer.write('"');
+            writer.write(JSONValue.escape(options.resolver.apply(fileObject)));
+            writer.write('"');
         }
     }
 

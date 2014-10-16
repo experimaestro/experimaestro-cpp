@@ -27,7 +27,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JSHelp {
-    /* Basic help */
+    /* Basic description */
     String value();
 
     /* List of arguments when using the variable style assignement */

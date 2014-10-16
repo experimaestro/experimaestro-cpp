@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
@@ -52,7 +53,7 @@ public class FunctionOperator extends UnaryOperator {
     protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> iterator = input.iterator(planContext);
-            public Iterator<? extends Json> innerIterator = Iterators.emptyIterator();
+            public Iterator<? extends Json> innerIterator = ImmutableSet.<Json>of().iterator();
             DefaultContexts contexts;
 
             @Override

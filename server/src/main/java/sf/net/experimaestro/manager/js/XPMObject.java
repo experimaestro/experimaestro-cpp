@@ -878,7 +878,7 @@ public class XPMObject {
                 List locks = (List) options.get("lock", options);
                 for (int i = (int) locks.size(); --i >= 0; ) {
                     Object lock_i = JSUtils.unwrap(locks.get(i));
-                    final Dependency dependency;
+                    Dependency dependency = null;
 
                     if (lock_i instanceof Dependency) {
                         dependency = (Dependency) lock_i;
@@ -907,7 +907,9 @@ public class XPMObject {
                         final Object lockType = array.get(1, array);
                         LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
 
-                        dependency = resource.createDependency(lockType);
+                        if (!simulate()) {
+                            dependency = resource.createDependency(lockType);
+                        }
                     } else {
                         throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
                                 i, lock_i.getClass());
@@ -998,6 +1000,10 @@ public class XPMObject {
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
         return new JSFileObject(Manager.uniqueDirectory(basedir, prefix, id, json));
+    }
+
+    public Connector getConnector() {
+        return currentResourceLocator.getConnector();
     }
 
     static public class Holder<T> {
@@ -1369,8 +1375,8 @@ public class XPMObject {
                 JsonObject jsObj = (JsonObject) json;
                 if (jsObj.containsKey(Manager.XP_RESOURCE.toString())) {
                     final Object o = jsObj.get(Manager.XP_RESOURCE.toString()).get();
-                    if (o instanceof JSResource)
-                        return o;
+                    if (o instanceof Resource)
+                        return new JSResource((Resource) o);
                     final String uri = (String) o;
                     if (xpm.simulate())
                         return new JSResource(xpm.submittedJobs.get(uri));

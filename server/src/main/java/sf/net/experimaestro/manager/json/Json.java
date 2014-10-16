@@ -27,7 +27,6 @@ import java.io.Writer;
  * Base class for all JSON objects
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 1/4/13
  */
 public interface Json {
     Json clone();

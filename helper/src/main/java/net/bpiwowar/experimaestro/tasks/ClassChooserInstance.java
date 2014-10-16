@@ -20,7 +20,7 @@ public @interface ClassChooserInstance {
 
     /**
      * Documentation
-     * @return A help string
+     * @return A description string
      */
     String description() default "";
 }

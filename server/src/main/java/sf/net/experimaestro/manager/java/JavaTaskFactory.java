@@ -7,10 +7,7 @@ import net.bpiwowar.experimaestro.tasks.TaskDescription;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
@@ -188,11 +185,17 @@ public class JavaTaskFactory extends TaskFactory {
                 JsonObject object = (JsonObject) element;
                 final Json r = object.get(Manager.XP_RESOURCE.toString());
                 if (r == null) continue;
-                final ResourceLocator locator = ResourceLocator.parse(r.get().toString());
-                final Resource resource = scheduler.getResource(locator);
-                if (resource == null) {
-                    throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                            locator, getId());
+                final Object o = r.get();
+                Resource resource;
+                if (o instanceof Resource) {
+                    resource = (Resource) o;
+                } else {
+                    final ResourceLocator locator = ResourceLocator.parse(o.toString());
+                    resource = scheduler.getResource(locator);
+                    if (resource == null) {
+                        throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                                locator, getId());
+                    }
                 }
                 final Dependency lock = resource.createDependency("READ");
                 commands.addDependency(lock);

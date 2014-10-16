@@ -19,15 +19,22 @@
 package sf.net.experimaestro.manager.js;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 
-import java.io.IOException;
-import java.io.StringWriter;
+import java.io.*;
 
 import static com.google.common.collect.Range.closed;
 
@@ -174,5 +181,29 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     @Override
     public Object unwrap() {
         return json;
+    }
+
+    @JSFunction(value = "as_parameter_file", optional = 1)
+    @JSHelp("Creates a parameter file from this JSON")
+    public Command.ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
+        final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        if (connector == null) {
+            connector = xpm.getConnector().getMainConnector();
+        }
+        Writer writer = new OutputStreamWriter(bytes);
+        final SingleHostConnector finalConnector = connector;
+        JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
+                .simplifyValues(true)
+                .ignore$(false)
+                .ignoreNull(false)
+                .resolveFile(f -> {
+                    try { return finalConnector.resolve(f); }
+                    catch(Exception e) {
+                        throw new XPMRhinoException(e);
+                    }
+                });
+        json.writeDescriptorString(writer, options);
+        writer.flush();
+        return new Command.ParameterFile(id, bytes.toByteArray());
     }
 }

@@ -1,10 +1,12 @@
 package sf.net.experimaestro.manager.json;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.vfs2.FileObject;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
 import java.util.Set;
+import java.util.function.Function;
 
 /**
 * Created by bpiwowar on 3/10/14.
@@ -18,12 +20,14 @@ public class JsonWriterOptions {
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
     public boolean ignoreNull = true;
+    Function<FileObject, String> resolver = f -> f.toString();
 
     public JsonWriterOptions(Set<QName> ignore) {
         this.ignore = ignore;
     }
 
-    protected JsonWriterOptions() {
+    public JsonWriterOptions() {
+        this(DEFAULT_IGNORE);
     }
 
     public JsonWriterOptions ignore$(boolean ignore$) {
@@ -38,6 +42,11 @@ public class JsonWriterOptions {
 
     public JsonWriterOptions simplifyValues(boolean simplifyValues) {
         this.simplifyValues = simplifyValues;
+        return this;
+    }
+
+    public JsonWriterOptions resolveFile(Function<FileObject, String> resolver) {
+        this.resolver = resolver;
         return this;
     }
 }

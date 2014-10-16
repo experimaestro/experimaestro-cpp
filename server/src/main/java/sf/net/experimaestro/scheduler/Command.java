@@ -208,6 +208,7 @@ public class Command implements CommandComponent {
     }
 
     @Persistent
+    @Exposed
     public static class ParameterFile implements CommandComponent {
         java.lang.String key;
         byte[] content;

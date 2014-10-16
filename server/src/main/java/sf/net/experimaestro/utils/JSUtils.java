@@ -234,7 +234,7 @@ public class JSUtils {
             return new JsonFileObject((FileObject)value);
 
         if (value instanceof Resource)
-            return new JSResource((Resource) value);
+            return new JsonResource((Resource) value);
 
         // -- Undefined
         if (value instanceof Undefined)

@@ -120,17 +120,15 @@ public class JSDirectTask extends JSAbstractTask {
 
         if (runFunction != null) {
             // We have a run function
-            Scriptable jsoninput = cx.newObject(jsScope, "Object", new Object[]{});
+            JsonObject jsoninput = new JsonObject();
             for (Entry<String, Value> entry : values.entrySet()) {
                 Json input = entry.getValue().get();
-                // The JS object is set to the document element
-                Object jsJson = input == null ? Scriptable.NOT_FOUND : new JSJson(input);
-                jsoninput.put(entry.getKey(), jsoninput, jsJson);
+                jsoninput.put(entry.getKey(), input);
             }
 
             xpm.setTaskContext(taskContext);
             final Object returned = runFunction.call(cx, jsScope, jsObject,
-                    new Object[]{jsoninput, resultObject});
+                    new Object[]{new JSJson(jsoninput).setXPM(xpm), resultObject});
             xpm.setTaskContext(null);
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)

@@ -156,7 +156,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
 
             return new ResourceLocator(connectorId.toString(), path.toString());
         } catch (URISyntaxException e) {
-            throw new XPMRuntimeException("Could not handle URI [%s]", idString);
+            throw new XPMRuntimeException("Could not parse locator URI [%s]", idString);
         }
     }
 

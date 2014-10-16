@@ -15,8 +15,8 @@ public @interface JsonArgument {
     String name() default "";
 
     /**
-     * A help string
-     * @return The help string
+     * A description string
+     * @return The description string
      */
     String help() default "";
 

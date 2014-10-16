@@ -28,12 +28,15 @@ import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonFileObject;
+import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import static sf.net.experimaestro.scheduler.Command.ParameterFile;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
