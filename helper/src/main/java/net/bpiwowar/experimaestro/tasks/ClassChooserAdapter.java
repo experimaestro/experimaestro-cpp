@@ -1,10 +1,6 @@
 package net.bpiwowar.experimaestro.tasks;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
-import com.google.gson.TypeAdapter;
+import com.google.gson.*;
 import com.google.gson.internal.bind.JsonTreeReader;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -70,10 +66,11 @@ public class ClassChooserAdapter extends ReaderTypeAdapter {
         }
 
         // Get the type
-        final String type = json.get("type").getAsString();
-        if (type == null) {
+        final JsonElement _type = json.get("type");
+        if (_type == null) {
             throw new JsonParseException("No type defined");
         }
+        String type = _type.getAsString();
 
         // Get the class of the object to create
         final Class<?> aClass = types.get(type);
