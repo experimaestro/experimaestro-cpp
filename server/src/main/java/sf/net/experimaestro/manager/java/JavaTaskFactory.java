@@ -130,7 +130,7 @@ public class JavaTaskFactory extends TaskFactory {
     }
 
     @Override
-    public Commands commands(Scheduler scheduler, JsonObject json) {
+    public Commands commands(Scheduler scheduler, JsonObject json, boolean simulate) {
         final Command command = new Command();
 
         Command classpath = new Command();
@@ -164,41 +164,30 @@ public class JavaTaskFactory extends TaskFactory {
         command.add(Command.WorkingDirectory.INSTANCE);
 
         // Parameter file
-        final ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
-        OutputStreamWriter jsonWriter = new OutputStreamWriter(jsonBytes, Manager.UTF8_CHARSET);
-        try {
-            final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
-                    .ignore$(false)
-                    .ignoreNull(false)
-                    .simplifyValues(true);
-            json.writeDescriptorString(jsonWriter, options);
-            jsonWriter.flush();
-        } catch (IOException e) {
-            throw new XPMRuntimeException(e, "Could not write JSON string for java task");
-        }
-        final Command.ParameterFile jsonInput = new Command.ParameterFile("json", jsonBytes.toByteArray());
-        command.add(jsonInput);
+        command.add(new Command.JsonParameterFile("json", json));
 
         // Check dependencies
-        for (Json element : json.values()) {
-            if (element instanceof JsonObject) {
-                JsonObject object = (JsonObject) element;
-                final Json r = object.get(Manager.XP_RESOURCE.toString());
-                if (r == null) continue;
-                final Object o = r.get();
-                Resource resource;
-                if (o instanceof Resource) {
-                    resource = (Resource) o;
-                } else {
-                    final ResourceLocator locator = ResourceLocator.parse(o.toString());
-                    resource = scheduler.getResource(locator);
-                    if (resource == null) {
-                        throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                                locator, getId());
+        if (!simulate) {
+            for (Json element : json.values()) {
+                if (element instanceof JsonObject) {
+                    JsonObject object = (JsonObject) element;
+                    final Json r = object.get(Manager.XP_RESOURCE.toString());
+                    if (r == null) continue;
+                    final Object o = r.get();
+                    Resource resource;
+                    if (o instanceof Resource) {
+                        resource = (Resource) o;
+                    } else {
+                        final ResourceLocator locator = ResourceLocator.parse(o.toString());
+                        resource = scheduler.getResource(locator);
+                        if (resource == null) {
+                            throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                                    locator, getId());
+                        }
                     }
+                    final Dependency lock = resource.createDependency("READ");
+                    commands.addDependency(lock);
                 }
-                final Dependency lock = resource.createDependency("READ");
-                commands.addDependency(lock);
             }
         }
 

@@ -62,7 +62,7 @@ public class JavaTask extends Task {
         CommandLineTask task;
         if (old == null || old.canBeReplaced()) {
             // --- Build the command
-            Commands commands = javaFactory.commands(taskContext.getScheduler(), json);
+            Commands commands = javaFactory.commands(taskContext.getScheduler(), json, taskContext.simulate());
 
             task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
 

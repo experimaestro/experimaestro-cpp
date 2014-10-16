@@ -1,5 +1,6 @@
 package sf.net.experimaestro.manager.json;
 
+import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
@@ -11,8 +12,11 @@ import java.io.Writer;
 /**
  * The default interface for JsonFileObject
  */
+@Persistent
 public class JsonFileObject implements Json {
     FileObject fileObject;
+
+    private JsonFileObject() {}
 
     public JsonFileObject(FileObject fileObject) {
         this.fileObject = fileObject;

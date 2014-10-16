@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.json;
 
+import com.sleepycat.persist.model.Persistent;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
@@ -26,12 +27,15 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
+ * A Json integer
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 2/4/13
  */
+@Persistent
 public class JsonInteger implements Json {
-    private final long value;
+    private long value;
 
+    public JsonInteger() {}
     public JsonInteger(long value) {
         this.value = value;
     }

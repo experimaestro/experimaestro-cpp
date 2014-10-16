@@ -140,7 +140,7 @@ public abstract class TaskFactory {
 		module.addFactory(this);
 	}
 
-    public Commands commands(Scheduler scheduler, JsonObject json) {
+    public Commands commands(Scheduler scheduler, JsonObject json, boolean simulate) {
         throw new IllegalAccessError(format("This task factory [%s] cannot generate a command", this.getClass()));
     }
 }

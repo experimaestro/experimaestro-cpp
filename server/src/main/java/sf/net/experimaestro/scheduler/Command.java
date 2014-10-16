@@ -18,16 +18,24 @@
 
 package sf.net.experimaestro.scheduler;
 
+import com.google.common.collect.ImmutableSet;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +44,7 @@ import java.util.stream.Stream;
 
 /**
  * A command line argument (or argument part)
+ *
  * @author B. Piwowarski
  */
 @Persistent
@@ -65,9 +74,9 @@ public class Command implements CommandComponent {
     }
 
     public void forEachDependency(Consumer<Dependency> consumer) {
-        for(CommandComponent c: list) {
+        for (CommandComponent c : list) {
             if (c instanceof SubCommand) {
-                ((SubCommand)c).forEachDependency(consumer);
+                ((SubCommand) c).forEachDependency(consumer);
             }
         }
     }
@@ -117,7 +126,7 @@ public class Command implements CommandComponent {
                 list.add((CommandComponent) t);
             } else if (t instanceof FileObject) {
                 list.add(new Path((FileObject) t));
-            }  else {
+            } else {
                 list.add(new String(t.toString()));
             }
         });
@@ -181,7 +190,9 @@ public class Command implements CommandComponent {
 
     @Persistent
     public static class Path implements CommandComponent {
-        /** An URI */
+        /**
+         * An URI
+         */
         private java.lang.String filename;
 
         private Path() {
@@ -238,12 +249,12 @@ public class Command implements CommandComponent {
     }
 
 
-
     @Persistent
     public static class WorkingDirectory implements CommandComponent {
         static final public WorkingDirectory INSTANCE = new WorkingDirectory();
 
-        private WorkingDirectory() {}
+        private WorkingDirectory() {
+        }
 
         @Override
         public java.lang.String prepare(CommandEnvironment environment) throws IOException {
@@ -258,7 +269,8 @@ public class Command implements CommandComponent {
     static public class Pipe implements CommandComponent {
         static private Pipe PIPE = new Pipe();
 
-        private Pipe() {}
+        private Pipe() {
+        }
 
         public static Pipe getInstance() {
             return PIPE;
@@ -270,11 +282,14 @@ public class Command implements CommandComponent {
      */
     @Persistent
     static public class SubCommand implements CommandComponent {
-        /** The commands */
+        /**
+         * The commands
+         */
         Commands commands;
 
         // Just for serialization
-        private SubCommand() {}
+        private SubCommand() {
+        }
 
         SubCommand(Commands commands) {
             this.commands = commands;
@@ -295,6 +310,44 @@ public class Command implements CommandComponent {
 
         public Commands commands() {
             return commands;
+        }
+    }
+
+
+    @Persistent
+    static public class JsonParameterFile implements CommandComponent {
+        private java.lang.String key;
+        private Json json;
+
+        private JsonParameterFile() {}
+
+        public JsonParameterFile(java.lang.String key, Json json) {
+            this.key = key;
+            this.json = json;
+        }
+
+        @Override
+        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+            FileObject file = environment.getAuxiliaryFile(key, ".input");
+            try (OutputStream out = file.getContent().getOutputStream();
+                 OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
+                final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
+                        .ignore$(false)
+                        .ignoreNull(false)
+                        .simplifyValues(true)
+                        .resolveFile(f -> {
+                            try {
+                                return environment.resolve(f);
+                            } catch (FileSystemException e) {
+                                throw new XPMRuntimeException(e);
+                            }
+                        });
+                json.writeDescriptorString(jsonWriter, options);
+            } catch (IOException e) {
+                throw new XPMRuntimeException(e, "Could not write JSON string for java task");
+            }
+
+            return environment.resolve(file);
         }
     }
 }

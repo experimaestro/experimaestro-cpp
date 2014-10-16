@@ -19,16 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Wrapper;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.scheduler.Resource;
-
-import java.io.IOException;
-import java.io.Writer;
-
-import static java.lang.String.format;
 
 /**
  * A resource
@@ -40,7 +31,7 @@ public class JSResource extends JSBaseObject implements Wrapper {
 
     private Resource resource;
 
-    @sf.net.experimaestro.manager.js.JSFunction
+    @JSFunction
     public JSResource(Resource resource) {
         this.resource = resource;
     }

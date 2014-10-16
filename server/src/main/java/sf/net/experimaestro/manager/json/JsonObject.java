@@ -38,7 +38,6 @@ import java.util.TreeMap;
  * A JSON object (associates a key to a json value)
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 1/4/13
  */
 public class JsonObject
         extends TreeMap<String, Json> /* Warning: we depend on the map being sorted (for hash string) */

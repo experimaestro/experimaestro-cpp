@@ -35,11 +35,14 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.manager.json.JsonProxies;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.je.LocalFileProxy;
 import sf.net.experimaestro.utils.je.FileProxy;
+import sf.net.experimaestro.utils.je.SftpFileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -360,15 +363,13 @@ final public class Scheduler {
 
         EntityModel model = new AnnotationModel();
         model.registerClass(FileProxy.class);
+        model.registerClass(LocalFileProxy.class);
+        model.registerClass(SftpFileProxy.class);
+        model.registerClass(JsonProxies.JsonObjectProxy.class);
         storeConfig.setModel(model);
 
         // Add a shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Scheduler.this.close();
-            }
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> Scheduler.this.close()));
 
         // Initialise the stores
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);

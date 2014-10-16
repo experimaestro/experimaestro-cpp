@@ -26,8 +26,9 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
+ * A boolean wrapped as Json
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 2/4/13
  */
 public class JsonBoolean implements Json {
     private final boolean value;

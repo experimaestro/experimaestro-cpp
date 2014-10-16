@@ -18,6 +18,7 @@
 
 package sf.net.experimaestro.manager.json;
 
+import com.sleepycat.persist.model.Persistent;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
@@ -29,8 +30,11 @@ import java.io.Writer;
  * A JSON string
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Persistent
 public class JsonString implements Json {
     String string;
+
+    public JsonString() {}
 
     public JsonString(String string) {
         this.string = string;
