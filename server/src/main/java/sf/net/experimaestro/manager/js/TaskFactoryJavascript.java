@@ -10,10 +10,8 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_HERE;
@@ -23,10 +21,12 @@ import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_
  */
 public class TaskFactoryJavascript extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * Our XPM object
      */
     private final XPMObject xpm;
+
     /**
      * The server
      */
@@ -36,10 +36,12 @@ public class TaskFactoryJavascript extends TaskFactory {
      * The inputs
      */
     protected Map<String, Input> inputs;
+
     /**
      * The scope
      */
     Scriptable jsScope;
+
     /**
      * The outputs
      */
@@ -150,7 +152,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
             final Scriptable definition = (Scriptable) o;
 
-            Set<String> fields = getFields(definition, "value", "array", "alternative", "json", "xml", "task");
+            Set<String> fields = getFields(definition, "value", "alternative", "json", "xml", "task");
             String type;
             if (fields.size() == 1) {
                 type = fields.iterator().next();
@@ -158,11 +160,12 @@ public class TaskFactoryJavascript extends TaskFactory {
                 type = "task";
             } else {
                 throw new ValueMismatchException("Cannot create task factory: expected value, alternative, xml, array or " +
-                        "task values in input definition [got "+ definition.getIds() + "]");
+                        "task values in input definition [got " + definition.getIds() + "]");
             }
 
             boolean sequence = JSUtils.toBoolean(scope, definition, "sequence");
             boolean optional = JSUtils.toBoolean(scope, definition, "optional");
+
 
             Input input;
             final QName inputType = QName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
@@ -178,10 +181,6 @@ public class TaskFactoryJavascript extends TaskFactory {
 
                 case "json":
                     input = new JsonInput(new Type(inputType));
-                    break;
-
-                case "array":
-                    input = new ArrayInput(new Type(inputType));
                     break;
 
                 case "alternative":
@@ -228,6 +227,22 @@ public class TaskFactoryJavascript extends TaskFactory {
                     input.setCopyTo(JSUtils.toString(copyTo));
                 }
             }
+
+            // Set groups
+            final Object _groups = definition.get("groups", definition);
+            if (JSUtils.isDefined(_groups)) {
+                String[] groups;
+                if (_groups instanceof List) {
+                    final Stream<String> __groups = ((List) _groups).stream().map(JSUtils::toString);
+                    groups = __groups.toArray(n -> new String[n]);
+                } else if (_groups instanceof String) {
+                    groups = new String[]{_groups.toString()};
+                } else {
+                    throw new ValueMismatchException("groups should be an array of strings, or a single value");
+                }
+                input.setGroups(groups);
+            }
+
 
             // Set required/optional flag
             input.setOptional(optional);

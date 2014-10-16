@@ -64,6 +64,19 @@ public class JSDirectTask extends JSAbstractTask {
             }
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
+
+        @JSFunction()
+        @JSHelp("Returns a Json object corresponding to inputs of a given group (shallow copy)")
+        public JSJson group(String groupId, JsonObject p) {
+            JsonObject json = new JsonObject();
+            for(Entry<String, Input> x: getFactory().getInputs().entrySet()) {
+                if (x.getValue().inGroup(groupId)) {
+                    json.put(x.getKey(), p.get(x.getKey()));
+                }
+            }
+
+            return (JSJson) new JSJson(json).setXPM(xpm);
+        }
     }
 
     /**

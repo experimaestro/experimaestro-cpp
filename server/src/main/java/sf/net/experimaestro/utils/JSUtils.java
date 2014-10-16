@@ -265,6 +265,15 @@ public class JSUtils {
         };
     }
 
+    /**
+     * Returns true if the object is a well defined JavaScript/Java object
+     * @param object
+     * @return
+     */
+    public static boolean isDefined(Object object) {
+        return object != null && object != UniqueTag.NOT_FOUND;
+    }
+
 
     static public class OptionalDocument {
         Document document;

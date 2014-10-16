@@ -68,6 +68,11 @@ public abstract class Input {
     private String copyTo;
 
     /**
+     * The groups this input belongs to
+     */
+    private String[] groups;
+
+    /**
 	 * Returns whether the input is optional or not
 	 * 
 	 * @return
@@ -145,5 +150,18 @@ public abstract class Input {
 
     public String getCopyTo() {
         return copyTo;
+    }
+
+    public void setGroups(String[] groups) {
+        this.groups = groups;
+    }
+
+    public boolean inGroup(String groupId) {
+        for(String group: groups) {
+            if (groupId.equals(group)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
