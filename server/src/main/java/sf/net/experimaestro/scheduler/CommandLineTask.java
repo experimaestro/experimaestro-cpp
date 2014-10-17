@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
@@ -235,5 +236,13 @@ public class CommandLineTask extends Job<JobData> {
     }
     public Commands getCommands() {
         return commands;
+    }
+
+    @Override
+    public FileObject outputFile() throws FileSystemException {
+        if (jobOutputPath != null) {
+            return getMainConnector().resolveFile(jobOutputPath);
+        }
+        return getLocator().resolve(getMainConnector(), OUT_EXTENSION);
     }
 }

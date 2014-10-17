@@ -18,6 +18,8 @@
 
 package sf.net.experimaestro.manager.js;
 
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.scheduler.Resource;
 
@@ -41,6 +43,10 @@ public class JSResource extends JSBaseObject implements Wrapper {
         return "Resource";
     }
 
+    @JSFunction("output")
+    public FileObject output() throws FileSystemException {
+        return resource.outputFile();
+    }
 
     @Override
     @JSFunction("toString")

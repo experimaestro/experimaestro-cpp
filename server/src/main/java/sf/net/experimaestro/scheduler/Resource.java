@@ -30,6 +30,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.manager.js.JSFileObject;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -415,6 +416,11 @@ public abstract class Resource<Data extends ResourceData>
             return false;
         }
         return true;
+    }
+
+    /** Returns the main output file for this resource */
+    public FileObject outputFile() throws FileSystemException {
+        throw new IllegalAccessError("No output file for resources of type " + this.getClass());
     }
 
     /**
