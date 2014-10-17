@@ -37,6 +37,7 @@ import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
@@ -246,6 +247,7 @@ public class XPMObject {
         }
 
         JSBaseObject.defineClass(this, scope, Command.class);
+        JSBaseObject.defineClass(this, scope, Constant.class);
 
         // Add global functions
         for (JSUtils.FunctionDefinition definition : definitions)

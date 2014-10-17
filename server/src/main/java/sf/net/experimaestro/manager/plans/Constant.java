@@ -21,6 +21,8 @@ package sf.net.experimaestro.manager.plans;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import sf.net.experimaestro.annotations.Expose;
+import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.manager.json.Json;
 
 import java.util.*;
@@ -31,9 +33,11 @@ import java.util.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
+@Exposed
 public class Constant extends Operator {
     List<Json> values = new ArrayList<>();
 
+    @Expose
     public Constant(Json... values) {
         this(Arrays.asList(values));
     }
@@ -66,6 +70,7 @@ public class Constant extends Operator {
     }
 
     @Override
+    @Expose
     protected String getName() {
         return String.format("JSON (#=%d)", values.size());
     }
