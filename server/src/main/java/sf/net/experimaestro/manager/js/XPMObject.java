@@ -37,6 +37,7 @@ import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
@@ -123,7 +124,7 @@ public class XPMObject {
     private final Map<String, String> environment;
     /**
      * The resource cleaner
-     * <p>
+     * <p/>
      * Used to close objects at the end of the execution of a script
      */
     private final Cleaner cleaner;
@@ -1215,6 +1216,32 @@ public class XPMObject {
                                          Commands commands,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             JSResource jsResource = xpm.commandlineJob(jobId, commands, jsoptions);
+            return jsResource;
+        }
+
+        @JSFunction(value = "command_line_job", optional = 1)
+        @JSHelp(value = COMMAND_LINE_JOB_HELP)
+        public Scriptable commandlineJob(
+                JsonObject json,
+                @JSArgument(name = "jobId") Object jobId,
+                Object commands,
+                @JSArgument(type = "Map", name = "options") NativeObject jsOptions) throws Exception {
+
+            Commands _commands;
+            if (commands instanceof Commands) {
+                _commands = (Commands) commands;
+            } else if (commands instanceof Command) {
+                _commands = new Commands((Command) commands);
+            } else if (commands instanceof NativeArray) {
+                _commands = new Commands(JSCommand.getCommand(commands));
+            } else {
+                throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
+            }
+
+            JSResource jsResource = xpm.commandlineJob(jobId, _commands, jsOptions);
+
+            // Update the json
+            json.put(Manager.XP_RESOURCE.toString(), new JsonResource((Resource) jsResource.unwrap()));
             return jsResource;
         }
 
