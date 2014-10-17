@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.json;
 
-import org.json.simple.JSONValue;
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
@@ -56,12 +56,12 @@ public class JsonBoolean implements Json {
 
     @Override
     public String toString() {
-        return JSONValue.toJSONString(value);
+        return value ? "true" : "false";
     }
 
     @Override
     public void write(Writer out) throws IOException {
-        JSONValue.writeJSONString(value, out);
+        out.write(toString());
     }
 
 
