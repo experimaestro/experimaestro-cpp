@@ -142,11 +142,24 @@ public class OperatorMap {
      *
      * @param id The ID of the operator
      * @param maxLength The maximum ID to consider (exclusive)
-     * @return A bitset reprenting the ancestors
+     * @return A bitset representing the ancestors
      */
     BitSet getAncestors(int id, int maxLength) {
         int index = getIndex(0, id);
         return ancestors.get(index, index + min(maxLength, id));
+    }
+
+    /**
+     * Returns the ancestors of a set of nodes
+     * @param set The set of nodes
+     * @return The ancestors
+     */
+    public BitSet getAncestors(BitSet set) {
+        BitSet ancestors = new BitSet();
+        for(int i = set.nextSetBit(0); i != -1; i = set.nextSetBit(i + 1)) {
+            ancestors.or(getAncestors(i));
+        }
+        return ancestors;
     }
 
 
@@ -239,10 +252,16 @@ public class OperatorMap {
      * @return A bitset
      */
     public BitSet setOf(Operator... operators) {
+        return setOf(false, operators);
+    }
+
+    public BitSet setOf(boolean create, Operator... operators) {
         BitSet set = new BitSet();
         for (Operator operator : operators) {
-            set.set(get(operator));
+            set.set(create ? add(operator) : get(operator));
         }
         return set;
     }
+
+
 }

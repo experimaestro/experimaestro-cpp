@@ -1,19 +1,19 @@
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.Output;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -32,17 +32,6 @@ public class LatticeNodeTest {
         for (int i : ints)
             bitSet.set(i);
         return bitSet;
-    }
-
-    static void add(Lattice lattice, Operator operator, Operator... parents) {
-        BitSet bitset = new BitSet();
-        for (Operator lca : parents) {
-            bitset.set(lattice.opMap.add(lca));
-        }
-        operator.addParents(parents);
-        lattice.add(bitset, operator);
-//        System.err.format("=== %s%n", bitset);
-//        print(lattice);
     }
 
     private static void print(Lattice lattice) {
@@ -126,36 +115,15 @@ public class LatticeNodeTest {
 
     @Test(description = "Simple merge c0 -> {op0, op1} -> op")
     public void SimpleOperatorTest() throws XPathExpressionException {
-
-        PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
-        OperatorMap opMap = new OperatorMap();
-        LatticeNode root = new LatticeNode();
+        Builder builder = new Builder();
 
         final Constant c0 = new Constant(json("A"), json("B"));
-        final int c0_nid = opMap.add(c0);
 
-        final FakeOperator op0 = new FakeOperator(opMap);
-        final FakeOperator op1 = new FakeOperator(opMap);
+        builder.createOperator(c0);
+        builder.createOperator(c0);
 
-        op0.addParents(c0);
-        root.add(set(c0_nid), op0);
-
-        op1.addParents(c0);
-        root.add(set(c0_nid), op1);
-
-        final MergeResult result = root.merge(opMap);
-
-        final FakeOperator op = new FakeOperator(opMap);
-        op.addParents(result.operator);
-
-        op.prepare();
-        op.init();
-        final Iterator<Value> iterator = op.iterator(pc);
-        HashSet<String> set = new HashSet<>();
-        while (iterator.hasNext()) {
-            set.add(iterator.next().getNodes()[0].toString());
-        }
-
+        final MergeResult result = builder.merge();
+        final HashSet<String> set = builder.run(result);
         assert set.remove("AA");
         assert set.remove("BB");
         assert set.isEmpty();
@@ -165,24 +133,22 @@ public class LatticeNodeTest {
     @Test(description = "Test that the output of a plan is OK")
     public void FlatOperatorSimpleTest() throws XPathExpressionException {
         PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
-        OperatorMap opMap = new OperatorMap();
-        Lattice lattice = new Lattice(opMap);
+        Builder builder = new Builder();
+        OperatorMap opMap = builder.opMap;
+        Lattice lattice = builder.lattice;
 
         // inputs
         final Constant c0 = new Constant(json("A"), json("B"));
         final Constant c1 = new Constant(json("C"), json("D"));
 
         // c0, c1 -> op0
-        final FakeOperator op0 = new FakeOperator(opMap);
-        add(lattice, op0, c0, c1);
+        final FakeOperator op0 = builder.createOperator(c0, c1);
 
         // c0 -> op1
-        final FakeOperator op1 = new FakeOperator(opMap);
-        add(lattice, op1, c0);
+        final FakeOperator op1 = builder.createOperator(c0);
 
         // c1 -> op2
-        final FakeOperator op2 = new FakeOperator(opMap);
-        add(lattice, op2, c1);
+        final FakeOperator op2 = builder.createOperator(c1);
 
         // Checks the lattice structure
         final Triplets triplets = unroll(lattice);
@@ -195,20 +161,7 @@ public class LatticeNodeTest {
 
         // op0 ... op5 -> op6
         final MergeResult result = lattice.merge();
-        final FakeOperator op = new FakeOperator(opMap);
-        op.addParent(result.operator);
-
-        // Checks the ancestors
-
-        op.prepare();
-        op.init();
-
-        final Iterator<Value> iterator = op.iterator(pc);
-        HashSet<String> set = new HashSet<>();
-        while (iterator.hasNext()) {
-            final String e = iterator.next().getNodes()[0].toString();
-            set.add(e);
-        }
+        final HashSet<String> set = builder.run(result);
 
         check(set, result.map, new String[]{"AC", "A", "C"}, op0, op1, op2);
         check(set, result.map, new String[]{"BC", "B", "C"}, op0, op1, op2);
@@ -230,11 +183,90 @@ public class LatticeNodeTest {
         assert set.remove(s) : format("%s is not in returned set", s);
     }
 
+    @Test(description = "Test that joins are simplified")
+    public void simplifiedJoinTest() throws XPathExpressionException, IOException, InterruptedException {
+        Builder builder = new Builder();
+        final Lattice lattice = builder.lattice;
+        final OperatorMap opMap = builder.opMap;
+
+        final Constant c0 = new Constant(json("A"), json("B"));
+        final FakeOperator op0 = builder.createOperator(true, opMap.setOf(), c0);
+        final FakeOperator op1 = builder.createOperator(true, opMap.setOf(op0), op0);
+
+        final Order order = new Order();
+        Join op2join = new Join();
+        order.add(op0);
+        op2join.addJoin(op0);
+
+        OrderBy orderBy0 = new OrderBy(order, null);
+        orderBy0.addParent(op0);
+
+        OrderBy orderBy1 = new OrderBy(order, null);
+        orderBy1.addParent(op1);
+
+        op2join.addParents(orderBy0, orderBy1);
+        final FakeOperator op2 = builder.createOperator(false, opMap.setOf(op0, op1), op2join);
+
+        // Check lattice
+        final Triplets triplets = unroll(lattice);
+
+        triplets.checkAndRemove(opMap.setOf(), opMap.setOf(op0, op1), op1, op2);
+        triplets.checkAndRemove(opMap.setOf(op0, op1), opMap.setOf(op0), op0);
+        triplets.checkEmpty();
+
+        // Check results
+        final MergeResult result = lattice.merge();
+        HashSet<String> set = builder.run(result);
+
+        check(set, result.map, new String[]{"A", "A", "AA"}, op0, op1, op2);
+        check(set, result.map, new String[]{"B", "B", "BB"}, op0, op1, op2);
+        Assert.assertTrue(set.isEmpty(), format("[%s]", Output.toString(", ", set)));
+
+        // Check that we have those joins:
+        // r = op1 join(op1) op2 [simplified from join(op0, op1)]
+        // r join(op0) op0
+        final Join[] joins = search(result.operator, Join.class).toArray(new Join[0]);
+
+        Assert.assertEquals(joins.length, 3);
+        int count0 = 0;
+        int count1 = 0;
+        for(Join join: joins) {
+            Assert.assertEquals(join.joins.size(), 1);
+            final Operator reference = join.joins.get(0).operator;
+            if (reference == op0) { ++count0; }
+            else if (reference == op1) { ++count1; };
+        }
+        Assert.assertEquals(count0, 2);
+        Assert.assertEquals(count1, 1);
+
+    }
+
+    static <T extends Operator> IdentityHashSet<T> search(Operator operator, Class<T> aClass) {
+        IdentityHashSet<T> set = new IdentityHashSet<>();
+        IdentityHashSet<Operator> visited = new IdentityHashSet<>();
+        search(set, visited, operator, aClass);
+        return set;
+    }
+
+    private static <T extends Operator> void search(IdentityHashSet<T> set, IdentityHashSet<Operator> visited, Operator operator, Class<T> aClass) {
+        if (visited.contains(operator)) {
+            return;
+        }
+
+        if (operator.getClass() == aClass) {
+            set.add((T) operator);
+        }
+
+        for(Operator parent: operator.getParents()) {
+            search(set, visited, parent, aClass);
+        }
+    }
+
     @Test(description = "Test that the output of a plan is OK")
-    public void FlatOperatorTest() throws XPathExpressionException, IOException, InterruptedException {
-        PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
-        OperatorMap opMap = new OperatorMap();
-        Lattice lattice = new Lattice(opMap);
+    public void flatOperatorTest() throws XPathExpressionException, IOException, InterruptedException {
+        Builder builder = new Builder();
+        final Lattice lattice = builder.lattice;
+        final OperatorMap opMap = builder.opMap;
 
         // inputs
         final Constant c0 = new Constant(json("A"), json("B"));
@@ -246,35 +278,28 @@ public class LatticeNodeTest {
         final Constant c6 = new Constant(json("M"), json("N"));
 
         // c0, c1 -> op0
-        final FakeOperator op0 = new FakeOperator(opMap);
-        add(lattice, op0, c0, c1);
+        final FakeOperator op0 = builder.createOperator(c0, c1);
 
         // c0 -> op1
-        final FakeOperator op1 = new FakeOperator(opMap);
-        add(lattice, op1, c0);
+        final FakeOperator op1 = builder.createOperator(c0);
 
         // c2, c3 -> op2
-        final FakeOperator op2 = new FakeOperator(opMap);
-        add(lattice, op2, c2, c3);
+        final FakeOperator op2 = builder.createOperator(c2, c3);
 
         // c1, c4 -> op3
-        final FakeOperator op3 = new FakeOperator(opMap);
-        add(lattice, op3, c1, c4);
+        final FakeOperator op3 = builder.createOperator(c1, c4);
 
         // c1, c5 -> op4
-        final FakeOperator op4 = new FakeOperator(opMap);
-        add(lattice, op4, c1, c5);
+        final FakeOperator op4 = builder.createOperator(c1, c5);
 
         // c2, c3, c4, c5 -> op5
-        final FakeOperator op5 = new FakeOperator(opMap);
-        add(lattice, op5, c2, c3, c4, c5);
+        final FakeOperator op5 = builder.createOperator(c2, c3, c4, c5);
 
         // c1, c4, c5 -> op6
-        final FakeOperator op6 = new FakeOperator(opMap);
-        add(lattice, op6, c1, c4, c5);
+        final FakeOperator op6 = builder.createOperator(c1, c4, c5);
 
         // c6 -> op7
-        add(lattice, c6);
+        builder.add(c6, false, null);
 
         // Checks the lattice structure
         final Triplets triplets = unroll(lattice);
@@ -294,20 +319,7 @@ public class LatticeNodeTest {
 
         // op0 ... op5 -> op6
         final MergeResult result = lattice.merge();
-        final FakeOperator op = new FakeOperator(opMap);
-        op.addParent(result.operator);
-
-        // Checks the ancestors
-
-        op.prepare();
-        op.init();
-
-        final Iterator<Value> iterator = op.iterator(pc);
-        HashSet<String> set = new HashSet<>();
-        while (iterator.hasNext()) {
-            final String e = iterator.next().getNodes()[0].toString();
-            set.add(e);
-        }
+        HashSet<String> set = builder.run(result);
 
         // Check all
         for (String s0 : new String[]{"A", "B"}) {
@@ -339,7 +351,7 @@ public class LatticeNodeTest {
         Assert.assertTrue(set.isEmpty(), format("[%s]", Output.toString(", ", set)));
     }
 
-    private void saveGraphAsPDF(FakeOperator op, String pathname) throws IOException, InterruptedException {
+    static void saveGraphAsPDF(Operator op, String pathname) throws IOException, InterruptedException {
         final ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.command("dot", "-Tpdf");
         processBuilder.redirectOutput(new File(pathname));
@@ -353,6 +365,56 @@ public class LatticeNodeTest {
 
     private JsonString json(String s) {
         return new JsonString(s);
+    }
+
+    static class Builder {
+        OperatorMap opMap = new OperatorMap();
+        Lattice lattice = new Lattice(opMap);
+
+        public FakeOperator createOperator(Operator... parents) {
+            return createOperator(false, opMap.setOf(true, parents), parents);
+        }
+
+        public FakeOperator createOperator(boolean selfInLCA, BitSet lca, Operator... parents) {
+            final FakeOperator op = new FakeOperator("");
+
+            add(op, selfInLCA, lca, parents);
+            op.id = format("fake/%d", opMap.add(op));
+            return op;
+        }
+
+        void add(Operator operator, boolean selfInLCA, BitSet lca, Operator... parents) {
+            if (lca == null) {
+                lca = lattice.opMap.setOf(true, parents);
+            }
+            operator.addParents(parents);
+            if (selfInLCA) {
+                lca.set(opMap.add(operator));
+            }
+            lattice.add(lca, operator);
+        }
+
+
+        public HashSet<String> run(MergeResult result) throws XPathExpressionException {
+            HashSet<String> set = new HashSet<>();
+            final FakeOperator op = new FakeOperator("result");
+            op.addParent(result.operator);
+
+            op.prepare();
+            op.init();
+            final PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
+
+            final Iterator<Value> iterator = op.iterator(pc);
+            while (iterator.hasNext()) {
+                final String e = iterator.next().getNodes()[0].toString();
+                set.add(e);
+            }
+            return set;
+        }
+
+        public MergeResult merge() {
+            return lattice.merge();
+        }
     }
 
     static public class Triplets extends HashSet<Triplet> {
@@ -374,11 +436,7 @@ public class LatticeNodeTest {
     }
 
     static public class FakeOperator extends Product {
-        private final String id;
-
-        public FakeOperator(OperatorMap opMap) {
-            this.id = format("op/%d", opMap.add(this));
-        }
+        private String id;
 
         public FakeOperator(String id) {
             this.id = id;

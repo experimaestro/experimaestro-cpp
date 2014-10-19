@@ -78,6 +78,11 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
         // This will hold the common order between the OrderBy operators
         Order<Operator> order = new Order();
 
+
+        // Simplify the join
+        final BitSet ancestors = opMap.getAncestors(set);
+        set.andNot(ancestors);
+
         // Build the join and the order on the common indices
         for (int opIndex = set.nextSetBit(0); opIndex != -1; opIndex = set.nextSetBit(opIndex + 1)) {
             Operator op = opMap.get(opIndex);
