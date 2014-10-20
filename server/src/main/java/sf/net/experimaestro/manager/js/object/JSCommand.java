@@ -12,6 +12,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.js.*;
 import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.CommandComponent;
 import sf.net.experimaestro.scheduler.StreamReference;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -51,8 +52,8 @@ public class JSCommand extends JSBaseObject implements Wrapper {
                 Object object = JSUtils.unwrap(_object);
                 StringBuilder sb = new StringBuilder();
 
-                if (object instanceof Command.Pipe) {
-                    command.add(Command.Pipe.getInstance());
+                if (object instanceof CommandComponent) {
+                    command.add(object);
                 } else {
                     argumentWalkThrough(array, sb, argument, object);
 
