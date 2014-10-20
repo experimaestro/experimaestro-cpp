@@ -39,7 +39,6 @@ abstract public class NAryOperator extends Operator {
 
     @Override
     public void addParent(Operator parent) {
-        super.addParent(parent);
         parents.add(parent);
     }
 

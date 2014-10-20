@@ -19,10 +19,13 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
-import com.google.common.collect.*;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -32,14 +35,21 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A fake operator corresponding to a task factory. This is replaced by
  * {@linkplain TaskOperator} when constructing the final plan.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
  */
 public class Plan extends Operator {
     final static private Logger LOGGER = Logger.getLogger();
@@ -52,7 +62,7 @@ public class Plan extends Operator {
     /**
      * Mappings to either list of operators or operators
      */
-    List<Multimap<DotName, Operator>> inputsList = new ArrayList();
+    List<Multimap<DotName, Operator>> inputsList = new ArrayList<>();
 
     /**
      * Creates a new plan
@@ -199,8 +209,6 @@ public class Plan extends Operator {
                 }
 
                 // Create a new operator
-;
-
                 Operator inputOperators[] = new Operator[inputValues.length];
 
                 for (int i = inputValues.length; --i >= 0; ) {
@@ -311,7 +319,7 @@ public class Plan extends Operator {
 
 
     /**
-     * Iterates over the diffent inputs
+     * Iterates over the different inputs
      */
     static class OperatorIterable implements Iterable<Operator> {
         Collection<Operator> collection;

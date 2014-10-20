@@ -150,6 +150,7 @@ public abstract class Operator {
     public abstract List<Operator> getParents();
 
     public void addParent(Operator parent) {
+        throw new UnsupportedOperationException();
     }
 
     final public Operator getParent(int i) {

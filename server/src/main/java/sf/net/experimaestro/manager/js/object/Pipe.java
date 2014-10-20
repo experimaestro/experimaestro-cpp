@@ -14,4 +14,9 @@ public class Pipe extends JSBaseObject implements Wrapper {
     public Object unwrap() {
         return Command.Pipe.getInstance();
     }
+
+    @Override
+    public String toString() {
+        return "PIPE";
+    }
 }

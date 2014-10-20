@@ -51,14 +51,7 @@ public class JSCommand extends JSBaseObject implements Wrapper {
                 Object object = JSUtils.unwrap(_object);
                 StringBuilder sb = new StringBuilder();
 
-                // XML argument (deprecated -- too many problems with E4X!)
-                if (JSUtils.isXML(object)) {
-
-                    // Walk through
-                    for (Node child : xmlAsList(JSUtils.toDOM(array, object)))
-                        argumentWalkThrough(sb, argument, child);
-
-                } else if (object instanceof Pipe) {
+                if (object instanceof Command.Pipe) {
                     command.add(Command.Pipe.getInstance());
                 } else {
                     argumentWalkThrough(array, sb, argument, object);
@@ -97,60 +90,12 @@ public class JSCommand extends JSBaseObject implements Wrapper {
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
                 argumentWalkThrough(scope, sb, command, JSUtils.unwrap(child));
-        } else if (JSUtils.isXML(object)) {
-            final Object node = JSUtils.toDOM(scope, object);
-            for (Node child : xmlAsList(node))
-                argumentWalkThrough(sb, command, child);
         } else if (object instanceof JSParameterFile) {
             final JSParameterFile pFile = (JSParameterFile) object;
             command.add(new Command.ParameterFile(pFile.getKey(), pFile.getValue()));
         } else {
             sb.append(JSUtils.toString(object));
         }
-    }
-
-    /**
-     * Walk through a node hierarchy to build a command argument
-     *
-     * @param sb
-     * @param argument
-     * @param node
-     */
-    private static void argumentWalkThrough(StringBuilder sb, Command argument, Node node) {
-        switch (node.getNodeType()) {
-            case Node.TEXT_NODE:
-                sb.append(node.getTextContent());
-                break;
-
-            case Node.ATTRIBUTE_NODE:
-                if (Manager.XP_PATH.sameQName(node)) {
-                    argument.add(new Command.Path(node.getNodeValue()));
-                } else
-                    sb.append(node.getTextContent());
-                break;
-
-            case Node.DOCUMENT_NODE:
-                argumentWalkThrough(sb, argument, ((Document) node).getDocumentElement());
-                break;
-
-            case Node.ELEMENT_NODE:
-                Element element = (Element) node;
-                if (XMLUtils.is(Manager.XP_PATH, element)) {
-                    if (sb.length() > 0) {
-                        argument.add(sb.toString());
-                        sb.delete(0, sb.length());
-                    }
-                    argument.add(new Command.Path(element.getTextContent()));
-                } else {
-                    for (Node child : XMLUtils.children(node))
-                        argumentWalkThrough(sb, argument, child);
-                }
-
-                break;
-            default:
-                throw new XPMRuntimeException("Unhandled command XML node  " + node.toString());
-        }
-
     }
 
     /**

@@ -38,6 +38,7 @@ import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonResource;
+import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
@@ -1402,25 +1403,55 @@ public class XPMObject {
                 throw new EvaluatorException("assertion failed: " + String.format(format, objects));
         }
 
+        @JSFunction()
+        @JSHelp("Get a lock over all the resources defined in a JSON object")
+        public NativeArray get_locks(String lockMode, JsonObject json) {
+            ArrayList<Dependency> dependencies = new ArrayList<>();
+            for (Json jsonEntry: json.values()) {
+                if (jsonEntry instanceof JsonObject) {
+                    final Resource resource = getResource((JsonObject) jsonEntry);
+                    if (resource != null) {
+                        final Dependency dependency = resource.createDependency(lockMode);
+                        dependencies.add(dependency);
+                    }
+                }
+            }
+
+            return new NativeArray(dependencies.toArray(new Dependency[dependencies.size()]));
+        }
+
         @JSFunction(value = "$$", scope = true)
         @JSHelp("Get the resource associated with the json object")
-        public Object get_resource(Context cx, Scriptable scope, Json json) {
+        public JSResource get_resource(Context cx, Scriptable scope, Json json) {
+            Resource resource = null;
             if (json instanceof JsonObject) {
-                JsonObject jsObj = (JsonObject) json;
-                if (jsObj.containsKey(Manager.XP_RESOURCE.toString())) {
-                    final Object o = jsObj.get(Manager.XP_RESOURCE.toString()).get();
-                    if (o instanceof Resource)
-                        return new JSResource((Resource) o);
-                    final String uri = (String) o;
-                    if (xpm.simulate())
-                        return new JSResource(xpm.submittedJobs.get(uri));
-                    return new JSResource(xpm.scheduler.getResource(ResourceLocator.parse(uri)));
-                }
+                resource = getResource((JsonObject) json);
             } else {
                 throw new XPMRhinoException("Cannot handle Json of type " + json.getClass());
             }
 
+            if (resource != null) {
+                return new JSResource(resource);
+            }
             throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
+        }
+
+        private Resource getResource(JsonObject json) {
+            if (json.containsKey(Manager.XP_RESOURCE.toString())) {
+                final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
+                if (o instanceof Resource) {
+                    return  (Resource) o;
+                } else {
+                    final String uri = o instanceof JsonString ? o.toString() : (String) o;
+                    if (xpm.simulate()) {
+                        return xpm.submittedJobs.get(uri);
+                    } else {
+                        return xpm.scheduler.getResource(ResourceLocator.parse(uri));
+                    }
+                }
+
+            }
+            return null;
         }
 
         @JSFunction(value = "java_repository", optional = 1, optionalsAtStart = true)

@@ -58,12 +58,6 @@ public class Constant extends Operator {
         return Iterators.transform(values.iterator(), input -> new ReturnValue(null, input));
     }
 
-
-    @Override
-    public void addParent(Operator parent) {
-        throw new UnsupportedOperationException();
-    }
-
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
         return new Constant(values);
@@ -71,7 +65,7 @@ public class Constant extends Operator {
 
     @Override
     @Expose
-    protected String getName() {
+    public String getName() {
         return String.format("JSON (#=%d)", values.size());
     }
 

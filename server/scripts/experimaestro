@@ -15,9 +15,11 @@ import base64
 import websocket
 import json
 import argcomplete
-import jsonrpclib
 import socket
 # import daemon
+from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
+from tinyrpc.transports.http import HttpPostClientTransport
+from tinyrpc import RPCClient
 
 # --- Set some variables
 
@@ -193,7 +195,9 @@ class Configuration():
 
 
     def getJsonServer(self):
-        return jsonrpclib.Server("%s/json-rpc" % self.client["url"], verbose=args.verbose)
+        url = "%s/json-rpc" % self.client["url"]
+        rpc_client = RPCClient(JSONRPCProtocol(), HttpPostClientTransport(url))
+        return rpc_client
 
     def getWebSocketServer(self):
         re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")

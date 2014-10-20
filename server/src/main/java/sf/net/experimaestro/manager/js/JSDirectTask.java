@@ -25,6 +25,7 @@ import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -64,6 +65,17 @@ public class JSDirectTask extends JSAbstractTask {
             }
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
+
+        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        public JSFileObject unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            FileObject basedir = resource.getLocator().getFile().getParent();
+            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+        }
+
 
         @JSFunction()
         @JSHelp("Returns a Json object corresponding to inputs of a given group (shallow copy)")
