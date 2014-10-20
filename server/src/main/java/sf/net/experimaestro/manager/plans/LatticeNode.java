@@ -33,11 +33,6 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
     LinkedList<Operator> mergedOperators = new LinkedList<>();
 
     /**
-     * Number of operators
-     */
-    int nbOperators = 0;
-
-    /**
      * The index for the heap
      */
     int heapIndex;
@@ -80,6 +75,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
 
         // Simplify the join
+        set = (BitSet) set.clone();
         final BitSet ancestors = opMap.getAncestors(set);
         set.andNot(ancestors);
 
@@ -321,15 +317,16 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
                 }
 
                 currentSet.or(parent.set);
-
             }
 
+            // Finished
             heap.remove(this);
+            assert heap.isEmpty();
+
         } else if (this.operators.size() > 1) {
             // Merge all operators at this node
             assert mergedOperators.isEmpty();
             mergedOperators.addAll(operators);
-            nbOperators -= operators.size() + 1;
             operators.clear();
 
             resultOperator = merge(opMap, mergedOperators, set);
@@ -342,28 +339,25 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
         } else {
             // merge with one of the children (the first one)
 
-            final LatticeNode child = this.children.get(0);
+            if (!isRootParent()) {
+                final LatticeNode child = this.children.get(0);
 
-            assert this.parents.isEmpty() : "We should have no parent";
-            assert this.operators.isEmpty() : "This node should be processed";
-            assert child.operators.isEmpty() : "The child node should be processed";
+                assert this.parents.isEmpty() : "We should have no parent";
+                assert this.operators.isEmpty() : "This node should be processed";
+                assert child.operators.isEmpty() : "The child node should be processed";
 
-            child.mergedOperators.addAll(this.mergedOperators);
+                child.mergedOperators.addAll(this.mergedOperators);
 
-            child.resultOperator = merge(opMap, ImmutableList.of(child.resultOperator, this.resultOperator), this.set);
-
+                child.resultOperator = merge(opMap, ImmutableList.of(child.resultOperator, this.resultOperator), this.set);
+                remove = true;
+                child.operators.clear();
+            }
             // Cleanup
-            remove = true;
-            child.operators.clear();
-            nbOperators = 0;
             heap.remove(this);
         }
 
         // Update information in descendants
-        IdentityHashSet<LatticeNode> visited = new IdentityHashSet<>();
         for (LatticeNode child : children) {
-            child.updateInformation(heap, visited);
-
             if (remove) {
                 // Remove the edges going to this node
                 final Iterator<Edge> iterator = child.parents.iterator();
@@ -375,6 +369,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
                     }
                 }
             }
+            heap.update(child);
         }
 
     }
@@ -386,33 +381,6 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
     private boolean isRoot() {
         return this.cardinality == 0;
     }
-
-    /**
-     * Update information after a merge (going down)
-     *
-     * @param heap    The heap for updating priorities over nodes
-     * @param visited The list of visited nodes
-     */
-    private void updateInformation(Heap<LatticeNode> heap, IdentityHashSet<LatticeNode> visited) {
-        if (visited.contains(this)) {
-            return;
-        }
-
-        nbOperators = operators.size() + (resultOperator != null ? 1 : 0);
-        for (Edge edge : parents) {
-            nbOperators += edge.node.nbOperators;
-        }
-
-        if (nbOperators == 1) {
-            // We have finished with this node
-            if (getIndex() >= 0) {
-                heap.remove(this);
-            }
-        } else {
-            heap.update(this);
-        }
-    }
-
 
     /**
      * Build the information prior to a merge (going up)
@@ -430,15 +398,13 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
             operators.clear();
         }
 
-        nbOperators = operators.size() + (resultOperator != null ? 1 : 0);
         for (Edge edge : parents) {
             edge.node.children.add(this);
             edge.node.buildInformation(heap, visited);
-            nbOperators += edge.node.nbOperators;
         }
 
         // Don't add to the heap if one operator, no parent, and parent of root
-        if (nbOperators != 1 || parents.size() != 0 || !isRootParent()) {
+        if (operators.size() != 1 || parents.size() != 0 || !isRootParent()) {
             heap.add(this);
         }
     }
@@ -578,7 +544,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
             }
 
             // Then, this is based on number of operators (reverse)
-            return Integer.compare(b.nbOperators, a.nbOperators);
+            return 0;
         }
     }
 }

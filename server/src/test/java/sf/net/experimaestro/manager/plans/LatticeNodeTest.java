@@ -132,7 +132,6 @@ public class LatticeNodeTest {
 
     @Test(description = "Test that the output of a plan is OK")
     public void FlatOperatorSimpleTest() throws XPathExpressionException {
-        PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
         Builder builder = new Builder();
         OperatorMap opMap = builder.opMap;
         Lattice lattice = builder.lattice;
