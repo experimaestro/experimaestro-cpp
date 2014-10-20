@@ -132,6 +132,11 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     static Operator getSimple(Object value, Scriptable scope) throws XPathExpressionException {
         value = JSUtils.unwrap(value);
 
+        // --- Already an operator
+        if (value instanceof Operator) {
+            return (Operator) value;
+        }
+
         // --- Constants
 
         if (value instanceof Integer) {
