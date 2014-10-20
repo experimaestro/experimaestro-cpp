@@ -312,7 +312,7 @@ public abstract class GenericFunction implements Callable {
             }
 
             // Native object to JSON
-            if (o instanceof NativeObject && JsonObject.class.isAssignableFrom(type)) {
+            if (o instanceof NativeObject && Json.class.isAssignableFrom(type)) {
                 score -= 10;
                 return nativeObject -> JSUtils.toJSON(scope, nativeObject);
             }
