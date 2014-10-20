@@ -338,7 +338,6 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
             }
         } else {
             // merge with one of the children (the first one)
-
             if (!isRootParent()) {
                 final LatticeNode child = this.children.get(0);
 
@@ -389,8 +388,10 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
      * @param visited The list of visited nodes
      */
     private void buildInformation(Heap<LatticeNode> heap, IdentityHashSet<LatticeNode> visited) {
-        if (visited.contains(visited))
+        if (visited.contains(this))
             return;
+
+        visited.add(this);
 
         if (operators.size() == 1 && resultOperator == null) {
             resultOperator = operators.iterator().next();
