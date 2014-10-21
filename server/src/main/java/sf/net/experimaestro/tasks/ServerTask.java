@@ -130,23 +130,11 @@ public class ServerTask extends AbstractTask {
 
         context.setSecurityHandler(csh);
 
-        // --- Add the XML RPC servlet
-
-        final XmlRpcServlet xmlRpcServlet = new XPMXMLRpcServlet(webServer,
-                repositories, scheduler);
-
-        xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
-
-        final ServletHolder servletHolder = new ServletHolder(xmlRpcServlet);
-        context.addServlet(servletHolder, "/xmlrpc");
-
 
         // --- Add the JSON RPC servlet
 
         final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, scheduler, repositories);
-
-        xmlRpcServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
-
+        JsonRPCMethods.initMethods();
         final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
         context.addServlet(jsonServletHolder, "/json-rpc");
 

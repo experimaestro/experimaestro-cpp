@@ -16,12 +16,11 @@ import websocket
 import json
 import argcomplete
 import socket
-# import daemon
-from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
-from tinyrpc.transports.http import HttpPostClientTransport
-from tinyrpc import RPCClient
+import requests
 
 # --- Set some variables
+
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
 
@@ -29,6 +28,39 @@ version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
 
 logging.basicConfig(level=logging.INFO)
+
+class JsonRPCMethod:
+    def __init__(self, url, name, jsonid):
+        self.url = url
+        self.name = name
+        self.jsonid = jsonid
+
+    def __call__(self, args):
+        payload = {
+            "method": self.name,
+            "params": args,
+            "jsonrpc": "2.0",
+            "id": self.jsonid,
+        }
+        headers = {'content-type': 'application/json'}
+
+        response = requests.post(self.url, data=json.dumps(payload), headers=headers).json()
+        assert response["jsonrpc"] == "2.0"
+        assert response["id"] == str(self.jsonid)
+
+        error = response.get("error", None)
+        if not error is None:
+            raise Exception("Error while calling method %s: [%d] %s" % (self.name, error["code"], error["message"]))
+        return response["result"]
+
+class JsonRPCClient:
+    def __init__(self, url):
+        self.url = url
+        self.jsonid = 0
+
+    def __getattr__(self, name):
+        self.jsonid += 1
+        return JsonRPCMethod(self.url, name, self.jsonid)
 
 
 # --- Check paths
@@ -196,8 +228,7 @@ class Configuration():
 
     def getJsonServer(self):
         url = "%s/json-rpc" % self.client["url"]
-        rpc_client = RPCClient(JSONRPCProtocol(), HttpPostClientTransport(url))
-        return rpc_client
+        return JsonRPCClient(url)
 
     def getWebSocketServer(self):
         re_url = re.compile("""http(s)?://(?:([^:@]+):([^@]+)@)?(.+)$""")
@@ -213,6 +244,8 @@ class Configuration():
         if m.group(2) and m.group(3):
             auth = base64.b64encode(bytes("%s:%s" % (m.group(2), m.group(3)), "ascii")).decode("ascii")
             header = ["Authorization: Basic %s" % auth]
+
+
         return websocket.create_connection(url, header=header)
 
 
@@ -221,7 +254,7 @@ class Configuration():
 
 def ping(json_server):
     try:
-        return json_server.ping([]) == "pong"
+        return json_server.ping() == "pong"
     except socket.error as e:
         return False
 
@@ -238,59 +271,6 @@ def command_stop_server(args):
     server = Configuration(args).getJsonServer()
     server.shutdown({})
 
-
-def command_run_python(args):
-    conf = Configuration(args)
-    client = conf.getWebSocketServer()
-
-    # Get the command line
-    files = []
-
-    if args.pre:
-        files.append(["<pre>", args.pre])
-
-    for filename in args.files:
-        filepath = os.path.abspath(filename)
-        if not conf.remote:
-            files.append([filepath, None])
-        else:
-            files.append([filepath, open(filepath).read()])
-
-    if args.post:
-        files.append(["<post>", args.post])
-
-    logging.debug("Running python scripts %s" % [s[0] for s in files])
-
-    params = {"files": files, "environment": dict(os.environ)}
-    # if args.debug_port > 0:
-    #     params["debug"] = args.debug_port
-
-    try:
-        code = 0
-        msg = json.dumps({"id": 1, "method": "run-python", "params": params})
-        client.send(msg)
-        while client is not None:
-            message = client.recv()
-            o = json.loads(message)
-            if type(o) == dict:
-                if o["id"]:
-                    if o["error"]:
-                        code = o["error"]["code"]
-                        sys.stderr.write("%s\n" % o["error"]["message"])
-                    break
-                else:
-                    result = o["result"]
-                    if result["stream"] == "out":
-                        sys.stdout.write(result["value"])
-                    elif result["stream"] == "err":
-                        sys.stderr.write(result["value"])
-                    else:
-                        sys.stderr.write("Cannot interpret stream %s" % result["stream"])
-
-        sys.exit(code)
-    except Exception as e:
-        print(e)
-        sys.exit(1)
 
 def command_run_js(args):
     conf = Configuration(args)
@@ -345,13 +325,17 @@ def command_run_js(args):
 
 
 def command_update(args):
-    server = Configuration(args).getServer()
-    print("%d updated job(s)" % server.Server.updateJobs(args.group, args.recursive, get_states(args.states)))
+    server = Configuration(args).getJsonServer()
+    print("%d updated job(s)" % server.updateJobs({
+        "group": args.group, 
+        "recursive": args.recursive, 
+        "states": get_states(args.states)
+    }))
 
 
 def command_ls(args):
-    server = Configuration(args).getServer()
-    response = server.Server.listJobs(args.group, get_states(args.states))
+    server = Configuration(args).getJsonServer()
+    response = server.listJobs({"group": args.group, "states": get_states(args.states), "recursive": args.recursive})
     for l in response:
         state = l.get("state", "?").upper()
         if state == 'ERROR':
@@ -367,14 +351,14 @@ def command_ls(args):
 
 
 def command_ping(args):
-    r = Configuration(args).getJsonServer().ping([])
+    r = Configuration(args).getJsonServer().ping({})
     if r == "pong":
         sys.exit(0)
     sys.exit(1)
 
 
 def command_list_methods(args):
-    server = Configuration(args).getServer()
+    server = Configuration(args).getJsonServer()
     for method in server.system.listMethods():
         if not method.startswith("system"):
             print("# %s" % method)
@@ -389,13 +373,13 @@ def command_information(args):
 
 
 def command_invalidate(args):
-    server = Configuration(args).getServer()
-    print(server.Server.invalidateJob(args.resourceId[0], args.recursive))
+    server = Configuration(args).getJsonServer()
+    print(server.invalidateJob(args.resourceId[0], args.recursive))
 
 
 def command_kill(args):
-    server = Configuration(args).getServer()
-    n = server.Server.kill(args.jobid)
+    server = Configuration(args).getJsonServer()
+    n = server.kill({"jobs": args.jobid})
     print("Killed %d jobs" % n)
 
 
@@ -409,13 +393,13 @@ def command_rm(args):
         args.group = ""
 
     for jobid in args.jobid:
-        n = server.remove(group=args.group, id=jobid, states=states, recursive=args.recursive, regexp=args.regexp)
+        n = server.remove({"group": args.group, "id": jobid, "states": states, "recursive": args.recursive, "regexp": args.regexp})
         print("Removed %d resources" % n)
 
 
 def command_log_level(args):
-    server = Configuration(args).getServer()
-    server.Server.setLogLevel(args.id[0], args.level[0])
+    server = Configuration(args).getJsonServer()
+    server.setLogLevel(args.id[0], args.level[0])
 
 # --- Utility functions
 
@@ -456,21 +440,16 @@ p_run_js.add_argument("--post", dest="post", help="Execute this javascript after
 p_run_js.add_argument('files', nargs='*', help='')
 
 
-p_run_python = subparsers.add_parser("run-python", help="Run one or more python scripts on the server")
-p_run_python.add_argument("--pre", dest="pre", help="Execute this python code before the files")
-p_run_python.add_argument("--post", dest="post", help="Execute this python code after the files")
-p_run_python.add_argument('files', nargs='*', help='')
-
 job_specification = argparse.ArgumentParser(add_help=False)
 job_specification.add_argument('--states', dest="states", help="States")
 job_specification.add_argument('group', nargs='?', help="The group to list", default="")
-job_specification.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
+job_specification.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be included?")
 
 subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
 
 p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification])
 
-subparsers.add_parser("list-methods", help="List XML-RPC methods")
+subparsers.add_parser("list-methods", help="List Json RPC methods")
 
 p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
 p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")

@@ -21,6 +21,7 @@ package sf.net.experimaestro.server;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multiset;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -33,37 +34,74 @@ import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.RhinoException;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Listener;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceLocator;
+import sf.net.experimaestro.scheduler.ResourceState;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.http.HttpServlet;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 /**
+ * Json RPC methods
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 28/3/13
  */
 public class JsonRPCMethods extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
+    private static Multimap<String, MethodDescription> methods;
+
+    static {
+        initMethods();
+    }
+
+    private final Scheduler scheduler;
+    private final Repositories repository;
+    private final JSONRPCRequest mos;
+    HashMap<String, BufferedWriter> writers = new HashMap<>();
+    HashSet<Listener> listeners = new HashSet<>();
     /**
      * Server
      */
     private Server server;
-    private final Scheduler scheduler;
-    private final Repositories repository;
-    private final JSONRPCRequest mos;
 
     public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) {
         this.server = server;
@@ -72,89 +110,19 @@ public class JsonRPCMethods extends HttpServlet {
         this.mos = mos;
     }
 
-
-    static public interface Arguments {
-        public abstract RPCArgument getArgument(int i);
-
-        public abstract Class<?> getType(int i);
-
-        public abstract int size();
-    }
-
-    static public class MethodDescription implements Arguments {
-        Method method;
-        private RPCArgument[] arguments;
-        private Class<?>[] types;
-
-        public MethodDescription(Method method) {
-            this.method = method;
-            types = method.getParameterTypes();
-            Annotation[][] annotations = method.getParameterAnnotations();
-            arguments = new RPCArgument[annotations.length];
-            for (int i = 0; i < annotations.length; i++) {
-                types[i] = ClassUtils.primitiveToWrapper(types[i]);
-                for (int j = 0; j < annotations[i].length && arguments[i] == null; j++) {
-                    if (annotations[i][j] instanceof RPCArgument)
-                        arguments[i] = (RPCArgument) annotations[i][j];
+    public static void initMethods() {
+        if (methods == null) {
+            methods = HashMultimap.create();
+            for (Method method : JsonRPCMethods.class.getDeclaredMethods()) {
+                final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
+                if (rpcMethod != null) {
+                    methods.put("".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name(), new MethodDescription(method));
                 }
-
-                if (arguments[i] == null)
-                    throw new XPMRuntimeException("No annotation for %dth argument of %s", i + 1, method);
-
             }
         }
-
-        @Override
-        public RPCArgument getArgument(int i) {
-            return arguments[i];
-        }
-
-        @Override
-        public Class<?> getType(int i) {
-            return types[i];
-        }
-
-        @Override
-        public int size() {
-            return arguments.length;
-        }
     }
 
-    private static Multimap<String, MethodDescription> methods = HashMultimap.create();
-
-    static {
-        for (Method method : JsonRPCMethods.class.getDeclaredMethods()) {
-            final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
-            if (rpcMethod != null) {
-                methods.put("".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name(), new MethodDescription(method));
-            }
-        }
-
-    }
-
-    static public class RPCArrayArgument implements RPCArgument {
-        @Override
-        public String name() {
-            return null;
-        }
-
-        @Override
-        public boolean required() {
-            return true;
-        }
-
-        @Override
-        public String help() {
-            return "Array element";
-        }
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-            return RPCArgument.class;
-        }
-    }
-
-    private int convert(Object p, Arguments description, int score, Object args[], int index) {
+    private int convert(Object p, Arguments description, int score, List args, int index) {
         Object o;
         if (p instanceof JSONObject)
             // If p is a map, then use the json name of the argument
@@ -181,7 +149,19 @@ public class JsonRPCMethods extends HttpServlet {
         if (aType.isArray()) {
             if (o instanceof JSONArray) {
                 final JSONArray array = (JSONArray) o;
-                final Object[] arrayObjects = args != null ? new Object[array.size()] : null;
+
+
+                final ArrayList arrayObjects;
+                if (args != null) {
+                    arrayObjects = new ArrayList(array.size());
+                    for(int i = 0; i < array.size(); i++) {
+                        arrayObjects.add(null);
+                    }
+                } else {
+                    arrayObjects = null;
+                }
+
+
                 Arguments arguments = new Arguments() {
                     @Override
                     public RPCArgument getArgument(int i) {
@@ -198,8 +178,18 @@ public class JsonRPCMethods extends HttpServlet {
                         return array.size();
                     }
                 };
+
+
                 for (int i = 0; i < array.size() && score > Integer.MIN_VALUE; i++) {
                     score = convert(array.get(i), arguments, score, arrayObjects, i);
+                }
+
+                if (args != null && score > Integer.MIN_VALUE) {
+                    final Object a1 = Array.newInstance(aType.getComponentType(), array.size());
+                    for(int i = 0; i < array.size(); i++) {
+                        Array.set(a1, i, arrayObjects.get(i));
+                    }
+                    args.set(index, a1);
                 }
                 return score;
             }
@@ -208,19 +198,18 @@ public class JsonRPCMethods extends HttpServlet {
 
         if (aType.isAssignableFrom(o.getClass())) {
             if (args != null)
-                args[index] = o;
+                args.set(index, o);
             return score;
         }
 
         if (o.getClass() == Long.class && aType == Integer.class) {
             if (args != null)
-                args[index] = ((Long) o).intValue();
+                args.set(index, ((Long) o).intValue());
             return score - 1;
         }
 
         return Integer.MIN_VALUE;
     }
-
 
     public void handle(String message) {
         JSONObject object;
@@ -278,7 +267,7 @@ public class JsonRPCMethods extends HttpServlet {
 
             Object[] args = new Object[argmax.arguments.length];
             for (int i = 0; i < args.length; i++) {
-                int score = convert(p, argmax, 0, args, i);
+                int score = convert(p, argmax, 0, Arrays.asList(args), i);
                 assert score > Integer.MIN_VALUE;
             }
             Object result = argmax.method.invoke(this, args);
@@ -292,10 +281,8 @@ public class JsonRPCMethods extends HttpServlet {
             } catch (IOException e) {
                 LOGGER.error("Could not send the return code");
             }
-            return;
         }
     }
-
 
     private EnumSet<ResourceState> getStates(Object[] states) {
         final EnumSet<ResourceState> statesSet;
@@ -311,10 +298,6 @@ public class JsonRPCMethods extends HttpServlet {
         return statesSet;
     }
 
-
-    // -------- RPC METHODS -------
-
-
     /**
      * Information about a job
      */
@@ -329,6 +312,9 @@ public class JsonRPCMethods extends HttpServlet {
         return resource.toJSON();
     }
 
+
+    // -------- RPC METHODS -------
+
     private Resource getResource(String resourceId) {
         Resource resource;
         try {
@@ -340,11 +326,10 @@ public class JsonRPCMethods extends HttpServlet {
         return resource;
     }
 
-    @RPCMethod(help = "Ping (to maintain a WebSocket)")
+    @RPCMethod(help = "Ping")
     public String ping() {
         return "pong";
     }
-
 
     @RPCMethod(help = "Sets a log level")
     public int setLogLevel(@RPCArgument(name = "identifier") String identifier, @RPCArgument(name = "level") String level) {
@@ -355,9 +340,6 @@ public class JsonRPCMethods extends HttpServlet {
 
     /**
      * Run javascript
-     *
-     * @param files
-     * @param environment
      */
     @RPCMethod(name = "run-javascript", help = "Run a javascript")
     public String runJSScript(@RPCArgument(name = "files") List<JSONArray> files,
@@ -400,14 +382,12 @@ public class JsonRPCMethods extends HttpServlet {
             Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
             repositories.add(repository, 0);
 
-            ScriptableObject.defineProperty(scope, "env", new RPCHandler.JSGetEnv(environment), 0);
+            ScriptableObject.defineProperty(scope, "env", new JSGetEnv(environment), 0);
             jsXPM = new XPMObject(null, jsContext, environment, scope, repositories,
                     scheduler, loggerRepository, cleaner, null);
 
             Object result = null;
-            for (int i = 0; i < files.size(); i++) {
-                JSONArray filePointer = files.get(i);
-
+            for (JSONArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
@@ -499,7 +479,6 @@ public class JsonRPCMethods extends HttpServlet {
         return loggerRepository;
     }
 
-
     /**
      * Return the output stream for the request
      */
@@ -513,8 +492,6 @@ public class JsonRPCMethods extends HttpServlet {
     private BufferedWriter getRequestErrorStream() {
         return getRequestStream("err");
     }
-
-    HashMap<String, BufferedWriter> writers = new HashMap<>();
 
     /**
      * Return a stream with the given ID
@@ -581,7 +558,6 @@ public class JsonRPCMethods extends HttpServlet {
         return true;
     }
 
-
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
         final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId());
@@ -641,6 +617,31 @@ public class JsonRPCMethods extends HttpServlet {
         // If the job was done, we need to restart the dependences
         if (recursive && rsrcState == ResourceState.DONE) {
             nbUpdated += invalidate(resource);
+        }
+
+        return nbUpdated;
+    }
+
+    /**
+     * Update the status of jobs
+     */
+    @RPCMethod(help = "Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
+            " in a change of state")
+    public int updateJobs(
+            @RPCArgument(name = "group", required = false) String group,
+            @RPCArgument(name = "recursive", required = false) Boolean _recursive,
+            @RPCArgument(name = "states", required = false) String[] statesNames
+    ) throws Exception {
+        EnumSet<ResourceState> states = getStates(statesNames);
+        boolean recursive = _recursive != null ? _recursive : false;
+
+        int nbUpdated = 0;
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, states, true)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
+                if (scheduler.getResources().updateStatus(resource))
+                    nbUpdated++;
+            }
         }
 
         return nbUpdated;
@@ -707,43 +708,37 @@ public class JsonRPCMethods extends HttpServlet {
         return n;
     }
 
-
-    HashSet<Listener> listeners = new HashSet<>();
-
     @RPCMethod(help = "Listen to XPM events")
     public void listen() {
-        Listener listener = new Listener() {
-            @Override
-            public void notify(Message message) {
-                try {
-                    HashMap<String, Object> map = new HashMap<>();
-                    map.put("event", message.getType().toString());
-                    if (message instanceof SimpleMessage) {
-                        map.put("resource", ((SimpleMessage) message).getResource().getId());
-                        ResourceLocator locator = ((SimpleMessage) message).getResource().getLocator();
-                        if (locator != null)
-                            map.put("locator", locator.toString());
-                    }
-
-                    switch (message.getType()) {
-                        case STATE_CHANGED:
-                            map.put("state", ((SimpleMessage) message).getResource().getState().toString());
-                            break;
-
-                        case RESOURCE_REMOVED:
-                            break;
-
-                        case RESOURCE_ADDED:
-                            map.put("state", ((SimpleMessage) message).getResource().getState().toString());
-                            break;
-                    }
-
-                    mos.message(map);
-                } catch (IOException e) {
-                    LOGGER.error(e, "Could not output");
-                } catch (RuntimeException e) {
-                    LOGGER.error(e, "Error while trying to notify RPC client");
+        Listener listener = message -> {
+            try {
+                HashMap<String, Object> map = new HashMap<>();
+                map.put("event", message.getType().toString());
+                if (message instanceof SimpleMessage) {
+                    map.put("resource", ((SimpleMessage) message).getResource().getId());
+                    ResourceLocator locator = ((SimpleMessage) message).getResource().getLocator();
+                    if (locator != null)
+                        map.put("locator", locator.toString());
                 }
+
+                switch (message.getType()) {
+                    case STATE_CHANGED:
+                        map.put("state", ((SimpleMessage) message).getResource().getState().toString());
+                        break;
+
+                    case RESOURCE_REMOVED:
+                        break;
+
+                    case RESOURCE_ADDED:
+                        map.put("state", ((SimpleMessage) message).getResource().getState().toString());
+                        break;
+                }
+
+                mos.message(map);
+            } catch (IOException e) {
+                LOGGER.error(e, "Could not output");
+            } catch (RuntimeException e) {
+                LOGGER.error(e, "Error while trying to notify RPC client");
             }
         };
 
@@ -754,6 +749,316 @@ public class JsonRPCMethods extends HttpServlet {
     public void close() {
         for (Listener listener : listeners)
             scheduler.removeListener(listener);
+    }
+
+    /**
+     * Kills all the jobs in a group
+     */
+    @RPCMethod(help = "Stops a set of jobs under a given group.")
+    public int stopJobs(
+            @RPCArgument(name = "group", help = "The group to consider") String group,
+            @RPCArgument(name = "killRunning", help = "Whether to kill running tasks") boolean killRunning,
+            @RPCArgument(name = "holdWaiting", help = "Whether to put on hold ready/waiting tasks") boolean holdWaiting,
+            @RPCArgument(name = "recursive", help = "Recursive") boolean recursive) throws Exception {
+
+        final EnumSet<ResourceState> statesSet
+                = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
+
+
+        int n = 0;
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, statesSet, false)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
+                if (resource instanceof Job) {
+                    ((Job) resource).stop();
+                    n++;
+                }
+            }
+        }
+        return n;
+    }
+
+    @RPCMethod(help = "Kill one or more jobs")
+    public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
+        int n = 0;
+        for (Object id : JobIds) {
+            final Resource resource = scheduler.getResource(ResourceLocator.parse((String) id));
+            if (resource instanceof Job) {
+                if (((Job) resource).stop())
+                    n++;
+            }
+        }
+        return n;
+    }
+
+    @RPCMethod(help = "Puts back a job into the waiting queue")
+    public int restartJob(
+            @RPCArgument(name = "name", help = "The name of the job") String name,
+            @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
+            @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
+    ) throws Exception {
+
+        int nbUpdated = 0;
+        Resource resource = scheduler.getResource(ResourceLocator.parse(name));
+        if (resource == null)
+            throw new XPMRuntimeException("Job not found [%s]", name);
+
+        final ResourceState rsrcState = resource.getState();
+
+        if (rsrcState == ResourceState.RUNNING)
+            throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+
+        // The job is active, so we have nothing to do
+        if (rsrcState.isActive())
+            return 0;
+
+        if (!restartDone && rsrcState == ResourceState.DONE)
+            return 0;
+
+        ((Job) resource).restart();
+        nbUpdated++;
+
+        // If the job was done, we need to restart the dependences
+        if (recursive && rsrcState == ResourceState.DONE) {
+            nbUpdated += invalidate(resource);
+        }
+
+        return nbUpdated;
+    }
+
+    /**
+     * List jobs
+     */
+    @RPCMethod(help = "List the jobs along with their states")
+    public List<Map<String, String>> listJobs(
+            @RPCArgument(name = "group") String group,
+            @RPCArgument(name = "states") String[] states,
+            @RPCArgument(name = "recursive", required = false) Boolean _recursive) {
+        final EnumSet<ResourceState> set = getStates(states);
+        List<Map<String, String>> list = new ArrayList<>();
+        boolean recursive = _recursive == null ? false : _recursive;
+
+        for (Multiset.Entry<String> x : scheduler.subgroups(group).entrySet()) {
+            Map<String, String> map = new HashMap<>();
+            String s = x.getElement();
+            map.put("type", "group");
+            map.put("name", s);
+//            map.put("count", Integer.toString(x.getCount()));
+            list.add(map);
+        }
+
+        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, set, true)) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
+                Map<String, String> map = new HashMap<>();
+                map.put("type", resource.getClass().getCanonicalName());
+                map.put("state", resource.getState().toString());
+                map.put("name", resource.getLocator().toString());
+                list.add(map);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
+
+    private ResourceLocator toResourceLocator(Object depend) {
+        throw new NotImplementedException();
+//        return null;  //To change body of created methods use File | Settings | File Templates.
+    }
+
+    /**
+     * Utility function that transforms an array with paired values into a map
+     *
+     * @param envArray The array, must contain an even number of elements
+     * @return a map
+     */
+    private Map<String, String> arrayToMap(Object[] envArray) {
+        Map<String, String> env = new TreeMap<>();
+        for (Object x : envArray) {
+            Object[] o = (Object[]) x;
+            if (o.length != 2)
+                // FIXME: should be a proper one
+                throw new RuntimeException();
+            env.put((String) o[0], (String) o[1]);
+        }
+        return env;
+    }
+
+
+    static public interface Arguments {
+        public abstract RPCArgument getArgument(int i);
+
+        public abstract Class<?> getType(int i);
+
+        public abstract int size();
+    }
+
+
+//	/**
+//	 * Add a data resource
+//	 *
+//	 * @param id
+//	 *            The data ID
+//	 * @param mode
+//	 *            The locking mode
+//	 * @param exists
+//	 * @return
+//	 * @throws DatabaseException
+//	 */
+//	public boolean addData(String id, String mode, boolean exists)
+//			throws DatabaseException {
+//		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
+//
+//
+//        ResourceLocator identifier = ResourceLocator.decode(id);
+//		scheduler.append(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
+//				exists));
+//		return true;
+//	}
+
+    static public class MethodDescription implements Arguments {
+        Method method;
+        private RPCArgument[] arguments;
+        private Class<?>[] types;
+
+        public MethodDescription(Method method) {
+            this.method = method;
+            types = method.getParameterTypes();
+            Annotation[][] annotations = method.getParameterAnnotations();
+            arguments = new RPCArgument[annotations.length];
+            for (int i = 0; i < annotations.length; i++) {
+                types[i] = ClassUtils.primitiveToWrapper(types[i]);
+                for (int j = 0; j < annotations[i].length && arguments[i] == null; j++) {
+                    if (annotations[i][j] instanceof RPCArgument)
+                        arguments[i] = (RPCArgument) annotations[i][j];
+                }
+
+                if (arguments[i] == null)
+                    throw new XPMRuntimeException("No annotation for %dth argument of %s", i + 1, method);
+
+            }
+        }
+
+        @Override
+        public RPCArgument getArgument(int i) {
+            return arguments[i];
+        }
+
+        @Override
+        public Class<?> getType(int i) {
+            return types[i];
+        }
+
+        @Override
+        public int size() {
+            return arguments.length;
+        }
+    }
+
+
+//    /**
+//     * Add a command line job
+//     *
+//     * @throws DatabaseException
+//     */
+//    public boolean runCommand(String name, int priority, Object[] command,
+//                              Object[] envArray, String workingDirectory, Object[] depends,
+//                              Object[] readLocks, Object[] writeLocks) throws DatabaseException, ExperimaestroCannotOverwrite {
+//        Map<String, String> env = arrayToMap(envArray);
+//        LOGGER.info(
+//                "Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",
+//                name, Arrays.toString(command), priority,
+//                Arrays.toString(readLocks), Arrays.toString(writeLocks),
+//                Output.toString(", ", env.entrySet()));
+//
+//        CommandArguments commandArgs = new CommandArguments();
+//        for (int i = command.length; --i >= 0; )
+//            commandArgs.add(new CommandArgument(command[i].toString()));
+//
+//        Connector connector = LocalhostConnector.getInstance();
+//        CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
+//                env, new File(workingDirectory).getAbsolutePath());
+//
+//        // XPMProcess locks
+//        for (Object depend : depends) {
+//
+//            Resource resource = scheduler.getResource(toResourceLocator(depend));
+//            if (resource == null)
+//                throw new RuntimeException("Resource " + depend
+//                        + " was not found");
+//            job.addDependency(resource, LockType.GENERATED);
+//        }
+//
+//        // We have to wait for read lock resources to be generated
+//        for (Object readLock : readLocks) {
+//            Resource resource = scheduler.getResource(toResourceLocator(readLock));
+//            if (resource == null)
+//                throw new RuntimeException("Resource " + readLock
+//                        + " was not found");
+//            job.addDependency(resource, LockType.READ_ACCESS);
+//        }
+//
+//        // Write locks
+//        for (Object writeLock : writeLocks) {
+//            final ResourceLocator id = toResourceLocator(writeLock);
+//            Resource resource = scheduler.getResource(id);
+//            if (resource == null) {
+//                resource = new SimpleData(scheduler, id,
+//                        LockMode.EXCLUSIVE_WRITER, false);
+//            }
+//            job.addDependency(resource, LockType.WRITE_ACCESS);
+//        }
+//
+//        scheduler.store(job, null);
+//        return true;
+//    }
+
+    static public class RPCArrayArgument implements RPCArgument {
+        @Override
+        public String name() {
+            return null;
+        }
+
+        @Override
+        public boolean required() {
+            return true;
+        }
+
+        @Override
+        public String help() {
+            return "Array element";
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return RPCArgument.class;
+        }
+    }
+
+    /**
+     * A class that is used to control the environment in scripts
+     *
+     * @author B. Piwowarski <benjamin@bpiwowar.net>
+     */
+    static public class JSGetEnv {
+        private final Map<String, String> environment;
+
+        public JSGetEnv(Map<String, String> environment) {
+            this.environment = environment;
+        }
+
+        public String get(String key) {
+            return environment.get(key);
+        }
+
+        public String get(String key, String defaultValue) {
+            String value = environment.get(key);
+            if (value == null)
+                return defaultValue;
+            return value;
+        }
+
     }
 
 }

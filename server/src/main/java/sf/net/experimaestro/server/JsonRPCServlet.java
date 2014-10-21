@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Stack;
 
@@ -63,7 +64,15 @@ public class JsonRPCServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             JsonCallHandler handler = new JsonCallHandler(req, resp);
-            Object message = JSONValue.parse(req.getQueryString());
+            final String queryString = req.getQueryString();
+            if (queryString == null) {
+                ServletOutputStream outputStream = resp.getOutputStream();
+                OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+                writer.write("Error");
+                outputStream.close();
+                return;
+            }
+            Object message = JSONValue.parse(queryString);
             handler.handleJSON((JSONObject) message);
         } catch (RuntimeException e) {
             LOGGER.error(e, "Error while handling request");

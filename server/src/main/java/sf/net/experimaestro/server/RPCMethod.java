@@ -18,8 +18,10 @@
 
 package sf.net.experimaestro.server;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Help
@@ -27,12 +29,14 @@ import java.lang.annotation.RetentionPolicy;
  * @date 15/10/12
  */
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
 @interface RPCMethod {
     /** Help message */
     String help() default "";
 
-    /** Parameters documentation */
-    String [] parameters() default {};
-
+    /**
+     * Name of the method
+     * @return The name of the RPC method or empty string if default (method name)
+     */
     String name() default "";
 }
