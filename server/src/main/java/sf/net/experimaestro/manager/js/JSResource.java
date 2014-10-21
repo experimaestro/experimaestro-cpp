@@ -48,6 +48,16 @@ public class JSResource extends JSBaseObject implements Wrapper {
         return resource.outputFile();
     }
 
+    @JSFunction
+    public FileObject file() throws FileSystemException {
+        return resource.getLocator().getFile();
+    }
+
+    @JSFunction
+    public FileObject resolve(String path) throws FileSystemException {
+        return resource.getLocator().resolvePath(path, true).getFile();
+    }
+
     @Override
     @JSFunction("toString")
     public String toString() {

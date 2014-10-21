@@ -42,6 +42,7 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
+import sf.net.experimaestro.exceptions.XPMCommandException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
@@ -263,7 +264,7 @@ public class JsonRPCMethods extends HttpServlet {
             }
 
             if (argmax == null)
-                throw new XPMRuntimeException("Cannot find a matching method");
+                throw new XPMCommandException("Cannot find a matching method");
 
             Object[] args = new Object[argmax.arguments.length];
             for (int i = 0; i < args.length; i++) {
@@ -272,12 +273,21 @@ public class JsonRPCMethods extends HttpServlet {
             }
             Object result = argmax.method.invoke(this, args);
             mos.endMessage(requestID, result);
-        } catch (Throwable t) {
-            LOGGER.error(t, "Error while handling JSON request");
+        } catch(XPMCommandException e) {
+            LOGGER.info("Error while handling JSON request [%s]", e);
             try {
-                while (t.getCause() != null)
+                Throwable t = e;
+                while (t.getCause() != null) {
                     t = t.getCause();
+                }
                 mos.error(requestID, 1, t.getMessage());
+            } catch (IOException e2) {
+                LOGGER.error(e2, "Could not send the return code");
+            }
+        } catch (Throwable t) {
+            LOGGER.info(t, "Internal error while handling JSON request");
+            try {
+                mos.error(requestID, 1, "Internal error while running request");
             } catch (IOException e) {
                 LOGGER.error("Could not send the return code");
             }
@@ -301,7 +311,7 @@ public class JsonRPCMethods extends HttpServlet {
     /**
      * Information about a job
      */
-    @RPCMethod(help = "Returns detailed information about a job (XML format)")
+    @RPCMethod(help = "Returns detailed information about a job (Json format)")
     public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException {
         Resource resource = getResource(resourceId);
 
@@ -671,14 +681,14 @@ public class JsonRPCMethods extends HttpServlet {
         if (id != null && !id.equals("") && idPattern == null) {
             final Resource resource = getResource(id);
             if (resource == null)
-                throw new XPMRuntimeException("Job not found [%s]", id);
+                throw new XPMCommandException("Job not found [%s]", id);
 
             if (group != null && !resource.getGroup().startsWith(group))
-                throw new XPMRuntimeException("Resource [%s] group [%s] does not match [%s]",
+                throw new XPMCommandException("Resource [%s] group [%s] does not match [%s]",
                         resource, resource.getGroup(), group);
 
             if (!states.contains(resource.getState()))
-                throw new XPMRuntimeException("Resource [%s] state [%s] not in [%s]",
+                throw new XPMCommandException("Resource [%s] state [%s] not in [%s]",
                         resource, resource.getState(), states);
             scheduler.delete(resource, recursive);
             n = 1;

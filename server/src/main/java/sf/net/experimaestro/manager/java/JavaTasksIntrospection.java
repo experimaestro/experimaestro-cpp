@@ -69,29 +69,8 @@ public class JavaTasksIntrospection {
 
     private void addToRepository(Repository repository, ClassInfoLoader cl, Connector connector) throws ExperimaestroException, IOException {
         BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
-            NamespaceContext nsContext = new NamespaceContext() {
-                @Override
-                public String getNamespaceURI(String prefix) {
-                    final String uri = description.namespaces.get(prefix);
-                    if (uri != null) {
-                        return uri;
-                    }
-                    return Manager.PREDEFINED_PREFIXES.get(prefix);
-                }
-
-                @Override
-                public String getPrefix(String namespaceURI) {
-                    throw new NotImplementedException();
-                }
-
-                @Override
-                public Iterator getPrefixes(String namespaceURI) {
-                    throw new NotImplementedException();
-                }
-            };
-
             // Creates the task factory
-            JavaTaskFactory factory = new JavaTaskFactory(this, connector, repository, classInfo, nsContext);
+            JavaTaskFactory factory = new JavaTaskFactory(this, connector, repository, classInfo, description.namespaces);
             repository.addFactory(factory);
             return true;
         };

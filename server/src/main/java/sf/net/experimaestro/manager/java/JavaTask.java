@@ -49,7 +49,14 @@ public class JavaTask extends Task {
             final FileObject file = taskContext.workingDirectory;
             if (file == null)
                 throw new XPMRuntimeException("Working directory is not set");
-            uniqueDir = Manager.uniqueDirectory(file, factory.getId().getLocalPart(), factory.getId(), json);
+
+            String dirPrefix = factory.getId().getLocalPart();
+            final String prefix = javaFactory.prefixes.get(factory.getId().getNamespaceURI());
+            if (prefix != null) {
+                dirPrefix = prefix + "." + dirPrefix;
+            }
+
+            uniqueDir = Manager.uniqueDirectory(file, dirPrefix, factory.getId(), json);
             final SingleHostConnector connector = javaFactory.connector.getConnector(new ComputationalRequirements() {
             });
             locator = new ResourceLocator(connector, connector.resolve(uniqueDir.resolveFile("task")));

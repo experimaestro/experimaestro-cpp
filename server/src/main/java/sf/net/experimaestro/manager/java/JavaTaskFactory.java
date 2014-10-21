@@ -1,6 +1,5 @@
 package sf.net.experimaestro.manager.java;
 
-import com.google.common.collect.ImmutableSet;
 import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
@@ -13,10 +12,6 @@ import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
-import javax.xml.namespace.NamespaceContext;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,25 +29,31 @@ public class JavaTaskFactory extends TaskFactory {
     private final Type output;
     Map<String, Input> inputs = new HashMap<>();
 
+    /** Prefixes for namespaces - used for unique directory naming */
+    Map<String, String> prefixes = new HashMap<>();
+
     /**
      * Initialise a task
-     *
-     * @param javaTasksIntrospection
+     *  @param javaTasksIntrospection
      * @param connector
      * @param repository             The repository
      * @param classInfo              The java class from which to build a task factory
+     * @param namespaces
      */
-    public JavaTaskFactory(JavaTasksIntrospection javaTasksIntrospection, Connector connector, Repository repository, ClassInfo classInfo, NamespaceContext namespaces) {
+    public JavaTaskFactory(JavaTasksIntrospection javaTasksIntrospection, Connector connector, Repository repository, ClassInfo classInfo, Map<String, String> namespaces) {
         super(repository);
         this.javaTasksIntrospection = javaTasksIntrospection;
         this.connector = connector;
         this.taskClassname = classInfo.getName();
+
+        namespaces.forEach((key, value) -> prefixes.put(value, key));
 
         final TaskDescription description = classInfo.getAnnotation(TaskDescription.class);
         if (description == null) {
             throw new XPMRuntimeException("The class %s has no TaskDescription annotation", classInfo);
         }
 
+        namespaces.putAll(Manager.PREDEFINED_PREFIXES);
         this.id = QName.parse(description.id(), namespaces);
         this.output = new Type(QName.parse(description.output(), namespaces));
 
@@ -63,7 +64,7 @@ public class JavaTaskFactory extends TaskFactory {
             // TODO: add default values, etc.
             String fieldName = field.getName();
             if (jsonArgument != null) {
-                Input input = new JsonInput(getType(namespaces, jsonArgument, field));
+                Input input = new JsonInput(getType(field));
                 input.setDocumentation(jsonArgument.help());
                 input.setOptional(!jsonArgument.required());
                 String name = getString(jsonArgument.name(), fieldName);
@@ -88,7 +89,7 @@ public class JavaTaskFactory extends TaskFactory {
         return "".equals(value) ? defaultValue : value;
     }
 
-    private Type getType(NamespaceContext namespaces, JsonArgument jsonArgument, FieldInfo field) {
+    private Type getType(FieldInfo field) {
         final ClassInfo type = field.getType();
         if (type.isArray()) {
 

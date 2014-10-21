@@ -217,12 +217,7 @@ public class QName implements Comparable<QName> {
     }
 
     public static QName parse(final String name, final NamespaceContext namespaceContext) {
-        return parse(name, null, new String2String() {
-            @Override
-            public String get(String prefix) {
-                return namespaceContext.getNamespaceURI(prefix);
-            }
-        });
+        return parse(name, null, prefix -> namespaceContext.getNamespaceURI(prefix));
     }
 
     public boolean isAttribute(Element element) {
@@ -230,5 +225,9 @@ public class QName implements Comparable<QName> {
     }
     public String getAttribute(Element element) {
         return element.getAttributeNS(uri, localName);
+    }
+
+    public static QName parse(String name, Map<String, String> namespaces) {
+        return parse(name, null, s -> namespaces.get(s));
     }
 }
