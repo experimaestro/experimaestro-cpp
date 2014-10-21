@@ -21,9 +21,9 @@ package sf.net.experimaestro.manager.plans;
 import sf.net.experimaestro.manager.json.Json;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 20/2/13
-*/
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 20/2/13
+ */
 public class Value {
     /**
      * The value ID

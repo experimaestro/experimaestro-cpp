@@ -44,6 +44,40 @@ public class JSTasks extends JSBaseObject implements RefCallable {
         this.xpm = xpm;
     }
 
+    @JSFunction(scope = true)
+    static public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
+        Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
+        ProductReference pr = new ProductReference();
+        for (Object object : objects) {
+            if (object instanceof NativeObject) {
+                for (Object key : ((NativeObject) object).getIds()) {
+                    Object o = ((NativeObject) object).get(key);
+                    if (!(o instanceof JSAbstractOperator))
+                        throw new XPMRhinoException("Cannot merge object of type " + o.getClass());
+                    map.put(pr.getParents().size(), key.toString());
+                    pr.addParent(((JSAbstractOperator) o).getOperator());
+                }
+            } else if (object instanceof JSAbstractOperator) {
+                pr.addParent(((JSAbstractOperator) object).getOperator());
+            } else {
+                throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
+            }
+        }
+
+        if (pr.getParents().size() == 0)
+            throw new XPMRhinoException("Merge should at least have one argument");
+
+        if (pr.getParents().size() == 1 && map.isEmpty()) {
+            return new JSOperator(pr.getParents().get(0));
+        }
+
+
+        QName qname = QName.parse(outputType, new JSNamespaceContext(scope));
+        FunctionOperator operator = new FunctionOperator(new MergeFunction(qname, map));
+        operator.addParent(pr);
+        return new JSOperator(operator);
+    }
+
     @JSFunction(value = "set", scope = true)
     public JSTaskFactory set(Context cx, Scriptable scope, String qname, NativeObject definition) {
         QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
@@ -55,13 +89,11 @@ public class JSTasks extends JSBaseObject implements RefCallable {
         QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
         return new TaskRef(id).get(cx);
     }
-    
 
-	@Override
+    @Override
     public String getClassName() {
         return "Tasks";
     }
-
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
@@ -99,9 +131,9 @@ public class JSTasks extends JSBaseObject implements RefCallable {
     }
 
     class TaskRef extends Ref {
-		private static final long serialVersionUID = 1L;
-		
-		private final QName id;
+        private static final long serialVersionUID = 1L;
+
+        private final QName id;
 
         public TaskRef(QName id) {
             this.id = id;
@@ -131,39 +163,5 @@ public class JSTasks extends JSBaseObject implements RefCallable {
             xpm.getRepository().addFactory(factory.factory);
             return factory;
         }
-    }
-
-    @JSFunction(scope = true)
-    static public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
-        Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
-        ProductReference pr = new ProductReference();
-        for (Object object : objects) {
-            if (object instanceof NativeObject) {
-                for (Object key : ((NativeObject) object).getIds()) {
-                    Object o = ((NativeObject) object).get(key);
-                    if (!(o instanceof JSAbstractOperator))
-                        throw new XPMRhinoException("Cannot merge object of type " + o.getClass());
-                    map.put(pr.getParents().size(), key.toString());
-                    pr.addParent(((JSAbstractOperator) o).getOperator());
-                }
-            } else if (object instanceof JSAbstractOperator) {
-                pr.addParent(((JSAbstractOperator) object).getOperator());
-            } else {
-                throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
-            }
-        }
-
-        if (pr.getParents().size() == 0)
-            throw new XPMRhinoException("Merge should at least have one argument");
-
-        if (pr.getParents().size() == 1 && map.isEmpty()) {
-            return new JSOperator(pr.getParents().get(0));
-        }
-
-
-        QName qname = QName.parse(outputType, new JSNamespaceContext(scope));
-        FunctionOperator operator = new FunctionOperator(new MergeFunction(qname, map));
-        operator.addParent(pr);
-        return new JSOperator(operator);
     }
 }

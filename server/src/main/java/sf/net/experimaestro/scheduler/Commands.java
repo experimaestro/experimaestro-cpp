@@ -8,7 +8,6 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 /**
  * A full command
@@ -25,7 +24,7 @@ public class Commands implements Iterable<Command> {
 
     /**
      * List of dependencies attached to this command
-     *
+     * <p/>
      * The dependencies are not saved during serialization since this will be handled
      * by the resource
      */
@@ -75,7 +74,7 @@ public class Commands implements Iterable<Command> {
 
     public void forEachDependency(Consumer<Dependency> consumer) {
         // Process our dependencies
-        for(Dependency dependency: dependencies) {
+        for (Dependency dependency : dependencies) {
             consumer.accept(dependency);
         }
 

@@ -30,32 +30,26 @@ import sf.net.experimaestro.utils.log.Logger;
  */
 @Entity
 abstract public class Dependency {
-    final static private Logger LOGGER = Logger.getLogger();
-
     public static final String FROM_KEY_NAME = "from";
     public static final String TO_KEY_NAME = "to";
-
+    final static private Logger LOGGER = Logger.getLogger();
+    /**
+     * The state of this dependency
+     */
+    DependencyStatus status;
     @PrimaryKey(sequence = "dependency_id")
     private long id;
-
     /**
      * The resource.
      * We abort its deletion if there is a dependency.
      */
     @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.ABORT)
     private long from;
-
     /**
      * The resource that depends on the resource {@link #from}
      */
     @SecondaryKey(name = TO_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.CASCADE)
     private long to;
-
-    /**
-     * The state of this dependency
-     */
-    DependencyStatus status;
-
     /**
      * The lock (or null if no lock taken)
      */
@@ -69,13 +63,8 @@ abstract public class Dependency {
         this.from = from;
     }
 
-    public Dependency setTo(long to) {
-        this.to = to;
-        return this;
-    }
-
     public boolean hasLock() {
-    	return lock != null;
+        return lock != null;
     }
 
     public long getDatabaseId() {
@@ -90,6 +79,11 @@ abstract public class Dependency {
         return to;
     }
 
+    public Dependency setTo(long to) {
+        this.to = to;
+        return this;
+    }
+
     @Override
     public String toString() {
         return String.format("Dep[R%d-R%d]; %s; %b", from, to, status, hasLock());
@@ -101,9 +95,9 @@ abstract public class Dependency {
      * @param scheduler The scheduler to retrieve data from database
      * @param from      The requirement (to avoid a fetch from database) or null
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
-     *         {@link DependencyStatus#WAIT} if it can be satisfied one day
-     *         {@link DependencyStatus#HOLD} if it can be satisfied after an external change
-     *         {@link DependencyStatus#ERROR} if it cannot be satisfied
+     * {@link DependencyStatus#WAIT} if it can be satisfied one day
+     * {@link DependencyStatus#HOLD} if it can be satisfied after an external change
+     * {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     protected DependencyStatus accept(Scheduler scheduler, Resource from) {
         if (from == null) {

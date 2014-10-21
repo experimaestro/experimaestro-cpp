@@ -26,17 +26,18 @@ import java.util.TreeMap;
 
 /**
  * A trie of sequences
- *
+ * <p/>
  * Not a high efficiency implementation, but very generic.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/11/12
  */
 public class Trie<C extends Comparable, O extends List<? extends C>> {
-    TreeMap<C, Trie<C,O>> children;
+    TreeMap<C, Trie<C, O>> children;
 
     /**
      * Put a new sequence into the trie
+     *
      * @param sequence The sequence to insert
      * @return true if a new node was inserted in the trie
      */
@@ -46,6 +47,7 @@ public class Trie<C extends Comparable, O extends List<? extends C>> {
 
     /**
      * Inserts a new element in the subtrie
+     *
      * @param iterator
      * @return
      */
@@ -76,10 +78,11 @@ public class Trie<C extends Comparable, O extends List<? extends C>> {
 
     /**
      * Find the node of the trie that matches a given prefix
+     *
      * @param sequence The prefix to match
      * @return A trie node or null if not found
      */
-    public Trie<C,O> find(List<? extends C> sequence) {
+    public Trie<C, O> find(List<? extends C> sequence) {
         return find(sequence.iterator());
     }
 

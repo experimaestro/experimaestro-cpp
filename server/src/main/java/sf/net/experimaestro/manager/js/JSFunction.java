@@ -29,11 +29,15 @@ import java.lang.annotation.RetentionPolicy;
 public @interface JSFunction {
     String value() default "";
 
-    /** Whether the constructor takes scope & context */
+    /**
+     * Whether the constructor takes scope & context
+     */
     boolean scope() default false;
 
 
-    /** Marks a function that is used when the object is called */
+    /**
+     * Marks a function that is used when the object is called
+     */
     boolean call() default false;
 
     /**
@@ -41,6 +45,8 @@ public @interface JSFunction {
      */
     int optional() default 0;
 
-    /** Optional arguments are at the beginning when true */
+    /**
+     * Optional arguments are at the beginning when true
+     */
     boolean optionalsAtStart() default false;
 }

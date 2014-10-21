@@ -41,17 +41,25 @@ import java.net.URISyntaxException;
  * @date 25/6/12
  */
 @Persistent
-public class SSHOptions extends ConnectorOptions  {
-    /** Password - TODO: encrypt before storing */
+public class SSHOptions extends ConnectorOptions {
+    /**
+     * Password - TODO: encrypt before storing
+     */
     private String password;
 
-    /** Compression level */
+    /**
+     * Compression level
+     */
     private String compression;
 
-    /** Whether to use an SSH agent */
+    /**
+     * Whether to use an SSH agent
+     */
     private boolean useSSHAgent = true;
 
-    /** Proxy for configuration */
+    /**
+     * Proxy for configuration
+     */
     private ProxyConfiguration proxy;
 
     public void setCompression(String compression) {
@@ -102,7 +110,13 @@ public class SSHOptions extends ConnectorOptions  {
     }
 
 
-    /** Use the SSH agent to connect */
+    private static interface ProxyConfiguration {
+        void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException;
+    }
+
+    /**
+     * Use the SSH agent to connect
+     */
     private static class AgentRepositoryFactory implements IdentityRepositoryFactory {
         @Override
         public IdentityRepository create(JSch jsch) {
@@ -121,10 +135,6 @@ public class SSHOptions extends ConnectorOptions  {
         }
     }
 
-    private static interface ProxyConfiguration {
-        void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException;
-    }
-
     @Persistent
     private static class NCProxyConfiguration implements ProxyConfiguration {
         String username;
@@ -133,7 +143,8 @@ public class SSHOptions extends ConnectorOptions  {
 
         SSHOptions sshOptions;
 
-        private NCProxyConfiguration() {}
+        private NCProxyConfiguration() {
+        }
 
         public NCProxyConfiguration(String uriString, SSHOptions sshOptions) throws URISyntaxException {
             URI uri = new URI(uriString);

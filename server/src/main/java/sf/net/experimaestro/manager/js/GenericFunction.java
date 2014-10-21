@@ -7,7 +7,6 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
@@ -15,14 +14,16 @@ import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 
 import static java.lang.Math.max;
 import static java.lang.StrictMath.min;
 
 /**
  * Base class for javascript methods or constructors
- * <p>
+ * <p/>
  * Created by bpiwowar on 10/9/14.
  */
 public abstract class GenericFunction implements Callable {
@@ -226,7 +227,7 @@ public abstract class GenericFunction implements Callable {
             final Object[] objects = (Object[]) Array.newInstance(arrayClass, functions.size());
             final Iterator iterator = collection.iterator();
             int i = 0;
-            while(iterator.hasNext()) {
+            while (iterator.hasNext()) {
                 objects[i] = functions.get(i).apply(iterator.next());
                 ++i;
             }
@@ -273,7 +274,7 @@ public abstract class GenericFunction implements Callable {
                     final Iterator iterator = array.iterator();
                     final ListConverter listConverter = new ListConverter(innerType);
 
-                    while(iterator.hasNext()) {
+                    while (iterator.hasNext()) {
                         listConverter.add(converter(scope, iterator.next(), innerType));
                         if (score == Integer.MIN_VALUE) {
                             return null;

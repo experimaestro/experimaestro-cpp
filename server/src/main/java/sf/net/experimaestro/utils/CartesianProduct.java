@@ -40,6 +40,10 @@ public class CartesianProduct<T> implements Iterable<T[]> {
         this.iterables = iterables;
     }
 
+    public static <T> Iterable<T[]> of(Class<T> aClass, Iterable<? extends T>... values) {
+        return new CartesianProduct<>(aClass, values);
+    }
+
     @Override
     public Iterator<T[]> iterator() {
         @SuppressWarnings("unchecked")
@@ -87,9 +91,5 @@ public class CartesianProduct<T> implements Iterable<T[]> {
                 return true;
             }
         };
-    }
-
-    public static <T> Iterable<T[]> of(Class<T> aClass, Iterable<? extends T>... values) {
-        return new CartesianProduct<>(aClass, values);
     }
 }

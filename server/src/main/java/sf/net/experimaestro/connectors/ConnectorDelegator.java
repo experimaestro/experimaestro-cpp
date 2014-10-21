@@ -30,7 +30,9 @@ import sf.net.experimaestro.scheduler.Scheduler;
  */
 @Persistent
 public class ConnectorDelegator extends Connector {
-    /** The real connector */
+    /**
+     * The real connector
+     */
     transient Connector connector;
 
 

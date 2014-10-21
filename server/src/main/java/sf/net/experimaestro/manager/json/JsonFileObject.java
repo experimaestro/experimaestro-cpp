@@ -16,7 +16,8 @@ import java.io.Writer;
 public class JsonFileObject implements Json {
     FileObject fileObject;
 
-    private JsonFileObject() {}
+    private JsonFileObject() {
+    }
 
     public JsonFileObject(FileObject fileObject) {
         this.fileObject = fileObject;

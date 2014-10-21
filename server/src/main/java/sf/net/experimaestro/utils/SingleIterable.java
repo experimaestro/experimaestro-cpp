@@ -22,6 +22,7 @@ import java.util.Iterator;
 
 /**
  * Wraps an iterator into an Iterable that can be used only once
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/2/13
  */

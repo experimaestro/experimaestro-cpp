@@ -54,41 +54,35 @@ import java.io.OutputStream;
 public class LoggerOutputStream extends OutputStream {
 
     /**
+     * The default number of bytes in the buffer. =2048
+     */
+    public static final int DEFAULT_BUFFER_LENGTH = 2048;
+    /**
      * Used to maintain the contract of [EMAIL PROTECTED] #close()}.
      */
     protected boolean hasBeenClosed = false;
-
     /**
      * The internal buffer where data is stored.
      */
     protected byte[] buf;
-
     /**
      * The number of valid bytes in the buffer. This value is always in the
      * range <tt>0</tt> through <tt>buf.length</tt>; elements <tt>buf[0]</tt>
      * through <tt>buf[count-1]</tt> contain valid byte data.
      */
     protected int count;
-
-    /**
-     * Remembers the size of the buffer for speed.
-     */
-    private int bufLength;
-
-    /**
-     * The default number of bytes in the buffer. =2048
-     */
-    public static final int DEFAULT_BUFFER_LENGTH = 2048;
-
     /**
      * The category to write to.
      */
     protected Logger logger;
-
     /**
      * The priority to use when writing to the Category.
      */
     protected Level level;
+    /**
+     * Remembers the size of the buffer for speed.
+     */
+    private int bufLength;
 
     /**
      * Protection against construction

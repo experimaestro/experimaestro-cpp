@@ -57,6 +57,18 @@ import java.util.TreeMap;
  */
 public class XMLUtils {
     final static private Logger LOGGER = Logger.getLogger();
+    private final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    final static private XPathFactory XPATH_FACTORY = XPathFactory.newInstance();
+    private static DocumentBuilder documentBuilder;
+    static {
+        try {
+            dbFactory.setNamespaceAware(true);
+            documentBuilder = dbFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            throw new XPMRuntimeException(
+                    "Could not build a document builder", e);
+        }
+    }
 
     /**
      * Convert an XML node into a string
@@ -122,7 +134,6 @@ public class XMLUtils {
         }
     }
 
-
     /**
      * Finds a child with a given qualified name
      *
@@ -182,7 +193,6 @@ public class XMLUtils {
         return nodes(nodes);
     }
 
-
     public static Iterable<Element> elements(final NodeList nodes) {
         return Iterables.filter(nodes(nodes), Element.class);
     }
@@ -210,20 +220,6 @@ public class XMLUtils {
                 };
             }
         };
-    }
-
-
-    private final static DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-    private static DocumentBuilder documentBuilder;
-
-    static {
-        try {
-            dbFactory.setNamespaceAware(true);
-            documentBuilder = dbFactory.newDocumentBuilder();
-        } catch (ParserConfigurationException e) {
-            throw new XPMRuntimeException(
-                    "Could not build a document builder", e);
-        }
     }
 
     /**
@@ -264,11 +260,9 @@ public class XMLUtils {
         return map.entrySet();
     }
 
-
     public static boolean is(QName qname, Element element) {
         return qname.equals(new QName(element.getNamespaceURI(), element.getLocalName()));
     }
-
 
     public static Iterable<? extends Node> iterable(final NodeList list) {
         return new Iterable<Node>() {
@@ -295,7 +289,6 @@ public class XMLUtils {
         document.appendChild(node);
     }
 
-
     public static Iterable<? extends Node> iterable(Object nodes) {
         if (nodes instanceof Node)
             return ImmutableList.of((Node) nodes);
@@ -314,8 +307,7 @@ public class XMLUtils {
      *
      * @param node
      * @return
-     * @throws java.util.NoSuchElementException
-     *          if no root element exists
+     * @throws java.util.NoSuchElementException if no root element exists
      */
     public static Element getRootElement(Node node) throws NoSuchElementException {
         if (node == null)
@@ -341,8 +333,6 @@ public class XMLUtils {
 
         return element;
     }
-
-    final static private XPathFactory XPATH_FACTORY = XPathFactory.newInstance();
 
     public static XPathExpression parseXPath(String path) throws XPathExpressionException {
         return XPATH_FACTORY.newXPath().compile(path);

@@ -20,13 +20,13 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Merge the output of several operators
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
@@ -61,6 +61,15 @@ public class Union extends NAryOperator {
         };
     }
 
+    @Override
+    protected String getName() {
+        return "Union";
+    }
+
+    @Override
+    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
+    }
+
     static private class UnionContexts implements Contexts {
         private final int parent;
         private final long[] context;
@@ -76,15 +85,5 @@ public class Union extends NAryOperator {
                 return -1;
             return context[index];
         }
-    }
-
-
-    @Override
-    protected String getName() {
-        return "Union";
-    }
-
-    @Override
-    protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
     }
 }

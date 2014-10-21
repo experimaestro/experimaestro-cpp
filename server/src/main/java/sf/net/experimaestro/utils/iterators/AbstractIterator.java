@@ -22,10 +22,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 abstract public class AbstractIterator<E> implements Iterator<E> {
-    @SuppressWarnings("serial")
-    static class EndOfStream extends Throwable {
-    }
-
     protected E value;
     byte status = -1;
 
@@ -57,6 +53,10 @@ abstract public class AbstractIterator<E> implements Iterator<E> {
 
     final public void remove() {
         throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("serial")
+    static class EndOfStream extends Throwable {
     }
 
 }

@@ -35,53 +35,53 @@ import java.net.URL;
 import static java.lang.String.format;
 
 public class ContentServlet extends XPMServlet {
-	final static private Logger LOGGER = Logger.getLogger();
-	private static final long serialVersionUID = 1L;
+    final static private Logger LOGGER = Logger.getLogger();
+    private static final long serialVersionUID = 1L;
 
     public ContentServlet(ServerSettings serverSettings) {
         super(serverSettings);
     }
 
     protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
+                         HttpServletResponse response) throws ServletException, IOException {
 
-		URL url = ContentServlet.class.getResource(format("/web%s",
-				request.getRequestURI()));
+        URL url = ContentServlet.class.getResource(format("/web%s",
+                request.getRequestURI()));
 
-		if (url != null) {
-			FileSystemManager fsManager = VFS.getManager();
-			FileObject file = fsManager.resolveFile(url.toExternalForm());
-			if (file.getType() == FileType.FOLDER) {
-				response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
-				response.setHeader("Location",
-						format("%sindex.html", request.getRequestURI()));
-				return;
-			}
+        if (url != null) {
+            FileSystemManager fsManager = VFS.getManager();
+            FileObject file = fsManager.resolveFile(url.toExternalForm());
+            if (file.getType() == FileType.FOLDER) {
+                response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
+                response.setHeader("Location",
+                        format("%sindex.html", request.getRequestURI()));
+                return;
+            }
 
             String filename = url.getFile();
             if (filename.endsWith(".html"))
-			    response.setContentType("text/html");
+                response.setContentType("text/html");
             else if (filename.endsWith(".png"))
                 response.setContentType("image/png");
             else if (filename.endsWith(".css"))
                 response.setContentType("text/css");
-			response.setStatus(HttpServletResponse.SC_OK);
+            response.setStatus(HttpServletResponse.SC_OK);
 
-			final ServletOutputStream out = response.getOutputStream();
-			InputStream in = url.openStream();
-			byte[] buffer = new byte[8192];
-			int read;
-			while ((read = in.read(buffer)) > 0) {
-				out.write(buffer, 0, read);
-			}
-			out.flush();
-			in.close();
-			return;
-		}
+            final ServletOutputStream out = response.getOutputStream();
+            InputStream in = url.openStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) > 0) {
+                out.write(buffer, 0, read);
+            }
+            out.flush();
+            in.close();
+            return;
+        }
 
-		// Not found
-		error404(request, response);
+        // Not found
+        error404(request, response);
 
-	}
+    }
 
 }

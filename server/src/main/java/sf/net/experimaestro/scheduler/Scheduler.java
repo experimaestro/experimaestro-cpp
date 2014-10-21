@@ -33,15 +33,15 @@ import org.apache.commons.vfs2.VFS;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.JsonProxies;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.je.LocalFileProxy;
 import sf.net.experimaestro.utils.je.FileProxy;
+import sf.net.experimaestro.utils.je.LocalFileProxy;
 import sf.net.experimaestro.utils.je.SftpFileProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -64,71 +64,10 @@ final public class Scheduler {
      * Used for atomic series of locks
      */
     public static String LockSync = "I am just a placeholder";
-
-    /**
-     * Main directory for the task manager. One database subfolder will be
-     * created
-     */
-    private File baseDirectory;
-
-    /**
-     * Number of threads running concurrently (excluding any server)
-     */
-    private int nbThreads = 5;
-
-    /**
-     * Number of running threads
-     */
-    private ThreadCount counter = new ThreadCount();
-
-    /**
-     * The list of jobs organised in a heap - with those having all dependencies
-     * fulfilled first
-     */
-    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>) new Heap<>(JobComparator.INSTANCE);
-
-    /**
-     * All the resources
-     */
-    private Resources resources;
-
-    /**
-     * All the connectors
-     */
-    private Connectors connectors;
-
-
-    /**
-     * The database store
-     */
-    private EntityStore dbStore;
-
-    /**
-     * The database environement
-     */
-    private Environment dbEnvironment;
-
-    /**
-     * Listeners
-     */
-    HashSet<Listener> listeners = new HashSet<>();
-
-    /**
-     * Scheduler
-     */
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-    /**
-     * Simple asynchronous executor service (used for asynchronous notification)
-     */
-    final ExecutorService executorService;
-
-
     /**
      * The file manager
      */
     private static FileSystemManager fsManager;
-
     static {
         try {
             fsManager = VFS.getManager();
@@ -136,6 +75,117 @@ final public class Scheduler {
             LOGGER.error("Cannot initialize the file system manager: " + e);
             System.exit(-1);
         }
+    }
+    /**
+     * Simple asynchronous executor service (used for asynchronous notification)
+     */
+    final ExecutorService executorService;
+    /**
+     * Scheduler
+     */
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    /**
+     * Listeners
+     */
+    HashSet<Listener> listeners = new HashSet<>();
+    boolean stopping = false;
+    // List of threads we started
+    ArrayList<Thread> threads = new ArrayList<>();
+    /**
+     * Main directory for the task manager. One database subfolder will be
+     * created
+     */
+    private File baseDirectory;
+    /**
+     * Number of threads running concurrently (excluding any server)
+     */
+    private int nbThreads = 5;
+    /**
+     * Number of running threads
+     */
+    private ThreadCount counter = new ThreadCount();
+    /**
+     * The list of jobs organised in a heap - with those having all dependencies
+     * fulfilled first
+     */
+    private Heap<Job<? extends JobData>> readyJobs = (Heap<Job<? extends JobData>>) new Heap<>(JobComparator.INSTANCE);
+    /**
+     * All the resources
+     */
+    private Resources resources;
+    /**
+     * All the connectors
+     */
+    private Connectors connectors;
+    /**
+     * The database store
+     */
+    private EntityStore dbStore;
+    /**
+     * The database environement
+     */
+    private Environment dbEnvironment;
+    private Timer resourceCheckTimer;
+
+    /**
+     * Initialise the task manager
+     *
+     * @param baseDirectory The directory where the XPM database will be stored
+     * @throws EnvironmentLockedException
+     * @throws DatabaseException
+     */
+    public Scheduler(File baseDirectory) throws DatabaseException {
+        // Get the parameters
+        this.baseDirectory = baseDirectory;
+        this.nbThreads = 10;
+
+
+        // Initialise the JE database
+        LOGGER.info("Initialising JE database in directory %s", baseDirectory);
+        EnvironmentConfig myEnvConfig = new EnvironmentConfig();
+        myEnvConfig.setTransactional(true);
+        StoreConfig storeConfig = new StoreConfig();
+
+        myEnvConfig.setAllowCreate(true);
+        storeConfig.setAllowCreate(true);
+        storeConfig.setTransactional(true);
+        dbEnvironment = new Environment(baseDirectory, myEnvConfig);
+
+        EntityModel model = new AnnotationModel();
+        model.registerClass(FileProxy.class);
+        model.registerClass(LocalFileProxy.class);
+        model.registerClass(SftpFileProxy.class);
+        model.registerClass(JsonProxies.JsonObjectProxy.class);
+        storeConfig.setModel(model);
+
+        // Add a shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> Scheduler.this.close()));
+
+        // Initialise the stores
+        dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
+        connectors = new Connectors(this, dbStore);
+
+        // TODO: use bytecode enhancement to delete public default constructors and have better performance
+        // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
+
+
+        // Initialise the running resources so that they can retrieve their state
+        resources = new Resource.ResourcesIndex(this, dbStore);
+        resources.init(readyJobs);
+
+        // Start the thread that start the jobs
+        LOGGER.info("Starting %d job runner threads", nbThreads);
+        for (int i = 0; i < nbThreads; i++) {
+            counter.add();
+            final JobRunner runner = new JobRunner("JobRunner@" + i);
+            threads.add(runner);
+            runner.start();
+        }
+
+        executorService = Executors.newFixedThreadPool(1);
+
+
+        LOGGER.info("Done - ready to work now");
     }
 
     public static FileSystemManager getVFSManager() {
@@ -178,10 +228,8 @@ final public class Scheduler {
         return resources.subgroups(group);
     }
 
-
     /**
      * Retrieves resources on which the given resource depends
-     *
      *
      * @param to The resource
      * @return A map of dependencies
@@ -192,7 +240,6 @@ final public class Scheduler {
 
     /**
      * Retrieves resources that depend upon the given resource
-     *
      *
      * @param from The resource
      * @return A map of dependencies
@@ -288,126 +335,9 @@ final public class Scheduler {
             listener.notify(message);
     }
 
-
-    /**
-     * This task runner takes a new task each time
-     */
-    class JobRunner extends Thread {
-        private final String name;
-
-        JobRunner(String name) {
-            super(name);
-            this.name = name;
-        }
-
-        @Override
-        public void run() {
-            Job job;
-            try {
-                while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
-                    // Set the state to LOCKING
-                    job.setState(ResourceState.LOCKING);
-                    LOGGER.info("Launching %s", job);
-                    this.setName(name + "/" + job);
-                    try {
-                        job.run();
-                        LOGGER.info("Job %s has started", job);
-                    } catch (LockException e) {
-                        // We could not lock the resources: update the job state
-                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                        job.setState(ResourceState.WAITING);
-                        job.updateStatus(true);
-                        job.storeState(false);
-                    } catch (Throwable t) {
-                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                        job.setState(ResourceState.ERROR);
-                        job.storeState(true);
-                    } finally {
-                    }
-                    LOGGER.info("Finished launching %s", job);
-                    this.setName(name);
-                }
-            } catch (InterruptedException e) {
-                LOGGER.warn("Shutting down job runner", e);
-            } finally {
-                LOGGER.info("Shutting down job runner");
-                counter.del();
-            }
-        }
-    }
-
-
-    /**
-     * Initialise the task manager
-     *
-     * @param baseDirectory The directory where the XPM database will be stored
-     * @throws EnvironmentLockedException
-     * @throws DatabaseException
-     */
-    public Scheduler(File baseDirectory) throws DatabaseException {
-        // Get the parameters
-        this.baseDirectory = baseDirectory;
-        this.nbThreads = 10;
-
-
-        // Initialise the JE database
-        LOGGER.info("Initialising JE database in directory %s", baseDirectory);
-        EnvironmentConfig myEnvConfig = new EnvironmentConfig();
-        myEnvConfig.setTransactional(true);
-        StoreConfig storeConfig = new StoreConfig();
-
-        myEnvConfig.setAllowCreate(true);
-        storeConfig.setAllowCreate(true);
-        storeConfig.setTransactional(true);
-        dbEnvironment = new Environment(baseDirectory, myEnvConfig);
-
-        EntityModel model = new AnnotationModel();
-        model.registerClass(FileProxy.class);
-        model.registerClass(LocalFileProxy.class);
-        model.registerClass(SftpFileProxy.class);
-        model.registerClass(JsonProxies.JsonObjectProxy.class);
-        storeConfig.setModel(model);
-
-        // Add a shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> Scheduler.this.close()));
-
-        // Initialise the stores
-        dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
-        connectors = new Connectors(this, dbStore);
-
-        // TODO: use bytecode enhancement to delete public default constructors and have better performance
-        // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
-
-
-        // Initialise the running resources so that they can retrieve their state
-        resources = new Resource.ResourcesIndex(this, dbStore);
-        resources.init(readyJobs);
-
-        // Start the thread that start the jobs
-        LOGGER.info("Starting %d job runner threads", nbThreads);
-        for (int i = 0; i < nbThreads; i++) {
-            counter.add();
-            final JobRunner runner = new JobRunner("JobRunner@" + i);
-            threads.add(runner);
-            runner.start();
-        }
-
-        executorService = Executors.newFixedThreadPool(1);
-
-
-        LOGGER.info("Done - ready to work now");
-    }
-
-    boolean stopping = false;
-
     protected boolean isStopping() {
         return stopping;
     }
-
-    // List of threads we started
-    ArrayList<Thread> threads = new ArrayList<>();
-
-    private Timer resourceCheckTimer;
 
     /**
      * Shutdown the scheduler
@@ -461,10 +391,6 @@ final public class Scheduler {
         LOGGER.info("Scheduler stopped");
     }
 
-    // ----
-    // ---- Task related methods
-    // ----
-
     /**
      * Get a resource by from
      * <p/>
@@ -480,6 +406,9 @@ final public class Scheduler {
         return resource;
     }
 
+    // ----
+    // ---- Task related methods
+    // ----
 
     /**
      * Get the next waiting job
@@ -514,14 +443,12 @@ final public class Scheduler {
         }
     }
 
-
     /**
      * Iterator on resources
      */
     public CloseableIterable<Resource> resources() {
         return resources.values();
     }
-
 
     /**
      * Add/remove a job to the list of jobs ready to be run
@@ -591,6 +518,53 @@ final public class Scheduler {
         // Notify dependencies, using a new process
         if (notify)
             executorService.submit(new Notifier(resource));
+    }
+
+    /**
+     * This task runner takes a new task each time
+     */
+    class JobRunner extends Thread {
+        private final String name;
+
+        JobRunner(String name) {
+            super(name);
+            this.name = name;
+        }
+
+        @Override
+        public void run() {
+            Job job;
+            try {
+                while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
+                    // Set the state to LOCKING
+                    job.setState(ResourceState.LOCKING);
+                    LOGGER.info("Launching %s", job);
+                    this.setName(name + "/" + job);
+                    try {
+                        job.run();
+                        LOGGER.info("Job %s has started", job);
+                    } catch (LockException e) {
+                        // We could not lock the resources: update the job state
+                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                        job.setState(ResourceState.WAITING);
+                        job.updateStatus(true);
+                        job.storeState(false);
+                    } catch (Throwable t) {
+                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                        job.setState(ResourceState.ERROR);
+                        job.storeState(true);
+                    } finally {
+                    }
+                    LOGGER.info("Finished launching %s", job);
+                    this.setName(name);
+                }
+            } catch (InterruptedException e) {
+                LOGGER.warn("Shutting down job runner", e);
+            } finally {
+                LOGGER.info("Shutting down job runner");
+                counter.del();
+            }
+        }
     }
 
     /**

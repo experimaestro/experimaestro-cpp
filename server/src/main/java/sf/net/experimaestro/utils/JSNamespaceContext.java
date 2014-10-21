@@ -27,9 +27,10 @@ import java.util.Iterator;
 
 /**
  * A namespace context built from the current scope
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 6/3/13
-*/
+ *
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 6/3/13
+ */
 public class JSNamespaceContext implements NamespaceContext {
     private final Scriptable scope;
 

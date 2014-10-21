@@ -5,19 +5,20 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.BitSet;
 
-import static sf.net.experimaestro.manager.plans.LatticeNode.Edge;
 import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
 
 /**
  * Created by bpiwowar on 9/10/14.
  */
 public class Lattice {
-    LatticeNode root = new LatticeNode();
-
-    /** The operator map */
+    /**
+     * The operator map
+     */
     final OperatorMap opMap;
-
-    /** Operators without any dependency */
+    LatticeNode root = new LatticeNode();
+    /**
+     * Operators without any dependency
+     */
     private ArrayList<Operator> operators = new ArrayList<>();
 
     public Lattice(OperatorMap opMap) {
@@ -40,7 +41,7 @@ public class Lattice {
             } else {
                 product.addParent(result.operator);
             }
-            for(Operator op: operators) {
+            for (Operator op : operators) {
                 product.addParent(op);
                 result.map.put(op, result.map.size());
             }

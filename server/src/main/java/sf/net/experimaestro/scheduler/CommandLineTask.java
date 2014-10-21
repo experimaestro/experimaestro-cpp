@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.scheduler;
 
-import bpiwowar.argparser.utils.Formatter;
 import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -42,31 +41,25 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent(version=1)
+@Persistent(version = 1)
 public class CommandLineTask extends Job<JobData> {
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * Our command line launcher
-     */
-    Launcher launcher;
-
-
-    /**
-     * The command to execute
-     */
-    private Commands commands;
-
     /**
      * The environment
      */
     public TreeMap<String, String> environment = null;
-
     /**
      * Working directory
      */
     public String workingDirectory;
-
+    /**
+     * Our command line launcher
+     */
+    Launcher launcher;
+    /**
+     * The command to execute
+     */
+    private Commands commands;
     /**
      * The input source, if any (path from the main from)
      */
@@ -93,8 +86,8 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * Constructs the commands line
      *
-     * @param scheduler  The scheduler for this commands
-     * @param commands    The commands with arguments
+     * @param scheduler The scheduler for this commands
+     * @param commands  The commands with arguments
      */
     public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
                            Commands commands, Map<String, String> environment, String workingDirectory) {
@@ -120,9 +113,9 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * New command line task
      *
-     * @param scheduler  The scheduler
-     * @param locator    The resource locator
-     * @param commands    The commands to run
+     * @param scheduler The scheduler
+     * @param locator   The resource locator
+     * @param commands  The commands to run
      */
     public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
                            Commands commands) {
@@ -183,7 +176,7 @@ public class CommandLineTask extends Job<JobData> {
         builder.directory(locator.getFile().getParent());
 
         if (environment != null)
-        	builder.environment(environment);
+            builder.environment(environment);
 
         // Add commands
         builder.commands(commands);
@@ -217,13 +210,17 @@ public class CommandLineTask extends Job<JobData> {
         this.launcher = launcher;
     }
 
-    /** Sets the input for the command line to be a string content */
+    /**
+     * Sets the input for the command line to be a string content
+     */
     public void setInput(String jobInput) {
         this.jobInputPath = null;
         this.jobInputString = jobInput;
     }
 
-    /** Sets the input to be a file */
+    /**
+     * Sets the input to be a file
+     */
     public void setInput(FileObject fileObject) {
         this.jobInputPath = fileObject.toString();
         this.jobInputString = null;
@@ -236,6 +233,7 @@ public class CommandLineTask extends Job<JobData> {
     public void setError(FileObject fileObject) {
         this.jobErrorPath = fileObject.toString();
     }
+
     public Commands getCommands() {
         return commands;
     }

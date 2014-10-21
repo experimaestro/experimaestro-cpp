@@ -21,13 +21,15 @@ package sf.net.experimaestro.connectors;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.CommandComponent;
+import sf.net.experimaestro.scheduler.CommandEnvironment;
+import sf.net.experimaestro.scheduler.Commands;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
@@ -40,6 +42,27 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     public static final String SHELL_SPECIAL = " \"'<>\n";
     public static final String QUOTED_SPECIAL = "\"$";
+    /**
+     * Lock files to delete
+     */
+    ArrayList<String> lockFiles = new ArrayList<>();
+    private String shPath = "/bin/bash";
+    /**
+     * File where the exit code is written
+     */
+    private String exitCodePath;
+    /**
+     * File where the exit code is written
+     */
+    private String donePath;
+
+    public UnixScriptProcessBuilder(FileObject file, SingleHostConnector connector) throws FileSystemException {
+        super(connector, file, null);
+    }
+
+    public UnixScriptProcessBuilder(FileObject scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws FileSystemException {
+        super(connector, scriptFile, processBuilder);
+    }
 
     /**
      * XPMProcess one argument, adding backslash if necessary to protect special
@@ -60,32 +83,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
         return sb.toString();
     }
-
-    private String shPath = "/bin/bash";
-
-    /**
-     * Lock files to delete
-     */
-    ArrayList<String> lockFiles = new ArrayList<>();
-
-    /**
-     * File where the exit code is written
-     */
-    private String exitCodePath;
-
-    /**
-     * File where the exit code is written
-     */
-    private String donePath;
-
-    public UnixScriptProcessBuilder(FileObject file, SingleHostConnector connector) throws FileSystemException {
-        super(connector, file, null);
-    }
-
-    public UnixScriptProcessBuilder(FileObject scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws FileSystemException {
-        super(connector, scriptFile, processBuilder);
-    }
-
 
     @Override
     final public XPMProcess start() throws LaunchException, IOException {

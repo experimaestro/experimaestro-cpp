@@ -43,24 +43,6 @@ public class ListAdaptator<T> extends AbstractList<T> {
         this.size = size;
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public T get(int index) {
-        return (T) Array.get(array, index + from);
-    }
-
-    @Override
-    public int size() {
-        return size;
-    }
-
-    @SuppressWarnings("unchecked")
-    public T set(int index, T value) {
-        T t = (T) Array.get(array, index);
-        Array.set(array, index, value);
-        return t;
-    }
-
     public static ListAdaptator<Double> get(double[] array) {
         return new ListAdaptator<Double>(array);
     }
@@ -79,6 +61,24 @@ public class ListAdaptator<T> extends AbstractList<T> {
 
     public static <T> ListAdaptator<T> create(T[] array) {
         return new ListAdaptator<T>(array);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public T get(int index) {
+        return (T) Array.get(array, index + from);
+    }
+
+    @Override
+    public int size() {
+        return size;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T set(int index, T value) {
+        T t = (T) Array.get(array, index);
+        Array.set(array, index, value);
+        return t;
     }
 
 }

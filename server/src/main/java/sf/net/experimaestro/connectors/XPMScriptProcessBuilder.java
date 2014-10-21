@@ -32,21 +32,26 @@ import java.util.Map;
  * @date 10/9/12
  */
 public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
-    protected SingleHostConnector connector;
-
-    /** The process builder */
+    /**
+     * The process builder
+     */
     protected final AbstractProcessBuilder processBuilder;
-
-    /**  The environment */
-    private Map<String, String> environment;
-
-    /** The script file */
+    protected SingleHostConnector connector;
+    /**
+     * The script file
+     */
     protected FileObject scriptFile;
-
-    /** Local path to the script file */
+    /**
+     * Local path to the script file
+     */
     protected String path;
-
-    /** Commands */
+    /**
+     * The environment
+     */
+    private Map<String, String> environment;
+    /**
+     * Commands
+     */
     private Commands commands;
 
     public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile, AbstractProcessBuilder processBuilder) throws FileSystemException {
@@ -56,10 +61,13 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
         this.processBuilder = processBuilder == null ? connector.processBuilder() : processBuilder;
     }
 
-    /** Sets the commands */
+    /**
+     * Sets the commands
+     */
     public void commands(Commands commands) {
         this.commands = commands;
     }
+
     public Commands commands() {
         return commands;
     }

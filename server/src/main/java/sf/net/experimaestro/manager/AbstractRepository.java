@@ -37,9 +37,13 @@ abstract public class AbstractRepository {
         this.identifier = identifier;
     }
 
-    /** Get a task factory given a qualified name */
+    /**
+     * Get a task factory given a qualified name
+     */
     public abstract TaskFactory getFactory(QName name);
 
-    /** Get a type definition given a qualified name */
+    /**
+     * Get a type definition given a qualified name
+     */
     public abstract Type getType(QName name);
 }

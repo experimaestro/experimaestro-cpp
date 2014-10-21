@@ -45,92 +45,8 @@ import java.util.Set;
 public class DAGCartesianProduct {
 
     private final int[] marginalized, standard;
-
-    final public static class ProductNode {
-        /**
-         * Underlying node
-         */
-        final SimpleIterable node;
-
-        /**
-         * List of node indices that this variable will be marginalized over or <tt>null</tt> if none
-         */
-        final int marginalizeDestination[];
-
-        /**
-         * List of nodes that we need to marginalize to get the value
-         */
-        final int[] marginalized;
-
-        /**
-         * List of all marginalizable up to this index
-         */
-        private final int[] aggregateUpTo;
-
-
-        public ProductNode(SimpleIterable node, int[] marginalizeDestination, int[] marginalized, int[] aggregateUpTo) {
-            this.node = node;
-            this.marginalizeDestination = marginalizeDestination;
-            this.marginalized = marginalized;
-            this.aggregateUpTo = aggregateUpTo;
-        }
-
-        boolean isMarginalized() {
-            return marginalizeDestination != null;
-        }
-
-        public boolean next() throws ValueMismatchException {
-            return node.next(marginalized != null);
-        }
-
-        public void reset(boolean full) {
-            node.reset(full);
-        }
-
-        public boolean isAggregate() {
-            return marginalized != null;
-        }
-    }
-
     private final ProductNode[] nodes;
-
-
-    /**
-     * A node that can iterate
-     */
-    public interface SimpleIterable extends Node {
-        /**
-         * Resets the iterable
-         *
-         * @param full if <tt>true</tt>, one of the parents of this node has changed
-         */
-        void reset(boolean full);
-
-        /**
-         * Initialise the value (used only when aggregating)
-         */
-        void initValue();
-
-        /**
-         * Process the next value based on the current input(s)
-         *
-         * @param aggregate If <tt>true</tt>, the current value should be aggregated with previous ones
-         * @return <tt>true</tt> if there was a next element
-         */
-        boolean next(boolean aggregate) throws ValueMismatchException;
-
-
-        /**
-         * Return an iteratable over the nodes over which we group by
-         * or <tt>null</tt>
-         */
-        Set<? extends SimpleIterable> marginalizedParents();
-
-        Iterable<? extends SimpleIterable> getParents();
-
-        Iterable<? extends SimpleIterable> getChildren();
-
-    }
+    boolean first = true;
 
 
     /**
@@ -188,17 +104,13 @@ public class DAGCartesianProduct {
                 marginalized.push(i);
             else if (this.nodes[i].isAggregate()) {
                 aggregateUpTo.add(i);
-            }
-            else standard.push(i);
+            } else standard.push(i);
         }
 
 
         this.marginalized = marginalized.toIntArray();
         this.standard = standard.toIntArray();
     }
-
-
-    boolean first = true;
 
     /**
      * Resets the iterator
@@ -296,6 +208,89 @@ public class DAGCartesianProduct {
 
         return true;
 
+    }
+
+    /**
+     * A node that can iterate
+     */
+    public interface SimpleIterable extends Node {
+        /**
+         * Resets the iterable
+         *
+         * @param full if <tt>true</tt>, one of the parents of this node has changed
+         */
+        void reset(boolean full);
+
+        /**
+         * Initialise the value (used only when aggregating)
+         */
+        void initValue();
+
+        /**
+         * Process the next value based on the current input(s)
+         *
+         * @param aggregate If <tt>true</tt>, the current value should be aggregated with previous ones
+         * @return <tt>true</tt> if there was a next element
+         */
+        boolean next(boolean aggregate) throws ValueMismatchException;
+
+
+        /**
+         * Return an iteratable over the nodes over which we group by
+         * or <tt>null</tt>
+         */
+        Set<? extends SimpleIterable> marginalizedParents();
+
+        Iterable<? extends SimpleIterable> getParents();
+
+        Iterable<? extends SimpleIterable> getChildren();
+
+    }
+
+    final public static class ProductNode {
+        /**
+         * Underlying node
+         */
+        final SimpleIterable node;
+
+        /**
+         * List of node indices that this variable will be marginalized over or <tt>null</tt> if none
+         */
+        final int marginalizeDestination[];
+
+        /**
+         * List of nodes that we need to marginalize to get the value
+         */
+        final int[] marginalized;
+
+        /**
+         * List of all marginalizable up to this index
+         */
+        private final int[] aggregateUpTo;
+
+
+        public ProductNode(SimpleIterable node, int[] marginalizeDestination, int[] marginalized, int[] aggregateUpTo) {
+            this.node = node;
+            this.marginalizeDestination = marginalizeDestination;
+            this.marginalized = marginalized;
+            this.aggregateUpTo = aggregateUpTo;
+        }
+
+        boolean isMarginalized() {
+            return marginalizeDestination != null;
+        }
+
+        public boolean next() throws ValueMismatchException {
+            return node.next(marginalized != null);
+        }
+
+        public void reset(boolean full) {
+            node.reset(full);
+        }
+
+        public boolean isAggregate() {
+            return marginalized != null;
+        }
     }
 
 }

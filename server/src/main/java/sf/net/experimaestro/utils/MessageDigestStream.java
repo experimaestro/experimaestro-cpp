@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 
 /**
  * Wraps the MessageDigest
- *
+ * <p/>
  * Created by bpiwowar on 9/9/14.
  */
 public class MessageDigestStream extends OutputStream {
@@ -19,7 +19,7 @@ public class MessageDigestStream extends OutputStream {
 
     @Override
     public void write(int b) throws IOException {
-        messageDigest.update((byte)(b& (0xff)));
+        messageDigest.update((byte) (b & (0xff)));
     }
 
     @Override

@@ -26,32 +26,31 @@ import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;
 
 public class NSContext implements NamespaceContext {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
+    private Node node;
 
-	public NSContext(Node node) {
-		this.node = node;
-	}
+    public NSContext(Node node) {
+        this.node = node;
+    }
 
-	private Node node;
+    @Override
+    public String getNamespaceURI(String prefix) {
+        String uri = node.lookupNamespaceURI(prefix);
+        if (uri == null)
+            uri = Manager.PREDEFINED_PREFIXES.get(prefix);
+        if (uri == null)
+            throw new XPMRuntimeException("Prefix %s not bound", prefix);
+        LOGGER.debug("Prefix %s maps to %s", prefix, uri);
+        return uri;
+    }
 
-	@Override
-	public String getNamespaceURI(String prefix) {
-		String uri = node.lookupNamespaceURI(prefix);
-		if (uri == null)
-			uri = Manager.PREDEFINED_PREFIXES.get(prefix);
-		if (uri == null)
-			throw new XPMRuntimeException("Prefix %s not bound", prefix);
-		LOGGER.debug("Prefix %s maps to %s", prefix, uri);
-		return uri;
-	}
+    @Override
+    public String getPrefix(String arg0) {
+        throw new UnsupportedOperationException();
+    }
 
-	@Override
-	public String getPrefix(String arg0) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Iterator<?> getPrefixes(String arg0) {
-		throw new UnsupportedOperationException();
-	}
+    @Override
+    public Iterator<?> getPrefixes(String arg0) {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -25,7 +25,7 @@ package sf.net.experimaestro.scheduler;
  * @date 30/11/12
  */
 public class SimpleMessage extends Message {
-   Resource resource;
+    Resource resource;
 
     public SimpleMessage(Type type, Resource resource) {
         super(type);

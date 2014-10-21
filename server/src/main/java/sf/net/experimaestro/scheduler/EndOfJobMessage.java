@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 /**
  * Notify a job that it has ended
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 18/6/12
  */

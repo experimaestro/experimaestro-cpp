@@ -4,26 +4,22 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.bpiwowar.experimaestro.tasks.AbstractTask;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.utils.Introspection;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.namespace.NamespaceContext;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -34,23 +30,12 @@ import static sf.net.experimaestro.scheduler.Scheduler.getVFSManager;
  *
  */
 public class JavaTasksIntrospection {
-    final static Logger LOGGER = Logger.getLogger();
     public static final String META_INF_PATH = "META-INF/net.bpiwowar.experimaestro/tasks.json";
-
+    final static Logger LOGGER = Logger.getLogger();
     FileObject[] classpath;
 
     public JavaTasksIntrospection(FileObject[] classpath) {
         this.classpath = classpath;
-    }
-
-
-    /**
-     * Json description
-     */
-    static class Description {
-        Map<String, String> namespaces;
-        ArrayList<String> packages;
-        ArrayList<String> classes;
     }
 
     public static void addToRepository(Repository repository, Connector connector, String[] paths) throws ExperimaestroException, IOException {
@@ -65,19 +50,6 @@ public class JavaTasksIntrospection {
         final JavaTasksIntrospection javaTasksIntrospection = new JavaTasksIntrospection(classpath);
         final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, getVFSManager(), JavaTasksIntrospection.class.getClassLoader());
         javaTasksIntrospection.addToRepository(repository, classLoader, connector);
-    }
-
-    private void addToRepository(Repository repository, ClassInfoLoader cl, Connector connector) throws ExperimaestroException, IOException {
-        BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
-            // Creates the task factory
-            JavaTaskFactory factory = new JavaTaskFactory(this, connector, repository, classInfo, description.namespaces);
-            repository.addFactory(factory);
-            return true;
-        };
-
-        // FIXME: switch to this one
-        forEachClass(cl, classpath, f);
-
     }
 
     private static void forEachClass(ClassInfoLoader cl, FileObject[] classpath, BiFunction<ClassInfo, Description, ?> f) throws IOException, ExperimaestroException {
@@ -128,6 +100,28 @@ public class JavaTasksIntrospection {
                 }
             }
         }
+    }
+
+    private void addToRepository(Repository repository, ClassInfoLoader cl, Connector connector) throws ExperimaestroException, IOException {
+        BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
+            // Creates the task factory
+            JavaTaskFactory factory = new JavaTaskFactory(this, connector, repository, classInfo, description.namespaces);
+            repository.addFactory(factory);
+            return true;
+        };
+
+        // FIXME: switch to this one
+        forEachClass(cl, classpath, f);
+
+    }
+
+    /**
+     * Json description
+     */
+    static class Description {
+        Map<String, String> namespaces;
+        ArrayList<String> packages;
+        ArrayList<String> classes;
     }
 
 

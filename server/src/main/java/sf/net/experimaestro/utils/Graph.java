@@ -12,10 +12,11 @@ public class Graph {
 
     /**
      * Topological sort of a set of nodes
-     * @param graph A list of nodes that will be emptied if the sort is successful. Otherwise, nodes
-     * @param forward_edges The forward edges
+     *
+     * @param graph           A list of nodes that will be emptied if the sort is successful. Otherwise, nodes
+     * @param forward_edges   The forward edges
      * @param backwards_edges The backward edges
-     * @param <Node> A node
+     * @param <Node>          A node
      * @return A sorted list
      */
     static public <Node> ArrayList<Node> topologicalSort(

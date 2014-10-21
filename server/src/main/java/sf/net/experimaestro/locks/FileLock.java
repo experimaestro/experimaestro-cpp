@@ -72,7 +72,7 @@ public class FileLock implements Lock {
                     else throw new LockException();
                     lockFile.deleteOnExit();
 
-                } catch(java.nio.file.NoSuchFileException e) {
+                } catch (java.nio.file.NoSuchFileException e) {
                     // file was deleted before we started to monitor it
                 }
             }

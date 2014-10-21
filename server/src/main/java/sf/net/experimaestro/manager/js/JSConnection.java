@@ -55,8 +55,8 @@ public class JSConnection extends Connection {
     public Json computeValue(Task task) throws NoSuchParameter {
         Context context = Context.getCurrentContext();
 
-        Object[] args = new Object[]{ names.length };
-        for(int i = 0; i < args.length; i++) {
+        Object[] args = new Object[]{names.length};
+        for (int i = 0; i < args.length; i++) {
             args[i] = new JSJson(task.getValue(new DotName(names[i])).get());
         }
 

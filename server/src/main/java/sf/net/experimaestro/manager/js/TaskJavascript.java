@@ -83,8 +83,8 @@ public class TaskJavascript extends JSAbstractTask {
     /**
      * Run a task
      *
-     * @return
      * @param taskContext
+     * @return
      */
     public Json jsrun(TaskContext taskContext) {
         LOGGER.debug("[Running] task: %s", factory.getId());

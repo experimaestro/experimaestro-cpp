@@ -41,7 +41,6 @@ public class Connectors extends CachedEntitiesStore<String, Connector> {
      *
      * @param dbStore
      * @throws com.sleepycat.je.DatabaseException
-     *
      */
     public Connectors(Scheduler scheduler, EntityStore dbStore)
             throws DatabaseException {

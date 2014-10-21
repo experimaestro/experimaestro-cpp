@@ -53,6 +53,16 @@ public class AlternativeValue extends Value {
     public AlternativeValue() {
     }
 
+    /**
+     * Creates an alternative task object
+     *
+     * @param input The input
+     */
+    protected AlternativeValue(AlternativeInput input) {
+        super(input);
+        this.alternativeInput = input;
+    }
+
     @Override
     protected void init(Value _other) {
         AlternativeValue other = (AlternativeValue) _other;
@@ -62,16 +72,6 @@ public class AlternativeValue extends Value {
         // Copy the task if it has been set
         if (task != null)
             task = task.copy();
-    }
-
-    /**
-     * Creates an alternative task object
-     *
-     * @param input The input
-     */
-    protected AlternativeValue(AlternativeInput input) {
-        super(input);
-        this.alternativeInput = input;
     }
 
     @Override

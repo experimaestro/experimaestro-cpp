@@ -24,26 +24,27 @@ import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
  * A lock that can be removed.
- * 
+ * <p/>
  * The lock is taken during the object construction which is dependent on the
  * actual {@link Lock} implementation.
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public interface Lock extends AutoCloseable {
-	/**
-	 * Dispose of the resource
-	 */
-	void close();
-
-	/**
-	 * Change ownership
-	 *
-     * @param pid
-     *            The new owner PID
+    /**
+     * Dispose of the resource
      */
-	void changeOwnership(String pid) throws LockException;
+    void close();
 
-    /** Initialize the lock when restored from database */
+    /**
+     * Change ownership
+     *
+     * @param pid The new owner PID
+     */
+    void changeOwnership(String pid) throws LockException;
+
+    /**
+     * Initialize the lock when restored from database
+     */
     void init(Scheduler scheduler) throws DatabaseException;
 }

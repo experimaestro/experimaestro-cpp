@@ -30,9 +30,8 @@ import java.util.Iterator;
  * @date 13/3/13
  */
 public class CachedIterable<T> implements Iterable<T> {
-    ArrayList<T> cache = new ArrayList<>();
-
     private final Iterator<T> iterator;
+    ArrayList<T> cache = new ArrayList<>();
 
     public CachedIterable(Iterator<T> iterator) {
         this.iterator = iterator;

@@ -31,39 +31,39 @@ import sf.net.experimaestro.manager.Manager;
 import java.io.File;
 
 public class ParentPath extends ExtensionFunctionDefinition {
-	private static final StructuredQName NAME = new StructuredQName(Manager.EXPERIMAESTRO_PREFIX, Manager.EXPERIMAESTRO_NS, "parentPath");
-	private static final SequenceType[] SINGLE_STRING = new SequenceType[] { SequenceType.SINGLE_STRING };
-	private static final long serialVersionUID = 1L;
+    private static final StructuredQName NAME = new StructuredQName(Manager.EXPERIMAESTRO_PREFIX, Manager.EXPERIMAESTRO_NS, "parentPath");
+    private static final SequenceType[] SINGLE_STRING = new SequenceType[]{SequenceType.SINGLE_STRING};
+    private static final long serialVersionUID = 1L;
 
-	@Override
-	public SequenceType[] getArgumentTypes() {
-		return SINGLE_STRING;
-	}
+    @Override
+    public SequenceType[] getArgumentTypes() {
+        return SINGLE_STRING;
+    }
 
-	@Override
-	public StructuredQName getFunctionQName() {
-		return NAME;
-	}
+    @Override
+    public StructuredQName getFunctionQName() {
+        return NAME;
+    }
 
-	@Override
-	public int getMinimumNumberOfArguments() {
-		return 1;
-	}
-	
-	@Override
-	public int getMaximumNumberOfArguments() {
-		return 1;
-	}
+    @Override
+    public int getMinimumNumberOfArguments() {
+        return 1;
+    }
 
-	@Override
-	public SequenceType getResultType(SequenceType[] arg0) {
-		return SequenceType.SINGLE_STRING;
-	}
+    @Override
+    public int getMaximumNumberOfArguments() {
+        return 1;
+    }
 
-	@Override
-	public ExtensionFunctionCall makeCallExpression() {
-		return new ExtensionFunctionCall() {
-			private static final long serialVersionUID = 1L;
+    @Override
+    public SequenceType getResultType(SequenceType[] arg0) {
+        return SequenceType.SINGLE_STRING;
+    }
+
+    @Override
+    public ExtensionFunctionCall makeCallExpression() {
+        return new ExtensionFunctionCall() {
+            private static final long serialVersionUID = 1L;
 
 
             @Override
@@ -73,6 +73,6 @@ public class ParentPath extends ExtensionFunctionDefinition {
                 return new SingletonItem<>(new net.sf.saxon.value.StringValue(parentPath));
             }
         };
-	}
+    }
 
 }

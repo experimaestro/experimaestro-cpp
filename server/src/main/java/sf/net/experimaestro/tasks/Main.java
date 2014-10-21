@@ -45,120 +45,119 @@ import java.util.List;
 
 public class Main {
 
-	final static private Logger logger = Logger.getLogger();
+    final static private Logger logger = Logger.getLogger();
 
     public static void main(String[] args) {
-		try {
-			new Main().run(args);
-		} catch (Throwable e) {
-			logger.error("Stopping because of an exception");
-			logger.printException(Level.ERROR, e);
-			// Exit with an error
-			System.exit(1);
-		}
+        try {
+            new Main().run(args);
+        } catch (Throwable e) {
+            logger.error("Stopping because of an exception");
+            logger.printException(Level.ERROR, e);
+            // Exit with an error
+            System.exit(1);
+        }
 
-		System.exit(0);
-	}
+        System.exit(0);
+    }
 
-	/**
-	 * Main method
-	 * 
-	 * @param args
-	 *            The command line arguments
-	 */
-	private void run(String[] args) throws Throwable {
-		// Read options
-		ArgParser argParser = new ArgParser("[options] <task>");
-		argParser.addOptions(this);
-		args = argParser.matchAllArgs(args, 0, ArgParserOption.EXIT_ON_ERROR,
-				ArgParserOption.STOP_FIRST_UNMATCHED);
+    /**
+     * Main method
+     *
+     * @param args The command line arguments
+     */
+    private void run(String[] args) throws Throwable {
+        // Read options
+        ArgParser argParser = new ArgParser("[options] <task>");
+        argParser.addOptions(this);
+        args = argParser.matchAllArgs(args, 0, ArgParserOption.EXIT_ON_ERROR,
+                ArgParserOption.STOP_FIRST_UNMATCHED);
 
-		if (args.length == 0)
-			throw new ArgParseException("Expected a task");
+        if (args.length == 0)
+            throw new ArgParseException("Expected a task");
 
-		String task = args[0];
-		args = Arrays.copyOfRange(args, 1, args.length);
+        String task = args[0];
+        args = Arrays.copyOfRange(args, 1, args.length);
 
-		// --- Server task ---
+        // --- Server task ---
 
-		if ("xquery".equals(task)) {
-			Configuration config = new Configuration();
+        if ("xquery".equals(task)) {
+            Configuration config = new Configuration();
 //			config.setAllowExternalFunctions(true);
-			config.registerExtensionFunction(new TestFunctionDefinition());
-			StaticQueryContext staticContext = config.newStaticQueryContext();
-			// staticContext.declareGlobalVariable(qName, type, value,
-			// external);
-			staticContext.declareNamespace("sax", "net.bpiwowar.sax");
-			DynamicQueryContext dynamicContext = new DynamicQueryContext(config);
-			XQueryExpression exp = staticContext.compileQuery(args[0]);
-			List<?> evaluate = exp.evaluate(dynamicContext);
+            config.registerExtensionFunction(new TestFunctionDefinition());
+            StaticQueryContext staticContext = config.newStaticQueryContext();
+            // staticContext.declareGlobalVariable(qName, type, value,
+            // external);
+            staticContext.declareNamespace("sax", "net.bpiwowar.sax");
+            DynamicQueryContext dynamicContext = new DynamicQueryContext(config);
+            XQueryExpression exp = staticContext.compileQuery(args[0]);
+            List<?> evaluate = exp.evaluate(dynamicContext);
 
-			for (Object i : evaluate)
-				if (i instanceof TinyElementImpl)
-					logger.info("XQ: %s",
-							((TinyElementImpl) i).getDisplayName());
-				else
-					logger.info("XQ: %s", i);
+            for (Object i : evaluate)
+                if (i instanceof TinyElementImpl)
+                    logger.info("XQ: %s",
+                            ((TinyElementImpl) i).getDisplayName());
+                else
+                    logger.info("XQ: %s", i);
 
-			//
-			// XQDataSource xqjd = new SaxonXQDataSource();
-			// XQConnection xqjc = xqjd.getConnection();
-			// XQStaticContext xqsc = xqjc.getStaticContext();
-			// xqsc.declareNamespace("double", "java:bpiwowar.expmanager.Main");
-			// XQExpression xqje = xqjc.createExpression();
-			// XQSequence xqjs = xqje.executeQuery(args[0]);
-			//
-			// xqjs.writeSequence(System.out, new Properties());
-			// xqjc.close();
-		}
-		// Test
-		else if ("test".equals(task)) {
-			// Creates and enters a Context. The Context stores information
-			// about the execution environment of a script.
-			Context cx = Context.enter();
-			try {
-				// Initialize the standard objects (Object, Function, etc.)
-				// This must be done before scripts can be executed. Returns
-				// a scope object that we use in later calls.
-				Scriptable scope = cx.initStandardObjects();
+            //
+            // XQDataSource xqjd = new SaxonXQDataSource();
+            // XQConnection xqjc = xqjd.getConnection();
+            // XQStaticContext xqsc = xqjc.getStaticContext();
+            // xqsc.declareNamespace("double", "java:bpiwowar.expmanager.Main");
+            // XQExpression xqje = xqjc.createExpression();
+            // XQSequence xqjs = xqje.executeQuery(args[0]);
+            //
+            // xqjs.writeSequence(System.out, new Properties());
+            // xqjc.close();
+        }
+        // Test
+        else if ("test".equals(task)) {
+            // Creates and enters a Context. The Context stores information
+            // about the execution environment of a script.
+            Context cx = Context.enter();
+            try {
+                // Initialize the standard objects (Object, Function, etc.)
+                // This must be done before scripts can be executed. Returns
+                // a scope object that we use in later calls.
+                Scriptable scope = cx.initStandardObjects();
 
-				// Collect the arguments into a single string.
-				for (int i = 0; i < args.length; i++) {
-					logger.info("Executing %s", args[i]);
-					Object result = cx.evaluateString(scope, args[i], "<cmd>",
-							1, null);
-					System.err.println(result.getClass());
-					// Convert the result to a string and print it.
-					System.err.println(Context.toString(result));
-				}
+                // Collect the arguments into a single string.
+                for (int i = 0; i < args.length; i++) {
+                    logger.info("Executing %s", args[i]);
+                    Object result = cx.evaluateString(scope, args[i], "<cmd>",
+                            1, null);
+                    System.err.println(result.getClass());
+                    // Convert the result to a string and print it.
+                    System.err.println(Context.toString(result));
+                }
 
-			} finally {
-				// Exit from the context.
-				Context.exit();
-			}
+            } finally {
+                // Exit from the context.
+                Context.exit();
+            }
 
-		}
+        }
 
-		// Unknown command
-		else
-			throw new ArgParseException("Task " + task + " does not exist");
-	}
+        // Unknown command
+        else
+            throw new ArgParseException("Task " + task + " does not exist");
+    }
 
-	/**
-	 * Test for XQuery extensions
-	 * 
-	 * @author B. Piwowarski <benjamin@bpiwowar.net>
-	 */
-	public static class TestFunctionDefinition extends
-			ExtensionFunctionDefinition {
-		private static final long serialVersionUID = 1L;
-		private static final StructuredQName qName = new StructuredQName("sax",
-				"net.bpiwowar.sax", "test-function");
+    /**
+     * Test for XQuery extensions
+     *
+     * @author B. Piwowarski <benjamin@bpiwowar.net>
+     */
+    public static class TestFunctionDefinition extends
+            ExtensionFunctionDefinition {
+        private static final long serialVersionUID = 1L;
+        private static final StructuredQName qName = new StructuredQName("sax",
+                "net.bpiwowar.sax", "test-function");
 
-		@Override
-		public ExtensionFunctionCall makeCallExpression() {
-			return new ExtensionFunctionCall() {
-				private static final long serialVersionUID = 1L;
+        @Override
+        public ExtensionFunctionCall makeCallExpression() {
+            return new ExtensionFunctionCall() {
+                private static final long serialVersionUID = 1L;
 
                 @Override
                 public Sequence call(XPathContext xPathContext, Sequence[] sequences) throws XPathException {
@@ -166,32 +165,32 @@ public class Main {
                     return new SingletonItem(BooleanValue.TRUE);
                 }
             };
-		}
+        }
 
-		@Override
-		public SequenceType getResultType(SequenceType[] suppliedArgumentTypes) {
-			return SequenceType.SINGLE_BOOLEAN;
-		}
+        @Override
+        public SequenceType getResultType(SequenceType[] suppliedArgumentTypes) {
+            return SequenceType.SINGLE_BOOLEAN;
+        }
 
-		@Override
-		public int getMinimumNumberOfArguments() {
-			return 0;
-		}
+        @Override
+        public int getMinimumNumberOfArguments() {
+            return 0;
+        }
 
-		@Override
-		public int getMaximumNumberOfArguments() {
-			return 0;
-		}
+        @Override
+        public int getMaximumNumberOfArguments() {
+            return 0;
+        }
 
-		@Override
-		public StructuredQName getFunctionQName() {
-			return qName;
-		}
+        @Override
+        public StructuredQName getFunctionQName() {
+            return qName;
+        }
 
-		@Override
-		public SequenceType[] getArgumentTypes() {
-			return new SequenceType[] { SequenceType.SINGLE_BOOLEAN };
-		}
-	}
+        @Override
+        public SequenceType[] getArgumentTypes() {
+            return new SequenceType[]{SequenceType.SINGLE_BOOLEAN};
+        }
+    }
 
 }

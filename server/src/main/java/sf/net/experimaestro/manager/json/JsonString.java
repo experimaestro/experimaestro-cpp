@@ -28,13 +28,15 @@ import java.io.Writer;
 
 /**
  * A JSON string
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
 public class JsonString implements Json {
     String string;
 
-    public JsonString() {}
+    public JsonString() {
+    }
 
     public JsonString(String string) {
         this.string = string;

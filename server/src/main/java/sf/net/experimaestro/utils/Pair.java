@@ -30,16 +30,16 @@ public class Pair<T, U> implements Serializable, Map.Entry<T, U> {
     protected T first;
     protected U second;
 
-    public static <T, U> Pair<T, U> of(T t, U u) {
-        return new Pair<T, U>(t, u);
-    }
-
     public Pair() {
     }
 
     public Pair(final T x, final U y) {
         this.first = x;
         this.second = y;
+    }
+
+    public static <T, U> Pair<T, U> of(T t, U u) {
+        return new Pair<T, U>(t, u);
     }
 
     public final T getFirst() {

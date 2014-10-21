@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.json;
 
-import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
@@ -52,7 +51,9 @@ public class JsonBoolean implements Json {
         return value;
     }
 
-    public boolean getBoolean() { return value; }
+    public boolean getBoolean() {
+        return value;
+    }
 
     @Override
     public String toString() {

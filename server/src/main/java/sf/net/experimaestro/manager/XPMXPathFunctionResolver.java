@@ -31,93 +31,88 @@ import java.util.List;
 import static java.lang.String.format;
 
 /**
- * 
  * Adds some handy functions.
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * 
  */
 public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 
-	private XPathFunctionResolver resolver;
+    /**
+     * Returns the parentpath
+     */
+    private static final XPathFunction ParentPath_1 = new XPathFunction() {
+        @Override
+        public Object evaluate(@SuppressWarnings("rawtypes") List args)
+                throws XPathFunctionException {
+            return new File(argToString(args.get(0))).getParentFile().toString();
+        }
+    };
+    /**
+     * Returns the parentpath
+     */
+    private static final XPathFunction JoinPath = new XPathFunction() {
+        @Override
+        public Object evaluate(@SuppressWarnings("rawtypes") List args)
+                throws XPathFunctionException {
+            File file = null;
+            for (int i = 0; i < args.size(); i++) {
+                String name = argToString(args.get(i));
+                if (file == null)
+                    file = new File(name);
+                else
+                    file = new File(file, name);
+            }
+            return file.getAbsolutePath();
+        }
+    };
+    private XPathFunctionResolver resolver;
 
-	public XPMXPathFunctionResolver(XPathFunctionResolver resolver) {
-		this.resolver = resolver;
-	}
+    public XPMXPathFunctionResolver(XPathFunctionResolver resolver) {
+        this.resolver = resolver;
+    }
 
-	@Override
-	public XPathFunction resolveFunction(QName functionName, int arity) {
-		if (Manager.EXPERIMAESTRO_NS.equals(functionName.getNamespaceURI())) {
-			final String name = functionName.getLocalPart();
-			if ("parentPath".equals(name) && arity == 1)
-				return ParentPath_1;
-			if ("joinPaths".equals(name) && arity > 1)
-				return JoinPath;
-		}
+    /**
+     * Converts whatever XML object into a string
+     *
+     * @param arg an XML object
+     * @return
+     * @throws XPathFunctionException
+     */
+    static private String argToString(Object arg) throws XPathFunctionException {
+        if (arg instanceof String)
+            return (String) arg;
 
-		return resolver == null ? null : resolver.resolveFunction(functionName,
-				arity);
-	}
+        if (arg instanceof Boolean)
+            return arg.toString();
 
-	/**
-	 * Returns the parentpath
-	 */
-	private static final XPathFunction ParentPath_1 = new XPathFunction() {
-		@Override
-		public Object evaluate(@SuppressWarnings("rawtypes") List args)
-				throws XPathFunctionException {
-			return new File(argToString(args.get(0))).getParentFile().toString();
-		}
-	};
+        if (arg instanceof Double)
+            return arg.toString();
 
-	/**
-	 * Returns the parentpath
-	 */
-	private static final XPathFunction JoinPath = new XPathFunction() {
-		@Override
-		public Object evaluate(@SuppressWarnings("rawtypes") List args)
-				throws XPathFunctionException {
-			File file = null;
-			for (int i = 0; i < args.size(); i++) {
-				String name = argToString(args.get(i));
-				if (file == null)
-					file = new File(name);
-				else
-					file = new File(file, name);
-			}
-			return file.getAbsolutePath();
-		}
-	};
+        if (arg instanceof NodeList) {
+            NodeList list = (NodeList) arg;
+            Node node = list.item(0);
+            // getTextContent is available in Java 5 and DOM 3.
+            // In Java 1.4 and DOM 2, you'd need to recursively
+            // accumulate the content.
+            return node.getTextContent();
+        }
 
-	/**
-	 * Converts whatever XML object into a string
-	 * 
-	 * @param arg
-	 *            an XML object
-	 * @return
-	 * @throws XPathFunctionException
-	 */
-	static private String argToString(Object arg) throws XPathFunctionException {
-		if (arg instanceof String)
-			return (String) arg;
+        throw new XPathFunctionException(format(
+                "Could not convert argument type [%s]",
+                arg == null ? "null" : arg.getClass()));
+    }
 
-		if (arg instanceof Boolean)
-			return arg.toString();
+    @Override
+    public XPathFunction resolveFunction(QName functionName, int arity) {
+        if (Manager.EXPERIMAESTRO_NS.equals(functionName.getNamespaceURI())) {
+            final String name = functionName.getLocalPart();
+            if ("parentPath".equals(name) && arity == 1)
+                return ParentPath_1;
+            if ("joinPaths".equals(name) && arity > 1)
+                return JoinPath;
+        }
 
-		if (arg instanceof Double)
-			return arg.toString();
-
-		if (arg instanceof NodeList) {
-			NodeList list = (NodeList) arg;
-			Node node = list.item(0);
-			// getTextContent is available in Java 5 and DOM 3.
-			// In Java 1.4 and DOM 2, you'd need to recursively
-			// accumulate the content.
-			return node.getTextContent();
-		}
-
-		throw new XPathFunctionException(format(
-				"Could not convert argument type [%s]",
-				arg == null ? "null" : arg.getClass()));
-	}
+        return resolver == null ? null : resolver.resolveFunction(functionName,
+                arity);
+    }
 }

@@ -107,7 +107,6 @@ public abstract class Value {
     }
 
 
-
     final public Value copy() {
         try {
             Constructor<? extends Value> constructor = this.getClass()

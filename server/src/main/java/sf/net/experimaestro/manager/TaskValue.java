@@ -23,17 +23,17 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
 
 public class TaskValue extends Value {
-	private Task task;
-	private Json value;
+    private Task task;
+    private Json value;
 
-	public TaskValue() {
-	}
+    public TaskValue() {
+    }
 
 
     public TaskValue(TaskInput taskInput) {
-		super(taskInput);
-		task = taskInput.factory.create();
-	}
+        super(taskInput);
+        task = taskInput.factory.create();
+    }
 
 
     @Override
@@ -49,23 +49,23 @@ public class TaskValue extends Value {
     }
 
     @Override
-	public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
+    public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
         if (value == null) {
             // Run unless a value was set
-		    value = task.run(taskContext);
+            value = task.run(taskContext);
         }
-	}
+    }
 
-	@Override
-	public Json get() {
-		return value;
-	}
+    @Override
+    public Json get() {
+        return value;
+    }
 
-	@Override
-	protected void init(Value _other) {
-		TaskValue other = (TaskValue) _other;
-		super.init(other);
-		task = other.task.copy();
-	}
+    @Override
+    protected void init(Value _other) {
+        TaskValue other = (TaskValue) _other;
+        super.init(other);
+        task = other.task.copy();
+    }
 
 }

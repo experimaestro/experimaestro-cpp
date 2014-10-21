@@ -44,50 +44,39 @@ public class UnixChannelEndPoint extends UnixAbstractEndPoint //implements Socke
     private volatile boolean _ishut;
     private volatile boolean _oshut;
 
-    public UnixChannelEndPoint(Scheduler scheduler, UnixSocketChannel channel)
-    {
+    public UnixChannelEndPoint(Scheduler scheduler, UnixSocketChannel channel) {
         super(scheduler,
                 channel.getLocalSocketAddress(),
                 channel.getRemoteSocketAddress()
         );
         _channel = channel;
-        _socket=channel;
+        _socket = channel;
     }
 
     @Override
-    public boolean isOpen()
-    {
+    public boolean isOpen() {
         return _channel.isOpen();
     }
 
-    protected void shutdownInput()
-    {
+    protected void shutdownInput() {
         LOG.debug("ishut {}", this);
-        _ishut=true;
+        _ishut = true;
         if (_oshut)
             close();
     }
 
     @Override
-    public void shutdownOutput()
-    {
+    public void shutdownOutput() {
         LOG.debug("oshut {}", this);
         _oshut = true;
-        if (_channel.isOpen())
-        {
-            try
-            {
+        if (_channel.isOpen()) {
+            try {
 //                if (!_socket.isOutputShutdown())
-                    _socket.shutdownOutput();
-            }
-            catch (IOException e)
-            {
+                _socket.shutdownOutput();
+            } catch (IOException e) {
                 LOG.debug(e);
-            }
-            finally
-            {
-                if (_ishut)
-                {
+            } finally {
+                if (_ishut) {
                     close();
                 }
             }
@@ -95,135 +84,109 @@ public class UnixChannelEndPoint extends UnixAbstractEndPoint //implements Socke
     }
 
     @Override
-    public boolean isOutputShutdown()
-    {
+    public boolean isOutputShutdown() {
         return _oshut || !_channel.isOpen(); // || _socket.isOutputShutdown();
     }
 
     @Override
-    public boolean isInputShutdown()
-    {
+    public boolean isInputShutdown() {
         return _ishut || !_channel.isOpen(); // || _socket.isInputShutdown();
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
         LOG.debug("close {}", this);
-        try
-        {
+        try {
             _channel.close();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             LOG.debug(e);
-        }
-        finally
-        {
-            _ishut=true;
-            _oshut=true;
+        } finally {
+            _ishut = true;
+            _oshut = true;
         }
     }
 
     @Override
-    public int fill(ByteBuffer buffer) throws IOException
-    {
+    public int fill(ByteBuffer buffer) throws IOException {
         if (_ishut)
             return -1;
 
-        int pos=BufferUtil.flipToFill(buffer);
-        try
-        {
+        int pos = BufferUtil.flipToFill(buffer);
+        try {
             int filled = _channel.read(buffer);
             LOG.debug("filled {} {}", filled, this);
 
-            if (filled>0)
+            if (filled > 0)
                 notIdle();
-            else if (filled==-1)
+            else if (filled == -1)
                 shutdownInput();
 
             return filled;
-        }
-        catch(IOException e)
-        {
+        } catch (IOException e) {
             LOG.debug(e);
             shutdownInput();
             return -1;
-        }
-        finally
-        {
-            BufferUtil.flipToFlush(buffer,pos);
+        } finally {
+            BufferUtil.flipToFlush(buffer, pos);
         }
     }
 
     @Override
-    public boolean flush(ByteBuffer... buffers) throws IOException
-    {
-        int flushed=0;
-        try
-        {
-            if (buffers.length==1)
-                flushed=_channel.write(buffers[0]);
-            else if (buffers.length>1 && _channel instanceof GatheringByteChannel)
-                flushed= (int)((GatheringByteChannel)_channel).write(buffers,0,buffers.length);
-            else
-            {
-                for (ByteBuffer b : buffers)
-                {
-                    if (b.hasRemaining())
-                    {
-                        int l=_channel.write(b);
-                        if (l>0)
-                            flushed+=l;
+    public boolean flush(ByteBuffer... buffers) throws IOException {
+        int flushed = 0;
+        try {
+            if (buffers.length == 1)
+                flushed = _channel.write(buffers[0]);
+            else if (buffers.length > 1 && _channel instanceof GatheringByteChannel)
+                flushed = (int) ((GatheringByteChannel) _channel).write(buffers, 0, buffers.length);
+            else {
+                for (ByteBuffer b : buffers) {
+                    if (b.hasRemaining()) {
+                        int l = _channel.write(b);
+                        if (l > 0)
+                            flushed += l;
                         if (b.hasRemaining())
                             break;
                     }
                 }
             }
             LOG.debug("flushed {} {}", flushed, this);
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new EofException(e);
         }
-        
-        if (flushed>0)
+
+        if (flushed > 0)
             notIdle();
 
         for (ByteBuffer b : buffers)
             if (!BufferUtil.isEmpty(b))
                 return false;
-        
+
         return true;
     }
 
-    public ByteChannel getChannel()
-    {
+    public ByteChannel getChannel() {
         return _channel;
     }
 
     @Override
-    public Object getTransport()
-    {
+    public Object getTransport() {
         return _channel;
     }
 
-//    @Override
-    public Socket getSocket()
-    {
+    //    @Override
+    public Socket getSocket() {
         return null;
 //        return _socket;
     }
 
     @Override
-    protected void onIncompleteFlush()
-    {
+    protected void onIncompleteFlush() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean needsFill() throws IOException
-    {
+    protected boolean needsFill() throws IOException {
         throw new UnsupportedOperationException();
     }
 }

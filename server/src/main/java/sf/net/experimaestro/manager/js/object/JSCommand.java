@@ -4,12 +4,8 @@ import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.js.*;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.CommandComponent;
@@ -24,16 +20,17 @@ import static java.lang.String.format;
 
 @JSObjectDescription()
 public class JSCommand extends JSBaseObject implements Wrapper {
-    /** The underlying command */
+    /**
+     * The underlying command
+     */
     Command command;
+    @JSProperty("out")
+    StreamReference stream;
 
     @JSFunction
     public JSCommand(List array) {
         command = getCommand(array);
     }
-
-    @JSProperty("out")
-    StreamReference stream;
 
     /**
      * Transform an array of JS objects into a command line argument object

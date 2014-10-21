@@ -34,7 +34,9 @@ public interface Json {
     /**
      * Returns true if this Json object is a simple type
      */
-    default boolean isSimple() { return true; }
+    default boolean isSimple() {
+        return true;
+    }
 
     /**
      * Returns the simple value underlying this object
@@ -48,17 +50,23 @@ public interface Json {
      */
     QName type();
 
-    default boolean canIgnore(JsonWriterOptions options) { return false; }
+    default boolean canIgnore(JsonWriterOptions options) {
+        return false;
+    }
 
     /**
      * Write a normalized version of the JSON
      */
-    default void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException { write(writer); }
+    default void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+        write(writer);
+    }
 
     /**
      * Write a normalized version of the JSON
      */
-    default void writeDescriptorString(Writer writer) throws IOException { writeDescriptorString(writer, JsonWriterOptions.DEFAULT_OPTIONS); }
+    default void writeDescriptorString(Writer writer) throws IOException {
+        writeDescriptorString(writer, JsonWriterOptions.DEFAULT_OPTIONS);
+    }
 
     /**
      * Write a JSON representation

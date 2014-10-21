@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
 

@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 /**
  * Helper class when writing documentation
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 16/1/13
  */
@@ -32,7 +33,6 @@ public class Documentation {
     }
 
 
-
     static public abstract class Content {
         abstract public void html(PrintWriter out);
     }
@@ -45,7 +45,7 @@ public class Documentation {
         }
 
         public void html(PrintWriter out) {
-            for(Content c: contents)
+            for (Content c : contents)
                 c.html(out);
         }
 
@@ -70,9 +70,9 @@ public class Documentation {
     }
 
 
-
     static public class Title extends Container {
         int level;
+
         public Title(int level, Content... contents) {
             super(contents);
             this.level = level;
@@ -121,6 +121,7 @@ public class Documentation {
         public Text() {
 
         }
+
         public Text(String text) {
             super();
             this.text.append(text);
@@ -141,7 +142,6 @@ public class Documentation {
     }
 
 
-
     static public class DefinitionList extends Content {
         ArrayList<Pair<Content, Content>> items = new ArrayList<>();
 
@@ -153,7 +153,7 @@ public class Documentation {
         public void html(PrintWriter out) {
             if (!items.isEmpty()) {
                 out.print("<dl>");
-                for(Pair<Content,Content> pair: items) {
+                for (Pair<Content, Content> pair : items) {
                     out.print("<dt>");
                     pair.getFirst().html(out);
                     out.print("</dt>");

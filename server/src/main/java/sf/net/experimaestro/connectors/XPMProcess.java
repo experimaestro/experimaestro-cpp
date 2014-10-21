@@ -49,32 +49,27 @@ import java.util.concurrent.TimeUnit;
 @Persistent
 public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
-
+    /**
+     * The checker
+     */
+    protected transient ScheduledFuture<?> checker = null;
+    /**
+     * The job to notify when finished with this
+     */
+    protected transient Job job;
     /**
      * Our process ID
      */
     String pid;
-
     /**
      * The host where this process is running (or give an access to the process, e.g. for OAR processes)
      */
     transient SingleHostConnector connector;
     String connectorId;
-
     /**
      * The associated locks to release when the process has ended
      */
     private List<Lock> locks = null;
-
-    /**
-     * The checker
-     */
-    protected transient ScheduledFuture<?> checker = null;
-
-    /**
-     * The job to notify when finished with this
-     */
-    protected transient Job job;
 
     /**
      * Creates a new job monitor from a process
@@ -87,6 +82,21 @@ public abstract class XPMProcess {
         this.pid = pid;
         this.job = job;
         this.connectorId = connector.getIdentifier();
+    }
+
+    /**
+     * Constructs a XPMProcess without an underlying process
+     */
+    protected XPMProcess(SingleHostConnector connector, final Job job, String pid) {
+        this(connector, pid, job);
+    }
+
+    /**
+     * Used for serialization
+     *
+     * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
+     */
+    protected XPMProcess() {
     }
 
     /**
@@ -121,22 +131,6 @@ public abstract class XPMProcess {
                 }
             }.start();
         }
-    }
-
-    /**
-     * Constructs a XPMProcess without an underlying process
-     */
-    protected XPMProcess(SingleHostConnector connector, final Job job, String pid) {
-        this(connector, pid, job);
-    }
-
-
-    /**
-     * Used for serialization
-     *
-     * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
-     */
-    protected XPMProcess() {
     }
 
     /**

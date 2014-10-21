@@ -25,17 +25,21 @@ import java.lang.annotation.Target;
 
 /**
  * Help
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 15/10/12
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @interface RPCMethod {
-    /** Help message */
+    /**
+     * Help message
+     */
     String help() default "";
 
     /**
      * Name of the method
+     *
      * @return The name of the RPC method or empty string if default (method name)
      */
     String name() default "";

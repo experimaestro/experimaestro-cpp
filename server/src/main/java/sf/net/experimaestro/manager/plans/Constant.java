@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.plans;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import sf.net.experimaestro.annotations.Expose;

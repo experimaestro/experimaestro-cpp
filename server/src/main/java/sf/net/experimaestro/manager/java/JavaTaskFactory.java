@@ -6,7 +6,9 @@ import net.bpiwowar.experimaestro.tasks.TaskDescription;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.*;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
@@ -29,12 +31,15 @@ public class JavaTaskFactory extends TaskFactory {
     private final Type output;
     Map<String, Input> inputs = new HashMap<>();
 
-    /** Prefixes for namespaces - used for unique directory naming */
+    /**
+     * Prefixes for namespaces - used for unique directory naming
+     */
     Map<String, String> prefixes = new HashMap<>();
 
     /**
      * Initialise a task
-     *  @param javaTasksIntrospection
+     *
+     * @param javaTasksIntrospection
      * @param connector
      * @param repository             The repository
      * @param classInfo              The java class from which to build a task factory

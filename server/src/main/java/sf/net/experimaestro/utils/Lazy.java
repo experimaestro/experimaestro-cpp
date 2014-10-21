@@ -13,12 +13,12 @@ public class Lazy {
         this.objects = objects;
     }
 
+    public static Lazy format(String format, Object... objects) {
+        return new Lazy(format, objects);
+    }
+
     @Override
     public String toString() {
         return String.format(format, objects);
-    }
-
-    public static Lazy format(String format, Object... objects) {
-        return new Lazy(format, objects);
     }
 }

@@ -20,7 +20,6 @@ package sf.net.experimaestro.utils.je;
 
 import com.sleepycat.persist.model.Persistent;
 import com.sleepycat.persist.model.PersistentProxy;
-import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.provider.local.LocalFile;
 import sf.net.experimaestro.scheduler.Scheduler;

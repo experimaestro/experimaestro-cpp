@@ -53,39 +53,33 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>{@link UnixSelectorManager} subclasses implement methods to return protocol-specific
  * {@link org.eclipse.jetty.io.EndPoint}s and {@link sf.net.experimaestro.manager.Connection}s.</p>
  */
-public abstract class UnixSelectorManager extends AbstractLifeCycle implements Dumpable
-{
-    protected static final Logger LOG = Log.getLogger(UnixSelectorManager.class);
+public abstract class UnixSelectorManager extends AbstractLifeCycle implements Dumpable {
     /**
      * The default connect timeout, in milliseconds
      */
     public static final int DEFAULT_CONNECT_TIMEOUT = 15000;
-
+    private long _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    protected static final Logger LOG = Log.getLogger(UnixSelectorManager.class);
     private final Executor executor;
     private final Scheduler scheduler;
     private final ManagedSelector[] _selectors;
-    private long _connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     private long _selectorIndex;
 
-    protected UnixSelectorManager(Executor executor, Scheduler scheduler)
-    {
+    protected UnixSelectorManager(Executor executor, Scheduler scheduler) {
         this(executor, scheduler, (Runtime.getRuntime().availableProcessors() + 1) / 2);
     }
 
-    protected UnixSelectorManager(Executor executor, Scheduler scheduler, int selectors)
-    {
+    protected UnixSelectorManager(Executor executor, Scheduler scheduler, int selectors) {
         this.executor = executor;
         this.scheduler = scheduler;
         _selectors = new ManagedSelector[selectors];
     }
 
-    public Executor getExecutor()
-    {
+    public Executor getExecutor() {
         return executor;
     }
 
-    public Scheduler getScheduler()
-    {
+    public Scheduler getScheduler() {
         return scheduler;
     }
 
@@ -94,8 +88,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @return the connect timeout (in milliseconds)
      */
-    public long getConnectTimeout()
-    {
+    public long getConnectTimeout() {
         return _connectTimeout;
     }
 
@@ -104,8 +97,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param milliseconds the number of milliseconds for the timeout
      */
-    public void setConnectTimeout(long milliseconds)
-    {
+    public void setConnectTimeout(long milliseconds) {
         _connectTimeout = milliseconds;
     }
 
@@ -114,26 +106,23 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param task the task to execute
      */
-    protected void execute(Runnable task)
-    {
+    protected void execute(Runnable task) {
         executor.execute(task);
     }
 
     /**
      * @return the number of selectors in use
      */
-    public int getSelectorCount()
-    {
+    public int getSelectorCount() {
         return _selectors.length;
     }
 
-    private ManagedSelector chooseSelector()
-    {
+    private ManagedSelector chooseSelector() {
         // The ++ increment here is not atomic, but it does not matter,
         // so long as the value changes sometimes, then connections will
         // be distributed over the available selectors.
         long s = _selectorIndex++;
-        int index = (int)(s % getSelectorCount());
+        int index = (int) (s % getSelectorCount());
         return _selectors[index];
     }
 
@@ -145,8 +134,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * @param channel    the channel to register
      * @param attachment the attachment object
      */
-    public void connect(SocketChannel channel, Object attachment)
-    {
+    public void connect(SocketChannel channel, Object attachment) {
         ManagedSelector set = chooseSelector();
         set.submit(set.new Connect(channel, attachment));
     }
@@ -158,18 +146,15 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param channel the channel to register
      */
-    public void accept(final UnixSocketChannel channel)
-    {
+    public void accept(final UnixSocketChannel channel) {
         final ManagedSelector selector = chooseSelector();
         selector.submit(selector.new Accept(channel));
     }
 
     @Override
-    protected void doStart() throws Exception
-    {
+    protected void doStart() throws Exception {
         super.doStart();
-        for (int i = 0; i < _selectors.length; i++)
-        {
+        for (int i = 0; i < _selectors.length; i++) {
             ManagedSelector selector = newSelector(i);
             _selectors[i] = selector;
             selector.start();
@@ -183,14 +168,12 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * @param id an identifier for the {@link ManagedSelector to create}
      * @return a new {@link ManagedSelector}
      */
-    protected ManagedSelector newSelector(int id)
-    {
+    protected ManagedSelector newSelector(int id) {
         return new ManagedSelector(id);
     }
 
     @Override
-    protected void doStop() throws Exception
-    {
+    protected void doStop() throws Exception {
         for (ManagedSelector selector : _selectors)
             selector.stop();
         super.doStop();
@@ -201,8 +184,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param endpoint the endpoint being opened
      */
-    protected void endPointOpened(EndPoint endpoint)
-    {
+    protected void endPointOpened(EndPoint endpoint) {
         endpoint.onOpen();
     }
 
@@ -211,8 +193,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param endpoint the endpoint being closed
      */
-    protected void endPointClosed(EndPoint endpoint)
-    {
+    protected void endPointClosed(EndPoint endpoint) {
         endpoint.onClose();
     }
 
@@ -221,18 +202,14 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param connection the connection just opened
      */
-    public void connectionOpened(Connection connection)
-    {
-        try
-        {
+    public void connectionOpened(Connection connection) {
+        try {
             connection.onOpen();
-        }
-        catch (Throwable x)
-        {
+        } catch (Throwable x) {
             if (isRunning())
                 LOG.warn("Exception while notifying connection " + connection, x);
             else
-                LOG.debug("Exception while notifying connection {}",connection, x);
+                LOG.debug("Exception while notifying connection {}", connection, x);
         }
     }
 
@@ -241,20 +218,15 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      *
      * @param connection the connection just closed
      */
-    public void connectionClosed(Connection connection)
-    {
-        try
-        {
+    public void connectionClosed(Connection connection) {
+        try {
             connection.onClose();
-        }
-        catch (Throwable x)
-        {
+        } catch (Throwable x) {
             LOG.debug("Exception while notifying connection " + connection, x);
         }
     }
 
-    protected boolean finishConnect(UnixSocketChannel channel) throws IOException
-    {
+    protected boolean finishConnect(UnixSocketChannel channel) throws IOException {
         return channel.finishConnect();
     }
 
@@ -262,12 +234,11 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * <p>Callback method invoked when a non-blocking connect cannot be completed.</p>
      * <p>By default it just logs with level warning.</p>
      *
-     * @param channel the channel that attempted the connect
-     * @param ex the exception that caused the connect to fail
+     * @param channel    the channel that attempted the connect
+     * @param ex         the exception that caused the connect to fail
      * @param attachment the attachment object associated at registration
      */
-    protected void connectionFailed(SocketChannel channel, Throwable ex, Object attachment)
-    {
+    protected void connectionFailed(SocketChannel channel, Throwable ex, Object attachment) {
         LOG.warn(String.format("%s - %s", channel, attachment), ex);
     }
 
@@ -276,11 +247,9 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * <p>This method is invoked as a result of the registration of a channel via {@link #connect(SocketChannel, Object)}
      * or {@link #accept(jnr.unixsocket.UnixSocketChannel)}.</p>
      *
-     *
-     *
-     * @param channel   the channel associated to the endpoint
-     * @param selectSet the selector the channel is registered to
-     * @param selectionKey      the selection key
+     * @param channel      the channel associated to the endpoint
+     * @param selectSet    the selector the channel is registered to
+     * @param selectionKey the selection key
      * @return a new endpoint
      * @throws IOException if the endPoint cannot be created
      * @see #newConnection(jnr.unixsocket.UnixSocketChannel, org.eclipse.jetty.io.EndPoint, Object)
@@ -289,7 +258,6 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
 
     /**
      * <p>Factory method to create {@link Connection}.</p>
-     *
      *
      * @param channel    the channel associated to the connection
      * @param endpoint   the endpoint
@@ -301,16 +269,26 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
     public abstract Connection newConnection(UnixSocketChannel channel, EndPoint endpoint, Object attachment) throws IOException;
 
     @Override
-    public String dump()
-    {
+    public String dump() {
         return ContainerLifeCycle.dump(this);
     }
 
     @Override
-    public void dump(Appendable out, String indent) throws IOException
-    {
+    public void dump(Appendable out, String indent) throws IOException {
         ContainerLifeCycle.dumpObject(out, this);
         ContainerLifeCycle.dump(out, indent, TypeUtil.asList(_selectors));
+    }
+
+    /**
+     * A {@link SelectableEndPoint} is an {@link EndPoint} that wish to be notified of
+     * non-blocking events by the {@link ManagedSelector}.
+     */
+    public interface SelectableEndPoint extends EndPoint {
+        /**
+         * <p>Callback method invoked when a read or write events has been detected by the {@link ManagedSelector}
+         * for this endpoint.</p>
+         */
+        void onSelected();
     }
 
     /**
@@ -319,8 +297,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * happen for registered channels. When events happen, it notifies the {@link EndPoint} associated
      * with the channel.</p>
      */
-    public class ManagedSelector extends AbstractLifeCycle implements Runnable, Dumpable
-    {
+    public class ManagedSelector extends AbstractLifeCycle implements Runnable, Dumpable {
         private final Queue<Runnable> _changes = new ConcurrentArrayQueue<>();
 
         private final int _id;
@@ -329,22 +306,19 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
         private boolean _needsWakeup = true;
         private boolean _runningChanges = false;
 
-        public ManagedSelector(int id)
-        {
+        public ManagedSelector(int id) {
             _id = id;
             setStopTimeout(5000);
         }
 
         @Override
-        protected void doStart() throws Exception
-        {
+        protected void doStart() throws Exception {
             super.doStart();
             _selector = NativeSelectorProvider.getInstance().openSelector();
         }
 
         @Override
-        protected void doStop() throws Exception
-        {
+        protected void doStop() throws Exception {
             LOG.debug("Stopping {}", this);
             Stop stop = new Stop();
             submit(stop);
@@ -359,25 +333,20 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
          *
          * @param change the change to submit
          */
-        public void submit(Runnable change)
-        {
+        public void submit(Runnable change) {
             // if we have been called by the selector thread we can directly run the change
-            if (_thread==Thread.currentThread())
-            {
+            if (_thread == Thread.currentThread()) {
                 // If we are already iterating over the changes, just add this change to the list.
                 // No race here because it is this thread that is iterating over the changes.
                 if (_runningChanges)
                     _changes.offer(change);
-                else
-                {
+                else {
                     // Otherwise we run the queued changes
                     runChanges();
                     // and then directly run the passed change
                     runChange(change);
                 }
-            }
-            else
-            {
+            } else {
                 // otherwise we have to queue the change and wakeup the selector
                 _changes.offer(change);
                 LOG.debug("Queued change {}", change);
@@ -387,52 +356,40 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             }
         }
 
-        private void runChanges()
-        {
-            try
-            {
+        private void runChanges() {
+            try {
                 if (_runningChanges)
                     throw new IllegalStateException();
-                _runningChanges=true;
+                _runningChanges = true;
 
                 Runnable change;
                 while ((change = _changes.poll()) != null)
                     runChange(change);
-            }
-            finally
-            {
-                _runningChanges=false;
+            } finally {
+                _runningChanges = false;
             }
         }
 
-        protected void runChange(Runnable change)
-        {
-            try
-            {
+        protected void runChange(Runnable change) {
+            try {
                 LOG.debug("Running change {}", change);
                 change.run();
-            }
-            catch (Throwable x)
-            {
+            } catch (Throwable x) {
                 LOG.debug("Could not run change " + change, x);
             }
         }
 
         @Override
-        public void run()
-        {
+        public void run() {
             _thread = Thread.currentThread();
             String name = _thread.getName();
-            try
-            {
+            try {
                 _thread.setName(name + "-selector-" + _id);
                 LOG.debug("Starting {} on {}", _thread, this);
                 while (isRunning())
                     select();
                 processChanges();
-            }
-            finally
-            {
+            } finally {
                 LOG.debug("Stopped {} on {}", _thread, this);
                 _thread.setName(name);
             }
@@ -443,11 +400,9 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
          *
          * @see #submit(Runnable)
          */
-        public void select()
-        {
+        public void select() {
             boolean debug = LOG.isDebugEnabled();
-            try
-            {
+            try {
                 processChanges();
 
                 if (debug)
@@ -459,25 +414,19 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
                 _needsWakeup = false;
 
                 Set<SelectionKey> selectedKeys = _selector.selectedKeys();
-                for (SelectionKey key : selectedKeys)
-                {
-                    if (key.isValid())
-                    {
+                for (SelectionKey key : selectedKeys) {
+                    if (key.isValid()) {
                         processKey(key);
-                    }
-                    else
-                    {
+                    } else {
                         if (debug)
                             LOG.debug("Selector loop ignoring invalid key for channel {}", key.channel());
                         Object attachment = key.attachment();
                         if (attachment instanceof EndPoint)
-                            ((EndPoint)attachment).close();
+                            ((EndPoint) attachment).close();
                     }
                 }
                 selectedKeys.clear();
-            }
-            catch (Throwable x)
-            {
+            } catch (Throwable x) {
                 if (isRunning())
                     LOG.warn(x);
                 else
@@ -485,8 +434,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             }
         }
 
-        private void processChanges()
-        {
+        private void processChanges() {
             runChanges();
 
             // If tasks are submitted between these 2 statements, they will not
@@ -499,87 +447,62 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             runChanges();
         }
 
-        private void processKey(SelectionKey key)
-        {
+        private void processKey(SelectionKey key) {
             Object attachment = key.attachment();
-            try
-            {
-                if (attachment instanceof SelectableEndPoint)
-                {
-                    ((SelectableEndPoint)attachment).onSelected();
-                }
-                else if (key.isConnectable())
-                {
-                    processConnect(key, (Connect)attachment);
-                }
-                else
-                {
+            try {
+                if (attachment instanceof SelectableEndPoint) {
+                    ((SelectableEndPoint) attachment).onSelected();
+                } else if (key.isConnectable()) {
+                    processConnect(key, (Connect) attachment);
+                } else {
                     throw new IllegalStateException();
                 }
-            }
-            catch (CancelledKeyException x)
-            {
+            } catch (CancelledKeyException x) {
                 LOG.debug("Ignoring cancelled key for channel {}", key.channel());
                 if (attachment instanceof EndPoint)
-                    ((EndPoint)attachment).close();
-            }
-            catch (Throwable x)
-            {
+                    ((EndPoint) attachment).close();
+            } catch (Throwable x) {
                 LOG.warn("Could not process key for channel " + key.channel(), x);
                 if (attachment instanceof EndPoint)
-                    ((EndPoint)attachment).close();
+                    ((EndPoint) attachment).close();
             }
         }
 
-        private void processConnect(SelectionKey key, Connect connect)
-        {
-            UnixSocketChannel channel = (UnixSocketChannel)key.channel();
-            try
-            {
+        private void processConnect(SelectionKey key, Connect connect) {
+            UnixSocketChannel channel = (UnixSocketChannel) key.channel();
+            try {
                 key.attach(connect.attachment);
                 boolean connected = finishConnect(channel);
-                if (connected)
-                {
+                if (connected) {
                     connect.timeout.cancel();
                     key.interestOps(0);
                     EndPoint endpoint = createEndPoint(channel, key);
                     key.attach(endpoint);
-                }
-                else
-                {
+                } else {
                     throw new ConnectException();
                 }
-            }
-            catch (Throwable x)
-            {
+            } catch (Throwable x) {
                 connect.failed(x);
             }
         }
 
-        private void closeNoExceptions(Closeable closeable)
-        {
-            try
-            {
+        private void closeNoExceptions(Closeable closeable) {
+            try {
                 closeable.close();
-            }
-            catch (Throwable x)
-            {
+            } catch (Throwable x) {
                 LOG.ignore(x);
             }
         }
 
-        public void wakeup()
-        {
+        public void wakeup() {
             _selector.wakeup();
         }
 
-        public boolean isSelectorThread()
-        {
+        public boolean isSelectorThread() {
             return Thread.currentThread() == _thread;
         }
 
-        private EndPoint createEndPoint(UnixSocketChannel channel, SelectionKey selectionKey) throws IOException
-        {
+        private EndPoint createEndPoint(UnixSocketChannel channel, SelectionKey selectionKey) throws IOException {
             EndPoint endPoint = newEndPoint(channel, this, selectionKey);
             endPointOpened(endPoint);
             Connection connection = newConnection(channel, endPoint, selectionKey.attachment());
@@ -589,8 +512,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             return endPoint;
         }
 
-        public void destroyEndPoint(EndPoint endPoint)
-        {
+        public void destroyEndPoint(EndPoint endPoint) {
             LOG.debug("Destroyed {}", endPoint);
             Connection connection = endPoint.getConnection();
             if (connection != null)
@@ -599,33 +521,28 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
         }
 
         @Override
-        public String dump()
-        {
+        public String dump() {
             return ContainerLifeCycle.dump(this);
         }
 
         @Override
-        public void dump(Appendable out, String indent) throws IOException
-        {
+        public void dump(Appendable out, String indent) throws IOException {
             out.append(String.valueOf(this)).append(" id=").append(String.valueOf(_id)).append("\n");
 
             Thread selecting = _thread;
 
             Object where = "not selecting";
             StackTraceElement[] trace = selecting == null ? null : selecting.getStackTrace();
-            if (trace != null)
-            {
+            if (trace != null) {
                 for (StackTraceElement t : trace)
-                    if (t.getClassName().startsWith("org.eclipse.jetty."))
-                    {
+                    if (t.getClassName().startsWith("org.eclipse.jetty.")) {
                         where = t;
                         break;
                     }
             }
 
             Selector selector = _selector;
-            if (selector != null && selector.isOpen())
-            {
+            if (selector != null && selector.isOpen()) {
                 final ArrayList<Object> dump = new ArrayList<>(selector.keys().size() * 2);
                 dump.add(where);
 
@@ -637,13 +554,11 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             }
         }
 
-        public void dumpKeysState(List<Object> dumps)
-        {
+        public void dumpKeysState(List<Object> dumps) {
             Selector selector = _selector;
             Set<SelectionKey> keys = selector.keys();
             dumps.add(selector + " keys=" + keys.size());
-            for (SelectionKey key : keys)
-            {
+            for (SelectionKey key : keys) {
                 if (key.isValid())
                     dumps.add(key.attachment() + " iOps=" + key.interestOps() + " rOps=" + key.readyOps());
                 else
@@ -652,8 +567,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             Selector selector = _selector;
             return String.format("%s keys=%d selected=%d",
                     super.toString(),
@@ -661,93 +575,72 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
                     selector != null && selector.isOpen() ? selector.selectedKeys().size() : -1);
         }
 
-        private class DumpKeys implements Runnable
-        {
+        private class DumpKeys implements Runnable {
             private final CountDownLatch latch = new CountDownLatch(1);
             private final List<Object> _dumps;
 
-            private DumpKeys(List<Object> dumps)
-            {
+            private DumpKeys(List<Object> dumps) {
                 this._dumps = dumps;
             }
 
             @Override
-            public void run()
-            {
+            public void run() {
                 dumpKeysState(_dumps);
                 latch.countDown();
             }
 
-            public boolean await(long timeout, TimeUnit unit)
-            {
-                try
-                {
+            public boolean await(long timeout, TimeUnit unit) {
+                try {
                     return latch.await(timeout, unit);
-                }
-                catch (InterruptedException x)
-                {
+                } catch (InterruptedException x) {
                     return false;
                 }
             }
         }
 
-        private class Accept implements Runnable
-        {
+        private class Accept implements Runnable {
             private final UnixSocketChannel _channel;
 
-            public Accept(UnixSocketChannel channel)
-            {
+            public Accept(UnixSocketChannel channel) {
                 this._channel = channel;
             }
 
             @Override
-            public void run()
-            {
-                try
-                {
+            public void run() {
+                try {
                     SelectionKey key = _channel.register(_selector, 0, null);
                     EndPoint endpoint = createEndPoint(_channel, key);
                     key.attach(endpoint);
-                }
-                catch (Throwable x)
-                {
+                } catch (Throwable x) {
                     closeNoExceptions(_channel);
                     LOG.debug(x);
                 }
             }
         }
 
-        private class Connect implements Runnable
-        {
+        private class Connect implements Runnable {
             private final AtomicBoolean failed = new AtomicBoolean();
             private final SocketChannel channel;
             private final Object attachment;
             private final Scheduler.Task timeout;
 
-            public Connect(SocketChannel channel, Object attachment)
-            {
+            public Connect(SocketChannel channel, Object attachment) {
                 this.channel = channel;
                 this.attachment = attachment;
                 this.timeout = scheduler.schedule(new ConnectTimeout(this), getConnectTimeout(), TimeUnit.MILLISECONDS);
             }
 
             @Override
-            public void run()
-            {
-                try
-                {
+            public void run() {
+                try {
                     channel.register(_selector, SelectionKey.OP_CONNECT, this);
-                }
-                catch (Throwable x)
-                {
+                } catch (Throwable x) {
                     failed(x);
                 }
             }
 
-            protected void failed(Throwable failure)
-            {
-                if (failed.compareAndSet(false, true))
-                {
+            protected void failed(Throwable failure) {
+                if (failed.compareAndSet(false, true)) {
                     timeout.cancel();
                     closeNoExceptions(channel);
                     connectionFailed(channel, failure, attachment);
@@ -755,42 +648,33 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
             }
         }
 
-        private class ConnectTimeout implements Runnable
-        {
+        private class ConnectTimeout implements Runnable {
             private final Connect connect;
 
-            private ConnectTimeout(Connect connect)
-            {
+            private ConnectTimeout(Connect connect) {
                 this.connect = connect;
             }
 
             @Override
-            public void run()
-            {
+            public void run() {
                 SocketChannel channel = connect.channel;
-                if (channel.isConnectionPending())
-                {
+                if (channel.isConnectionPending()) {
                     LOG.debug("Channel {} timed out while connecting, closing it", channel);
                     connect.failed(new SocketTimeoutException());
                 }
             }
         }
 
-        private class Stop implements Runnable
-        {
+        private class Stop implements Runnable {
             private final CountDownLatch latch = new CountDownLatch(1);
 
             @Override
-            public void run()
-            {
-                try
-                {
-                    for (SelectionKey key : _selector.keys())
-                    {
+            public void run() {
+                try {
+                    for (SelectionKey key : _selector.keys()) {
                         Object attachment = key.attachment();
-                        if (attachment instanceof EndPoint)
-                        {
-                            EndPointCloser closer = new EndPointCloser((EndPoint)attachment);
+                        if (attachment instanceof EndPoint) {
+                            EndPointCloser closer = new EndPointCloser((EndPoint) attachment);
                             execute(closer);
                             // We are closing the SelectorManager, so we want to block the
                             // selector thread here until we have closed all EndPoints.
@@ -801,73 +685,44 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
                     }
 
                     closeNoExceptions(_selector);
-                }
-                finally
-                {
+                } finally {
                     latch.countDown();
                 }
             }
 
-            public boolean await(long timeout)
-            {
-                try
-                {
+            public boolean await(long timeout) {
+                try {
                     return latch.await(timeout, TimeUnit.MILLISECONDS);
-                }
-                catch (InterruptedException x)
-                {
+                } catch (InterruptedException x) {
                     return false;
                 }
             }
         }
 
-        private class EndPointCloser implements Runnable
-        {
+        private class EndPointCloser implements Runnable {
             private final CountDownLatch latch = new CountDownLatch(1);
             private final EndPoint endPoint;
 
-            private EndPointCloser(EndPoint endPoint)
-            {
+            private EndPointCloser(EndPoint endPoint) {
                 this.endPoint = endPoint;
             }
 
             @Override
-            public void run()
-            {
-                try
-                {
+            public void run() {
+                try {
                     closeNoExceptions(endPoint.getConnection());
-                }
-                finally
-                {
+                } finally {
                     latch.countDown();
                 }
             }
 
-            private boolean await(long timeout)
-            {
-                try
-                {
+            private boolean await(long timeout) {
+                try {
                     return latch.await(timeout, TimeUnit.MILLISECONDS);
-                }
-                catch (InterruptedException x)
-                {
+                } catch (InterruptedException x) {
                     return false;
                 }
             }
         }
-    }
-
-    /**
-     * A {@link SelectableEndPoint} is an {@link EndPoint} that wish to be notified of
-     * non-blocking events by the {@link ManagedSelector}.
-     */
-    public interface SelectableEndPoint extends EndPoint
-    {
-        /**
-         * <p>Callback method invoked when a read or write events has been detected by the {@link ManagedSelector}
-         * for this endpoint.</p>
-         */
-        void onSelected();
     }
 }

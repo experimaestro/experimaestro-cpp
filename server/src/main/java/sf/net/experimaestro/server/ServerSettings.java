@@ -31,21 +31,14 @@ import java.net.UnknownHostException;
  */
 public class ServerSettings {
     final static private Logger LOGGER = Logger.getLogger();
-
-    static enum Style {
-        SMOOTHNESS, BLITZER;
-    }
-
     /**
      * Server name
      */
     String name = "?";
-
     /**
      * Default style: smoothness
      */
     Style style = Style.SMOOTHNESS;
-
 
     public ServerSettings(Configuration configuration) {
         try {
@@ -62,5 +55,10 @@ public class ServerSettings {
                     Output.toString(",", Style.values()));
         }
 
+    }
+
+
+    static enum Style {
+        SMOOTHNESS, BLITZER;
     }
 }

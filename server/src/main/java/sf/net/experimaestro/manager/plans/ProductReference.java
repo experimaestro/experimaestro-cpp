@@ -20,10 +20,9 @@ package sf.net.experimaestro.manager.plans;
 
 import org.apache.commons.lang.NotImplementedException;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.util.*;
 
-import static sf.net.experimaestro.manager.plans.LatticeNode.*;
+import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
 
 /**
  * A fake operator that will be replaced by a succession of
@@ -109,7 +108,7 @@ public class ProductReference extends NAryOperator {
         // Build the trie structure for product/joins
 
         int[] mapping = new int[inputOperators.length];
-        for(int i = 0; i < parents.size(); i++) {
+        for (int i = 0; i < parents.size(); i++) {
             mapping[i] = merge.map.get(inputOperators[i]);
         }
 

@@ -23,9 +23,9 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 7/2/13
-*/
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 7/2/13
+ */
 public class JSNamespaceBinder implements String2String {
     private final Scriptable scope;
 

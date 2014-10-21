@@ -38,17 +38,12 @@ public class JSConnector extends ScriptableObject {
     private Connector connector;
 
 
-    public JSConnector() {}
+    public JSConnector() {
+    }
 
     public JSConnector(Connector connector) {
         this.connector = connector;
     }
-
-
-    Connector getConnector() {
-        return connector;
-    }
-
 
     public static JSConnector jsConstructor(Context cx, Object[] args,
                                             Function ctorObj,
@@ -72,6 +67,9 @@ public class JSConnector extends ScriptableObject {
         }
     }
 
+    Connector getConnector() {
+        return connector;
+    }
 
     @Override
     public String getClassName() {

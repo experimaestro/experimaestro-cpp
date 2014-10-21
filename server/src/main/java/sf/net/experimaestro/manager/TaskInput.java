@@ -24,21 +24,21 @@ import sf.net.experimaestro.manager.json.Json;
 
 public class TaskInput extends Input {
 
-	final TaskFactory factory;
+    final TaskFactory factory;
 
-	public TaskInput(TaskFactory factory, Type type) {
-		super(type);
-		this.factory = factory;
-	}
+    public TaskInput(TaskFactory factory, Type type) {
+        super(type);
+        this.factory = factory;
+    }
 
-	@Override
-	public void setDefaultValue(Json defaultValue) {
-		throw new XPMRuntimeException(
-				"Default value must not be set for task inputs");
-	}
+    @Override
+    public void setDefaultValue(Json defaultValue) {
+        throw new XPMRuntimeException(
+                "Default value must not be set for task inputs");
+    }
 
-	@Override
-	Value newValue() {
-		return new TaskValue(this);
-	}
+    @Override
+    Value newValue() {
+        return new TaskValue(this);
+    }
 }

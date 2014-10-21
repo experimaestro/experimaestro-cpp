@@ -24,6 +24,7 @@ import sf.net.experimaestro.utils.JSUtils;
 
 /**
  * JavaScript wrapper for SSH connection options
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/10/12
  */

@@ -186,7 +186,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
                 array.add(ValueType.wrap(e));
             }
 
-            return new Constant(new Json[] { array });
+            return new Constant(new Json[]{array});
         }
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());

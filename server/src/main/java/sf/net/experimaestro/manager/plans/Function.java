@@ -25,11 +25,10 @@ import sf.net.experimaestro.manager.json.JsonArray;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
-public interface Function  {
+public interface Function {
 
     /**
      * Apply the function
-     *
      *
      * @param input
      * @return

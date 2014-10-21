@@ -41,6 +41,18 @@ public class JSLogger extends JSBaseObject {
         logger = Logger.getLogger(xpm.loggerRepository, name);
     }
 
+    static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
+        if (args.length < 1)
+            throw new XPMRuntimeException("There should be at least one argument when logging");
+
+        String format = Context.toString(args[0]);
+        Object[] objects = new Object[args.length - 1];
+        for (int i = 1; i < args.length; i++)
+            objects[i - 1] = JSUtils.unwrap(args[i]);
+
+        ((JSLogger) thisObj).logger.log(level, format, objects);
+    }
+
     @JSFunction("trace")
     public void trace(Object format, Object... objects) {
         logger.trace(Lazy.format(JSUtils.toString(format), objects));
@@ -79,20 +91,8 @@ public class JSLogger extends JSBaseObject {
 
     @JSFunction("set_level")
     @JSHelp("Sets the level")
-    public void set_level(@JSArgument(type="String", name="level") String level) {
+    public void set_level(@JSArgument(type = "String", name = "level") String level) {
         logger.setLevel(Level.toLevel(level));
-    }
-
-    static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        if (args.length < 1)
-            throw new XPMRuntimeException("There should be at least one argument when logging");
-
-        String format = Context.toString(args[0]);
-        Object[] objects = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            objects[i - 1] = JSUtils.unwrap(args[i]);
-
-        ((JSLogger) thisObj).logger.log(level, format, objects);
     }
 
 

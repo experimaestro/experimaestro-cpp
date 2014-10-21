@@ -29,24 +29,24 @@ import java.io.PrintWriter;
 
 /**
  * Help about JavaScript
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JSHelpServlet extends XPMServlet {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     public JSHelpServlet(ServerSettings serverSettings) {
         super(serverSettings);
     }
 
     protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
+                         HttpServletResponse response) throws ServletException, IOException {
 
-		String localPath = request.getRequestURI().substring(
-				request.getServletPath().length());
+        String localPath = request.getRequestURI().substring(
+                request.getServletPath().length());
 
-		if (localPath.equals("")) {
-			final PrintWriter out = startHTMLResponse(response);
+        if (localPath.equals("")) {
+            final PrintWriter out = startHTMLResponse(response);
             header(out, "JavaScript Help");
 
             out.println("<div id='jsdocumentation'>");
@@ -55,11 +55,11 @@ public class JSHelpServlet extends XPMServlet {
             out.println("</div>");
             out.println("</body></html>");
             return;
-		}
+        }
 
-		// Not found
-		error404(request, response);
-	}
+        // Not found
+        error404(request, response);
+    }
 
 
 }

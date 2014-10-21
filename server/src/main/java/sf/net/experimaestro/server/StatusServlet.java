@@ -42,10 +42,9 @@ import java.util.ArrayList;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class StatusServlet extends XPMServlet {
-    final static private Logger LOGGER = Logger.getLogger();
-
-    private static final long serialVersionUID = 1L;
     public static final String RESOURCE_PATH = "/resource/";
+    final static private Logger LOGGER = Logger.getLogger();
+    private static final long serialVersionUID = 1L;
     private final Scheduler scheduler;
 
     public StatusServlet(ServerSettings serverSettings, Scheduler manager) {

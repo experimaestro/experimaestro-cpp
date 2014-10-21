@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Marks objects that have exposed methods
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.CONSTRUCTOR })
+@Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface Expose {
     String value() default "";
 }

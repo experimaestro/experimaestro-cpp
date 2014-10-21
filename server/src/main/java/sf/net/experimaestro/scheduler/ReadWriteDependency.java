@@ -53,6 +53,14 @@ public class ReadWriteDependency extends Dependency {
         super(from);
     }
 
+    static private Data getData(Resource resource) {
+        Data data = (Data) resource.getLockData();
+        if (data == null) {
+            resource.setLockData(data = new Data(resource));
+        }
+        return data;
+    }
+
     @Override
     public String toString() {
         return super.toString() + "/RW";
@@ -72,20 +80,11 @@ public class ReadWriteDependency extends Dependency {
         return new StatusLock(resource, pid, false);
     }
 
-    static private Data getData(Resource resource) {
-        Data data = (Data) resource.getLockData();
-        if (data == null) {
-            resource.setLockData(data = new Data(resource));
-        }
-        return data;
-    }
-
     @Persistent
     static public class StatusLock implements Lock {
         long resourceId;
-        private String pid;
-
         transient Resource resource;
+        private String pid;
 
         protected StatusLock() {
         }

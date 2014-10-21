@@ -33,21 +33,10 @@ import java.util.Iterator;
  */
 public class Output {
 
-    private static final class NullFormatter<T> implements Formatter<T> {
-        public String format(T t) {
-            return t.toString();
-        }
-    }
-
-    static public interface Formatter<T> {
-        String format(T t);
-    }
-
     static public <T> void print(PrintStream out, String separator,
                                  Iterable<T> iterable) {
         print(out, separator, iterable.iterator(), new NullFormatter<T>());
     }
-
 
     public static void print(PrintWriter out, String separator,
                              final double[] array) {
@@ -216,11 +205,11 @@ public class Output {
 
     }
 
-        /**
-         * @param string
-         * @param actions
-         * @return
-         */
+    /**
+     * @param string
+     * @param actions
+     * @return
+     */
     public static <U> String toString(String separator, Iterable<U> iterable) {
         StringBuilder sb = new StringBuilder();
         print(sb, separator, iterable);
@@ -243,6 +232,16 @@ public class Output {
         StringBuilder sb = new StringBuilder();
         print(sb, separator, iterable, formatter);
         return sb.toString();
+    }
+
+    static public interface Formatter<T> {
+        String format(T t);
+    }
+
+    private static final class NullFormatter<T> implements Formatter<T> {
+        public String format(T t) {
+            return t.toString();
+        }
     }
 
 }

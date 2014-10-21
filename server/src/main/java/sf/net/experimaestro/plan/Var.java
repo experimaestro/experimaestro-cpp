@@ -27,24 +27,25 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class Var extends Node {
-	String name;
-	ArrayList<Value> values = new ArrayList<>();
+    String name;
+    ArrayList<Value> values = new ArrayList<>();
 
-	public String toString() {
-		return String.format("%s=[%s]", name, Output.toString("],[", values));
-	}
+    public String toString() {
+        return String.format("%s=[%s]", name, Output.toString("],[", values));
+    }
 
-	@Override
-	public Iterator<Map<String, Value>> iterator() {
+    @Override
+    public Iterator<Map<String, Value>> iterator() {
 
-		return new AbstractIterator<Map<String, Value>>() {
-			Iterator<Value> it = values.iterator();
-			@Override
-			protected Map<String, Value> computeNext() {
-				if (!it.hasNext())
-					return endOfData();
+        return new AbstractIterator<Map<String, Value>>() {
+            Iterator<Value> it = values.iterator();
+
+            @Override
+            protected Map<String, Value> computeNext() {
+                if (!it.hasNext())
+                    return endOfData();
                 return ImmutableMap.of(name, it.next());
-			}
-		};
-	}
+            }
+        };
+    }
 }

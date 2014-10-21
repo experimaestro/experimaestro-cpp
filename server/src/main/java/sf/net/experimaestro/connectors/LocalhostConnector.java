@@ -52,18 +52,25 @@ import static java.lang.String.format;
 @Persistent
 public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
-
+    private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
     static private LocalhostConnector singleton = new LocalhostConnector();
 
     public LocalhostConnector() {
         super("file://");
     }
 
+    public static LocalhostConnector getInstance() {
+        return singleton;
+    }
+
+    public static ResourceLocator getLocator(URI uri) {
+        return new ResourceLocator(singleton, uri.getPath());
+    }
+
     @Override
     public AbstractProcessBuilder processBuilder() {
         return new ProcessBuilder();
     }
-
 
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
@@ -85,21 +92,10 @@ public class LocalhostConnector extends SingleHostConnector {
         return "localhost";
     }
 
-    public static LocalhostConnector getInstance() {
-        return singleton;
-    }
-
-
-    public static ResourceLocator getLocator(URI uri) {
-        return new ResourceLocator(singleton, uri.getPath());
-    }
-
     @Override
     public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
         return new ProcessBuilder();
     }
-
-    private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
 
     @Override
     protected FileObject getTemporaryDirectory() throws FileSystemException {
@@ -123,7 +119,9 @@ public class LocalhostConnector extends SingleHostConnector {
         transient private Process process;
         transient private Thread destroyThread;
 
-        /** Stores the exit value */
+        /**
+         * Stores the exit value
+         */
         transient private Integer exitValue;
 
         @SuppressWarnings("unused")

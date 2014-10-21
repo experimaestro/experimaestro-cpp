@@ -30,10 +30,11 @@ import sf.net.experimaestro.utils.log.Logger;
 
 public class JSModule extends JSBaseObject {
     final static private Logger LOGGER = Logger.getLogger();
+    private static final String DEFAULT_OUTPUT_ENCODING = "UTF-8";
+    private static final int DEFAULT_LINE_LENGTH = 72;
+    private static final int DEFAULT_INDENT = 2;
     private final XPMObject xpm;
-
     Module module;
-
     /**
      * Creates a new module from a JavaScript description
      *
@@ -58,16 +59,6 @@ public class JSModule extends JSBaseObject {
 
     }
 
-    static public enum Type {
-        SCHEMA,
-        RELAXNG
-    }
-
-    private static final String DEFAULT_OUTPUT_ENCODING = "UTF-8";
-    private static final int DEFAULT_LINE_LENGTH = 72;
-    private static final int DEFAULT_INDENT = 2;
-
-
     static public Module getModule(Repository repository, Object parent) {
         if (parent == null)
             return null;
@@ -87,6 +78,12 @@ public class JSModule extends JSBaseObject {
         throw new XPMRuntimeException(
                 "Cannot search for module with type %s [%s]",
                 parent.getClass(), parent);
+    }
+
+
+    static public enum Type {
+        SCHEMA,
+        RELAXNG
     }
 
 }

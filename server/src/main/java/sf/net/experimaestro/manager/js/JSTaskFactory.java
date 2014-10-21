@@ -24,7 +24,9 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.JSNamespaceContext;
@@ -32,7 +34,6 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.List;
 
 /**
  * A task factory

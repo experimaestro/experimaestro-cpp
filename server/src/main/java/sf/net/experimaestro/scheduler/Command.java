@@ -25,14 +25,11 @@ import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -319,7 +316,8 @@ public class Command implements CommandComponent {
         private java.lang.String key;
         private Json json;
 
-        private JsonParameterFile() {}
+        private JsonParameterFile() {
+        }
 
         public JsonParameterFile(java.lang.String key, Json json) {
             this.key = key;

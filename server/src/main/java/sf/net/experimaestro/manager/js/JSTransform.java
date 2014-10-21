@@ -72,7 +72,7 @@ public class JSTransform extends JSAbstractOperator implements Function {
         Json result = JSUtils.toJSON(scope, f.call(cx, scope, null, args));
 
         if (result instanceof JsonArray)
-            return (JsonArray)result;
+            return (JsonArray) result;
 
         JsonArray array = new JsonArray();
         array.add(result);

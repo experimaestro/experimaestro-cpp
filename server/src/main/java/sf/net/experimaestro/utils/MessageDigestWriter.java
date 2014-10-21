@@ -22,11 +22,11 @@ public class MessageDigestWriter extends Writer implements Closeable {
 
     public static byte[] stringToBytesUTFCustom(String str) {
         byte[] b = new byte[str.length() << 1];
-        for(int i = 0; i < str.length(); i++) {
+        for (int i = 0; i < str.length(); i++) {
             char strChar = str.charAt(i);
             int bpos = i << 1;
-            b[bpos] = (byte) ((strChar&0xFF00)>>8);
-            b[bpos + 1] = (byte) (strChar&0x00FF);
+            b[bpos] = (byte) ((strChar & 0xFF00) >> 8);
+            b[bpos + 1] = (byte) (strChar & 0x00FF);
         }
         return b;
     }

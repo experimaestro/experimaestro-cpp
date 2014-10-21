@@ -26,34 +26,56 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 public final class Logger extends org.apache.log4j.Logger {
 
 
-    static public interface Factory extends LoggerFactory {
-        @Override
-        public Logger makeNewLoggerInstance(String name);
-    }
-
-    /**
-     * Our own logger factory
-     */
-    static public class DefaultFactory implements Factory {
-        @Override
-        public Logger makeNewLoggerInstance(String name) {
-            return new Logger(name);
-        }
-
-    }
-
+    private static final String FQCN = Logger.class.getName();
     private static DefaultFactory myFactory = new DefaultFactory();
-
-    public final static Factory factory() {
-        return myFactory;
-    }
 
     public Logger(String name) {
         super(name);
     }
 
+    public final static Factory factory() {
+        return myFactory;
+    }
+
     public static Level toLevel(String name, Level level) {
         return Level.toLevel(name, Level.INFO);
+    }
+
+    /**
+     * This method overrides {@link Logger#getLogger} by supplying its own
+     * factory type as a parameter.
+     */
+    public static Logger getLogger(String name, Factory factory) {
+        return (Logger) org.apache.log4j.Logger.getLogger(name, factory);
+    }
+
+    public static Logger getLogger(Hierarchy repository) {
+        return getLogger(repository, new Throwable().getStackTrace()[1]
+                .getClassName());
+    }
+
+    public static Logger getLogger(Hierarchy repository, String name) {
+        if (repository == null)
+            return getLogger(name);
+        return (Logger) repository.getLogger(name, myFactory);
+    }
+
+    /**
+     * This method overrides {@link Logger#getLogger} by supplying its own
+     * factory type as a parameter.
+     */
+    public static Logger getLogger(String name) {
+        return getLogger(name, myFactory);
+    }
+
+    public static Logger getLogger(Factory factory) {
+        return getLogger(new Throwable().getStackTrace()[1]
+                .getClassName(), factory);
+    }
+
+    public static Logger getLogger() {
+        return getLogger(new Throwable().getStackTrace()[1]
+                .getClassName(), myFactory);
     }
 
     public void trace(String format, Object... values) {
@@ -114,7 +136,6 @@ public final class Logger extends org.apache.log4j.Logger {
             forcedLog(FQCN, Level.ERROR, String.format(format, values), t);
     }
 
-
     public void error(String format, Object... values) {
         if (repository.isDisabled(Level.ERROR_INT))
             return;
@@ -122,47 +143,6 @@ public final class Logger extends org.apache.log4j.Logger {
         if (isEnabledFor(Level.ERROR))
             forcedLog(FQCN, Level.ERROR, String.format(format, values), null);
     }
-
-    /**
-     * This method overrides {@link Logger#getLogger} by supplying its own
-     * factory type as a parameter.
-     */
-    public static Logger getLogger(String name, Factory factory) {
-        return (Logger) org.apache.log4j.Logger.getLogger(name, factory);
-    }
-
-    public static Logger getLogger(Hierarchy repository) {
-        return getLogger(repository, new Throwable().getStackTrace()[1]
-                .getClassName());
-    }
-
-    public static Logger getLogger(Hierarchy repository, String name) {
-        if (repository == null)
-            return getLogger(name);
-        return (Logger) repository.getLogger(name, myFactory);
-    }
-
-
-    /**
-     * This method overrides {@link Logger#getLogger} by supplying its own
-     * factory type as a parameter.
-     */
-    public static Logger getLogger(String name) {
-        return getLogger(name, myFactory);
-    }
-
-    public static Logger getLogger(Factory factory) {
-        return getLogger(new Throwable().getStackTrace()[1]
-                .getClassName(), factory);
-    }
-
-    public static Logger getLogger() {
-        return getLogger(new Throwable().getStackTrace()[1]
-                .getClassName(), myFactory);
-    }
-
-
-    private static final String FQCN = Logger.class.getName();
 
     /**
      * Print an exception with its stack tracke
@@ -187,6 +167,22 @@ public final class Logger extends org.apache.log4j.Logger {
             return;
         if (isEnabledFor(level))
             forcedLog(FQCN, level, String.format(format, values), null);
+    }
+
+    static public interface Factory extends LoggerFactory {
+        @Override
+        public Logger makeNewLoggerInstance(String name);
+    }
+
+    /**
+     * Our own logger factory
+     */
+    static public class DefaultFactory implements Factory {
+        @Override
+        public Logger makeNewLoggerInstance(String name) {
+            return new Logger(name);
+        }
+
     }
 
 }

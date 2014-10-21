@@ -26,6 +26,7 @@ import java.util.Map;
 
 /**
  * An operator with multiple inputs
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/2/13
  */

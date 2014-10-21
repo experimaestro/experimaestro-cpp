@@ -34,34 +34,29 @@ import java.util.Map;
  */
 public class TaskContext {
     /**
-     * The scheduler
+     * The logger
      */
-    private Scheduler scheduler;
-
-    /**
-     * Whether we should simulate
-     */
-    private boolean simulate;
-
+    private final Logger logger;
     /**
      * The default locks
      */
     public Map<Resource, String> defaultLocks = ImmutableMap.of();
-
-    /**
-     * Resource locator
-     */
-    private ResourceLocator locator;
-
     /**
      * The working directory
      */
     public FileObject workingDirectory;
-
     /**
-     * The logger
+     * The scheduler
      */
-    private final Logger logger;
+    private Scheduler scheduler;
+    /**
+     * Whether we should simulate
+     */
+    private boolean simulate;
+    /**
+     * Resource locator
+     */
+    private ResourceLocator locator;
 
 
     public TaskContext(Scheduler scheduler, ResourceLocator locator, FileObject workingDirectory, Logger logger) {
@@ -70,11 +65,12 @@ public class TaskContext {
 
     /**
      * Initialize a new task context
-     * @param scheduler The scheduler
-     * @param locator The resource locator
+     *
+     * @param scheduler        The scheduler
+     * @param locator          The resource locator
      * @param workingDirectory The working directory
-     * @param logger The logger
-     * @param simulate Whether to simulate
+     * @param logger           The logger
+     * @param simulate         Whether to simulate
      */
     public TaskContext(Scheduler scheduler, ResourceLocator locator, FileObject workingDirectory, Logger logger, boolean simulate) {
         this.scheduler = scheduler;

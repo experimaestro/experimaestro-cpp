@@ -81,6 +81,28 @@ public class ClassInfo implements AnnotatedElement {
         this(classInfoLoader, file.getContent().getInputStream());
     }
 
+    /**
+     * Read class information from disk.
+     */
+    public ClassInfo(ClassInfoLoader classInfoLoader, final InputStream stream) throws IOException {
+        this.classInfoLoader = classInfoLoader;
+        readFromInputStream(stream);
+    }
+
+    private static Object readRefd(DataInputStream inp, Object[] constantPool) throws IOException {
+        int constantPoolIdx = inp.readUnsignedShort();
+        return constantPool[constantPoolIdx];
+    }
+
+    /**
+     * Read a string reference from a classfile, then look up the string in the constant pool.
+     */
+    private static String readRefdString(DataInputStream inp, Object[] constantPool) throws IOException {
+        Object constantPoolObj = readRefd(inp, constantPool);
+        return (constantPoolObj instanceof Integer ? (String) constantPool[(Integer) constantPoolObj]
+                : (String) constantPoolObj);
+    }
+
     public boolean belongs(Class<?> aclass) {
         if (aclass.isPrimitive()) {
             resolve();
@@ -99,29 +121,6 @@ public class ClassInfo implements AnnotatedElement {
 
     public String getName() {
         return name;
-    }
-
-    /**
-     * Read class information from disk.
-     */
-    public ClassInfo(ClassInfoLoader classInfoLoader, final InputStream stream) throws IOException {
-        this.classInfoLoader = classInfoLoader;
-        readFromInputStream(stream);
-    }
-
-
-    private static Object readRefd(DataInputStream inp, Object[] constantPool) throws IOException {
-        int constantPoolIdx = inp.readUnsignedShort();
-        return constantPool[constantPoolIdx];
-    }
-
-    /**
-     * Read a string reference from a classfile, then look up the string in the constant pool.
-     */
-    private static String readRefdString(DataInputStream inp, Object[] constantPool) throws IOException {
-        Object constantPoolObj = readRefd(inp, constantPool);
-        return (constantPoolObj instanceof Integer ? (String) constantPool[(Integer) constantPoolObj]
-                : (String) constantPoolObj);
     }
 
     /**

@@ -51,7 +51,8 @@ public class TokenResource extends Resource<ResourceData> {
     private int usedTokens;
 
 
-    protected TokenResource() {}
+    protected TokenResource() {
+    }
 
     /**
      * Creates a new token resource
@@ -93,21 +94,21 @@ public class TokenResource extends Resource<ResourceData> {
     @Override
     synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
         LOGGER.debug("Updating token resource");
-    	int used = 0;
-    	for(Dependency dependency: scheduler.getDependentResources(getId())) {
-    		if (dependency.hasLock()) {
+        int used = 0;
+        for (Dependency dependency : scheduler.getDependentResources(getId())) {
+            if (dependency.hasLock()) {
                 LOGGER.debug("Dependency [%s] has lock", dependency);
-    			used++;
+                used++;
             }
-    	}
-    	
-    	if (used != this.usedTokens) {
-    		this.usedTokens = used;
-    		if (store)
-    			scheduler.store(this, true);
-    		return true;
-    	}
-    	
+        }
+
+        if (used != this.usedTokens) {
+            this.usedTokens = used;
+            if (store)
+                scheduler.store(this, true);
+            return true;
+        }
+
         return false;
     }
 
@@ -118,12 +119,24 @@ public class TokenResource extends Resource<ResourceData> {
     }
 
     /**
+     * Unlock a resource
+     *
+     * @return
+     */
+    synchronized private void unlock() {
+        usedTokens--;
+        LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
+        storeState(true);
+    }
+
+    /**
      * A token dependency
      */
     @Persistent
     static public class TokenDependency extends Dependency {
 
-        protected TokenDependency() {}
+        protected TokenDependency() {
+        }
 
         public TokenDependency(long from) {
             super(from);
@@ -154,18 +167,6 @@ public class TokenResource extends Resource<ResourceData> {
                 return new TokenLock(token);
             }
         }
-    }
-
-
-    /**
-     * Unlock a resource
-     *
-     * @return
-     */
-    synchronized private void unlock() {
-        usedTokens--;
-        LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
-        storeState(true);
     }
 
     /**

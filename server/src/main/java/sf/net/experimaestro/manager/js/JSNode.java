@@ -57,6 +57,14 @@ public class JSNode extends JSBaseObject implements Json {
         this.node = node;
     }
 
+    static String getAttribute(Node node, QName attributeQName) {
+        Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
+        if (!attributeQName.isAttribute(element)) {
+            throw new XPMRhinoException("No " + attributeQName + " associated to XML element %s", new QName(element));
+        }
+
+        return attributeQName.getAttribute(element);
+    }
 
     @JSFunction(value = "xpath", scope = true)
     public JSNodeList xpath(Context context, Scriptable scope, String expression) throws XPathExpressionException {
@@ -69,7 +77,6 @@ public class JSNode extends JSBaseObject implements Json {
         return (NodeList) xpath.evaluate(node, XPathConstants.NODESET);
     }
 
-
     @JSFunction(value = "get_string", scope = true)
     public String getString(Context context, Scriptable scope, String expression) throws XPathExpressionException {
         XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
@@ -80,7 +87,6 @@ public class JSNode extends JSBaseObject implements Json {
     public String getString() {
         return node.getTextContent();
     }
-
 
     @JSFunction(value = "get_node", scope = true)
     public Object getNode(Context context, Scriptable scope, String expression) throws XPathExpressionException {
@@ -169,21 +175,11 @@ public class JSNode extends JSBaseObject implements Json {
         getElement().setAttributeNS(qname.getNamespaceURI(), qname.getLocalPart(), value);
     }
 
-
     private NodeList get_one_node(Scriptable scope, String xpath) throws XPathExpressionException {
         NodeList nodeList = evaluate(scope, xpath);
         if (nodeList.getLength() != 1)
             throw new XPMRhinoException("XPath expression %s gave more than one result (%d)", xpath, nodeList.getLength());
         return nodeList;
-    }
-
-    static String getAttribute(Node node, QName attributeQName) {
-        Element element = node instanceof Document ? ((Document) node).getDocumentElement() : (Element) node;
-        if (!attributeQName.isAttribute(element)) {
-            throw new XPMRhinoException("No " + attributeQName + " associated to XML element %s", new QName(element));
-        }
-
-        return attributeQName.getAttribute(element);
     }
 
     public Node getNode() {

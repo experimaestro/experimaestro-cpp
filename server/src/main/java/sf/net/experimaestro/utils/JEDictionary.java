@@ -36,35 +36,10 @@ import com.sleepycat.persist.model.SecondaryKey;
  */
 public class JEDictionary {
 
-    /**
-     * Our entities: a string and a long
-     *
-     * @author B. Piwowarski <benjamin@bpiwowar.net>
-     */
-    @Entity
-    static public class Entry {
-        @PrimaryKey
-        String key;
-
-        @SecondaryKey(relate = Relationship.ONE_TO_ONE)
-        long id;
-
-        public Entry() {
-        }
-
-        public Entry(String key, long id) {
-            this.key = key;
-            this.id = id;
-        }
-
-    }
-
+    static public final int NULL_ID = -1;
     private EntityStore store;
     private PrimaryIndex<String, Entry> index;
     private SecondaryIndex<Long, String, Entry> entries;
-
-    static public final int NULL_ID = -1;
-
     /**
      * The size of the store (used to give a new id to a new entry)
      */
@@ -135,5 +110,28 @@ public class JEDictionary {
     protected void finalize() throws Throwable {
         shutdown();
         super.finalize();
+    }
+
+    /**
+     * Our entities: a string and a long
+     *
+     * @author B. Piwowarski <benjamin@bpiwowar.net>
+     */
+    @Entity
+    static public class Entry {
+        @PrimaryKey
+        String key;
+
+        @SecondaryKey(relate = Relationship.ONE_TO_ONE)
+        long id;
+
+        public Entry() {
+        }
+
+        public Entry(String key, long id) {
+            this.key = key;
+            this.id = id;
+        }
+
     }
 }

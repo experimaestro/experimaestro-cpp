@@ -27,7 +27,9 @@ import com.google.common.collect.Range;
  * @date 7/3/13
  */
 public class RangeUtils {
-    /** Transforms a range into an array of {@linkplain Integer} */
+    /**
+     * Transforms a range into an array of {@linkplain Integer}
+     */
     public static Integer[] toIntegerArray(Range<Integer> closed) {
         ContiguousSet<Integer> integers = ContiguousSet.create(closed, DiscreteDomain.integers());
         return integers.toArray(new Integer[integers.size()]);

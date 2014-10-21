@@ -282,7 +282,7 @@ public abstract class Operator {
 
     /**
      * Initialize the node  (called after the initialization of parents)
-     * <p>
+     * <p/>
      * Top-down calls (parents are initialized before)
      *
      * @param parentStreams A map from the operators from parent streams to the context index
@@ -292,7 +292,7 @@ public abstract class Operator {
 
     /**
      * Initialize the operator.
-     * <p>
+     * <p/>
      * <ol>
      * <li>Calls the {@linkplain #doPreInit()} method</li>
      * <li>Initialize the parents</li>

@@ -8,7 +8,9 @@ package sf.net.experimaestro.scheduler;
  * @date 25/1/13
  */
 public interface Cleaneable {
-    /** Clean before deletion */
+    /**
+     * Clean before deletion
+     */
     void clean();
 
 }

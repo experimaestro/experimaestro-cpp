@@ -27,12 +27,12 @@ import java.util.*;
 
 /**
  * Represents an abstraction of an order by a list of set of object/indices.
- *
+ * <p/>
  * This is useful to choose an order compatible with several orders, and is used by
  * OrderBy.
- *
+ * <p/>
  * For instance,  {1, 2}, {3, 4, 5} means that we could have an order 1,2,3,4,5 or 2,1,3,4,5 or ...
- *
+ * <p/>
  * The {@linkplain #flatten()} method is used an order
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -45,34 +45,6 @@ public class Order<T> implements Iterable<Set<T>> {
     }
 
     public Order() {
-    }
-
-    /**
-     * Add an operator to the last set to be sorted (and create a new one if asked)
-     *
-     * @param t      The element
-     * @param newSet Whether to create a new set
-     */
-    public void add(T t, boolean newSet) {
-        if (list.isEmpty() || newSet)
-            list.add(new HashSet<T>());
-        list.get(list.size() - 1).add(t);
-    }
-
-    /**
-     * Add an operator to the last set
-     * @param t
-     */
-    public void add(T t) {
-        add(t, false);
-    }
-
-    /**
-     * Get a a full order compatible with this one
-     */
-    public Iterable<T> items() {
-        Set[] inputs = list.toArray(new Set[list.size()]);
-        return Iterables.concat(inputs);
     }
 
     /**
@@ -121,7 +93,6 @@ public class Order<T> implements Iterable<Set<T>> {
         return new WrappedResult(true, new Order(newList));
     }
 
-
     private static <T> Set<T> intersection(Set<T>[] sets, int remaining) {
         Set<T> intersection = new HashSet<>();
         main:
@@ -159,6 +130,34 @@ public class Order<T> implements Iterable<Set<T>> {
         return count;
     }
 
+    /**
+     * Add an operator to the last set to be sorted (and create a new one if asked)
+     *
+     * @param t      The element
+     * @param newSet Whether to create a new set
+     */
+    public void add(T t, boolean newSet) {
+        if (list.isEmpty() || newSet)
+            list.add(new HashSet<T>());
+        list.get(list.size() - 1).add(t);
+    }
+
+    /**
+     * Add an operator to the last set
+     *
+     * @param t
+     */
+    public void add(T t) {
+        add(t, false);
+    }
+
+    /**
+     * Get a a full order compatible with this one
+     */
+    public Iterable<T> items() {
+        Set[] inputs = list.toArray(new Set[list.size()]);
+        return Iterables.concat(inputs);
+    }
 
     /**
      * Remove the specified operator from the list

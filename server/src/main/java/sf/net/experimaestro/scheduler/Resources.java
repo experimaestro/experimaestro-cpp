@@ -75,33 +75,26 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
      * Resource data by resource ID
      */
     private final SecondaryIndex<Long, ResourceLocator, ResourceData> dataByID;
-
-
-    /**
-     * The dependencies
-     */
-    private PrimaryIndex<Long, Dependency> dependencies;
-
-    /**
-     * Access to the index that gives dependent resources
-     */
-    private SecondaryIndex<Long, Long, Dependency> fromDependencies;
-
-    /**
-     * Access to the index that gives required resources
-     */
-    private SecondaryIndex<Long, Long, Dependency> toDependencies;
-
     /**
      * The dataByGroup the resources belong to
      */
     private final SecondaryIndex<GroupId, ResourceLocator, ResourceData> dataByGroup;
-
-
     /**
      * A Trie
      */
     Trie<String, DotName> groupsTrie = new Trie<>();
+    /**
+     * The dependencies
+     */
+    private PrimaryIndex<Long, Dependency> dependencies;
+    /**
+     * Access to the index that gives dependent resources
+     */
+    private SecondaryIndex<Long, Long, Dependency> fromDependencies;
+    /**
+     * Access to the index that gives required resources
+     */
+    private SecondaryIndex<Long, Long, Dependency> toDependencies;
 
     /**
      * Initialise the set of resources
@@ -327,7 +320,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Retrieves resources on which the given resource depends
      *
-     *
      * @param to The resource
      * @return A map of dependencies
      */
@@ -337,7 +329,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
 
     /**
      * Retrieves resources that depend upon the given resource
-     *
      *
      * @param from The resource
      * @return A map of dependencies
@@ -350,7 +341,6 @@ abstract public class Resources extends CachedEntitiesStore<Long, Resource> {
     /**
      * Retrieve the dependencies from a given secondary index, and fills a {@link java.util.Map}
      * from it
-     *
      *
      * @param id    The key
      * @param index The index

@@ -24,6 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Marks a constructor that can be called through the Callable interface
  * of {@linkplain JSBaseObject}
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 13/3/13
  */

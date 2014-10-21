@@ -50,37 +50,38 @@ import static java.lang.String.format;
  */
 @Persistent()
 public abstract class Job<Data extends JobData> extends Resource<Data> implements HeapElement<Job<? extends JobData>> {
+    final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
     final static private Logger LOGGER = Logger.getLogger();
-
-
     /**
      * When did the job start (0 if not started)
      */
     long startTimestamp;
-
     /**
      * When did the job stop (0 when it did not stop yet)
      */
     long endTimestamp;
-
     /**
      * Our job monitor (null when there is no attached process)
      */
     XPMProcess process;
-
     /**
      * Number of unsatisfied jobs
      */
     int nbUnsatisfied = 0;
-
     /**
      * Number of holding jobs
      */
     int nbHolding = 0;
-
+    /**
+     * Negative value when not in the heap. It should
+     * not be serialized since it is linked to a list of jobs
+     * that should remain in main memory
+     */
+    transient private int index = -1;
 
     protected Job() {
     }
+
 
     /**
      * Initialisation of a task
@@ -105,7 +106,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         }
     }
 
-
     /**
      * Restart the job
      * <p/>
@@ -123,9 +123,15 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         }
     }
 
-
     @Override
     protected void finalize() {
+    }
+
+    /**
+     * @return the priority
+     */
+    final public int getPriority() {
+        return getData().priority;
     }
 
     /**
@@ -137,17 +143,9 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         getData().priority = priority;
     }
 
-    /**
-     * @return the priority
-     */
-    final public int getPriority() {
-        return getData().priority;
-    }
-
     public long getTimestamp() {
         return getData().timestamp;
     }
-
 
     /**
      * This is where the real job gets done
@@ -175,6 +173,9 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
         return true;
     }
+
+
+    // ----- Heap part (do not touch) -----
 
     /*
       * (non-Javadoc)
@@ -390,25 +391,15 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
     }
 
-
-    // ----- Heap part (do not touch) -----
-
-    /**
-     * Negative value when not in the heap. It should
-     * not be serialized since it is linked to a list of jobs
-     * that should remain in main memory
-     */
-    transient private int index = -1;
-
     public int getIndex() {
         return index;
     }
 
+    // ----- [/Heap part] -----
+
     public void setIndex(int index) {
         this.index = index;
     }
-
-    // ----- [/Heap part] -----
 
     public long getStartTimestamp() {
         return startTimestamp;
@@ -417,8 +408,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     public long getEndTimestamp() {
         return endTimestamp;
     }
-
-    final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     @Override
     public JSONObject toJSON() throws IOException {

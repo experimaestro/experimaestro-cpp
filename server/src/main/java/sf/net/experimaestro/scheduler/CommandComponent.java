@@ -29,7 +29,9 @@ public interface CommandComponent {
      * command component has no direct string representation
      * @throws org.apache.commons.vfs2.FileSystemException
      */
-    default String prepare(CommandEnvironment environment) throws IOException { return null; }
+    default String prepare(CommandEnvironment environment) throws IOException {
+        return null;
+    }
 
     default Stream<? extends CommandComponent> allComponents() {
         return Stream.of(this);

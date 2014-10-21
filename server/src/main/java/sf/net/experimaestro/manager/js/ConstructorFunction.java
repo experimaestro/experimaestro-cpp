@@ -10,12 +10,22 @@ import java.util.ArrayList;
  * Created by bpiwowar on 10/9/14.
  */
 public class ConstructorFunction extends GenericFunction {
-    private String className;
     ArrayList<Constructor<?>> constructors = new ArrayList<>();
+    private String className;
 
     public ConstructorFunction(String className, ArrayList<Constructor<?>> constructors) {
         this.className = className;
         this.constructors = constructors;
+    }
+
+    @Override
+    protected String getName() {
+        return "new " + className;
+    }
+
+    @Override
+    protected Iterable<ConstructorDeclaration> declarations() {
+        return Iterables.transform(constructors, ConstructorDeclaration::new);
     }
 
     static public class ConstructorDeclaration extends Declaration<Constructor> {
@@ -31,16 +41,5 @@ public class ConstructorFunction extends GenericFunction {
             return constructor.newInstance(transformedArgs);
         }
 
-    }
-
-
-    @Override
-    protected String getName() {
-        return "new " + className;
-    }
-
-    @Override
-    protected Iterable<ConstructorDeclaration> declarations() {
-        return Iterables.transform(constructors, ConstructorDeclaration::new);
     }
 }

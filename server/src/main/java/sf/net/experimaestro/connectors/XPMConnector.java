@@ -45,6 +45,10 @@ public class XPMConnector extends SingleHostConnector {
         super(ID + "://");
     }
 
+    public static XPMConnector getInstance() {
+        return SINGLETON;
+    }
+
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
         throw new NotImplementedException();
@@ -73,10 +77,6 @@ public class XPMConnector extends SingleHostConnector {
     @Override
     protected FileObject getTemporaryDirectory() throws FileSystemException {
         throw new UnsupportedOperationException();
-    }
-
-    public static XPMConnector getInstance() {
-        return SINGLETON;
     }
 
     @Override

@@ -38,13 +38,31 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class QName implements Comparable<QName> {
+    /**
+     * Matches the following qualified name formats
+     * <ul>
+     * <li>localName</li>
+     * <li>{namespace}name</li>
+     * <li>prefix:name</li>
+     * </ul>
+     */
+    final static Pattern QNAME_PATTERN;
+    static {
+        try {
+            // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
+            QNAME_PATTERN =
+                    Pattern
+                            .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.$])+)");
+        } catch (PatternSyntaxException e) {
+            LOGGER.error("Could not initialise the pattern: %s", e);
+            throw e;
+        }
+    }
     final static private Logger LOGGER = Logger.getLogger();
-
     /**
      * The URI
      */
     String uri;
-
     /**
      * The local name
      */
@@ -61,7 +79,6 @@ public class QName implements Comparable<QName> {
         this.localName = localName;
     }
 
-
     /**
      * Create a QName from an element
      *
@@ -70,28 +87,6 @@ public class QName implements Comparable<QName> {
      */
     public QName(Node node) {
         this(node.getNamespaceURI(), node.getLocalName());
-    }
-
-    /**
-     * Matches the following qualified name formats
-     * <ul>
-     * <li>localName</li>
-     * <li>{namespace}name</li>
-     * <li>prefix:name</li>
-     * </ul>
-     */
-    final static Pattern QNAME_PATTERN;
-
-    static {
-        try {
-            // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
-            QNAME_PATTERN =
-                    Pattern
-                            .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.$])+)");
-        } catch (PatternSyntaxException e) {
-            LOGGER.error("Could not initialise the pattern: %s", e);
-            throw e;
-        }
     }
 
     public static QName parse(String qname, Element context,
@@ -120,7 +115,7 @@ public class QName implements Comparable<QName> {
         Matcher matcher = QNAME_PATTERN.matcher(qname);
         if (!matcher.matches())
             throw new IllegalArgumentException(String.format("Type [%s] is not a valid type: expected name, {uri}name, " +
-                    "or prefix:name",
+                            "or prefix:name",
                     qname));
 
         String url = matcher.group(1);
@@ -142,6 +137,14 @@ public class QName implements Comparable<QName> {
 
     public static QName parse(String qname) {
         return parse(qname, null, (String2String) null);
+    }
+
+    public static QName parse(final String name, final NamespaceContext namespaceContext) {
+        return parse(name, null, prefix -> namespaceContext.getNamespaceURI(prefix));
+    }
+
+    public static QName parse(String name, Map<String, String> namespaces) {
+        return parse(name, null, s -> namespaces.get(s));
     }
 
     @Override
@@ -177,7 +180,6 @@ public class QName implements Comparable<QName> {
         return true;
     }
 
-
     @Override
     public int compareTo(QName other) {
         int z = (uri != null ? 1 : 0) - (other.uri != null ? 1 : 0);
@@ -207,7 +209,6 @@ public class QName implements Comparable<QName> {
         return format("{%s}%s", uri, localName);
     }
 
-
     public boolean sameQName(Node element) {
         return equals(new QName(element));
     }
@@ -216,18 +217,11 @@ public class QName implements Comparable<QName> {
         return uri != null;
     }
 
-    public static QName parse(final String name, final NamespaceContext namespaceContext) {
-        return parse(name, null, prefix -> namespaceContext.getNamespaceURI(prefix));
-    }
-
     public boolean isAttribute(Element element) {
         return element.hasAttributeNS(uri, localName);
     }
+
     public String getAttribute(Element element) {
         return element.getAttributeNS(uri, localName);
-    }
-
-    public static QName parse(String name, Map<String, String> namespaces) {
-        return parse(name, null, s -> namespaces.get(s));
     }
 }

@@ -34,51 +34,24 @@ import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.XPMCommandException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMObject;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Listener;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleMessage;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -155,7 +128,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final ArrayList arrayObjects;
                 if (args != null) {
                     arrayObjects = new ArrayList(array.size());
-                    for(int i = 0; i < array.size(); i++) {
+                    for (int i = 0; i < array.size(); i++) {
                         arrayObjects.add(null);
                     }
                 } else {
@@ -187,7 +160,7 @@ public class JsonRPCMethods extends HttpServlet {
 
                 if (args != null && score > Integer.MIN_VALUE) {
                     final Object a1 = Array.newInstance(aType.getComponentType(), array.size());
-                    for(int i = 0; i < array.size(); i++) {
+                    for (int i = 0; i < array.size(); i++) {
                         Array.set(a1, i, arrayObjects.get(i));
                     }
                     args.set(index, a1);
@@ -273,7 +246,7 @@ public class JsonRPCMethods extends HttpServlet {
             }
             Object result = argmax.method.invoke(this, args);
             mos.endMessage(requestID, result);
-        } catch(XPMCommandException e) {
+        } catch (XPMCommandException e) {
             LOGGER.info("Error while handling JSON request [%s]", e);
             try {
                 Throwable t = e;

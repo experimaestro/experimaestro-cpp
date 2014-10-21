@@ -4,11 +4,9 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.NameScope;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -16,14 +14,13 @@ import java.util.HashMap;
  */
 public class ClassInfoLoader {
     final static private Logger LOGGER = Logger.getLogger();
-
-    private final FileObject[] classpath;
     final ClassLoader classLoader;
+    private final FileObject[] classpath;
     private final HashMap<String, ClassInfo> classes = new HashMap<>();
 
     public ClassInfoLoader(FileObject[] classpath, FileSystemManager vfsManager, ClassLoader classLoader) throws FileSystemException {
         this.classpath = classpath.clone();
-        for(int i = 0; i < classpath.length; i++) {
+        for (int i = 0; i < classpath.length; i++) {
             if (vfsManager.canCreateFileSystem(this.classpath[i])) {
                 this.classpath[i] = vfsManager.createFileSystem(this.classpath[i]);
             }
@@ -42,13 +39,14 @@ public class ClassInfoLoader {
 
     /**
      * Get a stream of the object represented by the name
+     *
      * @param name The class name
      * @return The input stream or null if not found
      */
     InputStream getStream(String name) {
         final String path = name.replace(".", "/") + ".class";
 
-        for(FileObject basepath: classpath) {
+        for (FileObject basepath : classpath) {
             try {
                 FileObject file = basepath.resolveFile(path, NameScope.DESCENDENT_OR_SELF);
                 if (file.exists()) {

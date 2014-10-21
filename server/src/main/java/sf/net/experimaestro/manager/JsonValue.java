@@ -23,39 +23,38 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
- * 
  * A simple XML value
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JsonValue extends Value {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
-	private Json value;
+    private Json value;
 
-	public JsonValue(Input input) {
-		super(input);
-	}
+    public JsonValue(Input input) {
+        super(input);
+    }
 
-	public JsonValue() {
-	}
+    public JsonValue() {
+    }
 
-	@Override
-	public void process(TaskContext taskContext) {
-		// If there is no value, takes the default
-		if (value == null && input.defaultValue != null) {
-			LOGGER.debug("Setting default value [%s]", input.defaultValue);
-			value = input.defaultValue.clone();
-		}
-	}
+    @Override
+    public void process(TaskContext taskContext) {
+        // If there is no value, takes the default
+        if (value == null && input.defaultValue != null) {
+            LOGGER.debug("Setting default value [%s]", input.defaultValue);
+            value = input.defaultValue.clone();
+        }
+    }
 
-	@Override
-	public Value getValue(DotName id) {
-		if (id.size() != 0)
-			throw new XPMRuntimeException("Cannot handle qualified names [%s]");
-		LOGGER.debug("Value set to [%s]", value);
+    @Override
+    public Value getValue(DotName id) {
+        if (id.size() != 0)
+            throw new XPMRuntimeException("Cannot handle qualified names [%s]");
+        LOGGER.debug("Value set to [%s]", value);
         return this;
-	}
+    }
 
     @Override
     public void set(Json value) {
@@ -63,18 +62,18 @@ public class JsonValue extends Value {
         this.value = value;
     }
 
-	@Override
-	public Json get() {
-		return value;
-	}
+    @Override
+    public Json get() {
+        return value;
+    }
 
-	@Override
-	protected void init(Value _other) {
-		JsonValue other = (JsonValue) _other;
-		super.init(other);
-		if (other.value != null)
-			value = other.value.clone();
-	}
+    @Override
+    protected void init(Value _other) {
+        JsonValue other = (JsonValue) _other;
+        super.init(other);
+        if (other.value != null)
+            value = other.value.clone();
+    }
 
     @Override
     public boolean isSet() {

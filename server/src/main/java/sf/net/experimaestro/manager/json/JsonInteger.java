@@ -35,7 +35,9 @@ import java.io.Writer;
 public class JsonInteger implements Json {
     private long value;
 
-    public JsonInteger() {}
+    public JsonInteger() {
+    }
+
     public JsonInteger(long value) {
         this.value = value;
     }

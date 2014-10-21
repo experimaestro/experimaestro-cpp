@@ -45,10 +45,6 @@ public class TaskOperator extends UnaryOperator {
     private Plan plan;
     private Map<DotName, Integer> mappings;
 
-    public Plan getPlan() {
-        return plan;
-    }
-
     /**
      * Construct a new task node
      *
@@ -56,6 +52,10 @@ public class TaskOperator extends UnaryOperator {
      */
     public TaskOperator(Plan plan) {
         this.plan = plan;
+    }
+
+    public Plan getPlan() {
+        return plan;
     }
 
     @Override
@@ -73,6 +73,7 @@ public class TaskOperator extends UnaryOperator {
 
     /**
      * Creates an iterator
+     *
      * @param planContext
      */
     @Override

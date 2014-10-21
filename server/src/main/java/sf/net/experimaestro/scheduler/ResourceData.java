@@ -63,6 +63,10 @@ public class ResourceData {
         this.locator = locator;
     }
 
+    public String getGroupId() {
+        return groupId.getName();
+    }
+
     /**
      * Sets the group
      *
@@ -71,12 +75,6 @@ public class ResourceData {
     public void setGroupId(String groupId) {
         this.groupId = new GroupId(groupId);
     }
-
-
-    public String getGroupId() {
-        return groupId.getName();
-    }
-
 
     public ResourceLocator getLocator() {
         return locator;

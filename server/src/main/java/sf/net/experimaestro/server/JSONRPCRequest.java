@@ -57,7 +57,9 @@ public abstract class JSONRPCRequest {
         sendJSONString(answer.toJSONString());
     }
 
-    /** Send a message to the client */
+    /**
+     * Send a message to the client
+     */
     public void message(Object message) throws IOException {
         endMessage(null, message);
     }

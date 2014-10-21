@@ -29,7 +29,6 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.*;
 
@@ -42,9 +41,9 @@ import static java.lang.StrictMath.max;
  * @date 20/2/13
  */
 public class GroupBy extends UnaryOperator {
+    private final QName wrapperQName;
     List<Operator> operators = new ArrayList<>();
     int[] indices;
-    private final QName wrapperQName;
 
     public GroupBy(QName qname) {
         this.wrapperQName = qname;

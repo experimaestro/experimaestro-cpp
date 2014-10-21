@@ -11,7 +11,8 @@ import java.io.Writer;
 public class JsonNull implements Json {
     private static JsonNull singleton = new JsonNull();
 
-    private JsonNull() {}
+    private JsonNull() {
+    }
 
     public static JsonNull getSingleton() {
         return singleton;

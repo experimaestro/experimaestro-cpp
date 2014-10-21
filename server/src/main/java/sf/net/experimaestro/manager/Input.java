@@ -26,130 +26,125 @@ import java.util.ArrayList;
 
 /**
  * A parameter definition in a task factory / task
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class Input {
-	final static Logger LOGGER = Logger.getLogger();
+    final static Logger LOGGER = Logger.getLogger();
 
-	/**
-	 * Defines an optional parameter
-	 */
-	boolean optional;
+    /**
+     * Defines an optional parameter
+     */
+    boolean optional;
 
-	/**
-	 * The type of the parameter
-	 */
-	Type type;
+    /**
+     * The type of the parameter
+     */
+    Type type;
 
-	/**
-	 * Documentation for this parameter
-	 */
-	String documentation;
+    /**
+     * Documentation for this parameter
+     */
+    String documentation;
 
-	/**
-	 * Default value
-	 */
-	Json defaultValue;
+    /**
+     * Default value
+     */
+    Json defaultValue;
 
-	/**
-	 * Unnamed option
-	 */
-	boolean unnamed;
-
+    /**
+     * Unnamed option
+     */
+    boolean unnamed;
+    /**
+     * Used when this input is connected, i.e. its value is the
+     * result of an XQuery expression based on other inputs
+     */
+    ArrayList<Connection> connections = new ArrayList<>();
     /**
      * Defines the namespace for wrapping values
      */
     private String namespace;
-
     /**
      * Whether the input should be copied into the output structure
      */
     private String copyTo;
-
     /**
      * The groups this input belongs to
      */
     private String[] groups;
 
     /**
-	 * Returns whether the input is optional or not
-	 * 
-	 * @return
-	 */
-	public boolean isOptional() {
-		return optional;
-	}
-
-	/**
-	 * Get the documentation
-	 * 
-	 * @return A string in XHTML
-	 */
-	public String getDocumentation() {
-		return documentation;
-	}
-
-	public Type getType() {
-		return type;
-	}
-
-	/**
-	 * New input type
-	 * 
-	 * @param type the type
-	 */
-	public Input(Type type) {
-		this.type = type;
-	}
-
-
-	public void setOptional(boolean optional) {
-		this.optional = optional;
-	}
-
-	public void setDocumentation(String documentation) {
-		this.documentation = documentation;
-	}
-
-	abstract Value newValue();
-
-	public void printHTML(PrintWriter out) {
-		out.println(documentation);
-	}
-
-	public void setDefaultValue(Json defaultValue) {
-		this.defaultValue = defaultValue;
-	}
+     * New input type
+     *
+     * @param type the type
+     */
+    public Input(Type type) {
+        this.type = type;
+    }
 
     /**
-     * Used when this input is connected, i.e. its value is the
-     * result of an XQuery expression based on other inputs
+     * Returns whether the input is optional or not
+     *
+     * @return
      */
-	ArrayList<Connection> connections = new ArrayList<>();
+    public boolean isOptional() {
+        return optional;
+    }
 
-	public void addConnection(Connection connection) {
+    public void setOptional(boolean optional) {
+        this.optional = optional;
+    }
+
+    /**
+     * Get the documentation
+     *
+     * @return A string in XHTML
+     */
+    public String getDocumentation() {
+        return documentation;
+    }
+
+    public void setDocumentation(String documentation) {
+        this.documentation = documentation;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    abstract Value newValue();
+
+    public void printHTML(PrintWriter out) {
+        out.println(documentation);
+    }
+
+    public void setDefaultValue(Json defaultValue) {
+        this.defaultValue = defaultValue;
+    }
+
+    public void addConnection(Connection connection) {
         connections.add(connection);
-	}
+    }
 
-	public boolean isUnnamed() {
-		return unnamed;
-	}
+    public boolean isUnnamed() {
+        return unnamed;
+    }
 
-	public void setUnnamed(boolean unnamed) {
-		this.unnamed = unnamed;
-	}
+    public void setUnnamed(boolean unnamed) {
+        this.unnamed = unnamed;
+    }
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
     }
 
-    public void setCopyTo(String copyTo) {
-        this.copyTo= copyTo;
-    }
-
     public String getCopyTo() {
         return copyTo;
+    }
+
+    public void setCopyTo(String copyTo) {
+        this.copyTo = copyTo;
     }
 
     public void setGroups(String[] groups) {
@@ -157,7 +152,7 @@ public abstract class Input {
     }
 
     public boolean inGroup(String groupId) {
-        for(String group: groups) {
+        for (String group : groups) {
             if (groupId.equals(group)) {
                 return true;
             }

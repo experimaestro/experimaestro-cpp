@@ -24,6 +24,7 @@ import java.util.HashMap;
 
 /**
  * Scope variables when iterating over operators
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 18/12/13
  */

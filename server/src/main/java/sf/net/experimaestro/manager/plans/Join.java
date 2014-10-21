@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.log4j.Level;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -273,7 +272,6 @@ public class Join extends Product {
                                     contextIndex, streamIndex, current[streamIndex].context[contextIndex],
                                     positions[joinIndex]);
                         }
-
 
 
                         // Asserts that we arrived at the right position

@@ -48,29 +48,10 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
     @KeyField(value = 2)
     String path;
 
-    /** The underlying connector, initialized with {@linkplain #init(Scheduler)} */
+    /**
+     * The underlying connector, initialized with {@linkplain #init(Scheduler)}
+     */
     transient Connector connector;
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        ResourceLocator that = (ResourceLocator) o;
-
-        if (!connectorId.equals(that.connectorId)) return false;
-        if (!path.equals(that.path)) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = connectorId.hashCode();
-        result = 31 * result + path.hashCode();
-        return result;
-    }
 
 
     protected ResourceLocator() {
@@ -89,19 +70,11 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         this.path = "/";
     }
 
+
     public ResourceLocator(ResourceLocator other) {
         this.connectorId = other.connectorId;
         this.connector = other.connector;
         this.path = other.path;
-    }
-
-    public void init(Scheduler scheduler) throws DatabaseException {
-        connector = scheduler.getConnector(connectorId);
-    }
-
-
-    public String getPath() {
-        return path;
     }
 
     public ResourceLocator(Connector connector, String path) {
@@ -124,24 +97,6 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         this.path = path;
     }
 
-
-    @Override
-    public int compareTo(ResourceLocator other) {
-        if (other == null)
-            return 1;
-
-        int z = connectorId.compareTo(other.connectorId);
-
-        if (z != 0)
-            return z;
-        return path.compareTo(other.path);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s%s", connectorId, path);
-    }
-
     public static ResourceLocator parse(String idString) {
         try {
             final URI uri = new URI(idString);
@@ -161,6 +116,50 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         }
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ResourceLocator that = (ResourceLocator) o;
+
+        if (!connectorId.equals(that.connectorId)) return false;
+        if (!path.equals(that.path)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = connectorId.hashCode();
+        result = 31 * result + path.hashCode();
+        return result;
+    }
+
+    public void init(Scheduler scheduler) throws DatabaseException {
+        connector = scheduler.getConnector(connectorId);
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    @Override
+    public int compareTo(ResourceLocator other) {
+        if (other == null)
+            return 1;
+
+        int z = connectorId.compareTo(other.connectorId);
+
+        if (z != 0)
+            return z;
+        return path.compareTo(other.path);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s%s", connectorId, path);
+    }
 
     public String getConnectorId() {
         return connectorId;

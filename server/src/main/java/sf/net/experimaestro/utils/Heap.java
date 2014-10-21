@@ -41,38 +41,7 @@ import java.util.List;
  */
 final public class Heap<Element extends HeapElement<Element>> implements Iterable<Element> {
 
-    /**
-     * Default element for a heap
-     *
-     * @param <E>
-     * @author bpiwowar
-     * @date Nov 20, 2007
-     */
-    static abstract public class DefaultElement<E> implements HeapElement<E> {
-        int index = 0;
-
-        /*
-           * (non-Javadoc)
-           *
-           * @see yrla.utils.HeapElement#getIndex()
-           */
-        public int getIndex() {
-            return index;
-        }
-
-        /*
-           * (non-Javadoc)
-           *
-           * @see yrla.utils.HeapElement#setIndex(int)
-           */
-        public void setIndex(int index) {
-            this.index = index;
-
-        }
-    }
-
     List<Element> list = new ArrayList<Element>();
-
     Comparator<Element> comparator = null;
 
     /**
@@ -137,9 +106,9 @@ final public class Heap<Element extends HeapElement<Element>> implements Iterabl
         }
     }
 
-
     /**
      * Remove element from Heap
+     *
      * @param element
      */
     public Element remove(Element element) {
@@ -147,7 +116,6 @@ final public class Heap<Element extends HeapElement<Element>> implements Iterabl
         element.setIndex(-1);
         return remove(index);
     }
-
 
     private void setItem(final int index, final Element item) {
         list.set(index, item);
@@ -311,6 +279,36 @@ final public class Heap<Element extends HeapElement<Element>> implements Iterabl
 
     public Iterator<Element> iterator() {
         return list.iterator();
+    }
+
+    /**
+     * Default element for a heap
+     *
+     * @param <E>
+     * @author bpiwowar
+     * @date Nov 20, 2007
+     */
+    static abstract public class DefaultElement<E> implements HeapElement<E> {
+        int index = 0;
+
+        /*
+           * (non-Javadoc)
+           *
+           * @see yrla.utils.HeapElement#getIndex()
+           */
+        public int getIndex() {
+            return index;
+        }
+
+        /*
+           * (non-Javadoc)
+           *
+           * @see yrla.utils.HeapElement#setIndex(int)
+           */
+        public void setIndex(int index) {
+            this.index = index;
+
+        }
     }
 
 }

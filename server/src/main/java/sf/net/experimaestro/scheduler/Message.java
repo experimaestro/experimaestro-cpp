@@ -25,16 +25,6 @@ package sf.net.experimaestro.scheduler;
  * @date 29/1/13
  */
 public class Message {
-    static public enum Type {
-        STORED_IN_DATABASE,
-        STATE_CHANGED,
-        END_OF_JOB,
-        DEPENDENCY_CHANGED,
-
-        RESOURCE_ADDED,
-        RESOURCE_REMOVED;
-    }
-
     private Type type;
 
     public Message(Type type) {
@@ -43,5 +33,15 @@ public class Message {
 
     public Type getType() {
         return type;
+    }
+
+    static public enum Type {
+        STORED_IN_DATABASE,
+        STATE_CHANGED,
+        END_OF_JOB,
+        DEPENDENCY_CHANGED,
+
+        RESOURCE_ADDED,
+        RESOURCE_REMOVED;
     }
 }

@@ -33,37 +33,10 @@ import java.util.ArrayList;
  * Represents all the methods with the same name within the same object
  */
 class MethodFunction extends GenericFunction implements org.mozilla.javascript.Function {
-    /**
-     * Represent all the methods from a given ancestor (or self)
-     */
-    static class Group {
-        final Object thisObject;
-        ArrayList<Method> methods = new ArrayList<>();
-
-        Group(Object thisObject, ArrayList<Method> methods) {
-            this.thisObject = thisObject;
-            this.methods = methods;
-        }
-    }
-
     final String name;
     final ArrayList<Group> groups = new ArrayList<>();
-
-    static public class MethodDeclaration extends Declaration<Method> {
-        final Object baseObject;
-        final Method method;
-
-        public MethodDeclaration(Object baseObject, Method method) {
-            super(method);
-            this.baseObject = baseObject;
-            this.method = method;
-        }
-
-        @Override
-        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
-            boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
-            return method.invoke(isStatic ? null : baseObject, transformedArgs);
-        }
+    public MethodFunction(String name) {
+        this.name = name;
     }
 
     public boolean isEmpty() {
@@ -90,11 +63,6 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
                 return groups.size();
             }
         });
-    }
-
-
-    public MethodFunction(String name) {
-        this.name = name;
     }
 
     public void add(Object thisObj, ArrayList<Method> methods) {
@@ -184,6 +152,36 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
     @Override
     public boolean hasInstance(Scriptable instance) {
         throw new NotImplementedException();
+    }
+
+    /**
+     * Represent all the methods from a given ancestor (or self)
+     */
+    static class Group {
+        final Object thisObject;
+        ArrayList<Method> methods = new ArrayList<>();
+
+        Group(Object thisObject, ArrayList<Method> methods) {
+            this.thisObject = thisObject;
+            this.methods = methods;
+        }
+    }
+
+    static public class MethodDeclaration extends Declaration<Method> {
+        final Object baseObject;
+        final Method method;
+
+        public MethodDeclaration(Object baseObject, Method method) {
+            super(method);
+            this.baseObject = baseObject;
+            this.method = method;
+        }
+
+        @Override
+        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+            boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
+            return method.invoke(isStatic ? null : baseObject, transformedArgs);
+        }
     }
 
 

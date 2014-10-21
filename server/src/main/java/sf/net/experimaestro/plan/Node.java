@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.plan;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Iterator;

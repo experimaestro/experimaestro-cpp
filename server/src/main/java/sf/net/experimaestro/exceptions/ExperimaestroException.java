@@ -24,40 +24,40 @@ import java.util.List;
 import static java.lang.String.format;
 
 public class ExperimaestroException extends Exception implements ContextualException<ExperimaestroException> {
-	private static final long serialVersionUID = 1L;
-	ArrayList<String> context = new ArrayList<>();
+    private static final long serialVersionUID = 1L;
+    ArrayList<String> context = new ArrayList<>();
 
-	public ExperimaestroException() {
-		super();
-	}
+    public ExperimaestroException() {
+        super();
+    }
 
-	public ExperimaestroException(String message, Throwable t) {
-		super(message, t);
-	}
+    public ExperimaestroException(String message, Throwable t) {
+        super(message, t);
+    }
 
-	public ExperimaestroException(Throwable t, String format, Object... values) {
-		super(String.format(format, values), t);
-	}
+    public ExperimaestroException(Throwable t, String format, Object... values) {
+        super(String.format(format, values), t);
+    }
 
-	public ExperimaestroException(String message) {
-		super(message);
-	}
+    public ExperimaestroException(String message) {
+        super(message);
+    }
 
-	public ExperimaestroException(String format, Object... values) {
-		super(String.format(format, values));
-	}
+    public ExperimaestroException(String format, Object... values) {
+        super(String.format(format, values));
+    }
 
-	public ExperimaestroException(Throwable t) {
-		super(t);
-	}
+    public ExperimaestroException(Throwable t) {
+        super(t);
+    }
 
-	public ExperimaestroException addContext(String string, Object... values) {
-		context.add(format(string, values));
+    public ExperimaestroException addContext(String string, Object... values) {
+        context.add(format(string, values));
         return this;
-	}
+    }
 
-	public List<String> getContext() {
-		return context;
-	}
+    public List<String> getContext() {
+        return context;
+    }
 
 }

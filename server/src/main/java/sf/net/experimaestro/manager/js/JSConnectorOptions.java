@@ -23,6 +23,7 @@ import sf.net.experimaestro.connectors.ConnectorOptions;
 
 /**
  * Common class for connector options
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 abstract public class JSConnectorOptions extends ScriptableObject {

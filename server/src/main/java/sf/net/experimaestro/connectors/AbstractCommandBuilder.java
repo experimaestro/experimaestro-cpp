@@ -12,28 +12,38 @@ import java.util.Map;
  * Created by bpiwowar on 26/9/14.
  */
 public abstract class AbstractCommandBuilder {
-    /** The different input/output */
+    /**
+     * The different input/output
+     */
     protected AbstractProcessBuilder.Redirect input;
     protected AbstractProcessBuilder.Redirect output;
     protected AbstractProcessBuilder.Redirect error;
 
-    /** The associated job */
+    /**
+     * The associated job
+     */
     Job job;
 
-    /** Working directory */
+    /**
+     * Working directory
+     */
     FileObject directory;
 
-    /** Whether this process should be bound to the Java process */
+    /**
+     * Whether this process should be bound to the Java process
+     */
     boolean detach;
 
-    /**  The environment */
+    /**
+     * The environment
+     */
     private Map<String, String> environment;
 
-    public Map<String,String> environment() {
+    public Map<String, String> environment() {
         return environment;
     }
 
-    public void environment(Map<String,String> environment) {
+    public void environment(Map<String, String> environment) {
         this.environment = environment;
     }
 
@@ -56,8 +66,9 @@ public abstract class AbstractCommandBuilder {
     }
 
     /**
-     *  Start the process and return an Experimaestro process
-     *  @return A valid {@linkplain sf.net.experimaestro.connectors.XPMProcess}
+     * Start the process and return an Experimaestro process
+     *
+     * @return A valid {@linkplain sf.net.experimaestro.connectors.XPMProcess}
      */
     abstract public XPMProcess start() throws LaunchException, IOException;
 
@@ -96,13 +107,11 @@ public abstract class AbstractCommandBuilder {
      */
     @Persistent
     static public class Redirect {
-        private FileObject file;
-        private String string;
-
-        private Type type;
-
         public static final Redirect PIPE = new Redirect(Type.PIPE, null);
         public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
+        private FileObject file;
+        private String string;
+        private Type type;
 
         private Redirect() {
             this.type = Type.INHERIT;
@@ -111,6 +120,18 @@ public abstract class AbstractCommandBuilder {
         private Redirect(Type type, FileObject file) {
             this.type = type;
             this.file = file;
+        }
+
+        static public Redirect from(FileObject file) {
+            return new Redirect(Type.READ, file);
+        }
+
+        static public Redirect append(FileObject file) {
+            return new Redirect(Type.APPEND, file);
+        }
+
+        static public Redirect to(FileObject file) {
+            return new Redirect(Type.WRITE, file);
         }
 
         public boolean isWriter() {
@@ -139,18 +160,6 @@ public abstract class AbstractCommandBuilder {
             public boolean isWriter() {
                 return this == APPEND || this == WRITE || this == PIPE || this == INHERIT;
             }
-        }
-
-        static public Redirect from(FileObject file) {
-            return new Redirect(Type.READ, file);
-        }
-
-        static public Redirect append(FileObject file) {
-            return new Redirect(Type.APPEND, file);
-        }
-
-        static public Redirect to(FileObject file) {
-            return new Redirect(Type.WRITE, file);
         }
     }
 }

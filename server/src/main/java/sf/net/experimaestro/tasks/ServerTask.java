@@ -26,7 +26,6 @@ import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.configuration.SubnodeConfiguration;
-import org.apache.xmlrpc.webserver.XmlRpcServlet;
 import org.eclipse.jetty.security.ConstraintMapping;
 import org.eclipse.jetty.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.HashLoginService;
@@ -56,10 +55,9 @@ import java.util.Iterator;
  */
 @TaskDescription(name = "server", project = {"xpmanager"})
 public class ServerTask extends AbstractTask {
-    final static Logger LOGGER = Logger.getLogger();
     public static final String KEY_SERVER_SOCKET = "server.socket";
     public static final String XPM_REALM = "xpm-realm";
-
+    final static Logger LOGGER = Logger.getLogger();
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
     HierarchicalINIConfiguration configuration;
 
@@ -95,7 +93,7 @@ public class ServerTask extends AbstractTask {
         Server webServer = new Server();
 
         // TCP-IP socket
-        ServerConnector connector=new ServerConnector(webServer);
+        ServerConnector connector = new ServerConnector(webServer);
         connector.setPort(port);
         webServer.addConnector(connector);
 
@@ -153,7 +151,7 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new TasksServlet(serverSettings,repositories,
+        context.addServlet(new ServletHolder(new TasksServlet(serverSettings, repositories,
                 scheduler)), "/tasks/*");
 
 
@@ -176,7 +174,6 @@ public class ServerTask extends AbstractTask {
 
         webServer.start();
         ThreadPool threadPool = webServer.getThreadPool();
-
 
 
         // --- Wait for servers to close
@@ -226,7 +223,7 @@ public class ServerTask extends AbstractTask {
         ConstraintSecurityHandler csh = new ConstraintSecurityHandler();
         csh.setRealmName(XPM_REALM);
         csh.setAuthenticator(new BasicAuthenticator());
-        csh.setConstraintMappings(new ConstraintMapping[] {cm});
+        csh.setConstraintMappings(new ConstraintMapping[]{cm});
         csh.addConstraintMapping(cm);
         csh.setLoginService(loginService);
         return csh;

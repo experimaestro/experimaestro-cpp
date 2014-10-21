@@ -36,7 +36,7 @@ public class JSCopy extends JSPlan {
 
         Type anyType = new Type(Manager.XP_ANY);
 
-        for (DotName name: mappings.getMap().keySet()) {
+        for (DotName name : mappings.getMap().keySet()) {
             if (name.size() != 1)
                 throw new XPMRhinoException("Names for products should be simple (got %s)", name);
             inputs.put(name.toString(), new JsonInput(anyType));

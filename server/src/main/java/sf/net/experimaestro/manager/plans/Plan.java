@@ -19,11 +19,7 @@
 package sf.net.experimaestro.manager.plans;
 
 import com.google.common.base.Function;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.manager.DotName;
@@ -35,15 +31,7 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * A fake operator corresponding to a task factory. This is replaced by

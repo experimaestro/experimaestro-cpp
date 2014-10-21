@@ -28,7 +28,6 @@ import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonFileObject;
-import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -36,15 +35,13 @@ import java.io.*;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static sf.net.experimaestro.scheduler.Command.ParameterFile;
-
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
 public class JSFileObject extends JSBaseObject implements Wrapper {
-    final static Logger LOGGER = Logger.getLogger();
     public static final String JSCLASSNAME = "FileObject";
+    final static Logger LOGGER = Logger.getLogger();
     private FileObject file;
 
     public JSFileObject() {
@@ -116,12 +113,12 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
             throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
 
         if (arg instanceof NativeArray)
-            return path(current, (NativeArray)arg);
+            return path(current, (NativeArray) arg);
 
         if (arg instanceof JSJson) {
-            Json json = ((JSJson)arg).getJson();
+            Json json = ((JSJson) arg).getJson();
             if (json instanceof JsonArray)
-            return path(current, (JsonArray)json);
+                return path(current, (JsonArray) json);
         }
 
         String name = Context.toString(arg);
@@ -136,8 +133,6 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
         }
         return current;
     }
-
-
 
 
     @JSFunction("mkdirs")
@@ -175,27 +170,50 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
 
     @JSFunction
     @JSHelp("Find all the matching files within this folder")
-    public JSJson find_matching_files(@JSArgument(name = "regexp", type="String", help = "The regular expression") String regexp) throws FileSystemException {
+    public JSJson find_matching_files(@JSArgument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws FileSystemException {
         final Pattern pattern = Pattern.compile(regexp);
         final JsonArray array = new JsonArray();
         FileObject[] files = file.findFiles(new FileFilterSelector(fileSelectInfo -> {
             LOGGER.info("Looking at %s", fileSelectInfo.getFile().getName());
             return pattern.matcher(fileSelectInfo.getFile().getName().getBaseName()).matches();
         }));
-        for(FileObject file: files) {
+        for (FileObject file : files) {
             array.add(new JsonFileObject(file));
         }
         return new JSJson(array);
     }
 
     @JSFunction
-    public void copy_to(@JSArgument(name="destination") JSFileObject destination) throws FileSystemException {
+    public void copy_to(@JSArgument(name = "destination") JSFileObject destination) throws FileSystemException {
         destination.file.copyFrom(file, new FileDepthSelector(0, 0));
     }
 
     @Override
     public Object unwrap() {
         return file;
+    }
+
+    @JSFunction
+    public PrintWriter output_stream() throws FileSystemException {
+        final OutputStream output = file.getContent().getOutputStream();
+        final PrintWriter writer = new MyPrintWriter(xpm, output);
+        return writer;
+    }
+
+    @JSFunction
+    public BufferedReader input_stream() throws FileSystemException {
+        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm, file.getContent().getInputStream()));
+        return reader;
+    }
+
+    public FileObject getFile() {
+        return file;
+    }
+
+    @JSFunction("get_path")
+    @JSHelp("Get the file path, ignoring the file scheme")
+    public String get_path() {
+        return file.getName().getPath();
     }
 
     static class MyPrintWriter extends PrintWriter {
@@ -214,13 +232,6 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
         }
     }
 
-    @JSFunction
-    public PrintWriter output_stream() throws FileSystemException {
-        final OutputStream output = file.getContent().getOutputStream();
-        final PrintWriter writer = new MyPrintWriter(xpm, output);
-        return writer;
-    }
-
     static class MyInputStreamReader extends InputStreamReader {
         final XPMObject xpm;
 
@@ -235,22 +246,6 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
             super.close();
             xpm.unregister(this);
         }
-    }
-
-    @JSFunction
-    public BufferedReader input_stream() throws FileSystemException {
-        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm, file.getContent().getInputStream()));
-        return reader;
-    }
-
-    public FileObject getFile() {
-        return file;
-    }
-
-    @JSFunction("get_path")
-    @JSHelp("Get the file path, ignoring the file scheme")
-    public String get_path() {
-        return file.getName().getPath();
     }
 
 

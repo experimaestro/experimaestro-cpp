@@ -28,7 +28,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.io.PrintStream;
 import java.util.*;
 
@@ -39,23 +38,30 @@ import java.util.*;
  * @date 21/2/13
  */
 public class OrderBy extends UnaryOperator {
-    /** The order over streams (might be shared by different order-by before a join */
+    /**
+     * The order over streams (might be shared by different order-by before a join
+     */
     Order<Operator> order;
 
-    /** The subset of order operators that we use to sort here. Null if using them all. */
+    /**
+     * The subset of order operators that we use to sort here. Null if using them all.
+     */
     Set<Operator> operators;
 
-    /** The order for the context, computed when initializing this operator */
+    /**
+     * The order for the context, computed when initializing this operator
+     */
     int contextOrder[];
 
     /**
      * New order by operator
-     * @param order The order shared by different order by operators
+     *
+     * @param order     The order shared by different order by operators
      * @param operators A subset of operators from order or <tt>null</tt> for all
      */
     public OrderBy(Order<Operator> order, Set<Operator> operators) {
         this.order = order;
-        this.operators = operators == null ? null: new HashSet<>(operators);
+        this.operators = operators == null ? null : new HashSet<>(operators);
     }
 
     public OrderBy() {
@@ -118,7 +124,7 @@ public class OrderBy extends UnaryOperator {
     @Override
     public boolean printDOT(PrintStream out, HashSet<Operator> planNodes, Map<Operator, MutableInt> counts) {
         if (super.printDOT(out, planNodes, counts)) {
-            for (Operator operator: order.items())
+            for (Operator operator : order.items())
                 out.format("p%s -> p%s [style=\"dashed\", color=\"#ddddff\"];%n", System.identityHashCode(operator), System.identityHashCode(this));
         }
         return false;
@@ -155,7 +161,7 @@ public class OrderBy extends UnaryOperator {
 
     @Override
     protected void ensureConnections(Map<Operator, Operator> map) {
-        for(Set<Operator> set: order.list) {
+        for (Set<Operator> set : order.list) {
             Operator.ensureConnections(map, set);
         }
         if (operators != null)

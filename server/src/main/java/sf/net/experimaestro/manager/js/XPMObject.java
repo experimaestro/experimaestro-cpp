@@ -1407,7 +1407,7 @@ public class XPMObject {
         @JSHelp("Get a lock over all the resources defined in a JSON object")
         public NativeArray get_locks(String lockMode, JsonObject json) {
             ArrayList<Dependency> dependencies = new ArrayList<>();
-            for (Json jsonEntry: json.values()) {
+            for (Json jsonEntry : json.values()) {
                 if (jsonEntry instanceof JsonObject) {
                     final Resource resource = getResource((JsonObject) jsonEntry);
                     if (resource != null) {
@@ -1440,7 +1440,7 @@ public class XPMObject {
             if (json.containsKey(Manager.XP_RESOURCE.toString())) {
                 final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
                 if (o instanceof Resource) {
-                    return  (Resource) o;
+                    return (Resource) o;
                 } else {
                     final String uri = o instanceof JsonString ? o.toString() : (String) o;
                     if (xpm.simulate()) {

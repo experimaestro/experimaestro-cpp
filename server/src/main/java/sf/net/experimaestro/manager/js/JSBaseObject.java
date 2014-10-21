@@ -67,7 +67,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     /**
      * Analyze a class and returns the multi-map of names to methods
-     * <p>
+     * <p/>
      * Any constructor annotated with JSFunction is a valid functoin
      *
      * @param aClass
@@ -201,7 +201,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     /**
      * Defines a new class.
-     * <p>
+     * <p/>
      * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
      * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
      *
@@ -221,7 +221,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(xpm, scope, (Class<? extends Scriptable>) aClass);
                 scope.put(name, scope, nativeJavaClass);
             } else {
-                ScriptableObject.defineClass(scope, (Class<? extends Scriptable>)aClass);
+                ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
             }
         } else {
             final String name = JSBaseObject.getClassName(aClass);
@@ -283,9 +283,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     /**
      * Returns the underlying object
+     *
      * @return An object
      */
-    protected Object thisObject() { return this; }
+    protected Object thisObject() {
+        return this;
+    }
 
     @Override
     public Object get(int index, Scriptable start) {

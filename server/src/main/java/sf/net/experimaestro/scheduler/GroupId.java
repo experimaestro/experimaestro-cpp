@@ -54,13 +54,12 @@ public class GroupId implements Comparable<GroupId> {
 
     /**
      * Compares two strings with special rules linked to the dot (a and b are sequences of non dots):
-     *
+     * <p/>
      * <ol>
-     *     <li>a.b is less than ab</li>
-     *     <li>a.b is greater than a</li>
-     *     <li>a.b. is less than a.</li>
+     * <li>a.b is less than ab</li>
+     * <li>a.b is greater than a</li>
+     * <li>a.b. is less than a.</li>
      * </ol>
-     *
      *
      * @param o
      * @return
@@ -70,12 +69,12 @@ public class GroupId implements Comparable<GroupId> {
         // Compares give a special meaning to dots
         int l1 = this.name.length(), l2 = o.name.length();
 
-        int l = min(l1,l2);
+        int l = min(l1, l2);
 
         // true if the last common character is a dot
         boolean lastDots = false;
 
-        for(int i = 0; i < l; i++) {
+        for (int i = 0; i < l; i++) {
             lastDots = false;
             char c1 = this.name.charAt(i);
             char c2 = o.name.charAt(i);

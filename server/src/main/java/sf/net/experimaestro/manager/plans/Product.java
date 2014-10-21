@@ -22,7 +22,6 @@ import com.google.common.collect.AbstractIterator;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -99,7 +98,9 @@ public class Product extends NAryOperator {
             return true;
         }
 
-        /** Compute the next value to return */
+        /**
+         * Compute the next value to return
+         */
         ReturnValue getReturnValue(Value[] current) {
             Json[] nodes = new Json[Product.this.outputSize()];
             final long[][] contexts = new long[parents.size()][];

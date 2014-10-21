@@ -7,6 +7,7 @@ package sf.net.experimaestro.manager;
 public interface ScriptRunner {
     /**
      * Evaluate the script and returns its output
+     *
      * @param script
      * @return The output of the script - either as XML or as a String
      * @throws Exception if something goes wrong

@@ -26,89 +26,89 @@ import java.util.TreeMap;
 
 /**
  * A module groups tasks
- * 
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Module implements Comparable<Module> {
-	/**
-	 * Module unique identifier
-	 */
-	protected QName id;
+    /**
+     * Module unique identifier
+     */
+    protected QName id;
 
-	/**
-	 * The module human readable name
-	 */
-	protected String name;
+    /**
+     * The module human readable name
+     */
+    protected String name;
 
-	/**
-	 * The documentation in XHTML
-	 */
-	protected Document documentation;
+    /**
+     * The documentation in XHTML
+     */
+    protected Document documentation;
 
-	/**
-	 * Parent module
-	 */
-	Module parent;
+    /**
+     * Parent module
+     */
+    Module parent;
 
-	/**
-	 * The list of submodules
-	 */
-	ArrayList<Module> submodules = new ArrayList<>();
+    /**
+     * The list of submodules
+     */
+    ArrayList<Module> submodules = new ArrayList<>();
 
-	/**
-	 * List of tasks
-	 */
-	ArrayList<TaskFactory> factories = new ArrayList<>();
+    /**
+     * List of tasks
+     */
+    ArrayList<TaskFactory> factories = new ArrayList<>();
 
     /**
      * Map of namespaces to prefixes
      */
     Map<String, String> prefixes = new TreeMap<>();
-	
-	public Module() {
-	}
-	
-	public Module(QName id) {
-		this.id = id;
-	}
 
-	public Module getParent() {
-		return parent;
-	}
+    public Module() {
+    }
 
-	public void setParent(Module parent) {
-		this.parent = parent;
-		parent.submodules.add(this);
-	}
+    public Module(QName id) {
+        this.id = id;
+    }
 
-	public QName getId() {
-		return id;
-	}
+    public Module getParent() {
+        return parent;
+    }
 
-	public ArrayList<Module> getSubmodules() {
-		return submodules;
-	}
+    public void setParent(Module parent) {
+        this.parent = parent;
+        parent.submodules.add(this);
+    }
 
-	public void addSubmodule(Module module) {
-		submodules.add(module);
-	}
+    public QName getId() {
+        return id;
+    }
 
-	public ArrayList<TaskFactory> getFactories() {
-		return factories;
-	}
+    public ArrayList<Module> getSubmodules() {
+        return submodules;
+    }
 
-	public void addFactory(TaskFactory factory) {
-		factories.add(factory);
-	}
+    public void addSubmodule(Module module) {
+        submodules.add(module);
+    }
 
-	public void remove(TaskFactory oldFactory) {
-		factories.remove(oldFactory);
-	}
+    public ArrayList<TaskFactory> getFactories() {
+        return factories;
+    }
 
-	@Override
-	public int compareTo(Module other) {
-		return id.compareTo(other.id);
-	}
+    public void addFactory(TaskFactory factory) {
+        factories.add(factory);
+    }
+
+    public void remove(TaskFactory oldFactory) {
+        factories.remove(oldFactory);
+    }
+
+    @Override
+    public int compareTo(Module other) {
+        return id.compareTo(other.id);
+    }
 
     public void setPrefix(String prefix, String url) {
         prefixes.put(url, prefix);

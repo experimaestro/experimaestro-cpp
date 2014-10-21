@@ -4,7 +4,6 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -18,7 +17,9 @@ import static java.lang.String.format;
 public abstract class CommandEnvironment implements Closeable {
     private final static Logger LOGGER = Logger.getLogger();
 
-    /** The host where the command is executed */
+    /**
+     * The host where the command is executed
+     */
     protected final SingleHostConnector connector;
 
     ArrayList<FileObject> files = new ArrayList<>();
@@ -58,10 +59,10 @@ public abstract class CommandEnvironment implements Closeable {
 
         @Override
         public void close() throws IOException {
-            for(FileObject file: files) {
+            for (FileObject file : files) {
                 try {
                     file.delete();
-                } catch(IOException e) {
+                } catch (IOException e) {
                     LOGGER.error(e, "Could not delete %s", file);
                 }
             }
@@ -69,11 +70,14 @@ public abstract class CommandEnvironment implements Closeable {
     }
 
     static public class FolderEnvironment extends CommandEnvironment {
-        /** The base folder for this process */
-        FileObject folder;
-
-        /** The base name for generated files */
+        /**
+         * The base name for generated files
+         */
         private final String name;
+        /**
+         * The base folder for this process
+         */
+        FileObject folder;
 
         public FolderEnvironment(SingleHostConnector connector, FileObject basepath, String name) throws FileSystemException {
             super(connector);

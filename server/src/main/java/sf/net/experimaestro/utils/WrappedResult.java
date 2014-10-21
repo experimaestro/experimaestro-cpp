@@ -21,6 +21,7 @@ package sf.net.experimaestro.utils;
 /**
  * A class that wraps a result together with a boolean
  * indicating the success of failure of the operation
+ *
  * @param <T> The wrapped result
  */
 public class WrappedResult<T> {

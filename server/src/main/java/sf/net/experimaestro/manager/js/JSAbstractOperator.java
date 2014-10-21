@@ -96,7 +96,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         if (objects.length == 0)
             return this;
 
-        Object allObjects[] = new Object[objects.length+1];
+        Object allObjects[] = new Object[objects.length + 1];
         System.arraycopy(objects, 0, allObjects, 1, objects.length);
         allObjects[0] = this;
         return JSTasks.merge(cx, scope, outputType, allObjects);
@@ -104,7 +104,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 
     @JSFunction(scope = true)
     public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, String key, Object... objects) {
-        Object allObjects[] = new Object[objects.length+1];
+        Object allObjects[] = new Object[objects.length + 1];
         System.arraycopy(objects, 0, allObjects, 1, objects.length);
 
         NativeObject jsobject = new NativeObject();

@@ -51,15 +51,6 @@ public class Introspection {
         return list.toArray(objects);
     }
 
-    /**
-     * A checker class
-     *
-     * @author bpiwowar
-     */
-    public interface Checker {
-        boolean accepts(Class<?> aClass);
-    }
-
     public static <T> void addImplementors(final ClassLoader cl, final Collection<Class<? extends T>> list,
                                            final Class<?> which, final String packageName, final int levels) {
         final ArrayList<Class<?>> aList = new ArrayList<>();
@@ -161,16 +152,6 @@ public class Introspection {
         }
     }
 
-    static public class ClassFile {
-        public FileObject file;
-        public String classname;
-
-        public ClassFile(FileObject file, String classname) {
-            this.file = file;
-            this.classname = classname;
-        }
-    }
-
     public static <T> Stream<? extends ClassFile> findClasses(final FileObject file, final int levels, final String packageName) throws FileSystemException {
         final String name = packageName.replace('.', '/');
         return classesStream(file.resolveFile(name), levels, packageName);
@@ -179,8 +160,8 @@ public class Introspection {
     /**
      * Returns a stream of classes files (a class name + file) within a package
      *
-     * @param file The file or directory to inspect
-     * @param levels The number of levels of recursion
+     * @param file        The file or directory to inspect
+     * @param levels      The number of levels of recursion
      * @param packageName The name of the package
      * @return
      */
@@ -206,7 +187,6 @@ public class Introspection {
         return Stream.empty();
 
     }
-
 
     public static void addClasses(final ClassLoader cl, final Checker checker,
                                   final ArrayList<Class<?>> list, final String packageName,
@@ -235,6 +215,25 @@ public class Introspection {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * A checker class
+     *
+     * @author bpiwowar
+     */
+    public interface Checker {
+        boolean accepts(Class<?> aClass);
+    }
+
+    static public class ClassFile {
+        public FileObject file;
+        public String classname;
+
+        public ClassFile(FileObject file, String classname) {
+            this.file = file;
+            this.classname = classname;
         }
     }
 

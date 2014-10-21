@@ -45,10 +45,9 @@ import java.util.concurrent.Future;
  */
 public class UnixSocketConnector extends AbstractNetworkConnector implements Connector {
     final static private Logger LOGGER = Logger.getLogger();
-    private File socketFile;
-
     private final ServerConnectorManager _manager;
     volatile UnixServerSocketChannel _acceptChannel;
+    private File socketFile;
     private volatile boolean _inheritChannel = false;
     private volatile int _localPort = -1;
     private volatile int _acceptQueueSize = 0;
@@ -56,74 +55,77 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
 
 
     /* ------------------------------------------------------------ */
-    /** HTTP Server Connection.
+
+    /**
+     * HTTP Server Connection.
      * <p>Construct a ServerConnector with a private instance of {@link org.eclipse.jetty.server.HttpConnectionFactory} as the only factory.</p>
+     *
      * @param server The {@link Server} this connector will accept connection for.
      */
     public UnixSocketConnector(
-            @Name("server") Server server)
-    {
-        this(server,null,null,null,0,0,new HttpConnectionFactory());
+            @Name("server") Server server) {
+        this(server, null, null, null, 0, 0, new HttpConnectionFactory());
     }
 
     /* ------------------------------------------------------------ */
-    /** Generic Server Connection with default configuration.
+
+    /**
+     * Generic Server Connection with default configuration.
      * <p>Construct a Server Connector with the passed Connection factories.</p>
-     * @param server The {@link Server} this connector will accept connection for.
+     *
+     * @param server    The {@link Server} this connector will accept connection for.
      * @param factories Zero or more {@link org.eclipse.jetty.server.ConnectionFactory} instances used to create and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
-            @Name("factories") ConnectionFactory... factories)
-    {
-        this(server,null,null,null,0,0,factories);
+            @Name("factories") ConnectionFactory... factories) {
+        this(server, null, null, null, 0, 0, factories);
     }
 
     /* ------------------------------------------------------------ */
-    /** HTTP Server Connection.
+
+    /**
+     * HTTP Server Connection.
      * <p>Construct a ServerConnector with a private instance of {@link HttpConnectionFactory} as the primary protocol</p>.
-     * @param server The {@link Server} this connector will accept connection for.
+     *
+     * @param server            The {@link Server} this connector will accept connection for.
      * @param sslContextFactory If non null, then a {@link org.eclipse.jetty.server.SslConnectionFactory} is instantiated and prepended to the
-     * list of HTTP Connection Factory.
+     *                          list of HTTP Connection Factory.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
-            @Name("sslContextFactory") SslContextFactory sslContextFactory)
-    {
-        this(server,null,null,null,0,0, AbstractConnectionFactory.getFactories(sslContextFactory, new HttpConnectionFactory()));
+            @Name("sslContextFactory") SslContextFactory sslContextFactory) {
+        this(server, null, null, null, 0, 0, AbstractConnectionFactory.getFactories(sslContextFactory, new HttpConnectionFactory()));
     }
 
     /* ------------------------------------------------------------ */
-    /** Generic SSL Server Connection.
-     * @param server The {@link Server} this connector will accept connection for.
+
+    /**
+     * Generic SSL Server Connection.
+     *
+     * @param server            The {@link Server} this connector will accept connection for.
      * @param sslContextFactory If non null, then a {@link org.eclipse.jetty.server.SslConnectionFactory} is instantiated and prepended to the
-     * list of ConnectionFactories, with the first factory being the default protocol for the SslConnectionFactory.
-     * @param factories Zero or more {@link ConnectionFactory} instances used to create and configure connections.
+     *                          list of ConnectionFactories, with the first factory being the default protocol for the SslConnectionFactory.
+     * @param factories         Zero or more {@link ConnectionFactory} instances used to create and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
             @Name("sslContextFactory") SslContextFactory sslContextFactory,
-            @Name("factories") ConnectionFactory... factories)
-    {
-        this(server,null,null,null,0,0,AbstractConnectionFactory.getFactories(sslContextFactory,factories));
+            @Name("factories") ConnectionFactory... factories) {
+        this(server, null, null, null, 0, 0, AbstractConnectionFactory.getFactories(sslContextFactory, factories));
     }
 
-    /** Generic Server Connection.
-     * @param server
-     *          The server this connector will be accept connection for.
-     * @param executor
-     *          An executor used to run tasks for handling requests, acceptors and selectors. I
-     *          If null then use the servers executor
-     * @param scheduler
-     *          A scheduler used to schedule timeouts. If null then use the servers scheduler
-     * @param bufferPool
-     *          A ByteBuffer pool used to allocate buffers.  If null then create a private pool with default configuration.
-     * @param acceptors
-     *          the number of acceptor threads to use, or 0 for a default value. Acceptors accept new TCP/IP connections.
-     * @param selectors
-     *          the number of selector threads, or 0 for a default value. Selectors notice and schedule established connection that can make IO progress.
-     * @param factories
-     *          Zero or more {@link ConnectionFactory} instances used to create and configure connections.
+    /**
+     * Generic Server Connection.
+     *
+     * @param server     The server this connector will be accept connection for.
+     * @param executor   An executor used to run tasks for handling requests, acceptors and selectors. I
+     *                   If null then use the servers executor
+     * @param scheduler  A scheduler used to schedule timeouts. If null then use the servers scheduler
+     * @param bufferPool A ByteBuffer pool used to allocate buffers.  If null then create a private pool with default configuration.
+     * @param acceptors  the number of acceptor threads to use, or 0 for a default value. Acceptors accept new TCP/IP connections.
+     * @param selectors  the number of selector threads, or 0 for a default value. Selectors notice and schedule established connection that can make IO progress.
+     * @param factories  Zero or more {@link ConnectionFactory} instances used to create and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
@@ -132,9 +134,8 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
             @Name("bufferPool") ByteBufferPool bufferPool,
             @Name("acceptors") int acceptors,
             @Name("selectors") int selectors,
-            @Name("factories") ConnectionFactory... factories)
-    {
-        super(server,executor,scheduler,bufferPool,acceptors,factories);
+            @Name("factories") ConnectionFactory... factories) {
+        super(server, executor, scheduler, bufferPool, acceptors, factories);
         _manager = new ServerConnectorManager(getExecutor(), getScheduler(), selectors > 0 ? selectors : Runtime.getRuntime().availableProcessors());
         addBean(_manager, true);
     }
@@ -174,21 +175,17 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
     }
 
 
-
-
     @Override
-    public boolean isOpen()
-    {
+    public boolean isOpen() {
         UnixServerSocketChannel channel = _acceptChannel;
-        return channel!=null && channel.isOpen();
+        return channel != null && channel.isOpen();
     }
 
     /**
      * @return whether this connector uses a channel inherited from the JVM.
      * @see System#inheritedChannel()
      */
-    public boolean isInheritChannel()
-    {
+    public boolean isInheritChannel() {
         return _inheritChannel;
     }
 
@@ -203,38 +200,30 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      *
      * @param inheritChannel whether this connector uses a channel inherited from the JVM.
      */
-    public void setInheritChannel(boolean inheritChannel)
-    {
+    public void setInheritChannel(boolean inheritChannel) {
         _inheritChannel = inheritChannel;
     }
 
 
     @Override
-    public Future<Void> shutdown()
-    {
+    public Future<Void> shutdown() {
         // TODO shutdown all the connections
         return super.shutdown();
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
         UnixServerSocketChannel serverChannel = _acceptChannel;
         _acceptChannel = null;
 
-        if (serverChannel != null)
-        {
+        if (serverChannel != null) {
             removeBean(serverChannel);
 
             // If the interrupt did not close it, we should close it
-            if (serverChannel.isOpen())
-            {
-                try
-                {
+            if (serverChannel.isOpen()) {
+                try {
                     serverChannel.close();
-                }
-                catch (IOException e)
-                {
+                } catch (IOException e) {
                     LOG.warn(e);
                 }
             }
@@ -246,11 +235,9 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
     }
 
     @Override
-    public void accept(int acceptorID) throws IOException
-    {
+    public void accept(int acceptorID) throws IOException {
         UnixServerSocketChannel serverChannel = _acceptChannel;
-        if (serverChannel != null && serverChannel.isOpen())
-        {
+        if (serverChannel != null && serverChannel.isOpen()) {
             UnixSocketChannel channel = serverChannel.accept();
             channel.configureBlocking(false);
             _manager.accept(channel);
@@ -258,26 +245,22 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
     }
 
 
-    public UnixSelectorManager getSelectorManager()
-    {
+    public UnixSelectorManager getSelectorManager() {
         return _manager;
     }
 
     @Override
-    public Object getTransport()
-    {
+    public Object getTransport() {
         return _acceptChannel;
     }
 
     @Override
     @ManagedAttribute("local port")
-    public int getLocalPort()
-    {
+    public int getLocalPort() {
         return _localPort;
     }
 
-    protected UnixSelectChannelEndPoint newEndPoint(UnixSocketChannel channel, UnixSelectorManager.ManagedSelector selectSet, SelectionKey key) throws IOException
-    {
+    protected UnixSelectChannelEndPoint newEndPoint(UnixSocketChannel channel, UnixSelectorManager.ManagedSelector selectSet, SelectionKey key) throws IOException {
         return new UnixSelectChannelEndPoint(channel, selectSet, key, getScheduler(), getIdleTimeout());
     }
 
@@ -285,16 +268,14 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * @return the accept queue size
      */
     @ManagedAttribute("Accept Queue size")
-    public int getAcceptQueueSize()
-    {
+    public int getAcceptQueueSize() {
         return _acceptQueueSize;
     }
 
     /**
      * @param acceptQueueSize the accept queue size (also known as accept backlog)
      */
-    public void setAcceptQueueSize(int acceptQueueSize)
-    {
+    public void setAcceptQueueSize(int acceptQueueSize) {
         _acceptQueueSize = acceptQueueSize;
     }
 
@@ -302,8 +283,7 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * @return whether the server socket reuses addresses
      * @see java.net.ServerSocket#getReuseAddress()
      */
-    public boolean getReuseAddress()
-    {
+    public boolean getReuseAddress() {
         return _reuseAddress;
     }
 
@@ -311,40 +291,33 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * @param reuseAddress whether the server socket reuses addresses
      * @see java.net.ServerSocket#setReuseAddress(boolean)
      */
-    public void setReuseAddress(boolean reuseAddress)
-    {
+    public void setReuseAddress(boolean reuseAddress) {
         _reuseAddress = reuseAddress;
     }
 
-    private final class ServerConnectorManager extends UnixSelectorManager
-    {
-        private ServerConnectorManager(Executor executor, Scheduler scheduler, int selectors)
-        {
+    private final class ServerConnectorManager extends UnixSelectorManager {
+        private ServerConnectorManager(Executor executor, Scheduler scheduler, int selectors) {
             super(executor, scheduler, selectors);
         }
 
         @Override
-        protected UnixSelectChannelEndPoint newEndPoint(UnixSocketChannel channel, ManagedSelector selectSet, SelectionKey selectionKey) throws IOException
-        {
+        protected UnixSelectChannelEndPoint newEndPoint(UnixSocketChannel channel, ManagedSelector selectSet, SelectionKey selectionKey) throws IOException {
             return UnixSocketConnector.this.newEndPoint(channel, selectSet, selectionKey);
         }
 
         @Override
-        public Connection newConnection(UnixSocketChannel channel, EndPoint endpoint, Object attachment) throws IOException
-        {
+        public Connection newConnection(UnixSocketChannel channel, EndPoint endpoint, Object attachment) throws IOException {
             return getDefaultConnectionFactory().newConnection(UnixSocketConnector.this, endpoint);
         }
 
         @Override
-        protected void endPointOpened(EndPoint endpoint)
-        {
+        protected void endPointOpened(EndPoint endpoint) {
             super.endPointOpened(endpoint);
             onEndPointOpened(endpoint);
         }
 
         @Override
-        protected void endPointClosed(EndPoint endpoint)
-        {
+        protected void endPointClosed(EndPoint endpoint) {
             onEndPointClosed(endpoint);
             super.endPointClosed(endpoint);
         }

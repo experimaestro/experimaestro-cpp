@@ -25,9 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 7/2/13
-*/
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 7/2/13
+ */
 public class ArrayNodeList implements NodeList {
 
     ArrayList<Node> nodes = new ArrayList<>();

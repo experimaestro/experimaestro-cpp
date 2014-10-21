@@ -20,10 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
@@ -99,8 +96,8 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         if (hint == String.class)
             return toString();
 
-    	// We don't return the value since otherwise hidden bug could be introduced in scripts:
-    	// scripts should always access json value through calling it
+        // We don't return the value since otherwise hidden bug could be introduced in scripts:
+        // scripts should always access json value through calling it
         return "Json";
     }
 
@@ -108,7 +105,7 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     @Override
     public Object get(String name, Scriptable start) {
         if (json instanceof JsonArray) {
-            switch(name) {
+            switch (name) {
                 case "length":
                     return ((JsonArray) json).size();
             }
@@ -197,8 +194,9 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
                 .ignore$(false)
                 .ignoreNull(false)
                 .resolveFile(f -> {
-                    try { return finalConnector.resolve(f); }
-                    catch(Exception e) {
+                    try {
+                        return finalConnector.resolve(f);
+                    } catch (Exception e) {
                         throw new XPMRhinoException(e);
                     }
                 });

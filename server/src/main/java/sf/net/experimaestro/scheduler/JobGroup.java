@@ -20,11 +20,12 @@ package sf.net.experimaestro.scheduler;
 
 /**
  * A name of jobs
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JobGroup {
-	/**
-	 * Name of the name of jobs
-	 */
-	String name;
+    /**
+     * Name of the name of jobs
+     */
+    String name;
 }

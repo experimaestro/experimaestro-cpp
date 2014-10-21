@@ -21,13 +21,13 @@ package sf.net.experimaestro.manager;
 
 public class JsonInput extends Input {
 
-	public JsonInput(Type type) {
-		super(type);
-	}
+    public JsonInput(Type type) {
+        super(type);
+    }
 
-	@Override
-	Value newValue() {
-		return new JsonValue(this);
-	}
+    @Override
+    Value newValue() {
+        return new JsonValue(this);
+    }
 
 }

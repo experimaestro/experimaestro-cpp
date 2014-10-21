@@ -45,52 +45,6 @@ public class JSDirectTask extends JSAbstractTask {
      * The wrapper for the javascript object
      */
     private JSTask jsObject;
-
-    public class JSTask extends JSBaseObject {
-        /**
-         * The object?
-         */
-        private NativeObject jsFactory;
-
-        @JSFunction
-        public JSTask(NativeObject jsFactory) {
-            this.jsFactory = jsFactory;
-        }
-
-        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
-        public JSFileObject unique_directory(Context cx, Scriptable scope, FileObject basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
-            QName taskId = JSDirectTask.this.getFactory().getId();
-            if (prefix == null) {
-                prefix = taskId.getLocalPart();
-            }
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
-        }
-
-        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
-        public JSFileObject unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
-            QName taskId = JSDirectTask.this.getFactory().getId();
-            if (prefix == null) {
-                prefix = taskId.getLocalPart();
-            }
-            FileObject basedir = resource.getLocator().getFile().getParent();
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
-        }
-
-
-        @JSFunction()
-        @JSHelp("Returns a Json object corresponding to inputs of a given group (shallow copy)")
-        public JSJson group(String groupId, JsonObject p) {
-            JsonObject json = new JsonObject();
-            for(Entry<String, Input> x: getFactory().getInputs().entrySet()) {
-                if (x.getValue().inGroup(groupId)) {
-                    json.put(x.getKey(), p.get(x.getKey()));
-                }
-            }
-
-            return (JSJson) new JSJson(json).setXPM(xpm);
-        }
-    }
-
     /**
      * The XPM object
      */
@@ -175,5 +129,50 @@ public class JSDirectTask extends JSAbstractTask {
 
         LOGGER.debug("[/Running] task: %s", factory.getId());
         return resultObject;
+    }
+
+    public class JSTask extends JSBaseObject {
+        /**
+         * The object?
+         */
+        private NativeObject jsFactory;
+
+        @JSFunction
+        public JSTask(NativeObject jsFactory) {
+            this.jsFactory = jsFactory;
+        }
+
+        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        public JSFileObject unique_directory(Context cx, Scriptable scope, FileObject basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+        }
+
+        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        public JSFileObject unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            FileObject basedir = resource.getLocator().getFile().getParent();
+            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+        }
+
+
+        @JSFunction()
+        @JSHelp("Returns a Json object corresponding to inputs of a given group (shallow copy)")
+        public JSJson group(String groupId, JsonObject p) {
+            JsonObject json = new JsonObject();
+            for (Entry<String, Input> x : getFactory().getInputs().entrySet()) {
+                if (x.getValue().inGroup(groupId)) {
+                    json.put(x.getKey(), p.get(x.getKey()));
+                }
+            }
+
+            return (JSJson) new JSJson(json).setXPM(xpm);
+        }
     }
 }

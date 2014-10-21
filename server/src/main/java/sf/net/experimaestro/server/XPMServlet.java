@@ -29,9 +29,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
 public abstract class XPMServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-
     protected static final String ENCODING = "UTF-8";
+    private static final long serialVersionUID = 1L;
     private final ServerSettings serverSettings;
 
     public XPMServlet(ServerSettings serverSettings) {

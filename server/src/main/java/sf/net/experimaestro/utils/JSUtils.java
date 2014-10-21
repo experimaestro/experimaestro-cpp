@@ -176,12 +176,12 @@ public class JSUtils {
             return new JsonString((String) value);
 
         if (value instanceof Double) {
-            if ((double)((Double) value).longValue() == (double)value)
+            if ((double) ((Double) value).longValue() == (double) value)
                 return new JsonInteger(((Double) value).longValue());
             return new JsonReal((Double) value);
         }
         if (value instanceof Float) {
-            if ((double)((Float) value).longValue() == (float)value)
+            if ((double) ((Float) value).longValue() == (float) value)
                 return new JsonInteger(((Float) value).longValue());
             return new JsonReal((Float) value);
         }
@@ -231,7 +231,7 @@ public class JSUtils {
         }
 
         if (value instanceof FileObject)
-            return new JsonFileObject((FileObject)value);
+            return new JsonFileObject((FileObject) value);
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
@@ -267,38 +267,12 @@ public class JSUtils {
 
     /**
      * Returns true if the object is a well defined JavaScript/Java object
+     *
      * @param object
      * @return
      */
     public static boolean isDefined(Object object) {
         return object != null && object != UniqueTag.NOT_FOUND;
-    }
-
-
-    static public class OptionalDocument {
-        Document document;
-
-        Document get() {
-            if (document == null)
-                document = XMLUtils.newDocument();
-            return document;
-        }
-
-        public boolean has() {
-            return document != null;
-        }
-
-        /**
-         * Clone and adopt node if not already owned
-         *
-         * @param node
-         * @return
-         */
-        public Node cloneAndAdopt(Node node) {
-            if (node.getOwnerDocument() != get())
-                return get().adoptNode(node.cloneNode(true));
-            return node;
-        }
     }
 
     /**
@@ -593,6 +567,32 @@ public class JSUtils {
 
     public static NamespaceContext getNamespaceContext(final Scriptable scope) {
         return new JSNamespaceContext(scope);
+    }
+
+    static public class OptionalDocument {
+        Document document;
+
+        Document get() {
+            if (document == null)
+                document = XMLUtils.newDocument();
+            return document;
+        }
+
+        public boolean has() {
+            return document != null;
+        }
+
+        /**
+         * Clone and adopt node if not already owned
+         *
+         * @param node
+         * @return
+         */
+        public Node cloneAndAdopt(Node node) {
+            if (node.getOwnerDocument() != get())
+                return get().adoptNode(node.cloneNode(true));
+            return node;
+        }
     }
 
     /**

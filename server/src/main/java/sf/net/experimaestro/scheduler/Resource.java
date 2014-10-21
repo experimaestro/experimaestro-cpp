@@ -30,7 +30,6 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.manager.js.JSFileObject;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -47,62 +46,94 @@ import java.util.*;
 @Entity(version = 1)
 public abstract class Resource<Data extends ResourceData>
         implements /*not sure if ID or locator... Comparable<Resource>,*/ Cleaneable, Listener {
-    final static private Logger LOGGER = Logger.getLogger();
+    /**
+     * Extension for the lock file
+     */
+    public static final String LOCK_EXTENSION = ".lock";
 
     // --- Resource description
+    /**
+     * Extension for the file that describes the state of the resource
+     */
+    public static final String STATUS_EXTENSION = ".state";
+    /**
+     * Extension used to mark a produced resource
+     */
+    public static final String DONE_EXTENSION = ".done";
+    /**
+     * Extension for the file containing the return code
+     */
+    public static final FileNameTransformer CODE_EXTENSION = new FileNameTransformer(".xpm.", ".code");
 
+
+    // --- Values filled on demand
+    /**
+     * Extension for the file containing the script to run
+     */
+    public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer(".xpm.", ".run");
+    /**
+     * Extension for the standard output of a job
+     */
+    public static final String OUT_EXTENSION = ".out";
+
+
+    // --- Values filled on doPostInit
+    /**
+     * Extension for the standard error of a job
+     */
+    public static final String ERR_EXTENSION = ".err";
+    /**
+     * Extension for the standard input of a job
+     */
+    public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
+    /**
+     * Secondary key for "state"
+     */
+    public static final String STATE_KEY_NAME = "state";
+    final static private Logger LOGGER = Logger.getLogger();
+    /**
+     * Task manager
+     */
+    protected transient Scheduler scheduler;
     /**
      * The resource ID
      */
     @PrimaryKey(sequence = "resourceId")
     private Long resourceID;
-
-
+    /**
+     * Comparator on the database ID
+     */
+    static public final Comparator<Resource<?>> ID_COMPARATOR = new Comparator<Resource<?>>() {
+        @Override
+        public int compare(Resource<?> o1, Resource<?> o2) {
+            return Long.compare(o1.resourceID, o2.resourceID);
+        }
+    };
     /**
      * The resource state
      */
     @SecondaryKey(relate = Relationship.MANY_TO_ONE, name = STATE_KEY_NAME)
     private ResourceState state;
-
     /**
      * Lock-related data: we don't store it
      */
     private transient LockData lockData;
-
-
-    // --- Values filled on demand
-
     /**
      * The dependencies for this job (dependencies are on any resource)
      * This array is filled when needed.
      */
     private transient Map<Long, Dependency> dependencies = null;
-
     /**
      * Resource data
      */
     private transient ResourceData data;
-
-
-    // --- Values filled on doPostInit
-
-    /**
-     * Task manager
-     */
-    protected transient Scheduler scheduler;
-
-
-    @Override
-    protected void finalize() {
-        LOGGER.debug("Finalizing resource [%s@%s]", System.identityHashCode(this), this);
-    }
-
 
     /**
      * Called when deserializing from database
      */
     protected Resource() {
     }
+
 
     /**
      * Constructs a resource
@@ -117,6 +148,10 @@ public abstract class Resource<Data extends ResourceData>
         LOGGER.debug("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
+    @Override
+    protected void finalize() {
+        LOGGER.debug("Finalizing resource [%s@%s]", System.identityHashCode(this), this);
+    }
 
     /**
      * Compares to another resource (based on the locator)
@@ -162,7 +197,6 @@ public abstract class Resource<Data extends ResourceData>
         }
     }
 
-
     /**
      * Do a full update of the state of this resource.
      * <p/>
@@ -174,7 +208,6 @@ public abstract class Resource<Data extends ResourceData>
     synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
         return false;
     }
-
 
     /**
      * Get the resource data
@@ -192,7 +225,6 @@ public abstract class Resource<Data extends ResourceData>
     public boolean stored() {
         return resourceID != null;
     }
-
 
     /**
      * Returns the connector associated to this resource
@@ -212,7 +244,6 @@ public abstract class Resource<Data extends ResourceData>
         return getConnector().getMainConnector();
     }
 
-
     /**
      * Initialise a resource when retrieved from database. Does nothing if the resource
      * is already initialized
@@ -226,7 +257,6 @@ public abstract class Resource<Data extends ResourceData>
         this.scheduler = scheduler;
         return true;
     }
-
 
     /**
      * Replace this resource
@@ -272,7 +302,6 @@ public abstract class Resource<Data extends ResourceData>
         }
     }
 
-
     /**
      * The set of dependencies for this object
      */
@@ -288,7 +317,7 @@ public abstract class Resource<Data extends ResourceData>
             if (stored()) {
                 ArrayList<Dependency> required = scheduler.getDependencies(resourceID);
                 dependencies = new HashMap<>();
-                for(Dependency from: required)
+                for (Dependency from : required)
                     dependencies.put(from.getDatabaseId(), from);
             } else
                 dependencies = new TreeMap<>();
@@ -306,11 +335,9 @@ public abstract class Resource<Data extends ResourceData>
         return null;
     }
 
-
     public void addDependency(Dependency dependency) {
         throw new RuntimeException("Cannot add dependency to resource of type " + this.getClass());
     }
-
 
     /**
      * @return the generated
@@ -318,7 +345,6 @@ public abstract class Resource<Data extends ResourceData>
     public boolean isGenerated() {
         return getState() == ResourceState.DONE;
     }
-
 
     /**
      * Get the task from
@@ -383,7 +409,6 @@ public abstract class Resource<Data extends ResourceData>
         return false;
     }
 
-
     public FileObject getFileWithExtension(String extension) throws FileSystemException {
         return getMainConnector().resolveFile(getLocator().path + extension);
     }
@@ -419,16 +444,11 @@ public abstract class Resource<Data extends ResourceData>
         return true;
     }
 
-    /** Returns the main output file for this resource */
+    /**
+     * Returns the main output file for this resource
+     */
     public FileObject outputFile() throws FileSystemException {
         throw new IllegalAccessError("No output file for resources of type " + this.getClass());
-    }
-
-    /**
-     * Defines how printing should be done
-     */
-    static public class PrintConfig {
-        public String detailURL;
     }
 
     /**
@@ -462,6 +482,13 @@ public abstract class Resource<Data extends ResourceData>
     }
 
     /**
+     * Defines how printing should be done
+     */
+    static public class PrintConfig {
+        public String detailURL;
+    }
+
+    /**
      * Provides an access to the reference of the resource
      */
     final static public class ResourcesIndex extends Resources {
@@ -471,7 +498,6 @@ public abstract class Resource<Data extends ResourceData>
          * @param scheduler The scheduler
          * @param dbStore
          * @throws com.sleepycat.je.DatabaseException
-         *
          */
         public ResourcesIndex(Scheduler scheduler, EntityStore dbStore) throws DatabaseException {
             super(scheduler, dbStore);
@@ -492,60 +518,4 @@ public abstract class Resource<Data extends ResourceData>
             resource.resourceID = key;
         }
     }
-
-
-    /**
-     * Extension for the lock file
-     */
-    public static final String LOCK_EXTENSION = ".lock";
-
-    /**
-     * Extension for the file that describes the state of the resource
-     */
-    public static final String STATUS_EXTENSION = ".state";
-
-    /**
-     * Extension used to mark a produced resource
-     */
-    public static final String DONE_EXTENSION = ".done";
-
-    /**
-     * Extension for the file containing the return code
-     */
-    public static final FileNameTransformer CODE_EXTENSION = new FileNameTransformer(".xpm.",".code");
-
-    /**
-     * Extension for the file containing the script to run
-     */
-    public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer(".xpm.",".run");
-
-    /**
-     * Extension for the standard output of a job
-     */
-    public static final String OUT_EXTENSION = ".out";
-
-    /**
-     * Extension for the standard error of a job
-     */
-    public static final String ERR_EXTENSION = ".err";
-
-    /**
-     * Extension for the standard input of a job
-     */
-    public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
-
-    /**
-     * Secondary key for "state"
-     */
-    public static final String STATE_KEY_NAME = "state";
-
-    /**
-     * Comparator on the database ID
-     */
-    static public final Comparator<Resource<?>> ID_COMPARATOR = new Comparator<Resource<?>>() {
-        @Override
-        public int compare(Resource<?> o1, Resource<?> o2) {
-            return Long.compare(o1.resourceID, o2.resourceID);
-        }
-    };
 }

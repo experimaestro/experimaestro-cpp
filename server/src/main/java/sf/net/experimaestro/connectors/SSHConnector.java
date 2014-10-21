@@ -30,9 +30,9 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.VFS;
 import org.apache.commons.vfs2.provider.sftp.SftpClientFactory;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystem;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
@@ -55,39 +55,38 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 @Persistent
 public class SSHConnector extends SingleHostConnector {
 
-    static final private Logger LOGGER = Logger.getLogger();
     static final int SSHD_DEFAULT_PORT = 22;
-
-    /**
-     * Username
-     */
-    String username;
-
-    /**
-     * Hostname to connect to
-     */
-    String hostname;
-
     /**
      * Port
      */
     int port = SSHD_DEFAULT_PORT;
-
+    static final private Logger LOGGER = Logger.getLogger();
+    /**
+     * Static map to sessions
+     * This is necessary since the SSHConnector object can be serialized (within a resource)
+     */
+    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<SSHConnector, SSHSession>();
+    /**
+     * Username
+     */
+    String username;
+    /**
+     * Hostname to connect to
+     */
+    String hostname;
     /**
      * Connection options
      */
     private SSHOptions options = new SSHOptions();
-
+    /**
+     * Cached SSH session
+     */
+    transient private SSHSession _session;
 
     /**
      * Used for serialization
      */
     private SSHConnector() {
-    }
-
-    @Override
-    public AbstractProcessBuilder processBuilder() {
-        return new SSHProcessBuilder();
     }
 
     /**
@@ -106,6 +105,30 @@ public class SSHConnector extends SingleHostConnector {
 
     public SSHConnector(String username, String hostname) {
         this(username, hostname, SSHD_DEFAULT_PORT);
+    }
+
+    /**
+     * @param username
+     * @param hostname
+     * @param port
+     * @param options
+     */
+    public SSHConnector(String username, String hostname, int port, ConnectorOptions options) {
+        super(String.format("ssh://%s:%d@%s", username, port, hostname));
+        this.username = username;
+        this.hostname = hostname;
+        this.port = port > 0 ? port : SSHD_DEFAULT_PORT;
+        if (options != null)
+            this.options = (SSHOptions) options;
+    }
+
+    public SSHConnector(URI uri, ConnectorOptions options) {
+        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
+    }
+
+    @Override
+    public AbstractProcessBuilder processBuilder() {
+        return new SSHProcessBuilder();
     }
 
     public Lock createLockFile(final String path, boolean wait) throws LockException {
@@ -162,30 +185,43 @@ public class SSHConnector extends SingleHostConnector {
         return false;
     }
 
-    /**
-     * @param username
-     * @param hostname
-     * @param port
-     * @param options
-     */
-    public SSHConnector(String username, String hostname, int port, ConnectorOptions options) {
-        super(String.format("ssh://%s:%d@%s", username, port, hostname));
-        this.username = username;
-        this.hostname = hostname;
-        this.port = port > 0 ? port : SSHD_DEFAULT_PORT;
-        if (options != null)
-            this.options = (SSHOptions) options;
-    }
-
-    public SSHConnector(URI uri, ConnectorOptions options) {
-        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
-    }
-
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
         return new UnixScriptProcessBuilder(scriptFile, connector);
     }
 
+    ChannelSftp newSftpChannel() throws JSchException, FileSystemException {
+        return (ChannelSftp) getSession().openChannel("sftp");
+    }
+
+    ChannelExec newExecChannel() throws JSchException, FileSystemException {
+        return (ChannelExec) getSession().openChannel("exec");
+    }
+
+    /**
+     * Get the session (creates it if necessary)
+     */
+    private Session getSession() throws JSchException, FileSystemException {
+        if (_session == null) {
+            _session = sessions.get(this);
+            if (_session == null) {
+                sessions.put(this, _session = new SSHSession());
+            }
+        }
+
+        // If we are not connected, do it now
+        if (!_session.session.isConnected())
+            _session.session.connect();
+
+        // Returns
+        return _session.session;
+    }
+
+    private interface StreamSetter {
+        public void setStream(OutputStream out, boolean dontClose);
+
+        int streamNumber();
+    }
 
     /**
      * An SSH process
@@ -267,65 +303,6 @@ public class SSHConnector extends SingleHostConnector {
         }
     }
 
-
-    /**
-     * an SSH session
-     */
-    class SSHSession {
-        public Session session;
-        public SftpFileSystem filesystem;
-
-        SSHSession() throws JSchException, FileSystemException {
-            init();
-        }
-
-        void init() throws JSchException, FileSystemException {
-            session = SftpClientFactory.createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
-        }
-
-        SftpFileSystem getFileSystem() {
-            return filesystem;
-        }
-    }
-
-    ChannelSftp newSftpChannel() throws JSchException, FileSystemException {
-        return (ChannelSftp) getSession().openChannel("sftp");
-    }
-
-    ChannelExec newExecChannel() throws JSchException, FileSystemException {
-        return (ChannelExec) getSession().openChannel("exec");
-    }
-
-    /**
-     * Get the session (creates it if necessary)
-     */
-    private Session getSession() throws JSchException, FileSystemException {
-        if (_session == null) {
-            _session = sessions.get(this);
-            if (_session == null) {
-                sessions.put(this, _session = new SSHSession());
-            }
-        }
-
-        // If we are not connected, do it now
-        if (!_session.session.isConnected())
-            _session.session.connect();
-
-        // Returns
-        return _session.session;
-    }
-
-    /**
-     * Static map to sessions
-     * This is necessary since the SSHConnector object can be serialized (within a resource)
-     */
-    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<SSHConnector, SSHSession>();
-
-    /**
-     * Cached SSH session
-     */
-    transient private SSHSession _session;
-
     /**
      * A lock
      */
@@ -372,13 +349,25 @@ public class SSHConnector extends SingleHostConnector {
         }
     }
 
+    /**
+     * an SSH session
+     */
+    class SSHSession {
+        public Session session;
+        public SftpFileSystem filesystem;
 
-    private interface StreamSetter {
-        public void setStream(OutputStream out, boolean dontClose);
+        SSHSession() throws JSchException, FileSystemException {
+            init();
+        }
 
-        int streamNumber();
+        void init() throws JSchException, FileSystemException {
+            session = SftpClientFactory.createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
+        }
+
+        SftpFileSystem getFileSystem() {
+            return filesystem;
+        }
     }
-
 
     public class SSHProcessBuilder extends AbstractProcessBuilder {
 

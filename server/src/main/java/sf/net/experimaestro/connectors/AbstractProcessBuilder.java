@@ -27,21 +27,22 @@ import java.util.List;
 /**
  * This class is used to create processes on a given host through a
  * specific connection method (e.g. direct, ssh).
- *
+ * <p/>
  * This class borrows heavily from {@linkplain java.lang.ProcessBuilder},
  * with some differences:
  * <ol>
- *     <li>There is a parameter to detach the process (e.g. for SSH connections)</li>
- *     <li>A {@linkplain Job} can be associated to the process for notification</li>
- *     <li>A path should be associated (if detached) to the process</li>
+ * <li>There is a parameter to detach the process (e.g. for SSH connections)</li>
+ * <li>A {@linkplain Job} can be associated to the process for notification</li>
+ * <li>A path should be associated (if detached) to the process</li>
  * </ol>
- *
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 abstract public class AbstractProcessBuilder extends AbstractCommandBuilder {
 
-    /** The command to run */
+    /**
+     * The command to run
+     */
     private List<String> command;
 
     public AbstractProcessBuilder command(List<String> command) throws FileSystemException {

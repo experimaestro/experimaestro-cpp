@@ -43,17 +43,23 @@ public class JSTaskWrapper extends JSBaseObject {
     private final XPMObject xpm;
 
 
-    @Override
-    public String getClassName() {
-        return "Task";
-    }
-
     @JSFunction
     public JSTaskWrapper(Task task, XPMObject xpm) {
         this.task = task;
         this.xpm = xpm;
     }
 
+    static NativeArray wrap(ArrayList<Json> result) {
+        NativeArray array = new NativeArray(result.size());
+        for (int index = 0; index < result.size(); index++)
+            array.put(index, array, new JSJson(result.get(index)));
+        return array;
+    }
+
+    @Override
+    public String getClassName() {
+        return "Task";
+    }
 
     @Override
     public void put(String name, Scriptable start, Object value) {
@@ -74,12 +80,5 @@ public class JSTaskWrapper extends JSBaseObject {
     @JSFunction("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
         return new JSJson(task.run(xpm.newTaskContext().simulate(false)));
-    }
-
-    static NativeArray wrap(ArrayList<Json> result) {
-        NativeArray array = new NativeArray(result.size());
-        for (int index = 0; index < result.size(); index++)
-            array.put(index, array, new JSJson(result.get(index)));
-        return array;
     }
 }

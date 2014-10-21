@@ -29,7 +29,7 @@ import java.net.URISyntaxException;
 /**
  * This class represents any layer that can get between a host where files can be stored
  * and possibly where a command can be executed.
- *
+ * <p/>
  * Connectors are stored in the database so that they can be used
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -48,56 +48,7 @@ public abstract class Connector implements Comparable<Connector> {
         this.identifier = identifier;
     }
 
-    /**
-     * Retrieves a connector with some requirements
-     * @return A valid connector or null if no connector meet the requirements
-     */
-    public abstract SingleHostConnector getConnector(ComputationalRequirements requirements);
-
-    /**
-     * Returns the main connector for this group
-     * @return A valid single host connector
-     */
-    public abstract SingleHostConnector getMainConnector();
-
-
     protected Connector() {
-    }
-
-
-    /**
-     * Returns true if the connector can execute commands
-     */
-    public boolean canExecute() {
-        return false;
-    }
-
-    /**
-     * Returns the connectorId identifier
-     */
-    public final String getIdentifier() {
-        return identifier;
-    }
-
-
-//    /**
-//     * Create a file with a thread safe mechanism
-//     *
-//     * @param path
-//     * @return A lock object
-//     * @throws LockException
-//     */
-//    public abstract Lock createLockFile(String path) throws LockException;
-//
-
-
-    @Override
-    final public int compareTo(Connector other) {
-        return identifier.compareTo(other.identifier);
-    }
-
-    public ConnectorDelegator delegate() {
-        return new ConnectorDelegator(this);
     }
 
     /**
@@ -118,7 +69,57 @@ public abstract class Connector implements Comparable<Connector> {
         }
     }
 
-    /** Initialize the connector after deserialization */
+    /**
+     * Retrieves a connector with some requirements
+     *
+     * @return A valid connector or null if no connector meet the requirements
+     */
+    public abstract SingleHostConnector getConnector(ComputationalRequirements requirements);
+
+    /**
+     * Returns the main connector for this group
+     *
+     * @return A valid single host connector
+     */
+    public abstract SingleHostConnector getMainConnector();
+
+
+//    /**
+//     * Create a file with a thread safe mechanism
+//     *
+//     * @param path
+//     * @return A lock object
+//     * @throws LockException
+//     */
+//    public abstract Lock createLockFile(String path) throws LockException;
+//
+
+    /**
+     * Returns true if the connector can execute commands
+     */
+    public boolean canExecute() {
+        return false;
+    }
+
+    /**
+     * Returns the connectorId identifier
+     */
+    public final String getIdentifier() {
+        return identifier;
+    }
+
+    @Override
+    final public int compareTo(Connector other) {
+        return identifier.compareTo(other.identifier);
+    }
+
+    public ConnectorDelegator delegate() {
+        return new ConnectorDelegator(this);
+    }
+
+    /**
+     * Initialize the connector after deserialization
+     */
     public void init(Scheduler scheduler) throws DatabaseException {
     }
 }

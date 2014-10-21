@@ -46,6 +46,7 @@ public class XPMRhinoException extends EvaluatorException implements ContextualE
         super(String.format(format, values));
         initCause(t);
     }
+
     public XPMRhinoException(Throwable t) {
         super("Wrapped exception");
         initCause(t);

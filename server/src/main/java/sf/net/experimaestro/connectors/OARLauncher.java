@@ -22,8 +22,8 @@ import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
@@ -43,15 +43,19 @@ import java.io.*;
  */
 @Persistent
 public class OARLauncher implements Launcher {
+    /**
+     * Prefix for the PID of the job
+     */
+    protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
     static private final Logger LOGGER = Logger.getLogger();
-
-    /** oarsub command */
+    /**
+     * oarsub command
+     */
     private String oarCommand = "oarsub";
 
-    /** Prefix for the PID of the job */
-    protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
-
-    /** Construction from a connector */
+    /**
+     * Construction from a connector
+     */
     public OARLauncher() {
         super();
     }
@@ -113,7 +117,7 @@ public class OARLauncher implements Launcher {
             final String path = job.getLocator().getPath();
             final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
-            String [] command = new String[] { oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run" };
+            String[] command = new String[]{oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run"};
 
             LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
 
@@ -128,16 +132,16 @@ public class OARLauncher implements Launcher {
             final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String s;
             String pid = null;
-            while ((s =reader.readLine()) != null) {
+            while ((s = reader.readLine()) != null) {
                 if (s.startsWith(OARJOBID_PREFIX))
                     pid = s.substring(OARJOBID_PREFIX.length());
             }
 
             LOGGER.info("Started OAR job with PID %s", pid);
 
-            return new OARProcess(job, pid, connector);        }
+            return new OARProcess(job, pid, connector);
+        }
     }
-
 
 
     /**
@@ -145,7 +149,9 @@ public class OARLauncher implements Launcher {
      */
     @Persistent
     static private class OARProcess extends XPMProcess {
-        /** Used for serialization */
+        /**
+         * Used for serialization
+         */
         public OARProcess() {
         }
 
@@ -153,8 +159,6 @@ public class OARLauncher implements Launcher {
             super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
             startWaitProcess();
         }
-
-
 
 
         @Override
@@ -207,7 +211,9 @@ public class OARLauncher implements Launcher {
             return Integer.parseInt(code);
         }
 
-        /** Runs oarstat and returns the XML document */
+        /**
+         * Runs oarstat and returns the XML document
+         */
         private Document oarstat(boolean full) {
             final Document document;
             try {

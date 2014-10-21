@@ -23,6 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 
 /**
  * An RPC method argument annotation
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/3/13
  */
@@ -30,9 +31,13 @@ import java.lang.annotation.RetentionPolicy;
 public @interface RPCArgument {
     String name();
 
-    /** Required argument */
+    /**
+     * Required argument
+     */
     boolean required() default true;
 
-    /** Help for the argumnent */
+    /**
+     * Help for the argumnent
+     */
     String help() default "";
 }

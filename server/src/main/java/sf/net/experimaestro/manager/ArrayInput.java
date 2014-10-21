@@ -1,7 +1,6 @@
 package sf.net.experimaestro.manager;
 
 /**
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/1/13
  */

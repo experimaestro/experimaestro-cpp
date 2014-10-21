@@ -24,41 +24,41 @@ import java.util.List;
 import static java.lang.String.format;
 
 public class XPMRuntimeException extends RuntimeException implements ContextualException<XPMRuntimeException> {
-	private static final long serialVersionUID = 1L;
     public static final AssertionError SHOULD_NOT_BE_HERE = new AssertionError("Should not be here");
+    private static final long serialVersionUID = 1L;
     ArrayList<String> context = new ArrayList<>();
 
-	public XPMRuntimeException() {
-		super();
-	}
+    public XPMRuntimeException() {
+        super();
+    }
 
-	public XPMRuntimeException(String message, Throwable t) {
-		super(message, t);
-	}
+    public XPMRuntimeException(String message, Throwable t) {
+        super(message, t);
+    }
 
-	public XPMRuntimeException(Throwable t, String format, Object... values) {
-		super(String.format(format, values), t);
-	}
+    public XPMRuntimeException(Throwable t, String format, Object... values) {
+        super(String.format(format, values), t);
+    }
 
-	public XPMRuntimeException(String message) {
-		super(message);
-	}
+    public XPMRuntimeException(String message) {
+        super(message);
+    }
 
-	public XPMRuntimeException(String format, Object... values) {
-		super(String.format(format, values));
-	}
+    public XPMRuntimeException(String format, Object... values) {
+        super(String.format(format, values));
+    }
 
-	public XPMRuntimeException(Throwable t) {
-		super(t);
-	}
+    public XPMRuntimeException(Throwable t) {
+        super(t);
+    }
 
-	public XPMRuntimeException addContext(String string, Object... values) {
-		context.add(format(string, values));
+    public XPMRuntimeException addContext(String string, Object... values) {
+        context.add(format(string, values));
         return this;
-	}
+    }
 
-	public List<String> getContext() {
-		return context;
-	}
+    public List<String> getContext() {
+        return context;
+    }
 
 }

@@ -29,7 +29,7 @@ import static java.lang.Math.min;
 
 /**
  * Keeps track of who is a descendent of who
- *
+ * <p/>
  * <ul>
  * <li>Each operator is associated to one ID (contiguous)</li>
  * <li>If x is an ancestor of y, id(x) < id(y)</li>
@@ -38,7 +38,9 @@ import static java.lang.Math.min;
  * </ul>
  */
 public class OperatorMap {
-    /** The node to ID */
+    /**
+     * The node to ID
+     */
     Object2IntOpenHashMap<Operator> operators = new Object2IntOpenHashMap<>();
 
     {
@@ -84,7 +86,7 @@ public class OperatorMap {
     /**
      * Returns true if a node is a descendant of another one
      *
-     * @param node The node to test
+     * @param node     The node to test
      * @param ancestor The ancestor to test
      * @return True if {@code ancestor} is an ancestor of {@code node}
      */
@@ -96,7 +98,8 @@ public class OperatorMap {
 
     /**
      * Get the index of the bit for an ancestor-descendant relationship
-     * @param ancestor The ancestor
+     *
+     * @param ancestor   The ancestor
      * @param descendant The descendant
      * @return The index of the bit
      */
@@ -107,12 +110,12 @@ public class OperatorMap {
 
     /**
      * Set the bits to mark all the ancestors of a child.
-     *
+     * <p/>
      * We suppose that the ancestors of the parent have already been marked,
      * which should be the case since we add nodes in topological order.
      *
      * @param parentIndex The index of the parent
-     * @param childIndex The index of the child
+     * @param childIndex  The index of the child
      */
     void markAncestors(int parentIndex, int childIndex) {
         assert childIndex > parentIndex;
@@ -140,7 +143,7 @@ public class OperatorMap {
     /**
      * Get ancestors of a given operator
      *
-     * @param id The ID of the operator
+     * @param id        The ID of the operator
      * @param maxLength The maximum ID to consider (exclusive)
      * @return A bitset representing the ancestors
      */
@@ -151,12 +154,13 @@ public class OperatorMap {
 
     /**
      * Returns the ancestors of a set of nodes
+     *
      * @param set The set of nodes
      * @return The ancestors
      */
     public BitSet getAncestors(BitSet set) {
         BitSet ancestors = new BitSet();
-        for(int i = set.nextSetBit(0); i != -1; i = set.nextSetBit(i + 1)) {
+        for (int i = set.nextSetBit(0); i != -1; i = set.nextSetBit(i + 1)) {
             ancestors.or(getAncestors(i));
         }
         return ancestors;
@@ -165,6 +169,7 @@ public class OperatorMap {
 
     /**
      * Find the least common ancestors of a pair of operators
+     *
      * @param op1 The first operator
      * @param op2 The second operator
      * @return
@@ -192,7 +197,7 @@ public class OperatorMap {
         candidates.set(id1);
 
         // Intersects with ancestors of id2 (restrict to those that can be ancestors or self of id1)
-        candidates.and(getAncestors(id2, id1+1));
+        candidates.and(getAncestors(id2, id1 + 1));
 
 
         // --- Remove the ancestors which are not the least ancestors
@@ -214,7 +219,6 @@ public class OperatorMap {
     }
 
     /**
-     *
      * @param operator
      * @return The ID of the operator or <tt>-1</tt> if no such operator was found
      */
@@ -248,6 +252,7 @@ public class OperatorMap {
 
     /**
      * Returns a bitset corresponding to a set of operators
+     *
      * @param operators The operators
      * @return A bitset
      */

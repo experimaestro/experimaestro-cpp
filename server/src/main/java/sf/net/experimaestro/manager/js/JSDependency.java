@@ -7,7 +7,9 @@ import sf.net.experimaestro.scheduler.Dependency;
  * Created by bpiwowar on 11/9/14.
  */
 public class JSDependency extends JSBaseObject implements Wrapper {
-    /** The wrapped dependency */
+    /**
+     * The wrapped dependency
+     */
     private Dependency dependency;
 
     @JSFunction

@@ -24,10 +24,14 @@ package sf.net.experimaestro.manager.plans;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 final public class StreamReference {
-    /** The index of the input */
+    /**
+     * The index of the input
+     */
     final int inputIndex;
 
-    /** The index within the input stream */
+    /**
+     * The index within the input stream
+     */
     final int contextIndex;
 
     public StreamReference(int inputIndex, int contextIndex) {

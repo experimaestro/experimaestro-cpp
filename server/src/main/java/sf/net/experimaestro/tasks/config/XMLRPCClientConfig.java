@@ -33,20 +33,13 @@ import java.net.URL;
 import java.util.Properties;
 
 public class XMLRPCClientConfig {
-	final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
-	@Argument(name = "file", help = "The name of the file containing the XML RPC configuration for the client", required=true)
-	File xmlrpcfile;
+    @Argument(name = "file", help = "The name of the file containing the XML RPC configuration for the client", required = true)
+    File xmlrpcfile;
 
-	private Properties xmlrpcConfig;
+    private Properties xmlrpcConfig;
 
-	
-	@ArgumentPostProcessor()
-	public void init() throws IOException {
-		LOGGER.info("Loading properies from file %s", xmlrpcfile);
-		xmlrpcConfig = new Properties();
-		xmlrpcConfig.load(new FileInputStream(xmlrpcfile));
-	}
 
     public XMLRPCClientConfig(File xmlrpcfile) throws IOException {
         this.xmlrpcfile = xmlrpcfile;
@@ -56,44 +49,51 @@ public class XMLRPCClientConfig {
     public XMLRPCClientConfig() {
     }
 
+    @ArgumentPostProcessor()
+    public void init() throws IOException {
+        LOGGER.info("Loading properies from file %s", xmlrpcfile);
+        xmlrpcConfig = new Properties();
+        xmlrpcConfig.load(new FileInputStream(xmlrpcfile));
+    }
+
     /**
-	 * 
-	 * Get a property defined in the file
-	 * @param key
-	 * @param defaultValue
-	 * @return
-	 */
-	public String getProperty(String key, String defaultValue) {
-		final String value = xmlrpcConfig.getProperty(key);
-		if (value == null)
-			return defaultValue;
-		return value;
-	}
+     * Get a property defined in the file
+     *
+     * @param key
+     * @param defaultValue
+     * @return
+     */
+    public String getProperty(String key, String defaultValue) {
+        final String value = xmlrpcConfig.getProperty(key);
+        if (value == null)
+            return defaultValue;
+        return value;
+    }
 
-	/**
-	 * Gets a client from the RPC file
-	 * 
-	 * @return
-	 * @throws IOException
-	 * @throws FileNotFoundException
-	 * @throws MalformedURLException
-	 */
-	public XmlRpcClient getClient() throws IOException, FileNotFoundException,
-			MalformedURLException {
+    /**
+     * Gets a client from the RPC file
+     *
+     * @return
+     * @throws IOException
+     * @throws FileNotFoundException
+     * @throws MalformedURLException
+     */
+    public XmlRpcClient getClient() throws IOException, FileNotFoundException,
+            MalformedURLException {
 
-		XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
-		final String url = xmlrpcConfig.getProperty("url");
-		LOGGER.info("XML RPC server is at %s", url);
-		config.setServerURL(new URL(url));
+        XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+        final String url = xmlrpcConfig.getProperty("url");
+        LOGGER.info("XML RPC server is at %s", url);
+        config.setServerURL(new URL(url));
 
-		if (xmlrpcConfig.contains("user")) {
-			config.setBasicUserName(xmlrpcConfig.getProperty("user"));
-			config.setBasicPassword(xmlrpcConfig.getProperty("password"));
-		}
+        if (xmlrpcConfig.contains("user")) {
+            config.setBasicUserName(xmlrpcConfig.getProperty("user"));
+            config.setBasicPassword(xmlrpcConfig.getProperty("password"));
+        }
 
-		LOGGER.info("Connecting to server %s with username %s", url, config.getBasicUserName());
-		XmlRpcClient client = new XmlRpcClient();
-		client.setConfig(config);
-		return client;
-	}
+        LOGGER.info("Connecting to server %s with username %s", url, config.getBasicUserName());
+        XmlRpcClient client = new XmlRpcClient();
+        client.setConfig(config);
+        return client;
+    }
 }

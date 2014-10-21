@@ -61,7 +61,6 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     }
 
 
-
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
         super.onWebSocketClose(statusCode, reason);

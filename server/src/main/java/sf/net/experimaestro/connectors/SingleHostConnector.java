@@ -23,21 +23,22 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 
 import static java.lang.String.format;
 
 /**
  * A connector that corresponds to a single host.
- *
+ * <p/>
  * Descendant of this class of connector provide access to a file system and to a process launcher.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Persistent
 abstract public class SingleHostConnector extends Connector implements Launcher {
+    static private final char[] chars = new String("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").toCharArray();
     /**
      * Underlying filesystem
      */
@@ -47,9 +48,9 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         super(id);
     }
 
+
     protected SingleHostConnector() {
     }
-
 
     @Override
     public SingleHostConnector getConnector(ComputationalRequirements requirements) {
@@ -62,7 +63,6 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         // By default, the main connector is ourselves
         return this;
     }
-
 
     /**
      * Get the underlying filesystem
@@ -81,7 +81,6 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         return filesystem;
     }
 
-
     /**
      * Resolve the file name
      *
@@ -95,7 +94,7 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
 
     /**
      * Resolve a FileObject to a local path
-     *
+     * <p/>
      * Throws an exception when the file name cannot be resolved, i.e. when
      * the file object is not
      */
@@ -107,21 +106,28 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         return file.getName().getPath();
     }
 
-    /** Returns true if the filesystem matches */
+    /**
+     * Returns true if the filesystem matches
+     */
     protected abstract boolean contains(FileSystem fileSystem) throws FileSystemException;
 
     public String resolve(String path) throws FileSystemException {
         return resolve(resolveFile(path));
     }
 
-
-    /** Returns a process builder */
+    /**
+     * Returns a process builder
+     */
     public abstract AbstractProcessBuilder processBuilder();
 
-    /** Lock a file */
+    /**
+     * Lock a file
+     */
     public abstract Lock createLockFile(String path, boolean wait) throws LockException;
 
-    /** Returns the hostname */
+    /**
+     * Returns the hostname
+     */
     public abstract String getHostName();
 
     @Override
@@ -132,18 +138,17 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
         return this.processBuilder();
     }
 
-    static private final char[] chars = new String("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").toCharArray();
     public FileObject getTemporaryFile(String prefix, String suffix) throws FileSystemException {
         FileObject tmpdir = getTemporaryDirectory();
 
         final int MAX_ATTEMPTS = 1000;
 
-        for(int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             FileObject child = tmpdir.resolveFile(prefix + RandomStringUtils.random(10, chars) + suffix);
             if (!child.exists()) {
                 try {
                     child.createFile();
-                } catch(Throwable t) {
+                } catch (Throwable t) {
                 }
                 return child;
             }

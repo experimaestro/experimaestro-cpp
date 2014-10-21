@@ -79,7 +79,7 @@ public class JsonArray extends ArrayList<Json> implements Json {
 
     @Override
     public Object get() {
-    	return this;
+        return this;
     }
 
     @Override

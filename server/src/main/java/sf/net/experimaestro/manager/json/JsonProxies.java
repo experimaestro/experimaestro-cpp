@@ -14,13 +14,6 @@ import java.io.StringWriter;
  */
 @Persistent
 public class JsonProxies implements PersistentProxy<Json> {
-    @Persistent(proxyFor = JsonObject.class)
-    static public class JsonObjectProxy extends JsonProxies {
-    }
-    @Persistent(proxyFor = JsonReal.class)
-    static public class JsonRealProxy extends JsonProxies {
-    }
-
     String jsonString;
 
     @Override
@@ -93,5 +86,13 @@ public class JsonProxies implements PersistentProxy<Json> {
                 throw new RuntimeException("Cannot handle GSON token type: " + token.name());
 
         }
+    }
+
+    @Persistent(proxyFor = JsonObject.class)
+    static public class JsonObjectProxy extends JsonProxies {
+    }
+
+    @Persistent(proxyFor = JsonReal.class)
+    static public class JsonRealProxy extends JsonProxies {
     }
 }

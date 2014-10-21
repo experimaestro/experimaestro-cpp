@@ -26,6 +26,18 @@ import java.util.regex.Pattern;
 
 public class ProcessUtils {
 
+    static OSType osType;
+    static {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.indexOf("win") >= 0)
+            osType = OSType.WINDOWS;
+        else if (os.indexOf("mac") >= 0)
+            osType = OSType.MAC;
+        else if (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0)
+            osType = OSType.UNIX;
+
+    }
+
     public static boolean isRunning(java.lang.Process process) {
         try {
             process.exitValue();
@@ -65,23 +77,6 @@ public class ProcessUtils {
         }
     }
 
-    enum OSType {
-        WINDOWS, UNIX, MAC
-    }
-
-    static OSType osType;
-
-    static {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.indexOf("win") >= 0)
-            osType = OSType.WINDOWS;
-        else if (os.indexOf("mac") >= 0)
-            osType = OSType.MAC;
-        else if (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0)
-            osType = OSType.UNIX;
-
-    }
-
     /**
      * Get the PID of the java runtime
      *
@@ -111,5 +106,9 @@ public class ProcessUtils {
         }
         return result;
 
+    }
+
+    enum OSType {
+        WINDOWS, UNIX, MAC
     }
 }

@@ -22,9 +22,9 @@ import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 
 /**
-* @author B. Piwowarski <benjamin@bpiwowar.net>
-* @date 29/1/13
-*/
+ * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 29/1/13
+ */
 @Persistent
 public class JobData extends ResourceData {
     /**

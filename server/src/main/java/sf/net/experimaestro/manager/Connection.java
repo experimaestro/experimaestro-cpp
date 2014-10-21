@@ -27,24 +27,30 @@ import sf.net.experimaestro.manager.json.Json;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class Connection {
-    /** The destination */
+    /**
+     * The destination
+     */
     final DotName to;
 
-    /** Required flag */
+    /**
+     * Required flag
+     */
     boolean required;
 
-    public Connection( DotName to) {
+    public Connection(DotName to) {
         this.to = to;
     }
 
     /**
      * Get the list of the input variables
+     *
      * @return
      */
     abstract public Iterable<String> inputs();
 
     /**
      * Compute the value
+     *
      * @param task
      * @return
      */

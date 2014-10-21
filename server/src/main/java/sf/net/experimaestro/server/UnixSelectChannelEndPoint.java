@@ -31,32 +31,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * An ChannelEndpoint that can be scheduled by {@link UnixSelectorManager}.
  */
-public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements UnixSelectorManager.SelectableEndPoint
-{
+public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements UnixSelectorManager.SelectableEndPoint {
     public static final Logger LOG = Log.getLogger(UnixSelectChannelEndPoint.class);
 
-    private final Runnable _updateTask = new Runnable()
-    {
+    private final Runnable _updateTask = new Runnable() {
         @Override
-        public void run()
-        {
-            try
-            {
-                if (getChannel().isOpen())
-                {
+        public void run() {
+            try {
+                if (getChannel().isOpen()) {
                     int oldInterestOps = _key.interestOps();
                     int newInterestOps = _interestOps.get();
                     if (newInterestOps != oldInterestOps)
                         setKeyInterests(oldInterestOps, newInterestOps);
                 }
-            }
-            catch (CancelledKeyException x)
-            {
+            } catch (CancelledKeyException x) {
                 LOG.debug("Ignoring key update for concurrently closed channel {}", this);
                 close();
-            }
-            catch (Exception x)
-            {
+            } catch (Exception x) {
                 LOG.warn("Ignoring key update for " + this, x);
                 close();
             }
@@ -73,30 +64,26 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
      */
     private final AtomicInteger _interestOps = new AtomicInteger();
 
-    public UnixSelectChannelEndPoint(UnixSocketChannel channel, UnixSelectorManager.ManagedSelector selector, SelectionKey key, Scheduler scheduler, long idleTimeout)
-    {
-        super(scheduler,channel);
+    public UnixSelectChannelEndPoint(UnixSocketChannel channel, UnixSelectorManager.ManagedSelector selector, SelectionKey key, Scheduler scheduler, long idleTimeout) {
+        super(scheduler, channel);
         _selector = selector;
         _key = key;
         setIdleTimeout(idleTimeout);
     }
 
     @Override
-    protected boolean needsFill()
-    {
+    protected boolean needsFill() {
         updateLocalInterests(SelectionKey.OP_READ, true);
         return false;
     }
 
     @Override
-    protected void onIncompleteFlush()
-    {
+    protected void onIncompleteFlush() {
         updateLocalInterests(SelectionKey.OP_WRITE, true);
     }
 
     @Override
-    public void onSelected()
-    {
+    public void onSelected() {
         assert _selector.isSelectorThread();
         int oldInterestOps = _key.interestOps();
         int readyOps = _key.readyOps();
@@ -110,10 +97,8 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
     }
 
 
-    private void updateLocalInterests(int operation, boolean add)
-    {
-        while (true)
-        {
+    private void updateLocalInterests(int operation, boolean add) {
+        while (true) {
             int oldInterestOps = _interestOps.get();
             int newInterestOps;
             if (add)
@@ -126,21 +111,15 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
             if (isOutputShutdown())
                 newInterestOps &= ~SelectionKey.OP_WRITE;
 
-            if (newInterestOps != oldInterestOps)
-            {
-                if (_interestOps.compareAndSet(oldInterestOps, newInterestOps))
-                {
+            if (newInterestOps != oldInterestOps) {
+                if (_interestOps.compareAndSet(oldInterestOps, newInterestOps)) {
                     LOG.debug("Local interests updated {} -> {} for {}", oldInterestOps, newInterestOps, this);
                     _selector.submit(_updateTask);
-                }
-                else
-                {
+                } else {
                     LOG.debug("Local interests update conflict: now {}, was {}, attempted {} for {}", _interestOps.get(), oldInterestOps, newInterestOps, this);
                     continue;
                 }
-            }
-            else
-            {
+            } else {
                 LOG.debug("Ignoring local interests update {} -> {} for {}", oldInterestOps, newInterestOps, this);
             }
             break;
@@ -148,26 +127,22 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
     }
 
 
-    private void setKeyInterests(int oldInterestOps, int newInterestOps)
-    {
+    private void setKeyInterests(int oldInterestOps, int newInterestOps) {
         assert _selector.isSelectorThread();
         LOG.debug("Key interests updated {} -> {}", oldInterestOps, newInterestOps);
         _key.interestOps(newInterestOps);
     }
 
     @Override
-    public void close()
-    {
-        if (_open.compareAndSet(true, false))
-        {
+    public void close() {
+        if (_open.compareAndSet(true, false)) {
             super.close();
             _selector.destroyEndPoint(this);
         }
     }
 
     @Override
-    public boolean isOpen()
-    {
+    public boolean isOpen() {
         // We cannot rely on super.isOpen(), because there is a race between calls to close() and isOpen():
         // a thread may call close(), which flips the boolean but has not yet called super.close(), and
         // another thread calls isOpen() which would return true - wrong - if based on super.isOpen().
@@ -175,21 +150,18 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
     }
 
     @Override
-    public void onOpen()
-    {
+    public void onOpen() {
         if (_open.compareAndSet(false, true))
             super.onOpen();
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         // Do NOT use synchronized (this)
         // because it's very easy to deadlock when debugging is enabled.
         // We do a best effort to print the right toString() and that's it.
-        try
-        {
-            boolean valid = _key!=null && _key.isValid();
+        try {
+            boolean valid = _key != null && _key.isValid();
             int keyInterests = valid ? _key.interestOps() : -1;
             int keyReadiness = valid ? _key.readyOps() : -1;
             return String.format("%s{io=%d,kio=%d,kro=%d}",
@@ -197,9 +169,7 @@ public class UnixSelectChannelEndPoint extends UnixChannelEndPoint implements Un
                     _interestOps.get(),
                     keyInterests,
                     keyReadiness);
-        }
-        catch (CancelledKeyException x)
-        {
+        } catch (CancelledKeyException x) {
             return String.format("%s{io=%s,kio=-2,kro=-2}", super.toString(), _interestOps.get());
         }
     }

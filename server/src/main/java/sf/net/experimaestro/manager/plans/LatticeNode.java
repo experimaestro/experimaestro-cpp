@@ -11,7 +11,7 @@ import java.util.*;
 
 /**
  * A lattice set (node)
- * <p>
+ * <p/>
  * We store it in inverse order (Starting by the union of all sets)
  */
 final public class LatticeNode implements HeapElement<LatticeNode> {
@@ -284,7 +284,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
     /**
      * Merge this node
-     * <p>
+     * <p/>
      * Depending on the context, either merge the operators
      * at this node level, or the content of this node with the
      * children

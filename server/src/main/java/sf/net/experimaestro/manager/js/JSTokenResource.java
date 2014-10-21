@@ -23,7 +23,6 @@ import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.scheduler.TokenResource;
 
 /**
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 26/11/12
  */
@@ -31,16 +30,16 @@ public class JSTokenResource extends ScriptableObject implements Wrapper {
 
     private TokenResource resource;
 
+    public JSTokenResource() {
+    }
+
     @Override
     public String getClassName() {
         return "TokenResource";
     }
 
-    public JSTokenResource() {
-    }
-
     public void jsConstructor(Object resource) {
-        this.resource = (TokenResource)resource;
+        this.resource = (TokenResource) resource;
     }
 
 

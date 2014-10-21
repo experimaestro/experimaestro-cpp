@@ -22,15 +22,15 @@ package sf.net.experimaestro.manager;
 import sf.net.experimaestro.utils.log.Logger;
 
 public class AlternativeInput extends Input {
-	final static Logger LOGGER = Logger.getLogger();
-	
-	public AlternativeInput(AlternativeType type) {
-		super(type);
-	}
+    final static Logger LOGGER = Logger.getLogger();
 
-	@Override
-	Value newValue() {
-		return new AlternativeValue(this);
-	}
+    public AlternativeInput(AlternativeType type) {
+        super(type);
+    }
+
+    @Override
+    Value newValue() {
+        return new AlternativeValue(this);
+    }
 
 }

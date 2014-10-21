@@ -90,5 +90,4 @@ public abstract class JSAbstractTask extends Task {
     abstract protected Json jsrun(TaskContext taskContext);
 
 
-
 }

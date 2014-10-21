@@ -9,7 +9,9 @@ import sf.net.experimaestro.manager.json.JsonArray;
  * @date 23/1/13
  */
 public class ArrayValue extends Value {
-    /** The input nodes */
+    /**
+     * The input nodes
+     */
     JsonArray array;
 
     public ArrayValue(ArrayInput input) {
@@ -26,7 +28,7 @@ public class ArrayValue extends Value {
 
     @Override
     public void set(Json value) {
-        this.array = (JsonArray)value;
+        this.array = (JsonArray) value;
     }
 
     @Override

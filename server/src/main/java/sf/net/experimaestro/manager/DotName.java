@@ -113,6 +113,18 @@ public class DotName extends AbstractList<String> implements Comparable<DotName>
     }
 
     /**
+     * Creates a DotName from an unparsed string identifier containing dots.
+     *
+     * @param name The full identifier to be parsed
+     * @return
+     */
+    public static DotName parse(String name) {
+        if (name == null)
+            return EMPTY;
+        return new DotName(name.split("\\."));
+    }
+
+    /**
      * Returns a new qualified name with offset
      *
      * @param offset
@@ -200,18 +212,6 @@ public class DotName extends AbstractList<String> implements Comparable<DotName>
      */
     public String get(int index) {
         return array[index];
-    }
-
-    /**
-     * Creates a DotName from an unparsed string identifier containing dots.
-     *
-     * @param name The full identifier to be parsed
-     * @return
-     */
-    public static DotName parse(String name) {
-        if (name == null)
-            return EMPTY;
-        return new DotName(name.split("\\."));
     }
 
     public boolean isQualified() {

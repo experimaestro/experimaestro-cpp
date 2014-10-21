@@ -30,10 +30,14 @@ import java.util.TreeMap;
  * @date 15/6/12
  */
 public class Repositories extends Repository {
-    /** Our logger */
+    /**
+     * Our logger
+     */
     static final private Logger LOGGER = Logger.getLogger();
 
-    /** Our repositories */
+    /**
+     * Our repositories
+     */
     TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<>();
 
     /**
@@ -55,7 +59,7 @@ public class Repositories extends Repository {
             return factory;
 
         int priority = 0;
-        for(RepositoryInformation repository: repositories.values()) {
+        for (RepositoryInformation repository : repositories.values()) {
 
             if (priority < repository.priority || factory == null) {
                 final TaskFactory aFactory = repository.repository.getFactory(name);

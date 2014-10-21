@@ -28,7 +28,7 @@ import java.util.Map;
 
 /**
  * Context when running a plan
- *
+ * <p/>
  * This class hides away what is part of the static context and
  * what if part of the dynamic one
  *
@@ -37,42 +37,19 @@ import java.util.Map;
  */
 final public class PlanContext {
 
-    /** Static context */
-    final static public class StaticContext {
-        /**
-         * Counts the number of items output by an operator; null if not used
-         */
-        private Map<Operator, MutableInt> counts;
-
-        /**
-         * Cached iterators
-         */
-        private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
-
-        /**
-         * The task context
-         */
-        final private TaskContext taskContext;
-
-        public StaticContext(TaskContext taskContext) {
-            this.taskContext = taskContext;
-        }
-    }
-
     /**
      * The static context
      */
     StaticContext staticContext;
-
     /**
      * The dynamic context
      */
     PlanScope scope;
 
-
     private PlanContext(StaticContext staticContext) {
         this.staticContext = staticContext;
     }
+
 
     public PlanContext(TaskContext taskContext) {
         staticContext = new StaticContext(taskContext);
@@ -108,6 +85,28 @@ final public class PlanContext {
 
     public CachedIterable<Value> getCachedIterable(Object key) {
         return staticContext.cachedIterables.get(key);
+    }
+
+    /**
+     * Static context
+     */
+    final static public class StaticContext {
+        /**
+         * The task context
+         */
+        final private TaskContext taskContext;
+        /**
+         * Counts the number of items output by an operator; null if not used
+         */
+        private Map<Operator, MutableInt> counts;
+        /**
+         * Cached iterators
+         */
+        private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
+
+        public StaticContext(TaskContext taskContext) {
+            this.taskContext = taskContext;
+        }
     }
 
 }

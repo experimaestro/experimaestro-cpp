@@ -29,12 +29,9 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JSOARLauncher extends ScriptableObject implements JSLauncher {
-    final static private Logger LOGGER = Logger.getLogger();
-
-    private static final long serialVersionUID = 1L;
-
     public static final String CLASSNAME = "OARLauncher";
-
+    final static private Logger LOGGER = Logger.getLogger();
+    private static final long serialVersionUID = 1L;
     OARLauncher launcher;
 
     public JSOARLauncher() {

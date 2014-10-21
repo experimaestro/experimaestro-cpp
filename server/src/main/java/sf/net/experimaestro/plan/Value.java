@@ -18,9 +18,9 @@
 
 package sf.net.experimaestro.plan;
 
-public class Value  {
+public class Value {
     boolean script;
-	String value;
+    String value;
 
     public Value(boolean script, String value) {
         this.script = script;
@@ -30,8 +30,8 @@ public class Value  {
     public String toString() {
         if (script)
             return String.format("{%s}", value);
-		return value;
-	}
+        return value;
+    }
 
     public boolean isScript() {
         return script;

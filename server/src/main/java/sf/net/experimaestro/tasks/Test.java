@@ -21,13 +21,13 @@ package sf.net.experimaestro.tasks;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
 
-@TaskDescription(name = "test", project = { "xpmanager" })
+@TaskDescription(name = "test", project = {"xpmanager"})
 public class Test extends AbstractTask {
-	@Override
-	public int execute() throws Throwable {
+    @Override
+    public int execute() throws Throwable {
 
         return 0;
-		
-	}
+
+    }
 
 }

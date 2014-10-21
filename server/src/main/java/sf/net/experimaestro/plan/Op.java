@@ -27,54 +27,54 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class Op extends Node {
-	Node n1, n2;
-	OpType type;
+    Node n1, n2;
+    OpType type;
 
-	Op(OpType type, Node n1, Node n2) {
-		this.type = type;
-		this.n1 = n1;
-		this.n2 = n2;
-	}
+    Op(OpType type, Node n1, Node n2) {
+        this.type = type;
+        this.n1 = n1;
+        this.n2 = n2;
+    }
 
-	public String toString() {
-		return String.format("(%s %s %s)", n1, type, n2);
-	}
+    public String toString() {
+        return String.format("(%s %s %s)", n1, type, n2);
+    }
 
-	@Override
-	public Iterator<Map<String, Value>> iterator() {
-		switch (type) {
-		case OR: {
-			@SuppressWarnings("unchecked")
-			IteratorSequence<Map<String, Value>> a = new IteratorSequence<>(
-					n1.iterator(), n2.iterator());
-			return a;
-		}
-		
-		case MULT: {
-			@SuppressWarnings({ "unchecked", "rawtypes" })
-			final CartesianProduct<Map<String, Value>> p = new CartesianProduct(
-					Map.class, n1, n2);
-			return new AbstractIterator<Map<String, Value>>() {
-				Iterator<Map<String, Value>[]> iterator = p.iterator();
+    @Override
+    public Iterator<Map<String, Value>> iterator() {
+        switch (type) {
+            case OR: {
+                @SuppressWarnings("unchecked")
+                IteratorSequence<Map<String, Value>> a = new IteratorSequence<>(
+                        n1.iterator(), n2.iterator());
+                return a;
+            }
 
-				@Override
-				protected Map<String, Value> computeNext() {
-					if (iterator.hasNext()) {
-						Map<String, Value>[] values = iterator.next();
-                        Map<String, Value> map = new TreeMap<>();
-						for (Map<String, Value> v : values) {
-							map.putAll(v);
-						}
-						return map;
-					}
+            case MULT: {
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                final CartesianProduct<Map<String, Value>> p = new CartesianProduct(
+                        Map.class, n1, n2);
+                return new AbstractIterator<Map<String, Value>>() {
+                    Iterator<Map<String, Value>[]> iterator = p.iterator();
 
-					return endOfData();
-				}
-			};
+                    @Override
+                    protected Map<String, Value> computeNext() {
+                        if (iterator.hasNext()) {
+                            Map<String, Value>[] values = iterator.next();
+                            Map<String, Value> map = new TreeMap<>();
+                            for (Map<String, Value> v : values) {
+                                map.putAll(v);
+                            }
+                            return map;
+                        }
 
-		}
-		}
+                        return endOfData();
+                    }
+                };
 
-		return null;
-	}
+            }
+        }
+
+        return null;
+    }
 }
