@@ -27,6 +27,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.utils.FileNameTransformer;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -227,4 +228,7 @@ public class ResourceLocator implements Comparable<ResourceLocator> {
         throw new NotImplementedException();
     }
 
+    public FileObject resolve(SingleHostConnector connector, FileNameTransformer transformer) throws FileSystemException {
+        return transformer.transform(resolvePath(connector, this.path));
+    }
 }

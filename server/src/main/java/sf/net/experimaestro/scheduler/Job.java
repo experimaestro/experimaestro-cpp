@@ -27,6 +27,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
@@ -628,6 +629,18 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                 doneFile.delete();
         } catch (FileSystemException e) {
             LOGGER.info("Could not remove '%s' file: %s", extension, e);
+        }
+    }
+
+    /**
+     * Remove a file linked to this job
+     */
+    private void removeJobFile(FileNameTransformer t) {
+        try (final FileObject file = t.transform(getMainConnector().resolveFile(getLocator().getPath()))) {
+            if (file.exists())
+                file.delete();
+        } catch (FileSystemException e) {
+            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getLocator(), t);
         }
     }
 

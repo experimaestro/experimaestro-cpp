@@ -103,7 +103,7 @@ public class CommandLineTask extends Job<JobData> {
 
         launcher = new DefaultLauncher();
 
-        LOGGER.info("Command is %s", commands.toString());
+        LOGGER.debug("Command is %s", commands);
 
         // Copy the environment
         if (environment != null)

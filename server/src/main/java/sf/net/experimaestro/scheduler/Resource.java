@@ -31,6 +31,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.js.JSFileObject;
+import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -511,12 +512,12 @@ public abstract class Resource<Data extends ResourceData>
     /**
      * Extension for the file containing the return code
      */
-    public static final String CODE_EXTENSION = ".xpm.code";
+    public static final FileNameTransformer CODE_EXTENSION = new FileNameTransformer(".xpm.",".code");
 
-    /**S
+    /**
      * Extension for the file containing the script to run
      */
-    public static final String RUN_EXTENSION = ".xpm.run";
+    public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer(".xpm.",".run");
 
     /**
      * Extension for the standard output of a job
@@ -531,7 +532,7 @@ public abstract class Resource<Data extends ResourceData>
     /**
      * Extension for the standard input of a job
      */
-    public static final String INPUT_EXTENSION = ".input";
+    public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
 
     /**
      * Secondary key for "state"
