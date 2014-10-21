@@ -21,7 +21,7 @@ public abstract class AbstractCommandBuilder {
     Job job;
 
     /** Working directory */
-    String directory;
+    FileObject directory;
 
     /** Whether this process should be bound to the Java process */
     boolean detach;
@@ -37,7 +37,7 @@ public abstract class AbstractCommandBuilder {
         this.environment = environment;
     }
 
-    public String directory() {
+    public FileObject directory() {
         return directory;
     }
 
@@ -50,7 +50,7 @@ public abstract class AbstractCommandBuilder {
     }
 
 
-    public AbstractCommandBuilder directory(String directory) {
+    public AbstractCommandBuilder directory(FileObject directory) {
         this.directory = directory;
         return this;
     }

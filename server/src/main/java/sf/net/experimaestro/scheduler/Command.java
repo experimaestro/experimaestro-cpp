@@ -328,7 +328,7 @@ public class Command implements CommandComponent {
 
         @Override
         public java.lang.String prepare(CommandEnvironment environment) throws IOException {
-            FileObject file = environment.getAuxiliaryFile(key, ".input");
+            FileObject file = environment.getAuxiliaryFile(key, ".json");
             try (OutputStream out = file.getContent().getOutputStream();
                  OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
                 final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())

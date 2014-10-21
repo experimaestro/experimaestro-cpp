@@ -149,7 +149,7 @@ public class Manager {
 
         String digest = getDigest(json);
 
-        FileObject file = basedir.resolveFile(format("%s-%s", prefix, digest));
+        FileObject file = basedir.resolveFile(format("%s/%s", prefix, digest));
 
         file.createFolder();
 

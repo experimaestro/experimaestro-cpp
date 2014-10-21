@@ -113,7 +113,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             if (directory() != null) {
-                writer.format("cd \"%s\"%n", protect(directory(), QUOTED_SPECIAL));
+                writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
             }
 
             writer.format("%n#Checks that the locks are set%n");

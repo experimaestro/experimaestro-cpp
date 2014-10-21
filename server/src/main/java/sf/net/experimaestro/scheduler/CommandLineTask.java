@@ -179,7 +179,9 @@ public class CommandLineTask extends Job<JobData> {
             builder.redirectError(AbstractCommandBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
 
         builder.redirectInput(jobInput);
-        
+
+        builder.directory(locator.getFile().getParent());
+
         if (environment != null)
         	builder.environment(environment);
 
