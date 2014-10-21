@@ -23,8 +23,6 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.plan.ParseException;
-import sf.net.experimaestro.plan.PlanParser;
 import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
@@ -342,59 +340,6 @@ public abstract class Task {
         for (Entry<String, Value> entry : other.values.entrySet()) {
             values.put(entry.getKey(), entry.getValue().copy());
         }
-    }
-
-    /**
-     * Run an experimental plan
-     *
-     * FIXME: should belong to TaskFactory (and the copy() should also be removed)
-     * @param planString The plan string
-     * @param singlePlan If the plan should be composed of only one plan
-     * @param taskContext The context wh
-     * @throws ParseException
-     */
-    public ArrayList<Json> runPlan(String planString, boolean singlePlan, ScriptRunner runner, TaskContext taskContext) throws Exception {
-        PlanParser planParser = new PlanParser(new StringReader(planString));
-        sf.net.experimaestro.plan.Node plans = planParser.plan();
-        final Iterator<Map<String, sf.net.experimaestro.plan.Value>> iterator = plans.iterator();
-
-        ArrayList<Json> results = new ArrayList<>();
-
-        LOGGER.info("Plan is %s", plans.toString());
-        while (iterator.hasNext()) {
-            Map<String, sf.net.experimaestro.plan.Value> plan = iterator.next();
-            if (singlePlan && iterator.hasNext()) {
-                throw new ParseException("Plan has several parameter settings");
-            }
-
-            // Run a plan
-            LOGGER.info("Running plan: %s",
-                    Output.toString(" * ", plan.entrySet()));
-            // First, get a copy of the task
-            Task task = copy();
-
-            // Set the parameters
-            for (Entry<String, sf.net.experimaestro.plan.Value> kv : plan.entrySet()) {
-                final sf.net.experimaestro.plan.Value value = kv.getValue();
-                String text = value.getValue();
-                final DotName name = DotName.parse(kv.getKey());
-                if (value.isScript()) {
-                    if (runner == null)
-                        throw new XPMRuntimeException("Could not run the script [%s]", text);
-                    final Object result = runner.evaluate(text);
-                    if (result instanceof Json)
-                        task.setParameter(name, (Json)result);
-                    else
-                        task.setParameter(name, result.toString());
-                } else
-                    task.setParameter(name, text);
-            }
-
-            // and run
-            results.add(task.run(taskContext));
-        }
-
-        return results;
     }
 
  }

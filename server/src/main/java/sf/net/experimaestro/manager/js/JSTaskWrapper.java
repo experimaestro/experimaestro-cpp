@@ -76,12 +76,6 @@ public class JSTaskWrapper extends JSBaseObject {
         return new JSJson(task.run(xpm.newTaskContext().simulate(false)));
     }
 
-    @JSFunction(value = "run_plan", scope = true)
-    public Object runPlan(Context cx, Scriptable scope, String planString) throws Exception {
-        return wrap(task.runPlan(planString, false, new JSScriptRunner(scope), xpm.newTaskContext().simulate(true)));
-    }
-
-
     static NativeArray wrap(ArrayList<Json> result) {
         NativeArray array = new NativeArray(result.size());
         for (int index = 0; index < result.size(); index++)

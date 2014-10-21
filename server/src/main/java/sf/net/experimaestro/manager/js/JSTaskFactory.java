@@ -103,13 +103,6 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
         return newObject(cx, scope, JSPlan.class);
     }
 
-    @JSFunction("run_plan")
-    public List<Object> runPlan(String plan) throws Exception {
-        Task task = factory.create();
-        return JSTaskWrapper.wrap(task.runPlan(plan, false, new JSScriptRunner(this),
-                xpm.newTaskContext()));
-    }
-
     @JSFunction(value = "simulate", scope = true)
     public Object simulate(Context context, Scriptable scope, NativeObject parameters) throws Exception {
         final JSPlan plan = plan(context, scope, parameters);
