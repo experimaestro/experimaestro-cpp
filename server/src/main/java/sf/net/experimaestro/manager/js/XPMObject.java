@@ -33,6 +33,7 @@ import org.w3c.dom.Node;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
@@ -156,6 +157,11 @@ public class XPMObject {
      * Root logger
      */
     private Logger rootLogger;
+
+    /**
+     * Current experiment
+     */
+    private Experiment experiment;
 
 
 
@@ -920,7 +926,7 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger());
+        return new TaskContext(scheduler, experiment, currentResourceLocator, workdir.get(), getRootLogger(), false);
     }
 
     public void setLocator(ResourceLocator locator) {

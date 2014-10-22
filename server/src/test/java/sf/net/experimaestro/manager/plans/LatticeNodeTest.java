@@ -401,7 +401,7 @@ public class LatticeNodeTest {
 
             op.prepare();
             op.init();
-            final PlanContext pc = new PlanContext(new TaskContext(null, null, null, null));
+            final PlanContext pc = new PlanContext(new TaskContext(null, null, null, null, null, false));
 
             final Iterator<Value> iterator = op.iterator(pc);
             while (iterator.hasNext()) {

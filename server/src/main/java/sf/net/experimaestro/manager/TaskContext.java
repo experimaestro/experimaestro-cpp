@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -58,10 +59,10 @@ public class TaskContext {
      */
     private ResourceLocator locator;
 
-
-    public TaskContext(Scheduler scheduler, ResourceLocator locator, FileObject workingDirectory, Logger logger) {
-        this(scheduler, locator, workingDirectory, logger, false);
-    }
+    /**
+     * Associated experiment
+     */
+    private Experiment experiment;
 
     /**
      * Initialize a new task context
@@ -72,8 +73,9 @@ public class TaskContext {
      * @param logger           The logger
      * @param simulate         Whether to simulate
      */
-    public TaskContext(Scheduler scheduler, ResourceLocator locator, FileObject workingDirectory, Logger logger, boolean simulate) {
+    public TaskContext(Scheduler scheduler, Experiment experiment, ResourceLocator locator, FileObject workingDirectory, Logger logger, boolean simulate) {
         this.scheduler = scheduler;
+        this.experiment = experiment;
         this.locator = locator;
         this.workingDirectory = workingDirectory;
         this.logger = logger;
@@ -82,7 +84,7 @@ public class TaskContext {
 
     @Override
     public TaskContext clone() {
-        return new TaskContext(scheduler, locator, workingDirectory, logger, simulate);
+        return new TaskContext(scheduler, experiment, locator, workingDirectory, logger, simulate);
     }
 
     public boolean simulate() {

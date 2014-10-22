@@ -35,6 +35,8 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.experiments.Experiments;
+import sf.net.experimaestro.manager.experiments.Tasks;
 import sf.net.experimaestro.manager.json.JsonProxies;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -68,6 +70,7 @@ final public class Scheduler {
      * The file manager
      */
     private static FileSystemManager fsManager;
+
     static {
         try {
             fsManager = VFS.getManager();
@@ -76,6 +79,7 @@ final public class Scheduler {
             System.exit(-1);
         }
     }
+
     /**
      * Simple asynchronous executor service (used for asynchronous notification)
      */
@@ -113,6 +117,17 @@ final public class Scheduler {
      * All the resources
      */
     private Resources resources;
+
+    /**
+     * The experiments
+     */
+    private Experiments experiments;
+
+    /**
+     * The tasks within the experiments
+     */
+    private Tasks tasks;
+
     /**
      * All the connectors
      */
@@ -125,6 +140,7 @@ final public class Scheduler {
      * The database environement
      */
     private Environment dbEnvironment;
+
     private Timer resourceCheckTimer;
 
     /**
@@ -164,6 +180,9 @@ final public class Scheduler {
         // Initialise the stores
         dbStore = new EntityStore(dbEnvironment, "SchedulerStore", storeConfig);
         connectors = new Connectors(this, dbStore);
+
+        experiments = new Experiments(this, dbStore);
+        tasks = new Tasks(this, dbStore);
 
         // TODO: use bytecode enhancement to delete public default constructors and have better performance
         // See http://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/persist/model/ClassEnhancer.html
