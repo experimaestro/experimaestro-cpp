@@ -21,6 +21,7 @@ import requests
 # --- Set some variables
 
 logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
 
@@ -214,13 +215,15 @@ class Configuration():
                     if client.get("default", False) == "true":
                         if args.server is None:
                             args.server = name
+                            logging.debug("Default server is %s" % name)
                         else:
                             raise Exception("More than one client defined as default in configuration file")
                 if args.server is None:
                     raise Exception("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
                                     % (len(clients), ",".join(clients.keys())))
             else:
-                args.server = clients.keys()[0]
+                for name, client in clients:
+                    args.server = name
 
         self.client = clients.sub(args.server)
         self.remote = self.client.get("remote", False) in ["true", "True", "1"]
