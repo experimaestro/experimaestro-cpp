@@ -9,7 +9,6 @@ import java.util.Iterator;
  * A cleaner closes all the resources when finished
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 16/1/13
  */
 public class Cleaner implements AutoCloseable {
     final private static Logger LOGGER = Logger.getLogger();

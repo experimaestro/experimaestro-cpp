@@ -151,7 +151,7 @@ public class JSDirectTask extends JSAbstractTask {
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
 
-        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        @JSFunction(scope = true)
         public JSFileObject unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {

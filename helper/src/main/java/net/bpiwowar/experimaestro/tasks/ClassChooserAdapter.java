@@ -26,6 +26,11 @@ public class ClassChooserAdapter extends ReaderTypeAdapter {
                                 + aClass + " for )");
             }
 
+        for (ClassChooserInstance instance : annotation.instances()) {
+            types.put(instance.name(), instance.instance());
+        }
+
+
         // Using packages
         for (Class<?> zclass : annotation.classesOfPackage()) {
             Introspection.getClasses(

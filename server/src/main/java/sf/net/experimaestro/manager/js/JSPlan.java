@@ -204,7 +204,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
     private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
-        final Iterator<Json> iterator = plan.run(new PlanContext(xpm.newTaskContext().simulate(simulate)));
+        final Iterator<Json> iterator = plan.run(new PlanContext(xpm().newTaskContext().simulate(simulate)));
         ArrayList<Object> values = new ArrayList<>();
 
         while (iterator.hasNext()) {

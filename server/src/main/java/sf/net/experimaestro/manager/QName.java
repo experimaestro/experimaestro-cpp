@@ -38,6 +38,8 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class QName implements Comparable<QName> {
+    final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * Matches the following qualified name formats
      * <ul>
@@ -58,7 +60,6 @@ public class QName implements Comparable<QName> {
             throw e;
         }
     }
-    final static private Logger LOGGER = Logger.getLogger();
     /**
      * The URI
      */

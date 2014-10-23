@@ -30,19 +30,20 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.RootLogger;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.RhinoException;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.XPMCommandException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.XPMObject;
+import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -53,6 +54,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.regex.Pattern;
+
+import static java.lang.String.format;
 
 /**
  * Json RPC methods
@@ -330,45 +333,17 @@ public class JsonRPCMethods extends HttpServlet {
                               @RPCArgument(name = "debug", required = false) Integer debugPort) {
 
         final StringWriter errString = new StringWriter();
-        final PrintWriter err = new PrintWriter(errString);
-        XPMObject jsXPM;
+//        final PrintWriter err = new PrintWriter(errString);
 
         final Hierarchy loggerRepository = getScriptLogger();
 
+        // TODO: should be a one shot repository - ugly
+        Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
+        repositories.add(repository, 0);
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        RhinoDebugger debugger = null;
-        try (Cleaner cleaner = new Cleaner()) {
-
-
-            // --- Debugging via JSDT
-            // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
-            ContextFactory factory = new ContextFactory();
-
-            if (debugPort != null) {
-                debugger = new RhinoDebugger("transport=socket,suspend=y,address=" + debugPort);
-                debugger.start();
-                factory.addListener(debugger);
-            }
-            // --- End (Debugging via JSDT)
-
-            Context jsContext = factory.enterContext();
-
-            // Initialize the standard objects (Object, Function, etc.)
-            // This must be done before scripts can be executed. Returns
-            // a scope object that we use in later calls.
-            Scriptable scope = jsContext.initStandardObjects();
-
-
-            // TODO: should be a one shot repository - ugly
-            Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
-            repositories.add(repository, 0);
-
-            ScriptableObject.defineProperty(scope, "env", new JSGetEnv(environment), 0);
-            jsXPM = new XPMObject(null, jsContext, environment, scope, repositories,
-                    scheduler, loggerRepository, cleaner, null);
-
+        try (XPMContext jsXPM = new XPMContext(environment, repositories, scheduler, loggerRepository, debugPort)) {
             Object result = null;
             for (JSONArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
@@ -376,13 +351,10 @@ public class JsonRPCMethods extends HttpServlet {
                 final String filename = filePointer.get(0).toString();
 
                 ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
-                jsXPM.setLocator(locator);
-                LOGGER.info("Script locator is %s", locator);
-
                 if (isFile)
-                    result = jsContext.evaluateReader(scope, new FileReader(filename), filename, 1, null);
+                    result = jsXPM.evaluateReader(locator, new FileReader(filename), filename, 1, null);
                 else
-                    result = jsContext.evaluateString(scope, content, filename, 1, null);
+                    result = jsXPM.evaluateString(locator, content, filename, 1, null);
 
             }
 
@@ -402,23 +374,25 @@ public class JsonRPCMethods extends HttpServlet {
 
             LOGGER.printException(Level.INFO, wrapped);
 
-            err.println(wrapped.toString());
+            org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
+
+            logger.error(wrapped.toString());
 
             for (Throwable ee = e; ee != null; ee = ee.getCause()) {
                 if (ee instanceof ContextualException) {
                     ContextualException ce = (ContextualException) ee;
                     List<String> context = ce.getContext();
                     if (!context.isEmpty()) {
-                        err.format("%n[context]%n");
+                        logger.error("%n[context]%n");
                         for (String s : context) {
-                            err.format("%s%n", s);
+                            logger.error(format("%s%n", s));
                         }
                     }
                 }
             }
 
             if (wrapped instanceof NotImplementedException)
-                err.format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]);
+                logger.error(format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]));
 
             // Search for innermost rhino exception
             RhinoException rhinoException = null;
@@ -427,7 +401,7 @@ public class JsonRPCMethods extends HttpServlet {
                     rhinoException = (RhinoException) t;
 
             if (rhinoException != null)
-                err.append("\n" + rhinoException.getScriptStackTrace());
+                logger.error(rhinoException.getScriptStackTrace());
 
             // TODO: We should have something better
 //            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
@@ -435,19 +409,8 @@ public class JsonRPCMethods extends HttpServlet {
 //                e.printStackTrace(err);
 //            }
 
-            err.flush();
             throw new RuntimeException(errString.toString());
 
-        } finally {
-            // Stop debugger
-            if (debugger != null)
-                try {
-                    debugger.stop();
-                } catch (Exception e) {
-                    LOGGER.error(e);
-                }
-            // Exit context
-            Context.exit();
         }
     }
 

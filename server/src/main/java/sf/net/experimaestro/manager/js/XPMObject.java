@@ -85,22 +85,7 @@ public class XPMObject {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
-    /**
-     * The global functions
-     */
-    static final JSUtils.FunctionDefinition[] definitions = {
-            new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include_repository"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "script_file"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "path"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "value"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "file"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "format"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir"),
-    };
+
     final static private Logger LOGGER = Logger.getLogger();
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
     /**
@@ -114,7 +99,7 @@ public class XPMObject {
     /**
      * Our scope (global among javascripts)
      */
-    private final Scriptable scope;
+    final Scriptable scope;
     /**
      * The task scheduler
      */
@@ -173,6 +158,8 @@ public class XPMObject {
     private Logger rootLogger;
 
 
+
+
     /**
      * Initialise a new XPM object
      *
@@ -183,22 +170,22 @@ public class XPMObject {
      * @param repository             The task repository
      * @param scheduler              The job scheduler
      * @param loggerRepository       The logger for the script
-     * @param workdir
+     * @param workdir                The working directory or null if none
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    public XPMObject(ResourceLocator currentResourceLocator,
-                     Context context,
-                     Map<String, String> environment,
-                     Scriptable scope,
-                     Repository repository,
-                     Scheduler scheduler,
-                     Hierarchy loggerRepository,
-                     Cleaner cleaner,
-                     Holder<FileObject> workdir)
+    XPMObject(ResourceLocator currentResourceLocator,
+              Context context,
+              Map<String, String> environment,
+              Scriptable scope,
+              Repository repository,
+              Scheduler scheduler,
+              Hierarchy loggerRepository,
+              Cleaner cleaner,
+              Holder<FileObject> workdir)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentResourceLocator);
@@ -216,47 +203,9 @@ public class XPMObject {
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
 
-        // --- Tells E4X to preserve whitespaces
-        // XML.ignoreWhitespace=false
-
-        final Scriptable jsXML = (Scriptable) scope.get("XML", scope);
-        scope.put("ignoreWhitespace", jsXML, false);
-
-        // --- Define functions and classes
-
-        // Define the new classes (scans the package for implementations of ScriptableObject)
-        ArrayList<Class<?>> list = new ArrayList<>();
-
-        try {
-            final String packageName = getClass().getPackage().getName();
-            final String resourceName = packageName.replace('.', '/');
-            final Enumeration<URL> urls = XPMObject.class.getClassLoader().getResources(resourceName);
-            while (urls.hasMoreElements()) {
-                URL url = urls.nextElement();
-                Introspection.addClasses(
-                        aClass -> (ScriptableObject.class.isAssignableFrom(aClass)
-                                || JSConstructable.class.isAssignableFrom(aClass)
-                                || JSBaseObject.class.isAssignableFrom(aClass))
-                                && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0), list, packageName, -1, url);
-            }
-        } catch (IOException e) {
-            LOGGER.error(e, "While trying to grab resources");
-        }
-
-        // Add the classes to javascript
-        for (Class<?> aClass : list) {
-            JSBaseObject.defineClass(this, scope, (Class<? extends Scriptable>) aClass);
-        }
-
-        JSBaseObject.defineClass(this, scope, Command.class);
-        JSBaseObject.defineClass(this, scope, Constant.class);
-
-        // Add global functions
-        for (JSUtils.FunctionDefinition definition : definitions)
-            JSUtils.addFunction(scope, definition);
+        // --- Add new objects
 
         // Add functions from our Function object
-
         Map<String, ArrayList<Method>> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class).methods;
         final XPMFunctions xpmFunctions = new XPMFunctions(this);
         for (Map.Entry<String, ArrayList<Method>> entry : functionsMap.entrySet()) {
@@ -265,25 +214,16 @@ public class XPMObject {
             ScriptableObject.putProperty(scope, entry.getKey(), function);
         }
 
-        // --- Add new objects
-
-        // namespace
-        addNewObject(context, scope, "xp", "Namespace", new Object[]{"xp",
-                Manager.EXPERIMAESTRO_NS});
-
-        // xpm object
-        addNewObject(context, scope, "xpm", "XPM", new Object[]{});
-        ((JSXPM) get(scope, "xpm")).set(this);
-
-        // Adds a Pipe object
-        addNewObject(context, scope, "PIPE", "Pipe", new Object[]{});
-
         // tasks object
-        addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
+        XPMContext.addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
 
         // logger
-        addNewObject(context, scope, "logger", JSBaseObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
+        XPMContext.addNewObject(context, scope, "logger", JSBaseObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
 
+        // xpm object
+        XPMContext.addNewObject(context, scope, "xpm", "XPM", new Object[]{});
+
+        ((JSXPM) get(scope, "xpm")).set(this);
         // --- Get the default group from the environment
         if (environment.containsKey(DEFAULT_GROUP))
             defaultGroup = environment.get(DEFAULT_GROUP);
@@ -296,12 +236,7 @@ public class XPMObject {
         return ((JSXPM) scope.get("xpm", scope)).xpm;
     }
 
-    static private void addNewObject(Context cx, Scriptable scope,
-                                     final String objectName, final String className,
-                                     final Object[] params) {
-        ScriptableObject.defineProperty(scope, objectName,
-                cx.newObject(scope, className, params), 0);
-    }
+
 
     static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
                              Function funObj, boolean repositoryMode) throws Exception {
@@ -594,7 +529,8 @@ public class XPMObject {
     /**
      * Includes a repository
      *
-     * @param path The xpath, absolute or relative to the current evaluated script
+     * @param path           The xpath, absolute or relative to the current evaluated script
+     * @param repositoryMode If true, creates a new javascript scope that will be independant of this one
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
@@ -605,32 +541,36 @@ public class XPMObject {
     }
 
     /**
-     * Final method called for inclusion of a script
+     * Central method called for any script inclusion
      *
-     * @param scriptpath
+     * @param scriptLocator The path to the script
      * @param repositoryMode If true, runs in a separate environement
-     * @throws Exception
+     * @throws Exception if something goes wrong
      */
-    private XPMObject include(ResourceLocator scriptpath, boolean repositoryMode) throws Exception {
+    private XPMObject include(ResourceLocator scriptLocator, boolean repositoryMode) throws Exception {
 
-        try (InputStream inputStream = scriptpath.getFile().getContent().getInputStream()) {
+        try (InputStream inputStream = scriptLocator.getFile().getContent().getInputStream()) {
             Scriptable scriptScope = scope;
             XPMObject xpmObject = this;
             if (repositoryMode) {
                 // Run the script in a new environment
-                scriptScope = context.initStandardObjects();
+                scriptScope = XPMContext.newScope();
                 final TreeMap<String, String> newEnvironment = new TreeMap<>(environment);
-                xpmObject = clone(scriptpath, scriptScope, newEnvironment);
-
+                xpmObject = clone(scriptLocator, scriptScope, newEnvironment);
+                threadXPM.set(xpmObject);
             }
 
             // Avoid adding the protocol if this is a local file
-            final String sourceName = scriptpath.getConnector() == LocalhostConnector.getInstance()
-                    ? scriptpath.getPath() : scriptpath.toString();
+            final String sourceName = scriptLocator.getConnector() == LocalhostConnector.getInstance()
+                    ? scriptLocator.getPath() : scriptLocator.toString();
 
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
+        } catch(FileNotFoundException e) {
+            throw new XPMRhinoException("File not found: %s", scriptLocator.getFile());
+        } finally {
+            threadXPM.set(this);
         }
 
     }
@@ -1013,6 +953,12 @@ public class XPMObject {
 
     public Connector getConnector() {
         return currentResourceLocator.getConnector();
+    }
+
+    final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
+
+    public static XPMObject getThreadXPM() {
+        return threadXPM.get();
     }
 
     static public class Holder<T> {

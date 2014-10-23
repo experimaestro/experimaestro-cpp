@@ -185,7 +185,7 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     public Command.ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         if (connector == null) {
-            connector = xpm.getConnector().getMainConnector();
+            connector = xpm().getConnector().getMainConnector();
         }
         Writer writer = new OutputStreamWriter(bytes);
         final SingleHostConnector finalConnector = connector;

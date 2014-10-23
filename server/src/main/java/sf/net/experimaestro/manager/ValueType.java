@@ -32,6 +32,11 @@ import java.util.HashSet;
  * @date 13/9/12
  */
 public class ValueType extends Type {
+    final static private Logger LOGGER = Logger.getLogger();
+
+    // Set of all atomic types
+    public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
+
     static final public QName XP_STRING = registerAtomicType(Manager.EXPERIMAESTRO_NS, "string");
     static final public QName XP_REAL = registerAtomicType(Manager.EXPERIMAESTRO_NS, "real");
     static final public QName XP_INTEGER = registerAtomicType(Manager.EXPERIMAESTRO_NS, "integer");
@@ -39,9 +44,7 @@ public class ValueType extends Type {
     static final public QName XP_RESOURCE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "resource");
     public static final QName XP_FILE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "file");
     public static final QName XP_XML = registerAtomicType(Manager.EXPERIMAESTRO_NS, "xml");
-    final static private Logger LOGGER = Logger.getLogger();
-    // Set of all atomic types
-    public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
+
     public ValueType(QName type) {
         super(type);
     }
@@ -54,7 +57,7 @@ public class ValueType extends Type {
 
     /**
      * Wraps a value into an XML document
-     *
+     *app
      * @param string The value of the element
      * @param type   XML type of the element
      * @return An XML document representing the value

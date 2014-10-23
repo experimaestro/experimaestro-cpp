@@ -44,7 +44,8 @@ import static java.lang.String.format;
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
     final static private HashMap<Class<?>, ClassDescription> CLASS_DESCRIPTION = new HashMap<>();
-    protected XPMObject xpm;
+    private XPMObject xpm;
+
     private ClassDescription classDescription;
     private Scriptable prototype;
     private Scriptable parentScope;
@@ -63,6 +64,13 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      */
     public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
         return (T) cx.newObject(scope, getClassName(aClass), args);
+    }
+
+    /**
+     * Get the XPM object (thread)
+     */
+    final static XPMObject xpm() {
+        return XPMObject.getThreadXPM();
     }
 
     /**
@@ -211,14 +219,14 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      * @throws java.lang.reflect.InvocationTargetException
      * @throws InstantiationException
      */
-    public static void defineClass(XPMObject xpm, Scriptable scope, Class<?> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+    public static void defineClass(Scriptable scope, Class<?> aClass) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         if (Scriptable.class.isAssignableFrom(aClass)) {
             // If not a JSObject descendent, we handle this with standard JS procedure
             if (JSConstructable.class.isAssignableFrom(aClass)) {
                 // Use our own constructor
                 final String name = JSBaseObject.getClassName(aClass);
                 scope = ScriptableObject.getTopLevelScope(scope);
-                final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(xpm, scope, (Class<? extends Scriptable>) aClass);
+                final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(scope, (Class<? extends Scriptable>) aClass);
                 scope.put(name, scope, nativeJavaClass);
             } else {
                 ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
@@ -478,11 +486,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     }
 
     private static class MyNativeJavaClass extends NativeJavaClass {
-        private final XPMObject xpm;
-
-        public MyNativeJavaClass(XPMObject xpm, Scriptable scriptable, Class<? extends Scriptable> aClass) {
+        public MyNativeJavaClass(Scriptable scriptable, Class<? extends Scriptable> aClass) {
             super(scriptable, aClass);
-            this.xpm = xpm;
         }
 
         @Override
@@ -492,10 +497,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.constructors);
             Object object = constructorFunction.call(cx, scope, null, args);
 
-            // Sets xpm if the object is running
-            if (object instanceof JSBaseObject) {
-                ((JSBaseObject) object).xpm = xpm;
-            }
             return (Scriptable) object;
 
         }

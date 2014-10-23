@@ -55,7 +55,6 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
     public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                          Repository repository) throws ValueMismatchException {
         factory = new TaskFactoryJavascript(qname, scope, jsObject, repository);
-        this.xpm = XPMObject.getXPM(scope);
     }
 
     @JSFunction
@@ -79,12 +78,12 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
 
     @JSFunction("create")
     public JSTaskWrapper create() {
-        return new JSTaskWrapper(factory.create(), xpm);
+        return new JSTaskWrapper(factory.create(), xpm());
     }
 
     @JSFunction("commands")
     public Commands commands(JsonObject json) {
-        return factory.commands(xpm.getScheduler(), json, xpm._simulate);
+        return factory.commands(xpm().getScheduler(), json, xpm()._simulate);
     }
 
     @JSFunction(value = "run", scope = true)

@@ -19,6 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 
@@ -38,7 +39,7 @@ public class JSNamespaceBinder implements String2String {
         if (scope == null)
             return null;
 
-        final Object object = scope.get(id, scope);
+        Object object = ScriptableObject.getProperty(scope, id);
         if (object == Scriptable.NOT_FOUND)
             return null;
         return JSUtils.toString(object);

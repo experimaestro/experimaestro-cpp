@@ -196,13 +196,13 @@ public class JSFileObject extends JSBaseObject implements Wrapper {
     @JSFunction
     public PrintWriter output_stream() throws FileSystemException {
         final OutputStream output = file.getContent().getOutputStream();
-        final PrintWriter writer = new MyPrintWriter(xpm, output);
+        final PrintWriter writer = new MyPrintWriter(xpm(), output);
         return writer;
     }
 
     @JSFunction
     public BufferedReader input_stream() throws FileSystemException {
-        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm, file.getContent().getInputStream()));
+        final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm(), file.getContent().getInputStream()));
         return reader;
     }
 

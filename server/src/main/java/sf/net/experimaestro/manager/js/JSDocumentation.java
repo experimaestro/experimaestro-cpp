@@ -166,7 +166,7 @@ public class JSDocumentation {
 
         final Documentation.DefinitionList functions = new Documentation.DefinitionList();
 
-        for (JSUtils.FunctionDefinition d : XPMObject.definitions) {
+        for (JSUtils.FunctionDefinition d : XPMContext.definitions) {
             final Documentation.Text text = new Documentation.Text(d.getName());
             try {
                 final Method method = d.getClazz().getDeclaredMethod("js_" + d.getName(), d.getArguments());

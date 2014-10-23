@@ -177,7 +177,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     private Object doRun(boolean simulate, boolean details) throws XPathExpressionException {
-        PlanContext planContext = new PlanContext(xpm.newTaskContext().clone().simulate(simulate));
+        PlanContext planContext = new PlanContext(xpm().newTaskContext().clone().simulate(simulate));
         planContext.counts(details);
 
         ArrayList<JSJson> result = new ArrayList<>();

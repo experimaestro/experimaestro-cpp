@@ -39,6 +39,7 @@ import org.eclipse.jetty.util.security.Password;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repositories;
+import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.*;
@@ -86,6 +87,9 @@ public class ServerTask extends AbstractTask {
 
         File taskmanagerDirectory = new File(property);
         final Scheduler scheduler = new Scheduler(taskmanagerDirectory);
+
+        // Early initialization to detect errors
+        XPMContext.init();
 
         // Main repository
         final Repositories repositories = new Repositories(new ResourceLocator(XPMConnector.getInstance(), ""));

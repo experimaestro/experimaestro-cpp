@@ -23,8 +23,6 @@ import static java.lang.StrictMath.min;
 
 /**
  * Base class for javascript methods or constructors
- * <p/>
- * Created by bpiwowar on 10/9/14.
  */
 public abstract class GenericFunction implements Callable {
 
@@ -186,9 +184,6 @@ public abstract class GenericFunction implements Callable {
             final Object result = argmax.invoke(transformedArgs);
             if (result == null) return Undefined.instance;
 
-            if (result instanceof JSBaseObject && !(result instanceof XPMObject.JSXPM)) {
-                ((JSBaseObject) result).setXPM(XPMObject.getXPM(scope));
-            }
             return result;
         } catch (XPMRhinoException e) {
             throw e;
