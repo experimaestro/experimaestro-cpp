@@ -61,7 +61,7 @@ public class JsonResource implements Json {
     @Override
     public void write(Writer out) throws IOException {
         out.write(format("{ \"id\": \"%s\", \"$type\": \"%s\" }",
-                resource.getLocator().toString(),
+                resource.getPath().toString(),
                 ValueType.XP_RESOURCE.toString()
         ));
     }

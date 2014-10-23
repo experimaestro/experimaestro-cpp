@@ -18,12 +18,15 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.connectors.ComputationalRequirements;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
@@ -33,6 +36,7 @@ import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -48,30 +52,59 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent()
-public abstract class Job<Data extends JobData> extends Resource<Data> implements HeapElement<Job<? extends JobData>> {
+@Entity
+public abstract class Job extends Resource implements HeapElement<Job> {
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
+
     final static private Logger LOGGER = Logger.getLogger();
+
+    /** The connector  to execute the task */
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Connector connector;
+
+    /**
+     * The priority of the job (the higher, the more urgent)
+     */
+    int priority;
+
+    /**
+     * When was the job submitted (in case the priority is not enough)
+     */
+    long timestamp = System.currentTimeMillis();
+
+
+    /**
+     * Requirements (ignored for the moment)
+     */
+    transient ComputationalRequirements requirements;
+
     /**
      * When did the job start (0 if not started)
      */
     long startTimestamp;
+
     /**
      * When did the job stop (0 when it did not stop yet)
      */
     long endTimestamp;
+
     /**
      * Our job monitor (null when there is no attached process)
      */
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "process")
     XPMProcess process;
+
     /**
      * Number of unsatisfied jobs
      */
     int nbUnsatisfied = 0;
+
     /**
      * Number of holding jobs
      */
     int nbHolding = 0;
+
     /**
      * Negative value when not in the heap. It should
      * not be serialized since it is linked to a list of jobs
@@ -79,32 +112,49 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      */
     transient private int index = -1;
 
+    /** For serialization */
     protected Job() {
     }
-
 
     /**
      * Initialisation of a task
      * <p/>
      * The job is by default initialized as "WAITING": its state should be updated after
      * the initialization has finished
-     *
-     * @param scheduler The job scheduler
      */
-    public Job(Scheduler scheduler, Data data) {
-        super(scheduler, data);
-
+    public Job(Connector connector, Path path) {
+        super(path);
+        this.connector = connector;
         setState(ResourceState.WAITING);
     }
 
     private boolean isDone() {
         try {
-            return getMainConnector().resolveFile(getLocator().path + DONE_EXTENSION).exists();
+            return Files.exists(DONE_EXTENSION.transform(path));
         } catch (Exception e) {
-            LOGGER.error("Error while checking if " + getLocator() + DONE_EXTENSION + " exists");
+            LOGGER.error("Error while checking if " + getPath() + DONE_EXTENSION + " exists");
             return false;
         }
     }
+
+    /**
+     * Returns the connector associated to this resource
+     *
+     * @return a Connector object
+     */
+    final public Connector getConnector() {
+        return connector;
+    }
+
+    /**
+     * Returns the main connector associated with this resource
+     *
+     * @return a SingleHostConnector object
+     */
+    public final SingleHostConnector getMainConnector() {
+        return getConnector().getMainConnector();
+    }
+
 
     /**
      * Restart the job
@@ -119,7 +169,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
             // Update status
             updateStatus(false);
-            scheduler.store(this, true);
+            Scheduler.get().store(this, true);
         }
     }
 
@@ -131,20 +181,20 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      * @return the priority
      */
     final public int getPriority() {
-        return getData().priority;
+        return priority;
     }
 
     /**
-     * Task priority - the higher, the better
+     * TaskReference priority - the higher, the better
      *
      * @param priority the priority to set
      */
     final public void setPriority(int priority) {
-        getData().priority = priority;
+        this.priority = priority;
     }
 
     public long getTimestamp() {
-        return getData().timestamp;
+        return this.timestamp;
     }
 
     /**
@@ -156,24 +206,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      *                   return the process
      */
     abstract protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable;
-
-    /**
-     * Initialize the object when retrieved from database
-     *
-     * @param scheduler
-     * @throws DatabaseException
-     */
-    @Override
-    public boolean init(Scheduler scheduler) throws DatabaseException {
-        if (!super.init(scheduler))
-            return false;
-
-        if (process != null)
-            process.init(this);
-
-        return true;
-    }
-
 
     // ----- Heap part (do not touch) -----
 
@@ -201,8 +233,8 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
                 // Try to lock, otherwise wait
                 try {
-                    locks.add(getMainConnector().createLockFile(getLocator().path + LOCK_EXTENSION, false));
-                } catch (LockException e) {
+                    locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(path), false));
+                } catch (LockException | IOException e) {
                     LOGGER.info("Could not lock job [%s]", this);
                     synchronized (this) {
                         try {
@@ -235,14 +267,13 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     for (Dependency dependency : getDependencies()) {
                         try {
                             LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
-                            final Lock lock = dependency.lock(scheduler, null, pid);
+                            final Lock lock = dependency.lock(pid);
                             if (lock != null)
                                 locks.add(lock);
                             LOGGER.debug("Running preparation - locked dependencies [%s]", dependency);
                         } catch (LockException e) {
                             // Update & store this dependency
-                            Resource resource = scheduler.getResource(dependency.getFrom());
-                            resource.init(scheduler);
+                            Resource resource = dependency.getFrom();
                             e.addContext("While locking to run %s", resource);
                             throw e;
                         }
@@ -316,7 +347,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
 
                 // TODO: copy done & code to main connector if needed
 
-                LOGGER.info("Job [%s] has ended with code %d", this.getLocator(), eoj.code);
+                LOGGER.info("Job [%s] has ended with code %d", this.getPath(), eoj.code);
 
                 // Update state
                 setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
@@ -331,7 +362,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     for (Dependency dep : deps) {
                         dep.unactivate();
 
-                        scheduler.getResources().store(dep);
+                        Scheduler.get().store(dep);
                     }
                 } catch (RuntimeException e) {
                     LOGGER.error(e, "Error while unactivating dependencies");
@@ -437,13 +468,11 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
             info.put("dependencies", dependencies);
 
             for (Dependency dependency : getDependencies()) {
-
-                Resource resource = scheduler.getResource(dependency.getFrom());
-                resource.init(scheduler);
+                Resource resource = dependency.getFrom();
 
                 JSONObject dep = new JSONObject();
                 dependencies.add(dep);
-                dep.put("from", resource.getLocator().toString());
+                dep.put("from", resource.getPath().toString());
                 dep.put("fromId", resource.getId());
                 dep.put("status", dependency.toString());
             }
@@ -486,22 +515,17 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
                     nbUnsatisfied, nbHolding);
             for (Dependency dependency : getDependencies()) {
 
-                Resource resource = scheduler.getResource(dependency.getFrom());
-                resource.init(scheduler);
+                Resource resource = dependency.getFrom();
 
                 out.format(
                         "<li><a href=\"%s/resource/%d\">%s</a>: %s</li>",
                         config.detailURL,
                         resource.getId(),
-                        resource.getLocator(),
+                        resource.getPath(),
                         dependency);
             }
             out.println("</ul>");
         }
-    }
-
-    public Scheduler getScheduler() {
-        return scheduler;
     }
 
     @Override
@@ -514,7 +538,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         dependency.status = DependencyStatus.WAIT;
         nbUnsatisfied++;
         // FIXME: handle the case where a dependency is overwritten
-        final Dependency old = getDependencyMap().put(dependency.getFrom(), dependency);
+        final Dependency old = dependencies.put(dependency.getFrom(), dependency);
         if (old != null) {
             LOGGER.warn("Overwritten dependency: %s", dependency);
         }
@@ -526,11 +550,11 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         boolean changes = super.doUpdateStatus(store);
 
         // Check the done file
-        final FileObject doneFile = getMainConnector().resolveFile(getLocator().getPath() + DONE_EXTENSION);
-        if (doneFile.exists() && getState() != ResourceState.DONE) {
+        final Path doneFile = DONE_EXTENSION.transform(path);
+        if (Files.exists(doneFile) && getState() != ResourceState.DONE) {
             changes = true;
             if (this instanceof Job) {
-                ((Job) this).endTimestamp = doneFile.getContent().getLastModifiedTime();
+                this.endTimestamp = Files.getLastModifiedTime(doneFile).toMillis();
             }
             this.setState(ResourceState.DONE);
         }
@@ -542,7 +566,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
             int nbHolding = 0;
 
             for (Dependency dependency : getDependencies()) {
-                dependency.update(scheduler, null, store);
+                dependency.update(store);
                 if (!dependency.status.isOK()) {
                     nbUnsatisfied++;
                     if (dependency.status == DependencyStatus.HOLD)
@@ -598,7 +622,7 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
         return false;
     }
 
-    @Override
+    @PostRemove
     public void clean() {
         super.clean();
         LOGGER.info("Cleaning job %s", this);
@@ -613,23 +637,20 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
      * Remove a file linked to this job
      */
     private void removeJobFile(String extension) {
-        try (final FileObject doneFile = getMainConnector().resolveFile(getLocator().getPath() + extension)) {
-            if (doneFile.exists())
-                doneFile.delete();
-        } catch (FileSystemException e) {
-            LOGGER.info("Could not remove '%s' file: %s", extension, e);
-        }
+        removeJobFile(new FileNameTransformer("", extension));
     }
 
     /**
      * Remove a file linked to this job
      */
     private void removeJobFile(FileNameTransformer t) {
-        try (final FileObject file = t.transform(getMainConnector().resolveFile(getLocator().getPath()))) {
-            if (file.exists())
-                file.delete();
-        } catch (FileSystemException e) {
-            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getLocator(), t);
+        try {
+            final Path file = t.transform(path);
+            if (Files.exists(file)) {
+                Files.delete(file);
+            }
+        } catch (IOException e) {
+            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getPath(), t);
         }
     }
 
@@ -637,6 +658,6 @@ public abstract class Job<Data extends JobData> extends Resource<Data> implement
     @Override
     public ReadWriteDependency createDependency(Object object) {
         // TODO: assert object is nothing
-        return new ReadWriteDependency(getId());
+        return new ReadWriteDependency(this);
     }
 }

@@ -18,17 +18,19 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +43,9 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent(version = 1)
-public class CommandLineTask extends Job<JobData> {
+@DiscriminatorValue(Resource.COMMAND_LINE_JOB_TYPE)
+@Entity
+public class CommandLineTask extends Job {
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * The environment
@@ -56,10 +59,12 @@ public class CommandLineTask extends Job<JobData> {
      * Our command line launcher
      */
     Launcher launcher;
+
     /**
      * The command to execute
      */
     private Commands commands;
+
     /**
      * The input source, if any (path from the main from)
      */
@@ -80,19 +85,15 @@ public class CommandLineTask extends Job<JobData> {
      */
     private String jobErrorPath;
 
-    protected CommandLineTask() {
-    }
-
     /**
      * Constructs the commands line
      *
-     * @param scheduler The scheduler for this commands
      * @param commands  The commands with arguments
      */
-    public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
+    public CommandLineTask(Connector connector, Path path,
                            Commands commands, Map<String, String> environment, String workingDirectory) {
 
-        super(scheduler, new JobData(locator));
+        super(connector, path);
 
         launcher = new DefaultLauncher();
 
@@ -113,13 +114,11 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * New command line task
      *
-     * @param scheduler The scheduler
-     * @param locator   The resource locator
      * @param commands  The commands to run
      */
-    public CommandLineTask(Scheduler scheduler, ResourceLocator locator,
+    public CommandLineTask(Connector connector, Path path,
                            Commands commands) {
-        this(scheduler, locator, commands, null, null);
+        this(connector, path, commands, null, null);
     }
 
     /**
@@ -134,8 +133,7 @@ public class CommandLineTask extends Job<JobData> {
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
         SingleHostConnector connector = getConnector().getConnector(null);
 
-        ResourceLocator locator = getLocator();
-        final FileObject runFile = locator.resolve(connector, RUN_EXTENSION);
+        final Path runFile = RUN_EXTENSION.transform(path);
         LOGGER.info("Starting command with run file [%s]", runFile);
         XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(connector, runFile);
 
@@ -150,8 +148,8 @@ public class CommandLineTask extends Job<JobData> {
         AbstractProcessBuilder.Redirect jobInput = AbstractCommandBuilder.Redirect.INHERIT;
 
         if (jobInputString != null) {
-            FileObject inputFile = locator.resolve(connector, INPUT_EXTENSION);
-            final OutputStream outputStream = inputFile.getContent().getOutputStream();
+            Path inputFile = INPUT_EXTENSION.transform(path);
+            final OutputStream outputStream = Files.newOutputStream(inputFile);
             outputStream.write(jobInputString.getBytes());
             outputStream.close();
             jobInputPath = getMainConnector().resolve(inputFile);
@@ -163,17 +161,17 @@ public class CommandLineTask extends Job<JobData> {
         if (jobOutputPath != null)
             builder.redirectOutput(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobOutputPath)));
         else
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(locator.resolve(connector, OUT_EXTENSION)));
+            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(OUT_EXTENSION.transform(path)));
 
         // Redirect output & error streams into corresponding files
         if (jobErrorPath != null)
             builder.redirectError(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobErrorPath)));
         else
-            builder.redirectError(AbstractCommandBuilder.Redirect.to(locator.resolve(connector, ERR_EXTENSION)));
+            builder.redirectError(AbstractCommandBuilder.Redirect.to(ERR_EXTENSION.transform(path)));
 
         builder.redirectInput(jobInput);
 
-        builder.directory(locator.getFile().getParent());
+        builder.directory(path.getParent());
 
         if (environment != null)
             builder.environment(environment);
@@ -181,9 +179,9 @@ public class CommandLineTask extends Job<JobData> {
         // Add commands
         builder.commands(commands);
 
-        builder.exitCodeFile(locator.resolve(connector, CODE_EXTENSION));
-        builder.doneFile(locator.resolve(connector, DONE_EXTENSION));
-        builder.removeLock(locator.resolve(connector, LOCK_EXTENSION));
+        builder.exitCodeFile(CODE_EXTENSION.transform(path));
+        builder.doneFile(DONE_EXTENSION.transform(path));
+        builder.removeLock(LOCK_EXTENSION.transform(path));
 
         // Start
         return builder.start();
@@ -221,16 +219,16 @@ public class CommandLineTask extends Job<JobData> {
     /**
      * Sets the input to be a file
      */
-    public void setInput(FileObject fileObject) {
+    public void setInput(Path fileObject) {
         this.jobInputPath = fileObject.toString();
         this.jobInputString = null;
     }
 
-    public void setOutput(FileObject fileObject) {
+    public void setOutput(Path fileObject) {
         this.jobOutputPath = fileObject.toString();
     }
 
-    public void setError(FileObject fileObject) {
+    public void setError(Path fileObject) {
         this.jobErrorPath = fileObject.toString();
     }
 
@@ -239,10 +237,10 @@ public class CommandLineTask extends Job<JobData> {
     }
 
     @Override
-    public FileObject outputFile() throws FileSystemException {
+    public Path outputFile() throws FileSystemException {
         if (jobOutputPath != null) {
             return getMainConnector().resolveFile(jobOutputPath);
         }
-        return getLocator().resolve(getMainConnector(), OUT_EXTENSION);
+        return OUT_EXTENSION.transform(path);
     }
 }

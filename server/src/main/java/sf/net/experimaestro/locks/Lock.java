@@ -18,9 +18,10 @@
 
 package sf.net.experimaestro.locks;
 
-import com.sleepycat.je.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.scheduler.Scheduler;
+
+import javax.persistence.*;
 
 /**
  * A lock that can be removed.
@@ -30,21 +31,21 @@ import sf.net.experimaestro.scheduler.Scheduler;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public interface Lock extends AutoCloseable {
-    /**
-     * Dispose of the resource
-     */
-    void close();
+@Entity(name = "locks")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Table(name = "locks")
+public abstract class Lock implements AutoCloseable {
+    @Id
+    private long id;
+
+    @Override
+    abstract public void close() throws RuntimeException;
 
     /**
      * Change ownership
      *
      * @param pid The new owner PID
      */
-    void changeOwnership(String pid) throws LockException;
-
-    /**
-     * Initialize the lock when restored from database
-     */
-    void init(Scheduler scheduler) throws DatabaseException;
+    public abstract void changeOwnership(String pid) throws LockException;
 }
+

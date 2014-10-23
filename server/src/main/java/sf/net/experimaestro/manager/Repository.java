@@ -18,9 +18,9 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class Repository extends AbstractRepository {
     /**
      * Dependencies
      */
-    ArrayList<ResourceLocator> sources = new ArrayList<>();
+    ArrayList<Path> sources = new ArrayList<>();
     /**
      * The list of of input types
      */
@@ -55,7 +55,7 @@ public class Repository extends AbstractRepository {
      */
     private Map<QName, TaskFactory> factories = new TreeMap<>();
 
-    public Repository(ResourceLocator identifier) {
+    public Repository(Path identifier) {
         super(identifier);
     }
 

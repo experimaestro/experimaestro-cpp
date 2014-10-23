@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.FileSystemException;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -157,16 +157,16 @@ public class JSNode extends JSBaseObject implements Json {
     }
 
     @JSFunction(scope = true)
-    public JSFileObject path(Context cx, Scriptable scope) throws FileSystemException {
+    public JSPath path(Context cx, Scriptable scope) throws FileSystemException {
         XPMObject xpm = XPMObject.getXPMObject(scope);
-        return new JSFileObject(getAttribute(node, Manager.XP_PATH));
+        return new JSPath(getAttribute(node, Manager.XP_PATH));
 
     }
 
     @JSFunction(scope = true)
-    public JSFileObject path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
+    public JSPath path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
         NodeList nodeList = get_one_node(scope, xpath);
-        return new JSFileObject(getAttribute(nodeList.item(0), Manager.XP_PATH));
+        return new JSPath(getAttribute(nodeList.item(0), Manager.XP_PATH));
     }
 
     @JSFunction(scope = true)

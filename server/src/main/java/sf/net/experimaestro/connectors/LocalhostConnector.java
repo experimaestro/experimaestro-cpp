@@ -18,27 +18,20 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.provider.local.LocalFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.ResourceLocator;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URL;
+import java.nio.file.*;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -47,9 +40,8 @@ import static java.lang.String.format;
  * A local host connector provides access to the current machine
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date June 2012
  */
-@Persistent
+@Entity
 public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
@@ -59,13 +51,15 @@ public class LocalhostConnector extends SingleHostConnector {
         super("file://");
     }
 
+    @Override
+    public Path resolve(String path) {
+        return new File(path).toPath();
+    }
+
     public static LocalhostConnector getInstance() {
         return singleton;
     }
 
-    public static ResourceLocator getLocator(URI uri) {
-        return new ResourceLocator(singleton, uri.getPath());
-    }
 
     @Override
     public AbstractProcessBuilder processBuilder() {
@@ -74,16 +68,16 @@ public class LocalhostConnector extends SingleHostConnector {
 
     @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
-        return Scheduler.getVFSManager().resolveFile("file://").getFileSystem();
+        return FileSystems.getDefault();
     }
 
     @Override
-    protected boolean contains(FileSystem fileSystem) {
-        return fileSystem instanceof LocalFileSystem;
+    protected boolean contains(FileSystem fileSystem) throws FileSystemException {
+        return fileSystem.equals(getFileSystem());
     }
 
     @Override
-    public Lock createLockFile(String path, boolean wait) throws LockException {
+    public Lock createLockFile(Path path, boolean wait) throws LockException {
         return new FileLock(path, wait);
     }
 
@@ -93,25 +87,20 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
-        return new ProcessBuilder();
+    protected Path getTemporaryDirectory() throws FileSystemException {
+        return getFileSystem().getPath(TMPDIR);
     }
 
     @Override
-    protected FileObject getTemporaryDirectory() throws FileSystemException {
-        return getFileSystem().resolveFile(TMPDIR);
-    }
-
-    @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return new UnixScriptProcessBuilder(scriptFile, connector);
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws FileSystemException {
+        return new UnixScriptProcessBuilder(scriptFile, this);
     }
 
 
     /**
      * Wrapper for a local thread
      */
-    @Persistent
+    @Entity
     private static class LocalProcess extends XPMProcess {
         /**
          * The running process: if we have it, easier to monitor
@@ -131,7 +120,7 @@ public class LocalhostConnector extends SingleHostConnector {
         // Check on Windows:
         // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
-        public LocalProcess(Job<?> job, Process process, boolean detach) {
+        public LocalProcess(Job job, Process process, boolean detach) {
             super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job);
             this.process = process;
             if (!detach) {
@@ -157,7 +146,7 @@ public class LocalhostConnector extends SingleHostConnector {
             if (process != null)
                 return ProcessUtils.isRunning(process);
 
-            return singleton.resolveFile(job.getLocator().getPath() + Job.LOCK_EXTENSION).exists();
+            return super.isRunning();
         }
 
         @Override
@@ -239,11 +228,8 @@ public class LocalhostConnector extends SingleHostConnector {
      */
     static private class ProcessBuilder extends AbstractProcessBuilder {
 
-        static private File convert(FileObject file) throws FileSystemException {
-            URL url = file.getURL();
-            if (url.getProtocol().contentEquals("file"))
-                return new File(url.getPath());
-            throw new FileSystemException("Cannot convert file for redirection on localhost", file);
+        static private File convert(Path file) throws FileSystemException {
+            return file.toAbsolutePath().toFile();
         }
 
         static private java.lang.ProcessBuilder.Redirect convert(Redirect redirect) throws FileSystemException {

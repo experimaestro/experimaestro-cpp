@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager;
 
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
@@ -89,7 +89,7 @@ public class ValueType extends Type {
         return new JsonBoolean(value);
     }
 
-    static public Json wrap(FileObject value) {
+    static public Json wrap(Path value) {
         return wrapString(value.toString(), XP_FILE);
     }
 
@@ -103,8 +103,8 @@ public class ValueType extends Type {
         if (value instanceof Double)
             return wrap((Double) value);
 
-        if (value instanceof FileObject)
-            return wrap((FileObject) value);
+        if (value instanceof Path)
+            return wrap((Path) value);
 
         // Otherwise, wrap as a string
         return new JsonString(value.toString());

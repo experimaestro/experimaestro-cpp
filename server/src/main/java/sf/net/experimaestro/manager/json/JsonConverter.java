@@ -2,9 +2,9 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
-import com.sleepycat.persist.model.Persistent;
-import com.sleepycat.persist.model.PersistentProxy;
 
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -12,25 +12,24 @@ import java.io.StringWriter;
 /**
  * Serialization of Json with Berkeley DB JE
  */
-@Persistent
-public class JsonProxies implements PersistentProxy<Json> {
-    String jsonString;
+@Converter
+public class JsonConverter implements AttributeConverter<Json, String> {
 
     @Override
-    public void initializeProxy(Json json) {
+    public String convertToDatabaseColumn(Json json) {
         try {
             StringWriter writer = new StringWriter();
             json.write(writer);
             writer.close();
-            jsonString = writer.toString();
+            return writer.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Json convertProxy() {
-        final JsonReader jsonReader = new JsonReader(new StringReader(jsonString));
+    public Json convertToEntityAttribute(String dbData) {
+        final JsonReader jsonReader = new JsonReader(new StringReader(dbData));
 
         try {
             final Json json = readNext(jsonReader);
@@ -88,11 +87,5 @@ public class JsonProxies implements PersistentProxy<Json> {
         }
     }
 
-    @Persistent(proxyFor = JsonObject.class)
-    static public class JsonObjectProxy extends JsonProxies {
-    }
 
-    @Persistent(proxyFor = JsonReal.class)
-    static public class JsonRealProxy extends JsonProxies {
-    }
 }

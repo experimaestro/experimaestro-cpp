@@ -4,8 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.bpiwowar.experimaestro.tasks.AbstractTask;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -24,39 +26,37 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import static sf.net.experimaestro.scheduler.Scheduler.getVFSManager;
-
 /**
  *
  */
 public class JavaTasksIntrospection {
     public static final String META_INF_PATH = "META-INF/net.bpiwowar.experimaestro/tasks.json";
     final static Logger LOGGER = Logger.getLogger();
-    FileObject[] classpath;
+    Path[] classpath;
 
-    public JavaTasksIntrospection(FileObject[] classpath) {
+    public JavaTasksIntrospection(Path[] classpath) {
         this.classpath = classpath;
     }
 
     public static void addToRepository(Repository repository, Connector connector, String[] paths) throws ExperimaestroException, IOException {
-        FileObject[] classpath = Arrays.stream(paths).map(path -> {
+        Path[] classpath = Arrays.stream(paths).map(path -> {
             try {
                 return connector.getMainConnector().resolveFile(path);
             } catch (FileSystemException e) {
                 throw new XPMRuntimeException(e, "Could not resolve path %s", path);
             }
-        }).toArray(n -> new FileObject[n]);
+        }).toArray(n -> new Path[n]);
 
         final JavaTasksIntrospection javaTasksIntrospection = new JavaTasksIntrospection(classpath);
-        final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, getVFSManager(), JavaTasksIntrospection.class.getClassLoader());
+        final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, JavaTasksIntrospection.class.getClassLoader());
         javaTasksIntrospection.addToRepository(repository, classLoader, connector);
     }
 
-    private static void forEachClass(ClassInfoLoader cl, FileObject[] classpath, BiFunction<ClassInfo, Description, ?> f) throws IOException, ExperimaestroException {
+    private static void forEachClass(ClassInfoLoader cl, Path[] classpath, BiFunction<ClassInfo, Description, ?> f) throws IOException, ExperimaestroException {
 
-        for (FileObject base : classpath) {
-            final FileObject infoFile = base.resolveFile(META_INF_PATH);
-            if (!infoFile.exists()) {
+        for (Path base : classpath) {
+            final Path infoFile = base.resolve(META_INF_PATH);
+            if (!Files.exists(infoFile)) {
                 continue;
             }
 
@@ -66,7 +66,7 @@ public class JavaTasksIntrospection {
             try {
                 final Gson gson = new GsonBuilder()
                         .create();
-                final InputStreamReader reader = new InputStreamReader(infoFile.getContent().getInputStream());
+                final InputStreamReader reader = new InputStreamReader(Files.newInputStream(infoFile));
                 description = gson.fromJson(reader, collectionType);
             } catch (IllegalStateException e) {
                 throw new ExperimaestroException(e, "Could not read json file %s", infoFile)
@@ -95,7 +95,7 @@ public class JavaTasksIntrospection {
             // Get forEachClass directly
             if (description.classes != null) {
                 for (String name : description.classes) {
-                    final FileObject fileObject = base.resolveFile(name.replace('.', '/'));
+                    final Path fileObject = base.resolve(name.replace('.', '/'));
                     action.accept(new Introspection.ClassFile(fileObject, name));
                 }
             }

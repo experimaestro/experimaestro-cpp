@@ -26,6 +26,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.manager.experiments.Experiment;
+import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.CachedIterable;
@@ -37,14 +39,13 @@ import java.io.PrintStream;
 import java.util.*;
 
 /**
- * An operator
+ * Base class for all operators
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
  */
 public abstract class Operator {
     final static private Logger LOGGER = Logger.getLogger();
-    public PlanScope scope = new PlanScope();
+    public DynamicContext scope = new DynamicContext();
     /**
      * Size of the output (1 per default)
      */
@@ -213,10 +214,6 @@ public abstract class Operator {
         ancestors.add(this);
         for (Operator parent : getParents())
             parent.getAncestors(ancestors);
-    }
-
-    public Map<Resource, String> getDefaultLocks() {
-        return scope.defaultLocks;
     }
 
     public void setDefaultLocks(Map<Resource, String> defaultLocks) {
@@ -574,6 +571,52 @@ public abstract class Operator {
         ensureConnections(simplified);
     }
 
+    static public class AMap {
+
+    }
+
+    /**
+     * Get a simplified view of the plan
+     * @return A map for task operators
+     * @param experiment
+     */
+    public IdentityHashMap<TaskOperator, TaskReference> getTaskOperatorMap(Experiment experiment) {
+        IdentityHashMap<TaskOperator, TaskReference> map = new IdentityHashMap<>();
+        getTaskOperatorMap(experiment, map, null);
+        return map;
+    }
+
+    /**
+     * Recursion through the structure
+     *
+     * @see #getTaskOperatorMap(sf.net.experimaestro.manager.experiments.Experiment)
+     * @param experiment
+     * @param map The current map
+     * @param descendant The current descendant
+     */
+    private void getTaskOperatorMap(Experiment experiment, IdentityHashMap<TaskOperator, TaskReference> map, TaskReference descendant) {
+        if (this instanceof TaskOperator) {
+            TaskOperator task = (TaskOperator) this;
+            TaskReference reference  = map.get(task);
+
+            if (descendant != null) {
+                descendant.addParent(reference);
+            }
+
+            if (reference != null) {
+                // If we already were in the map, no need to go higher
+                return;
+            }
+
+            reference = new TaskReference(experiment, task.getPlan().getFactory().getId());
+            map.put(task, reference);
+            descendant = reference;
+        }
+
+        for(Operator parent: getParents()) {
+            parent.getTaskOperatorMap(experiment, map, descendant);
+        }
+    }
 
     // --- Simplify ---
 

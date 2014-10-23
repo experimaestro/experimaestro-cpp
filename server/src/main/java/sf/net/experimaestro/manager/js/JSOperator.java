@@ -22,7 +22,6 @@ import sf.net.experimaestro.manager.plans.Operator;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 10/3/13
  */
 public class JSOperator extends JSAbstractOperator {
     private final Operator operator;

@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.TaskContext;
+import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.utils.CachedIterable;
 
 import java.util.HashMap;
@@ -41,10 +42,12 @@ final public class PlanContext {
      * The static context
      */
     StaticContext staticContext;
+
     /**
      * The dynamic context
      */
-    PlanScope scope;
+    DynamicContext dynamicContext;
+
 
     private PlanContext(StaticContext staticContext) {
         this.staticContext = staticContext;
@@ -69,9 +72,9 @@ final public class PlanContext {
         return staticContext.taskContext.simulate();
     }
 
-    public PlanContext add(PlanScope scope) {
+    public PlanContext add(DynamicContext dynamicContext) {
         PlanContext options = new PlanContext(staticContext);
-        options.scope = scope.clone(scope);
+        options.dynamicContext = dynamicContext.clone(dynamicContext);
         return options;
     }
 
@@ -85,6 +88,14 @@ final public class PlanContext {
 
     public CachedIterable<Value> getCachedIterable(Object key) {
         return staticContext.cachedIterables.get(key);
+    }
+
+    public void setTaskOperatorMap(IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap) {
+        this.staticContext.taskOperatorMap = taskOperatorMap;
+    }
+
+    public void setTaskOperator(TaskOperator taskOperator) {
+        staticContext.taskContext.setTask(taskOperator == null ? null : staticContext.taskOperatorMap.get(taskOperator));
     }
 
     /**
@@ -103,6 +114,11 @@ final public class PlanContext {
          * Cached iterators
          */
         private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
+
+        /**
+         * The task operator map
+         */
+        private IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap = new IdentityHashMap<>();
 
         public StaticContext(TaskContext taskContext) {
             this.taskContext = taskContext;

@@ -25,22 +25,17 @@ import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
 import com.jcraft.jsch.agentproxy.USocketFactory;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.provider.sftp.IdentityRepositoryFactory;
-import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
-import org.apache.commons.vfs2.provider.sftp.SftpStreamProxy;
+import com.pastdev.jsch.DefaultSessionFactory;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystemException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 25/6/12
  */
-@Persistent
 public class SSHOptions extends ConnectorOptions {
     /**
      * Password - TODO: encrypt before storing
@@ -78,27 +73,28 @@ public class SSHOptions extends ConnectorOptions {
         }
     }
 
-    public FileSystemOptions getOptions() throws FileSystemException {
-        FileSystemOptions options = new FileSystemOptions();
-
-        final SftpFileSystemConfigBuilder builder = SftpFileSystemConfigBuilder.getInstance();
-
-        // Use root file system
-        builder.setUserDirIsRoot(options, false);
-
-        if (compression != null)
-            builder.setCompression(options, compression);
-
-        if (useSSHAgent)
-            builder.setIdentityRepositoryFactory(options, new AgentRepositoryFactory());
-        else
-            builder.setIdentityRepositoryFactory(options, null);
-
-
-        if (proxy != null)
-            proxy.configure(builder, options);
-
-        return options;
+    public Object getOptions() throws FileSystemException {
+//        DefaultSessionFactory factory = new DefaultSessionFactory();
+//
+//
+//        // Use root file system
+//        if (compression != null) {
+//            throw new NotImplementedException();
+//        }
+//
+//        if (useSSHAgent) {
+//            builder.setIdentityRepositoryFactory(options, new AgentRepositoryFactory());
+//        } else {
+//            builder.setIdentityRepositoryFactory(options, null);
+//        }
+//
+//
+//        if (proxy != null)
+//            proxy.configure(builder, options);
+//
+//        return options;
+        // TODO implement getOptions
+        throw new NotImplementedException();
     }
 
     public void setPassword(String password) {
@@ -110,14 +106,11 @@ public class SSHOptions extends ConnectorOptions {
     }
 
 
-    private static interface ProxyConfiguration {
-        void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException;
-    }
 
     /**
      * Use the SSH agent to connect
      */
-    private static class AgentRepositoryFactory implements IdentityRepositoryFactory {
+    private static class AgentRepositoryFactory implements IdentityRepositoryFactory, sf.net.experimaestro.connectors.AgentRepositoryFactory {
         @Override
         public IdentityRepository create(JSch jsch) {
             USocketFactory usf = null;
@@ -135,7 +128,10 @@ public class SSHOptions extends ConnectorOptions {
         }
     }
 
-    @Persistent
+    private static interface ProxyConfiguration {
+        void configure() throws FileSystemException;
+    }
+
     private static class NCProxyConfiguration implements ProxyConfiguration {
         String username;
         String hostname;
@@ -157,14 +153,16 @@ public class SSHOptions extends ConnectorOptions {
         }
 
         @Override
-        public void configure(SftpFileSystemConfigBuilder builder, FileSystemOptions opts) throws FileSystemException {
-            builder.setProxyType(opts, SftpFileSystemConfigBuilder.PROXY_STREAM);
-            builder.setProxyCommand(opts, SftpStreamProxy.NETCAT_COMMAND);
-            builder.setProxyUser(opts, username);
-            builder.setProxyHost(opts, hostname);
-            builder.setProxyPassword(opts, "");
-            builder.setProxyPort(opts, port);
-            builder.setProxyOptions(opts, sshOptions.getOptions());
+        public void configure() throws FileSystemException {
+            // TODO implement configure
+            throw new NotImplementedException();
+//            builder.setProxyType(opts, SftpFileSystemConfigBuilder.PROXY_STREAM);
+//            builder.setProxyCommand(opts, SftpStreamProxy.NETCAT_COMMAND);
+//            builder.setProxyUser(opts, username);
+//            builder.setProxyHost(opts, hostname);
+//            builder.setProxyPassword(opts, "");
+//            builder.setProxyPort(opts, port);
+//            builder.setProxyOptions(opts, sshOptions.getOptions());
         }
     }
 }

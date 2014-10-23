@@ -1,6 +1,7 @@
 package sf.net.experimaestro.utils.introspection;
 
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.io.BufferedInputStream;
@@ -77,8 +78,8 @@ public class ClassInfo implements AnnotatedElement {
         this.loaded = false;
     }
 
-    public ClassInfo(ClassInfoLoader classInfoLoader, FileObject file) throws IOException {
-        this(classInfoLoader, file.getContent().getInputStream());
+    public ClassInfo(ClassInfoLoader classInfoLoader, Path file) throws IOException {
+        this(classInfoLoader, Files.newInputStream(file));
     }
 
     /**

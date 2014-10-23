@@ -19,7 +19,7 @@
 package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.annotations.Expose;
@@ -428,8 +428,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
-            if (obj instanceof FileObject)
-                return new JSFileObject((FileObject) obj).setXPM(XPMObject.getXPM(scope));
+            if (obj instanceof Path)
+                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
             if (obj instanceof Node) {
                 return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
             }
@@ -461,8 +461,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof Node)
                 return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
 
-            if (obj instanceof FileObject) {
-                return new JSFileObject((FileObject) obj).setXPM(XPMObject.getXPM(scope));
+            if (obj instanceof Path) {
+                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
             }
 
             if (obj instanceof Resource)

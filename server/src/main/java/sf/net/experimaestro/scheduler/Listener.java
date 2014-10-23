@@ -19,8 +19,8 @@
 package sf.net.experimaestro.scheduler;
 
 /**
+ * Listen to messages
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/3/13
  */
 public interface Listener {
     void notify(Message message);

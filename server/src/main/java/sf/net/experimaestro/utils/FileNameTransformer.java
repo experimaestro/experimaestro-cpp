@@ -1,7 +1,7 @@
 package sf.net.experimaestro.utils;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 
 /**
  * Transforms the filename
@@ -15,8 +15,8 @@ final public class FileNameTransformer {
         this.suffix = suffix;
     }
 
-    public FileObject transform(FileObject file) throws FileSystemException {
-        final String baseName = prefix + file.getName().getBaseName() + suffix;
-        return file.getParent().resolveFile(baseName);
+    public Path transform(Path path) throws FileSystemException {
+        final String baseName = prefix + path.getName(-1).toString() + suffix;
+        return path.getParent().resolve(baseName);
     }
 }

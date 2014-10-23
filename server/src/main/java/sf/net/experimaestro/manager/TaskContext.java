@@ -19,19 +19,19 @@
 package sf.net.experimaestro.manager;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import sf.net.experimaestro.manager.experiments.Experiment;
+import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
 
 /**
- * The context for a running task
+ * The context when running a task
  *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @author B. Piwowarski
  */
 public class TaskContext {
     /**
@@ -45,7 +45,7 @@ public class TaskContext {
     /**
      * The working directory
      */
-    public FileObject workingDirectory;
+    public Path workingDirectory;
     /**
      * The scheduler
      */
@@ -55,9 +55,9 @@ public class TaskContext {
      */
     private boolean simulate;
     /**
-     * Resource locator
+     * Resource path
      */
-    private ResourceLocator locator;
+    private Path path;
 
     /**
      * Associated experiment
@@ -65,35 +65,29 @@ public class TaskContext {
     private Experiment experiment;
 
     /**
+     * The current task
+     */
+    private TaskReference task;
+
+    /**
      * Initialize a new task context
-     *
-     * @param scheduler        The scheduler
-     * @param locator          The resource locator
+     *  @param scheduler        The scheduler
+     * @param path          The resource path
      * @param workingDirectory The working directory
      * @param logger           The logger
      * @param simulate         Whether to simulate
      */
-    public TaskContext(Scheduler scheduler, Experiment experiment, ResourceLocator locator, FileObject workingDirectory, Logger logger, boolean simulate) {
+    public TaskContext(Scheduler scheduler, Experiment experiment, Path path, Path workingDirectory, Logger logger, boolean simulate) {
         this.scheduler = scheduler;
         this.experiment = experiment;
-        this.locator = locator;
+        this.path = path;
         this.workingDirectory = workingDirectory;
         this.logger = logger;
         this.simulate = simulate;
     }
 
-    @Override
-    public TaskContext clone() {
-        return new TaskContext(scheduler, experiment, locator, workingDirectory, logger, simulate);
-    }
-
     public boolean simulate() {
         return simulate;
-    }
-
-    public TaskContext defaultLocks(Map<Resource, String> defaultLocks) {
-        this.defaultLocks = defaultLocks;
-        return this;
     }
 
     public Map<Resource, String> defaultLocks() {
@@ -111,5 +105,13 @@ public class TaskContext {
 
     public Logger getLogger() {
         return logger;
+    }
+
+    public void setTask(TaskReference task) {
+        this.task = task;
+    }
+
+    public TaskReference getTaskReference() {
+        return task;
     }
 }

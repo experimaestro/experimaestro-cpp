@@ -26,11 +26,11 @@ import java.util.Comparator;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JobComparator implements Comparator<Job<? extends JobData>> {
+public class JobComparator implements Comparator<Job> {
     /**
      * A public instance
      */
-    public static final Comparator<Job<? extends JobData>> INSTANCE = new JobComparator();
+    public static final Comparator<Job> INSTANCE = new JobComparator();
 
     /**
      * Private since the public instance should be used in all cases

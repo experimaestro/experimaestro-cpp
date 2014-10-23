@@ -18,10 +18,6 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -29,7 +25,12 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.*;
 import java.io.*;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -44,31 +45,43 @@ import java.util.concurrent.TimeUnit;
  * </p>
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date June 2012
  */
-@Persistent
+@Entity
+@Table(name = "process")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The checker
      */
     protected transient ScheduledFuture<?> checker = null;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+
     /**
      * The job to notify when finished with this
      */
-    protected transient Job job;
+    @OneToOne(fetch= FetchType.LAZY, mappedBy = "process")
+    protected Job job;
+
     /**
      * Our process ID
      */
     String pid;
+
     /**
      * The host where this process is running (or give an access to the process, e.g. for OAR processes)
      */
-    transient SingleHostConnector connector;
-    String connectorId;
+    @ManyToOne
+    SingleHostConnector connector;
+
     /**
      * The associated locks to release when the process has ended
      */
+    @OneToMany
     private List<Lock> locks = null;
 
     /**
@@ -81,7 +94,6 @@ public abstract class XPMProcess {
         this.connector = connector;
         this.pid = pid;
         this.job = job;
-        this.connectorId = connector.getIdentifier();
     }
 
     /**
@@ -104,7 +116,7 @@ public abstract class XPMProcess {
      */
 
     protected void startWaitProcess() {
-        LOGGER.debug("XPM Process %s constructed", connectorId);
+        LOGGER.debug("XPM Process %s constructed", connector);
 
         // Set up the notification thread if needed
         if (job != null) {
@@ -138,18 +150,9 @@ public abstract class XPMProcess {
      * <p/>
      * The method also sets up a status checker at regular intervals.
      */
-    public void init(Job job) throws DatabaseException {
-        this.job = job;
-        final Scheduler scheduler = job.getScheduler();
-
+    public void init(Job job)  {
         // TODO: use connector & job dependent times for checking
-        checker = scheduler.schedule(this, 15, TimeUnit.SECONDS);
-
-        connector = (SingleHostConnector) scheduler.getConnector(connectorId);
-
-        // Init locks if needed
-        for (Lock lock : locks)
-            lock.init(scheduler);
+        checker = Scheduler.get().schedule(this, 15, TimeUnit.SECONDS);
     }
 
     @Override
@@ -226,8 +229,7 @@ public abstract class XPMProcess {
      */
     public boolean isRunning() throws Exception {
         // We have no process, check
-        return job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.LOCK_EXTENSION).exists();
-
+        return Files.exists(Job.LOCK_EXTENSION.transform(job.getPath()));
     }
 
     /**
@@ -236,14 +238,14 @@ public abstract class XPMProcess {
     public int exitValue() {
         // Check for done file
         try {
-            if (job.getLocator().resolve(connector, Resource.DONE_EXTENSION).exists())
+            if (Files.exists(Resource.DONE_EXTENSION.transform(job.getPath())))
                 return 0;
 
             // If the job is not done, check the ".code" file to get the error code
             // and otherwise return -1
-            final FileObject codeFile = job.getMainConnector().resolveFile(job.getLocator().getPath() + Job.CODE_EXTENSION);
-            if (codeFile.exists()) {
-                final InputStream stream = codeFile.getContent().getInputStream();
+            final Path codeFile = Resource.CODE_EXTENSION.transform(job.getPath());
+            if (Files.exists(codeFile)) {
+                final InputStream stream = Files.newInputStream(codeFile);
                 final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
                 String s = reader.readLine();
                 int code = s != null ? Integer.parseInt(s) : -1;
@@ -262,7 +264,7 @@ public abstract class XPMProcess {
     /**
      * Add a lock to release after this job has completed
      *
-     * @param lock
+     * @param lock The lock to add
      */
     public void addLock(Lock lock) {
         locks.add(lock);
@@ -275,8 +277,8 @@ public abstract class XPMProcess {
         if (!isRunning()) {
             // We are not running: send a message
             LOGGER.debug("End of job [%s]", job);
-            final FileObject file = job.getLocator().resolve(connector, Resource.CODE_EXTENSION);
-            final long time = file.exists() ? file.getContent().getLastModifiedTime() : -1;
+            final Path file = Resource.CODE_EXTENSION.transform(job.getPath());
+            final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
             job.notify(new EndOfJobMessage(exitValue(), time));
             dispose();
         }
@@ -318,7 +320,7 @@ public abstract class XPMProcess {
                     }
                     wait(1000);
 
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
 
                 }
             }

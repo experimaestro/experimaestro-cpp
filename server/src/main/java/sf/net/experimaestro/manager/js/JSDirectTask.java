@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -143,7 +143,7 @@ public class JSDirectTask extends JSAbstractTask {
         }
 
         @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
-        public JSFileObject unique_directory(Context cx, Scriptable scope, FileObject basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        public JSPath unique_directory(Context cx, Scriptable scope, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
@@ -152,12 +152,12 @@ public class JSDirectTask extends JSAbstractTask {
         }
 
         @JSFunction(scope = true)
-        public JSFileObject unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        public JSPath unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            FileObject basedir = resource.getLocator().getFile().getParent();
+            Path basedir = resource.getPath().getParent();
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
 

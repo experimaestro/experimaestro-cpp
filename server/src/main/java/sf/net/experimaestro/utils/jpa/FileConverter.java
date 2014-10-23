@@ -16,30 +16,22 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.utils.je;
+package sf.net.experimaestro.utils.jpa;
 
-import com.sleepycat.persist.model.Persistent;
-import com.sleepycat.persist.model.PersistentProxy;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.provider.sftp.SftpFileObject;
-import sf.net.experimaestro.scheduler.Scheduler;
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
+import java.io.File;
 
-@Persistent(proxyFor = SftpFileObject.class)
-public class SftpFileProxy implements PersistentProxy<SftpFileObject> {
-    String path;
 
+@Converter
+public class FileConverter implements AttributeConverter<File, String> {
     @Override
-    public void initializeProxy(SftpFileObject object) {
-        path = object.getPublicURIString();
+    public String convertToDatabaseColumn(File attribute) {
+      return  attribute.getAbsolutePath();
     }
 
     @Override
-    public SftpFileObject convertProxy() {
-        try {
-            return (SftpFileObject) Scheduler.getVFSManager().resolveFile(path);
-        } catch (FileSystemException e) {
-            throw new RuntimeException("Cannot resolve URI: " + path);
-        }
+    public File convertToEntityAttribute(String dbData) {
+        return  new File(dbData);
     }
-
 }

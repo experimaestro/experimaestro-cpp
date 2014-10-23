@@ -1,6 +1,5 @@
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.je.DatabaseException;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -17,13 +16,13 @@ import java.io.IOException;
 public class SchedulerRestartTest extends XPMEnvironment {
     @Test(description = "Run a job over restarts")
     public void test_running_job() throws
-            DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
+           IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
 
         int one_hour = 60 * 60 * 1000;
-        WaitingJob job = new WaitingJob(scheduler, counter, jobDirectory, "job", new WaitingJob.Action(one_hour, 0, 0));
+        WaitingJob job = new WaitingJob(counter, jobDirectory, "job", new WaitingJob.Action(one_hour, 0, 0));
         scheduler.store(job, false);
 
 

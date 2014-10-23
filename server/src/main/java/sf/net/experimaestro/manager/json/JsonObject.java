@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.manager.json;
 
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.FileSystemException;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
@@ -29,6 +29,7 @@ import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -108,11 +109,7 @@ public class JsonObject
                     // TODO: do those checks
                     case "directory":
                     case "file":
-                        try {
-                            return Scheduler.getVFSManager().resolveFile(value.get().toString());
-                        } catch (FileSystemException e) {
-                            throw new XPMRuntimeException(e);
-                        }
+                        return Paths.get(value.get().toString());
                     default:
                         throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
                 }

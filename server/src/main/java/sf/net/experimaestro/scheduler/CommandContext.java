@@ -1,20 +1,21 @@
 package sf.net.experimaestro.scheduler;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
 import static java.lang.String.format;
 
 /**
- * Created by bpiwowar on 26/9/14.
+ * The context of a command
  */
-public abstract class CommandEnvironment implements Closeable {
+public abstract class CommandContext implements Closeable {
     private final static Logger LOGGER = Logger.getLogger();
 
     /**
@@ -22,32 +23,32 @@ public abstract class CommandEnvironment implements Closeable {
      */
     protected final SingleHostConnector connector;
 
-    ArrayList<FileObject> files = new ArrayList<>();
+    ArrayList<Path> files = new ArrayList<>();
 
 
-    public CommandEnvironment(SingleHostConnector connector) {
+    public CommandContext(SingleHostConnector connector) {
         this.connector = connector;
     }
 
-    public String resolve(FileObject file) throws FileSystemException {
+    public String resolve(Path file) throws FileSystemException {
         return connector.resolve(file);
     }
 
-    abstract FileObject getAuxiliaryFile(String prefix, String suffix) throws FileSystemException;
+    abstract Path getAuxiliaryFile(String prefix, String suffix) throws IOException;
 
     abstract public String getWorkingDirectory() throws FileSystemException;
 
     /**
      * A temporary environment: all the auxiliary files will be deleted
      */
-    static public class Temporary extends CommandEnvironment {
+    static public class Temporary extends CommandContext {
         public Temporary(SingleHostConnector connector) {
             super(connector);
         }
 
         @Override
-        FileObject getAuxiliaryFile(String prefix, String suffix) throws FileSystemException {
-            final FileObject temporaryFile = connector.getTemporaryFile(prefix, suffix);
+        Path getAuxiliaryFile(String prefix, String suffix) throws IOException {
+            final Path temporaryFile = connector.getTemporaryFile(prefix, suffix);
             files.add(temporaryFile);
             return temporaryFile;
         }
@@ -59,9 +60,9 @@ public abstract class CommandEnvironment implements Closeable {
 
         @Override
         public void close() throws IOException {
-            for (FileObject file : files) {
+            for (Path file : files) {
                 try {
-                    file.delete();
+                    Files.delete(file);
                 } catch (IOException e) {
                     LOGGER.error(e, "Could not delete %s", file);
                 }
@@ -69,7 +70,7 @@ public abstract class CommandEnvironment implements Closeable {
         }
     }
 
-    static public class FolderEnvironment extends CommandEnvironment {
+    static public class FolderContext extends CommandContext {
         /**
          * The base name for generated files
          */
@@ -77,17 +78,17 @@ public abstract class CommandEnvironment implements Closeable {
         /**
          * The base folder for this process
          */
-        FileObject folder;
+        Path folder;
 
-        public FolderEnvironment(SingleHostConnector connector, FileObject basepath, String name) throws FileSystemException {
+        public FolderContext(SingleHostConnector connector, Path basepath, String name) throws FileSystemException {
             super(connector);
             this.folder = basepath;
             this.name = name;
         }
 
         @Override
-        FileObject getAuxiliaryFile(String prefix, String suffix) throws FileSystemException {
-            return folder.resolveFile(format("%s.%s%s", name, prefix, suffix));
+        Path getAuxiliaryFile(String prefix, String suffix) throws FileSystemException {
+            return folder.resolve(format("%s.%s%s", name, prefix, suffix));
         }
 
         @Override

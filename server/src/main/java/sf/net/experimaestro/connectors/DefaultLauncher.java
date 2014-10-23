@@ -18,24 +18,22 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 
 /**
  * A default launcher uses the SingleHostConnector process builders
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
 public class DefaultLauncher implements Launcher {
     @Override
     public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
-        return connector.processBuilder(connector);
+        return connector.processBuilder();
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return connector.scriptProcessBuilder(connector, scriptFile);
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws FileSystemException {
+        return connector.scriptProcessBuilder(scriptFile);
     }
 }

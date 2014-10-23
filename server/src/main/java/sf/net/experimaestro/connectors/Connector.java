@@ -18,13 +18,11 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Entity;
-import com.sleepycat.persist.model.PrimaryKey;
-import sf.net.experimaestro.scheduler.Scheduler;
-
+import javax.persistence.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -33,16 +31,17 @@ import java.net.URISyntaxException;
  * Connectors are stored in the database so that they can be used
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/6/12
  */
 @Entity
+@Table(name = "connector")
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Connector implements Comparable<Connector> {
     /**
      * Each connector has a unique integer ID
      */
-    @PrimaryKey
+    @Id()
     String identifier;
-
 
     public Connector(String identifier) {
         this.identifier = identifier;
@@ -63,6 +62,7 @@ public abstract class Connector implements Comparable<Connector> {
             case "ssh":
                 return new SSHConnector(uri, options);
             case "local":
+            case "file":
                 return new LocalhostConnector();
             default:
                 throw new IllegalArgumentException("Unknown connector scheme: " + uri.getScheme());
@@ -117,9 +117,5 @@ public abstract class Connector implements Comparable<Connector> {
         return new ConnectorDelegator(this);
     }
 
-    /**
-     * Initialize the connector after deserialization
-     */
-    public void init(Scheduler scheduler) throws DatabaseException {
-    }
+    public abstract Path resolve(String path) throws FileSystemException;
 }

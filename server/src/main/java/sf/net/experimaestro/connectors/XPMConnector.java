@@ -18,22 +18,19 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
+
 /**
- * A fake connector used for internal purposes. It is backed up by
- * the temporary Apache VFS file system
+ * A fake connector used for internal purposes.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/8/12
  */
-@Persistent
 public class XPMConnector extends SingleHostConnector {
     final private static XPMConnector SINGLETON = new XPMConnector();
     /**
@@ -43,6 +40,11 @@ public class XPMConnector extends SingleHostConnector {
 
     protected XPMConnector() {
         super(ID + "://");
+    }
+
+    @Override
+    public Path resolve(String path) {
+        return null;
     }
 
     public static XPMConnector getInstance() {
@@ -65,7 +67,7 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
-    public Lock createLockFile(String path, boolean wait) throws LockException {
+    public Lock createLockFile(Path path, boolean wait) throws LockException {
         throw new NotImplementedException();
     }
 
@@ -75,12 +77,12 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
-    protected FileObject getTemporaryDirectory() throws FileSystemException {
+    protected Path getTemporaryDirectory() throws FileSystemException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) {
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) {
         throw new NotImplementedException();
     }
 }

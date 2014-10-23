@@ -18,15 +18,16 @@
 
 package sf.net.experimaestro.connectors;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.io.Serializable;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 
 /**
  * sf.net.experimaestro.connectors
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public interface Launcher {
+public interface Launcher extends Serializable {
     /**
      * Creates and returns a new process builder
      *
@@ -37,5 +38,5 @@ public interface Launcher {
     /**
      * Returns a script process builder that can be run
      */
-    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException;
+    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws FileSystemException;
 }

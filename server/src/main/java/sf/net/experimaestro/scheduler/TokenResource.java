@@ -18,14 +18,13 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -36,8 +35,7 @@ import java.io.IOException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/11/12
  */
-@Persistent
-public class TokenResource extends Resource<ResourceData> {
+public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -56,13 +54,9 @@ public class TokenResource extends Resource<ResourceData> {
 
     /**
      * Creates a new token resource
-     *
-     * @param scheduler The scheduler this resource belongs to
-     * @param data      The resource data
-     * @param limit     The maximum number of tokens
-     */
-    public TokenResource(Scheduler scheduler, ResourceData data, int limit) {
-        super(scheduler, data);
+     *  @param data      The resource data
+     * @param limit     The maximum number of tokens*/
+    public TokenResource(Path data, int limit) {
         this.limit = limit;
         this.usedTokens = 0;
         setState(ResourceState.DONE);
@@ -95,7 +89,7 @@ public class TokenResource extends Resource<ResourceData> {
     synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
         LOGGER.debug("Updating token resource");
         int used = 0;
-        for (Dependency dependency : scheduler.getDependentResources(getId())) {
+        for (Dependency dependency : getDependentResources()) {
             if (dependency.hasLock()) {
                 LOGGER.debug("Dependency [%s] has lock", dependency);
                 used++;
@@ -104,8 +98,9 @@ public class TokenResource extends Resource<ResourceData> {
 
         if (used != this.usedTokens) {
             this.usedTokens = used;
-            if (store)
-                scheduler.store(this, true);
+            if (store) {
+                Scheduler.get().store(this, true);
+            }
             return true;
         }
 
@@ -115,7 +110,7 @@ public class TokenResource extends Resource<ResourceData> {
 
     @Override
     public TokenDependency createDependency(Object values) {
-        return new TokenDependency(this.getId());
+        return new TokenDependency(this);
     }
 
     /**
@@ -132,13 +127,12 @@ public class TokenResource extends Resource<ResourceData> {
     /**
      * A token dependency
      */
-    @Persistent
     static public class TokenDependency extends Dependency {
 
         protected TokenDependency() {
         }
 
-        public TokenDependency(long from) {
+        public TokenDependency(Resource from) {
             super(from);
         }
 
@@ -148,14 +142,14 @@ public class TokenResource extends Resource<ResourceData> {
         }
 
         @Override
-        protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
-            TokenResource token = (TokenResource) getFrom(scheduler, from);
+        protected DependencyStatus _accept() {
+            TokenResource token = (TokenResource) getFrom();
             return token.usedTokens < token.limit ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
         }
 
         @Override
-        protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
-            TokenResource token = (TokenResource) getFrom(scheduler, from);
+        protected Lock _lock(String pid) throws LockException {
+            TokenResource token = (TokenResource) getFrom();
             synchronized (token) {
                 if (token.usedTokens >= token.limit)
                     throw new LockException("All the tokens are already taken");
@@ -174,8 +168,7 @@ public class TokenResource extends Resource<ResourceData> {
      * released.
      * TODO: maybe ensure that we only unlock valid locks (using an ID)
      */
-    @Persistent
-    private static class TokenLock implements Lock {
+    private static class TokenLock extends Lock {
         private String pid;
         private String resourceId;
         transient private TokenResource resource;
@@ -202,10 +195,6 @@ public class TokenResource extends Resource<ResourceData> {
             this.pid = pid;
         }
 
-        @Override
-        public void init(Scheduler scheduler) throws DatabaseException {
-            this.resource = (TokenResource) scheduler.getResource(ResourceLocator.parse(resourceId));
-        }
     }
 
 }

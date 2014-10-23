@@ -1,6 +1,6 @@
 package sf.net.experimaestro.manager.js.object;
 
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
@@ -76,15 +76,15 @@ public class JSCommand extends JSBaseObject implements Wrapper {
         if (object == null)
             throw new IllegalArgumentException(String.format("Null argument in command line"));
 
-        if (object instanceof JSFileObject)
-            object = ((JSFileObject) object).getFile();
+        if (object instanceof JSPath)
+            object = ((JSPath) object).getPath();
 
-        if (object instanceof FileObject) {
+        if (object instanceof Path) {
             if (sb.length() > 0) {
                 command.add(sb.toString());
                 sb.delete(0, sb.length());
             }
-            command.add(new Command.Path((FileObject) object));
+            command.add(new Command.Path((Path) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
                 argumentWalkThrough(scope, sb, command, JSUtils.unwrap(child));

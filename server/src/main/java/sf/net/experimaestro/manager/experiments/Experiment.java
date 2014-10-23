@@ -1,37 +1,49 @@
 package sf.net.experimaestro.manager.experiments;
 
-import com.sleepycat.persist.model.Entity;
-import com.sleepycat.persist.model.PrimaryKey;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
+import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.jpa.PathConverter;
 
+import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * An experiment
  */
 @Entity
+@Exposed
 public class Experiment {
-    /** Experiment identifier */
-    @PrimaryKey
-    String identifier;
-
-    /** Working directory */
-    FileObject workingDirectory;
+    /** Experiment taskId */
+    @Id
+    long id;
 
     /** Tasks */
-    ArrayList<Task> tasks = new ArrayList<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+    Collection<TaskReference> tasks = new ArrayList<>();
+
+    /** Working directory */
+    @Convert(converter = PathConverter.class)
+    Path workingDirectory;
+
+    /** Timestamp */
+    private final long timestamp;
+
+    /** Identifier */
+    String identifier;
 
     /** Scheduler */
-    private Scheduler scheduler;
+    transient private Scheduler scheduler;
 
     /**
      * New task
-     * @param identifier The experiment identifier
+     * @param identifier The experiment taskId
      * @param workingDirectory The working directory for this experiment
      */
-    public Experiment(String identifier, FileObject workingDirectory) {
+    public Experiment(String identifier, long timestamp, Path workingDirectory) {
         this.identifier = identifier;
+        this.timestamp = timestamp;
         this.workingDirectory = workingDirectory;
     }
 

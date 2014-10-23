@@ -18,13 +18,18 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.*;
 import org.testng.annotations.Factory;
+import sf.net.experimaestro.utils.Streams;
 import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 /**
  * Runs the scripts contained in the directory "test/resources/js"
@@ -46,37 +51,20 @@ public class ScriptTest  {
      * @throws IOException
      */
     @Factory
-    public Object[] jsFactories() throws IOException {
-        XPMEnvironment environment = new XPMEnvironment();
+    public Object[] jsFactories() throws IOException, URISyntaxException {
+        final XPMEnvironment environment = new XPMEnvironment();
 
         final String testFile = System.getProperty(JS_TEST_FILE_KEY);
 
         // Get the JavaScript files
         final URL url = ScriptTest.class.getResource(JS_SCRIPT_PATH);
-        FileSystemManager fsManager = VFS.getManager();
-        FileObject dir = fsManager.resolveFile(url.toExternalForm());
-        FileObject[] files = dir.findFiles(new FileSelector() {
-            @Override
-            public boolean traverseDescendents(FileSelectInfo info)
-                    throws Exception {
-                return true;
-            }
+        Path dir = Paths.get(url.toURI());
 
-            @Override
-            public boolean includeFile(FileSelectInfo file) throws Exception {
-                String name = file.getFile().getName().getBaseName();
-                if (testFile != null)
-                    return name.equals(testFile);
-                return name.endsWith(".js") && !name.endsWith(".inc.js");
-            }
-        });
-
-        Object[] r = new Object[files.length];
-        for (int i = r.length; --i >= 0; )
-            r[i] = new JavaScriptChecker(environment, files[i]);
-
-        return r;
-
+        return Files.walk(dir)
+                .filter(path -> path.getFileName().toString().endsWith(".js")
+                        && !path.getFileName().toString().endsWith(".inc.js"))
+                .map(Streams.propagateFunction(path -> new JavaScriptChecker(environment, path)))
+                .toArray(n -> new JavaScriptChecker[n]);
     }
 
 

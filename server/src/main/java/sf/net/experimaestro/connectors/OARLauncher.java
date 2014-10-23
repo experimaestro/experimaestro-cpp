@@ -18,9 +18,8 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -41,7 +40,6 @@ import java.io.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
 public class OARLauncher implements Launcher {
     /**
      * Prefix for the PID of the job
@@ -94,7 +92,7 @@ public class OARLauncher implements Launcher {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws FileSystemException {
         return new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
     }
 
@@ -114,7 +112,7 @@ public class OARLauncher implements Launcher {
 
         @Override
         public XPMProcess start() throws LaunchException, IOException {
-            final String path = job.getLocator().getPath();
+            final String path = connector.resolve(job.getPath());
             final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
             String[] command = new String[]{oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run"};
@@ -147,7 +145,6 @@ public class OARLauncher implements Launcher {
     /**
      * An OAR process
      */
-    @Persistent
     static private class OARProcess extends XPMProcess {
         /**
          * Used for serialization

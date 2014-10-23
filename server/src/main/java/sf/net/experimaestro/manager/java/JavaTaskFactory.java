@@ -14,13 +14,14 @@ import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Task factory created from java reflection
+ * TaskReference factory created from java reflection
  */
 public class JavaTaskFactory extends TaskFactory {
     public static final String JVM_OPTIONS = "$jvm";
@@ -136,7 +137,7 @@ public class JavaTaskFactory extends TaskFactory {
     }
 
     @Override
-    public Commands commands(Scheduler scheduler, JsonObject json, boolean simulate) {
+    public Commands commands(JsonObject json, boolean simulate) {
         final Command command = new Command();
 
         Command classpath = new Command();
@@ -163,7 +164,7 @@ public class JavaTaskFactory extends TaskFactory {
         // Runner class name
         command.add(Runner.class.getName());
 
-        // Task class name
+        // TaskReference class name
         command.add(taskClassname);
 
         // Working directory
@@ -184,8 +185,8 @@ public class JavaTaskFactory extends TaskFactory {
                     if (o instanceof Resource) {
                         resource = (Resource) o;
                     } else {
-                        final ResourceLocator locator = ResourceLocator.parse(o.toString());
-                        resource = scheduler.getResource(locator);
+                        final java.nio.file.Path locator = Paths.get(o.toString());
+                        resource = Scheduler.get().getResource(locator);
                         if (resource == null) {
                             throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
                                     locator, getId());

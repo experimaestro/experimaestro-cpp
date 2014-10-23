@@ -18,7 +18,7 @@
 
 package sf.net.experimaestro.connectors;
 
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.FileSystemException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 

@@ -32,7 +32,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import static java.lang.String.format;
 
 /**
- * Task as implemented by a javascript object
+ * TaskReference as implemented by a javascript object
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -40,7 +40,7 @@ public class TaskJavascript extends JSAbstractTask {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-     * The Task object
+     * The TaskReference object
      */
     private NativeObject jsObject;
 

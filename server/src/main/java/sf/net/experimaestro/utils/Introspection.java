@@ -3,17 +3,15 @@
  */
 package sf.net.experimaestro.utils;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 import org.apache.log4j.Logger;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.jar.JarFile;
@@ -152,9 +150,9 @@ public class Introspection {
         }
     }
 
-    public static <T> Stream<? extends ClassFile> findClasses(final FileObject file, final int levels, final String packageName) throws FileSystemException {
+    public static <T> Stream<? extends ClassFile> findClasses(final Path file, final int levels, final String packageName) throws IOException {
         final String name = packageName.replace('.', '/');
-        return classesStream(file.resolveFile(name), levels, packageName);
+        return classesStream(file.resolve(name), levels, packageName);
     }
 
     /**
@@ -165,19 +163,16 @@ public class Introspection {
      * @param packageName The name of the package
      * @return
      */
-    private static Stream<? extends ClassFile> classesStream(final FileObject file, final int levels, final String packageName) throws FileSystemException {
-        if (file.getType().hasChildren()) {
+    private static Stream<? extends ClassFile> classesStream(final Path file, final int levels, final String packageName) throws IOException {
+        if (Files.isDirectory(file)) {
             if (levels <= 0) {
                 return Stream.empty();
             }
 
-            return Arrays.stream(file.getChildren()).flatMap(child -> {
-                try {
-                    return classesStream(child, levels - 1, packageName + "." + child.getName().getBaseName());
-                } catch (FileSystemException e) {
-                    throw new XPMRuntimeException();
-                }
-            });
+            for (Path child : Files.newDirectoryStream(file)) {
+                return classesStream(child, levels - 1, packageName + "." + child.getFileName().toString());
+            }
+
         }
 
         if (packageName.endsWith(CLASS)) {
@@ -228,10 +223,10 @@ public class Introspection {
     }
 
     static public class ClassFile {
-        public FileObject file;
+        public Path file;
         public String classname;
 
-        public ClassFile(FileObject file, String classname) {
+        public ClassFile(Path file, String classname) {
             this.file = file;
             this.classname = classname;
         }

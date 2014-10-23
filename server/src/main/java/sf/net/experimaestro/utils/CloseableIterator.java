@@ -20,12 +20,30 @@ package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
 import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.scheduler.Resource;
+
+import java.util.Iterator;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/1/13
  */
 public abstract class CloseableIterator<T> extends AbstractIterator<T> implements AutoCloseable {
+    static public CloseableIterator<Resource> of(final Iterator<Resource> iterator) {
+        return new CloseableIterator<Resource>() {
+            @Override
+            public void close() throws CloseException {
+            }
+
+            @Override
+            protected Resource computeNext() {
+                if (iterator.hasNext())
+                    return iterator.next();
+                return endOfData();
+            }
+        };
+    }
+
     @Override
     public abstract void close() throws CloseException;
 }

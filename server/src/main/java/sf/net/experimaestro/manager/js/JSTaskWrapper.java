@@ -19,41 +19,28 @@
 package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.JSUtils;
 
-import java.util.ArrayList;
-
 /**
- * A JS wrapper around a task
+ * A JavaScript wrapper around a task
  *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 6/3/13
+ * @author B. Piwowarski
  */
 @JSObjectDescription(name = "TaskWrapper")
 public class JSTaskWrapper extends JSBaseObject {
     private final Task task;
     private final XPMObject xpm;
 
-
     @JSFunction
     public JSTaskWrapper(Task task, XPMObject xpm) {
         this.task = task;
         this.xpm = xpm;
-    }
-
-    static NativeArray wrap(ArrayList<Json> result) {
-        NativeArray array = new NativeArray(result.size());
-        for (int index = 0; index < result.size(); index++)
-            array.put(index, array, new JSJson(result.get(index)));
-        return array;
     }
 
     @Override

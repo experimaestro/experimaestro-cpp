@@ -18,10 +18,9 @@
 
 package sf.net.experimaestro.server;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.FileType;
-import org.apache.commons.vfs2.VFS;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
@@ -31,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Paths;
 
 import static java.lang.String.format;
 
@@ -49,9 +49,13 @@ public class ContentServlet extends XPMServlet {
                 request.getRequestURI()));
 
         if (url != null) {
-            FileSystemManager fsManager = VFS.getManager();
-            FileObject file = fsManager.resolveFile(url.toExternalForm());
-            if (file.getType() == FileType.FOLDER) {
+            Path file;
+            try {
+                file = Paths.get(url.toURI());
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+            if (Files.isDirectory(file)) {
                 response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
                 response.setHeader("Location",
                         format("%sindex.html", request.getRequestURI()));

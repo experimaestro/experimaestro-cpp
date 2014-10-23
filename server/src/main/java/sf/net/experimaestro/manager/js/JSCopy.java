@@ -3,14 +3,12 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -22,8 +20,6 @@ import java.util.Map;
  * @date 26/4/13
  */
 public class JSCopy extends JSPlan {
-    private static final ResourceLocator ANONYMOUS_LOCATOR = new ResourceLocator(XPMConnector.getInstance(), "anonymous");
-
     private final Type outputType;
     private final Map<String, Input> inputs = new HashMap<>();
 
@@ -49,7 +45,7 @@ public class JSCopy extends JSPlan {
 
     private class AnonymousTaskFactory extends TaskFactory {
         public AnonymousTaskFactory() {
-            super(new Repository(ANONYMOUS_LOCATOR), outputType.qname(), "1.0", "");
+            super(new Repository(null), outputType.qname(), "1.0", "");
         }
 
         @Override

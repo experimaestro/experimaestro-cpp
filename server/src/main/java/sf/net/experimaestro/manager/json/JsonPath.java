@@ -1,7 +1,6 @@
 package sf.net.experimaestro.manager.json;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
@@ -10,22 +9,21 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
- * The default interface for JsonFileObject
+ * The default interface for JsonPath
  */
-@Persistent
-public class JsonFileObject implements Json {
-    FileObject fileObject;
+public class JsonPath implements Json {
+    Path path;
 
-    private JsonFileObject() {
+    private JsonPath() {
     }
 
-    public JsonFileObject(FileObject fileObject) {
-        this.fileObject = fileObject;
+    public JsonPath(Path path) {
+        this.path = path;
     }
 
     @Override
     public Json clone() {
-        return new JsonFileObject(fileObject);
+        return new JsonPath(path);
     }
 
     @Override
@@ -34,8 +32,8 @@ public class JsonFileObject implements Json {
     }
 
     @Override
-    public FileObject get() {
-        return fileObject;
+    public Path get() {
+        return path;
     }
 
     @Override
@@ -54,7 +52,7 @@ public class JsonFileObject implements Json {
             writer.write("null");
         } else {
             writer.write('"');
-            writer.write(JSONValue.escape(options.resolver.apply(fileObject)));
+            writer.write(JSONValue.escape(options.resolver.apply(path)));
             writer.write('"');
         }
     }

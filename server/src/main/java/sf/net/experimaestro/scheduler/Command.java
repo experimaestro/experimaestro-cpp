@@ -19,9 +19,9 @@
 package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.ImmutableSet;
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+
+import java.nio.file.Files;
+import java.nio.file.FileSystemException;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -44,7 +44,6 @@ import java.util.stream.Stream;
  *
  * @author B. Piwowarski
  */
-@Persistent
 @Exposed
 public class Command implements CommandComponent {
     public final static Logger LOGGER = Logger.getLogger();
@@ -121,15 +120,15 @@ public class Command implements CommandComponent {
         Arrays.asList(arguments).forEach(t -> {
             if (t instanceof CommandComponent) {
                 list.add((CommandComponent) t);
-            } else if (t instanceof FileObject) {
-                list.add(new Path((FileObject) t));
+            } else if (t instanceof Path) {
+                list.add(new Path((java.nio.file.Path) t));
             } else {
                 list.add(new String(t.toString()));
             }
         });
     }
 
-    public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+    public java.lang.String prepare(CommandContext environment) throws IOException {
         StringBuilder sb = new StringBuilder();
         for (CommandComponent component : list)
             sb.append(component.prepare(environment));
@@ -140,7 +139,6 @@ public class Command implements CommandComponent {
         return this.list;
     }
 
-    @Persistent
     public static class CommandOutput implements CommandComponent {
         /**
          * The output
@@ -158,12 +156,11 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws FileSystemException {
+        public java.lang.String prepare(CommandContext environment) throws FileSystemException {
             throw new NotImplementedException();
         }
     }
 
-    @Persistent
     public static class String implements CommandComponent {
         java.lang.String string;
 
@@ -175,7 +172,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) {
+        public java.lang.String prepare(CommandContext environment) {
             return string;
         }
 
@@ -185,37 +182,27 @@ public class Command implements CommandComponent {
         }
     }
 
-    @Persistent
     public static class Path implements CommandComponent {
-        /**
-         * An URI
-         */
-        private java.lang.String filename;
+        private java.nio.file.Path file;
 
         private Path() {
         }
 
-        public Path(FileObject file) {
-            filename = file.getName().getURI();
-        }
-
-        public Path(java.lang.String filename) {
-            this.filename = filename;
+        public Path(java.nio.file.Path file) {
+            this.file = file;
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws FileSystemException {
-            FileObject object = Scheduler.getVFSManager().resolveFile(filename);
-            return environment.resolve(object);
+        public java.lang.String prepare(CommandContext environment) throws FileSystemException {
+            return environment.resolve(file);
         }
 
         @Override
         public java.lang.String toString() {
-            return java.lang.String.format("<xp:path>%s</xp:path>", filename);
+            return java.lang.String.format("Path{%s}", file.toUri());
         }
     }
 
-    @Persistent
     @Exposed
     public static class ParameterFile implements CommandComponent {
         java.lang.String key;
@@ -230,9 +217,9 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
-            FileObject file = environment.getAuxiliaryFile(key, ".input");
-            OutputStream out = file.getContent().getOutputStream();
+        public java.lang.String prepare(CommandContext environment) throws IOException {
+            java.nio.file.Path file = environment.getAuxiliaryFile(key, ".input");
+            OutputStream out = Files.newOutputStream(file);
             out.write(content);
             out.close();
 
@@ -246,7 +233,6 @@ public class Command implements CommandComponent {
     }
 
 
-    @Persistent
     public static class WorkingDirectory implements CommandComponent {
         static final public WorkingDirectory INSTANCE = new WorkingDirectory();
 
@@ -254,7 +240,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+        public java.lang.String prepare(CommandContext environment) throws IOException {
             return environment.getWorkingDirectory();
         }
     }
@@ -262,7 +248,6 @@ public class Command implements CommandComponent {
     /**
      * A pipe
      */
-    @Persistent
     static public class Pipe implements CommandComponent {
         static private Pipe PIPE = new Pipe();
 
@@ -277,7 +262,6 @@ public class Command implements CommandComponent {
     /**
      * A sub-command whose output / input can be globally set
      */
-    @Persistent
     static public class SubCommand implements CommandComponent {
         /**
          * The commands
@@ -311,7 +295,6 @@ public class Command implements CommandComponent {
     }
 
 
-    @Persistent
     static public class JsonParameterFile implements CommandComponent {
         private java.lang.String key;
         private Json json;
@@ -325,9 +308,9 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
-            FileObject file = environment.getAuxiliaryFile(key, ".json");
-            try (OutputStream out = file.getContent().getOutputStream();
+        public java.lang.String prepare(CommandContext environment) throws IOException {
+            java.nio.file.Path file = environment.getAuxiliaryFile(key, ".json");
+            try (OutputStream out = Files.newOutputStream(file);
                  OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
                 final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
                         .ignore$(false)

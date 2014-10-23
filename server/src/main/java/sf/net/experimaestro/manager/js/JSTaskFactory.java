@@ -83,7 +83,7 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
 
     @JSFunction("commands")
     public Commands commands(JsonObject json) {
-        return factory.commands(xpm().getScheduler(), json, xpm()._simulate);
+        return factory.commands(json, xpm()._simulate);
     }
 
     @JSFunction(value = "run", scope = true)

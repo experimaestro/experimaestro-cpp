@@ -18,8 +18,8 @@
 
 package sf.net.experimaestro.connectors;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import sf.net.experimaestro.scheduler.Commands;
 
 import java.util.Map;
@@ -40,7 +40,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     /**
      * The script file
      */
-    protected FileObject scriptFile;
+    protected Path scriptFile;
     /**
      * Local path to the script file
      */
@@ -54,7 +54,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     private Commands commands;
 
-    public XPMScriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile, AbstractProcessBuilder processBuilder) throws FileSystemException {
+    public XPMScriptProcessBuilder(SingleHostConnector connector, Path scriptFile, AbstractProcessBuilder processBuilder) throws FileSystemException {
         this.connector = connector;
         this.scriptFile = scriptFile;
         this.path = connector.resolve(scriptFile);
@@ -72,9 +72,9 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
         return commands;
     }
 
-    public abstract void removeLock(FileObject lockFile) throws FileSystemException;
+    public abstract void removeLock(Path lockFile) throws FileSystemException;
 
-    public abstract void exitCodeFile(FileObject exitCodeFile) throws FileSystemException;
+    public abstract void exitCodeFile(Path exitCodeFile) throws FileSystemException;
 
-    public abstract void doneFile(FileObject doneFile) throws FileSystemException;
+    public abstract void doneFile(Path doneFile) throws FileSystemException;
 }

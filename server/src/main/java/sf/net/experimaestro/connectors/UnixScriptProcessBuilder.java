@@ -18,25 +18,28 @@
 
 package sf.net.experimaestro.connectors;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.CommandComponent;
-import sf.net.experimaestro.scheduler.CommandEnvironment;
+import sf.net.experimaestro.scheduler.CommandContext;
 import sf.net.experimaestro.scheduler.Commands;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Map;
 
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
 
 /**
+ * Script builder for UNIX systems (bash)
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/9/12
  */
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
@@ -56,11 +59,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      */
     private String donePath;
 
-    public UnixScriptProcessBuilder(FileObject file, SingleHostConnector connector) throws FileSystemException {
+    public UnixScriptProcessBuilder(Path file, SingleHostConnector connector) throws FileSystemException {
         super(connector, file, null);
     }
 
-    public UnixScriptProcessBuilder(FileObject scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws FileSystemException {
+    public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws FileSystemException {
         super(connector, scriptFile, processBuilder);
     }
 
@@ -68,8 +71,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      * XPMProcess one argument, adding backslash if necessary to protect special
      * characters.
      *
-     * @param string
-     * @return
+     * @param string The string to protect
+     * @return The protected string
      */
     static public String protect(String string, String special) {
         if (string.equals(""))
@@ -86,13 +89,13 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     final public XPMProcess start() throws LaunchException, IOException {
-        final FileObject runFile = connector.resolveFile(path);
-        final FileObject basepath = runFile.getParent();
-        final String baseName = runFile.getName().getBaseName();
+        final Path runFile = connector.resolveFile(path);
+        final Path basepath = runFile.getParent();
+        final String baseName = runFile.getName(-1).toString();
 
-        try (CommandEnvironment env = new CommandEnvironment.FolderEnvironment(connector, basepath, baseName)) {
+        try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
             // First generate the run file
-            PrintWriter writer = new PrintWriter(runFile.getContent().getOutputStream());
+            PrintWriter writer = new PrintWriter(Files.newOutputStream(runFile));
 
             writer.format("#!%s%n", shPath);
 
@@ -194,7 +197,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.close();
 
             // Set the file as executable
-            runFile.setExecutable(true, false);
+            Files.setPosixFilePermissions(runFile, PosixFilePermissions.fromString("rwxr-x---"));
 
             processBuilder.command(protect(path, SHELL_SPECIAL));
 
@@ -211,7 +214,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     }
 
-    private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
+    private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
         commands.reorder();
 
         for (Command command : commands) {
@@ -235,17 +238,17 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
 
     @Override
-    public void removeLock(FileObject lockFile) throws FileSystemException {
+    public void removeLock(Path lockFile) throws FileSystemException {
         lockFiles.add(protect(connector.resolve(lockFile), SHELL_SPECIAL));
     }
 
     @Override
-    public void exitCodeFile(FileObject exitCodeFile) throws FileSystemException {
+    public void exitCodeFile(Path exitCodeFile) throws FileSystemException {
         exitCodePath = connector.resolve(exitCodeFile);
     }
 
     @Override
-    public void doneFile(FileObject doneFile) throws FileSystemException {
+    public void doneFile(Path doneFile) throws FileSystemException {
         donePath = connector.resolve(doneFile);
     }
 }

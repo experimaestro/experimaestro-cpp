@@ -27,9 +27,9 @@ public interface CommandComponent {
      * @param environment Binds identifiers to file objects
      * @return A string representing the path to the file for this component, or null if this
      * command component has no direct string representation
-     * @throws org.apache.commons.vfs2.FileSystemException
+     * @throws java.nio.file.FileSystemException
      */
-    default String prepare(CommandEnvironment environment) throws IOException {
+    default String prepare(CommandContext environment) throws IOException {
         return null;
     }
 

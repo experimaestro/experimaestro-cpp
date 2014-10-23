@@ -1,7 +1,7 @@
 package sf.net.experimaestro.manager.json;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
@@ -21,7 +21,7 @@ public class JsonWriterOptions {
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
     public boolean ignoreNull = true;
-    Function<FileObject, String> resolver = f -> f.toString();
+    Function<Path, String> resolver = f -> f.toString();
 
     public JsonWriterOptions(Set<QName> ignore) {
         this.ignore = ignore;
@@ -46,7 +46,7 @@ public class JsonWriterOptions {
         return this;
     }
 
-    public JsonWriterOptions resolveFile(Function<FileObject, String> resolver) {
+    public JsonWriterOptions resolveFile(Function<Path, String> resolver) {
         this.resolver = resolver;
         return this;
     }

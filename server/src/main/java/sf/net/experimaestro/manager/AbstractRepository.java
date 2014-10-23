@@ -18,22 +18,21 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.scheduler.ResourceLocator;
+import java.nio.file.Path;
 
 /**
  * A repository for tasks, types and modules
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/6/12
  */
 abstract public class AbstractRepository {
 
     /**
      * Our repository identifier (i.e. the script identifier)
      */
-    ResourceLocator identifier;
+    Path identifier;
 
-    public AbstractRepository(ResourceLocator identifier) {
+    public AbstractRepository(Path identifier) {
         this.identifier = identifier;
     }
 

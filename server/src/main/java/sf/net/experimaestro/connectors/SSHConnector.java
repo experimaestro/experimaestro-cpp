@@ -22,22 +22,19 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.VFS;
-import org.apache.commons.vfs2.provider.sftp.SftpClientFactory;
-import org.apache.commons.vfs2.provider.sftp.SftpFileSystem;
+
+import java.nio.file.FileSystem;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,10 +49,12 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
 public class SSHConnector extends SingleHostConnector {
 
     static final int SSHD_DEFAULT_PORT = 22;
+
+    public String temporaryPath = "/tmp";
+
     /**
      * Port
      */
@@ -131,30 +130,8 @@ public class SSHConnector extends SingleHostConnector {
         return new SSHProcessBuilder();
     }
 
-    public Lock createLockFile(final String path, boolean wait) throws LockException {
-        try {
-            ChannelExec channel = newExecChannel();
-            LOGGER.info("Creating SSH lock [%s]", path);
-            channel.setCommand(String.format("%s \"%s\"", options.getLockFileCommand(), protect(path, "\"")));
-            channel.setInputStream(null);
-            channel.setErrStream(System.err, true);
-            channel.setOutputStream(System.out, true);
-            channel.connect();
-            while (!channel.isClosed()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    LOGGER.error(e);
-                }
-            }
-            channel.disconnect();
-        } catch (JSchException e) {
-            throw new LockException(e);
-        } catch (FileSystemException e) {
-            throw new LockException(e);
-        }
-
-        return new SSHLock(this, path);
+    public Lock createLockFile(final Path path, boolean wait) throws LockException {
+        return new FileLock(path, wait);
     }
 
     @Override
@@ -163,31 +140,27 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    protected FileObject getTemporaryDirectory() throws FileSystemException {
-        // FIXME: hardcoded value
-        return getFileSystem().resolveFile("/tmp");
+    protected Path getTemporaryDirectory() throws FileSystemException {
+        return getFileSystem().getPath(temporaryPath);
     }
 
     @Override
     public FileSystem doGetFileSystem() throws FileSystemException {
-        final FileSystem fileSystem = VFS.getManager()
-                .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
-        return fileSystem;
+
+//        final FileSystem fileSystem = VFS.getManager()
+//                .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
+//        return fileSystem;
+        throw new NotImplementedException();
     }
 
     @Override
     protected boolean contains(FileSystem fileSystem) throws FileSystemException {
-        if (fileSystem instanceof SftpFileSystem) {
-            SftpFileSystem sftpFS = (SftpFileSystem) fileSystem;
-            // FIXME: not really nice
-            return sftpFS.getRootURI().equals(getFileSystem().getRootURI());
-        }
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, FileObject scriptFile) throws FileSystemException {
-        return new UnixScriptProcessBuilder(scriptFile, connector);
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws FileSystemException {
+        return new UnixScriptProcessBuilder(scriptFile, this);
     }
 
     ChannelSftp newSftpChannel() throws JSchException, FileSystemException {
@@ -226,7 +199,6 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * An SSH process
      */
-    @Persistent
     public static class SSHProcess extends XPMProcess {
 
         transient private ChannelExec channel;
@@ -304,69 +276,20 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     /**
-     * A lock
-     */
-    @Persistent
-    static public class SSHLock implements Lock {
-        private String path;
-
-        private String connectorId;
-
-        transient private Connector connector;
-
-        private SSHLock() {
-        }
-
-        public SSHLock(Connector connector, String path) {
-            this.connector = connector;
-            this.connectorId = connector.getIdentifier();
-            this.path = path;
-        }
-
-        @Override
-        public void close() {
-            try {
-                ChannelSftp sftp = ((SSHConnector) connector.getMainConnector()).newSftpChannel();
-                LOGGER.info("Disposing of SSH lock [%s]", path);
-                sftp.connect();
-                sftp.chmod(644, path);
-                sftp.rm(path);
-                sftp.disconnect();
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public void changeOwnership(String pid) {
-        }
-
-        @Override
-        public void init(Scheduler scheduler) throws DatabaseException {
-            connector = scheduler.getConnector(connectorId);
-        }
-    }
-
-    /**
      * an SSH session
      */
     class SSHSession {
         public Session session;
-        public SftpFileSystem filesystem;
 
         SSHSession() throws JSchException, FileSystemException {
             init();
         }
 
         void init() throws JSchException, FileSystemException {
-            session = SftpClientFactory.createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
+//            session = createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
+            throw new NotImplementedException();
         }
 
-        SftpFileSystem getFileSystem() {
-            return filesystem;
-        }
     }
 
     public class SSHProcessBuilder extends AbstractProcessBuilder {

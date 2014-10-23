@@ -16,36 +16,35 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.manager.plans;
 
-import com.sleepycat.persist.model.Persistent;
-import sf.net.experimaestro.connectors.ComputationalRequirements;
+import sf.net.experimaestro.scheduler.Resource;
+
+import java.util.HashMap;
 
 /**
+ * Scope variables when iterating over operators
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
  */
-@Persistent
-public class JobData extends ResourceData {
-    /**
-     * The priority of the job (the higher, the more urgent)
-     */
-    int priority;
+class DynamicContext {
+    public HashMap<Resource, String> defaultLocks = null;
 
-    /**
-     * When was the job submitted (in case the priority is not enough)
-     */
-    long timestamp = System.currentTimeMillis();
-
-    /**
-     * Requirements
-     */
-    ComputationalRequirements requirements;
-
-    public JobData() {
+    @Override
+    protected DynamicContext clone() {
+        DynamicContext newScope = new DynamicContext();
+        newScope.defaultLocks = defaultLocks;
+        return newScope;
     }
 
-    public JobData(ResourceLocator locator) {
-        super(locator);
+    public DynamicContext clone(DynamicContext scope) {
+        DynamicContext newScope = scope.clone();
+
+        if (scope.defaultLocks != null) {
+            newScope.defaultLocks = scope.defaultLocks;
+        }
+
+
+        return newScope;
     }
 }

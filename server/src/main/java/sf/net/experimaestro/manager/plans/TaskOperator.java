@@ -27,6 +27,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.json.Json;
 
 import java.util.Iterator;
@@ -74,7 +75,7 @@ public class TaskOperator extends UnaryOperator {
     /**
      * Creates an iterator
      *
-     * @param planContext
+     * @param planContext The current context
      */
     @Override
     protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
@@ -100,7 +101,10 @@ public class TaskOperator extends UnaryOperator {
                 }
 
                 try {
-                    final Json result = task.run(planContext.getTaskContext());
+                    TaskContext taskContext = planContext.getTaskContext();
+                    planContext.setTaskOperator(TaskOperator.this);
+                    final Json result = task.run(taskContext);
+                    planContext.setTaskOperator(null);
                     return new ReturnValue(new DefaultContexts(value.context), result);
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new XPMRuntimeException(e);

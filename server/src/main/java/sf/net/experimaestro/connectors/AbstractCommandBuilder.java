@@ -1,7 +1,6 @@
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
 
@@ -27,7 +26,7 @@ public abstract class AbstractCommandBuilder {
     /**
      * Working directory
      */
-    FileObject directory;
+    Path directory;
 
     /**
      * Whether this process should be bound to the Java process
@@ -47,7 +46,7 @@ public abstract class AbstractCommandBuilder {
         this.environment = environment;
     }
 
-    public FileObject directory() {
+    public Path directory() {
         return directory;
     }
 
@@ -60,7 +59,7 @@ public abstract class AbstractCommandBuilder {
     }
 
 
-    public AbstractCommandBuilder directory(FileObject directory) {
+    public AbstractCommandBuilder directory(Path directory) {
         this.directory = directory;
         return this;
     }
@@ -105,11 +104,10 @@ public abstract class AbstractCommandBuilder {
     /**
      * Represents a process source of input or output
      */
-    @Persistent
     static public class Redirect {
         public static final Redirect PIPE = new Redirect(Type.PIPE, null);
         public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
-        private FileObject file;
+        private Path file;
         private String string;
         private Type type;
 
@@ -117,20 +115,20 @@ public abstract class AbstractCommandBuilder {
             this.type = Type.INHERIT;
         }
 
-        private Redirect(Type type, FileObject file) {
+        private Redirect(Type type, Path file) {
             this.type = type;
             this.file = file;
         }
 
-        static public Redirect from(FileObject file) {
+        static public Redirect from(Path file) {
             return new Redirect(Type.READ, file);
         }
 
-        static public Redirect append(FileObject file) {
+        static public Redirect append(Path file) {
             return new Redirect(Type.APPEND, file);
         }
 
-        static public Redirect to(FileObject file) {
+        static public Redirect to(Path file) {
             return new Redirect(Type.WRITE, file);
         }
 
@@ -138,7 +136,7 @@ public abstract class AbstractCommandBuilder {
             return type.isWriter();
         }
 
-        public FileObject file() {
+        public Path file() {
             return file;
         }
 

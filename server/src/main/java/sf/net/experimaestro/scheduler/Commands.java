@@ -1,11 +1,11 @@
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.utils.Graph;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -13,8 +13,7 @@ import java.util.function.Consumer;
  * A full command
  */
 @Exposed
-@Persistent
-public class Commands implements Iterable<Command> {
+public class Commands implements Iterable<Command>, Serializable {
     /**
      * The list of commands to be executed
      * <p/>

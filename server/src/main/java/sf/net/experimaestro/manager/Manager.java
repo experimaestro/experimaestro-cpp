@@ -19,7 +19,9 @@
 package sf.net.experimaestro.manager;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.vfs2.FileObject;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.XPMObject;
@@ -143,7 +145,7 @@ public class Manager {
 //        return document;
     }
 
-    static public FileObject uniqueDirectory(FileObject basedir, String prefix, QName id, Json jsonValues) throws IOException, NoSuchAlgorithmException {
+    static public Path uniqueDirectory(Path basedir, String prefix, QName id, Json jsonValues) throws IOException, NoSuchAlgorithmException {
 
         JsonObject json = new JsonObject();
         json.put("task", id.toString());
@@ -151,17 +153,17 @@ public class Manager {
 
         String digest = getDigest(json);
 
-        FileObject file = basedir.resolveFile(format("%s/%s", prefix, digest));
+        Path uniquePath = basedir.resolve(format("%s/%s", prefix, digest));
 
-        file.createFolder();
+        Files.createDirectories(uniquePath);
 
         // Create the signature
-        FileObject signature = file.resolveFile(XPMObject.XPM_SIGNATURE);
+        Path signature = uniquePath.resolve(XPMObject.XPM_SIGNATURE);
         String descriptor = getDescriptor(json);
 
-        if (!signature.exists()) {
+        if (!Files.exists(signature)) {
             // Write the signature in the
-            try (PrintWriter writer = new PrintWriter(signature.getContent().getOutputStream())) {
+            try (PrintWriter writer = new PrintWriter(Files.newOutputStream(signature))) {
                 writer.write(descriptor);
             }
         } else {
@@ -169,7 +171,7 @@ public class Manager {
             // @TODO more efficient comparison by avoiding to compute the whole signature
             char buffer[] = new char[1024];
             int offset = 0;
-            try (InputStreamReader reader = new InputStreamReader(signature.getContent().getInputStream())) {
+            try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(signature))) {
                 int read;
                 while ((read = reader.read(buffer)) > 0) {
                     if (offset + read > descriptor.length()) {
@@ -190,7 +192,7 @@ public class Manager {
             }
         }
 
-        return file;
+        return uniquePath;
     }
 
     public static String getDescriptor(Json json) throws IOException {

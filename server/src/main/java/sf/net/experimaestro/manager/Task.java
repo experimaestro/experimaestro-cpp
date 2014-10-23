@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * The abstract Task object
+ * The abstract TaskReference object
  */
 public abstract class Task {
     final static private Logger LOGGER = Logger.getLogger();
@@ -179,7 +179,8 @@ public abstract class Task {
         }
 
         // Do the real-run
-        return doRun(taskContext);
+        Json json = doRun(taskContext);
+        return json;
 
     }
 
@@ -303,7 +304,7 @@ public abstract class Task {
     /**
      * Returns a deep copy of this task
      *
-     * @return A new Task
+     * @return A new TaskReference
      */
     final public Task copy() {
         try {
@@ -320,7 +321,7 @@ public abstract class Task {
     }
 
     /**
-     * Initialise the Task from another one
+     * Initialise the TaskReference from another one
      * <p/>
      * This method is called right after object creation in {@link #copy()}
      *

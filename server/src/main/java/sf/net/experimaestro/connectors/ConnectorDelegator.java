@@ -18,17 +18,16 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.scheduler.Scheduler;
+
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * A connector delegator, for ease of use of connectors
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/6/12
  */
-@Persistent
 public class ConnectorDelegator extends Connector {
     /**
      * The real connector
@@ -44,7 +43,7 @@ public class ConnectorDelegator extends Connector {
         this.connector = connector;
     }
 
-    public void init(Scheduler scheduler) throws DatabaseException {
+    public void init(Scheduler scheduler) {
         connector = scheduler.getConnector(identifier);
     }
 
@@ -56,6 +55,11 @@ public class ConnectorDelegator extends Connector {
     @Override
     public SingleHostConnector getMainConnector() {
         return connector.getMainConnector();
+    }
+
+    @Override
+    public Path resolve(String path) throws FileSystemException {
+        return delegate().resolve(path);
     }
 
 }

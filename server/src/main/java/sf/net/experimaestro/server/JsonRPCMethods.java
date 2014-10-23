@@ -21,7 +21,6 @@ package sf.net.experimaestro.server;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multiset;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -39,7 +38,6 @@ import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.XPMCommandException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
@@ -47,11 +45,17 @@ import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -307,7 +311,7 @@ public class JsonRPCMethods extends HttpServlet {
             long rid = Long.parseLong(resourceId);
             resource = scheduler.getResource(rid);
         } catch (NumberFormatException e) {
-            resource = scheduler.getResource(ResourceLocator.parse(resourceId));
+            throw new RuntimeException(e);
         }
         return resource;
     }
@@ -338,7 +342,7 @@ public class JsonRPCMethods extends HttpServlet {
         final Hierarchy loggerRepository = getScriptLogger();
 
         // TODO: should be a one shot repository - ugly
-        Repositories repositories = new Repositories(new ResourceLocator(LocalhostConnector.getInstance(), ""));
+        Repositories repositories = new Repositories(new File("/").toPath());
         repositories.add(repository, 0);
 
         // Creates and enters a Context. The Context stores information
@@ -350,7 +354,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
 
-                ResourceLocator locator = new ResourceLocator(LocalhostConnector.getInstance(), isFile ? filename : "/");
+                Path locator = LocalhostConnector.getInstance().resolve(filename);
                 if (isFile)
                     result = jsXPM.evaluateReader(locator, new FileReader(filename), filename, 1, null);
                 else
@@ -506,7 +510,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = scheduler.getDependentResources(resource.getId());
+        final Collection<Dependency> deps = resource.getDependentResources();
 
         if (deps.isEmpty())
             return 0;
@@ -514,20 +518,19 @@ public class JsonRPCMethods extends HttpServlet {
         int nbUpdated = 0;
 
         for (Dependency dependency : deps) {
-            final long to = dependency.getTo();
+            final Resource to = dependency.getTo();
             LOGGER.info("Invalidating %s", to);
-            Resource child = scheduler.getResource(to);
 
-            invalidate(child);
+            invalidate(to);
 
-            final ResourceState state = child.getState();
+            final ResourceState state = to.getState();
             if (state == ResourceState.RUNNING)
-                ((Job) child).stop();
+                ((Job) to).stop();
             if (!state.isActive()) {
                 nbUpdated++;
                 // We invalidate grand-children if the child was done
-                if (state == ResourceState.DONE) invalidate(child);
-                ((Job) child).restart();
+                if (state == ResourceState.DONE) invalidate(to);
+                ((Job) to).restart();
             }
         }
         return nbUpdated;
@@ -582,10 +585,10 @@ public class JsonRPCMethods extends HttpServlet {
         boolean recursive = _recursive != null ? _recursive : false;
 
         int nbUpdated = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, states, true)) {
+        try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
             while (resources.hasNext()) {
                 Resource resource = resources.next();
-                if (scheduler.getResources().updateStatus(resource))
+                if (resource.updateStatus())
                     nbUpdated++;
             }
         }
@@ -596,13 +599,11 @@ public class JsonRPCMethods extends HttpServlet {
     /**
      * Remove resources specified with the given filter
      *
-     * @param group       The group of the resource (or none if no filter)
      * @param id          The URI of the resource to delete
      * @param statesNames The states of the resource to delete
      */
     @RPCMethod(name = "remove", help = "Remove jobs")
-    public int remove(@RPCArgument(name = "group", required = false) String group,
-                      @RPCArgument(name = "id", required = false) String id,
+    public int remove(@RPCArgument(name = "id", required = false) String id,
                       @RPCArgument(name = "regexp", required = false) Boolean _idIsRegexp,
                       @RPCArgument(name = "states", required = false) String[] statesNames,
                       @RPCArgument(name = "recursive", required = false) Boolean _recursive
@@ -619,19 +620,16 @@ public class JsonRPCMethods extends HttpServlet {
             if (resource == null)
                 throw new XPMCommandException("Job not found [%s]", id);
 
-            if (group != null && !resource.getGroup().startsWith(group))
-                throw new XPMCommandException("Resource [%s] group [%s] does not match [%s]",
-                        resource, resource.getGroup(), group);
 
             if (!states.contains(resource.getState()))
                 throw new XPMCommandException("Resource [%s] state [%s] not in [%s]",
                         resource, resource.getState(), states);
-            scheduler.delete(resource, recursive);
+            resource.delete(recursive);
             n = 1;
         } else {
-            // TODO order the tasks so that depencies are removed first
+            // TODO order the tasks so that dependencies are removed first
             HashSet<Resource> toRemove = new HashSet<>();
-            try (final CloseableIterator<Resource> resources = scheduler.getResources().entities(group, true, states, true)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     if (idPattern != null) {
@@ -648,7 +646,7 @@ public class JsonRPCMethods extends HttpServlet {
             }
 
             for (Resource resource : toRemove)
-                scheduler.delete(resource, recursive);
+                resource.delete(recursive);
 
         }
         return n;
@@ -662,7 +660,7 @@ public class JsonRPCMethods extends HttpServlet {
                 map.put("event", message.getType().toString());
                 if (message instanceof SimpleMessage) {
                     map.put("resource", ((SimpleMessage) message).getResource().getId());
-                    ResourceLocator locator = ((SimpleMessage) message).getResource().getLocator();
+                    Path locator = ((SimpleMessage) message).getResource().getPath();
                     if (locator != null)
                         map.put("locator", locator.toString());
                 }
@@ -712,7 +710,7 @@ public class JsonRPCMethods extends HttpServlet {
 
 
         int n = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, statesSet, false)) {
+        try (final CloseableIterator<Resource> resources = scheduler.resources(statesSet)) {
             while (resources.hasNext()) {
                 Resource resource = resources.next();
                 if (resource instanceof Job) {
@@ -728,7 +726,7 @@ public class JsonRPCMethods extends HttpServlet {
     public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
         int n = 0;
         for (Object id : JobIds) {
-            final Resource resource = scheduler.getResource(ResourceLocator.parse((String) id));
+            final Resource resource = scheduler.getResource(Paths.get(id.toString()));
             if (resource instanceof Job) {
                 if (((Job) resource).stop())
                     n++;
@@ -745,7 +743,7 @@ public class JsonRPCMethods extends HttpServlet {
     ) throws Exception {
 
         int nbUpdated = 0;
-        Resource resource = scheduler.getResource(ResourceLocator.parse(name));
+        Resource resource = scheduler.getResource(Paths.get(name));
         if (resource == null)
             throw new XPMRuntimeException("Job not found [%s]", name);
 
@@ -784,33 +782,20 @@ public class JsonRPCMethods extends HttpServlet {
         List<Map<String, String>> list = new ArrayList<>();
         boolean recursive = _recursive == null ? false : _recursive;
 
-        for (Multiset.Entry<String> x : scheduler.subgroups(group).entrySet()) {
-            Map<String, String> map = new HashMap<>();
-            String s = x.getElement();
-            map.put("type", "group");
-            map.put("name", s);
-//            map.put("count", Integer.toString(x.getCount()));
-            list.add(map);
-        }
 
-        try (final CloseableIterator<Resource> resources = scheduler.resources(group, recursive, set, true)) {
+        try (final CloseableIterator<Resource> resources = scheduler.resources(set)) {
             while (resources.hasNext()) {
                 Resource resource = resources.next();
                 Map<String, String> map = new HashMap<>();
                 map.put("type", resource.getClass().getCanonicalName());
                 map.put("state", resource.getState().toString());
-                map.put("name", resource.getLocator().toString());
+                map.put("name", resource.getPath().toString());
                 list.add(map);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return list;
-    }
-
-    private ResourceLocator toResourceLocator(Object depend) {
-        throw new NotImplementedException();
-//        return null;  //To change body of created methods use File | Settings | File Templates.
     }
 
     /**

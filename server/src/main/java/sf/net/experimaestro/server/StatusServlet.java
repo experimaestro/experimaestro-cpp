@@ -18,11 +18,9 @@
 
 package sf.net.experimaestro.server;
 
-import com.sleepycat.je.DatabaseException;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -35,6 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.EnumSet;
 
 /**
  * Gives the current task status
@@ -43,8 +42,11 @@ import java.util.ArrayList;
  */
 public class StatusServlet extends XPMServlet {
     public static final String RESOURCE_PATH = "/resource/";
+
     final static private Logger LOGGER = Logger.getLogger();
+
     private static final long serialVersionUID = 1L;
+
     private final Scheduler scheduler;
 
     public StatusServlet(ServerSettings serverSettings, Scheduler manager) {
@@ -81,16 +83,15 @@ public class StatusServlet extends XPMServlet {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
-                try (final CloseableIterator<Resource> resources = scheduler.resources(state, true)) {
+                try (final CloseableIterator<Resource> resources = scheduler.resources(EnumSet.of(state))) {
                     while (resources.hasNext()) {
                         Resource resource = resources.next();
                         if (resource.getState() == state) {
                             out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
                             try {
-                                ResourceLocator locator = resource.getLocator();
                                 out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
                                 out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                out.format("<a href=\"javascript:void(0)\">%s</a></li>", locator);
+                                out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getPath());
                             } catch (Throwable t) {
                                 out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                             }
@@ -122,24 +123,16 @@ public class StatusServlet extends XPMServlet {
             PrintWriter out = startHTMLResponse(response);
 
             Resource resource = scheduler.getResource(resourceId);
-            ResourceLocator locator = resource.getLocator();
-            header(out, String.format("Details of resource %s", locator));
-
-            try {
-                resource = scheduler.getResource(locator);
-            } catch (DatabaseException e) {
-                throw new IOException(e);
-            }
+            header(out, String.format("Details of resource %s", resource.getPath()));
 
             if (resource != null) {
                 PrintConfig config = new PrintConfig();
                 config.detailURL = request.getServletPath();
-                resource.init(scheduler);
                 out.format("<div class=\"resource\" name=\"%d\">%n", resourceId);
                 resource.printXML(out, config);
                 out.format("</div>");
             } else {
-                out.format("Could not retrieve resource <b>%s</b>", locator);
+                out.format("Could not retrieve resource <b>%s</b>", resource.getPath());
             }
 
             out.println("</body></html>");

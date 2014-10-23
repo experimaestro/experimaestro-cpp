@@ -6,32 +6,30 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.experiments.Experiment;
+import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSNamespaceContext;
+import sf.net.experimaestro.utils.Streams;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 8/3/13
  */
 public abstract class JSAbstractOperator extends JSBaseObject {
-    /**
-     * Get the associated operator
-     */
-    abstract Operator getOperator();
 
-//    @JSFunction(scope = true)
+    //    @JSFunction(scope = true)
 //    @JSHelp("Runs an XQuery against the input: each returned item is a new input")
 //    public JSAbstractOperator xpath(Context context, Scriptable scope, String xpath) throws XPathExpressionException {
 //        XPathFunction function = new XPathFunction(xpath, JSUtils.getNamespaceContext(scope));
@@ -39,6 +37,11 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 //        operator.addParent(this.getOperator());
 //        return new JSOperator(operator);
 //    }
+
+    /**
+     * Get the associated operator
+     */
+    abstract Operator getOperator();
 
     @JSFunction(scope = true)
     @JSHelp("Runs an XQuery against the input: each returned item is a new input")
@@ -48,7 +51,6 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         operator.addParent(this.getOperator());
         return new JSOperator(operator);
     }
-
 
     @JSFunction
     public JSOperator group_by(JSAbstractOperator... operators) {
@@ -113,7 +115,6 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return JSTasks.merge(cx, scope, outputType, allObjects);
     }
 
-
     @JSFunction("to_dot")
     public String toDot(boolean simplify) throws XPathExpressionException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -124,7 +125,6 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         operator.printDOT(ps);
         return baos.toString();
     }
-
 
     @JSFunction("to_dot")
     public String toDOT(boolean simplify, boolean initialize) throws XPathExpressionException {
@@ -148,7 +148,6 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         getOperator().setDefaultLocks(_empty);
     }
 
-
     private Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
         Operator operator = getOperator();
 
@@ -162,28 +161,37 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     @JSFunction
-    public Object run() throws XPathExpressionException {
+    public Object run() throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(false, false);
     }
 
     @JSFunction
-    public Object simulate() throws XPathExpressionException {
+    public Object simulate() throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(true, false);
     }
 
     @JSFunction
-    public Object simulate(boolean details) throws XPathExpressionException {
+    public Object simulate(boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(true, details);
     }
 
-    private Object doRun(boolean simulate, boolean details) throws XPathExpressionException {
-        PlanContext planContext = new PlanContext(xpm().newTaskContext().clone().simulate(simulate));
+    private Object doRun(boolean simulate, boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
+        PlanContext planContext = new PlanContext(xpm().newTaskContext().simulate(simulate));
         planContext.counts(details);
+
+        // If we have an experiment, get the task reference and store them
+        Experiment experiment = xpm().experiment;
+        if (experiment != null) {
+            Scheduler scheduler = xpm().getScheduler();
+            IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
+            map.values().forEach(Streams.propagate(scheduler::store));
+            planContext.setTaskOperatorMap(map);
+        }
+
 
         ArrayList<JSJson> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
-        PlanScope scope = new PlanScope();
         final Iterator<Value> nodes = operator.iterator(planContext);
         while (nodes.hasNext()) {
             result.add(new JSJson(nodes.next().getNodes()[0]));
@@ -199,5 +207,6 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 
         return new NativeArray(new Object[]{result, baos.toString()});
     }
+
 
 }

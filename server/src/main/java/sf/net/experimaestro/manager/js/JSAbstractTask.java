@@ -78,7 +78,7 @@ public abstract class JSAbstractTask extends Task {
 //        }
 //
 //        if (document.getDocumentElement() == null)
-//            throw new ExperimaestroRuntimeException("Task did not return a valid XML document (no root)");
+//            throw new ExperimaestroRuntimeException("TaskReference did not return a valid XML document (no root)");
 //        return document;
     }
 

@@ -18,8 +18,7 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
@@ -30,6 +29,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
@@ -42,8 +42,7 @@ import java.util.concurrent.TimeUnit;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 30/1/13
  */
-@Persistent
-public class WaitingJob extends Job<JobData> {
+public class WaitingJob extends Job {
     final static private Logger LOGGER = Logger.getLogger();
     private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -55,8 +54,20 @@ public class WaitingJob extends Job<JobData> {
     // id for debugging
     private String id;
 
+    /**
+     * Initialisation of a task
+     * <p/>
+     * The job is by default initialized as "WAITING": its state should be updated after
+     * the initialization has finished
+     *
+     * @param connector
+     * @param path
+     */
+    public WaitingJob(Connector connector, Path path) {
+        super(connector, path);
+    }
 
-    @Persistent
+
     static public class Action {
         // Duration before exiting
         long duration;
@@ -87,11 +98,11 @@ public class WaitingJob extends Job<JobData> {
     int currentIndex;
     transient Action current;
 
-    protected WaitingJob() {
+    public WaitingJob() {
     }
 
-    public WaitingJob(Scheduler scheduler, ThreadCount counter, File dir, String id, Action... actions) {
-        super(scheduler, new JobData(new ResourceLocator(LocalhostConnector.getInstance(), new File(dir, id).getAbsolutePath())));
+    public WaitingJob(ThreadCount counter, File dir, String id, Action... actions) {
+        super(LocalhostConnector.getInstance(), new File(dir, id).toPath());
         this.counter = counter;
         this.id = id;
         counter.add(actions.length);
@@ -110,10 +121,9 @@ public class WaitingJob extends Job<JobData> {
     }
 
 
-    @Override
-    public boolean init(Scheduler scheduler) throws DatabaseException {
+    public void init(Scheduler scheduler) {
+        // FIXME: does nothing now...
         current = currentIndex < actions.size() ? actions.get(currentIndex) : null;
-        return super.init(scheduler);
     }
 
     @Override
@@ -187,7 +197,6 @@ public class WaitingJob extends Job<JobData> {
     }
 
 
-    @Persistent
     static private class MyXPMProcess extends XPMProcess {
         private long timestamp;
         private transient ThreadCount counter;
@@ -198,7 +207,7 @@ public class WaitingJob extends Job<JobData> {
         }
 
         @Override
-        public void init(Job job) throws DatabaseException {
+        public void init(Job job) {
             LOGGER.debug("Initialized with job %s", job);
         }
 

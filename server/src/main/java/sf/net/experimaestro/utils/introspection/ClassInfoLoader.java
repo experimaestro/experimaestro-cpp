@@ -1,12 +1,13 @@
 package sf.net.experimaestro.utils.introspection;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.NameScope;
+import com.google.common.collect.ImmutableMap;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 
 /**
@@ -14,17 +15,20 @@ import java.util.HashMap;
  */
 public class ClassInfoLoader {
     final static private Logger LOGGER = Logger.getLogger();
+
     final ClassLoader classLoader;
-    private final FileObject[] classpath;
+
+    private final Path[] classpath;
+
     private final HashMap<String, ClassInfo> classes = new HashMap<>();
 
-    public ClassInfoLoader(FileObject[] classpath, FileSystemManager vfsManager, ClassLoader classLoader) throws FileSystemException {
+    public ClassInfoLoader(Path[] classpath, ClassLoader classLoader) throws IOException {
         this.classpath = classpath.clone();
         for (int i = 0; i < classpath.length; i++) {
-            if (vfsManager.canCreateFileSystem(this.classpath[i])) {
-                this.classpath[i] = vfsManager.createFileSystem(this.classpath[i]);
+            if (Files.isRegularFile(this.classpath[i])) {
+                this.classpath[i] = FileSystems.newFileSystem(this.classpath[i].toUri(), ImmutableMap.of(), null)
+                        .getPath("/");
             }
-
         }
         this.classLoader = classLoader;
     }
@@ -46,13 +50,13 @@ public class ClassInfoLoader {
     InputStream getStream(String name) {
         final String path = name.replace(".", "/") + ".class";
 
-        for (FileObject basepath : classpath) {
+        for (Path basepath : classpath) {
             try {
-                FileObject file = basepath.resolveFile(path, NameScope.DESCENDENT_OR_SELF);
-                if (file.exists()) {
-                    return file.getContent().getInputStream();
+                Path file = basepath.resolve(path);
+                if (Files.exists(file)) {
+                    return Files.newInputStream(file);
                 }
-            } catch (FileSystemException e) {
+            } catch (IOException e) {
                 LOGGER.warn(e, "I/O error while trying to retrieve path %s", path);
             }
         }

@@ -18,9 +18,13 @@
 
 package sf.net.experimaestro.scheduler;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
+
+import org.hsqldb.persist.LockFile;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -28,28 +32,23 @@ import sf.net.experimaestro.utils.log.Logger;
  * A dependency type where the resource can accessed by just one
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
  */
 public class ExclusiveDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 
-    protected ExclusiveDependency() {
+    protected ExclusiveDependency() {}
 
-    }
-
-    public ExclusiveDependency(long from) {
+    public ExclusiveDependency(Resource from) {
         super(from);
     }
 
-
     @Override
-    synchronized protected DependencyStatus _accept(Scheduler scheduler, Resource from) {
-        Resource resource = getFrom(scheduler, from);
-        resource.init(scheduler);
-        final FileObject file;
+    synchronized protected DependencyStatus _accept() {
+        Resource from = getFrom();
+        final Path file;
         try {
-            file = resource.getFileWithExtension(Resource.LOCK_EXTENSION);
-            return file.exists() ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
+            file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
+            return Files.exists(file) ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
         } catch (FileSystemException e) {
             LOGGER.error(e, "Error while checking the presence of lock file for [%s]", from);
             return DependencyStatus.ERROR;
@@ -59,11 +58,11 @@ public class ExclusiveDependency extends Dependency {
     }
 
     @Override
-    synchronized protected Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException {
-        Resource resource = getFrom(scheduler, from);
+    synchronized protected Lock _lock(String pid) throws LockException {
+        Resource from = getFrom();
         try {
-            FileObject file = resource.getFileWithExtension(Resource.LOCK_EXTENSION);
-            final Lock lockFile = resource.getMainConnector().createLockFile(file.getName().getPath(), true);
+            Path file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
+            final Lock lockFile = new FileLock(file, true);
             return lockFile;
         } catch (FileSystemException e) {
             throw new LockException(e);

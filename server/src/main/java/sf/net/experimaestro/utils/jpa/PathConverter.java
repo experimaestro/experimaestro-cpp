@@ -1,6 +1,6 @@
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2013 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,22 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils.jpa;
 
-/**
- * An action to be performed on each resource
- *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
- */
-public interface ResourceAction {
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+@Converter(autoApply = true)
+public class PathConverter implements AttributeConverter<Path, String> {
+    @Override
+    public String convertToDatabaseColumn(Path attribute) {
+      return attribute.toUri().toString();
+    }
+
+    @Override
+    public Path convertToEntityAttribute(String dbData) {
+        return Paths.get(dbData);
+    }
 }

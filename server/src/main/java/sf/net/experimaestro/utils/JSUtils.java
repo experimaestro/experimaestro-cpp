@@ -19,7 +19,7 @@
 package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
-import org.apache.commons.vfs2.FileObject;
+import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
@@ -230,8 +230,8 @@ public class JSUtils {
             return json;
         }
 
-        if (value instanceof FileObject)
-            return new JsonFileObject((FileObject) value);
+        if (value instanceof Path)
+            return new JsonPath((Path) value);
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);

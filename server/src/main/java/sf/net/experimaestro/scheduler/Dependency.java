@@ -18,10 +18,11 @@
 
 package sf.net.experimaestro.scheduler;
 
-import com.sleepycat.persist.model.*;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
+
+import javax.persistence.*;
 
 /**
  * What is the state of a dependency.
@@ -29,37 +30,43 @@ import sf.net.experimaestro.utils.log.Logger;
  * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
  */
 @Entity
+@Table(name = "dependency")
 abstract public class Dependency {
-    public static final String FROM_KEY_NAME = "from";
-    public static final String TO_KEY_NAME = "to";
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The state of this dependency
      */
     DependencyStatus status;
-    @PrimaryKey(sequence = "dependency_id")
+
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
     private long id;
+
     /**
      * The resource.
      * We abort its deletion if there is a dependency.
      */
-    @SecondaryKey(name = FROM_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.ABORT)
-    private long from;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Resource from;
+
     /**
      * The resource that depends on the resource {@link #from}
      */
-    @SecondaryKey(name = TO_KEY_NAME, relate = Relationship.MANY_TO_ONE, relatedEntity = Resource.class, onRelatedEntityDelete = DeleteAction.CASCADE)
-    private long to;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Resource to;
+
     /**
      * The lock (or null if no lock taken)
      */
+    @OneToOne(optional = true)
     private Lock lock;
 
 
     protected Dependency() {
     }
 
-    public Dependency(long from) {
+    public Dependency(Resource from) {
         this.from = from;
     }
 
@@ -71,15 +78,15 @@ abstract public class Dependency {
         return id;
     }
 
-    public long getFrom() {
+    public Resource getFrom() {
         return from;
     }
 
-    public long getTo() {
+    public Resource getTo() {
         return to;
     }
 
-    public Dependency setTo(long to) {
+    public Dependency setTo(Resource to) {
         this.to = to;
         return this;
     }
@@ -92,22 +99,12 @@ abstract public class Dependency {
     /**
      * Can the dependency be accepted?
      *
-     * @param scheduler The scheduler to retrieve data from database
-     * @param from      The requirement (to avoid a fetch from database) or null
      * @return {@link DependencyStatus#OK} if the dependency is satisfied,
      * {@link DependencyStatus#WAIT} if it can be satisfied one day
      * {@link DependencyStatus#HOLD} if it can be satisfied after an external change
      * {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
-    protected DependencyStatus accept(Scheduler scheduler, Resource from) {
-        if (from == null) {
-            from = scheduler.getResource(this.from);
-            if (from == null)
-                throw new AssertionError(String.format("Could not find resource with ID %d", this.from));
-        }
-
-        assert from.getId() == this.from;
-
+    protected DependencyStatus accept() {
         LOGGER.debug("From [%d] is in state %s [to=%s]", this.from, from.getState(), to);
 
         // Handle simple cases
@@ -121,52 +118,44 @@ abstract public class Dependency {
                 return DependencyStatus.WAIT;
         }
 
-        return _accept(scheduler, from);
+        return _accept();
     }
 
     /**
      * Check the dependency status
      */
-    abstract protected DependencyStatus _accept(Scheduler scheduler, Resource from);
+    abstract protected DependencyStatus _accept();
 
     /**
      * Lock the resource
      */
-    protected abstract Lock _lock(Scheduler scheduler, Resource from, String pid) throws LockException;
+    protected abstract Lock _lock(String pid) throws LockException;
 
 
     /**
      * Update a dependency status
      *
-     * @param scheduler
-     * @param from      The  resource to be locked, i.e. {@linkplain #from} or null (in this case,
-     *                  it might be loaded from DB using the scheduler)
      * @param store     <tt>true</tt> if the dependency status should be stored in DB if changed.
      * @return
      */
-    synchronized final public boolean update(Scheduler scheduler, Resource from, boolean store) {
+    synchronized final public boolean update(boolean store) {
         DependencyStatus old = status;
-        status = accept(scheduler, from);
+        status = accept();
 
         if (status == old)
             return false;
 
         if (store)
-            scheduler.store(this);
+            Scheduler.get().store(this);
         return true;
     }
 
-    final public Lock lock(Scheduler scheduler, Resource from, String pid) throws LockException {
-        lock = _lock(scheduler, from, pid);
+    final public Lock lock(String pid) throws LockException {
+        lock = _lock(pid);
         if (lock != null) {
-            scheduler.store(this);
+            Scheduler.get().store(this);
         }
         return lock;
-    }
-
-
-    protected Resource getFrom(Scheduler scheduler, Resource from) {
-        return from != null ? from : scheduler.getResource(getFrom());
     }
 
 

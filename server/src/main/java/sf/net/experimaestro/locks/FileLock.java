@@ -18,10 +18,7 @@
 
 package sf.net.experimaestro.locks;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.persist.model.Persistent;
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -34,15 +31,14 @@ import java.nio.file.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
-public class FileLock implements Lock {
+public class FileLock extends Lock {
 
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
      * Lock
      */
-    File lockFile;
+    Path lockFile;
 
     /**
      * Used for (de)serialization
@@ -53,27 +49,30 @@ public class FileLock implements Lock {
     /**
      * Lock a file. If the file exists, waits for it to be deleted.
      *
-     * @param lockFile
+     * @param lockPath
      * @throws IOException
      */
-    public FileLock(File lockFile, boolean wait) throws LockException {
-        this.lockFile = lockFile;
+    public FileLock(Path lockPath, boolean wait) throws LockException {
+        this.lockFile = lockPath;
 
         // FIXME: this is not reliable... but we rely on it for the moment!
         try {
-            while (!lockFile.createNewFile()) {
-                try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
-
-                    Path path = Paths.get(lockFile.toURI());
-
-                    WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
-                    if (wait)
-                        watcher.take();
-                    else throw new LockException();
-                    lockFile.deleteOnExit();
-
-                } catch (java.nio.file.NoSuchFileException e) {
-                    // file was deleted before we started to monitor it
+            while (true) {
+                try {
+                    Files.createFile(lockPath);
+                    break;
+                } catch (FileAlreadyExistsException e) {
+                    try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
+                        WatchKey key = lockPath.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                        if (wait) {
+                            watcher.take();
+                        }
+                        else {
+                            throw new LockException();
+                        }
+                    } catch (java.nio.file.NoSuchFileException f) {
+                        // file was deleted before we started to monitor it
+                    }
                 }
             }
         } catch (IOException | InterruptedException e) {
@@ -82,15 +81,15 @@ public class FileLock implements Lock {
     }
 
     public FileLock(File lockFile) throws LockException {
-        this(lockFile, true);
+        this(lockFile.toPath(), true);
     }
 
     public FileLock(String lockFile) throws LockException {
-        this(new File(lockFile), true);
+        this(new File(lockFile).toPath(), true);
     }
 
     public FileLock(String lockFile, boolean wait) throws LockException {
-        this(new File(lockFile), wait);
+        this(new File(lockFile).toPath(), wait);
     }
 
     /*
@@ -100,8 +99,13 @@ public class FileLock implements Lock {
      */
 
     public void close() {
-        if (lockFile != null && lockFile.exists()) {
-            boolean success = lockFile.delete();
+        if (lockFile != null && Files.exists(lockFile)) {
+            boolean success = false;
+            try {
+                success = Files.deleteIfExists(lockFile);
+            } catch (IOException e) {
+                LOGGER.error(e);
+            }
             lockFile = null;
             if (!success)
                 LOGGER.warn("Could not delete lock file %s", lockFile);
@@ -116,10 +120,6 @@ public class FileLock implements Lock {
 
     public void changeOwnership(String pid) {
         // TODO Auto-generated method stub
-    }
-
-    @Override
-    public void init(Scheduler scheduler) throws DatabaseException {
     }
 
 }

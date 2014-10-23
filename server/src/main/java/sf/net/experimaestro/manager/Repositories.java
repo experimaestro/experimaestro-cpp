@@ -18,16 +18,15 @@
 
 package sf.net.experimaestro.manager;
 
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.nio.file.Path;
 import java.util.TreeMap;
 
 /**
  * Manages a set of repositories, each associated to an identifier
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/6/12
  */
 public class Repositories extends Repository {
     /**
@@ -38,12 +37,12 @@ public class Repositories extends Repository {
     /**
      * Our repositories
      */
-    TreeMap<ResourceLocator, RepositoryInformation> repositories = new TreeMap<>();
+    TreeMap<Path, RepositoryInformation> repositories = new TreeMap<>();
 
     /**
      * Creates a new set of repositories
      */
-    public Repositories(ResourceLocator locator) {
+    public Repositories(Path locator) {
         super(locator);
     }
 
@@ -76,8 +75,8 @@ public class Repositories extends Repository {
     /**
      * Adds a new repository with a given priority
      *
-     * @param repository
-     * @param priority
+     * @param repository The container
+     * @param priority The priority of this repository
      */
     public void add(AbstractRepository repository, int priority) {
         LOGGER.info("Adding repository %s", repository.identifier);

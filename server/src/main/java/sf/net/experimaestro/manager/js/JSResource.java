@@ -18,8 +18,8 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.scheduler.Resource;
 
@@ -27,7 +27,6 @@ import sf.net.experimaestro.scheduler.Resource;
  * A resource
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/11/12
  */
 public class JSResource extends JSBaseObject implements Wrapper {
 
@@ -44,24 +43,24 @@ public class JSResource extends JSBaseObject implements Wrapper {
     }
 
     @JSFunction("output")
-    public FileObject output() throws FileSystemException {
+    public Path output() throws FileSystemException {
         return resource.outputFile();
     }
 
     @JSFunction
-    public FileObject file() throws FileSystemException {
-        return resource.getLocator().getFile();
+    public Path file() throws FileSystemException {
+        return resource.getPath();
     }
 
     @JSFunction
-    public FileObject resolve(String path) throws FileSystemException {
-        return resource.getLocator().resolvePath(path, true).getFile();
+    public Path resolve(String path) throws FileSystemException {
+        return resource.getPath().getParent().resolve(path);
     }
 
     @Override
     @JSFunction("toString")
     public String toString() {
-        return resource == null ? "[null]" : ("[Resource " + resource.getLocator().toString() + "]");
+        return resource == null ? "[null]" : ("[Resource " + resource.getPath().toString() + "]");
     }
 
     @JSFunction

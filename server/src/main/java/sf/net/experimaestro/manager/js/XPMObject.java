@@ -18,13 +18,14 @@
 
 package sf.net.experimaestro.manager.js;
 
-import bpiwowar.argparser.utils.Introspection;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.FileSystemException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
@@ -34,13 +35,13 @@ import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.experiments.Experiment;
+import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
@@ -50,12 +51,15 @@ import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.net.URL;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -85,10 +89,11 @@ public class XPMObject {
             "<dt>lock</dt><dd>An array of couples (resource, lock type). The lock depends on the resource" +
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
-    public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
 
     final static private Logger LOGGER = Logger.getLogger();
+
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
+
     /**
      * Logging should be directed to an output
      */
@@ -118,37 +123,33 @@ public class XPMObject {
     /**
      * The connector for default inclusion
      */
-    ResourceLocator currentResourceLocator;
+    Path currentScriptPath;
 
     /**
      * Properties set by the script that will be returned
      */
     Map<String, Object> properties = new HashMap<>();
     /**
-     * Default group for new jobs
-     */
-    String defaultGroup = "";
-    /**
      * Default locks for new jobs
      */
-    Map<Resource<?>, Object> defaultLocks = new TreeMap<>(Resource.ID_COMPARATOR);
+    Map<Resource, Object> defaultLocks = new TreeMap<>(Resource.ID_COMPARATOR);
     /**
      * List of submitted jobs (so that we don't submit them twice with the same script
      * by default)
      */
-    Map<ResourceLocator, Resource> submittedJobs = new HashMap<>();
+    Map<Path, Resource> submittedJobs = new HashMap<>();
     /**
      * Simulate flags: jobs will not be submitted (but commands will be evaluated)
      */
     boolean _simulate;
     /**
-     * Task context for this XPM object
+     * TaskReference context for this XPM object
      */
     private TaskContext taskContext;
     /**
      * The current work dir
      */
-    private Holder<FileObject> workdir;
+    private Holder<Path> workdir;
     /**
      * The context (local)
      */
@@ -161,15 +162,15 @@ public class XPMObject {
     /**
      * Current experiment
      */
-    private Experiment experiment;
+    Experiment experiment;
 
-
-
+    /** The current connector */
+    private Connector connector;
 
     /**
      * Initialise a new XPM object
      *
-     * @param currentResourceLocator The xpath to the current script
+     * @param currentScriptPath The xpath to the current script
      * @param context                The JS context
      * @param environment            The environment variables
      * @param scope                  The JS scope for execution
@@ -183,7 +184,9 @@ public class XPMObject {
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    XPMObject(ResourceLocator currentResourceLocator,
+    XPMObject(
+              Connector connector,
+              Path currentScriptPath,
               Context context,
               Map<String, String> environment,
               Scriptable scope,
@@ -191,11 +194,13 @@ public class XPMObject {
               Scheduler scheduler,
               Hierarchy loggerRepository,
               Cleaner cleaner,
-              Holder<FileObject> workdir)
+              Holder<Path> workdir,
+              Experiment experiment)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
-        LOGGER.debug("Current script is %s", currentResourceLocator);
-        this.currentResourceLocator = currentResourceLocator;
+        LOGGER.debug("Current script is %s", currentScriptPath);
+        this.currentScriptPath = currentScriptPath;
+        this.connector = connector;
         this.context = context;
         this.environment = environment;
         this.scope = scope;
@@ -205,6 +210,7 @@ public class XPMObject {
         this.cleaner = cleaner;
         this.workdir = workdir == null ? new Holder<>(null) : workdir;
         this.rootLogger = Logger.getLogger(loggerRepository);
+        this.experiment = experiment;
 
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
@@ -230,9 +236,6 @@ public class XPMObject {
         XPMContext.addNewObject(context, scope, "xpm", "XPM", new Object[]{});
 
         ((JSXPM) get(scope, "xpm")).set(this);
-        // --- Get the default group from the environment
-        if (environment.containsKey(DEFAULT_GROUP))
-            defaultGroup = environment.get(DEFAULT_GROUP);
 
     }
 
@@ -290,32 +293,32 @@ public class XPMObject {
     }
 
     /**
-     * Returns a JSFileObject that corresponds to the path. This can
+     * Returns a JSPath that corresponds to the path. This can
      * be used when building command lines containing path to resources
      * or executables
      *
-     * @return A {@JSFileObject}
+     * @return A {@JSPath}
      */
-    @JSHelp("Returns a FileObject corresponding to the path")
+    @JSHelp("Returns a Path corresponding to the path")
     static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         if (args.length != 1)
             throw new IllegalArgumentException("path() needs one argument");
 
         XPMObject xpm = getXPM(thisObj);
 
-        if (args[0] instanceof JSFileObject)
+        if (args[0] instanceof JSPath)
             return args[0];
 
         final Object o = unwrap(args[0]);
 
-        if (o instanceof JSFileObject)
+        if (o instanceof JSPath)
             return o;
 
-        if (o instanceof FileObject)
-            return xpm.newObject(JSFileObject.class, o);
+        if (o instanceof Path)
+            return xpm.newObject(JSPath.class, o);
 
         if (o instanceof String)
-            return xpm.newObject(JSFileObject.class, xpm.currentResourceLocator.resolvePath(o.toString(), true).getFile());
+            return xpm.newObject(JSPath.class, xpm.currentScriptPath.getParent().resolve(o.toString()));
 
         throw new XPMRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
@@ -359,20 +362,20 @@ public class XPMObject {
      */
     static public void js_set_workdir(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         XPMObject xpm = getXPM(thisObj);
-        xpm.workdir.set(((JSFileObject) js_path(cx, thisObj, args, funObj)).getFile());
+        xpm.workdir.set(((JSPath) js_path(cx, thisObj, args, funObj)).getPath());
     }
 
     /**
      * Returns the current script location
      */
-    static public JSFileObject js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
+    static public JSPath js_script_file(Context cx, Scriptable thisObj, Object[] args, Function funObj)
             throws FileSystemException {
         if (args.length != 0)
             throw new IllegalArgumentException("script_file() has no argument");
 
         XPMObject xpm = getXPM(thisObj);
 
-        return new JSFileObject(xpm.currentResourceLocator.getFile());
+        return new JSPath(xpm.currentScriptPath);
     }
 
     @JSHelp(value = "Returns a file relative to the current connector")
@@ -381,8 +384,8 @@ public class XPMObject {
         if (args.length != 1)
             throw new IllegalArgumentException("file() takes only one argument");
         final String arg = JSUtils.toString(args[0]);
-        return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
-                new Object[]{xpm.currentResourceLocator.getFile().getParent().resolveFile(arg)});
+        return xpm.context.newObject(xpm.scope, JSPath.JSCLASSNAME,
+                new Object[]{xpm.currentScriptPath.getParent().resolve(arg)});
     }
 
     @JSHelp(value = "Unwrap an annotated XML value into a native JS object")
@@ -476,15 +479,15 @@ public class XPMObject {
         return object.toString();
     }
 
-    private static FileObject getFileObject(Connector connector, Object stdout) throws FileSystemException {
+    private static Path getPath(Connector connector, Object stdout) throws FileSystemException {
         if (stdout instanceof String || stdout instanceof ConsString)
             return connector.getMainConnector().resolveFile(stdout.toString());
 
-        if (stdout instanceof JSFileObject)
+        if (stdout instanceof JSPath)
             return connector.getMainConnector().resolveFile(stdout.toString());
 
-        if (stdout instanceof FileObject)
-            return (FileObject) stdout;
+        if (stdout instanceof Path)
+            return (Path) stdout;
 
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
@@ -492,9 +495,8 @@ public class XPMObject {
     /**
      * Clone properties from this XPM instance
      */
-    private XPMObject clone(ResourceLocator scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir);
-        clone.defaultGroup = this.defaultGroup;
+    private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+        final XPMObject clone = new XPMObject(connector, scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir, experiment);
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashMap<>(this.submittedJobs);
         clone._simulate = _simulate;
@@ -529,7 +531,7 @@ public class XPMObject {
         else
             connector = (Connector) _connector;
 
-        return include(new ResourceLocator(connector, path), repositoryMode);
+        return include(connector.resolve(path), repositoryMode);
     }
 
     /**
@@ -541,7 +543,7 @@ public class XPMObject {
      * @throws InstantiationException
      */
     public XPMObject include(String path, boolean repositoryMode) throws Exception {
-        ResourceLocator scriptpath = currentResourceLocator.resolvePath(path, true);
+        Path scriptpath = currentScriptPath.getParent().resolve(path);
         LOGGER.debug("Including repository file [%s]", scriptpath);
         return include(scriptpath, repositoryMode);
     }
@@ -549,32 +551,31 @@ public class XPMObject {
     /**
      * Central method called for any script inclusion
      *
-     * @param scriptLocator The path to the script
+     * @param scriptPath The path to the script
      * @param repositoryMode If true, runs in a separate environement
      * @throws Exception if something goes wrong
      */
-    private XPMObject include(ResourceLocator scriptLocator, boolean repositoryMode) throws Exception {
+    private XPMObject include(Path scriptPath, boolean repositoryMode) throws Exception {
 
-        try (InputStream inputStream = scriptLocator.getFile().getContent().getInputStream()) {
+        try (InputStream inputStream = Files.newInputStream(scriptPath)) {
             Scriptable scriptScope = scope;
             XPMObject xpmObject = this;
             if (repositoryMode) {
                 // Run the script in a new environment
                 scriptScope = XPMContext.newScope();
                 final TreeMap<String, String> newEnvironment = new TreeMap<>(environment);
-                xpmObject = clone(scriptLocator, scriptScope, newEnvironment);
+                xpmObject = clone(scriptPath, scriptScope, newEnvironment);
                 threadXPM.set(xpmObject);
             }
 
             // Avoid adding the protocol if this is a local file
-            final String sourceName = scriptLocator.getConnector() == LocalhostConnector.getInstance()
-                    ? scriptLocator.getPath() : scriptLocator.toString();
+            final String sourceName = scriptPath.toString();
 
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
         } catch(FileNotFoundException e) {
-            throw new XPMRhinoException("File not found: %s", scriptLocator.getFile());
+            throw new XPMRhinoException("File not found: %s", scriptPath);
         } finally {
             threadXPM.set(this);
         }
@@ -631,11 +632,10 @@ public class XPMObject {
         Command command = JSCommand.getCommand(jsargs);
 
         // Run the process and captures the output
-        final SingleHostConnector connector = currentResourceLocator.getConnector().getConnector(null);
-        AbstractProcessBuilder builder = connector.processBuilder();
+        AbstractProcessBuilder builder = connector.getMainConnector().processBuilder();
 
 
-        try (CommandEnvironment commandEnv = new CommandEnvironment.Temporary(connector)) {
+        try (CommandContext commandEnv = new CommandContext.Temporary(connector.getMainConnector())) {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {
@@ -646,7 +646,7 @@ public class XPMObject {
             })));
 
             if (options != null && options.has("stdout", options)) {
-                FileObject stdout = getFileObject(connector, unwrap(options.get("stdout", options)));
+                Path stdout = getPath(connector, unwrap(options.get("stdout", options)));
                 builder.redirectOutput(AbstractCommandBuilder.Redirect.to(stdout));
             } else {
                 builder.redirectOutput(AbstractCommandBuilder.Redirect.PIPE);
@@ -750,26 +750,25 @@ public class XPMObject {
         if (options != null && options.has("connector", options)) {
             connector = ((JSConnector) options.get("connector", options)).getConnector();
         } else {
-            connector = currentResourceLocator.getConnector();
+            connector = this.connector;
         }
 
         // Store connector in database
         scheduler.put(connector);
 
         // Resolve the path for the given connector
-        if (path instanceof FileObject) {
-            path = connector.getMainConnector().resolve((FileObject) path);
+        if (path instanceof Path) {
+            path = connector.getMainConnector().resolve((Path) path);
         } else
             path = connector.getMainConnector().resolve(path.toString());
 
-        final ResourceLocator locator = new ResourceLocator(connector.getMainConnector(), path.toString());
-        task = new CommandLineTask(scheduler, locator, commands);
+        task = new CommandLineTask(connector, (Path) path, commands);
 
-        if (submittedJobs.containsKey(locator)) {
-            getRootLogger().info("Not submitting %s [duplicate]", locator);
+        if (submittedJobs.containsKey(path)) {
+            getRootLogger().info("Not submitting %s [duplicate]", path);
             if (simulate())
-                return new JSResource(submittedJobs.get(locator));
-            return new JSResource(scheduler.getResource(locator));
+                return new JSResource(submittedJobs.get(path));
+            return new JSResource(scheduler.getResource(Paths.get(path.toString())));
         }
 
         // -- Adds default locks
@@ -809,21 +808,21 @@ public class XPMObject {
                 final Object stdin = unwrap(options.get("stdin", options));
                 if (stdin instanceof String || stdin instanceof ConsString) {
                     task.setInput(stdin.toString());
-                } else if (stdin instanceof FileObject) {
-                    task.setInput((FileObject) stdin);
+                } else if (stdin instanceof Path) {
+                    task.setInput((Path) stdin);
                 } else
                     throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
             }
 
             // --- Redirect standard output
             if (options.has("stdout", options)) {
-                FileObject fileObject = getFileObject(connector, unwrap(options.get("stdout", options)));
+                Path fileObject = getPath(connector, unwrap(options.get("stdout", options)));
                 task.setOutput(fileObject);
             }
 
             // --- Redirect standard error
             if (options.has("stderr", options)) {
-                FileObject fileObject = getFileObject(connector, unwrap(options.get("stderr", options)));
+                Path fileObject = getPath(connector, unwrap(options.get("stderr", options)));
                 task.setError(fileObject);
             }
 
@@ -848,7 +847,7 @@ public class XPMObject {
                             resource = (Resource) depObject;
                         } else {
                             final String rsrcPath = Context.toString(depObject);
-                            ResourceLocator depLocator = ResourceLocator.parse(rsrcPath);
+                            Path depLocator = connector.resolve(rsrcPath);
                             resource = scheduler.getResource(depLocator);
                             if (resource == null)
                                 if (simulate()) {
@@ -879,16 +878,11 @@ public class XPMObject {
 
 
         }
-
-        // Update the task status now that it is initialized
-        task.setGroup(defaultGroup);
-
-        final Resource old = scheduler.getResource(locator);
+        final Resource old = scheduler.getResource(Paths.get(path.toString()));
         if (old != null) {
             // TODO: if equal, do not try to replace the task
             if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
-                old.init(scheduler);
                 return new JSResource(old);
             } else {
                 getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
@@ -900,10 +894,18 @@ public class XPMObject {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", task.toString());
             pw.format("Command: %s%n", task.getCommands().toString());
-            pw.format("Locator: %s", locator.toString());
+            pw.format("Locator: %s", path.toString());
             pw.flush();
         } else {
+            // Store in scheduler
             scheduler.store(task, false);
+
+            // Store within an experiment
+            if (experiment != null) {
+                TaskReference reference = taskContext.getTaskReference();
+                reference.add(task);
+                scheduler.store(reference);
+            }
         }
 
         return new JSResource(task);
@@ -926,11 +928,11 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, experiment, currentResourceLocator, workdir.get(), getRootLogger(), false);
+        return new TaskContext(scheduler, experiment, currentScriptPath, workdir.get(), getRootLogger(), false);
     }
 
-    public void setLocator(ResourceLocator locator) {
-        this.currentResourceLocator = locator;
+    public void setPath(Path locator) {
+        this.currentScriptPath = locator;
     }
 
     public void setTaskContext(TaskContext taskContext) {
@@ -946,7 +948,7 @@ public class XPMObject {
      * @param jsonValues the JSON object from which the hash is computed
      * @return
      */
-    public JSFileObject uniqueDirectory(Scriptable scope, FileObject basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
+    public JSPath uniqueDirectory(Scriptable scope, Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
         if (basedir == null) {
             if (workdir.get() == null)
                 throw new XPMRuntimeException("Working directory was not set before unique_directory() is called");
@@ -954,12 +956,11 @@ public class XPMObject {
             basedir = workdir.get();
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
-        return new JSFileObject(Manager.uniqueDirectory(basedir, prefix, id, json));
+        return new JSPath(Manager.uniqueDirectory(basedir, prefix, id, json));
     }
 
     public Connector getConnector() {
-        return currentResourceLocator.getConnector();
-    }
+        return connector; }
 
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
 
@@ -1020,12 +1021,6 @@ public class XPMObject {
             xpm.properties.put(name, object);
         }
 
-        @JSFunction("set_default_group")
-        @JSHelp("Set the default group for new tasks")
-        public void setDefaultGroup(String name) {
-            xpm.defaultGroup = name;
-        }
-
         @JSFunction("set_default_lock")
         @JSHelp("Adds a new resource to lock for all jobs to be started")
         public void setDefaultLock(Object resource, Object parameters) {
@@ -1037,12 +1032,10 @@ public class XPMObject {
         public Scriptable getTokenResource(
                 @JSArgument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
-            final ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), path);
-            final Resource resource = xpm.scheduler.getResource(locator);
+            final Resource resource = Scheduler.get().getResource(Paths.get(path));
             final TokenResource tokenResource;
             if (resource == null) {
-                tokenResource = new TokenResource(xpm.scheduler, new ResourceData(locator), 0);
-                tokenResource.init(xpm.scheduler);
+                tokenResource = new TokenResource(Paths.get(path), 0);
                 xpm.scheduler.store(tokenResource, false);
             } else {
                 if (!(resource instanceof TokenResource))
@@ -1076,12 +1069,12 @@ public class XPMObject {
 
         @JSFunction("get_script_path")
         public String getScriptPath() {
-            return xpm.currentResourceLocator.getPath();
+            return xpm.currentScriptPath.toString();
         }
 
         @JSFunction("get_script_file")
-        public Scriptable getScriptFile() throws FileSystemException {
-            return xpm.newObject(JSFileObject.class, xpm.currentResourceLocator.getFile());
+        public JSPath getScriptFile() throws FileSystemException {
+            return new JSPath(xpm.currentScriptPath);
         }
 
         /**
@@ -1133,12 +1126,12 @@ public class XPMObject {
         @JSFunction("file")
         @JSHelp(value = "Returns a file relative to the current connector")
         public Scriptable file(@JSArgument(name = "filepath") String filepath) throws FileSystemException {
-            return xpm.context.newObject(xpm.scope, JSFileObject.JSCLASSNAME,
-                    new Object[]{xpm, xpm.currentResourceLocator.resolvePath(filepath).getFile()});
+            return xpm.context.newObject(xpm.scope, JSPath.JSCLASSNAME,
+                    new Object[]{xpm, xpm.currentScriptPath.resolve(filepath)});
         }
 
         @JSFunction
-        public Scriptable file(@JSArgument(name = "file") JSFileObject file) throws FileSystemException {
+        public Scriptable file(@JSArgument(name = "file") JSPath file) throws FileSystemException {
             return file;
         }
 
@@ -1228,7 +1221,7 @@ public class XPMObject {
         @JSFunction("publish")
         @JSHelp("Publish the repository on the web server")
         public void publish() throws InterruptedException {
-            TasksServlet.updateRepository(xpm.currentResourceLocator.toString(), xpm.repository);
+            TasksServlet.updateRepository(xpm.currentScriptPath.toString(), xpm.repository);
         }
 
         @JSFunction
@@ -1398,7 +1391,7 @@ public class XPMObject {
                     if (xpm.simulate()) {
                         return xpm.submittedJobs.get(uri);
                     } else {
-                        return xpm.scheduler.getResource(ResourceLocator.parse(uri));
+                        return xpm.scheduler.getResource(Paths.get(uri));
                     }
                 }
 
@@ -1413,6 +1406,21 @@ public class XPMObject {
                 connector = LocalhostConnector.getInstance();
             JavaTasksIntrospection.addToRepository(xpm.repository, connector, paths);
         }
+
+        @JSFunction
+        public void set_experiment(String dotname, Path workdir) throws ExperimaestroCannotOverwrite {
+            if (!xpm.simulate()) {
+                xpm.experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
+                xpm.scheduler.store(xpm.experiment);
+            }
+            xpm.workdir.set(workdir);
+        }
+
+        @JSFunction
+        public void set_workdir(Path workdir) throws FileSystemException {
+            xpm.workdir.set(workdir);
+        }
+
 
     }
 

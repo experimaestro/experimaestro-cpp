@@ -18,23 +18,23 @@
 
 package sf.net.experimaestro.manager.js;
 
-import org.apache.commons.vfs2.FileObject;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.scheduler.ResourceLocator;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMEnvironment;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -48,13 +48,13 @@ import static java.lang.String.format;
 public class JavaScriptChecker {
 
     private final XPMEnvironment environment;
-    private FileObject file;
+    private Path file;
     private String content;
     private Context context;
     private Repository repository;
     private ScriptableObject scope;
 
-    public JavaScriptChecker(XPMEnvironment environment, FileObject file) throws
+    public JavaScriptChecker(XPMEnvironment environment, Path file) throws
             IOException {
         this.environment = environment;
         environment.init();
@@ -77,10 +77,8 @@ public class JavaScriptChecker {
     public void runScript() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
         // Defines the environment
         Map<String, String> environment = System.getenv();
-        final ResourceLocator currentResourceLocator
-                = new ResourceLocator(LocalhostConnector.getInstance(), file.getName().getPath());
-        new XPMObject(currentResourceLocator, context, environment, scope,
-                repository, this.environment.scheduler, null, new Cleaner(), null);
+        new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
+                repository, this.environment.scheduler, null, new Cleaner(), null, null);
 
         // Adds some special functions available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
@@ -127,7 +125,7 @@ public class JavaScriptChecker {
     public void enter() {
         context = Context.enter();
         scope = context.initStandardObjects();
-        repository = new Repository(new ResourceLocator(XPMConnector.getInstance(), "/"));
+        repository = new Repository(new File("/").toPath());
     }
 
     @AfterTest
@@ -144,10 +142,9 @@ public class JavaScriptChecker {
     }
 
 
-    static String getFileContent(FileObject file)
+    static String getFileContent(Path file)
             throws IOException {
-        InputStreamReader reader = new InputStreamReader(file.getContent()
-                .getInputStream());
+        InputStreamReader reader = new InputStreamReader(Files.newInputStream(file));
         char[] cbuf = new char[8192];
         int read;
         StringBuilder builder = new StringBuilder();

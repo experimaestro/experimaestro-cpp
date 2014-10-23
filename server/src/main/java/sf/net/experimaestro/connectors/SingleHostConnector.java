@@ -18,14 +18,16 @@
 
 package sf.net.experimaestro.connectors;
 
-import com.sleepycat.persist.model.Persistent;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
-import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
+
+import javax.persistence.Entity;
+import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static java.lang.String.format;
 
@@ -36,9 +38,8 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Persistent
-abstract public class SingleHostConnector extends Connector implements Launcher {
-    static private final char[] chars = new String("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").toCharArray();
+@Entity
+abstract public class SingleHostConnector extends Connector {
     /**
      * Underlying filesystem
      */
@@ -88,32 +89,28 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
      * @return A file object
      * @throws FileSystemException
      */
-    public FileObject resolveFile(String path) throws FileSystemException {
-        return getFileSystem().resolveFile(path);
+    public Path resolveFile(String path) throws FileSystemException {
+        return getFileSystem().getPath(path);
     }
 
     /**
-     * Resolve a FileObject to a local path
+     * Resolve a Path to a local path
      * <p/>
      * Throws an exception when the file name cannot be resolved, i.e. when
      * the file object is not
      */
-    public String resolve(FileObject file) throws FileSystemException {
+    public String resolve(Path file) throws FileSystemException {
         if (!contains(file.getFileSystem())) {
             throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
         }
 
-        return file.getName().getPath();
+        return file.toString();
     }
 
     /**
      * Returns true if the filesystem matches
      */
     protected abstract boolean contains(FileSystem fileSystem) throws FileSystemException;
-
-    public String resolve(String path) throws FileSystemException {
-        return resolve(resolveFile(path));
-    }
 
     /**
      * Returns a process builder
@@ -123,38 +120,31 @@ abstract public class SingleHostConnector extends Connector implements Launcher 
     /**
      * Lock a file
      */
-    public abstract Lock createLockFile(String path, boolean wait) throws LockException;
+    public abstract Lock createLockFile(Path path, boolean wait) throws LockException;
 
     /**
      * Returns the hostname
      */
     public abstract String getHostName();
 
+
+    public Path getTemporaryFile(String prefix, String suffix) throws IOException {
+        return Files.createTempFile(getTemporaryDirectory(), prefix, suffix);
+    }
+
+    protected abstract Path getTemporaryDirectory() throws FileSystemException;
+
     @Override
-    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
-        if (connector != this)
-            throw new XPMRuntimeException("");
-
-        return this.processBuilder();
+    public Path resolve(String path) throws FileSystemException {
+        return getFileSystem().getPath(path);
     }
 
-    public FileObject getTemporaryFile(String prefix, String suffix) throws FileSystemException {
-        FileObject tmpdir = getTemporaryDirectory();
-
-        final int MAX_ATTEMPTS = 1000;
-
-        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            FileObject child = tmpdir.resolveFile(prefix + RandomStringUtils.random(10, chars) + suffix);
-            if (!child.exists()) {
-                try {
-                    child.createFile();
-                } catch (Throwable t) {
-                }
-                return child;
-            }
-        }
-        throw new FileSystemException(format("Could not find a proper temporary file name after %d attempts", MAX_ATTEMPTS));
-    }
-
-    protected abstract FileObject getTemporaryDirectory() throws FileSystemException;
+    /**
+     * Creates a script builder
+     * @param scriptFile The path to the script file to create
+     * @return A builder
+     * @throws FileSystemException if an exception occurs while accessing the script file
+     */
+    abstract public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile)
+            throws FileSystemException;
 }

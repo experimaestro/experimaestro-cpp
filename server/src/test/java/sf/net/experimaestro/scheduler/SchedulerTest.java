@@ -19,7 +19,6 @@
 package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.Output;
-import com.sleepycat.je.DatabaseException;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.XPMConnector;
@@ -31,6 +30,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 
 import static java.lang.Math.*;
@@ -43,7 +43,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other to start")
     public void test_simple_dependency() throws
-            DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -51,7 +51,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, 0, 0));
+            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, 0, 0));
             if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i], false);
@@ -65,7 +65,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other to start, the first fails")
     public void test_failed_dependency() throws
-            DatabaseException, IOException, InterruptedException, ExperimaestroCannotOverwrite {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -73,7 +73,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
+            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             if (i > 0)
                 jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
             scheduler.store(jobs[i], false);
@@ -251,8 +251,7 @@ public class SchedulerTest extends XPMEnvironment {
         // --- Generate token resource
         TokenResource token = null;
         if (p.token > 0) {
-            ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), "test");
-            token = new TokenResource(scheduler, new ResourceData(locator), p.token);
+            token = new TokenResource(XPMConnector.getInstance().resolve("test"), p.token);
             scheduler.store(token, false);
         }
 
@@ -260,7 +259,7 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
 
             int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(waitingTime, states[i] == ResourceState.DONE ? 0 : 1, 0));
+            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(waitingTime, states[i] == ResourceState.DONE ? 0 : 1, 0));
 
             ArrayList<String> deps = new ArrayList<>();
             for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
@@ -337,8 +336,8 @@ public class SchedulerTest extends XPMEnvironment {
         File jobDirectory = mkTestDir();
 
         ThreadCount counter = new ThreadCount();
-        ResourceLocator locator = new ResourceLocator(XPMConnector.getInstance(), "test");
-        TokenResource token = new TokenResource(scheduler, new ResourceData(locator), 1);
+        Path locator = XPMConnector.getInstance().resolve("test");
+        TokenResource token = new TokenResource(locator, 1);
         scheduler.store(token, false);
 
         WaitingJob[] jobs = new WaitingJob[5];
@@ -346,7 +345,7 @@ public class SchedulerTest extends XPMEnvironment {
         failure.set(3);
 
         for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
+            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
             jobs[i].addDependency(token.createDependency(null));
             scheduler.store(jobs[i], false);
         }
@@ -358,12 +357,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Check that one started after the other (since only one must have been active
         // at a time)
         LOGGER.info("Checking the token test output");
-        Arrays.sort(jobs, new Comparator<WaitingJob>() {
-            @Override
-            public int compare(WaitingJob o1, WaitingJob o2) {
-                return Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp());
-            }
-        });
+        Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp()));
 
 
         int errors = 0;
@@ -384,7 +378,7 @@ public class SchedulerTest extends XPMEnvironment {
         counter.add();
 
         for(int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(scheduler, counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
+            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             if (i > 0) {
                 jobs[i].addDependency(jobs[i-1].createDependency(null));
             }
