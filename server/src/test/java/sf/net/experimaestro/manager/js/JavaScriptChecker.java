@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -52,7 +53,8 @@ public class JavaScriptChecker {
     private String content;
     private Context context;
     private Repository repository;
-    private ScriptableObject scope;
+
+    private Scriptable scope;
 
     public JavaScriptChecker(XPMEnvironment environment, Path file) throws
             IOException {
@@ -77,12 +79,14 @@ public class JavaScriptChecker {
     public void runScript() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
         // Defines the environment
         Map<String, String> environment = System.getenv();
-        new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
+        scope = XPMContext.newScope();
+        XPMObject xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
                 repository, this.environment.scheduler, null, new Cleaner(), null, null);
 
         // Adds some special functions available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
+        XPMObject.threadXPM.set(xpm);
         context.evaluateReader(scope, new StringReader(content),
                 file.toString(), 1, null);
 

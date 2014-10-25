@@ -11,7 +11,6 @@ import java.io.IOException;
 /**
  * Test the persistency and consistency of the information after the server restarts
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/12/13
  */
 public class SchedulerRestartTest extends XPMEnvironment {
     @Test(description = "Run a job over restarts")

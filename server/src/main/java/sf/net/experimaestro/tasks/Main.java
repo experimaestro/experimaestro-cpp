@@ -126,9 +126,7 @@ public class Main {
                     logger.info("Executing %s", args[i]);
                     Object result = cx.evaluateString(scope, args[i], "<cmd>",
                             1, null);
-                    System.err.println(result.getClass());
-                    // Convert the result to a string and print it.
-                    System.err.println(Context.toString(result));
+                    logger.info("Result: %s [%s]", result.getClass(), Context.toString(result));
                 }
 
             } finally {

@@ -67,8 +67,9 @@ public class XPMEnvironment {
     @AfterClass
     public void close() {
         synchronized (this) {
-            if (--count == 0)
+            if (--count == 0) {
                 scheduler.close();
+            }
         }
     }
 

@@ -103,7 +103,7 @@ public class Introspection {
                 addClasses(cl, checker, list, levels, conn, packageName.replace(
                         '.', '/'));
             } catch (final IOException ioex) {
-                System.err.println(ioex);
+                System.err.println("Exception in introspection: " + ioex);
             }
         }
     }

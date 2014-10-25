@@ -32,6 +32,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -136,7 +137,7 @@ public abstract class Resource
     @CollectionTable(name = "dependencies", joinColumns = @JoinColumn(name = "userId"))
     @Column(name = "dependency")
     @MapKeyJoinColumn(name = "messageId")
-    Map<Resource, Dependency> dependencies = null;
+    Map<Resource, Dependency> dependencies = new HashMap<>();
 
     /**
      * Called when deserializing from database

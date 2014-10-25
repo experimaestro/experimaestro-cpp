@@ -16,7 +16,7 @@ final public class FileNameTransformer {
     }
 
     public Path transform(Path path) throws FileSystemException {
-        final String baseName = prefix + path.getName(-1).toString() + suffix;
+        final String baseName = prefix + path.getFileName().toString() + suffix;
         return path.getParent().resolve(baseName);
     }
 }

@@ -171,7 +171,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
     public JSJson find_matching_files(@JSArgument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
         final Pattern pattern = Pattern.compile(regexp);
         final JsonArray array = new JsonArray();
-        DirectoryStream<Path> paths = Files.newDirectoryStream(path, f -> pattern.matcher(f.getName(-1).toString()).matches());
+        DirectoryStream<Path> paths = Files.newDirectoryStream(path, f -> pattern.matcher(f.getFileName().toString()).matches());
 
         Iterator<Path> iterator = paths.iterator();
         while (iterator.hasNext()) {

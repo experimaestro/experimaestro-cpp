@@ -15,6 +15,7 @@ import java.util.jar.JarFile;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 
+import static java.lang.String.format;
 
 
 /**
@@ -24,7 +25,7 @@ import java.util.zip.ZipEntry;
  * 
  */
 public class Introspection {
-    final static private Logger logger = Logger.getLogger(Introspection.class.getName());
+    final static private Logger LOGGER = Logger.getLogger(Introspection.class.getName());
 
 	/**
 	 * Get the list of class which implement a given class
@@ -122,7 +123,7 @@ public class Introspection {
                 addClasses(checker, list, levels, conn, packageName.replace(
                         '.', '/'));
             } catch (final IOException ioex) {
-                System.err.println(ioex);
+                LOGGER.info(format("Exception while introspecting: %s", ioex));
             }
         }
 	}
@@ -156,12 +157,12 @@ public class Introspection {
 					classname = classname.substring(1);
 				classname = classname.replace('/', '.');
 				try {
-					logger.fine("Testing class " + classname);
+					LOGGER.fine("Testing class " + classname);
 					final Class<?> oclass = Class.forName(classname);
 					if (checker.accepts(oclass))
 						list.add(oclass);
 				} catch (final Exception ex) {
-					logger.warning("Caught exception " + ex);
+					LOGGER.warning("Caught exception " + ex);
 				}
 			}
 		}

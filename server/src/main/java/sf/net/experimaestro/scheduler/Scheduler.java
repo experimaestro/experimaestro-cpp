@@ -56,7 +56,10 @@ final public class Scheduler {
      */
     public static String LockSync = "I am just a placeholder";
 
-    private static Scheduler INSTANCE;
+    /**
+     * Thread local instance (there should be only one scheduler per thread)
+     */
+    private static ThreadLocal<Scheduler> INSTANCE = new ThreadLocal<>();
 
     /**
      * Simple asynchronous executor service (used for asynchronous notification)
@@ -99,11 +102,11 @@ final public class Scheduler {
      * @param baseDirectory The directory where the XPM database will be stored
      */
     public Scheduler(File baseDirectory) {
-        if (INSTANCE != null) {
+        if (INSTANCE.get() != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
 
-        INSTANCE = this;
+        INSTANCE.set(this);
 
         // Get the parameters
         /*
@@ -113,7 +116,7 @@ final public class Scheduler {
 
 
         // Initialise the database
-        LOGGER.info("Initialising JE database in directory %s", baseDirectory);
+        LOGGER.info("Initialising database in directory %s", baseDirectory);
         HashMap<String, String> properties = new HashMap<>();
         properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true", baseDirectory));
         properties.put("hibernate.connection.username", "");
@@ -150,7 +153,7 @@ final public class Scheduler {
     }
 
     public static EntityTransaction transaction() {
-        EntityTransaction transaction = INSTANCE.entityManager.getTransaction();
+        EntityTransaction transaction = INSTANCE.get().entityManager.getTransaction();
         if (transaction.isActive())
             return transaction;
         transaction.begin();
@@ -158,7 +161,7 @@ final public class Scheduler {
     }
 
     public static Scheduler get() {
-        return INSTANCE;
+        return INSTANCE.get();
     }
 
     public Connector getConnector(String id) {
@@ -263,6 +266,7 @@ final public class Scheduler {
             executorService.shutdown();
         }
 
+        INSTANCE = null;
         LOGGER.info("Scheduler stopped");
     }
 
@@ -382,8 +386,12 @@ final public class Scheduler {
         List<Resource> result = query.getResultList();
         assert result.size() <= 1;
 
-        final Resource old = result.get(0);
-        resource.replace(old);
+        Resource old = null;
+        if (!result.isEmpty()) {
+            old = result.get(0);
+        }
+        // FIXME ?
+        entityManager.persist(resource);
 
         // Special case of jobs: we need to track
         // jobs that are ready to be run

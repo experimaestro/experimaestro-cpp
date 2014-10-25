@@ -91,7 +91,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     final public XPMProcess start() throws LaunchException, IOException {
         final Path runFile = connector.resolveFile(path);
         final Path basepath = runFile.getParent();
-        final String baseName = runFile.getName(-1).toString();
+        final String baseName = runFile.getFileName().toString();
 
         try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
             // First generate the run file

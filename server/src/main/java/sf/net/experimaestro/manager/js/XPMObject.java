@@ -227,7 +227,7 @@ public class XPMObject {
         }
 
         // tasks object
-        XPMContext.addNewObject(context, scope, "tasks", "Tasks", new Object[]{this});
+        XPMContext.addNewObject(context, scope, "tasks", "Tasks", new Object[]{});
 
         // logger
         XPMContext.addNewObject(context, scope, "logger", JSBaseObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
@@ -965,7 +965,10 @@ public class XPMObject {
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
 
     public static XPMObject getThreadXPM() {
-        return threadXPM.get();
+        XPMObject xpmObject = threadXPM.get();
+        assert xpmObject != null;
+        return xpmObject;
+
     }
 
     static public class Holder<T> {

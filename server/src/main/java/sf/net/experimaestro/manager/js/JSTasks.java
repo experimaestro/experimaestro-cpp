@@ -37,11 +37,8 @@ import javax.xml.xpath.XPathExpressionException;
  * @date 7/2/13
  */
 public class JSTasks extends JSBaseObject implements RefCallable {
-    XPMObject xpm;
-
     @JSFunction
-    public JSTasks(XPMObject xpm) {
-        this.xpm = xpm;
+    public JSTasks() {
     }
 
     @JSFunction(scope = true)
@@ -141,6 +138,7 @@ public class JSTasks extends JSBaseObject implements RefCallable {
 
         @Override
         public Object get(Context cx) {
+            XPMObject xpm = XPMObject.getThreadXPM();
             final TaskFactory factory = xpm.getRepository().getFactory(id);
             if (factory == null)
                 return NOT_FOUND;
@@ -151,6 +149,7 @@ public class JSTasks extends JSBaseObject implements RefCallable {
 
         @Override
         public JSTaskFactory set(Context cx, Object _value) {
+            XPMObject xpm = XPMObject.getThreadXPM();
             NativeObject value = (NativeObject) _value;
             final JSTaskFactory factory;
             try {
