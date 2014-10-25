@@ -59,9 +59,13 @@ public class JavaScriptChecker {
     public JavaScriptChecker(XPMEnvironment environment, Path file) throws
             IOException {
         this.environment = environment;
-        environment.init();
         this.file = file;
         this.content = getFileContent(file);
+    }
+
+    @BeforeClass
+    public void open() throws IOException {
+        environment.init();
     }
 
     @AfterClass

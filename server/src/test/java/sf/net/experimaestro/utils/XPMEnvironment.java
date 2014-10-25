@@ -21,19 +21,22 @@ package sf.net.experimaestro.utils;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
+ * Ensures that only one scheduler is opened throughout the tests
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 30/1/13
  */
 public class XPMEnvironment {
-    protected TemporaryDirectory directory;
-    public Scheduler scheduler;
+    private static final Logger LOGGER = Logger.getLogger();
 
-    private int count = 0;
+    public static Scheduler scheduler;
+
+    protected static TemporaryDirectory directory;
 
     /**
      * Make a directory corresponding to the caller
@@ -45,6 +48,7 @@ public class XPMEnvironment {
         // we get the caller method name
         StackTraceElement e = stacktrace[2];
         String methodName = e.getMethodName();
+        assert directory != null;
         File jobDirectory = new File(directory.getFile(), methodName);
 
         jobDirectory.mkdirs();
@@ -53,24 +57,19 @@ public class XPMEnvironment {
 
 
     @BeforeClass
-    public void init() throws IOException {
-        synchronized (this) {
-            if (count++ == 0) {
-                directory = new TemporaryDirectory("scheduler-tests", "dir");
-                final File dbFile = new File(directory.getFile(), "db");
-                dbFile.mkdir();
-                scheduler = new Scheduler(dbFile);
-            }
+    synchronized public void init() throws IOException {
+        if (scheduler == null) {
+            LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
+            directory = new TemporaryDirectory("scheduler-tests", "dir");
+            final File dbFile = new File(directory.getFile(), "db");
+            dbFile.mkdir();
+            scheduler = new Scheduler(dbFile);
         }
     }
 
+
     @AfterClass
     public void close() {
-        synchronized (this) {
-            if (--count == 0) {
-                scheduler.close();
-            }
-        }
     }
 
 
