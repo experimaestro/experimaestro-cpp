@@ -55,4 +55,5 @@ public interface CommandComponent {
         return Stream.of(this);
     }
 
+    default Stream<Dependency> dependencies() { return Stream.of(); }
 }

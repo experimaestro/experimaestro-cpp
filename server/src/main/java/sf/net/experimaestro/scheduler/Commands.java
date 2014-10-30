@@ -26,6 +26,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * A full command
@@ -89,13 +90,9 @@ public class Commands implements Iterable<Command>, Serializable {
         dependencies.add(dependency);
     }
 
-    public void forEachDependency(Consumer<Dependency> consumer) {
+    public Stream<Dependency> dependencies() {
         // Process our dependencies
-        for (Dependency dependency : dependencies) {
-            consumer.accept(dependency);
-        }
-
-        commands.stream().forEach(c -> c.forEachDependency(consumer));
+        return Stream.concat(dependencies.stream(), commands.stream().flatMap(c -> c.dependencies()));
     }
 
     @Override

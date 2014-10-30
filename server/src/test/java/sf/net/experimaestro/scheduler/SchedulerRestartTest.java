@@ -40,9 +40,7 @@ public class SchedulerRestartTest extends XPMEnvironment {
 
         int one_hour = 60 * 60 * 1000;
         WaitingJob job = new WaitingJob(counter, jobDirectory, "job", new WaitingJob.Action(one_hour, 0, 0));
-        scheduler.store(job, false);
-
-
+        Transaction.run(em -> em.persist(job));
     }
 
 

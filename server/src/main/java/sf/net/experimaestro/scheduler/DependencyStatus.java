@@ -55,10 +55,18 @@ public enum DependencyStatus {
      */
     UNACTIVE;
 
+    /**
+     * Returns true if the resource is ready
+     * @return Boolean
+     */
     public boolean isOK() {
         return this == OK_LOCK || this == OK;
     }
 
+    /**
+     * Returns whether this resource is in a blocking state
+     * @return A boolean
+     */
     public boolean isBlocking() {
         return this == HOLD || this == ERROR;
     }

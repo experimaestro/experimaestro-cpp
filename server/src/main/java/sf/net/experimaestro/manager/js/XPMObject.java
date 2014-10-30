@@ -4,10 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
@@ -26,21 +22,18 @@ import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.XMLUtils;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
+import javax.persistence.EntityManager;
 import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -99,7 +92,7 @@ public class XPMObject {
      */
     final Hierarchy loggerRepository;
     /**
-     * The experiment repository
+     * The experimentId repository
      */
     private final Repository repository;
     /**
@@ -116,7 +109,7 @@ public class XPMObject {
     private final Map<String, String> environment;
     /**
      * The resource cleaner
-     * <p/>
+     * <p>
      * Used to close objects at the end of the execution of a script
      */
     private final Cleaner cleaner;
@@ -160,24 +153,27 @@ public class XPMObject {
     private Logger rootLogger;
 
     /**
-     * Current experiment
+     * Current experimentId
      */
-    Experiment experiment;
+    Long experimentId;
 
-    /** The current connector */
+    /**
+     * The current connector
+     */
     private Connector connector;
 
     /**
      * Initialise a new XPM object
      *
      * @param currentScriptPath The xpath to the current script
-     * @param context                The JS context
-     * @param environment            The environment variables
-     * @param scope                  The JS scope for execution
-     * @param repository             The task repository
-     * @param scheduler              The job scheduler
-     * @param loggerRepository       The logger for the script
-     * @param workdir                The working directory or null if none
+     * @param context           The JS context
+     * @param environment       The environment variables
+     * @param scope             The JS scope for execution
+     * @param repository        The task repository
+     * @param scheduler         The job scheduler
+     * @param loggerRepository  The logger for the script
+     * @param workdir           The working directory or null if none
+     * @param experimentId
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
@@ -185,17 +181,17 @@ public class XPMObject {
      * @throws NoSuchMethodException
      */
     XPMObject(
-              Connector connector,
-              Path currentScriptPath,
-              Context context,
-              Map<String, String> environment,
-              Scriptable scope,
-              Repository repository,
-              Scheduler scheduler,
-              Hierarchy loggerRepository,
-              Cleaner cleaner,
-              Holder<Path> workdir,
-              Experiment experiment)
+            Connector connector,
+            Path currentScriptPath,
+            Context context,
+            Map<String, String> environment,
+            Scriptable scope,
+            Repository repository,
+            Scheduler scheduler,
+            Hierarchy loggerRepository,
+            Cleaner cleaner,
+            Holder<Path> workdir,
+            Long experimentId)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentScriptPath);
@@ -210,7 +206,7 @@ public class XPMObject {
         this.cleaner = cleaner;
         this.workdir = workdir == null ? new Holder<>(null) : workdir;
         this.rootLogger = Logger.getLogger(loggerRepository);
-        this.experiment = experiment;
+        this.experimentId = experimentId;
 
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
@@ -244,7 +240,6 @@ public class XPMObject {
             scope = scope.getParentScope();
         return ((JSXPM) scope.get("xpm", scope)).xpm;
     }
-
 
 
     static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
@@ -496,7 +491,7 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(connector, scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir, experiment);
+        final XPMObject clone = new XPMObject(connector, scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir, experimentId);
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = new HashMap<>(this.submittedJobs);
         clone._simulate = _simulate;
@@ -551,7 +546,7 @@ public class XPMObject {
     /**
      * Central method called for any script inclusion
      *
-     * @param scriptPath The path to the script
+     * @param scriptPath     The path to the script
      * @param repositoryMode If true, runs in a separate environement
      * @throws Exception if something goes wrong
      */
@@ -574,7 +569,7 @@ public class XPMObject {
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
-        } catch(FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         } finally {
             threadXPM.set(this);
@@ -737,178 +732,178 @@ public class XPMObject {
      * @throws Exception
      */
     public JSResource commandlineJob(Object path, Commands commands, NativeObject options) throws Exception {
-        CommandLineTask task = null;
-        // --- XPMProcess arguments: convert the javascript array into a Java array
-        // of String
-        LOGGER.debug("Adding command line job");
+        try (Transaction transaction = Transaction.create()) {
+            EntityManager em = transaction.em();
 
-        // --- Create the task
+            Job job = null;
+            // --- XPMProcess arguments: convert the javascript array into a Java array
+            // of String
+            LOGGER.debug("Adding command line job");
 
-
-        final Connector connector;
-
-        if (options != null && options.has("connector", options)) {
-            connector = ((JSConnector) options.get("connector", options)).getConnector();
-        } else {
-            connector = this.connector;
-        }
-
-        // Store connector in database
-        scheduler.put(connector);
-
-        // Resolve the path for the given connector
-        if (path instanceof Path) {
-            path = connector.getMainConnector().resolve((Path) path);
-        } else
-            path = connector.getMainConnector().resolve(path.toString());
-
-        task = new CommandLineTask(connector, (Path) path, commands);
-
-        if (submittedJobs.containsKey(path)) {
-            getRootLogger().info("Not submitting %s [duplicate]", path);
-            if (simulate())
-                return new JSResource(submittedJobs.get(path));
-            return new JSResource(scheduler.getResource(Paths.get(path.toString())));
-        }
-
-        // -- Adds default locks
-        Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
-                ? taskContext.defaultLocks() : defaultLocks;
-        for (Map.Entry<? extends Resource, ?> lock : _defaultLocks.entrySet()) {
-            Dependency dependency = lock.getKey().createDependency(lock.getValue());
-            task.addDependency(dependency);
-        }
+            // --- Create the task
 
 
-        // --- Environment
-        task.environment = new TreeMap<>(environment);
+            final Connector connector;
 
-        // --- Options
-
-
-        if (options != null) {
-
-            final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
-            if (!unmatched.isEmpty()) {
-                throw new IllegalArgumentException(format("Some options are not allowed: %s",
-                        Output.toString(", ", unmatched)));
+            if (options != null && options.has("connector", options)) {
+                connector = ((JSConnector) options.get("connector", options)).getConnector();
+            } else {
+                connector = this.connector;
             }
 
+            // Resolve the path for the given connector
+            if (path instanceof Path) {
+                path = connector.getMainConnector().resolve((Path) path);
+            } else
+                path = connector.getMainConnector().resolve(path.toString());
 
-            // --- XPMProcess launcher
-            if (options.has("launcher", options)) {
-                final Object launcher = options.get("launcher", options);
-                if (launcher != null && !(launcher instanceof UniqueTag))
-                    task.setLauncher(((JSLauncher) launcher).getLauncher());
-
-            }
-
-            // --- Redirect standard output
-            if (options.has("stdin", options)) {
-                final Object stdin = unwrap(options.get("stdin", options));
-                if (stdin instanceof String || stdin instanceof ConsString) {
-                    task.setInput(stdin.toString());
-                } else if (stdin instanceof Path) {
-                    task.setInput((Path) stdin);
-                } else
-                    throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
-            }
-
-            // --- Redirect standard output
-            if (options.has("stdout", options)) {
-                Path fileObject = getPath(connector, unwrap(options.get("stdout", options)));
-                task.setOutput(fileObject);
-            }
-
-            // --- Redirect standard error
-            if (options.has("stderr", options)) {
-                Path fileObject = getPath(connector, unwrap(options.get("stderr", options)));
-                task.setError(fileObject);
-            }
-
-
-            // --- Resources to lock
-            if (options.has("lock", options)) {
-                List locks = (List) options.get("lock", options);
-                for (int i = (int) locks.size(); --i >= 0; ) {
-                    Object lock_i = JSUtils.unwrap(locks.get(i));
-                    Dependency dependency = null;
-
-                    if (lock_i instanceof Dependency) {
-                        dependency = (Dependency) lock_i;
-                    } else if (lock_i instanceof NativeArray) {
-                        NativeArray array = (NativeArray) lock_i;
-                        if (array.getLength() != 2)
-                            throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
-
-                        final Object depObject = JSUtils.unwrap(array.get(0, array));
-                        Resource resource = null;
-                        if (depObject instanceof Resource) {
-                            resource = (Resource) depObject;
-                        } else {
-                            final String rsrcPath = Context.toString(depObject);
-                            Path depLocator = connector.resolve(rsrcPath);
-                            resource = scheduler.getResource(depLocator);
-                            if (resource == null)
-                                if (simulate()) {
-                                    if (!submittedJobs.containsKey(depLocator))
-                                        LOGGER.error("The dependency [%s] cannot be found", depLocator);
-                                } else {
-                                    throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
-                                }
-                        }
-
-                        final Object lockType = array.get(1, array);
-                        LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
-
-                        if (!simulate()) {
-                            dependency = resource.createDependency(lockType);
-                        }
-                    } else {
-                        throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
-                                i, lock_i.getClass());
-                    }
-
-                    if (!simulate()) {
-                        task.addDependency(dependency);
-                    }
+            job = new Job(connector, (Path) path);
+            CommandLineTask task = new CommandLineTask(commands);
+            job.setJobRunner(task);
+            if (submittedJobs.containsKey(path)) {
+                getRootLogger().info("Not submitting %s [duplicate]", path);
+                if (simulate()) {
+                    return new JSResource(submittedJobs.get(path));
                 }
 
+                return new JSResource(Resource.getByLocator(em, Paths.get(path.toString())));
+            }
+
+            // -- Adds default locks
+            Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
+                    ? taskContext.defaultLocks() : defaultLocks;
+            ArrayList<Dependency> dependencies = new ArrayList<>();
+            for (Map.Entry<? extends Resource, ?> lock : _defaultLocks.entrySet()) {
+                Dependency dependency = lock.getKey().createDependency(lock.getValue());
+                dependencies.add(dependency);
             }
 
 
-        }
-        final Resource old = scheduler.getResource(Paths.get(path.toString()));
-        if (old != null) {
-            // TODO: if equal, do not try to replace the task
-            if (!task.replace(old)) {
-                getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
-                return new JSResource(old);
+            // --- Environment
+            task.environment = new TreeMap<>(environment);
+
+            // --- Options
+
+
+            if (options != null) {
+
+                final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
+                if (!unmatched.isEmpty()) {
+                    throw new IllegalArgumentException(format("Some options are not allowed: %s",
+                            Output.toString(", ", unmatched)));
+                }
+
+
+                // --- XPMProcess launcher
+                if (options.has("launcher", options)) {
+                    final Object launcher = options.get("launcher", options);
+                    if (launcher != null && !(launcher instanceof UniqueTag))
+                        task.setLauncher(((JSLauncher) launcher).getLauncher());
+
+                }
+
+                // --- Redirect standard output
+                if (options.has("stdin", options)) {
+                    final Object stdin = unwrap(options.get("stdin", options));
+                    if (stdin instanceof String || stdin instanceof ConsString) {
+                        task.setInput(stdin.toString());
+                    } else if (stdin instanceof Path) {
+                        task.setInput((Path) stdin);
+                    } else
+                        throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
+                }
+
+                // --- Redirect standard output
+                if (options.has("stdout", options)) {
+                    Path fileObject = getPath(connector, unwrap(options.get("stdout", options)));
+                    task.setOutput(fileObject);
+                }
+
+                // --- Redirect standard error
+                if (options.has("stderr", options)) {
+                    Path fileObject = getPath(connector, unwrap(options.get("stderr", options)));
+                    task.setError(fileObject);
+                }
+
+
+                // --- Resources to lock
+                if (options.has("lock", options)) {
+                    List locks = (List) options.get("lock", options);
+                    for (int i = (int) locks.size(); --i >= 0; ) {
+                        Object lock_i = JSUtils.unwrap(locks.get(i));
+                        Dependency dependency = null;
+
+                        if (lock_i instanceof Dependency) {
+                            dependency = (Dependency) lock_i;
+                        } else if (lock_i instanceof NativeArray) {
+                            NativeArray array = (NativeArray) lock_i;
+                            if (array.getLength() != 2)
+                                throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+
+                            final Object depObject = JSUtils.unwrap(array.get(0, array));
+                            Resource resource = null;
+                            if (depObject instanceof Resource) {
+                                resource = (Resource) depObject;
+                            } else {
+                                final String rsrcPath = Context.toString(depObject);
+                                Path depLocator = connector.resolve(rsrcPath);
+                                resource = Resource.getByLocator(em, depLocator);
+                                if (resource == null)
+                                    if (simulate()) {
+                                        if (!submittedJobs.containsKey(depLocator))
+                                            LOGGER.error("The dependency [%s] cannot be found", depLocator);
+                                    } else {
+                                        throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
+                                    }
+                            }
+
+                            final Object lockType = array.get(1, array);
+                            LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
+
+                            if (!simulate()) {
+                                dependency = resource.createDependency(lockType);
+                            }
+                        } else {
+                            throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
+                                    i, lock_i.getClass());
+                        }
+
+                        if (!simulate()) {
+                            dependencies.add(dependency);
+                        }
+                    }
+
+                }
+
+
+            }
+
+
+            job.setState(ResourceState.WAITING);
+            if (simulate()) {
+                PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
+                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+                pw.format("Command: %s%n", task.getCommands().toString());
+                pw.format("Locator: %s", path.toString());
+                pw.flush();
             } else {
-                getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
+                // Store in scheduler
+                em.persist(em);
+
+                // Add dependencies
+                dependencies.forEach(job::addDependency);
+
+                // Register within an experimentId
+                if (experimentId != null) {
+                    TaskReference reference = taskContext.getTaskReference();
+                    reference.add(job);
+                    em.persist(reference);
+                }
+                transaction.commit();
             }
+
+            return new JSResource(job);
         }
-
-        task.setState(ResourceState.WAITING);
-        if (simulate()) {
-            PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-            pw.format("Command: %s%n", task.getCommands().toString());
-            pw.format("Locator: %s", path.toString());
-            pw.flush();
-        } else {
-            // Store in scheduler
-            scheduler.store(task, false);
-
-            // Store within an experiment
-            if (experiment != null) {
-                TaskReference reference = taskContext.getTaskReference();
-                reference.add(task);
-                scheduler.store(reference);
-            }
-        }
-
-        return new JSResource(task);
     }
 
     public void register(Closeable closeable) {
@@ -928,7 +923,7 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, experiment, currentScriptPath, workdir.get(), getRootLogger(), false);
+        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false);
     }
 
     public void setPath(Path locator) {
@@ -942,11 +937,11 @@ public class XPMObject {
     /**
      * Creates a unique (up to the collision probability) ID based on the hash
      *
-     * @param basedir
+     * @param basedir    The base directory
      * @param prefix     The prefix for the directory
      * @param id         The task ID or any other QName
      * @param jsonValues the JSON object from which the hash is computed
-     * @return
+     * @return A unique directory
      */
     public JSPath uniqueDirectory(Scriptable scope, Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
         if (basedir == null) {
@@ -960,7 +955,8 @@ public class XPMObject {
     }
 
     public Connector getConnector() {
-        return connector; }
+        return connector;
+    }
 
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
 
@@ -969,22 +965,6 @@ public class XPMObject {
         assert xpmObject != null;
         return xpmObject;
 
-    }
-
-    static public class Holder<T> {
-        private T value;
-
-        Holder(T value) {
-            this.value = value;
-        }
-
-        T get() {
-            return value;
-        }
-
-        void set(T value) {
-            this.value = value;
-        }
     }
 
 
@@ -1035,18 +1015,20 @@ public class XPMObject {
         public Scriptable getTokenResource(
                 @JSArgument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
-            final Resource resource = Scheduler.get().getResource(Paths.get(path));
-            final TokenResource tokenResource;
-            if (resource == null) {
-                tokenResource = new TokenResource(Paths.get(path), 0);
-                xpm.scheduler.store(tokenResource, false);
-            } else {
-                if (!(resource instanceof TokenResource))
-                    throw new AssertionError(String.format("Resource %s exists and is not a token", path));
-                tokenResource = (TokenResource) resource;
-            }
+            return Transaction.evaluate(em -> {
+                final Resource resource = Resource.getByLocator(em, Paths.get(path));
+                final TokenResource tokenResource;
+                if (resource == null) {
+                    tokenResource = new TokenResource(Paths.get(path), 0);
+                    em.persist(resource);
+               } else {
+                    if (!(resource instanceof TokenResource))
+                        throw new AssertionError(String.format("Resource %s exists and is not a token", path));
+                    tokenResource = (TokenResource) resource;
+                }
 
-            return xpm.context.newObject(xpm.scope, "TokenResource", new Object[]{tokenResource});
+                return xpm.context.newObject(xpm.scope, "TokenResource", new Object[]{tokenResource});
+            });
         }
 
         @JSFunction()
@@ -1092,7 +1074,7 @@ public class XPMObject {
         }
 
         /**
-         * Add an experiment
+         * Add an experimentId
          *
          * @param object
          * @return
@@ -1394,7 +1376,7 @@ public class XPMObject {
                     if (xpm.simulate()) {
                         return xpm.submittedJobs.get(uri);
                     } else {
-                        return xpm.scheduler.getResource(Paths.get(uri));
+                        return Transaction.evaluate(em -> Resource.getByLocator(em, Paths.get(uri)));
                     }
                 }
 
@@ -1413,8 +1395,12 @@ public class XPMObject {
         @JSFunction
         public void set_experiment(String dotname, Path workdir) throws ExperimaestroCannotOverwrite {
             if (!xpm.simulate()) {
-                xpm.experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
-                xpm.scheduler.store(xpm.experiment);
+                Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
+                try(Transaction t = Transaction.create()) {
+                    t.em().persist(experiment);
+                    xpm.experimentId = experiment.getId();
+                    t.commit();
+                }
             }
             xpm.workdir.set(workdir);
         }

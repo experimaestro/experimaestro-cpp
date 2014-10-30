@@ -45,10 +45,6 @@ import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
@@ -309,7 +305,7 @@ public class JsonRPCMethods extends HttpServlet {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
-            resource = scheduler.getResource(rid);
+            resource = Transaction.evaluate(em -> em.find(Resource.class, rid));
         } catch (NumberFormatException e) {
             throw new RuntimeException(e);
         }
@@ -529,7 +525,9 @@ public class JsonRPCMethods extends HttpServlet {
             if (!state.isActive()) {
                 nbUpdated++;
                 // We invalidate grand-children if the child was done
-                if (state == ResourceState.DONE) invalidate(to);
+                if (state == ResourceState.DONE) {
+                    invalidate(to);
+                }
                 ((Job) to).restart();
             }
         }
@@ -577,12 +575,10 @@ public class JsonRPCMethods extends HttpServlet {
     @RPCMethod(help = "Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
             " in a change of state")
     public int updateJobs(
-            @RPCArgument(name = "group", required = false) String group,
             @RPCArgument(name = "recursive", required = false) Boolean _recursive,
             @RPCArgument(name = "states", required = false) String[] statesNames
     ) throws Exception {
         EnumSet<ResourceState> states = getStates(statesNames);
-        boolean recursive = _recursive != null ? _recursive : false;
 
         int nbUpdated = 0;
         try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
@@ -726,10 +722,14 @@ public class JsonRPCMethods extends HttpServlet {
     public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
         int n = 0;
         for (Object id : JobIds) {
-            final Resource resource = scheduler.getResource(Paths.get(id.toString()));
-            if (resource instanceof Job) {
-                if (((Job) resource).stop())
-                    n++;
+            try (Transaction transaction = Transaction.create()) {
+                final Resource resource = Resource.getByLocator(transaction.em(), Paths.get(id.toString()));
+                if (resource instanceof Job) {
+                    if (((Job) resource).stop()) {
+                        n++;
+                    }
+                }
+                transaction.commit();
             }
         }
         return n;
@@ -737,37 +737,43 @@ public class JsonRPCMethods extends HttpServlet {
 
     @RPCMethod(help = "Puts back a job into the waiting queue")
     public int restartJob(
-            @RPCArgument(name = "name", help = "The name of the job") String name,
+            @RPCArgument(name = "name", help = "The ID of the job") String name,
             @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
             @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
     ) throws Exception {
-
         int nbUpdated = 0;
-        Resource resource = scheduler.getResource(Paths.get(name));
-        if (resource == null)
-            throw new XPMRuntimeException("Job not found [%s]", name);
 
-        final ResourceState rsrcState = resource.getState();
+        ResourceState rsrcState;
+        Resource resource;
+        try (Transaction transaction = Transaction.create()) {
+            resource = Resource.getByLocator(transaction.em(), Paths.get(name));
 
-        if (rsrcState == ResourceState.RUNNING)
-            throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+            if (resource == null)
+                throw new XPMRuntimeException("Job not found [%s]", name);
 
-        // The job is active, so we have nothing to do
-        if (rsrcState.isActive())
-            return 0;
+            rsrcState = resource.getState();
 
-        if (!restartDone && rsrcState == ResourceState.DONE)
-            return 0;
+            if (rsrcState == ResourceState.RUNNING)
+                throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
-        ((Job) resource).restart();
-        nbUpdated++;
+            // The job is active, so we have nothing to do
+            if (rsrcState.isActive())
+                return 0;
 
+            if (!restartDone && rsrcState == ResourceState.DONE)
+                return 0;
+
+            ((Job) resource).restart();
+            nbUpdated++;
+
+            transaction.commit();
+        }
         // If the job was done, we need to restart the dependences
         if (recursive && rsrcState == ResourceState.DONE) {
             nbUpdated += invalidate(resource);
         }
-
         return nbUpdated;
+
     }
 
     /**

@@ -69,12 +69,9 @@ public class Command implements CommandComponent {
         return list.parallelStream().flatMap(CommandComponent::allComponents);
     }
 
-    public void forEachDependency(Consumer<Dependency> consumer) {
-        for (CommandComponent c : list) {
-            if (c instanceof SubCommand) {
-                ((SubCommand) c).forEachDependency(consumer);
-            }
-        }
+    @Override
+    public Stream<Dependency> dependencies() {
+        return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> ((SubCommand)c).dependencies());
     }
 
     @Override
@@ -285,8 +282,9 @@ public class Command implements CommandComponent {
             return commands.commands.parallelStream().flatMap(CommandComponent::allComponents);
         }
 
-        public void forEachDependency(Consumer<Dependency> consumer) {
-            commands.forEachDependency(consumer);
+        @Override
+        public Stream<Dependency> dependencies() {
+            return commands.dependencies();
         }
 
         public Commands commands() {

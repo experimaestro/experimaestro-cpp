@@ -18,10 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
@@ -31,14 +27,17 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.FileNameTransformer;
-import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.*;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,13 +52,17 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-public abstract class Job extends Resource implements HeapElement<Job> {
+@DiscriminatorValue(Resource.JOB_TYPE)
+public class Job extends Resource {
+
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     final static private Logger LOGGER = Logger.getLogger();
 
-    /** The connector  to execute the task */
-    @ManyToOne(fetch = FetchType.LAZY)
+    /**
+     * The connector  to execute the task
+     */
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Connector connector;
 
     /**
@@ -95,6 +98,10 @@ public abstract class Job extends Resource implements HeapElement<Job> {
     @JoinColumn(name = "process")
     XPMProcess process;
 
+    @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "runner")
+    JobRunner jobRunner;
+
     /**
      * Number of unsatisfied jobs
      */
@@ -106,19 +113,14 @@ public abstract class Job extends Resource implements HeapElement<Job> {
     int nbHolding = 0;
 
     /**
-     * Negative value when not in the heap. It should
-     * not be serialized since it is linked to a list of jobs
-     * that should remain in main memory
+     * For serialization
      */
-    transient private int index = -1;
-
-    /** For serialization */
     protected Job() {
     }
 
     /**
      * Initialisation of a task
-     * <p/>
+     * <p>
      * The job is by default initialized as "WAITING": its state should be updated after
      * the initialization has finished
      */
@@ -158,7 +160,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
 
     /**
      * Restart the job
-     * <p/>
+     * <p>
      * Put the state into waiting mode and clean all the output files
      */
     synchronized public void restart() throws Exception {
@@ -168,8 +170,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
             clean();
 
             // Update status
-            updateStatus(false);
-            Scheduler.get().store(this, true);
+            updateStatus();
         }
     }
 
@@ -205,7 +206,10 @@ public abstract class Job extends Resource implements HeapElement<Job> {
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */
-    abstract protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable;
+    protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
+        process = jobRunner.startJob(locks);
+        return process;
+    }
 
     // ----- Heap part (do not touch) -----
 
@@ -226,7 +230,6 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 // Check if not done
                 if (isDone()) {
                     setState(ResourceState.DONE);
-                    storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
                 }
@@ -240,7 +243,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                         try {
                             // Wait five seconds before trying to lock again
                             wait(5000);
-                        } catch (InterruptedException ee) {
+                        } catch (InterruptedException ignored) {
                         }
                     }
                     continue;
@@ -252,7 +255,6 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 // will be sure of the result)
                 if (isDone()) {
                     setState(ResourceState.DONE);
-                    storeState(true);
                     LOGGER.info("Task %s is already done", this);
                     return;
                 }
@@ -264,9 +266,10 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 // the task manager
                 synchronized (Scheduler.LockSync) {
                     LOGGER.debug("Running preparation - locking dependencies [%s]", this);
-                    for (Dependency dependency : getDependencies()) {
+                    for (Dependency dependency : getRequiredResources()) {
                         try {
                             LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
+                            // FIXME: should be stored
                             final Lock lock = dependency.lock(pid);
                             if (lock != null)
                                 locks.add(lock);
@@ -289,28 +292,21 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                     startTimestamp = System.currentTimeMillis();
 
                     // Start the task and transfer locking handling to those
-                    storeState(false);
                     process = startJob(locks);
 
                     process.adopt(locks);
                     locks = null;
 
                     // Store the current state
-                    storeState(false);
-
                     LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
 
                 } catch (Throwable e) {
                     LOGGER.warn(format("Error while running: %s", this), e);
                     setState(ResourceState.ERROR);
-                    storeState(true);
-                } finally {
                 }
 
                 break;
             }
-        } catch (LockException e) {
-            throw e;
         } catch (RuntimeException e) {
             LOGGER.error(e, "Caught exception for %s", this);
             throw new RuntimeException(e);
@@ -342,6 +338,8 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 break;
 
             case END_OF_JOB:
+                // We received an end of job message from a process watcher
+
                 EndOfJobMessage eoj = (EndOfJobMessage) message;
                 this.endTimestamp = eoj.timestamp;
 
@@ -355,14 +353,11 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 XPMProcess old = process;
                 process = null;
 
-                storeState(true);
-
                 try {
-                    final Collection<Dependency> deps = getDependencies();
+                    final Collection<Dependency> deps = getDependentResources();
                     for (Dependency dep : deps) {
                         dep.unactivate();
 
-                        Scheduler.get().store(dep);
                     }
                 } catch (RuntimeException e) {
                     LOGGER.error(e, "Error while unactivating dependencies");
@@ -380,7 +375,6 @@ public abstract class Job extends Resource implements HeapElement<Job> {
 
             case DEPENDENCY_CHANGED:
                 LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
-                ResourceState oldState = getState();
                 final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
 
                 // Store in cache
@@ -409,7 +403,6 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                     // Store the result
                     assert nbHolding >= 0;
                     assert nbUnsatisfied >= nbHolding;
-                    storeState(getState() != oldState);
                 }
                 LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
                         diff, diffHold, depChanged.from, depChanged.to);
@@ -420,16 +413,6 @@ public abstract class Job extends Resource implements HeapElement<Job> {
 
         }
 
-    }
-
-    public int getIndex() {
-        return index;
-    }
-
-    // ----- [/Heap part] -----
-
-    public void setIndex(int index) {
-        this.index = index;
     }
 
     public long getStartTimestamp() {
@@ -463,11 +446,12 @@ public abstract class Job extends Resource implements HeapElement<Job> {
             }
         }
 
-        if (!getDependencies().isEmpty()) {
+        Collection<Dependency> requiredResources = getRequiredResources();
+        if (!requiredResources.isEmpty()) {
             JSONArray dependencies = new JSONArray();
             info.put("dependencies", dependencies);
 
-            for (Dependency dependency : getDependencies()) {
+            for (Dependency dependency : requiredResources) {
                 Resource resource = dependency.getFrom();
 
                 JSONObject dep = new JSONObject();
@@ -509,11 +493,11 @@ public abstract class Job extends Resource implements HeapElement<Job> {
             }
         }
 
-        if (!getDependencies().isEmpty()) {
+        if (!getRequiredResources().isEmpty()) {
             out.format("<h2>Dependencies</h2><ul>");
             out.format("<div>%d unsatisfied / %d holding dependencie(s)</div>",
                     nbUnsatisfied, nbHolding);
-            for (Dependency dependency : getDependencies()) {
+            for (Dependency dependency : getRequiredResources()) {
 
                 Resource resource = dependency.getFrom();
 
@@ -528,26 +512,29 @@ public abstract class Job extends Resource implements HeapElement<Job> {
         }
     }
 
-    @Override
+    /**
+     * Add a dependency (requirement) for this job.
+     *
+     * @param dependency The dependency
+     */
     public void addDependency(Dependency dependency) {
-        if (stored())
-            throw new RuntimeException("Cannot add dependencies to a stored resource");
-
-        // Start with an unsatisfied dependency -- the status will be updated
-        // when storing the resource
-        dependency.status = DependencyStatus.WAIT;
-        nbUnsatisfied++;
-        // FIXME: handle the case where a dependency is overwritten
-        final Dependency old = dependencies.put(dependency.getFrom(), dependency);
-        if (old != null) {
-            LOGGER.warn("Overwritten dependency: %s", dependency);
+        dependency.to = this;
+        this.dependencyTo.add(dependency);
+        dependency.update();
+        if (!dependency.status.isOK()) {
+            nbUnsatisfied++;
         }
+        dependency.from.dependencyFrom.add(dependency);
+    }
+
+    public void removeDependency(Dependency dependency) {
+        throw new NotImplementedException();
     }
 
     @Override
-    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+    synchronized protected boolean doUpdateStatus() throws Exception {
         LOGGER.debug("Updating status for [%s]", this);
-        boolean changes = super.doUpdateStatus(store);
+        boolean changes = super.doUpdateStatus();
 
         // Check the done file
         final Path doneFile = DONE_EXTENSION.transform(path);
@@ -565,8 +552,8 @@ public abstract class Job extends Resource implements HeapElement<Job> {
             int nbUnsatisfied = 0;
             int nbHolding = 0;
 
-            for (Dependency dependency : getDependencies()) {
-                dependency.update(store);
+            for (Dependency dependency : getRequiredResources()) {
+                dependency.update();
                 if (!dependency.status.isOK()) {
                     nbUnsatisfied++;
                     if (dependency.status == DependencyStatus.HOLD)
@@ -598,7 +585,7 @@ public abstract class Job extends Resource implements HeapElement<Job> {
     /**
      * Stop the job
      */
-    synchronized public boolean stop() {
+    public boolean stop() {
         // Process is running
         if (process != null) {
             try {
@@ -608,14 +595,12 @@ public abstract class Job extends Resource implements HeapElement<Job> {
                 return false;
             }
             setState(ResourceState.ERROR);
-            storeState(true);
             return true;
         }
 
         // Process is about to run
         if (getState() == ResourceState.READY || getState() == ResourceState.WAITING) {
             setState(ResourceState.ON_HOLD);
-            storeState(true);
             return true;
         }
 
@@ -660,4 +645,41 @@ public abstract class Job extends Resource implements HeapElement<Job> {
         // TODO: assert object is nothing
         return new ReadWriteDependency(this);
     }
+
+
+    @Override
+    protected void doReplaceBy(Resource resource) {
+        super.doReplaceBy(resource);
+        Job job = (Job)resource;
+        this.priority = job.priority;
+        this.startTimestamp  = job.startTimestamp;
+        this.endTimestamp = job.endTimestamp;
+        this.priority = job.priority;
+        this.setJobRunner(((Job)resource).jobRunner);
+    }
+
+    public void setJobRunner(JobRunner jobRunner) {
+        if (this.jobRunner != null) {
+            jobRunner.dependencies().forEach(d -> removeDependency(d));
+        }
+
+        this.jobRunner = jobRunner;
+        this.jobRunner.job = this;
+        // Adds all dependencies from the job runner
+        jobRunner.dependencies().forEach(this::addDependency);
+
+    }
+
+
+    @PostUpdate
+    @PostPersist
+    public void _stored()  {
+        // Special case of jobs: we need to track
+        // jobs that are ready to be run
+        updateStatus();
+        if (getState() == ResourceState.READY) {
+            Scheduler.notifyRunners();
+        }
+    }
+
 }

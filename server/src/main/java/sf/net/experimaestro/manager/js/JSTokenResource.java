@@ -18,19 +18,23 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.TokenResource;
+import sf.net.experimaestro.scheduler.Transaction;
 
 /**
+ * A token resource wrapper
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/11/12
  */
-public class JSTokenResource extends ScriptableObject implements Wrapper {
+public class JSTokenResource extends JSResource {
 
     private TokenResource resource;
 
-    public JSTokenResource() {
+    @JSFunction
+    public JSTokenResource(Resource resource) {
+        super(resource);
+        this.resource = (TokenResource) resource;
     }
 
     @Override
@@ -38,13 +42,16 @@ public class JSTokenResource extends ScriptableObject implements Wrapper {
         return "TokenResource";
     }
 
-    public void jsConstructor(Object resource) {
-        this.resource = (TokenResource) resource;
-    }
-
 
     public void jsFunction_set_limit(int limit) {
-        resource.setLimit(limit);
+        if (resource.getId() == null) {
+            resource.setLimit(limit);
+        }
+        // Get a database copy of this resource first
+        Transaction.run(em -> {
+            resource = em.find(TokenResource.class, resource.getId());
+            resource.setLimit(limit);
+        });
     }
 
     @Override

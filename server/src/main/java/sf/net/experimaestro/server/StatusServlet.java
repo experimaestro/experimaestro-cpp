@@ -122,7 +122,7 @@ public class StatusServlet extends XPMServlet {
             }
             PrintWriter out = startHTMLResponse(response);
 
-            Resource resource = scheduler.getResource(resourceId);
+            Resource resource = Resource.getById(resourceId);
             header(out, String.format("Details of resource %s", resource.getPath()));
 
             if (resource != null) {

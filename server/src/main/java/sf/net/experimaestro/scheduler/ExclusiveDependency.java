@@ -18,15 +18,14 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
-
-import org.hsqldb.persist.LockFile;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * A dependency type where the resource can accessed by just one
@@ -38,7 +37,7 @@ public class ExclusiveDependency extends Dependency {
 
     protected ExclusiveDependency() {}
 
-    public ExclusiveDependency(Resource from) {
+    public ExclusiveDependency(Resource from, Resource to) {
         super(from);
     }
 

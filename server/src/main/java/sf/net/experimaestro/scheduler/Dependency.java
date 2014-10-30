@@ -23,45 +23,40 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 /**
  * What is the state of a dependency.
  * This class stores the previous state
  * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
  */
-@Entity
-@Table(name = "dependency")
-abstract public class Dependency {
+@Entity(name = "dependencies")
+@Table(name = "dependencies")
+abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
+
 
     /**
      * The state of this dependency
      */
     DependencyStatus status;
 
-    @GeneratedValue(strategy = GenerationType.AUTO)
+
+    @ManyToOne
+    @JoinColumn(name = "fromId")
     @Id
-    private long id;
+    Resource from;
 
-    /**
-     * The resource.
-     * We abort its deletion if there is a dependency.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Resource from;
-
-    /**
-     * The resource that depends on the resource {@link #from}
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Resource to;
+    @Id
+    @ManyToOne
+    @JoinColumn(name = "toId")
+    Resource to;
 
     /**
      * The lock (or null if no lock taken)
      */
     @OneToOne(optional = true)
     private Lock lock;
-
 
     protected Dependency() {
     }
@@ -74,21 +69,12 @@ abstract public class Dependency {
         return lock != null;
     }
 
-    public long getDatabaseId() {
-        return id;
-    }
-
     public Resource getFrom() {
         return from;
     }
 
     public Resource getTo() {
         return to;
-    }
-
-    public Dependency setTo(Resource to) {
-        this.to = to;
-        return this;
     }
 
     @Override
@@ -105,7 +91,7 @@ abstract public class Dependency {
      * {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     protected DependencyStatus accept() {
-        LOGGER.debug("From [%d] is in state %s [to=%s]", this.from, from.getState(), to);
+        LOGGER.debug("From [%d] is in state %s [to=%s]", from, from.getState(), to);
 
         // Handle simple cases
         switch (from.getState()) {
@@ -135,26 +121,20 @@ abstract public class Dependency {
     /**
      * Update a dependency status
      *
-     * @param store     <tt>true</tt> if the dependency status should be stored in DB if changed.
-     * @return
+     * @return True if the status changed
      */
-    synchronized final public boolean update(boolean store) {
+    synchronized final public boolean update() {
         DependencyStatus old = status;
         status = accept();
 
         if (status == old)
             return false;
 
-        if (store)
-            Scheduler.get().store(this);
         return true;
     }
 
     final public Lock lock(String pid) throws LockException {
         lock = _lock(pid);
-        if (lock != null) {
-            Scheduler.get().store(this);
-        }
         return lock;
     }
 

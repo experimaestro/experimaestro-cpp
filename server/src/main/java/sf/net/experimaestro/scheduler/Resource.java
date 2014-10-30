@@ -26,14 +26,19 @@ import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.*;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+
+import static java.lang.String.format;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -41,12 +46,13 @@ import java.util.Map;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@SuppressWarnings("JpaAttributeTypeInspection")
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Table(name = "resources")
-public abstract class Resource
-        implements /*not sure if ID or locator... Comparable<Resource>,*/ Listener {
+//@Cacheable
+public abstract class Resource {
     /**
      * Extension for the lock file
      */
@@ -95,13 +101,22 @@ public abstract class Resource
      */
     public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
 
-    public static final String COMMAND_LINE_JOB_TYPE = "1";
+    public static final String JOB_TYPE = "1";
+    public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
 
-    /** The path with the connector */
-    @Basic
-    Path path;
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
+    protected List<Dependency> dependencyFrom = new ArrayList<>();
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
+    List<Dependency> dependencyTo = new ArrayList<>();
+
+    /**
+     * The path with the connector
+     */
+    @Column(updatable = false)
+    protected Path path;
 
     /**
      * The resource ID
@@ -123,6 +138,7 @@ public abstract class Resource
     /**
      * The resource state
      */
+    @Column(name = "state")
     private ResourceState state;
 
     /**
@@ -131,19 +147,10 @@ public abstract class Resource
     transient private LockData lockData;
 
     /**
-     * The resource this resource is dependent upon
-     */
-    @ElementCollection
-    @CollectionTable(name = "dependencies", joinColumns = @JoinColumn(name = "userId"))
-    @Column(name = "dependency")
-    @MapKeyJoinColumn(name = "messageId")
-    Map<Resource, Dependency> dependencies = new HashMap<>();
-
-    /**
      * Called when deserializing from database
      */
     protected Resource() {
-        LOGGER.debug("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
+        LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
     public Resource(Path path) {
@@ -155,13 +162,6 @@ public abstract class Resource
         LOGGER.debug("Finalizing resource [%s@%s]", System.identityHashCode(this), this);
     }
 
-    /**
-     * Compares to another resource (based on the locator)
-     */
-    public int compareTo(Resource o) {
-        return Long.compare(resourceID, o.resourceID);
-    }
-
     @Override
     public int hashCode() {
         return resourceID.hashCode();
@@ -171,27 +171,25 @@ public abstract class Resource
     public String toString() {
         if (resourceID == null)
             return "R-";
-        return String.format("R%d", resourceID);
+        return format("R%d", resourceID);
     }
 
     /**
      * Get the ID
      */
-    public long getId() {
-        if (resourceID == null)
-            return 0;
+    public Long getId() {
         return resourceID;
     }
 
     /**
      * Update the state of the resource by checking all that could have changed externally
-     * <p/>
-     * Calls {@linkplain #doUpdateStatus(boolean)}.
+     * <p>
+     * Calls {@linkplain #doUpdateStatus()}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final protected boolean updateStatus(boolean store) {
+    final public boolean updateStatus() {
         try {
-            boolean b = doUpdateStatus(store);
+            boolean b = doUpdateStatus();
             return b;
         } catch (Exception e) {
             LOGGER.error(e, "Exception while updating status");
@@ -201,39 +199,17 @@ public abstract class Resource
 
     /**
      * Do a full update of the state of this resource.
-     * <p/>
+     * <p>
      * This implies looking at the disk to check for done/lock files, etc.
      *
-     * @param store <tt>true</tt> if changes should be stored in DB
      * @return True if the state was updated
      */
-    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+    protected boolean doUpdateStatus() throws Exception {
         return false;
     }
 
     public boolean stored() {
         return resourceID != null;
-    }
-
-    /**
-     * Replace this resource
-     *
-     * @param old
-     * @return true if the resource was replaced, and false if an error occured
-     */
-    public boolean replace(Resource old) throws ExperimaestroCannotOverwrite {
-        assert old.getPath().equals(getPath()) : String.format("locators %s and %s do not match", old, this);
-
-        if (!old.canBeReplaced()) return false;
-        LOGGER.info("Old [%s] is in state %s", old.getPath(), old.state);
-
-        synchronized (old) {
-            if (ResourceState.UPDATABLE_STATES.contains(old.state)) {
-                Scheduler.get().store(this, false);
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -250,7 +226,6 @@ public abstract class Resource
      *
      * @param message The message
      */
-    @Override
     public void notify(Message message) {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
@@ -260,10 +235,17 @@ public abstract class Resource
     }
 
     /**
-     * The set of dependencies for this object
+     * The set of dependencies that are dependent on this resource
      */
-    public Collection<Dependency> getDependencies() {
-        return dependencies.values();
+    public Collection<Dependency> getRequiredResources() {
+        return dependencyFrom;
+    }
+
+    /**
+     * The set of resources the resource is dependent upon
+     */
+    public Collection<Dependency> getDependentResources() {
+        return dependencyTo;
     }
 
     /**
@@ -272,13 +254,10 @@ public abstract class Resource
      * @param dependency The dependency
      */
     protected Dependency updateDependency(Dependency dependency) {
-        if (dependencies != null)
-            return dependencies.put(dependency.getFrom(), dependency);
-        return null;
-    }
-
-    public void addDependency(Dependency dependency) {
-        throw new RuntimeException("Cannot add dependency to resource of type " + this.getClass());
+        throw new NotImplementedException();
+//        if (dependencies != null)
+//            return dependencies.put(dependency.getFrom(), dependency);
+//        return null;
     }
 
     /**
@@ -294,7 +273,8 @@ public abstract class Resource
      * @return The task unique from
      */
     public Path getPath() {
-        return path; }
+        return path;
+    }
 
     public String getIdentifier() {
         return getPath().toString();
@@ -333,23 +313,6 @@ public abstract class Resource
         return true;
     }
 
-    /**
-     * Update the database after a change in state
-     *
-     * @param notify
-     * @return true if everything went well
-     */
-    boolean storeState(boolean notify) {
-        try {
-            Scheduler.get().store(this, notify);
-            return true;
-        } catch (ExperimaestroCannotOverwrite e) {
-            LOGGER.error(
-                    "Could not update the information in the database for %s: %s",
-                    this, e.getMessage());
-        }
-        return false;
-    }
 
     public Path getFileWithExtension(String extension) throws FileSystemException {
         return new FileNameTransformer("", extension).transform(path);
@@ -371,7 +334,7 @@ public abstract class Resource
      */
     public boolean canBeOverriden(Resource current) {
         if (state == ResourceState.RUNNING && current != this) {
-            LOGGER.error(String.format("Cannot override a running task [%s] / %s vs %s", current,
+            LOGGER.error(format("Cannot override a running task [%s] / %s vs %s", current,
                     System.identityHashCode(current), System.identityHashCode(this.hashCode())));
             return false;
         }
@@ -416,65 +379,51 @@ public abstract class Resource
     }
 
     /**
-     * Retrieves resources that depend upon the given resource
-     *
-     * @return A map of dependencies
-     */
-    public Collection<Dependency> retrieveDependentResources() {
-        return dependencies.values();
-    }
-
-    /**
      * Notify the dependencies that a resource has changed
      */
     public void notifyDependencies() {
         // Join between active states
         // TODO: should limit to the dependencies of some resources
-        final long from = getId();
+        EntityManager em = null;
 
         // Notify dependencies in turn
-        Collection<Dependency> dependencies = retrieveDependentResources();
-        LOGGER.info("Notifying dependencies from R%s [%d]", from, dependencies.size());
+        Collection<Dependency> dependencies = getDependentResources();
+        LOGGER.info("Notifying dependencies from R%s [%d]", this, dependencies.size());
 
-        EntityTransaction transaction = Scheduler.transaction();
-        try {
-            for (Dependency dep : dependencies) {
-                if (dep.status == DependencyStatus.UNACTIVE) {
-                    LOGGER.debug("We won't notify [R%s] to [R%s] since the dependency is unactive", from, dep.getTo());
+        for (Dependency dep : dependencies) {
+            if (dep.status == DependencyStatus.UNACTIVE) {
+                LOGGER.debug("We won't notify [R%s] to [R%s] since the dependency is unactive", this, dep.getTo());
 
-                } else
-                    try {
-                        // when the dependency status is null, the dependency is not active anymore
-                        LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", from, dep.getTo(), dep.status);
-                        // Preserves the previous state
-                        DependencyStatus beforeState = dep.status;
+            } else
+                try {
+                    // when the dependency status is null, the dependency is not active anymore
+                    LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", this, dep.getTo(), dep.status);
+                    // Preserves the previous state
+                    DependencyStatus beforeState = dep.status;
 
-                        if (dep.update(false)) {
-                            final Resource depResource = dep.getTo();
-                            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                continue;
-                            }
-
-                            // We ensure nobody else can modify the resource first
-                            synchronized (depResource) {
-                                // Update the dependency in database
-                                Scheduler.get().store(dep);
-
-                                // Notify the resource that a dependency has changed
-                                depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-                                LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
-                                        beforeState, dep.status, depResource.getState(), depResource);
-                            }
-                        } else {
-                            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+                    if (dep.update()) {
+                        final Resource depResource = dep.getTo();
+                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                            continue;
                         }
-                    } catch (RuntimeException e) {
-                        LOGGER.error(e, "Got an exception while notifying [%s]", this);
+
+                        // We ensure nobody else can modify the resource first
+                        try (Transaction t = Transaction.of(em)) {
+                            // Update the dependency in database
+                            // Notify the resource that a dependency has changed
+                            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+                            LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
+                                    beforeState, dep.status, depResource.getState(), depResource);
+
+                            t.commit();
+                        }
+                    } else {
+                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }
-            }
-            transaction.commit();
-        } finally {
+                } catch (RuntimeException e) {
+                    LOGGER.error(e, "Got an exception while notifying [%s]", this);
+                }
         }
 
     }
@@ -491,7 +440,7 @@ public abstract class Resource
         // Get the group
         final boolean newResource = !resource.stored();
         if (newResource) {
-            resource.updateStatus(false);
+            resource.updateStatus();
         }
 
         // TODO implement
@@ -507,13 +456,14 @@ public abstract class Resource
             LOGGER.debug("Adding a new resource [%s] in database [id=%d/%x]", resource, id, System.identityHashCode(resource));
 
             // Add the dependencies
-            final Collection<Dependency> deps = resource.getDependencies();
-            for (Dependency dependency : deps) {
-                // FIXME
-                dependency.setTo(this);
-                Scheduler.get().store(dependency);
-                LOGGER.debug("Added new dependency %s [%d]", dependency, dependency.getDatabaseId());
-            }
+            // Should not be necessary
+//            final Collection<Dependency> deps = resource.getDependenciesFrom();
+//            for (Dependency dependency : deps) {
+//                // FIXME
+//                dependency.setTo(this);
+//                Scheduler.get().store(dependency);
+//                LOGGER.debug("Added new dependency %s", dependency);
+//            }
 
             // Notify
             Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, resource));
@@ -521,14 +471,6 @@ public abstract class Resource
 
 
         return old;
-    }
-
-    public Collection<Dependency> getDependentResources() {
-        return null;
-    }
-
-    public boolean updateStatus() {
-        return false;
     }
 
     /**
@@ -539,7 +481,8 @@ public abstract class Resource
     public synchronized void delete(boolean recursive) {
         if (getState() == ResourceState.RUNNING)
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
-        Collection<Dependency> dependencies = retrieveDependentResources();
+
+        Collection<Dependency> dependencies = getDependentResources();
         if (!dependencies.isEmpty()) {
             if (recursive) {
                 for (Dependency dependency : dependencies) {
@@ -552,7 +495,9 @@ public abstract class Resource
                 throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies", this);
         }
 
-        Scheduler.get().remove(this);
+        // Remove
+        Transaction.run(em -> em.remove(this));
+
         SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
         this.notify(message);
         notify(message);
@@ -561,6 +506,50 @@ public abstract class Resource
     public Path getFileWithExtension(FileNameTransformer extension) throws FileSystemException {
         return extension.transform(path);
     }
+
+
+    public static Resource getByLocator(EntityManager em, Path path) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
+        Root<Resource> root = cq.from(Resource.class);
+        cq.where(root.get("path").in(cb.parameter(Path.class, "path")));
+
+
+        TypedQuery<Resource> query = em.createQuery(cq);
+        query.setParameter("path", path);
+        List<Resource> result = query.getResultList();
+        assert result.size() <= 1;
+
+        return result.get(0);
+    }
+
+    public static Resource getById(long resourceId) {
+        // FIXME
+        throw new NotImplementedException();
+    }
+
+    final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
+        if (resource.getClass() != this.getClass()) {
+            throw new ExperimaestroCannotOverwrite("Class %s and %s differ", resource.getClass(), this.getClass());
+        }
+
+        if (!resource.getPath().equals(this.path)) {
+            throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getPath(), this.getPath());
+        }
+
+        doReplaceBy(resource);
+    }
+
+    protected void doReplaceBy(Resource resource) {
+        this.dependencyFrom.clear();
+        this.dependencyFrom.addAll(resource.dependencyFrom);
+
+        this.dependencyTo.clear();
+        this.dependencyTo.addAll(resource.dependencyTo);
+
+        this.state = resource.state;
+    }
+
 
     /**
      * Defines how printing should be done

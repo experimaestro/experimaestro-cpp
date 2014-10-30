@@ -24,10 +24,8 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
@@ -43,9 +42,8 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@DiscriminatorValue(Resource.COMMAND_LINE_JOB_TYPE)
-@Entity
-public class CommandLineTask extends Job {
+@DiscriminatorValue("command-line-task")
+public class CommandLineTask extends JobRunner {
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * The environment
@@ -90,10 +88,7 @@ public class CommandLineTask extends Job {
      *
      * @param commands  The commands with arguments
      */
-    public CommandLineTask(Connector connector, Path path,
-                           Commands commands, Map<String, String> environment, String workingDirectory) {
-
-        super(connector, path);
+    public CommandLineTask(Commands commands, Map<String, String> environment, String workingDirectory) {
 
         launcher = new DefaultLauncher();
 
@@ -106,9 +101,6 @@ public class CommandLineTask extends Job {
 
         // Construct commands
         this.commands = commands;
-
-        // Adds all dependencies
-        this.commands.forEachDependency(d -> addDependency(d));
     }
 
     /**
@@ -116,9 +108,8 @@ public class CommandLineTask extends Job {
      *
      * @param commands  The commands to run
      */
-    public CommandLineTask(Connector connector, Path path,
-                           Commands commands) {
-        this(connector, path, commands, null, null);
+    public CommandLineTask(Commands commands) {
+        this(commands, null, null);
     }
 
     /**
@@ -130,15 +121,15 @@ public class CommandLineTask extends Job {
 
 
     @Override
-    protected XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
-        SingleHostConnector connector = getConnector().getConnector(null);
+    public XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
+        SingleHostConnector singleHostConnector = job.getMainConnector();
 
-        final Path runFile = RUN_EXTENSION.transform(path);
+        final Path runFile = Resource.RUN_EXTENSION.transform(job.getPath());
         LOGGER.info("Starting command with run file [%s]", runFile);
-        XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(connector, runFile);
+        XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(singleHostConnector, runFile);
 
         // Sets the command
-        builder.job(this);
+        builder.job(job);
 
         // The job will be run in detached mode
         builder.detach(true);
@@ -148,30 +139,30 @@ public class CommandLineTask extends Job {
         AbstractProcessBuilder.Redirect jobInput = AbstractCommandBuilder.Redirect.INHERIT;
 
         if (jobInputString != null) {
-            Path inputFile = INPUT_EXTENSION.transform(path);
+            Path inputFile = Resource.INPUT_EXTENSION.transform(job.getPath());
             final OutputStream outputStream = Files.newOutputStream(inputFile);
             outputStream.write(jobInputString.getBytes());
             outputStream.close();
-            jobInputPath = getMainConnector().resolve(inputFile);
+            jobInputPath = job.getMainConnector().resolve(inputFile);
         }
 
         if (jobInputPath != null)
-            jobInput = AbstractCommandBuilder.Redirect.from(getMainConnector().resolveFile(jobInputPath));
+            jobInput = AbstractCommandBuilder.Redirect.from(job.getMainConnector().resolveFile(jobInputPath));
 
         if (jobOutputPath != null)
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobOutputPath)));
+            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(job.getMainConnector().resolveFile(jobOutputPath)));
         else
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(OUT_EXTENSION.transform(path)));
+            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(Resource.OUT_EXTENSION.transform(job.getPath())));
 
         // Redirect output & error streams into corresponding files
         if (jobErrorPath != null)
-            builder.redirectError(AbstractCommandBuilder.Redirect.to(getMainConnector().resolveFile(jobErrorPath)));
+            builder.redirectError(AbstractCommandBuilder.Redirect.to(job.getMainConnector().resolveFile(jobErrorPath)));
         else
-            builder.redirectError(AbstractCommandBuilder.Redirect.to(ERR_EXTENSION.transform(path)));
+            builder.redirectError(AbstractCommandBuilder.Redirect.to(Resource.ERR_EXTENSION.transform(job.getPath())));
 
         builder.redirectInput(jobInput);
 
-        builder.directory(path.getParent());
+        builder.directory(job.getPath().getParent());
 
         if (environment != null)
             builder.environment(environment);
@@ -179,25 +170,16 @@ public class CommandLineTask extends Job {
         // Add commands
         builder.commands(commands);
 
-        builder.exitCodeFile(CODE_EXTENSION.transform(path));
-        builder.doneFile(DONE_EXTENSION.transform(path));
-        builder.removeLock(LOCK_EXTENSION.transform(path));
+        builder.exitCodeFile(Resource.CODE_EXTENSION.transform(job.getPath()));
+        builder.doneFile(Resource.DONE_EXTENSION.transform(job.getPath()));
+        builder.removeLock(Resource.LOCK_EXTENSION.transform(job.getPath()));
 
         // Start
         return builder.start();
     }
 
-    @Override
-    public void printXML(PrintWriter out, PrintConfig config) {
-        super.printXML(out, config);
-        out.format("<div><b>Command</b>: %s</div>", commands.toString());
-        out.format("<div><b>Working directory</b> %s</div>", workingDirectory);
-        out.format("<div><b>Environment</b>: %s</div>", environment);
-    }
-
-    @Override
     public JSONObject toJSON() throws IOException {
-        JSONObject info = super.toJSON();
+        JSONObject info = new JSONObject();
         info.put("command", commands.toString());
         info.put("working-directory", workingDirectory);
         info.put("environment", environment);
@@ -237,10 +219,15 @@ public class CommandLineTask extends Job {
     }
 
     @Override
-    public Path outputFile() throws FileSystemException {
+    public Path outputFile(Job job) throws FileSystemException {
         if (jobOutputPath != null) {
-            return getMainConnector().resolveFile(jobOutputPath);
+            return job.getMainConnector().resolveFile(jobOutputPath);
         }
-        return OUT_EXTENSION.transform(path);
+        return Resource.OUT_EXTENSION.transform(job.getPath());
+    }
+
+    @Override
+    public Stream<Dependency> dependencies() {
+        return commands.dependencies();
     }
 }

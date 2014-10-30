@@ -23,18 +23,22 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import java.io.IOException;
 import java.nio.file.Path;
 
 /**
  * A class that can be locked a given number of times at the same time.
- * <p/>
+ * <p>
  * This is useful when one wants to limit the number of processes on a host for
  * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 23/11/12
  */
+@Entity
+@DiscriminatorValue(Resource.TOKEN_RESOURCE_TYPE)
 public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -54,8 +58,10 @@ public class TokenResource extends Resource {
 
     /**
      * Creates a new token resource
-     *  @param data      The resource data
-     * @param limit     The maximum number of tokens*/
+     *
+     * @param data  The resource data
+     * @param limit The maximum number of tokens
+     */
     public TokenResource(Path data, int limit) {
         this.limit = limit;
         this.usedTokens = 0;
@@ -67,12 +73,14 @@ public class TokenResource extends Resource {
      * invalidate current locks)
      *
      * @param limit The new limit
+     * @return true if the limit was changed
      */
-    synchronized public void setLimit(int limit) {
-        if (this.limit == limit) return;
-
+    public boolean setLimit(int limit) {
+        if (this.limit == limit) {
+            return false;
+        }
         this.limit = limit;
-        storeState(true);
+        return true;
     }
 
     @Override
@@ -86,10 +94,10 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    synchronized protected boolean doUpdateStatus(boolean store) throws Exception {
+    synchronized protected boolean doUpdateStatus() throws Exception {
         LOGGER.debug("Updating token resource");
         int used = 0;
-        for (Dependency dependency : getDependentResources()) {
+        for (Dependency dependency : getRequiredResources()) {
             if (dependency.hasLock()) {
                 LOGGER.debug("Dependency [%s] has lock", dependency);
                 used++;
@@ -98,9 +106,6 @@ public class TokenResource extends Resource {
 
         if (used != this.usedTokens) {
             this.usedTokens = used;
-            if (store) {
-                Scheduler.get().store(this, true);
-            }
             return true;
         }
 
@@ -121,7 +126,6 @@ public class TokenResource extends Resource {
     synchronized private void unlock() {
         usedTokens--;
         LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
-        storeState(true);
     }
 
     /**
@@ -156,8 +160,6 @@ public class TokenResource extends Resource {
 
                 token.usedTokens++;
                 LOGGER.debug("Taking one token (%s/%s)", token.usedTokens, token.limit);
-                token.storeState(true);
-
                 return new TokenLock(token);
             }
         }

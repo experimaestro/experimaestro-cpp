@@ -32,7 +32,7 @@ import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Streams;
 
@@ -42,8 +42,9 @@ import java.io.PrintStream;
 import java.util.*;
 
 /**
+ * Wrapper for abstract operators
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 8/3/13
  */
 public abstract class JSAbstractOperator extends JSBaseObject {
 
@@ -197,13 +198,16 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         PlanContext planContext = new PlanContext(xpm().newTaskContext().simulate(simulate));
         planContext.counts(details);
 
-        // If we have an experiment, get the task reference and store them
-        Experiment experiment = xpm().experiment;
-        if (experiment != null) {
-            Scheduler scheduler = xpm().getScheduler();
-            IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
-            map.values().forEach(Streams.propagate(scheduler::store));
-            planContext.setTaskOperatorMap(map);
+        // If we have an experimentId, get the task reference and store them
+        Long experimentId = xpm().experimentId;
+        if (experimentId != null) {
+            try(Transaction transaction = Transaction.create()) {
+                Experiment experiment = transaction.em().find(Experiment.class, experimentId);
+                IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
+                map.values().forEach(Streams.propagate(t -> transaction.em().persist(t)));
+                planContext.setTaskOperatorMap(map);
+                transaction.commit();
+            }
         }
 
 

@@ -62,7 +62,7 @@ public class TaskContext {
     /**
      * Associated experiment
      */
-    private Experiment experiment;
+    private Long experimentId;
 
     /**
      * The current task
@@ -77,9 +77,9 @@ public class TaskContext {
      * @param logger           The logger
      * @param simulate         Whether to simulate
      */
-    public TaskContext(Scheduler scheduler, Experiment experiment, Path path, Path workingDirectory, Logger logger, boolean simulate) {
+    public TaskContext(Scheduler scheduler, Long experimentId, Path path, Path workingDirectory, Logger logger, boolean simulate) {
         this.scheduler = scheduler;
-        this.experiment = experiment;
+        this.experimentId = experimentId;
         this.path = path;
         this.workingDirectory = workingDirectory;
         this.logger = logger;

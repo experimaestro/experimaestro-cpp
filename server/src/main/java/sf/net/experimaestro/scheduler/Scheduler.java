@@ -21,23 +21,19 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
-import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.File;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -54,12 +50,12 @@ final public class Scheduler {
     /**
      * Used for atomic series of locks
      */
-    public static String LockSync = "I am just a placeholder";
+    public static final String LockSync = "I am just a placeholder";
 
     /**
      * Thread local instance (there should be only one scheduler per thread)
      */
-    private static ThreadLocal<Scheduler> INSTANCE = new ThreadLocal<>();
+    private static Scheduler INSTANCE;
 
     /**
      * Simple asynchronous executor service (used for asynchronous notification)
@@ -71,30 +67,37 @@ final public class Scheduler {
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    private final EntityManager entityManager;
-
     /**
-     * The list of jobs organised in a heap - with those having all dependencies
-     * fulfilled first
+     * The entity manager factory
      */
-    private final Heap<Job> readyJobs = new Heap<>(JobComparator.INSTANCE);
+    EntityManagerFactory entityManagerFactory;
 
     /**
      * Listeners
      */
     HashSet<Listener> listeners = new HashSet<>();
 
+    /**
+     * True when the application is stopping
+     */
     boolean stopping = false;
 
-    /** List of threads we started */
-    ArrayList<Thread> threads = new ArrayList<>();
+    /**
+     * List of runners we started
+     */
+    ArrayList<Thread> runners = new ArrayList<>();
 
     /**
-     * Number of running threads
+     * Number of running runners
      */
     private ThreadCount counter = new ThreadCount();
 
     private Timer resourceCheckTimer;
+
+    /**
+     * A query that retrieves jobs that are ready, ordered by decreasing priority
+     */
+    CriteriaQuery<Job> readyJobsQuery;
 
     /**
      * Initialise the task manager
@@ -102,11 +105,11 @@ final public class Scheduler {
      * @param baseDirectory The directory where the XPM database will be stored
      */
     public Scheduler(File baseDirectory) {
-        if (INSTANCE.get() != null) {
+        if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
 
-        INSTANCE.set(this);
+        INSTANCE = this;
 
         // Get the parameters
         /*
@@ -117,23 +120,42 @@ final public class Scheduler {
 
         // Initialise the database
         LOGGER.info("Initialising database in directory %s", baseDirectory);
-        HashMap<String, String> properties = new HashMap<>();
+        HashMap<String, Object> properties = new HashMap<>();
         properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true", baseDirectory));
         properties.put("hibernate.connection.username", "");
         properties.put("hibernate.connection.password", "");
 
-        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro",
-                properties);
-        entityManager = entityManagerFactory.createEntityManager();
+        ArrayList<Class<?>> loadedClasses = new ArrayList<>();
+        ServiceLoader<PersistentClassesAdder> services = ServiceLoader.load(PersistentClassesAdder.class);
+        for (PersistentClassesAdder service : services) {
+            service.add(loadedClasses);
+        }
 
+        properties.put(org.hibernate.jpa.AvailableSettings.LOADED_CLASSES, loadedClasses);
+
+        entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro",
+                properties);
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
+
+        // Create reused criteria queries
+        CriteriaBuilder builder = entityManagerFactory.getCriteriaBuilder();
+        readyJobsQuery = builder.createQuery(Job.class);
+        Root<Job> root = readyJobsQuery.from(Job.class);
+        readyJobsQuery.orderBy(builder.desc(root.get("priority")));
+        readyJobsQuery.where(root.get("state").in(ResourceState.READY));
+
         // Initialise the running resources so that they can retrieve their state
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+
         TypedQuery<Resource> query = entityManager.createQuery("from resources r where r.state = :state", Resource.class);
         query.setParameter("state", ResourceState.RUNNING);
         for (Resource resource : query.getResultList()) {
-            readyJobs.add((Job) resource);
+            LOGGER.info("Job %s is running: starting a watcher", resource);
+            Job job = (Job) resource;
+            job.process.init(job);
+            resource.updateStatus();
         }
 
 
@@ -142,7 +164,7 @@ final public class Scheduler {
         for (int i = 0; i < nbThreads; i++) {
             counter.add();
             final JobRunner runner = new JobRunner("JobRunner@" + i);
-            threads.add(runner);
+            runners.add(runner);
             runner.start();
         }
 
@@ -152,24 +174,8 @@ final public class Scheduler {
         LOGGER.info("Done - ready to work now");
     }
 
-    public static EntityTransaction transaction() {
-        EntityTransaction transaction = INSTANCE.get().entityManager.getTransaction();
-        if (transaction.isActive())
-            return transaction;
-        transaction.begin();
-        return transaction;
-    }
-
     public static Scheduler get() {
-        return INSTANCE.get();
-    }
-
-    public Connector getConnector(String id) {
-        return entityManager.find(Connector.class, id);
-    }
-
-    public void put(Connector connector) throws ExperimaestroCannotOverwrite {
-        entityManager.persist(connector);
+        return INSTANCE;
     }
 
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
@@ -183,10 +189,6 @@ final public class Scheduler {
 
     }
 
-    public void store(Dependency dependency) {
-        entityManager.persist(dependency);
-    }
-
     /**
      * Returns resources filtered by group and state
      *
@@ -194,13 +196,14 @@ final public class Scheduler {
      * @return A closeable iterator
      */
     public CloseableIterator<Resource> resources(EnumSet<ResourceState> states) {
-        CriteriaBuilder criteria = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("state").in(states));
-        TypedQuery<Resource> query = entityManager.createQuery(cq);
-        List<Resource> result = query.getResultList();
-
+        List<Resource> result = Transaction.evaluate((EntityManager em) -> {
+            CriteriaBuilder criteria = entityManagerFactory.getCriteriaBuilder();
+            CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
+            Root<Resource> root = cq.from(Resource.class);
+            cq.where(root.get("state").in(states));
+            TypedQuery<Resource> query = em.createQuery(cq);
+            return query.getResultList();
+        });
         return CloseableIterator.of(result.iterator());
     }
 
@@ -250,17 +253,13 @@ final public class Scheduler {
             resourceCheckTimer = null;
         }
 
-        synchronized (readyJobs) {
-            readyJobs.notifyAll();
-        }
-
         counter.resume();
 
         // Stop the threads
-        for (Thread thread : threads) {
+        for (Thread thread : runners) {
             thread.interrupt();
         }
-        threads.clear();
+        runners.clear();
 
         if (executorService != null) {
             executorService.shutdown();
@@ -270,54 +269,19 @@ final public class Scheduler {
         LOGGER.info("Scheduler stopped");
     }
 
-    /**
-     * Get a resource by ID
-     */
+    final Boolean readyJobSemaphore = true;
 
-    public Resource getResource(long id) {
-        return entityManager.find(Resource.class, id);
-    }
-
-    /**
-     * Get the next waiting job
-     *
-     * @return A boolean, true if a task was started
-     * @throws InterruptedException
-     */
-    Job getNextWaitingJob() throws InterruptedException {
-        while (true) {
-            LOGGER.debug("Fetching the next task to run");
-            // Try the next task
-            synchronized (readyJobs) {
-                LOGGER.debug("Looking at the next job to run [%d]", readyJobs.size());
-                if (isStopping())
-                    return null;
-
-                if (!readyJobs.isEmpty()) {
-                    final Job task = readyJobs.peek();
-                    LOGGER.debug("Fetched task %s: checking for execution", task);
-                    return readyJobs.pop();
-                }
-
-                // ... and wait if we were not lucky (or there were no tasks)
-                try {
-                    readyJobs.wait();
-                } catch (InterruptedException e) {
-                    // The server stopped
-                }
-            }
-
-        }
-    }
 
     /**
      * Iterator on resources
      */
     public CloseableIterable<Resource> resources() {
-        // TDOO should to something else
-        TypedQuery<Resource> query = entityManager.createQuery("from resources", Resource.class);
-        query.setFlushMode(FlushModeType.AUTO);
-        List<Resource> resultList = query.getResultList();
+        final List<Resource> resultList = Transaction.evaluate(em -> {
+            TypedQuery<Resource> query = em.createQuery("from resources", Resource.class);
+            query.setFlushMode(FlushModeType.AUTO);
+            return query.getResultList();
+        });
+
         return new CloseableIterable<Resource>() {
             @Override
             public void close() throws CloseException {
@@ -331,114 +295,16 @@ final public class Scheduler {
         };
     }
 
-    /**
-     * Add/remove a job to the list of jobs ready to be run
-     */
-    void setReady(Job job) {
-        boolean ready = job.getState() == ResourceState.READY;
-        if (ready) {
-            synchronized (readyJobs) {
-                if (job.getIndex() < 0) {
-                    readyJobs.add(job);
-                    readyJobs.notify();
-                    LOGGER.info("Job %s [%d] is ready [notifying], %d", job, job.getIndex(), readyJobs.size());
-                }
-            }
-        } else {
-            synchronized (readyJobs) {
-                if (job.getIndex() >= 0) {
-                    // don't notify since nothing has to be done
-                    LOGGER.info("Deleting job [%s/%d] from ready jobs", job, job.getIndex());
-                    readyJobs.remove(job);
-                }
-            }
+    public static void notifyRunners() {
+        final Boolean semaphore = get().readyJobSemaphore;
+        synchronized (semaphore) {
+            semaphore.notify();
         }
     }
 
-    /**
-     * Store a resource in the database.
-     * <p/>
-     * This method is in charge of storing all the necessary information in the database and
-     * updating the different structures (e.g. list of jobs to be run).
-     *
-     * @param resource The resource to store
-     */
-    synchronized public void store(final Resource resource, boolean notify) throws ExperimaestroCannotOverwrite {
-        // Update the task and notify ourselves since we might want
-        // to run new processes
-
-        if (isStopping()) {
-            LOGGER.warn("Database is closing: Could not update resource %s", resource);
-            return;
-        }
-
-        // If new, update the status
-        if (!resource.stored()) {
-            resource.updateStatus(false);
-        }
-
-        // Store the resource
-        CriteriaBuilder criteria = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("path").in(resource.path));
-        TypedQuery<Resource> query = entityManager.createQuery(cq);
-        List<Resource> result = query.getResultList();
-        assert result.size() <= 1;
-
-        Resource old = null;
-        if (!result.isEmpty()) {
-            old = result.get(0);
-        }
-        // FIXME ?
-        entityManager.persist(resource);
-
-        // Special case of jobs: we need to track
-        // jobs that are ready to be run
-        if (resource instanceof Job) {
-
-            // If overridding, remove the previous job from heap
-            if (old != null && old instanceof Job) {
-                int index = ((Job) old).getIndex();
-                if (index > 0)
-                    readyJobs.remove((Job) old);
-            }
-
-            Job job = (Job) resource;
-            setReady(job);
-
-        }
-
-        // Notify dependencies, using a new process
-        if (notify) {
-            executorService.submit(new Notifier(resource));
-        }
+    public static EntityManager manager() {
+        return get().entityManagerFactory.createEntityManager();
     }
-
-    public void store(TaskReference reference) throws ExperimaestroCannotOverwrite {
-        entityManager.persist(reference);
-    }
-
-    public void store(Experiment experiment) throws ExperimaestroCannotOverwrite {
-        entityManager.persist(experiment);
-    }
-
-    public Resource getResource(Path path) {
-        CriteriaBuilder criteria = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("path").in((Path) path));
-        TypedQuery<Resource> query = entityManager.createQuery(cq);
-        List<Resource> result = query.getResultList();
-        assert result.size() <= 1;
-
-        return result.get(0);
-    }
-
-    public void remove(Object resource) {
-        this.entityManager.remove(resource);
-    }
-
 
     /**
      * This task runner takes a new task each time
@@ -451,34 +317,67 @@ final public class Scheduler {
             this.name = name;
         }
 
+
         @Override
         public void run() {
             Job job;
             try {
-                while (!Scheduler.this.isStopping() && (job = getNextWaitingJob()) != null) {
-                    // Set the state to LOCKING
-                    job.setState(ResourceState.LOCKING);
-                    LOGGER.info("Launching %s", job);
-                    this.setName(name + "/" + job);
+                while (true) {
+                    if (isStopping())
+                        return;
+
+                    // ... and wait if we were not lucky (or there were no tasks)
                     try {
-                        job.run();
-                        LOGGER.info("Job %s has started", job);
-                    } catch (LockException e) {
-                        // We could not lock the resources: update the job state
-                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                        job.setState(ResourceState.WAITING);
-                        job.updateStatus(true);
-                        job.storeState(false);
-                    } catch (Throwable t) {
-                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                        job.setState(ResourceState.ERROR);
-                        job.storeState(true);
+                        synchronized (readyJobSemaphore) {
+                            LOGGER.debug("Going to sleep [%s]...", name);
+                            readyJobSemaphore.wait();
+                            LOGGER.debug("Waking up [%s]...", name);
+                        }
+                    } catch (InterruptedException e) {
+                        // The server stopped
+                        break;
                     }
-                    LOGGER.info("Finished launching %s", job);
-                    this.setName(name);
+
+
+                    // Try the next task
+                    try (Transaction transaction = Transaction.create()) {
+                        LOGGER.debug("Looking at the next job to run");
+
+                        TypedQuery<Job> query = transaction.em().createQuery(Scheduler.this.readyJobsQuery);
+                        query.setMaxResults(1);
+                        List<Job> list = query.getResultList();
+                        if (list.isEmpty()) {
+                            LOGGER.debug("No job to run");
+                            continue;
+                        }
+
+                        job = list.get(0);
+                        LOGGER.debug("Next task to run: %s", job);
+
+                        // Set the state to LOCKING
+                        job.setState(ResourceState.LOCKING);
+                        transaction.commit();
+
+                        this.setName(name + "/" + job);
+                        try {
+                            job.run();
+
+                            LOGGER.info("Job %s has started", job);
+                        } catch (LockException e) {
+                            // We could not lock the resources: update the job state
+                            LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                            job.setState(ResourceState.WAITING);
+                            job.updateStatus();
+                        } catch (Throwable t) {
+                            LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                            job.setState(ResourceState.ERROR);
+                        }
+                        LOGGER.info("Finished launching %s", job);
+                        this.setName(name);
+
+                        transaction.commit();
+                    }
                 }
-            } catch (InterruptedException e) {
-                LOGGER.warn("Shutting down job runner", e);
             } finally {
                 LOGGER.info("Shutting down job runner");
                 counter.del();

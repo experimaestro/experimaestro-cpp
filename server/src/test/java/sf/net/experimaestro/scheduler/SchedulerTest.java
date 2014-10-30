@@ -50,12 +50,18 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
-        for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, 0, 0));
-            if (i > 0)
-                jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
-            scheduler.store(jobs[i], false);
-        }
+        Transaction.run(em -> {
+            for (int i = 0; i < jobs.length; i++) {
+                jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, 0, 0));
+                if (i > 0) {
+                    jobs[i].job.addDependency(jobs[i - 1].job.createDependency(jobs[i - 1]));
+                }
+                em.persist(jobs[i]);
+                em.persist(jobs[i].job);
+            }
+        });
+
+        LOGGER.info("Waiting for operations to finish");
 
         waitToFinish(0, counter, jobs, 1500, 5);
         checkSequence(jobs);
@@ -72,12 +78,15 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
-        for (int i = 0; i < jobs.length; i++) {
-            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
-            if (i > 0)
-                jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
-            scheduler.store(jobs[i], false);
-        }
+        Transaction.run(em -> {
+            for (int i = 0; i < jobs.length; i++) {
+                jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
+                if (i > 0) {
+                    jobs[i].job.addDependency(jobs[i - 1].job.createDependency(jobs[i - 1]));
+                }
+                em.persist(jobs[i]);
+            }
+        });
 
         waitToFinish(0, counter, jobs, 1500, 5);
 
@@ -251,8 +260,7 @@ public class SchedulerTest extends XPMEnvironment {
         // --- Generate token resource
         TokenResource token = null;
         if (p.token > 0) {
-            token = new TokenResource(XPMConnector.getInstance().resolve("test"), p.token);
-            scheduler.store(token, false);
+            Transaction.run(em -> em.persist(new TokenResource(XPMConnector.getInstance().resolve("test"), p.token)));
         }
 
         // --- Generate new jobs
@@ -264,15 +272,16 @@ public class SchedulerTest extends XPMEnvironment {
             ArrayList<String> deps = new ArrayList<>();
             for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
                 assert i == link.to;
-                jobs[i].addDependency(jobs[link.from].createDependency(null));
+                jobs[i].job.addDependency(jobs[link.from].job.createDependency(null));
                 if (token != null)
-                    jobs[i].addDependency(token.createDependency(null));
+                    jobs[i].job.addDependency(token.createDependency(null));
                 if (states[link.from].isBlocking())
                     states[i] = ResourceState.ON_HOLD;
                 deps.add(jobs[link.from].toString());
             }
 
-            scheduler.store(jobs[i], false);
+            WaitingJob job = jobs[i];
+            Transaction.run(em -> em.persist(job));
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
         }
 
@@ -298,7 +307,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         LOGGER.info("Checking job dependencies");
         for (Link link : dependencies) {
-            if (states[link.from] == ResourceState.DONE && jobs[link.to].getState() == ResourceState.DONE)
+            if (states[link.from] == ResourceState.DONE && jobs[link.to].job.getState() == ResourceState.DONE)
                 errors += checkSequence(jobs[link.from], jobs[link.to]);
         }
 
@@ -313,14 +322,20 @@ public class SchedulerTest extends XPMEnvironment {
             if (count <= limit) break;
 
             LOGGER.info("Waiting to finish - %d active jobs > %d [%d]", count, limit, loop);
-            for (int i = 0; i < jobs.length; i++)
-                if (jobs[i].getState().isActive())
-                    LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
+            for (int i = 0; i < jobs.length; i++) {
+                final long id = jobs[i].getId();
+                Transaction.run(em -> {
+                    Job job = em.find(Job.class, id);
+                    if (job.getState().isActive()) {
+                        LOGGER.warn("Job [%s] still active [%s]", job, job.getState());
+                    }
+                });
+            }
         }
     }
 
     private void waitBeforeCheck() {
-        synchronized (this)  {
+        synchronized (this) {
             try {
                 wait(1000);
             } catch (InterruptedException e) {
@@ -338,7 +353,7 @@ public class SchedulerTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
         Path locator = XPMConnector.getInstance().resolve("test");
         TokenResource token = new TokenResource(locator, 1);
-        scheduler.store(token, false);
+        Transaction.run(em -> em.persist(token));
 
         WaitingJob[] jobs = new WaitingJob[5];
         BitSet failure = new BitSet();
@@ -346,8 +361,9 @@ public class SchedulerTest extends XPMEnvironment {
 
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
-            jobs[i].addDependency(token.createDependency(null));
-            scheduler.store(jobs[i], false);
+            jobs[i].job.addDependency(token.createDependency(null));
+            WaitingJob job = jobs[i];
+            Transaction.run(em -> em.persist(job));
         }
 
 
@@ -357,7 +373,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Check that one started after the other (since only one must have been active
         // at a time)
         LOGGER.info("Checking the token test output");
-        Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp()));
+        Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.job.getStartTimestamp(), o2.job.getStartTimestamp()));
 
 
         int errors = 0;
@@ -377,12 +393,13 @@ public class SchedulerTest extends XPMEnvironment {
 
         counter.add();
 
-        for(int i = 0; i < jobs.length; i++) {
+        for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             if (i > 0) {
-                jobs[i].addDependency(jobs[i-1].createDependency(null));
+                jobs[i].job.addDependency(jobs[i - 1].job.createDependency(null));
             }
-            scheduler.store(jobs[i], false);
+            WaitingJob job = jobs[i];
+            Transaction.run(em -> em.persist(job));
         }
 
         // Wait
@@ -402,26 +419,35 @@ public class SchedulerTest extends XPMEnvironment {
     // ----- Utility methods for scheduler
 
 
-
     /**
-     * Check that these jobs started one after the other
+     * Check that these runners started one after the other
      *
-     * @param jobs
+     * @param runners The runners to check
      */
-    static private int checkSequence(WaitingJob... jobs) {
+    static private int checkSequence(WaitingJob... runners) {
         int errors = 0;
+        Job[] jobs = new Job[runners.length];
 
-        for (int i = 0; i < jobs.length - 1; i++) {
-            if (jobs[i].getEndTimestamp() >= jobs[i + 1].readyTimestamp) {
-                LOGGER.warn("The jobs (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
-                        jobs[i], System.identityHashCode(jobs[i]), jobs[i].getEndTimestamp(),
-                        jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i + 1].readyTimestamp);
+        Transaction.run(em -> {
+            for (int i = 0; i < runners.length - 1; i++) {
+                jobs[i] = em.find(Job.class, runners[i].getId());
+            }
+        });
+
+        for (int i = 0; i < runners.length - 1; i++) {
+            if (jobs[i].getEndTimestamp() >= runners[i + 1].status().readyTimestamp) {
+                LOGGER.warn("The runners (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
+                        runners[i], System.identityHashCode(runners[i]), runners[i].job.getEndTimestamp(),
+                        runners[i + 1], System.identityHashCode(runners[i + 1]), runners[i + 1].status().readyTimestamp);
                 errors++;
             } else
-                LOGGER.debug("The jobs (%s/%x) and (%s/%x) started one after the other [%dms]",
-                        jobs[i], System.identityHashCode(jobs[i]), jobs[i + 1], System.identityHashCode(jobs[i + 1]), jobs[i + 1].readyTimestamp - jobs[i].getEndTimestamp());
+                LOGGER.debug("The runners (%s/%x) and (%s/%x) started one after the other [%dms]",
+                        runners[i], System.identityHashCode(runners[i]), runners[i + 1],
+                        System.identityHashCode(runners[i + 1]),
+                        runners[i + 1].status().readyTimestamp - runners[i].job.getEndTimestamp());
 
         }
+
         return errors;
     }
 
@@ -432,14 +458,19 @@ public class SchedulerTest extends XPMEnvironment {
      * @param jobs   The jobs
      */
     private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) {
-        int errors = 0;
-        for (int i = 0; i < jobs.length; i++)
-            if (!states.contains(jobs[i].getState())) {
-                LOGGER.warn("The job (%s/%x) is not in one of the states %s but [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
-                errors++;
-            } else
-                LOGGER.debug("The job (%s/%x) is in one of the states %s [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
-        return errors;
+        return Transaction.evaluate(em -> {
+            int errors = 0;
+            for (int i = 0; i < jobs.length; i++) {
+                Job job = em.find(Job.class, jobs[i].getId());
+                if (!states.contains(job.getState())) {
+                    LOGGER.warn("The job (%s/%x) is not in one of the states %s but [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].job.getState());
+                    errors++;
+                } else
+                    LOGGER.debug("The job (%s/%x) is in one of the states %s [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].job.getState());
+            }
+
+            return errors;
+        });
     }
 
 

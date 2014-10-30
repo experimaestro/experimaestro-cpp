@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.scheduler.Scheduler;
 
+import javax.persistence.OneToOne;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 
@@ -32,7 +33,8 @@ public class ConnectorDelegator extends Connector {
     /**
      * The real connector
      */
-    transient Connector connector;
+    @OneToOne
+    Connector connector;
 
 
     public ConnectorDelegator() {
@@ -41,10 +43,6 @@ public class ConnectorDelegator extends Connector {
     public ConnectorDelegator(Connector connector) {
         super(connector.getIdentifier());
         this.connector = connector;
-    }
-
-    public void init(Scheduler scheduler) {
-        connector = scheduler.getConnector(identifier);
     }
 
     @Override

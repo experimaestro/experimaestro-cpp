@@ -58,11 +58,11 @@ public class JavaTaskFactory extends TaskFactory {
     /**
      * Initialise a task
      *
-     * @param javaTasksIntrospection
-     * @param connector
+     * @param javaTasksIntrospection The introspection object
+     * @param connector              The connector
      * @param repository             The repository
      * @param classInfo              The java class from which to build a task factory
-     * @param namespaces
+     * @param namespaces             The namespaces
      */
     public JavaTaskFactory(JavaTasksIntrospection javaTasksIntrospection, Connector connector, Repository repository, ClassInfo classInfo, Map<String, String> namespaces) {
         super(repository);
@@ -115,9 +115,6 @@ public class JavaTaskFactory extends TaskFactory {
 
     private Type getType(FieldInfo field) {
         final ClassInfo type = field.getType();
-        if (type.isArray()) {
-
-        }
 
         if (type.belongs(java.lang.Integer.class) || type.belongs(Integer.TYPE)
                 || type.belongs(java.lang.Long.class) || type.belongs(Long.TYPE)
@@ -174,7 +171,7 @@ public class JavaTaskFactory extends TaskFactory {
         if (jvm != null && jvm instanceof JsonObject) {
             final Json memory = ((JsonObject) jvm).get("memory");
             if (memory instanceof JsonString) {
-                final Object s = (String) memory.get();
+                final Object s = memory.get();
                 command.add("-Xmx" + s);
             }
         }
@@ -194,25 +191,28 @@ public class JavaTaskFactory extends TaskFactory {
         // Check dependencies
         if (!simulate) {
             for (Json element : json.values()) {
-                if (element instanceof JsonObject) {
-                    JsonObject object = (JsonObject) element;
-                    final Json r = object.get(Manager.XP_RESOURCE.toString());
-                    if (r == null) continue;
-                    final Object o = r.get();
-                    Resource resource;
-                    if (o instanceof Resource) {
-                        resource = (Resource) o;
-                    } else {
-                        final java.nio.file.Path locator = Paths.get(o.toString());
-                        resource = Scheduler.get().getResource(locator);
-                        if (resource == null) {
-                            throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                                    locator, getId());
+                Transaction.run(em -> {
+                    if (element instanceof JsonObject) {
+                        JsonObject object = (JsonObject) element;
+                        final Json r = object.get(Manager.XP_RESOURCE.toString());
+                        if (r == null) return;
+
+                        final Object o = r.get();
+                        Resource resource;
+                        if (o instanceof Resource) {
+                            resource = (Resource) o;
+                        } else {
+                            final java.nio.file.Path locator = Paths.get(o.toString());
+                            resource = Resource.getByLocator(em, locator);
+                            if (resource == null) {
+                                throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                                        locator, getId());
+                            }
                         }
+                        final Dependency lock = resource.createDependency("READ");
+                        commands.addDependency(lock);
                     }
-                    final Dependency lock = resource.createDependency("READ");
-                    commands.addDependency(lock);
-                }
+                });
             }
         }
 

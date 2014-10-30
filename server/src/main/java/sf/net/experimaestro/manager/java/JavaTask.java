@@ -31,13 +31,8 @@ import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -84,45 +79,46 @@ public class JavaTask extends Task {
         }
 
         // --- Check if this wasn't already done
-        final Resource old = taskContext.getScheduler().getResource(path);
-        CommandLineTask task;
-        if (old == null || old.canBeReplaced()) {
-            // --- Build the command
-            Commands commands = javaFactory.commands(json, taskContext.simulate());
-
-            task = new CommandLineTask(javaFactory.connector, uniqueDir, commands);
-
-            task.setState(ResourceState.WAITING);
-            if (taskContext.simulate()) {
-                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
-                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-                pw.format("Command: %s%n", task.getCommands().toString());
-                pw.format("Path: %s", path);
-                pw.flush();
+        try (Transaction transaction = Transaction.create()) {
+            final Resource old = Resource.getByLocator(transaction.em(), path);
+            if (old != null && !old.canBeReplaced()) {
+                taskContext.getLogger().warn("Cannot override resource [%s]", old);
             } else {
-                try {
+                Job job = new Job(javaFactory.connector, uniqueDir);
+
+                // --- Build the command
+                Commands commands = javaFactory.commands(json, taskContext.simulate());
+
+                CommandLineTask task = new CommandLineTask(commands);
+
+                if (taskContext.simulate()) {
+                    PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
+                    pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+                    pw.format("Command: %s%n", task.getCommands().toString());
+                    pw.format("Path: %s", path);
+                    pw.flush();
+                } else {
                     if (old != null) {
                         // TODO: if equal, do not try to replace the task
-                        if (task.replace(old)) {
-                            taskContext.getLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
-                        } else {
-                            taskContext.getLogger().warn("Cannot override resource [%s]", task.getIdentifier());
+                        try {
+                            old.replaceBy(job);
+                            job.setJobRunner(task);
+                            taskContext.getLogger().info(String.format("Overwriting resource [%s]", task));
+                        } catch (ExperimaestroCannotOverwrite e) {
+                            taskContext.getLogger().warn("Cannot override resource [%s]", old);
                         }
                     } else {
-                        taskContext.getScheduler().store(task, false);
+                        transaction.em().persist(task);
                     }
-                } catch (ExperimaestroCannotOverwrite e) {
-                    throw new XPMRuntimeException(e).addContext("while lauching command");
+                    transaction.commit();
                 }
             }
-        } else {
-            task = (CommandLineTask) old;
         }
 
         // --- Fill some fields in returned json
 
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
-        json.put(Manager.XP_RESOURCE.toString(), task.getIdentifier());
+        json.put(Manager.XP_RESOURCE.toString(), path.toString());
 
         for (PathArgument _path : javaFactory.pathArguments) {
             Path relativePath = uniqueDir.resolve(_path.relativePath);

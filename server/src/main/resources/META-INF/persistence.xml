@@ -20,7 +20,7 @@
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
              version="2.0">
-    <persistence-unit name="net.bpiwowar.experimaestro">
+    <persistence-unit name="net.bpiwowar.experimaestro" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
         <!-- Converters -->
@@ -32,10 +32,13 @@
         <class>sf.net.experimaestro.connectors.Connector</class>
         <class>sf.net.experimaestro.connectors.SingleHostConnector</class>
 
+        <class>sf.net.experimaestro.scheduler.TokenResource</class>
+
         <class>sf.net.experimaestro.connectors.XPMProcess</class>
 
         <class>sf.net.experimaestro.scheduler.Resource</class>
 
+        <class>sf.net.experimaestro.scheduler.Dependency</class>
 
         <properties>
             <property name="hibernate.connection.driver_class" value="org.hsqldb.jdbcDriver"/>

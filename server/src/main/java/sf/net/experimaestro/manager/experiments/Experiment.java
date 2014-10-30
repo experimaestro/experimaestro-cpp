@@ -31,6 +31,7 @@ import java.util.Collection;
  * An experiment
  */
 @Entity
+@Table(name = "experiments")
 @Exposed
 public class Experiment {
     /** Experiment taskId */
@@ -42,17 +43,19 @@ public class Experiment {
     Collection<TaskReference> tasks = new ArrayList<>();
 
     /** Working directory */
-    @Convert(converter = PathConverter.class)
+    @SuppressWarnings("JpaAttributeTypeInspection")
     Path workingDirectory;
 
     /** Timestamp */
-    private final long timestamp;
+    private long timestamp;
 
     /** Identifier */
     String identifier;
 
     /** Scheduler */
     transient private Scheduler scheduler;
+
+    protected Experiment() {}
 
     /**
      * New task
@@ -67,5 +70,9 @@ public class Experiment {
 
     public void init(Scheduler scheduler) {
         this.scheduler = scheduler;
+    }
+
+    public long getId() {
+        return id;
     }
 }
