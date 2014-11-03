@@ -4,14 +4,19 @@ experimaestro
 [![Build Status](https://travis-ci.org/bpiwowar/experimaestro.svg?branch=master)](https://travis-ci.org/bpiwowar/experimaestro)
 
 
-**[Documentation](http://bpiwowar.github.io/experimaestro/)**
+**[Documentation](http://xpm.bpiwowar.net/)**
 
 Experimaestro is an experiment manager based on a server that contains a job scheduler (job dependencies, locking mechanisms) and a framework to describe the experiments with JavaScript or in Java.
 
-- A [job scheduler](server/scheduler/index.md) that handles dependencies between jobs and provides locking mechanisms
+- A **job scheduler** that handles dependencies between jobs and provides locking mechanisms
    The job scheduler can be controlled via command line (`experimaestro` script) or via the web (where
-   you can easily monitor jobs in real time)
-- A [modular experiment description framework](server/manager/index.md), that allows easy description of the various parts of experiments:
+   you can easily monitor jobs in real time) and handles
+
+   1. Shell commands
+   2. OAR jobs
+   3. Hadoop jobs (*planned*)
+   
+- A **modular experiment description framework**, that allows easy description of the various parts of experiments:
     - Experiments are written in JavaScript or in Java (with annotations)
     - Tasks describe the components that can be used, take as input json objects and produce json objets as output
     - Tasks can be composed through the definition of an experimental plan
