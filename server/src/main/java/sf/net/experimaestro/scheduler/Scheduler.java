@@ -121,7 +121,7 @@ final public class Scheduler {
         // Initialise the database
         LOGGER.info("Initialising database in directory %s", baseDirectory);
         HashMap<String, Object> properties = new HashMap<>();
-        properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true", baseDirectory));
+        properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true;hsqldb.tx=mvcc", baseDirectory));
         properties.put("hibernate.connection.username", "");
         properties.put("hibernate.connection.password", "");
 
@@ -320,7 +320,6 @@ final public class Scheduler {
 
         @Override
         public void run() {
-            Job job;
             try {
                 while (true) {
                     if (isStopping())
@@ -341,22 +340,40 @@ final public class Scheduler {
 
                     // Try the next task
                     try (Transaction transaction = Transaction.create()) {
-                        LOGGER.debug("Looking at the next job to run");
+                        LOGGER.debug("Searching for ready jobs");
 
-                        TypedQuery<Job> query = transaction.em().createQuery(Scheduler.this.readyJobsQuery);
+                        final EntityManager em = transaction.em();
+                        TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
                         query.setMaxResults(1);
+                        query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
                         List<Job> list = query.getResultList();
                         if (list.isEmpty()) {
                             LOGGER.debug("No job to run");
                             continue;
                         }
 
-                        job = list.get(0);
+                        // Ensures we are the only ones
+                        Job job = list.get(0);
+                        try {
+                            em.lock(job, LockModeType.PESSIMISTIC_WRITE);
+                        } catch(LockTimeoutException e) {
+                            LOGGER.debug("Could not lock job %s", job);
+                            Scheduler.notifyRunners();
+                            continue;
+                        }
+
+                        if (job.getState() != ResourceState.READY) {
+                            LOGGER.debug("Job state is not READY anymore", job);
+                            Scheduler.notifyRunners();
+                            continue;
+                        }
+
+
                         LOGGER.debug("Next task to run: %s", job);
 
                         // Set the state to LOCKING
                         job.setState(ResourceState.LOCKING);
-                        transaction.commit();
+                        transaction.boundary();
 
                         this.setName(name + "/" + job);
                         try {

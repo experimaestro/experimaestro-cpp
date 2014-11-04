@@ -32,9 +32,9 @@ import java.io.Serializable;
  */
 @Entity(name = "dependencies")
 @Table(name = "dependencies")
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
-
 
     /**
      * The state of this dependency
@@ -79,7 +79,7 @@ abstract public class Dependency implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Dep[R%d-R%d]; %s; %b", from, to, status, hasLock());
+        return String.format("Dep[R%s-R%s]; %s; %b", from, to, status, hasLock());
     }
 
     /**
@@ -140,6 +140,7 @@ abstract public class Dependency implements Serializable {
 
 
     public void unactivate() {
+        assert lock != null : "Lock of an active dependency is null";
         lock.close();
         lock = null;
         status = DependencyStatus.UNACTIVE;

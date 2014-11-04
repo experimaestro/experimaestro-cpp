@@ -19,7 +19,9 @@ package sf.net.experimaestro.utils;
  */
 
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeSuite;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -56,21 +58,18 @@ public class XPMEnvironment {
     }
 
 
-    @BeforeClass
-    synchronized public void init() throws IOException {
-        if (scheduler == null) {
-            LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
-            directory = new TemporaryDirectory("scheduler-tests", "dir");
-            final File dbFile = new File(directory.getFile(), "db");
-            dbFile.mkdir();
-            scheduler = new Scheduler(dbFile);
-        }
+    @BeforeSuite
+    public static void openDatabase() throws IOException {
+        LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
+        directory = new TemporaryDirectory("scheduler-tests", "dir");
+        final File dbFile = new File(directory.getFile(), "db");
+        dbFile.mkdir();
+        scheduler = new Scheduler(dbFile);
     }
 
-
-    @AfterClass
-    public void close() {
+    @AfterSuite
+    public static void goodbye() {
+        LOGGER.info("Closing scheduler [%s]", Thread.currentThread());
+        scheduler.close();
     }
-
-
 }

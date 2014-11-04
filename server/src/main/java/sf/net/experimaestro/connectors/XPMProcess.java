@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Entity
 @Table(name = "process")
+@DiscriminatorColumn(name = "type")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
@@ -81,7 +82,7 @@ public abstract class XPMProcess {
     /**
      * The associated locks to release when the process has ended
      */
-    @OneToMany
+    @OneToMany(cascade = CascadeType.ALL)
     private List<Lock> locks = null;
 
     /**

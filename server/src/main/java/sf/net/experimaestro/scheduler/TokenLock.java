@@ -18,16 +18,43 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.List;
+import sf.net.experimaestro.locks.Lock;
+
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 
 /**
- * Extra configuration for Hibernate
+ * This lock calls {@linkplain TokenResource#unlock()} when
+ * released.
+ * TODO: maybe ensure that we only unlock valid locks (using an ID)
  */
-public class TestClassAdder implements PersistentClassesAdder {
-    @Override
-    public void add(List<Class<?>> classes) {
-        classes.add(WaitingJob.class);
-        classes.add(WaitingJobRunner.class);
-        classes.add(WaitingJobProcess.class);
+@Entity
+@DiscriminatorValue("token")
+class TokenLock extends Lock {
+    private String pid;
+    private String resourceId;
+    transient private TokenResource resource;
+
+    protected TokenLock() {
     }
+
+    public TokenLock(TokenResource resource) {
+        this.resource = resource;
+        resourceId = resource.getIdentifier();
+    }
+
+
+    @Override
+    public void close() {
+        if (resource != null) {
+            resource.unlock();
+            resource = null;
+        }
+    }
+
+    @Override
+    public void changeOwnership(String pid) {
+        this.pid = pid;
+    }
+
 }

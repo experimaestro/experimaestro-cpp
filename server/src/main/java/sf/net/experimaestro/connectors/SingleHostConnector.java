@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 
+import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -39,6 +40,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
+@DiscriminatorColumn(name = "type")
 abstract public class SingleHostConnector extends Connector {
     /**
      * Underlying filesystem

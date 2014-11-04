@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -83,6 +82,14 @@ public class TokenResource extends Resource {
         return true;
     }
 
+    public int getLimit() {
+        return limit;
+    }
+
+    public int getUsedTokens() {
+        return usedTokens;
+    }
+
     @Override
     public JSONObject toJSON() throws IOException {
         JSONObject info = super.toJSON();
@@ -123,80 +130,12 @@ public class TokenResource extends Resource {
      *
      * @return
      */
-    synchronized private void unlock() {
-        usedTokens--;
+    synchronized void unlock() {
+        --usedTokens;
         LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
     }
 
-    /**
-     * A token dependency
-     */
-    static public class TokenDependency extends Dependency {
-
-        protected TokenDependency() {
-        }
-
-        public TokenDependency(Resource from) {
-            super(from);
-        }
-
-        @Override
-        public String toString() {
-            return "Token/" + super.toString();
-        }
-
-        @Override
-        protected DependencyStatus _accept() {
-            TokenResource token = (TokenResource) getFrom();
-            return token.usedTokens < token.limit ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
-        }
-
-        @Override
-        protected Lock _lock(String pid) throws LockException {
-            TokenResource token = (TokenResource) getFrom();
-            synchronized (token) {
-                if (token.usedTokens >= token.limit)
-                    throw new LockException("All the tokens are already taken");
-
-                token.usedTokens++;
-                LOGGER.debug("Taking one token (%s/%s)", token.usedTokens, token.limit);
-                return new TokenLock(token);
-            }
-        }
+    public void increaseUsedTokens() {
+        ++usedTokens;
     }
-
-    /**
-     * This lock calls {@linkplain sf.net.experimaestro.scheduler.TokenResource#unlock()} when
-     * released.
-     * TODO: maybe ensure that we only unlock valid locks (using an ID)
-     */
-    private static class TokenLock extends Lock {
-        private String pid;
-        private String resourceId;
-        transient private TokenResource resource;
-
-        private TokenLock() {
-        }
-
-        public TokenLock(TokenResource resource) {
-            this.resource = resource;
-            resourceId = resource.getIdentifier();
-        }
-
-
-        @Override
-        public void close() {
-            if (resource != null) {
-                resource.unlock();
-                resource = null;
-            }
-        }
-
-        @Override
-        public void changeOwnership(String pid) {
-            this.pid = pid;
-        }
-
-    }
-
 }

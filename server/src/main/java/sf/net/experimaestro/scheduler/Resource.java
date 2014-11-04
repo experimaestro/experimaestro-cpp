@@ -238,14 +238,14 @@ public abstract class Resource {
      * The set of dependencies that are dependent on this resource
      */
     public Collection<Dependency> getRequiredResources() {
-        return dependencyFrom;
+        return dependencyTo;
     }
 
     /**
      * The set of resources the resource is dependent upon
      */
     public Collection<Dependency> getDependentResources() {
-        return dependencyTo;
+        return dependencyFrom;
     }
 
     /**

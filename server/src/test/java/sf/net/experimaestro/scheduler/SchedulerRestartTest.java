@@ -39,7 +39,7 @@ public class SchedulerRestartTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
 
         int one_hour = 60 * 60 * 1000;
-        WaitingJob job = new WaitingJob(counter, jobDirectory, "job", new WaitingJob.Action(one_hour, 0, 0));
+        WaitingJob job = new WaitingJob(counter, jobDirectory, "job", new WaitingJobRunner.Action(one_hour, 0, 0));
         Transaction.run(em -> em.persist(job));
     }
 

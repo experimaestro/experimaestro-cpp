@@ -54,9 +54,11 @@ public class Transaction implements AutoCloseable {
 
     public Transaction(EntityManager entityManager, boolean ownEntityManager) {
         this.entityManager = entityManager;
+        this.ownEntityManager = ownEntityManager;
+
         transaction  = entityManager.getTransaction();
         transaction.begin();
-        this.ownEntityManager = ownEntityManager;
+        LOGGER.info("Transaction %s begins", System.identityHashCode(this));
     }
 
     public EntityManager em() {

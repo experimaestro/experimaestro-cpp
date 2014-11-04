@@ -94,7 +94,7 @@ public class Job extends Resource {
     /**
      * Our job monitor (null when there is no attached process)
      */
-    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL)
     @JoinColumn(name = "process")
     XPMProcess process;
 
@@ -218,12 +218,11 @@ public class Job extends Resource {
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run() throws LockException {
+    synchronized final public void run() throws Exception {
         ArrayList<Lock> locks = new ArrayList<>();
 
         try {
             // We are running (prevents other task to try to replace ourselves)
-            setState(ResourceState.LOCKING);
             LOGGER.debug("Running preparation - locking ourselves [%s]", this);
 
             while (true) {
@@ -234,19 +233,12 @@ public class Job extends Resource {
                     return;
                 }
 
-                // Try to lock, otherwise wait
+                // Try to lock - discard if something goes wrong
                 try {
                     locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(path), false));
                 } catch (LockException | IOException e) {
-                    LOGGER.info("Could not lock job [%s]", this);
-                    synchronized (this) {
-                        try {
-                            // Wait five seconds before trying to lock again
-                            wait(5000);
-                        } catch (InterruptedException ignored) {
-                        }
-                    }
-                    continue;
+                    LOGGER.info("Could not lock job [%s]: %s", this, e);
+                    throw e;
                 }
 
                 LOGGER.debug("Running preparation - locked ourselves [%s]", this);
@@ -354,11 +346,13 @@ public class Job extends Resource {
                 process = null;
 
                 try {
-                    final Collection<Dependency> deps = getDependentResources();
-                    for (Dependency dep : deps) {
-                        dep.unactivate();
-
-                    }
+                    Transaction.run(em -> {
+                        final Job thisObj = em.find(Job.class, getId());
+                        final Collection<Dependency> deps = thisObj.getDependentResources();
+                        for (Dependency dep : deps) {
+                            dep.unactivate();
+                        }
+                    });
                 } catch (RuntimeException e) {
                     LOGGER.error(e, "Error while unactivating dependencies");
                 }
@@ -669,17 +663,4 @@ public class Job extends Resource {
         jobRunner.dependencies().forEach(this::addDependency);
 
     }
-
-
-    @PostUpdate
-    @PostPersist
-    public void _stored()  {
-        // Special case of jobs: we need to track
-        // jobs that are ready to be run
-        updateStatus();
-        if (getState() == ResourceState.READY) {
-            Scheduler.notifyRunners();
-        }
-    }
-
 }

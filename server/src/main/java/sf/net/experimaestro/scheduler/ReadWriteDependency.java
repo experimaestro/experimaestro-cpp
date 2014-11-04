@@ -25,6 +25,8 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.*;
@@ -39,6 +41,8 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Entity
+@DiscriminatorValue("RW")
 public class ReadWriteDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 

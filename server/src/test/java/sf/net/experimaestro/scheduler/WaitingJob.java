@@ -18,53 +18,29 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Serializable;
-import java.nio.file.FileSystemException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.stream.Stream;
+
+import static sf.net.experimaestro.scheduler.ResourceState.*;
 
 /**
- * A job that just waits a bit
- *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * Extends Job to collect some information for testing purposes
  */
 @Entity
-@DiscriminatorValue("-1")
-public class WaitingJob extends JobRunner {
-    final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * A scheduler for restarts
-     */
-    private final static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
+public class WaitingJob extends Job {
     /**
      * The statuses of the different jobs
      */
     static ArrayList<Status> statuses = new ArrayList<>();
-
     /**
      * The list of actions
      */
-    ArrayList<Action> actions;
+    ArrayList<WaitingJobRunner.Action> actions;
 
     /* The index in the static status list */
     int statusIndex;
@@ -72,33 +48,20 @@ public class WaitingJob extends JobRunner {
     /* id for debugging */
     private String debugId;
 
+    protected WaitingJob() {}
 
-    /**
-     * Initialisation of a task
-     * <p>
-     * The job is by default initialized as "WAITING": its state should be updated after
-     * the initialization has finished
-     *
-     * @param connector
-     * @param path
-     */
-    public WaitingJob(Connector connector, Path path) {
-        job = new Job(connector, path);
-    }
-    // The code to return
+    public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobRunner.Action... actions) {
+        super(LocalhostConnector.getInstance(), new File(dir, debugId).toPath());
 
-    public WaitingJob() {
-    }
 
-    public WaitingJob(ThreadCount counter, File dir, String debugId, Action... actions) {
-        job = new Job(LocalhostConnector.getInstance(), new File(dir, debugId).toPath());
+        jobRunner = new WaitingJobRunner();
 
         Status status = new Status();
         synchronized (statuses) {
             statusIndex = statuses.size();
             statuses.add(status);
         }
-        job.setJobRunner(this);
+        setJobRunner(jobRunner);
         status.counter = counter;
         this.debugId = debugId;
         counter.add(actions.length);
@@ -107,41 +70,32 @@ public class WaitingJob extends JobRunner {
         status.currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        job.setState(ResourceState.WAITING);
+        setState(WAITING);
     }
 
-    public Status status() {
+    @Override
+    public boolean setState(ResourceState state) {
+        if (!super.setState(state)) {
+            return false;
+        }
+        switch(state) {
+            case READY:
+                status().readyTimestamp = System.currentTimeMillis();
+                break;
+        }
+        return true;
+    }
+
+    Status status() {
         return statuses.get(statusIndex);
     }
 
-    @Override
-    public XPMProcess startJob(ArrayList<Lock> locks) {
-        Status status = statuses.get(statusIndex);
-        assert status.readyTimestamp > 0;
-        if (status.currentIndex >= actions.size()) {
-            throw new AssertionError("No next action");
-        }
-
-        final Action action = actions.get(status.currentIndex);
-        return new MyXPMProcess(status.counter, job.getMainConnector(), job, action);
-    }
-
-    @Override
-    Path outputFile(Job job) throws FileSystemException {
-        return null;
-    }
-
-    @Override
-    public Stream<Dependency> dependencies() {
-        return Stream.of();
-    }
-
     public int finalCode() {
-        return actions.get(actions.size() - 1).code;
+        return actions.get(status().currentIndex).code;
     }
 
-    public void restart(Action action) {
-        throw new NotImplementedException();
+    public void restart(WaitingJobRunner.Action action) {
+
     }
 
     public static class Status {
@@ -152,127 +106,6 @@ public class WaitingJob extends JobRunner {
         long readyTimestamp = 0;
 
         // Counter
-        transient private ThreadCount counter;
-    }
-
-    /**
-     * An action of our job
-     */
-    static public class Action implements Serializable {
-        // Duration before exiting
-        long duration;
-
-        // Exit code
-        int code;
-
-        // Waiting time before restart (0 = no restart)
-        long restart;
-
-        Action() {
-        }
-
-        Action(long duration, int code, long restart) {
-            this.duration = duration;
-            this.code = code;
-            this.restart = restart;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("Action(duration=%dms, code=%d, restart=%dms)", duration, code, restart);
-        }
-    }
-
-    static private class MyXPMProcess extends XPMProcess {
-        /**
-         * The action
-         */
-        Action action;
-        private long timestamp;
-        private transient ThreadCount counter;
-
-        public MyXPMProcess() {
-            LOGGER.debug("Default constructor for MyXPMProcess");
-        }
-
-        public MyXPMProcess(ThreadCount counter, SingleHostConnector connector, Job job, Action action) {
-            super(connector, "1", job);
-            assert action != null;
-            this.timestamp = System.currentTimeMillis();
-            this.counter = counter;
-            this.action = action;
-            LOGGER.debug("XPM Process initialized for job " + job + " with action " + action);
-            startWaitProcess();
-        }
-
-        @Override
-        public void init(Job job) {
-            LOGGER.debug("Initialized with job %s", job);
-        }
-
-        @Override
-        public void dispose() {
-            super.dispose();
-        }
-
-        @Override
-        public int waitFor() throws InterruptedException {
-            assert job.getStartTimestamp() > 0;
-            synchronized (this) {
-                LOGGER.debug("Starting to wait - " + job + " - " + action);
-                long toWait = action.duration - (System.currentTimeMillis() - timestamp);
-                if (toWait > 0) wait(toWait);
-                LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
-            }
-
-            // Schedule a restart
-
-            if (action.restart > 0) {
-                // "We should change the job index"
-                throw new NotImplementedException();
-//                scheduler.schedule(() -> {
-//                    LOGGER.debug("Restarting job %s[%d]", job.getId());
-//                    try {
-//                        job.restart();
-//                    } catch (Exception e) {
-//                        throw new AssertionError("Could not restart job", e);
-//                    }
-//                }, action.restart, TimeUnit.MILLISECONDS);
-            }
-
-            counter.del();
-            return action.code;
-        }
-
-        @Override
-        public boolean isRunning() throws Exception {
-            return action.duration < System.currentTimeMillis() - timestamp;
-        }
-
-        @Override
-        public int exitValue() {
-            return 0;
-        }
-
-        @Override
-        public OutputStream getOutputStream() {
-            return null;
-        }
-
-        @Override
-        public InputStream getErrorStream() {
-            return null;
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            return null;
-        }
-
-        @Override
-        public void destroy() {
-        }
-
-
+        transient ThreadCount counter;
     }
 }

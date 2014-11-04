@@ -63,16 +63,6 @@ public class JavaScriptChecker {
         this.content = getFileContent(file);
     }
 
-    @BeforeClass
-    public void open() throws IOException {
-        environment.init();
-    }
-
-    @AfterClass
-    public void close() {
-        environment.close();
-    }
-
     @Override
     public String toString() {
         return format("JavaScript for [%s]", file);

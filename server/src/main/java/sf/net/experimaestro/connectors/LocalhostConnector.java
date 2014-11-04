@@ -22,15 +22,12 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.*;
 import java.util.Map;
 
@@ -42,6 +39,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
+@DiscriminatorValue("local")
 public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
@@ -96,132 +94,6 @@ public class LocalhostConnector extends SingleHostConnector {
         return new UnixScriptProcessBuilder(scriptFile, this);
     }
 
-
-    /**
-     * Wrapper for a local thread
-     */
-    @Entity
-    private static class LocalProcess extends XPMProcess {
-        /**
-         * The running process: if we have it, easier to monitor
-         */
-        transient private Process process;
-        transient private Thread destroyThread;
-
-        /**
-         * Stores the exit value
-         */
-        transient private Integer exitValue;
-
-        @SuppressWarnings("unused")
-        public LocalProcess() {
-        }
-
-        // Check on Windows:
-        // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
-
-        public LocalProcess(Job job, Process process, boolean detach) {
-            super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job);
-            this.process = process;
-            if (!detach) {
-                // If we need to destroy this process
-                destroyThread = new Thread() {
-                    @Override
-                    public void run() {
-                        try {
-                            LocalProcess.this.destroy();
-                        } catch (FileSystemException e) {
-                            LOGGER.error("Process %s could not be destroyed", LocalProcess.this);
-                        }
-                    }
-                };
-                Runtime.getRuntime().addShutdownHook(destroyThread);
-            }
-
-            startWaitProcess();
-        }
-
-        @Override
-        public boolean isRunning() throws Exception {
-            if (process != null)
-                return ProcessUtils.isRunning(process);
-
-            return super.isRunning();
-        }
-
-        @Override
-        public int exitValue() {
-            // Try the easy way
-            if (process != null)
-                return process.exitValue();
-
-            return super.exitValue();
-        }
-
-
-        @Override
-        public OutputStream getOutputStream() {
-            return process == null ? null : process.getOutputStream();
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            return process == null ? null : process.getInputStream();
-        }
-
-        @Override
-        public InputStream getErrorStream() {
-            return process == null ? null : process.getErrorStream();
-        }
-
-        @Override
-        public int waitFor() throws InterruptedException {
-            if (process != null) {
-                exitValue = process.waitFor();
-                return exitValue;
-            }
-            if (exitValue != null) {
-                return exitValue;
-            }
-            return super.waitFor();
-        }
-
-        @Override
-        public void destroy() throws FileSystemException {
-            if (exitValue != null) {
-                return;
-            }
-
-            if (process != null) {
-                LOGGER.info("Killing job [%s] with PID [%s]", getJob(), getPID());
-                // TODO: send a signal first?
-                process.destroy();
-
-                if (destroyThread != null)
-                    try {
-                        Runtime.getRuntime().removeShutdownHook(destroyThread);
-                    } catch (IllegalStateException e) {/* Ignore */}
-                process = null;
-            } else {
-                LOGGER.info("Process was not started by server: killing it externally with PID %s", getPID());
-                AbstractProcessBuilder killingProcessBuilder = getInstance().processBuilder();
-                killingProcessBuilder.command("kill", getPID()).detach(false);
-                try {
-                    final XPMProcess killingProcess = killingProcessBuilder.detach(false).start();
-                    int code = killingProcess.waitFor();
-                    if (code != 0)
-                        throw new RuntimeException(format("Could not kill local process [%s]: error code %d", getPID(), code));
-                } catch (LaunchException | IOException | InterruptedException e) {
-                    throw new RuntimeException(format("Could not kill local process [%s]", getPID()), e);
-                }
-            }
-
-            // TODO: finish the implementation ???
-//            throw new NotImplementedException();
-        }
-
-
-    }
 
     /**
      * Localhost process builder

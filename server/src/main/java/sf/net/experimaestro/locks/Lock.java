@@ -18,8 +18,9 @@ package sf.net.experimaestro.locks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.hibernate.annotations.DiscriminatorFormula;
+import org.hibernate.annotations.DiscriminatorOptions;
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.scheduler.Scheduler;
 
 import javax.persistence.*;
 
@@ -31,12 +32,14 @@ import javax.persistence.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Table(name = "locks")
 @Entity(name = "locks")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(name = "locks")
+@DiscriminatorColumn(name = "type")
 public abstract class Lock implements AutoCloseable {
     @Id
-    private long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
 
     @Override
     abstract public void close() throws RuntimeException;

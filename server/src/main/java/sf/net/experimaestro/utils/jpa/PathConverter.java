@@ -20,6 +20,7 @@ package sf.net.experimaestro.utils.jpa;
 
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -32,6 +33,6 @@ public class PathConverter implements AttributeConverter<Path, String> {
 
     @Override
     public Path convertToEntityAttribute(String dbData) {
-        return Paths.get(dbData);
+        return Paths.get(URI.create(dbData));
     }
 }

@@ -23,6 +23,8 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +34,8 @@ import java.nio.file.Path;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Entity
+@DiscriminatorValue("exclusive")
 public class ExclusiveDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 

@@ -23,7 +23,6 @@ import java.nio.file.FileSystemException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -61,7 +60,7 @@ public class OARLauncher implements Launcher {
     /**
      * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
-    static private Document exec(SingleHostConnector connector, String command) throws Exception {
+    static Document exec(SingleHostConnector connector, String command) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
@@ -74,7 +73,7 @@ public class OARLauncher implements Launcher {
     /**
      * Evaluate an XPath to a string
      */
-    static private String evaluateXPathToString(String expression, Document document) {
+    static String evaluateXPathToString(String expression, Document document) {
         String value;
         XPath xpath = XPathFactory.newInstance().newXPath();
         try {
@@ -142,84 +141,4 @@ public class OARLauncher implements Launcher {
     }
 
 
-    /**
-     * An OAR process
-     */
-    static private class OARProcess extends XPMProcess {
-        /**
-         * Used for serialization
-         */
-        public OARProcess() {
-        }
-
-        public OARProcess(Job job, String pid, SingleHostConnector connector) {
-            super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
-            startWaitProcess();
-        }
-
-
-        @Override
-        public OutputStream getOutputStream() {
-            return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public InputStream getErrorStream() {
-            return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public int waitFor() throws InterruptedException {
-            return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public void destroy() {
-            //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-
-        @Override
-        public boolean isRunning() {
-            final Document document = oarstat(false);
-            String state = evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
-            LOGGER.debug("State of OAR process %s is %s", pid, state);
-            return "running".equalsIgnoreCase(state);
-        }
-
-        @Override
-        public int exitValue() {
-            final Document document = oarstat(true);
-            String state = evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
-            if ("running".equalsIgnoreCase(state))
-                throw new IllegalThreadStateException("Job is running - cannot access its exit value");
-
-            String code = evaluateXPathToString("//item[@identifier = \"exit_code\"]/text()", document);
-
-            LOGGER.debug("Exit code of OAR process %s is %s", pid, code);
-
-            if ("".equals(code))
-                return -1;
-            return Integer.parseInt(code);
-        }
-
-        /**
-         * Runs oarstat and returns the XML document
-         */
-        private Document oarstat(boolean full) {
-            final Document document;
-            try {
-                document = exec(connector, String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
-            } catch (Exception e) {
-                throw new XPMRuntimeException(e, "Cannot parse oarstat output");
-            }
-            return document;
-        }
-
-    }
 }
