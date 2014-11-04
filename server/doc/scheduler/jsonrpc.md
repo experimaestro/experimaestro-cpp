@@ -1,4 +1,6 @@
-<head><title>XML-RPC</title></head>
+---
+title: XML-RPC
+---
 
 # Commands
 

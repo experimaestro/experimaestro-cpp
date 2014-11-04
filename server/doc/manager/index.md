@@ -1,6 +1,6 @@
-<head>
-  <title>Manager</title>
-</head>
+---
+title: Manager
+---
 
 # Goals
 
@@ -22,9 +22,9 @@ The goals of the experimaestro manager are to:
 
 The main concepts of the manager are:
 
-* All messages between tasks are Json objects. This is described in [this document](json.md).
+* All messages between tasks are Json objects. This is described in [this document](json.html).
 * Tasks are the unit on which experiments are built, and correspond roughly to either the execution of a long process,
     or to a configuration task. Tasks can be composed in various ways to allow a compact representation of
-    experimental plans.  Tasks are described further [this document](tasks.md)
+    experimental plans.  Tasks are described further [this document](tasks.html)
 * Computational resources, named `connectors`, define a set of computers - how can a file be stored, how can a
-    command line be executed. More information can be found in this [document](connectors.md).
+    command line be executed. More information can be found in this [document](connectors.html).

@@ -1,6 +1,6 @@
-<head>
-  <title>Connectors</title>
-</head>
+---
+title: Connectors
+---
 
 Connectors describe a computational resource, as for example a single computer (*single host connector*) or a cluster. It provides
 information on how to access the file system and launch processes.

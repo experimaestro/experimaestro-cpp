@@ -1,6 +1,6 @@
-<head>
-  <title>Javascript for Manager</title>
-</head>
+---
+title: Javascript for Manager
+---
 
 # Example
 

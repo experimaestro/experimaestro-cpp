@@ -1,6 +1,7 @@
-<head>
-<title>Scheduler</title>
-</head>
+---
+title: Scheduler
+layout: default
+---
 
 # Main concepts
 
@@ -68,19 +69,21 @@
 
   The server and clients are configured by a simple property file, located in the `.experimaestro` (by default) file in the user's home directory.
 
-    [server]
-    ; Port for the Web server (and the XML-RPC server)
-    port = 12345
-    ; Experimaestro will store its data in this folder
-    database = /path/to/a/valid/folder
+{% highlight ini %}
 
-    [passwords]
+[server]
+; Port for the Web server (and the XML-RPC server)
+port = 12345
+; Experimaestro will store its data in this folder
+database = /path/to/a/valid/folder
 
-    USERNAME = PASSWORD, GROUP
+[passwords]
+USERNAME = PASSWORD, GROUP
 
-    [client]
+[client]
+url = http://USERNAME:PASSWORD@localhost:12345/
 
-    url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
+{% endhighlight %}
 
 ## Starting experimaestro
 
@@ -92,4 +95,4 @@ to get some help on available commands.
 
 ## XML-RPC
 
-The Experimaestro server can be reached [through XML-RPC calls](xmlrpc).
+The Experimaestro server can be reached [through XML-RPC calls](jsonrpc).
