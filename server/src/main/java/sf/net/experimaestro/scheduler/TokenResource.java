@@ -30,7 +30,7 @@ import java.nio.file.Path;
 /**
  * A class that can be locked a given number of times at the same time.
  * <p>
- * This is useful when one wants to limit the number of processes on a host for
+ * This is useful when one wants status limit the number of processes on a host for
  * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>

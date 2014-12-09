@@ -28,7 +28,7 @@
         <class>sf.net.experimaestro.utils.jpa.FileConverter</class>
         <class>sf.net.experimaestro.utils.jpa.PathConverter</class>
 
-        <!-- Classes to serialize -->
+        <!-- Classes status serialize -->
         <class>sf.net.experimaestro.connectors.Connector</class>
         <class>sf.net.experimaestro.connectors.SingleHostConnector</class>
         <class>sf.net.experimaestro.connectors.LocalhostConnector</class>
@@ -51,6 +51,9 @@
         <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
 
         <class>sf.net.experimaestro.locks.Lock</class>
+        <class>sf.net.experimaestro.scheduler.StatusLock</class>
+        <class>sf.net.experimaestro.locks.FileLock</class>
+        <class>sf.net.experimaestro.scheduler.TokenLock</class>
 
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
 

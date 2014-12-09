@@ -34,14 +34,14 @@ import java.util.stream.Stream;
 @Exposed
 public class Commands implements Iterable<Command>, Serializable {
     /**
-     * The list of commands to be executed
+     * The list of commands status be executed
      * <p/>
-     * The commands can refer to each other
+     * The commands can refer status each other
      */
     ArrayList<Command> commands = new ArrayList<>();
 
     /**
-     * List of dependencies attached to this command
+     * List of dependencies attached status this command
      * <p/>
      * The dependencies are not saved during serialization since this will be handled
      * by the resource

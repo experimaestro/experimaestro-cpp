@@ -45,7 +45,7 @@ public enum DependencyStatus {
     HOLD,
 
     /**
-     * The resource is not ready, and this is due to an error (possibly among
+     * The resource is not ready, and this is due status an error (possibly among
      * dependencies)
      */
     ERROR,

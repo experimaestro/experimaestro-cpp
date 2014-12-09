@@ -19,6 +19,8 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -50,7 +52,7 @@ import static java.lang.String.format;
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(name = "resources")
+@Table(name = "resources", indexes = @Index(columnList = "path"))
 //@Cacheable
 public abstract class Resource {
     /**
@@ -66,7 +68,7 @@ public abstract class Resource {
     public static final FileNameTransformer STATUS_EXTENSION = new FileNameTransformer("", ".state");
 
     /**
-     * Extension used to mark a produced resource
+     * Extension used status mark a produced resource
      */
     public static final FileNameTransformer DONE_EXTENSION = new FileNameTransformer("", ".done");
 
@@ -79,7 +81,7 @@ public abstract class Resource {
     // --- Values filled on demand
 
     /**
-     * Extension for the file containing the script to run
+     * Extension for the file containing the script status run
      */
     public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer(".xpm.", ".run");
 
@@ -109,15 +111,22 @@ public abstract class Resource {
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
     protected List<Dependency> dependencyFrom = new ArrayList<>();
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
-    List<Dependency> dependencyTo = new ArrayList<>();
-
     /**
      * The path with the connector
      */
-    @Column(updatable = false)
+    @Column(name = "path", updatable = false)
     protected Path path;
 
+    /**
+     * The connector
+     */
+    @JoinColumn(name = "connector", updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    protected Connector connector;
+
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
+    List<Dependency> dependencyTo = new ArrayList<>();
     /**
      * The resource ID
      */
@@ -139,12 +148,7 @@ public abstract class Resource {
      * The resource state
      */
     @Column(name = "state")
-    private ResourceState state;
-
-    /**
-     * Lock-related data - can be reconstructed
-     */
-    transient private LockData lockData;
+    private ResourceState state = ResourceState.ON_HOLD;
 
     /**
      * Called when deserializing from database
@@ -153,8 +157,24 @@ public abstract class Resource {
         LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
-    public Resource(Path path) {
+    public Resource(Connector connector, Path path) {
+        this.connector = connector;
         this.path = path;
+    }
+
+    public static Resource getByLocator(EntityManager em, Path path) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
+        Root<Resource> root = cq.from(Resource.class);
+        cq.where(root.get("path").in(cb.parameter(Path.class, "path")));
+
+
+        TypedQuery<Resource> query = em.createQuery(cq);
+        query.setParameter("path", path);
+        List<Resource> result = query.getResultList();
+        assert result.size() <= 1;
+
+        return result.get(0);
     }
 
     @Override
@@ -200,7 +220,7 @@ public abstract class Resource {
     /**
      * Do a full update of the state of this resource.
      * <p>
-     * This implies looking at the disk to check for done/lock files, etc.
+     * This implies looking at the disk status check for done/lock files, etc.
      *
      * @return True if the state was updated
      */
@@ -208,7 +228,7 @@ public abstract class Resource {
         return false;
     }
 
-    public boolean stored() {
+    public boolean isStored() {
         return resourceID != null;
     }
 
@@ -249,18 +269,6 @@ public abstract class Resource {
     }
 
     /**
-     * Update a dependency if we have a cache of it
-     *
-     * @param dependency The dependency
-     */
-    protected Dependency updateDependency(Dependency dependency) {
-        throw new NotImplementedException();
-//        if (dependencies != null)
-//            return dependencies.put(dependency.getFrom(), dependency);
-//        return null;
-    }
-
-    /**
      * @return the generated
      */
     public boolean isGenerated() {
@@ -278,14 +286,6 @@ public abstract class Resource {
 
     public String getIdentifier() {
         return getPath().toString();
-    }
-
-    public LockData getLockData() {
-        return lockData;
-    }
-
-    public void setLockData(LockData lockData) {
-        this.lockData = lockData;
     }
 
     /**
@@ -307,15 +307,10 @@ public abstract class Resource {
         if (this.state == state)
             return false;
         this.state = state;
-        if (this.stored()) {
+        if (this.isStored()) {
             Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
         }
         return true;
-    }
-
-
-    public Path getFileWithExtension(String extension) throws FileSystemException {
-        return new FileNameTransformer("", extension).transform(path);
     }
 
     /**
@@ -325,21 +320,6 @@ public abstract class Resource {
      * @return a new dependency
      */
     public abstract Dependency createDependency(Object type);
-
-    /**
-     * Returns whether this resource can be overriden
-     *
-     * @param current
-     * @return
-     */
-    public boolean canBeOverriden(Resource current) {
-        if (state == ResourceState.RUNNING && current != this) {
-            LOGGER.error(format("Cannot override a running task [%s] / %s vs %s", current,
-                    System.identityHashCode(current), System.identityHashCode(this.hashCode())));
-            return false;
-        }
-        return true;
-    }
 
     /**
      * Returns the main output file for this resource
@@ -362,7 +342,7 @@ public abstract class Resource {
     }
 
     /**
-     * Get a JSON reprensentation of the object
+     * Get a JSON representation of the object
      *
      * @return
      * @throws IOException
@@ -374,8 +354,11 @@ public abstract class Resource {
         return object;
     }
 
-    @PostRemove
     public void clean() {
+    }
+
+    /** Called when the resource was persisted/updated and committed */
+    public void stored() {
     }
 
     /**
@@ -383,8 +366,7 @@ public abstract class Resource {
      */
     public void notifyDependencies() {
         // Join between active states
-        // TODO: should limit to the dependencies of some resources
-        EntityManager em = null;
+        // TODO: should limit status the dependencies of some resources
 
         // Notify dependencies in turn
         Collection<Dependency> dependencies = getDependentResources();
@@ -392,12 +374,12 @@ public abstract class Resource {
 
         for (Dependency dep : dependencies) {
             if (dep.status == DependencyStatus.UNACTIVE) {
-                LOGGER.debug("We won't notify [R%s] to [R%s] since the dependency is unactive", this, dep.getTo());
+                LOGGER.debug("We won't notify [R%s] status [R%s] since the dependency is unactive", this, dep.getTo());
 
             } else
                 try {
                     // when the dependency status is null, the dependency is not active anymore
-                    LOGGER.debug("Notifying dependency: [R%s] to [R%s]; current dep. state=%s", this, dep.getTo(), dep.status);
+                    LOGGER.debug("Notifying dependency: [R%s] status [R%s]; current dep. state=%s", this, dep.getTo(), dep.status);
                     // Preserves the previous state
                     DependencyStatus beforeState = dep.status;
 
@@ -409,15 +391,12 @@ public abstract class Resource {
                         }
 
                         // We ensure nobody else can modify the resource first
-                        try (Transaction t = Transaction.of(em)) {
-                            // Update the dependency in database
-                            // Notify the resource that a dependency has changed
-                            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-                            LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
-                                    beforeState, dep.status, depResource.getState(), depResource);
+                        // Update the dependency in database
+                        // Notify the resource that a dependency has changed
+                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+                        LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
+                                beforeState, dep.status, depResource.getState(), depResource);
 
-                            t.commit();
-                        }
                     } else {
                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }
@@ -428,7 +407,6 @@ public abstract class Resource {
 
     }
 
-
     /**
      * Store a resource
      *
@@ -438,7 +416,7 @@ public abstract class Resource {
      */
     synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite {
         // Get the group
-        final boolean newResource = !resource.stored();
+        final boolean newResource = !resource.isStored();
         if (newResource) {
             resource.updateStatus();
         }
@@ -454,16 +432,6 @@ public abstract class Resource {
         if (newResource) {
             final long id = resource.getId();
             LOGGER.debug("Adding a new resource [%s] in database [id=%d/%x]", resource, id, System.identityHashCode(resource));
-
-            // Add the dependencies
-            // Should not be necessary
-//            final Collection<Dependency> deps = resource.getDependenciesFrom();
-//            for (Dependency dependency : deps) {
-//                // FIXME
-//                dependency.setTo(this);
-//                Scheduler.get().store(dependency);
-//                LOGGER.debug("Added new dependency %s", dependency);
-//            }
 
             // Notify
             Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, resource));
@@ -507,27 +475,6 @@ public abstract class Resource {
         return extension.transform(path);
     }
 
-
-    public static Resource getByLocator(EntityManager em, Path path) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("path").in(cb.parameter(Path.class, "path")));
-
-
-        TypedQuery<Resource> query = em.createQuery(cq);
-        query.setParameter("path", path);
-        List<Resource> result = query.getResultList();
-        assert result.size() <= 1;
-
-        return result.get(0);
-    }
-
-    public static Resource getById(long resourceId) {
-        // FIXME
-        throw new NotImplementedException();
-    }
-
     final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
         if (resource.getClass() != this.getClass()) {
             throw new ExperimaestroCannotOverwrite("Class %s and %s differ", resource.getClass(), this.getClass());
@@ -550,6 +497,20 @@ public abstract class Resource {
         this.state = resource.state;
     }
 
+    public Connector getConnector() {
+        return connector;
+    }
+
+    /**
+     * Returns the main connector associated with this resource
+     *
+     * @return a SingleHostConnector object
+     */
+    public final SingleHostConnector getMainConnector() {
+        return getConnector().getMainConnector();
+    }
+
+
 
     /**
      * Defines how printing should be done
@@ -558,4 +519,14 @@ public abstract class Resource {
         public String detailURL;
     }
 
+    @PostUpdate
+    @PostPersist
+    protected void _post_update() {
+        Transaction.current().addPostCommit(t -> stored());
+    }
+
+    @PostRemove
+    protected void _post_remove() {
+        Transaction.current().addPostCommit(t -> clean());
+    }
 }

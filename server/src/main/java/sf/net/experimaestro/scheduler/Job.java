@@ -22,7 +22,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
@@ -58,55 +57,39 @@ public class Job extends Resource {
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * The connector  to execute the task
-     */
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private Connector connector;
-
     /**
      * The priority of the job (the higher, the more urgent)
      */
     int priority;
-
     /**
      * When was the job submitted (in case the priority is not enough)
      */
     long timestamp = System.currentTimeMillis();
-
-
     /**
      * Requirements (ignored for the moment)
      */
     transient ComputationalRequirements requirements;
-
     /**
      * When did the job start (0 if not started)
      */
     long startTimestamp;
-
     /**
      * When did the job stop (0 when it did not stop yet)
      */
     long endTimestamp;
-
     /**
      * Our job monitor (null when there is no attached process)
      */
     @OneToOne(fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL)
     @JoinColumn(name = "process")
     XPMProcess process;
-
     @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "runner")
     JobRunner jobRunner;
-
     /**
      * Number of unsatisfied jobs
      */
     int nbUnsatisfied = 0;
-
     /**
      * Number of holding jobs
      */
@@ -125,8 +108,7 @@ public class Job extends Resource {
      * the initialization has finished
      */
     public Job(Connector connector, Path path) {
-        super(path);
-        this.connector = connector;
+        super(connector, path);
         setState(ResourceState.WAITING);
     }
 
@@ -139,24 +121,6 @@ public class Job extends Resource {
         }
     }
 
-    /**
-     * Returns the connector associated to this resource
-     *
-     * @return a Connector object
-     */
-    final public Connector getConnector() {
-        return connector;
-    }
-
-    /**
-     * Returns the main connector associated with this resource
-     *
-     * @return a SingleHostConnector object
-     */
-    public final SingleHostConnector getMainConnector() {
-        return getConnector().getMainConnector();
-    }
-
 
     /**
      * Restart the job
@@ -165,7 +129,7 @@ public class Job extends Resource {
      */
     synchronized public void restart() throws Exception {
         if (!getState().isActive()) {
-            // Set state to waiting
+            // Set state status waiting
             setState(ResourceState.WAITING);
             clean();
 
@@ -188,7 +152,7 @@ public class Job extends Resource {
     /**
      * TaskReference priority - the higher, the better
      *
-     * @param priority the priority to set
+     * @param priority the priority status set
      */
     final public void setPriority(int priority) {
         this.priority = priority;
@@ -202,7 +166,7 @@ public class Job extends Resource {
      * This is where the real job gets done
      *
      * @param locks The locks that were taken
-     * @return The process corresponding to the job
+     * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */
@@ -218,11 +182,11 @@ public class Job extends Resource {
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run() throws Exception {
+    synchronized final public void run(EntityManager em) throws Exception {
         ArrayList<Lock> locks = new ArrayList<>();
 
         try {
-            // We are running (prevents other task to try to replace ourselves)
+            // We are running (prevents other task status try status replace ourselves)
             LOGGER.debug("Running preparation - locking ourselves [%s]", this);
 
             while (true) {
@@ -233,7 +197,7 @@ public class Job extends Resource {
                     return;
                 }
 
-                // Try to lock - discard if something goes wrong
+                // Try status lock - discard if something goes wrong
                 try {
                     locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(path), false));
                 } catch (LockException | IOException e) {
@@ -253,8 +217,8 @@ public class Job extends Resource {
 
                 String pid = String.valueOf(ProcessUtils.getPID());
 
-                // Now, tries to lock all the resources
-                // in order to avoid race issues, we sync with
+                // Now, tries status lock all the resources
+                // in order status avoid race issues, we sync with
                 // the task manager
                 synchronized (Scheduler.LockSync) {
                     LOGGER.debug("Running preparation - locking dependencies [%s]", this);
@@ -263,13 +227,14 @@ public class Job extends Resource {
                             LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
                             // FIXME: should be stored
                             final Lock lock = dependency.lock(pid);
+                            em.persist(dependency);
                             if (lock != null)
                                 locks.add(lock);
                             LOGGER.debug("Running preparation - locked dependencies [%s]", dependency);
                         } catch (LockException e) {
                             // Update & store this dependency
                             Resource resource = dependency.getFrom();
-                            e.addContext("While locking to run %s", resource);
+                            e.addContext("While locking status run %s", resource);
                             throw e;
                         }
 
@@ -283,7 +248,7 @@ public class Job extends Resource {
                     setState(ResourceState.RUNNING);
                     startTimestamp = System.currentTimeMillis();
 
-                    // Start the task and transfer locking handling to those
+                    // Start the task and transfer locking handling status those
                     process = startJob(locks);
 
                     process.adopt(locks);
@@ -315,6 +280,7 @@ public class Job extends Resource {
 
     }
 
+
     /**
      * Called when a resource state has changed
      *
@@ -330,82 +296,108 @@ public class Job extends Resource {
                 break;
 
             case END_OF_JOB:
-                // We received an end of job message from a process watcher
-
-                EndOfJobMessage eoj = (EndOfJobMessage) message;
-                this.endTimestamp = eoj.timestamp;
-
-                // TODO: copy done & code to main connector if needed
-
-                LOGGER.info("Job [%s] has ended with code %d", this.getPath(), eoj.code);
-
-                // Update state
-                setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
-                // Dispose of the job monitor
-                XPMProcess old = process;
-                process = null;
-
-                try {
-                    Transaction.run(em -> {
-                        final Job thisObj = em.find(Job.class, getId());
-                        final Collection<Dependency> deps = thisObj.getDependentResources();
-                        for (Dependency dep : deps) {
-                            dep.unactivate();
-                        }
-                    });
-                } catch (RuntimeException e) {
-                    LOGGER.error(e, "Error while unactivating dependencies");
-                }
-
-                try {
-                    LOGGER.debug("Disposing of old XPM process [%s]", old);
-                    if (old != null) {
-                        old.dispose();
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Could not dispose of the old process checker %s", e);
-                }
+                // First, register our changes
+                Transaction.run((em, t) -> {
+                    em.find(Job.class, this.getId()).endOfJobMessage((EndOfJobMessage) message, em, t);
+                });
                 break;
 
             case DEPENDENCY_CHANGED:
-                LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
-                final DependencyChangedMessage depChanged = (DependencyChangedMessage) message;
+                Transaction.run((em, t) -> {
+                    final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
+                    em.find(Job.class, this.getId()).dependencyChanged(depMessage, em, t);
+                });
 
-                // Store in cache
-                Dependency cachedValue = updateDependency(depChanged.dependency);
-
-                // Use the cached value if we have one since it is most actual
-                DependencyStatus fromStatus = cachedValue == null ? depChanged.from : cachedValue.status;
-
-                int diff = (depChanged.to.isOK() ? 1 : 0) - (fromStatus.isOK() ? 1 : 0);
-                int diffHold = (depChanged.to.isBlocking() ? 1 : 0) - (fromStatus.isBlocking() ? 1 : 0);
-
-                if (diff != 0 || diffHold != 0) {
-                    nbUnsatisfied -= diff;
-                    nbHolding += diffHold;
-
-                    // Change the state in funciton of the number of unsatified requirements
-                    if (nbUnsatisfied == 0) {
-                        setState(ResourceState.READY);
-                    } else {
-                        if (nbHolding > 0)
-                            setState(ResourceState.ON_HOLD);
-                        else
-                            setState(ResourceState.WAITING);
-                    }
-
-                    // Store the result
-                    assert nbHolding >= 0;
-                    assert nbUnsatisfied >= nbHolding;
-                }
-                LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
-                        diff, diffHold, depChanged.from, depChanged.to);
                 break;
 
             default:
                 LOGGER.error("Received unknown self-message: %s", message);
 
         }
+
+    }
+
+    private void dependencyChanged(DependencyChangedMessage message, EntityManager em, Transaction t) {
+        LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
+
+        // Retrieve the dependency
+        final Resource _from = em.find(Resource.class, message.fromId);
+        final Dependency dependency = em.find(Dependency.class, new DependencyPK(_from.getId(), this.getId()));
+
+        // Use the cached value if we have one since it is most actual
+        DependencyStatus fromStatus = dependency.status;
+
+        int diff = (message.status.isOK() ? 1 : 0) - (fromStatus.isOK() ? 1 : 0);
+        int diffHold = (message.status.isBlocking() ? 1 : 0) - (fromStatus.isBlocking() ? 1 : 0);
+
+        if (diff != 0 || diffHold != 0) {
+            nbUnsatisfied -= diff;
+            nbHolding += diffHold;
+
+            // Change the state in function of the number of unsatisfied requirements
+            if (nbUnsatisfied == 0) {
+                setState(ResourceState.READY);
+                t.addPostCommit($ -> Scheduler.notifyRunners());
+            } else {
+                if (nbHolding > 0)
+                    setState(ResourceState.ON_HOLD);
+                else
+                    setState(ResourceState.WAITING);
+            }
+
+            // Store the result
+            assert nbHolding >= 0;
+            assert nbUnsatisfied >= nbHolding;
+        }
+        LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
+                diff, diffHold, message.fromId, message.status);
+    }
+
+    private void endOfJobMessage(EndOfJobMessage eoj, EntityManager em, Transaction t) {
+        this.endTimestamp = eoj.timestamp;
+
+        // TODO: copy done & code status main connector if needed
+
+        LOGGER.info("Job [%s] has ended with code %d", this.getPath(), eoj.code);
+
+        // (1) Change state
+
+        // Update state
+        setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
+        // Dispose of the job monitor
+        XPMProcess old = process;
+        process = null;
+        t.boundary();
+
+        // (2) required resources
+
+        final Collection<Dependency> deps = getRequiredResources();
+        try {
+            for (Dependency dep : deps) {
+                dep.unactivate();
+            }
+        } catch (RuntimeException e) {
+            LOGGER.error(e, "Error while unactivating dependencies");
+        }
+
+        t.boundary();
+
+        // (2) disposing of old XPM process
+
+        try {
+            LOGGER.debug("Disposing of old XPM process [%s]", old);
+            if (old != null) {
+                old.dispose();
+                em.remove(old);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Could not dispose of the old process checker %s", e);
+        }
+
+        t.commit();
+
+        // Notify our dependencies
+        notifyDependencies();
 
     }
 
@@ -592,7 +584,7 @@ public class Job extends Resource {
             return true;
         }
 
-        // Process is about to run
+        // Process is about status run
         if (getState() == ResourceState.READY || getState() == ResourceState.WAITING) {
             setState(ResourceState.ON_HOLD);
             return true;
@@ -601,7 +593,6 @@ public class Job extends Resource {
         return false;
     }
 
-    @PostRemove
     public void clean() {
         super.clean();
         LOGGER.info("Cleaning job %s", this);
@@ -613,14 +604,14 @@ public class Job extends Resource {
     }
 
     /**
-     * Remove a file linked to this job
+     * Remove a file linked status this job
      */
     private void removeJobFile(String extension) {
         removeJobFile(new FileNameTransformer("", extension));
     }
 
     /**
-     * Remove a file linked to this job
+     * Remove a file linked status this job
      */
     private void removeJobFile(FileNameTransformer t) {
         try {
@@ -644,12 +635,12 @@ public class Job extends Resource {
     @Override
     protected void doReplaceBy(Resource resource) {
         super.doReplaceBy(resource);
-        Job job = (Job)resource;
+        Job job = (Job) resource;
         this.priority = job.priority;
-        this.startTimestamp  = job.startTimestamp;
+        this.startTimestamp = job.startTimestamp;
         this.endTimestamp = job.endTimestamp;
         this.priority = job.priority;
-        this.setJobRunner(((Job)resource).jobRunner);
+        this.setJobRunner(((Job) resource).jobRunner);
     }
 
     public void setJobRunner(JobRunner jobRunner) {
@@ -661,6 +652,16 @@ public class Job extends Resource {
         this.jobRunner.job = this;
         // Adds all dependencies from the job runner
         jobRunner.dependencies().forEach(this::addDependency);
+    }
+
+    @Override
+    public void stored() {
+        super.stored();
+
+        if (getState() == ResourceState.READY) {
+            LOGGER.debug("Job is READY, notifying");
+            Scheduler.notifyRunners();
+        }
 
     }
 }

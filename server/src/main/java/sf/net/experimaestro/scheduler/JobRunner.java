@@ -44,7 +44,7 @@ public abstract class JobRunner {
      *
      *
      * @param locks The locks that were taken
-     * @return The process corresponding to the job
+     * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */

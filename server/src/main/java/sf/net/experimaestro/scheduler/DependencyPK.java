@@ -18,23 +18,42 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * Notify a job that it has ended
- *
- * @author B. Piwowarski
- */
-public class EndOfJobMessage extends Message {
-    public int code;
-    public long timestamp;
+import java.io.Serializable;
 
-    public EndOfJobMessage(int code, long timestamp) {
-        super(Type.END_OF_JOB);
-        this.code = code;
-        this.timestamp = timestamp;
+/**
+* The key of the dependency
+*/
+public class DependencyPK implements Serializable {
+    private static final long serialVersionUID = 1L;
+    protected long from;
+    protected long to;
+
+    public DependencyPK() {
+    }
+
+    public DependencyPK(long from, long to) {
+        this.from = from;
+        this.to = to;
     }
 
     @Override
-    public String toString() {
-        return String.format("end-of-job(%d)", code);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DependencyPK)) return false;
+
+        DependencyPK that = (DependencyPK) o;
+
+        if (from != that.from) return false;
+        if (to != that.to) return false;
+
+        return true;
     }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (from ^ (from >>> 32));
+        result = 31 * result + (int) (to ^ (to >>> 32));
+        return result;
+    }
+
 }

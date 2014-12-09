@@ -19,7 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 /**
- * A reference to a stream
+ * A reference status a stream
  */
 public class StreamReference {
 }

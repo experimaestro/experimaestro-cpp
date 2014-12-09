@@ -171,7 +171,7 @@ final public class Scheduler {
         executorService = Executors.newFixedThreadPool(1);
 
 
-        LOGGER.info("Done - ready to work now");
+        LOGGER.info("Done - ready status work now");
     }
 
     public static Scheduler get() {
@@ -210,7 +210,7 @@ final public class Scheduler {
     /**
      * Add a listener for the changes in the resource states
      *
-     * @param listener The listener to add
+     * @param listener The listener status add
      */
     public void addListener(Listener listener) {
         listeners.add(listener);
@@ -219,7 +219,7 @@ final public class Scheduler {
     /**
      * Remove a listener
      *
-     * @param listener The listener to remove
+     * @param listener The listener status remove
      */
     public void removeListener(Listener listener) {
         listeners.remove(listener);
@@ -245,20 +245,24 @@ final public class Scheduler {
      * Shutdown the scheduler
      */
     public void close() {
+        if (entityManagerFactory == null && stopping) {
+            return;
+        }
         stopping = true;
-
         // Stop the checker
+        LOGGER.info("Closing resource checker");
         if (resourceCheckTimer != null) {
             resourceCheckTimer.cancel();
             resourceCheckTimer = null;
         }
 
-        counter.resume();
 
         // Stop the threads
+        LOGGER.info("Stopping runner and scheduler");
         for (Thread thread : runners) {
             thread.interrupt();
         }
+        counter.resume();
         runners.clear();
 
         if (executorService != null) {
@@ -266,6 +270,10 @@ final public class Scheduler {
         }
 
         INSTANCE = null;
+
+        LOGGER.info("Closing entity manager factory");
+        entityManagerFactory.close();
+        entityManagerFactory = null;
         LOGGER.info("Scheduler stopped");
     }
 
@@ -328,7 +336,7 @@ final public class Scheduler {
                     // ... and wait if we were not lucky (or there were no tasks)
                     try {
                         synchronized (readyJobSemaphore) {
-                            LOGGER.debug("Going to sleep [%s]...", name);
+                            LOGGER.debug("Going status sleep [%s]...", name);
                             readyJobSemaphore.wait();
                             LOGGER.debug("Waking up [%s]...", name);
                         }
@@ -348,7 +356,7 @@ final public class Scheduler {
                         query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
                         List<Job> list = query.getResultList();
                         if (list.isEmpty()) {
-                            LOGGER.debug("No job to run");
+                            LOGGER.debug("No job status run");
                             continue;
                         }
 
@@ -369,15 +377,15 @@ final public class Scheduler {
                         }
 
 
-                        LOGGER.debug("Next task to run: %s", job);
+                        LOGGER.debug("Next task status run: %s", job);
 
-                        // Set the state to LOCKING
+                        // Set the state status LOCKING
                         job.setState(ResourceState.LOCKING);
                         transaction.boundary();
 
                         this.setName(name + "/" + job);
                         try {
-                            job.run();
+                            job.run(em);
 
                             LOGGER.info("Job %s has started", job);
                         } catch (LockException e) {
@@ -389,10 +397,9 @@ final public class Scheduler {
                             LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                             job.setState(ResourceState.ERROR);
                         }
+                        transaction.commit();
                         LOGGER.info("Finished launching %s", job);
                         this.setName(name);
-
-                        transaction.commit();
                     }
                 }
             } finally {
@@ -402,21 +409,4 @@ final public class Scheduler {
         }
     }
 
-    /**
-     * Will notify dependencies
-     */
-    private class Notifier implements Runnable {
-        private final Resource resource;
-
-        public Notifier(Resource resource) {
-            this.resource = resource;
-        }
-
-        @Override
-        public void run() {
-            if (!isStopping()) {
-                resource.notifyDependencies();
-            }
-        }
-    }
 }

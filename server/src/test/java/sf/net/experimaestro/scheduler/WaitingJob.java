@@ -20,19 +20,23 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.log.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.Entity;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static sf.net.experimaestro.scheduler.ResourceState.*;
+import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
 
 /**
- * Extends Job to collect some information for testing purposes
+ * Extends Job status collect some information for testing purposes
  */
 @Entity
 public class WaitingJob extends Job {
+    final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The statuses of the different jobs
      */
@@ -48,7 +52,8 @@ public class WaitingJob extends Job {
     /* id for debugging */
     private String debugId;
 
-    protected WaitingJob() {}
+    protected WaitingJob() {
+    }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobRunner.Action... actions) {
         super(LocalhostConnector.getInstance(), new File(dir, debugId).toPath());
@@ -74,16 +79,23 @@ public class WaitingJob extends Job {
     }
 
     @Override
-    public boolean setState(ResourceState state) {
-        if (!super.setState(state)) {
-            return false;
-        }
-        switch(state) {
+    public void stored() {
+        super.stored();
+
+        final ResourceState state = getState();
+
+        LOGGER.info("Stored with state %s", state);
+
+        switch (state) {
             case READY:
                 status().readyTimestamp = System.currentTimeMillis();
                 break;
+            case DONE:
+            case ERROR:
+            case ON_HOLD:
+                status().counter.del();
+                break;
         }
-        return true;
     }
 
     Status status() {
@@ -95,14 +107,14 @@ public class WaitingJob extends Job {
     }
 
     public void restart(WaitingJobRunner.Action action) {
-
+        throw new NotImplementedException();
     }
 
     public static class Status {
-        // Current index (action to run)
+        // Current index (action status run)
         int currentIndex;
 
-        // When was the job ready to run
+        // When was the job ready status run
         long readyTimestamp = 0;
 
         // Counter

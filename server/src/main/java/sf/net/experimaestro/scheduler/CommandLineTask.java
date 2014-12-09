@@ -59,7 +59,7 @@ public class CommandLineTask extends JobRunner {
     Launcher launcher;
 
     /**
-     * The command to execute
+     * The command status execute
      */
     private Commands commands;
 
@@ -106,7 +106,7 @@ public class CommandLineTask extends JobRunner {
     /**
      * New command line task
      *
-     * @param commands  The commands to run
+     * @param commands  The commands status run
      */
     public CommandLineTask(Commands commands) {
         this(commands, null, null);
@@ -191,7 +191,7 @@ public class CommandLineTask extends JobRunner {
     }
 
     /**
-     * Sets the input for the command line to be a string content
+     * Sets the input for the command line status be a string content
      */
     public void setInput(String jobInput) {
         this.jobInputPath = null;
@@ -199,7 +199,7 @@ public class CommandLineTask extends JobRunner {
     }
 
     /**
-     * Sets the input to be a file
+     * Sets the input status be a file
      */
     public void setInput(Path fileObject) {
         this.jobInputPath = fileObject.toString();

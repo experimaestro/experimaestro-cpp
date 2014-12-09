@@ -23,77 +23,56 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
-* A JPA transaction that can be used in try-resource blocks
-*/
+ * A JPA transaction that can be used in try-resource blocks
+ */
 public class Transaction implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
-
-    private EntityManager entityManager;
-
-    /** Do we own the entity manager ? */
-    private boolean ownEntityManager;
-
-    /** The underlying transaction */
+    /**
+     * The underlying transaction
+     */
     private final EntityTransaction transaction;
 
-    private int count = 1;
+    /** Old transaction */
+    private final Transaction old;
 
-    static public enum Status {
-        BEGIN,
-        COMMIT,
-        ROLLBACK
-    };
-
+    /** Current status of the transaction */
     Status status;
+
+    /** The attached entity manager */
+    private EntityManager entityManager;
+
+    /**
+     * Do we own the entity manager ?
+     */
+    private boolean ownEntityManager;
+
+    /** Methods to evaluate after commit  */
+    ArrayList<Consumer<Transaction>> postCommit = new ArrayList<>();
+
+    static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
     public Transaction(EntityManager entityManager, boolean ownEntityManager) {
         this.entityManager = entityManager;
         this.ownEntityManager = ownEntityManager;
 
-        transaction  = entityManager.getTransaction();
+        transaction = entityManager.getTransaction();
         transaction.begin();
+        old = currentTransaction.get();
+        currentTransaction.set(this);
+        status = Status.BEGIN;
         LOGGER.info("Transaction %s begins", System.identityHashCode(this));
     }
 
-    public EntityManager em() {
-        return entityManager;
-    }
-
-    @Override
-    public void close() throws RollbackException {
-        // If not commited, we throw an exception
-        if (--count == 0) {
-            // Rollback if an error occured
-            if (status == Status.BEGIN) {
-                LOGGER.info("Transaction %s rollback", System.identityHashCode(this));
-                transaction.rollback();
-            }
-
-            // Close the entity manager if necessary
-            if (ownEntityManager) {
-                entityManager.close();
-            }
-        }
-    }
-
-
-    public void commit() {
-        LOGGER.info("Transaction %s commits", System.identityHashCode(this));
-        transaction.commit();
-        status = Status.COMMIT;
-    }
-
-    public void boundary() {
-        LOGGER.info("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
-        transaction.commit();
-        transaction.begin();
-        status = Status.BEGIN;
+    static Transaction current() {
+        return currentTransaction.get();
     }
 
     public static Transaction create() {
@@ -109,7 +88,7 @@ public class Transaction implements AutoCloseable {
      * Run a transaction and commits
      */
     public static void run(Consumer<EntityManager> f) {
-        try(Transaction transaction = create()) {
+        try (Transaction transaction = create()) {
             f.accept(transaction.em());
             transaction.commit();
         }
@@ -118,8 +97,8 @@ public class Transaction implements AutoCloseable {
     /**
      * Run a transaction and commits
      */
-     public static <T> T evaluate(Function<EntityManager, T> f) {
-        try(Transaction transaction = create()) {
+    public static <T> T evaluate(Function<EntityManager, T> f) {
+        try (Transaction transaction = create()) {
             T t = f.apply(transaction.em());
             transaction.commit();
             return t;
@@ -129,22 +108,71 @@ public class Transaction implements AutoCloseable {
     /**
      * Run a transaction and commits
      */
+    public static <T> T evaluate(BiFunction<EntityManager, Transaction, T> f) {
+        try (Transaction transaction = create()) {
+            T t = f.apply(transaction.em(), transaction);
+            transaction.commit();
+            return t;
+        }
+    }
+
+
+    /**
+     * Run a transaction and commits
+     */
     public static void run(BiConsumer<EntityManager, Transaction> f) {
-        try(Transaction transaction = create()) {
+        try (Transaction transaction = create()) {
             f.accept(transaction.em(), transaction);
             transaction.commit();
         }
     }
 
-    /**
-     * Run a transaction and commits
-     */
-    public static <T> T evaluate(BiFunction<EntityManager, Transaction, T> f) {
-        try(Transaction transaction = create()) {
-            T t = f.apply(transaction.em(), transaction);
-            transaction.commit();
-            return t;
+
+    public EntityManager em() {
+        return entityManager;
+    }
+
+    @Override
+    public void close() throws RollbackException {
+        // Rollback if an error occurred
+        if (status == Status.BEGIN) {
+            LOGGER.info("Transaction %s rollback", System.identityHashCode(this));
+            transaction.rollback();
         }
+
+        // Close the entity manager if necessary
+        if (ownEntityManager) {
+            entityManager.close();
+        }
+
+        currentTransaction.set(old);
+    }
+
+    public void commit() {
+        if (status == Status.BEGIN) {
+            LOGGER.info("Transaction %s commits", System.identityHashCode(this));
+            transaction.commit();
+            status = Status.COMMIT;
+
+            postCommit.forEach(f -> f.accept(this));
+        }
+    }
+
+    public void boundary() {
+        LOGGER.info("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
+        transaction.commit();
+        transaction.begin();
+        status = Status.BEGIN;
+    }
+
+    public void addPostCommit(Consumer<Transaction> f) {
+        postCommit.add(f);
+    }
+
+    static public enum Status {
+        BEGIN,
+        COMMIT,
+        ROLLBACK
     }
 
 }

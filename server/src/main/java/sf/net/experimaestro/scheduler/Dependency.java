@@ -28,23 +28,18 @@ import java.io.Serializable;
 /**
  * What is the state of a dependency.
  * This class stores the previous state
- * (satisfied or not) in order to updateFromStatusFile the number of blocking resources
+ * (satisfied or not) in order status updateFromStatusFile the number of blocking resources
  */
 @Entity(name = "dependencies")
 @Table(name = "dependencies")
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
+@IdClass(DependencyPK.class)
 abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
 
-    /**
-     * The state of this dependency
-     */
-    DependencyStatus status;
-
-
+    @Id
     @ManyToOne
     @JoinColumn(name = "fromId")
-    @Id
     Resource from;
 
     @Id
@@ -52,6 +47,30 @@ abstract public class Dependency implements Serializable {
     @JoinColumn(name = "toId")
     Resource to;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Dependency)) return false;
+
+        Dependency that = (Dependency) o;
+
+        if (!from.equals(that.from)) return false;
+        if (!to.equals(that.to)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = from.hashCode();
+        result = 31 * result + to.hashCode();
+        return result;
+    }
+
+    /**
+     * The state of this dependency
+     */
+    DependencyStatus status;
     /**
      * The lock (or null if no lock taken)
      */
@@ -63,6 +82,11 @@ abstract public class Dependency implements Serializable {
 
     public Dependency(Resource from) {
         this.from = from;
+    }
+
+    protected Dependency(Resource from, Resource to) {
+        this.from = from;
+        this.to = to;
     }
 
     public boolean hasLock() {
@@ -79,7 +103,7 @@ abstract public class Dependency implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Dep[R%s-R%s]; %s; %b", from, to, status, hasLock());
+        return String.format("Dep[%s-%s]; %s; %b", from, to, status, hasLock());
     }
 
     /**
@@ -91,7 +115,7 @@ abstract public class Dependency implements Serializable {
      * {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     protected DependencyStatus accept() {
-        LOGGER.debug("From [%d] is in state %s [to=%s]", from, from.getState(), to);
+        LOGGER.debug("From [%s] is in state %s [status=%s]", from, from.getState(), to);
 
         // Handle simple cases
         switch (from.getState()) {
@@ -117,7 +141,6 @@ abstract public class Dependency implements Serializable {
      */
     protected abstract Lock _lock(String pid) throws LockException;
 
-
     /**
      * Update a dependency status
      *
@@ -134,15 +157,17 @@ abstract public class Dependency implements Serializable {
     }
 
     final public Lock lock(String pid) throws LockException {
+        LOGGER.debug("Locking dependency %s", this);
         lock = _lock(pid);
         return lock;
     }
 
-
     public void unactivate() {
+        LOGGER.debug("Unlocking dependency %s", this);
         assert lock != null : "Lock of an active dependency is null";
         lock.close();
         lock = null;
         status = DependencyStatus.UNACTIVE;
     }
+
 }

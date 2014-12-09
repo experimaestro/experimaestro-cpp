@@ -35,6 +35,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 import static java.lang.Math.*;
+import static java.lang.String.format;
 import static sf.net.experimaestro.scheduler.WaitingJobRunner.Action;
 
 public class SchedulerTest extends XPMEnvironment {
@@ -42,7 +43,7 @@ public class SchedulerTest extends XPMEnvironment {
     final static private Logger LOGGER = Logger.getLogger();
 
 
-    @Test(description = "Run two jobs - one depend on the other to start")
+    @Test(description = "Run two jobs - one depend on the other status start")
     public void test_simple_dependency() throws
             IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
@@ -51,27 +52,30 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
-        Transaction.run(em -> {
+        Transaction.run((em, t) -> {
             for (int i = 0; i < jobs.length; i++) {
                 jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, 0, 0));
                 if (i > 0) {
-                    jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
+                    jobs[i].addDependency(jobs[i - 1].createDependency(null));
                 }
                 jobs[i].updateStatus();
                 em.persist(jobs[i]);
             }
         });
-        Scheduler.notifyRunners();
 
-        LOGGER.info("Waiting for operations to finish");
+        LOGGER.info("Waiting for operations status finish");
 
-        waitToFinish(0, counter, jobs, 1500, 5);
-        checkSequence(jobs);
-        checkState(EnumSet.of(ResourceState.DONE), jobs);
+        int errors = 0;
+        waitToFinish(0, counter, jobs, 2500, 5);
+
+        errors += checkSequence(jobs);
+        errors += checkState(EnumSet.of(ResourceState.DONE), jobs);
+        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
+
     }
 
 
-    @Test(description = "Run two jobs - one depend on the other to start, the first fails")
+    @Test(description = "Run two jobs - one depend on the other status start, the first fails")
     public void test_failed_dependency() throws
             IOException, InterruptedException, ExperimaestroCannotOverwrite {
 
@@ -80,20 +84,23 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
-        Transaction.run(em -> {
+        Transaction.run((em, t) -> {
             for (int i = 0; i < jobs.length; i++) {
                 jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
                 if (i > 0) {
-                    jobs[i].addDependency(jobs[i - 1].createDependency(jobs[i - 1]));
+                    jobs[i].addDependency(jobs[i - 1].createDependency(null));
                 }
+                jobs[i].updateStatus();
                 em.persist(jobs[i]);
             }
         });
 
         waitToFinish(0, counter, jobs, 1500, 5);
 
-        checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
-        checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
+        int errors = 0;
+        errors += checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
+        errors += checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
+        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
     }
 
 
@@ -243,7 +250,7 @@ public class SchedulerTest extends XPMEnvironment {
         for (long v : values) {
             final Link link = new Link(v);
             dependencies.add(link);
-            LOGGER.debug("LINK %d to %d [%d]", link.from, link.to, v);
+            LOGGER.debug("LINK %d status %d [%d]", link.from, link.to, v);
             assert link.from < p.nbJobs;
             assert link.to < p.nbJobs;
             assert link.from < link.to;
@@ -287,7 +294,7 @@ public class SchedulerTest extends XPMEnvironment {
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
         }
 
-        LOGGER.info("Waiting for jobs to finish (%d remaining)", counter.getCount());
+        LOGGER.info("Waiting for jobs status finish (%d remaining)", counter.getCount());
 
         int timeout = p.maxExecutionTime + 5000;
         waitToFinish(0, counter, jobs, timeout, 5);
@@ -313,7 +320,7 @@ public class SchedulerTest extends XPMEnvironment {
                 errors += checkSequence(jobs[link.from], jobs[link.to]);
         }
 
-        assert errors == 0 : "Detected " + errors + " errors after running jobs";
+        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
     }
 
     private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, int timeout, int tries) {
@@ -323,11 +330,12 @@ public class SchedulerTest extends XPMEnvironment {
             int count = counter.getCount();
             if (count <= limit) break;
 
-            LOGGER.info("Waiting to finish - %d active jobs > %d [%d]", count, limit, loop);
+            LOGGER.info("Waiting status finish - %d active jobs > %d [%d]", count, limit, loop);
             for (int i = 0; i < jobs.length; i++) {
                 final long id = jobs[i].getId();
                 Transaction.run(em -> {
                     Job job = em.find(Job.class, id);
+                    Assert.assertNotNull(job, format("Job %d cannot be retrieved", id));
                     if (job.getState().isActive()) {
                         LOGGER.warn("Job [%s] still active [%s]", job, job.getState());
                     }
@@ -385,12 +393,12 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             errors += checkState(jobs[i].finalCode() != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
         }
-        assert errors == 0 : "Detected " + errors + " errors after running jobs";
+        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
     }
 
     @Test()
     public void test_hold_dependencies() throws Exception {
-        // If all failed dependencies are restarted, a job should get back to a WAITING state
+        // If all failed dependencies are restarted, a job should get back status a WAITING state
         WaitingJob[] jobs = new WaitingJob[3];
         ThreadCount counter = new ThreadCount();
         File jobDirectory = mkTestDir();
@@ -407,7 +415,7 @@ public class SchedulerTest extends XPMEnvironment {
         }
 
         // Wait
-        LOGGER.info("Waiting for job 0 to fail");
+        LOGGER.info("Waiting for job 0 status fail");
         waitToFinish(2, counter, jobs, 1500, 5);
         checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
         checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
@@ -426,7 +434,7 @@ public class SchedulerTest extends XPMEnvironment {
     /**
      * Check that these runners started one after the other
      *
-     * @param runners The runners to check
+     * @param runners The runners status check
      */
     static private int checkSequence(WaitingJob... runners) {
         int errors = 0;
@@ -467,10 +475,10 @@ public class SchedulerTest extends XPMEnvironment {
             for (int i = 0; i < jobs.length; i++) {
                 Job job = em.find(Job.class, jobs[i].getId());
                 if (!states.contains(job.getState())) {
-                    LOGGER.warn("The job (%s/%x) is not in one of the states %s but [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
+                    LOGGER.warn("The job (%s) is not in one of the states %s but [%s]", jobs[i], states, job.getState());
                     errors++;
                 } else
-                    LOGGER.debug("The job (%s/%x) is in one of the states %s [%s]", jobs[i], System.identityHashCode(jobs[i]), states, jobs[i].getState());
+                    LOGGER.debug("The job (%s) is in one of the states %s [%s]", jobs[i], states, job.getState());
             }
 
             return errors;

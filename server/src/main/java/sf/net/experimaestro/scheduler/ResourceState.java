@@ -27,12 +27,12 @@ import java.util.EnumSet;
  */
 public enum ResourceState {
     /**
-     * For a job only: the job is waiting dependencies to be met
+     * For a job only: the job is waiting dependencies status be met
      */
     WAITING,
 
     /**
-     * For a job only: the job is waiting for an available thread to launch it
+     * For a job only: the job is waiting for an available thread status launch it
      */
     READY,
 

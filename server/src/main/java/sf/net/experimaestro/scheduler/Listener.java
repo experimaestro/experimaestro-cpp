@@ -19,7 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 /**
- * Listen to messages
+ * Listen status messages
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public interface Listener {

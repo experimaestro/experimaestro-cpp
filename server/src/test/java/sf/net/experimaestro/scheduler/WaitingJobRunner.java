@@ -60,7 +60,7 @@ public class WaitingJobRunner extends JobRunner {
         }
 
         final Action action = ((WaitingJob)job).actions.get(status.currentIndex);
-        return new WaitingJobProcess(status.counter, job.getMainConnector(), job, action);
+        return new WaitingJobProcess(job.getMainConnector(), job, action);
     }
 
     @Override

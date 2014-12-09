@@ -19,7 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 /**
- * Simple messages that can be sent to resources
+ * Simple messages that can be sent status resources
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 30/11/12

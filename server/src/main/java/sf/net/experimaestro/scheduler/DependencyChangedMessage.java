@@ -19,23 +19,21 @@ package sf.net.experimaestro.scheduler;
  */
 
 /**
+ * A message
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
  */
 final public class DependencyChangedMessage extends Message {
-    Dependency dependency;
-    DependencyStatus from;
-    DependencyStatus to;
+    long fromId;
+    DependencyStatus status;
 
-    public DependencyChangedMessage(Dependency dependency, DependencyStatus from, DependencyStatus to) {
+    public DependencyChangedMessage(Dependency dependency, DependencyStatus from, DependencyStatus status) {
         super(Type.DEPENDENCY_CHANGED);
-        this.dependency = dependency;
-        this.from = from;
-        this.to = to;
+        this.fromId = dependency.getFrom().getId();
+        this.status = status;
     }
 
     @Override
     public String toString() {
-        return String.format("Dependency changed [%s -> %s / %s]", from, to, dependency);
+        return String.format("Dependency changed [%d / %s]", fromId, status);
     }
 }

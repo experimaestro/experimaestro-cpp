@@ -23,6 +23,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -113,7 +114,7 @@ public class StatusServlet extends XPMServlet {
 
         if (localPath.startsWith(RESOURCE_PATH)) {
             String resourceStringId = localPath.substring("/resource/".length());
-            long resourceId = 0;
+            final long resourceId;
             try {
                 resourceId = Long.parseLong(resourceStringId);
             } catch (NumberFormatException e) {
@@ -122,7 +123,7 @@ public class StatusServlet extends XPMServlet {
             }
             PrintWriter out = startHTMLResponse(response);
 
-            Resource resource = Resource.getById(resourceId);
+            Resource resource = Transaction.evaluate(em -> em.find(Resource.class, resourceId));
             header(out, String.format("Details of resource %s", resource.getPath()));
 
             if (resource != null) {

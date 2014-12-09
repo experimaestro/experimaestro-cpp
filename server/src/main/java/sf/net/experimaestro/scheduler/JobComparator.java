@@ -21,7 +21,7 @@ package sf.net.experimaestro.scheduler;
 import java.util.Comparator;
 
 /**
- * Used to order tasks within the heap; compares first on blocking data, then on
+ * Used status order tasks within the heap; compares first on blocking data, then on
  * priority, and eventually on timestamp
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -50,7 +50,7 @@ public class JobComparator implements Comparator<Job> {
         // return == 0 if no difference
         // returns > 0 if b should run before a
 
-        // First, if one is ready to start (dependencies are OK)
+        // First, if one is ready status start (dependencies are OK)
         if (a.nbUnsatisfied == 0 ^ b.nbUnsatisfied == 0)
             return a.nbUnsatisfied > b.nbUnsatisfied ? 1 : -1;
 

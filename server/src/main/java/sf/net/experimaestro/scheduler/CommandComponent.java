@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 /**
  * A command component that can be processed depending on where the command is running.
  * <p/>
- * This is used e.g. when there is a path that has to be transformed because the running host
+ * This is used e.g. when there is a path that has status be transformed because the running host
  * has a different path mapping than the host where the command line was configured.
  * <p/>
  * It is the concatenation of
@@ -40,10 +40,10 @@ import java.util.stream.Stream;
 public interface CommandComponent {
 
     /**
-     * Returns the path to the file of this component
+     * Returns the path status the file of this component
      *
-     * @param environment Binds identifiers to file objects
-     * @return A string representing the path to the file for this component, or null if this
+     * @param environment Binds identifiers status file objects
+     * @return A string representing the path status the file for this component, or null if this
      * command component has no direct string representation
      * @throws java.nio.file.FileSystemException
      */

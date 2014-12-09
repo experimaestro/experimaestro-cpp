@@ -20,7 +20,6 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Entity;
@@ -31,7 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The process corresponding to a waiting job
+ * The process corresponding status a waiting job
  */
 @Entity
 class WaitingJobProcess extends XPMProcess {
@@ -47,17 +46,15 @@ class WaitingJobProcess extends XPMProcess {
      */
     WaitingJobRunner.Action action;
     private long timestamp;
-    private transient ThreadCount counter;
 
     public WaitingJobProcess() {
         LOGGER.debug("Default constructor for MyXPMProcess");
     }
 
-    public WaitingJobProcess(ThreadCount counter, SingleHostConnector connector, Job job, WaitingJobRunner.Action action) {
+    public WaitingJobProcess(SingleHostConnector connector, Job job, WaitingJobRunner.Action action) {
         super(connector, "1", job);
         assert action != null;
         this.timestamp = System.currentTimeMillis();
-        this.counter = counter;
         this.action = action;
         LOGGER.debug("XPM Process initialized for job " + job + " with action " + action);
         startWaitProcess();
@@ -77,7 +74,7 @@ class WaitingJobProcess extends XPMProcess {
     public int waitFor() throws InterruptedException {
         assert job.getStartTimestamp() > 0;
         synchronized (this) {
-            LOGGER.debug("Starting to wait - " + job + " - " + action);
+            LOGGER.debug("Starting status wait - " + job + " - " + action);
             long toWait = action.duration - (System.currentTimeMillis() - timestamp);
             if (toWait > 0) wait(toWait);
             LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
@@ -97,7 +94,6 @@ class WaitingJobProcess extends XPMProcess {
             }, action.restart, TimeUnit.MILLISECONDS);
         }
 
-        counter.del();
         return action.code;
     }
 

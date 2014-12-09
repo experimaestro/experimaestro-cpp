@@ -21,6 +21,7 @@ package sf.net.experimaestro.locks;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
@@ -31,6 +32,7 @@ import java.nio.file.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Entity
 public class FileLock extends Lock {
 
     final static private Logger LOGGER = Logger.getLogger();
@@ -43,7 +45,7 @@ public class FileLock extends Lock {
     /**
      * Used for (de)serialization
      */
-    private FileLock() {
+    protected FileLock() {
     }
 
     /**
@@ -62,15 +64,14 @@ public class FileLock extends Lock {
                     Files.createFile(lockPath);
                     break;
                 } catch (FileAlreadyExistsException e) {
+                    if (!wait) {
+                        throw new LockException();
+                    }
+
                     try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
-                        WatchKey key = lockPath.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
-                        if (wait) {
-                            watcher.take();
-                        }
-                        else {
-                            throw new LockException();
-                        }
-                    } catch (java.nio.file.NoSuchFileException f) {
+                        lockPath.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                        watcher.take();
+                    } catch (NoSuchFileException f) {
                         // file was deleted before we started to monitor it
                     }
                 }
