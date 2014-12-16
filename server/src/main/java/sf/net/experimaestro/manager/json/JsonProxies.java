@@ -1,9 +1,11 @@
 package sf.net.experimaestro.manager.json;
 
+import bpiwowar.experiments.Run;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.sleepycat.persist.model.Persistent;
 import com.sleepycat.persist.model.PersistentProxy;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -14,6 +16,8 @@ import java.io.StringWriter;
  */
 @Persistent
 public class JsonProxies implements PersistentProxy<Json> {
+    final static private Logger LOGGER = Logger.getLogger();
+
     String jsonString;
 
     @Override
@@ -31,7 +35,6 @@ public class JsonProxies implements PersistentProxy<Json> {
     @Override
     public Json convertProxy() {
         final JsonReader jsonReader = new JsonReader(new StringReader(jsonString));
-
         try {
             final Json json = readNext(jsonReader);
             if (jsonReader.peek() != JsonToken.END_DOCUMENT) {
@@ -39,10 +42,12 @@ public class JsonProxies implements PersistentProxy<Json> {
             }
             return json;
         } catch (IOException e) {
+            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
             throw new RuntimeException(e);
+        } catch(RuntimeException e) {
+            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
+            throw e;
         }
-
-
     }
 
     private Json readNext(JsonReader jsonReader) throws IOException {
@@ -76,8 +81,10 @@ public class JsonProxies implements PersistentProxy<Json> {
             case STRING:
                 return new JsonString(jsonReader.nextString());
 
-            case NULL:
+            case NULL: {
+                jsonReader.nextNull();
                 return JsonNull.getSingleton();
+            }
 
             case NUMBER:
                 return new JsonReal(jsonReader.nextDouble());
