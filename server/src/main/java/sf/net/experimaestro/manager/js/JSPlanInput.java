@@ -33,7 +33,12 @@ public class JSPlanInput extends JSAbstractOperator {
 
     @JSFunction
     public JSPlanInput(NativeArray array) {
-        Constant constant = new Constant();
+        this(null, array);
+    }
+
+    @JSFunction
+    public JSPlanInput(String name, NativeArray array) {
+        Constant constant = new Constant(name);
         this.operator = constant;
         for (Object o : array) {
             constant.add(JSUtils.toJSON(null, o));

@@ -40,10 +40,14 @@ import java.util.*;
  * An operator
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
  */
 public abstract class Operator {
     final static private Logger LOGGER = Logger.getLogger();
+    /**
+     * Specific name for the operator
+     */
+    protected String name;
+
     public PlanScope scope = new PlanScope();
     /**
      * Size of the output (1 per default)
@@ -53,6 +57,13 @@ public abstract class Operator {
      * List of mappings for context
      */
     Map<StreamReference, Integer> contextMappings = new HashMap<>();
+
+    public Operator() {
+    }
+
+    public Operator(String name) {
+        this.name = name;
+    }
 
     static Operator getSimplified(Map<Operator, Operator> simplified, Operator operator) {
         Operator tmp;
@@ -282,7 +293,7 @@ public abstract class Operator {
 
     /**
      * Initialize the node  (called after the initialization of parents)
-     * <p/>
+     * <p>
      * Top-down calls (parents are initialized before)
      *
      * @param parentStreams A map from the operators from parent streams to the context index
@@ -292,7 +303,7 @@ public abstract class Operator {
 
     /**
      * Initialize the operator.
-     * <p/>
+     * <p>
      * <ol>
      * <li>Calls the {@linkplain #doPreInit()} method</li>
      * <li>Initialize the parents</li>
@@ -476,7 +487,7 @@ public abstract class Operator {
      */
     public void printDOT(PrintStream out, Map<Operator, MutableInt> counts) {
         out.println("digraph G {");
-        printDOT(out, new HashSet<Operator>(), counts);
+        printDOT(out, new HashSet<>(), counts);
         out.println("}");
         out.flush();
     }
@@ -561,7 +572,8 @@ public abstract class Operator {
     }
 
     protected String getName() {
-        return this.getClass().getName();
+        if (name == null) this.getClass().getName();
+        return name;
     }
 
     private void ensureConnections(HashMap<Operator, Operator> simplified, HashSet<Operator> visited) {

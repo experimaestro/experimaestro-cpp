@@ -36,12 +36,17 @@ import java.util.*;
 public class Constant extends Operator {
     List<Json> values = new ArrayList<>();
 
-    @Expose
-    public Constant(Json... values) {
-        this(Arrays.asList(values));
+    public Constant(String name, Json... values) {
+        this(name, Arrays.asList(values));
     }
 
-    public Constant(Iterable<Json> values) {
+    @Expose
+    public Constant(Json... values) {
+        this(null, Arrays.asList(values));
+    }
+
+    public Constant(String name, Iterable<Json> values) {
+        super(name);
         for (Json json : values) {
             this.values.add(json);
         }
@@ -59,12 +64,14 @@ public class Constant extends Operator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        return new Constant(values);
+        return new Constant(null, values);
     }
 
     @Override
     @Expose
     public String getName() {
+        if (name != null)
+            return String.format("JSON[%s] (#=%d)", name, values.size());
         return String.format("JSON (#=%d)", values.size());
     }
 
