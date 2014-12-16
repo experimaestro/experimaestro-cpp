@@ -158,6 +158,10 @@ public class JSPlan extends JSAbstractOperator implements Callable {
             return new Constant(new JsonString((String) value));
         }
 
+        if (value instanceof ConsString) {
+            return new Constant(new JsonString(value.toString()));
+        }
+
         if (value instanceof Json)
             return new Constant((Json) value);
 

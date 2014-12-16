@@ -9,6 +9,8 @@ import sf.net.experimaestro.manager.ValueType;
 import java.io.IOException;
 import java.io.Writer;
 
+import static java.lang.String.format;
+
 /**
  * The default interface for JsonFileObject
  */
@@ -46,6 +48,11 @@ public class JsonFileObject implements Json {
     @Override
     public boolean canIgnore(JsonWriterOptions options) {
         return options.ignore.contains(ValueType.XP_FILE);
+    }
+
+    @Override
+    public String toString() {
+        return format("FileObject(%s)", fileObject.toString());
     }
 
     @Override

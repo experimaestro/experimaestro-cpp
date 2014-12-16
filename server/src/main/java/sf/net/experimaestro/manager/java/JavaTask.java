@@ -14,6 +14,7 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonFileObject;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
@@ -77,7 +78,7 @@ public class JavaTask extends Task {
 
             task.setState(ResourceState.WAITING);
             if (taskContext.simulate()) {
-                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
+                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger("JavaTask"), Level.INFO);
                 pw.format("[SIMULATE] Starting job: %s%n", task.toString());
                 pw.format("Command: %s%n", task.getCommands().toString());
                 pw.format("Locator: %s", locator.toString());
@@ -103,10 +104,12 @@ public class JavaTask extends Task {
             task = (CommandLineTask) old;
         }
 
+        taskContext.startedJob(task);
+
         // --- Fill some fields in returned json
 
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
-        json.put(Manager.XP_RESOURCE.toString(), task.getIdentifier());
+        json.put(Manager.XP_RESOURCE.toString(), new JsonResource(task));
 
         for (PathArgument path : javaFactory.pathArguments) {
             try {

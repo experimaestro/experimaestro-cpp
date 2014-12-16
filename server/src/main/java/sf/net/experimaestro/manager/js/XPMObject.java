@@ -490,7 +490,7 @@ public class XPMObject {
         final XPMObject clone = new XPMObject(scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir);
         clone.defaultGroup = this.defaultGroup;
         clone.defaultLocks.putAll(this.defaultLocks);
-        clone.submittedJobs = new HashMap<>(this.submittedJobs);
+        clone.submittedJobs = this.submittedJobs;
         clone._simulate = _simulate;
         return clone;
     }
@@ -892,7 +892,7 @@ public class XPMObject {
         task.setState(ResourceState.WAITING);
         if (simulate()) {
             PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+            pw.format("[Simulation] Starting job: %s%n", task.getLocator().toString());
             pw.format("Command: %s%n", task.getCommands().toString());
             pw.format("Locator: %s", locator.toString());
             pw.flush();
@@ -900,7 +900,9 @@ public class XPMObject {
             scheduler.store(task, false);
         }
 
-        return new JSResource(task);
+        final JSResource jsResource = new JSResource(task);
+        this.submittedJobs.put(task.getLocator(), task);
+        return jsResource;
     }
 
     public void register(Closeable closeable) {
@@ -920,7 +922,8 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger());
+        return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger())
+                .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
     }
 
     public void setLocator(ResourceLocator locator) {
@@ -1373,7 +1376,7 @@ public class XPMObject {
             if (json instanceof JsonObject) {
                 resource = getResource((JsonObject) json);
             } else {
-                throw new XPMRhinoException("Cannot handle Json of type " + json.getClass());
+                throw new XPMRhinoException("Cannot get the resource of a Json of type " + json.getClass());
             }
 
             if (resource != null) {
@@ -1390,7 +1393,11 @@ public class XPMObject {
                 } else {
                     final String uri = o instanceof JsonString ? o.toString() : (String) o;
                     if (xpm.simulate()) {
-                        return xpm.submittedJobs.get(uri);
+                        final Resource resource = xpm.submittedJobs.get(uri);
+                        if (resource == null) {
+                            throw new XPMRhinoException("Resource with URI [%s] does not exist", uri);
+                        }
+                        return resource;
                     } else {
                         return xpm.scheduler.getResource(ResourceLocator.parse(uri));
                     }

@@ -27,6 +27,7 @@ import sf.net.experimaestro.utils.JSUtils;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 10/3/13
  */
+
 public class JSPlanInput extends JSAbstractOperator {
     Operator operator;
 

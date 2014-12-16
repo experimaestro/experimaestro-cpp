@@ -61,6 +61,7 @@ public class TaskFactoryJavascript extends TaskFactory {
         this.jsScope = scope;
         this.jsObject = jsObject;
         this.xpm = XPMObject.getXPMObject(scope);
+        String2String prefixes = new JSNamespaceBinder(scope);
 
         // --- Look up the module
         Module module = JSModule.getModule(repository,
@@ -152,7 +153,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
             final Scriptable definition = (Scriptable) o;
 
-            Set<String> fields = getFields(definition, "value", "alternative", "json", "xml", "task");
+            Set<String> fields = getFields(definition, "value", "alternative", "json", "task", "array");
             String type;
             if (fields.size() == 1) {
                 type = fields.iterator().next();
@@ -171,13 +172,15 @@ public class TaskFactoryJavascript extends TaskFactory {
             final QName inputType = QName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
 
             switch (type) {
+                case "array":
+                    final ArrayType arrayType = new ArrayType(new ValueType(inputType));
+                    input = new JsonInput(arrayType);
+                    break;
+
                 case "value":
                     final ValueType valueType = inputType == null ? null : new ValueType(inputType);
                     input = new JsonInput(valueType);
                     break;
-
-                case "xml":
-                    xpm.getRootLogger().warn("xml is *strongly* deprecated: use json [%s]", id);
 
                 case "json":
                     input = new JsonInput(new Type(inputType));

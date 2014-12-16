@@ -41,9 +41,14 @@ public class JSNamespaceContext implements NamespaceContext {
     @Override
     public String getNamespaceURI(String prefix) {
 
+        // Try the javascript scope
         Object o = JSUtils.unwrap(JSUtils.get(scope, prefix));
-        if (o == null)
+        if (o == null) {
+            // Look at default namespaces
+
             return null;
+        }
+
         if (o instanceof Scriptable) {
             Scriptable jsObject = (Scriptable) o;
             if ("Namespace".equals(jsObject.getClassName()))
@@ -55,13 +60,11 @@ public class JSNamespaceContext implements NamespaceContext {
 
     @Override
     public String getPrefix(String namespaceURI) {
-        // TODO: implement getPrefix
         throw new NotImplementedException();
     }
 
     @Override
     public Iterator getPrefixes(String namespaceURI) {
-        // TODO: implement getPrefixes
         throw new NotImplementedException();
     }
 }

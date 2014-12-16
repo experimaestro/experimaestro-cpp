@@ -180,6 +180,16 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         return json;
     }
 
+    @JSFunction
+    public boolean is_array() {
+        return json instanceof JsonArray;
+    }
+
+    @JSFunction
+    public boolean is_object() {
+        return json instanceof JsonObject;
+    }
+
     @JSFunction(value = "as_parameter_file", optional = 1)
     @JSHelp("Creates a parameter file from this JSON")
     public Command.ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
