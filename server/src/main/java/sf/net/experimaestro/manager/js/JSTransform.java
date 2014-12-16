@@ -18,16 +18,19 @@
 
 package sf.net.experimaestro.manager.js;
 
+import com.google.common.collect.ImmutableList;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.plans.Function;
+import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.utils.JSUtils;
+
+import java.util.Iterator;
 
 /**
  * JS function to transform inputs in a operators
@@ -65,18 +68,16 @@ public class JSTransform extends JSAbstractOperator implements Function {
         return "JS function";
     }
 
-    public JsonArray f(Json[] parameters) {
+    public Iterator<Json> apply(Json[] parameters) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++)
             args[i] = new JSJson(parameters[i]);
         Json result = JSUtils.toJSON(scope, f.call(cx, scope, null, args));
 
         if (result instanceof JsonArray)
-            return (JsonArray) result;
+            return ((JsonArray) result).iterator();
 
-        JsonArray array = new JsonArray();
-        array.add(result);
-        return array;
+        return ImmutableList.of(result).iterator();
     }
 
     @Override

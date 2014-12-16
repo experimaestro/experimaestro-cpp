@@ -25,6 +25,7 @@ import sf.net.experimaestro.utils.Output;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 
 import static java.lang.String.format;
@@ -36,6 +37,10 @@ import static java.lang.String.format;
 public class JsonArray extends ArrayList<Json> implements Json {
     public JsonArray(int initialCapacity) {
         super(initialCapacity);
+    }
+
+    public JsonArray(Json... elements) {
+        addAll(Arrays.asList(elements));
     }
 
     public JsonArray() {

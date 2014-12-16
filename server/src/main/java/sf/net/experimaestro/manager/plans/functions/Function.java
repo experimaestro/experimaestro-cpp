@@ -16,24 +16,23 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.plans.functions;
 
-import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.json.Json;
+
+import java.util.Iterator;
 
 /**
- * Wrapper for operators
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSOperator extends JSAbstractOperator {
-    private final Operator operator;
+public interface Function {
 
-    @JSFunction
-    public JSOperator(Operator operator) {
-        this.operator = operator;
-    }
+    /**
+     * Apply the function
+     *
+     * @param input
+     * @return
+     */
+    abstract Iterator<? extends Json> apply(Json[] input);
 
-    @Override
-    Operator getOperator() {
-        return operator;
-    }
 }

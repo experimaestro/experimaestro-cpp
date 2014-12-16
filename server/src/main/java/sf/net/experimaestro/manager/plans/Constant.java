@@ -36,6 +36,7 @@ import java.util.*;
 public class Constant extends Operator {
     List<Json> values = new ArrayList<>();
 
+    @Expose
     public Constant(String name, Json... values) {
         this(name, Arrays.asList(values));
     }

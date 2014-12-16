@@ -35,10 +35,7 @@ import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonResource;
-import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
@@ -85,7 +82,7 @@ public class XPMObject {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
-
+    final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
     /**
@@ -93,13 +90,13 @@ public class XPMObject {
      */
     final Hierarchy loggerRepository;
     /**
-     * The experiment repository
-     */
-    private final Repository repository;
-    /**
      * Our scope (global among javascripts)
      */
     final Scriptable scope;
+    /**
+     * The experiment repository
+     */
+    private final Repository repository;
     /**
      * The task scheduler
      */
@@ -110,7 +107,7 @@ public class XPMObject {
     private final Map<String, String> environment;
     /**
      * The resource cleaner
-     * <p/>
+     * <p>
      * Used to close objects at the end of the execution of a script
      */
     private final Cleaner cleaner;
@@ -118,7 +115,6 @@ public class XPMObject {
      * The connector for default inclusion
      */
     ResourceLocator currentResourceLocator;
-
     /**
      * Properties set by the script that will be returned
      */
@@ -156,9 +152,6 @@ public class XPMObject {
      * Root logger
      */
     private Logger rootLogger;
-
-
-
 
     /**
      * Initialise a new XPM object
@@ -235,8 +228,6 @@ public class XPMObject {
             scope = scope.getParentScope();
         return ((JSXPM) scope.get("xpm", scope)).xpm;
     }
-
-
 
     static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
                              Function funObj, boolean repositoryMode) throws Exception {
@@ -483,6 +474,10 @@ public class XPMObject {
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
 
+    public static XPMObject getThreadXPM() {
+        return threadXPM.get();
+    }
+
     /**
      * Clone properties from this XPM instance
      */
@@ -543,7 +538,7 @@ public class XPMObject {
     /**
      * Central method called for any script inclusion
      *
-     * @param scriptLocator The path to the script
+     * @param scriptLocator  The path to the script
      * @param repositoryMode If true, runs in a separate environement
      * @throws Exception if something goes wrong
      */
@@ -567,7 +562,7 @@ public class XPMObject {
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
-        } catch(FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptLocator.getFile());
         } finally {
             threadXPM.set(this);
@@ -688,6 +683,8 @@ public class XPMObject {
         rootLogger.info(format, objects);
     }
 
+    // XML Utilities
+
     /**
      * Log a message to be returned to the client
      */
@@ -703,8 +700,6 @@ public class XPMObject {
     public QName qName(String namespaceURI, String localPart) {
         return new QName(namespaceURI, localPart);
     }
-
-    // XML Utilities
 
     /**
      * Get experimaestro namespace
@@ -956,12 +951,6 @@ public class XPMObject {
 
     public Connector getConnector() {
         return currentResourceLocator.getConnector();
-    }
-
-    final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
-
-    public static XPMObject getThreadXPM() {
-        return threadXPM.get();
     }
 
     static public class Holder<T> {
@@ -1353,20 +1342,34 @@ public class XPMObject {
         }
 
         @JSFunction()
-        @JSHelp("Get a lock over all the resources defined in a JSON object")
+        @JSHelp("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
+                "to lock the resources below")
         public NativeArray get_locks(String lockMode, JsonObject json) {
             ArrayList<Dependency> dependencies = new ArrayList<>();
-            for (Json jsonEntry : json.values()) {
-                if (jsonEntry instanceof JsonObject) {
-                    final Resource resource = getResource((JsonObject) jsonEntry);
-                    if (resource != null) {
-                        final Dependency dependency = resource.createDependency(lockMode);
-                        dependencies.add(dependency);
-                    }
-                }
-            }
+
+            get_locks(lockMode, json, dependencies);
 
             return new NativeArray(dependencies.toArray(new Dependency[dependencies.size()]));
+        }
+
+        private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
+            if (json instanceof JsonObject) {
+                final Resource resource = getResource((JsonObject) json);
+                if (resource != null) {
+                    final Dependency dependency = resource.createDependency(lockMode);
+                    dependencies.add(dependency);
+                } else {
+                    for (Json element : ((JsonObject) json).values()) {
+                        get_locks(lockMode, element, dependencies);
+                    }
+
+                }
+            } else if (json instanceof JsonArray) {
+                for (Json arrayElement : ((JsonArray) json)) {
+                    get_locks(lockMode, arrayElement, dependencies);
+                }
+
+            }
         }
 
         @JSFunction(value = "$$", scope = true)
