@@ -22,6 +22,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.functions.Function;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class FunctionOperator extends UnaryOperator {
                         return endOfData();
 
                     Value value = iterator.next();
-                    innerIterator = function.f(value.nodes).iterator();
+                    innerIterator = function.apply(value.nodes);
 
                     contexts = new DefaultContexts(value.context);
                 }

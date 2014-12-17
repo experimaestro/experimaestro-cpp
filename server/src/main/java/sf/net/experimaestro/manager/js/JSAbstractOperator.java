@@ -31,6 +31,7 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.*;
+import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSNamespaceContext;
@@ -194,8 +195,16 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return doRun(true, details);
     }
 
+    @JSFunction
+    @JSHelp("Wrap each output into an array")
+    public JSOperator arrays() {
+        final FunctionOperator operator = new FunctionOperator(ArrayWrap.INSTANCE);
+        operator.addParent(this.getOperator());
+        return new JSOperator(operator);
+    }
+
     private Object doRun(boolean simulate, boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
-        PlanContext planContext = new PlanContext(xpm().newTaskContext().simulate(simulate));
+        PlanContext planContext = new PlanContext(xpm().newTaskContext().clone().simulate(simulate));
         planContext.counts(details);
 
         // If we have an experimentId, get the task reference and store them

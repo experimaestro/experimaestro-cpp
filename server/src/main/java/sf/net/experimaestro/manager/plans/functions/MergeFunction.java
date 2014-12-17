@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.manager.plans.functions;
 
 /*
  * This file is part of experimaestro.
@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
@@ -26,13 +27,13 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 
+import java.util.Iterator;
 import java.util.Map;
 
 /**
  * A function that simply merge JSON objects
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/4/13
  */
 public class MergeFunction implements Function {
     private final QName outputType;
@@ -44,7 +45,7 @@ public class MergeFunction implements Function {
     }
 
     @Override
-    public JsonArray f(Json[] input) {
+    public Iterator<? extends Json> apply(Json[] input) {
         JsonObject returned = new JsonObject();
         for (int i = 0; i < input.length; i++) {
             Json json = input[i];
@@ -69,9 +70,7 @@ public class MergeFunction implements Function {
         }
         if (outputType != null)
             returned.put(Manager.XP_TYPE.toString(), outputType.toString());
-        JsonArray array = new JsonArray();
-        array.add(returned);
-        return array;
+        return ImmutableList.of(returned).iterator();
     }
 
     @Override

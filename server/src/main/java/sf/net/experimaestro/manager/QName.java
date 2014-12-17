@@ -92,12 +92,7 @@ public class QName implements Comparable<QName> {
 
     public static QName parse(String qname, Element context,
                               final Map<String, String> prefixes) {
-        return parse(qname, context, new String2String() {
-            @Override
-            public String get(String id) {
-                return prefixes.get(id);
-            }
-        });
+        return parse(qname, context, id -> prefixes.get(id));
     }
 
     /**

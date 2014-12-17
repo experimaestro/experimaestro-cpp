@@ -20,6 +20,12 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
+import bpiwowar.experiments.Run;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.sleepycat.persist.model.Persistent;
+import com.sleepycat.persist.model.PersistentProxy;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
@@ -32,7 +38,6 @@ import java.io.StringWriter;
  */
 @Converter
 public class JsonConverter implements AttributeConverter<Json, String> {
-
     @Override
     public String convertToDatabaseColumn(Json json) {
         try {
@@ -56,10 +61,12 @@ public class JsonConverter implements AttributeConverter<Json, String> {
             }
             return json;
         } catch (IOException e) {
+            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
             throw new RuntimeException(e);
+        } catch(RuntimeException e) {
+            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
+            throw e;
         }
-
-
     }
 
     private Json readNext(JsonReader jsonReader) throws IOException {
@@ -93,8 +100,10 @@ public class JsonConverter implements AttributeConverter<Json, String> {
             case STRING:
                 return new JsonString(jsonReader.nextString());
 
-            case NULL:
+            case NULL: {
+                jsonReader.nextNull();
                 return JsonNull.getSingleton();
+            }
 
             case NUMBER:
                 return new JsonReal(jsonReader.nextDouble());

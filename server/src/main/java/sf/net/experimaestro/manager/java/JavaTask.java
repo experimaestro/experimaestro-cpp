@@ -28,6 +28,7 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
+import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 
@@ -83,6 +84,18 @@ public class JavaTask extends Task {
             final Resource old = Resource.getByLocator(transaction.em(), path);
             if (old != null && !old.canBeReplaced()) {
                 taskContext.getLogger().warn("Cannot override resource [%s]", old);
+            // --- Build the command
+            Commands commands = javaFactory.commands(taskContext.getScheduler(), json, taskContext.simulate());
+
+            task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
+
+            task.setState(ResourceState.WAITING);
+            if (taskContext.simulate()) {
+                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger("JavaTask"), Level.INFO);
+                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+                pw.format("Command: %s%n", task.getCommands().toString());
+                pw.format("Locator: %s", locator.toString());
+                pw.flush();
             } else {
                 Job job = new Job(javaFactory.connector, uniqueDir);
 
@@ -114,6 +127,8 @@ public class JavaTask extends Task {
                 }
             }
         }
+
+        taskContext.startedJob(task);
 
         // --- Fill some fields in returned json
 

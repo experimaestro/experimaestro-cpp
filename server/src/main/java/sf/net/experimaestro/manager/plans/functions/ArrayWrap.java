@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.manager.plans.functions;
 
 /*
  * This file is part of experimaestro.
@@ -18,21 +18,25 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableList;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 
+import java.util.Iterator;
+
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 21/2/13
+ * Wrap each output into an array
  */
-public interface Function {
+public class ArrayWrap implements Function {
+    public static final Function INSTANCE = new ArrayWrap();
 
-    /**
-     * Apply the function
-     *
-     * @param input
-     * @return
-     */
-    abstract JsonArray f(Json[] input);
+    @Override
+    public Iterator<? extends Json> apply(Json[] input) {
+        return ImmutableList.of(new JsonArray(input)).iterator();
+    }
 
+    @Override
+    public String toString() {
+        return "[]";
+    }
 }

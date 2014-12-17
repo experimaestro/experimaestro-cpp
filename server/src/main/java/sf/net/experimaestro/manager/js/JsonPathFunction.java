@@ -24,8 +24,10 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.plans.Function;
+import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.utils.JSNamespaceContext;
+
+import java.util.Iterator;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -50,7 +52,7 @@ public class JsonPathFunction implements Function {
     }
 
     @Override
-    public JsonArray f(Json[] input) {
+    public Iterator<? extends Json> apply(Json[] input) {
         if (input.length != 1)
             throw new XPMRhinoException("Expected a single JSON in JsonPathFunction");
 
@@ -77,6 +79,6 @@ public class JsonPathFunction implements Function {
             }
             current = next;
         }
-        return current;
+        return current.iterator();
     }
 }

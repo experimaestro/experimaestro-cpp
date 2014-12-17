@@ -27,12 +27,14 @@ import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
+import org.apache.log4j.spi.LoggerFactory;
 import org.apache.log4j.spi.RootLogger;
 import org.eclipse.jetty.server.Server;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.RhinoException;
+import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -43,6 +45,7 @@ import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -383,9 +386,9 @@ public class JsonRPCMethods extends HttpServlet {
                     ContextualException ce = (ContextualException) ee;
                     List<String> context = ce.getContext();
                     if (!context.isEmpty()) {
-                        logger.error("%n[context]%n");
+                        logger.error("[Context]");
                         for (String s : context) {
-                            logger.error(format("%s%n", s));
+                            logger.error(s);
                         }
                     }
                 }
@@ -394,14 +397,11 @@ public class JsonRPCMethods extends HttpServlet {
             if (wrapped instanceof NotImplementedException)
                 logger.error(format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]));
 
-            // Search for innermost rhino exception
-            RhinoException rhinoException = null;
-            for (Throwable t = e; t != null; t = t.getCause())
-                if (t instanceof RhinoException)
-                    rhinoException = (RhinoException) t;
-
-            if (rhinoException != null)
-                logger.error(rhinoException.getScriptStackTrace());
+            logger.error("[Stack trace]");
+            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
+            for (ScriptStackElement x : scriptStackTrace) {
+                logger.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
+            }
 
             // TODO: We should have something better
 //            if (wrapped instanceof RuntimeException && !(wrapped instanceof RhinoException)) {
@@ -414,9 +414,16 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
+
     private Hierarchy getScriptLogger() {
-        final RootLogger root = new RootLogger(Level.INFO);
-        final Hierarchy loggerRepository = new Hierarchy(root);
+//        final RootLogger root = new RootLogger(Level.INFO);
+        final Logger root = new Logger("root");
+        root.setLevel(Level.INFO);
+        final Hierarchy loggerRepository = new Hierarchy(root) {
+            public org.apache.log4j.Logger getLogger(String name) {
+                return this.getLogger(name, new Logger.DefaultFactory());
+            }
+        };
         BufferedWriter stringWriter = getRequestErrorStream();
 
         PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");

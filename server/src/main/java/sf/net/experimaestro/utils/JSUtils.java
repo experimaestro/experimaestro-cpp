@@ -35,9 +35,9 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.lang.reflect.Array;
-import java.util.AbstractMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 
@@ -138,14 +138,57 @@ public class JSUtils {
 
 
     public static Object get(Scriptable scope, String name) {
-        Scriptable _scope = scope;
-        while (scope != null) {
-            if (scope.has(name, _scope))
-                return scope.get(name, _scope);
-            scope = scope.getParentScope();
-        }
+        Scriptable start = scope;
+        Object result;
+        do {
+            result = scope.get(name, start);
+            if (result != Scriptable.NOT_FOUND)
+                break;
+            scope = scope.getPrototype();
+        } while (scope != null);
 
-        return Scriptable.NOT_FOUND;
+        return result;
+    }
+
+
+    /**
+     * @see org.mozilla.javascript.RhinoException#getScriptStack()
+     * @param ex
+     * @return A stack
+     */
+    static public ScriptStackElement[] getScriptStackTrace(Throwable ex) {
+        List<ScriptStackElement> list = new ArrayList<>();
+        ScriptStackElement[][] interpreterStack = null;
+        int interpreterStackIndex = 0;
+        StackTraceElement[] stack = ex.getStackTrace();
+        // Pattern to recover function name from java method name -
+        // see Codegen.getBodyMethodName()
+        // kudos to Marc Guillemot for coming up with this
+        Pattern pattern = Pattern.compile("_c_(.*)_\\d+");
+        for (StackTraceElement e : stack) {
+            String fileName = e.getFileName();
+            if (e.getMethodName().startsWith("_c_")
+                    && e.getLineNumber() > -1
+                    && fileName != null
+                    && !fileName.endsWith(".java")) {
+                String methodName = e.getMethodName();
+                Matcher match = pattern.matcher(methodName);
+                // the method representing the main script is always "_c_script_0" -
+                // at least we hope so
+                methodName = !"_c_script_0".equals(methodName) && match.find() ?
+                        match.group(1) : null;
+                list.add(new ScriptStackElement(fileName, methodName, e.getLineNumber()));
+            } else if ("org.mozilla.javascript.Interpreter".equals(e.getClassName())
+                    && "interpretLoop".equals(e.getMethodName())
+                    && interpreterStack != null
+                    && interpreterStack.length > interpreterStackIndex) {
+                for (ScriptStackElement elem : interpreterStack[interpreterStackIndex++]) {
+                    list.add(elem);
+                }
+            }
+        }
+        return list.toArray(new ScriptStackElement[list.size()]);
+
     }
 
     /**

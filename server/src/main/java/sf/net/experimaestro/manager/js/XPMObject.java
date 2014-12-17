@@ -20,6 +20,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.*;
@@ -83,6 +84,8 @@ public class XPMObject {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
 
+    public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
+    final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
 
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
@@ -99,6 +102,10 @@ public class XPMObject {
      * Our scope (global among javascripts)
      */
     final Scriptable scope;
+    /**
+     * The experiment repository
+     */
+    private final Repository repository;
     /**
      * The task scheduler
      */
@@ -240,7 +247,6 @@ public class XPMObject {
             scope = scope.getParentScope();
         return ((JSXPM) scope.get("xpm", scope)).xpm;
     }
-
 
     static XPMObject include(Context cx, Scriptable thisObj, Object[] args,
                              Function funObj, boolean repositoryMode) throws Exception {
@@ -487,13 +493,17 @@ public class XPMObject {
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
 
+    public static XPMObject getThreadXPM() {
+        return threadXPM.get();
+    }
+
     /**
      * Clone properties from this XPM instance
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
         final XPMObject clone = new XPMObject(connector, scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir, experimentId);
         clone.defaultLocks.putAll(this.defaultLocks);
-        clone.submittedJobs = new HashMap<>(this.submittedJobs);
+        clone.submittedJobs = this.submittedJobs;
         clone._simulate = _simulate;
         return clone;
     }
@@ -689,6 +699,8 @@ public class XPMObject {
         rootLogger.info(format, objects);
     }
 
+    // XML Utilities
+
     /**
      * Log a message to be returned to the client
      */
@@ -704,8 +716,6 @@ public class XPMObject {
     public QName qName(String namespaceURI, String localPart) {
         return new QName(namespaceURI, localPart);
     }
-
-    // XML Utilities
 
     /**
      * Get experimaestro namespace
@@ -902,8 +912,11 @@ public class XPMObject {
                 transaction.commit();
             }
 
+            this.submittedJobs.put(task.getLocator(), task);
+
             return new JSResource(job);
         }
+
     }
 
     public void register(Closeable closeable) {
@@ -923,7 +936,8 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false);
+        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false)
+                .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
     }
 
     public void setPath(Path locator) {
@@ -958,12 +972,22 @@ public class XPMObject {
         return connector;
     }
 
-    final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
 
     public static XPMObject getThreadXPM() {
         XPMObject xpmObject = threadXPM.get();
         assert xpmObject != null;
         return xpmObject;
+
+    static public class Holder<T> {
+        private T value;
+
+        Holder(T value) {
+            this.value = value;
+        }
+
+        T get() {
+            return value;
+        }
 
     }
 
@@ -1334,20 +1358,34 @@ public class XPMObject {
         }
 
         @JSFunction()
-        @JSHelp("Get a lock over all the resources defined in a JSON object")
+        @JSHelp("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
+                "to lock the resources below")
         public NativeArray get_locks(String lockMode, JsonObject json) {
             ArrayList<Dependency> dependencies = new ArrayList<>();
-            for (Json jsonEntry : json.values()) {
-                if (jsonEntry instanceof JsonObject) {
-                    final Resource resource = getResource((JsonObject) jsonEntry);
-                    if (resource != null) {
-                        final Dependency dependency = resource.createDependency(lockMode);
-                        dependencies.add(dependency);
-                    }
-                }
-            }
+
+            get_locks(lockMode, json, dependencies);
 
             return new NativeArray(dependencies.toArray(new Dependency[dependencies.size()]));
+        }
+
+        private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
+            if (json instanceof JsonObject) {
+                final Resource resource = getResource((JsonObject) json);
+                if (resource != null) {
+                    final Dependency dependency = resource.createDependency(lockMode);
+                    dependencies.add(dependency);
+                } else {
+                    for (Json element : ((JsonObject) json).values()) {
+                        get_locks(lockMode, element, dependencies);
+                    }
+
+                }
+            } else if (json instanceof JsonArray) {
+                for (Json arrayElement : ((JsonArray) json)) {
+                    get_locks(lockMode, arrayElement, dependencies);
+                }
+
+            }
         }
 
         @JSFunction(value = "$$", scope = true)
@@ -1357,7 +1395,7 @@ public class XPMObject {
             if (json instanceof JsonObject) {
                 resource = getResource((JsonObject) json);
             } else {
-                throw new XPMRhinoException("Cannot handle Json of type " + json.getClass());
+                throw new XPMRhinoException("Cannot get the resource of a Json of type " + json.getClass());
             }
 
             if (resource != null) {
@@ -1374,7 +1412,11 @@ public class XPMObject {
                 } else {
                     final String uri = o instanceof JsonString ? o.toString() : (String) o;
                     if (xpm.simulate()) {
-                        return xpm.submittedJobs.get(uri);
+                        final Resource resource = xpm.submittedJobs.get(uri);
+                        if (resource == null) {
+                            throw new XPMRhinoException("Resource with URI [%s] does not exist", uri);
+                        }
+                        return resource;
                     } else {
                         return Transaction.evaluate(em -> Resource.getByLocator(em, Paths.get(uri)));
                     }
