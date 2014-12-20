@@ -86,26 +86,17 @@ public class TaskOperator extends UnaryOperator {
 
             @Override
             protected ReturnValue computeNext() {
-                try {
-                    if (!iterator.hasNext())
-                        return endOfData();
+                if (!iterator.hasNext())
+                    return endOfData();
 
-                    Value value = iterator.next();
+                Value value = iterator.next();
 
-                    Task task = plan.createTask();
-                    for (Map.Entry<DotName, Integer> entry : mappings.entrySet()) {
-                        try {
-                            task.setParameter(entry.getKey(), value.nodes[entry.getValue()]);
-                        } catch (NoSuchParameter noSuchParameter) {
-                            throw new XPMRuntimeException(noSuchParameter);
-                        }
-                    }
-
+                Task task = plan.createTask();
+                for (Map.Entry<DotName, Integer> entry : mappings.entrySet()) {
                     try {
-                        final Json result = task.run(planContext.getTaskContext());
-                        return new ReturnValue(new DefaultContexts(value.context), result);
-                    } catch (NoSuchParameter | ValueMismatchException e) {
-                        throw new XPMRuntimeException(e);
+                        task.setParameter(entry.getKey(), value.nodes[entry.getValue()]);
+                    } catch (NoSuchParameter noSuchParameter) {
+                        throw new XPMRuntimeException(noSuchParameter);
                     }
                 }
 
@@ -117,7 +108,7 @@ public class TaskOperator extends UnaryOperator {
                     return new ReturnValue(new DefaultContexts(value.context), result);
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new XPMRuntimeException(e);
-                } catch(XPMRuntimeException e) {
+                } catch (XPMRuntimeException e) {
                     e.addContext("While running task %s", plan.getFactory().getId());
                     throw e;
                 }

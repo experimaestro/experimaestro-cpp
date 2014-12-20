@@ -16,14 +16,13 @@ import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonResource;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.plans.Constant;
+import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.utils.*;
+import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.XMLUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -94,10 +93,6 @@ public class XPMObject {
      * Logging should be directed to an output
      */
     final Hierarchy loggerRepository;
-    /**
-     * The experimentId repository
-     */
-    private final Repository repository;
     /**
      * Our scope (global among javascripts)
      */
@@ -180,7 +175,7 @@ public class XPMObject {
      * @param scheduler         The job scheduler
      * @param loggerRepository  The logger for the script
      * @param workdir           The working directory or null if none
-     * @param experimentId
+     * @param experimentId  The experiment ID
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
@@ -912,7 +907,7 @@ public class XPMObject {
                 transaction.commit();
             }
 
-            this.submittedJobs.put(task.getLocator(), task);
+            this.submittedJobs.put(job.getPath(), job);
 
             return new JSResource(job);
         }
@@ -936,8 +931,8 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false)
-                .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
+        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
+                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
     }
 
     public void setPath(Path locator) {
@@ -973,11 +968,6 @@ public class XPMObject {
     }
 
 
-    public static XPMObject getThreadXPM() {
-        XPMObject xpmObject = threadXPM.get();
-        assert xpmObject != null;
-        return xpmObject;
-
     static public class Holder<T> {
         private T value;
 
@@ -987,6 +977,10 @@ public class XPMObject {
 
         T get() {
             return value;
+        }
+
+        void set(T value) {
+            this.value = value;
         }
 
     }

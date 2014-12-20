@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import java.nio.file.Path;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
+import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
@@ -74,16 +75,7 @@ public class TaskContext {
      */
     private TaskReference task;
 
-    /**
-     * Constructs a new task context
-     * @param scheduler
-     * @param locator
-     * @param workingDirectory
-     * @param logger
-     */
-    public TaskContext(Scheduler scheduler, ResourceLocator locator, FileObject workingDirectory, Logger logger) {
-        this(scheduler, locator, workingDirectory, logger, false, new ArrayList<>());
-    }
+
 
     public TaskContext addNewTaskListener(Consumer<Job> listener) {
         newTaskListeners.add(listener);
@@ -99,19 +91,22 @@ public class TaskContext {
      * @param simulate         Whether to simulate
      * @param newTaskListeners
      */
-    public TaskContext(Scheduler scheduler, Long experimentId, Path path, Path workingDirectory, Logger logger, boolean simulate, ArrayList<Consumer<Job>> newTaskListeners) {
+    public TaskContext(Scheduler scheduler, Long experimentId, Path path, Path workingDirectory, Logger logger,
+                       boolean simulate, ArrayList<Consumer<Job>> newTaskListeners) {
         this.scheduler = scheduler;
         this.experimentId = experimentId;
         this.path = path;
         this.workingDirectory = workingDirectory;
         this.logger = logger;
         this.simulate = simulate;
-        this.newTaskListeners = newTaskListeners;
+        if (newTaskListeners != null) {
+            this.newTaskListeners = newTaskListeners;
+        }
     }
 
     @Override
     public TaskContext clone() {
-        return new TaskContext(scheduler, locator, workingDirectory, logger, simulate, newTaskListeners);
+        return new TaskContext(scheduler, experimentId, path, workingDirectory, logger, simulate, newTaskListeners);
     }
 
     public boolean simulate() {

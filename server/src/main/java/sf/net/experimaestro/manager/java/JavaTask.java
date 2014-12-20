@@ -28,9 +28,9 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.json.JsonResource;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
@@ -83,52 +83,49 @@ public class JavaTask extends Task {
         try (Transaction transaction = Transaction.create()) {
             final Resource old = Resource.getByLocator(transaction.em(), path);
             if (old != null && !old.canBeReplaced()) {
-                taskContext.getLogger().warn("Cannot override resource [%s]", old);
-            // --- Build the command
-            Commands commands = javaFactory.commands(taskContext.getScheduler(), json, taskContext.simulate());
-
-            task = new CommandLineTask(taskContext.getScheduler(), locator, commands);
-
-            task.setState(ResourceState.WAITING);
-            if (taskContext.simulate()) {
-                PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger("JavaTask"), Level.INFO);
-                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-                pw.format("Command: %s%n", task.getCommands().toString());
-                pw.format("Locator: %s", locator.toString());
-                pw.flush();
-            } else {
-                Job job = new Job(javaFactory.connector, uniqueDir);
-
+                final Logger taskLogger = taskContext.getLogger("JavaTask");
+                taskLogger.warn("Cannot override resource [%s]", old);
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());
 
                 CommandLineTask task = new CommandLineTask(commands);
 
                 if (taskContext.simulate()) {
-                    PrintWriter pw = new LoggerPrintWriter(taskContext.getLogger(), Level.INFO);
+                    PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", task.toString());
                     pw.format("Command: %s%n", task.getCommands().toString());
-                    pw.format("Path: %s", path);
+                    pw.format("Path: %s", path.toString());
                     pw.flush();
                 } else {
-                    if (old != null) {
-                        // TODO: if equal, do not try to replace the task
-                        try {
-                            old.replaceBy(job);
-                            job.setJobRunner(task);
-                            taskContext.getLogger().info(String.format("Overwriting resource [%s]", task));
-                        } catch (ExperimaestroCannotOverwrite e) {
-                            taskContext.getLogger().warn("Cannot override resource [%s]", old);
-                        }
+                    Job job = new Job(javaFactory.connector, uniqueDir);
+
+                    // --- Build the command
+
+                    if (taskContext.simulate()) {
+                        PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
+                        pw.format("[SIMULATE] Starting job: %s%n", task.toString());
+                        pw.format("Command: %s%n", task.getCommands().toString());
+                        pw.format("Path: %s", path);
+                        pw.flush();
                     } else {
-                        transaction.em().persist(task);
+                        if (old != null) {
+                            // TODO: if equal, do not try to replace the task
+                            try {
+                                old.replaceBy(job);
+                                job.setJobRunner(task);
+                                taskLogger.info(String.format("Overwriting resource [%s]", task));
+                            } catch (ExperimaestroCannotOverwrite e) {
+                                taskLogger.warn("Cannot override resource [%s]", old);
+                            }
+                        } else {
+                            transaction.em().persist(task);
+                        }
+                        transaction.commit();
                     }
-                    transaction.commit();
+                    taskContext.startedJob(job);
                 }
             }
         }
-
-        taskContext.startedJob(task);
 
         // --- Fill some fields in returned json
 

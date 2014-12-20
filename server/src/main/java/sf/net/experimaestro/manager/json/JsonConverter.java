@@ -20,11 +20,6 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
-import bpiwowar.experiments.Run;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.sleepycat.persist.model.Persistent;
-import com.sleepycat.persist.model.PersistentProxy;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.AttributeConverter;
@@ -34,10 +29,11 @@ import java.io.StringReader;
 import java.io.StringWriter;
 
 /**
- * Serialization of Json with Berkeley DB JE
+ * Serialization of Json
  */
 @Converter
 public class JsonConverter implements AttributeConverter<Json, String> {
+    final static private Logger LOGGER = Logger.getLogger();
     @Override
     public String convertToDatabaseColumn(Json json) {
         try {
@@ -61,10 +57,10 @@ public class JsonConverter implements AttributeConverter<Json, String> {
             }
             return json;
         } catch (IOException e) {
-            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
+            LOGGER.error(e, "Error while reading JSON string [%s]", dbData);
             throw new RuntimeException(e);
         } catch(RuntimeException e) {
-            LOGGER.error(e, "Error while reading JSON string [%s]", jsonString);
+            LOGGER.error(e, "Error while reading JSON string [%s]", dbData);
             throw e;
         }
     }
