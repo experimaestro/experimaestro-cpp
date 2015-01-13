@@ -51,10 +51,10 @@ import static java.lang.String.format;
 @SuppressWarnings("JpaAttributeTypeInspection")
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "resources", indexes = @Index(columnList = "path"))
 //@Cacheable
-public abstract class Resource {
+public abstract class Resource implements PostCommitListener {
     /**
      * Extension for the lock file
      */
@@ -149,6 +149,9 @@ public abstract class Resource {
      */
     @Column(name = "state")
     private ResourceState state = ResourceState.ON_HOLD;
+
+    /** Indicates that the resource is deleted */
+    transient private boolean delete = false;
 
     /**
      * Called when deserializing from database
@@ -469,6 +472,7 @@ public abstract class Resource {
         SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
         this.notify(message);
         notify(message);
+        this.delete = true;
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws FileSystemException {
@@ -522,11 +526,15 @@ public abstract class Resource {
     @PostUpdate
     @PostPersist
     protected void _post_update() {
-        Transaction.current().addPostCommit(t -> stored());
+        Transaction.current().registerPostCommit(this);
     }
 
-    @PostRemove
-    protected void _post_remove() {
-        Transaction.current().addPostCommit(t -> clean());
+    @Override
+    public void postCommit(Transaction transaction) {
+        if (delete) {
+            clean();
+        } else {
+            stored();
+        }
     }
 }

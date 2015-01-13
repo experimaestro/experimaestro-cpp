@@ -83,6 +83,7 @@ public class Job extends Resource {
     @OneToOne(fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL)
     @JoinColumn(name = "process")
     XPMProcess process;
+
     @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "runner")
     JobRunner jobRunner;
@@ -337,7 +338,6 @@ public class Job extends Resource {
             // Change the state in function of the number of unsatisfied requirements
             if (nbUnsatisfied == 0) {
                 setState(ResourceState.READY);
-                t.addPostCommit($ -> Scheduler.notifyRunners());
             } else {
                 if (nbHolding > 0)
                     setState(ResourceState.ON_HOLD);

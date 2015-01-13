@@ -18,6 +18,7 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.EntityManager;
@@ -55,7 +56,7 @@ public class Transaction implements AutoCloseable {
     private boolean ownEntityManager;
 
     /** Methods to evaluate after commit  */
-    ArrayList<Consumer<Transaction>> postCommit = new ArrayList<>();
+    IdentityHashSet<PostCommitListener> listeners = null;
 
     static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
@@ -153,8 +154,9 @@ public class Transaction implements AutoCloseable {
             LOGGER.info("Transaction %s commits", System.identityHashCode(this));
             transaction.commit();
             status = Status.COMMIT;
-
-            postCommit.forEach(f -> f.accept(this));
+            if (listeners != null) {
+                listeners.forEach(f -> f.postCommit(this));
+            }
         }
     }
 
@@ -165,8 +167,10 @@ public class Transaction implements AutoCloseable {
         status = Status.BEGIN;
     }
 
-    public void addPostCommit(Consumer<Transaction> f) {
-        postCommit.add(f);
+    public void registerPostCommit(PostCommitListener f) {
+        if (listeners == null)
+            listeners = new IdentityHashSet<>();
+        listeners.add(f);
     }
 
     static public enum Status {
