@@ -46,9 +46,8 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JavaScriptChecker {
+public class JavaScriptChecker extends XPMEnvironment {
 
-    private final XPMEnvironment environment;
     private Path file;
     private String content;
     private Context context;
@@ -56,11 +55,26 @@ public class JavaScriptChecker {
 
     private Scriptable scope;
 
-    public JavaScriptChecker(XPMEnvironment environment, Path file) throws
-            IOException {
-        this.environment = environment;
+    public JavaScriptChecker(Path file) throws
+            IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         this.file = file;
         this.content = getFileContent(file);
+
+        // Initialize XPM and load the file
+        context = Context.enter();
+        repository = new Repository(new File("/").toPath());
+        Map<String, String> environment = System.getenv();
+
+        scope = XPMContext.newScope();
+        XPMObject xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
+                repository, getScheduler(), null, new Cleaner(), null, null);
+
+        // Adds some special functions available for tests only
+        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
+
+        XPMObject.threadXPM.set(xpm);
+        context.evaluateReader(scope, new StringReader(content),
+                file.toString(), 1, null);
     }
 
     @Override
@@ -69,21 +83,9 @@ public class JavaScriptChecker {
     }
 
 
-    @BeforeClass
-    public void runScript() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
-        // Defines the environment
-        Map<String, String> environment = System.getenv();
-        scope = XPMContext.newScope();
-        XPMObject xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
-                repository, this.environment.scheduler, null, new Cleaner(), null, null);
-
-        // Adds some special functions available for tests only
-        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
-
-        XPMObject.threadXPM.set(xpm);
-        context.evaluateReader(scope, new StringReader(content),
-                file.toString(), 1, null);
-
+    @AfterClass
+    public void exit() {
+        Context.exit();
     }
 
     static public class JSTestFunction {
@@ -119,17 +121,7 @@ public class JavaScriptChecker {
         return list.toArray(new Object[list.size()][]);
     }
 
-    @BeforeTest
-    public void enter() {
-        context = Context.enter();
-        scope = context.initStandardObjects();
-        repository = new Repository(new File("/").toPath());
-    }
 
-    @AfterTest
-    public void exit() {
-        Context.exit();
-    }
 
     @Test(dataProvider = "jsProvider")
     public void testScript(JSTestFunction testFunction) throws
