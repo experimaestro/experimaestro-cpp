@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,23 +18,25 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import com.google.gson.Gson;
 
-@Converter(autoApply = true)
-public class PathConverter implements AttributeConverter<Path, String> {
+import javax.persistence.AttributeConverter;
+
+/**
+ * Converts a command into a JSON string
+ */
+public class CommandsConverter implements AttributeConverter<Commands, String> {
     @Override
-    public String convertToDatabaseColumn(Path attribute) {
-        if (attribute == null) return null;
-        return attribute.toUri().toString();
+    public String convertToDatabaseColumn(Commands commands) {
+        Gson gson = new Gson();
+        final String json = gson.toJson(commands);
+        return json;
     }
 
     @Override
-    public Path convertToEntityAttribute(String dbData) {
-        if (dbData == null) return null;
-        return Paths.get(URI.create(dbData));
+    public Commands convertToEntityAttribute(String json) {
+        Gson gson = new Gson();
+        final Commands commands = gson.fromJson(json, Commands.class);
+        return commands;
     }
 }

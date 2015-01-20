@@ -22,9 +22,11 @@ import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
+import java.io.File;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * A fake connector used for internal purposes.
@@ -44,7 +46,7 @@ public class XPMConnector extends SingleHostConnector {
 
     @Override
     public Path resolve(String path) {
-        return null;
+        return Paths.get(path);
     }
 
     public static XPMConnector getInstance() {

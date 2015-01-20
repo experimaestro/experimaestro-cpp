@@ -23,7 +23,9 @@ import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.PrimaryKeyJoinColumn;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +36,7 @@ import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
  * Extends Job status collect some information for testing purposes
  */
 @Entity
+@DiscriminatorValue("-1")
 public class WaitingJob extends Job {
     final static private Logger LOGGER = Logger.getLogger();
 

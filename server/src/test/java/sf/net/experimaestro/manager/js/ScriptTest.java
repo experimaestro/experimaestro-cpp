@@ -61,9 +61,11 @@ public class ScriptTest  {
         Path dir = Paths.get(url.toURI());
 
         return Files.walk(dir)
-                .filter(path -> path.getFileName().toString().endsWith(".js")
-                        && !path.getFileName().toString().endsWith(".inc.js"))
-                .map(Streams.propagateFunction(path -> new JavaScriptChecker(environment, path)))
+                .filter(path ->
+                        path.getFileName().toString().endsWith(".js")
+                        && !path.getFileName().toString().endsWith(".inc.js")
+                        && (testFile == null || path.getFileName().toString().equals(testFile)))
+                .map(Streams.propagateFunction(path -> new JavaScriptChecker(path)))
                 .toArray(n -> new JavaScriptChecker[n]);
     }
 

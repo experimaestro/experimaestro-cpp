@@ -31,9 +31,10 @@ import java.util.stream.Stream;
  * Base class for all jobs
  */
 @Entity
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class JobRunner {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.TABLE)
     private Long id;
 
     @OneToOne(mappedBy = "jobRunner")

@@ -58,10 +58,11 @@ public class TokenResource extends Resource {
     /**
      * Creates a new token resource
      *
-     * @param data  The resource data
+     * @param path  The token path
      * @param limit The maximum number of tokens
      */
-    public TokenResource(Path data, int limit) {
+    public TokenResource(Path path, int limit) {
+        super(null, path);
         this.limit = limit;
         this.usedTokens = 0;
         setState(ResourceState.DONE);

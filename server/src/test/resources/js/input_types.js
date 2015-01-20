@@ -20,19 +20,19 @@
  
 var test = new Namespace("xpm.tests");
 
-tasks("inputs") = {
+tasks.add("inputs", {
      inputs: {
          // Values
          x_integer: { value: "xp:integer", optional: true },
          
          // XML types
-         x_xml: { xml: "a", optional: true },
-         x_ns_xml: { xml: "test:a", optional: true },
+         x_xml: { json: "a", optional: true },
+         x_ns_xml: { json: "test:a", optional: true },
          
          // Sequence
-         x_sequence: { xml: "a", sequence: true, optional: true }
+         x_sequence: { json: "a", sequence: true, optional: true }
      }
-};
+});
 
 // Assert that the plan generates an error
 function assert_error(plan) {
@@ -68,7 +68,7 @@ function test_integer() {
     assert_ok({ x_integer: { "$type": "xp:integer", "$value": 1 } });
     
     assert_error({ x_integer: 1.2 });        
-    assert_error({ x_integer: <a>hello</a> });        
+    assert_error({ x_integer: "qwerty" });
 }
  
 // function test_xml() {

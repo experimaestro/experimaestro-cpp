@@ -1,3 +1,5 @@
+package sf.net.experimaestro.scheduler;
+
 /*
  * This file is part of experimaestro.
  * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
@@ -17,7 +19,7 @@
  */
 
 /**
- * Created by bpiwowar on 2/10/14.
+ * Created by bpiwowar on 16/01/2015.
  */
-public class Command {
+public class JsonPathConverter {
 }

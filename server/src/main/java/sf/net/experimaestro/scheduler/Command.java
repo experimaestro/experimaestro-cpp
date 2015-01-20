@@ -20,8 +20,11 @@ package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.ImmutableSet;
 
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.FileSystemException;
+
+import com.google.gson.annotations.JsonAdapter;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -45,7 +48,7 @@ import java.util.stream.Stream;
  * @author B. Piwowarski
  */
 @Exposed
-public class Command implements CommandComponent {
+public class Command implements CommandComponent, Serializable {
     public final static Logger LOGGER = Logger.getLogger();
 
     ArrayList<CommandComponent> list;
@@ -158,7 +161,7 @@ public class Command implements CommandComponent {
         }
     }
 
-    public static class String implements CommandComponent {
+    public static class String implements CommandComponent, Serializable {
         java.lang.String string;
 
         private String() {
@@ -180,6 +183,7 @@ public class Command implements CommandComponent {
     }
 
     public static class Path implements CommandComponent {
+        @JsonAdapter(JsonPathConverter.class)
         private java.nio.file.Path file;
 
         private Path() {

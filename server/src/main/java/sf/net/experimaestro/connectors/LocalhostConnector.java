@@ -39,7 +39,6 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-@DiscriminatorValue("local")
 public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();

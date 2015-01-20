@@ -893,7 +893,7 @@ public class XPMObject {
                 pw.flush();
             } else {
                 // Store in scheduler
-                em.persist(em);
+                em.persist(job);
 
                 // Add dependencies
                 dependencies.forEach(job::addDependency);

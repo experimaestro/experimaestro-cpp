@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import bpiwowar.argparser.utils.Output;
 import org.testng.Assert;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.XPMConnector;
@@ -41,6 +42,11 @@ import static sf.net.experimaestro.scheduler.WaitingJobRunner.Action;
 public class SchedulerTest extends XPMEnvironment {
 
     final static private Logger LOGGER = Logger.getLogger();
+
+    @BeforeSuite
+    public static void setup() throws IOException {
+        getScheduler();
+    }
 
 
     @Test(description = "Run two jobs - one depend on the other status start")
@@ -224,7 +230,7 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
     @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
-    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite {
+    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException {
         Random random = new Random();
         long seed = p.seed == null ? random.nextLong() : p.seed;
         LOGGER.info("Seed is %d", seed);
@@ -358,7 +364,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(description = "Test of the token resource - one job at a time")
-    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException {
+    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException {
 
         File jobDirectory = mkTestDir();
 
@@ -373,9 +379,13 @@ public class SchedulerTest extends XPMEnvironment {
 
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
-            jobs[i].addDependency(token.createDependency(null));
-            WaitingJob job = jobs[i];
-            Transaction.run(em -> em.persist(job));
+            final WaitingJob job = jobs[i];
+            Transaction.run(em -> {
+                final TokenResource _token = em.find(TokenResource.class, token.getId());
+                job.addDependency(_token.createDependency(null));
+                job.updateStatus();
+                em.persist(job);
+            });
         }
 
 

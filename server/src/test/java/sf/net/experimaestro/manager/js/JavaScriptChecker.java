@@ -56,7 +56,11 @@ public class JavaScriptChecker extends XPMEnvironment {
     private Scriptable scope;
 
     public JavaScriptChecker(Path file) throws
+<<<<<<< HEAD
             IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+=======
+            IOException {
+>>>>>>> Fixing bugs
         this.file = file;
         this.content = getFileContent(file);
 

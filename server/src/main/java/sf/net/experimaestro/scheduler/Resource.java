@@ -50,8 +50,8 @@ import static java.lang.String.format;
  */
 @SuppressWarnings("JpaAttributeTypeInspection")
 @Entity(name = "resources")
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Table(name = "resources", indexes = @Index(columnList = "path"))
 //@Cacheable
 public abstract class Resource implements PostCommitListener {
@@ -131,7 +131,7 @@ public abstract class Resource implements PostCommitListener {
      * The resource ID
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.TABLE)
     private Long resourceID;
 
     /**
@@ -527,6 +527,20 @@ public abstract class Resource implements PostCommitListener {
     @PostPersist
     protected void _post_update() {
         Transaction.current().registerPostCommit(this);
+    }
+
+    @PrePersist
+    protected void _pre_persist() {
+        final Transaction transaction = Transaction.current();
+        final EntityManager em = transaction.em();
+        if (connector != null && !em.contains(connector)) {
+            // Add the connector
+            final Connector other = em.find(Connector.class, connector.getIdentifier());
+            if (other != null) {
+                connector = other;
+            }
+        }
+
     }
 
     @Override

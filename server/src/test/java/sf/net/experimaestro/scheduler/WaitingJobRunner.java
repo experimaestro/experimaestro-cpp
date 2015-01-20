@@ -39,7 +39,6 @@ import java.util.stream.Stream;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-@DiscriminatorValue("-1")
 public class WaitingJobRunner extends JobRunner {
     final static private Logger LOGGER = Logger.getLogger();
 

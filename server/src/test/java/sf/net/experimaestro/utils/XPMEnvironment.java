@@ -36,40 +36,54 @@ import java.io.IOException;
 public class XPMEnvironment {
     private static final Logger LOGGER = Logger.getLogger();
 
-    public static Scheduler scheduler;
+    static final private Integer token = 0;
 
-    protected static TemporaryDirectory directory;
+    private static Scheduler scheduler;
+
+    private static TemporaryDirectory directory;
 
     /**
      * Make a directory corresponding to the caller
      *
      * @return
      */
-    protected File mkTestDir() {
+    protected File mkTestDir() throws IOException {
         StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
         // we get the caller method name
         StackTraceElement e = stacktrace[2];
         String methodName = e.getMethodName();
-        assert directory != null;
-        File jobDirectory = new File(directory.getFile(), methodName);
+        File jobDirectory = new File(getDirectory().getFile(), methodName);
 
         jobDirectory.mkdirs();
         return jobDirectory;
     }
 
+    public static TemporaryDirectory getDirectory() throws IOException {
+        if (directory != null) {
+            return directory;
+        }
 
-    @BeforeSuite
-    public static void openDatabase() throws IOException {
-        LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
-        directory = new TemporaryDirectory("scheduler-tests", "dir");
-        final File dbFile = new File(directory.getFile(), "db");
-        dbFile.mkdir();
-        scheduler = new Scheduler(dbFile);
+        synchronized (token) {
+            if (directory == null) {
+                directory = new TemporaryDirectory("scheduler-tests", "dir");
+            }
+        }
+        return directory;
     }
 
-    @AfterSuite
-    public static void goodbye() {
-        LOGGER.info("Closing scheduler [%s]", Thread.currentThread());
-        scheduler.close();
+    public static Scheduler getScheduler() throws IOException {
+        synchronized (token) {
+            if (scheduler == null) {
+                LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
+                final File dbFile = new File(getDirectory().getFile(), "db");
+                dbFile.mkdir();
+                scheduler = new Scheduler(dbFile);
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    LOGGER.info("Stopping scheduler");
+                    scheduler.close();
+                }));
+            }
+        }
+        return scheduler;
     }
 }
