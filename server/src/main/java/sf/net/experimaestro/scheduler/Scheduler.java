@@ -244,7 +244,7 @@ final public class Scheduler {
     /**
      * Shutdown the scheduler
      */
-    public void close() {
+    synchronized public void close() {
         if (entityManagerFactory == null && stopping) {
             return;
         }

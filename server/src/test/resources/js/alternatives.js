@@ -26,8 +26,8 @@ var abc = new Namespace("a.b.c");
 xpm.declare_alternative(altName);
 
 /** Alternative */
-tasks.set("abc:alt1", {
-	documentation: <p>"Configuration of a possible alternative"</p>,
+tasks.add("abc:alt1", {
+	documentation: "<p>Configuration of a possible alternative</p>",
 	alternative: altName,
 	
 	inputs: {
@@ -41,7 +41,7 @@ tasks.set("abc:alt1", {
 
 /** Task */
 
-tasks.set("abc:task", {
+tasks.add("abc:task", {
 	inputs: {
 	    p: { alternative: "abc:alt" }
 	},
@@ -54,7 +54,7 @@ tasks.set("abc:task", {
 // END SNIPPET: main
 
 function test_value() {
-    var task = tasks.get("abc:task").create();
+    var task = tasks("abc:task").create();
     
     task.set("p", "{a.b.c}alt1");
     task.set("p.x", 10);

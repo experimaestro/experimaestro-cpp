@@ -21,11 +21,11 @@ include("utils.inc.js");
 // START SNIPPET: main
 var abc = new Namespace("a.b.c");
 
-tasks("abc:default") = {
+tasks.add("abc:default", {
 	inputs: {
         a: { value: "xp:integer", default: 10 },
 	}
-};
+});
 
 // END SNIPPET: main
 

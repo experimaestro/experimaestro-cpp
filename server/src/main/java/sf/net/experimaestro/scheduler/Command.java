@@ -19,11 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.ImmutableSet;
-
-import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.FileSystemException;
-
 import com.google.gson.annotations.JsonAdapter;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
@@ -33,13 +28,17 @@ import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import javax.persistence.Column;
+import javax.persistence.Convert;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Serializable;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -139,7 +138,7 @@ public class Command implements CommandComponent, Serializable {
         return this.list;
     }
 
-    public static class CommandOutput implements CommandComponent {
+    public static class CommandOutput implements CommandComponent, Serializable {
         /**
          * The output
          */
@@ -182,7 +181,7 @@ public class Command implements CommandComponent, Serializable {
         }
     }
 
-    public static class Path implements CommandComponent {
+    public static class Path implements CommandComponent, Serializable  {
         @JsonAdapter(JsonPathConverter.class)
         private java.nio.file.Path file;
 
@@ -205,7 +204,7 @@ public class Command implements CommandComponent, Serializable {
     }
 
     @Exposed
-    public static class ParameterFile implements CommandComponent {
+    public static class ParameterFile implements CommandComponent, Serializable  {
         java.lang.String key;
         byte[] content;
 
@@ -267,6 +266,8 @@ public class Command implements CommandComponent, Serializable {
         /**
          * The commands
          */
+        @Convert(converter = CommandsConverter.class)
+        @Column(columnDefinition="VARCHAR(100000)")
         Commands commands;
 
         // Just for serialization

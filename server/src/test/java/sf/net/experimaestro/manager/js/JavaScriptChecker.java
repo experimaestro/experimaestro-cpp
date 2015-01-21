@@ -48,6 +48,7 @@ import static java.lang.String.format;
  */
 public class JavaScriptChecker extends XPMEnvironment {
 
+    private final XPMObject xpm;
     private Path file;
     private String content;
     private Context context;
@@ -56,11 +57,7 @@ public class JavaScriptChecker extends XPMEnvironment {
     private Scriptable scope;
 
     public JavaScriptChecker(Path file) throws
-<<<<<<< HEAD
             IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
-=======
-            IOException {
->>>>>>> Fixing bugs
         this.file = file;
         this.content = getFileContent(file);
 
@@ -70,7 +67,8 @@ public class JavaScriptChecker extends XPMEnvironment {
         Map<String, String> environment = System.getenv();
 
         scope = XPMContext.newScope();
-        XPMObject xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
+
+        xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
                 repository, getScheduler(), null, new Cleaner(), null, null);
 
         // Adds some special functions available for tests only
@@ -132,7 +130,11 @@ public class JavaScriptChecker extends XPMEnvironment {
             IOException, SecurityException, IllegalAccessException,
             InstantiationException, InvocationTargetException,
             NoSuchMethodException {
-        testFunction.function.call(context, scope, null, new Object[]{});
+        XPMObject.threadXPM.set(xpm);
+        Scriptable newScope = context.newObject(scope);
+        newScope.setPrototype(scope);
+        newScope.setParentScope(null);
+        testFunction.function.call(context, newScope, null, new Object[]{});
     }
 
 

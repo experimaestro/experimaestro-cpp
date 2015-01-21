@@ -18,8 +18,33 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
- * Created by bpiwowar on 16/01/2015.
+ * Converts a path
  */
-public class JsonPathConverter {
+public class JsonPathConverter extends TypeAdapter<Path> {
+    @Override
+    public void write(JsonWriter out, Path value) throws IOException {
+        final String stringPath = value.toUri().toString();
+        out.value(stringPath);
+    }
+
+    @Override
+    public Path read(JsonReader in) throws IOException {
+        final String uri = in.nextString();
+        try {
+            return Paths.get(new URI(uri));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -32,7 +32,7 @@ import java.util.stream.Stream;
  * A full command
  */
 @Exposed
-public class Commands implements Iterable<Command>, Serializable {
+public class Commands implements Iterable<Command> {
     /**
      * The list of commands status be executed
      * <p/>

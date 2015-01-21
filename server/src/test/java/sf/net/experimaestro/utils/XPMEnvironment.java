@@ -81,6 +81,7 @@ public class XPMEnvironment {
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     LOGGER.info("Stopping scheduler");
                     scheduler.close();
+                    LOGGER.info("Scheduler stopped");
                 }));
             }
         }

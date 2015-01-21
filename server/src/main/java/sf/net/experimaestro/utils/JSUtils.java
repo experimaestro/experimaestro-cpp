@@ -140,12 +140,17 @@ public class JSUtils {
     public static Object get(Scriptable scope, String name) {
         Scriptable start = scope;
         Object result;
+        Scriptable currentScope = scope;
         do {
-            result = scope.get(name, start);
-            if (result != Scriptable.NOT_FOUND)
-                break;
-            scope = scope.getPrototype();
-        } while (scope != null);
+            scope = currentScope;
+            do {
+                result = scope.get(name, start);
+                if (result != Scriptable.NOT_FOUND)
+                    break;
+                scope = scope.getPrototype();
+            } while (scope != null);
+            currentScope = currentScope.getParentScope();
+        } while (currentScope != null);
 
         return result;
     }

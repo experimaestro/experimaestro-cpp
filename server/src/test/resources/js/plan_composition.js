@@ -25,10 +25,10 @@
 include("check_array.inc.js");
  
  // START SNIPPET: task
-ns = new Namespace("xpm.tests");
+var ns = new Namespace("xpm.tests");
 var logger = xpm.logger("xpm.tests");
 
-tasks("ns:mult") = {
+tasks.add("ns:mult", {
     inputs: {
         x: { value: "xp:integer" },
         y: { value: "xp:integer" }
@@ -38,9 +38,9 @@ tasks("ns:mult") = {
         logger.debug("Task mult: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) * $(x.y))
         return $(x.x) * $(x.y);
     }
-};
+});
 
-tasks("ns:plus") = {
+tasks.add("ns:plus", {
     inputs: {
         x: { value: "xp:integer" },
         y: { value: "xp:integer" }
@@ -50,10 +50,10 @@ tasks("ns:plus") = {
         logger.debug("Task plus: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) + $(x.y))
         return $(x.x) + $(x.y)
     }
-};
+});
 // END SNIPPET: task
 
-tasks("ns:identity")= {
+tasks.add("ns:identity", {
     inputs: {
         x: {
             value: "xp:integer"
@@ -63,7 +63,7 @@ tasks("ns:identity")= {
     run: function(x) {
         return x.x;
     }
-};
+});
 
 /**
  * Simple product of two plans
@@ -93,9 +93,11 @@ function test_transform() {
         return Number($(x)) + 1;
     };
 
+
     var plan1 = tasks("ns:identity").plan({
         x: [0, 1]
     });
+
     var plan2 = tasks("ns:mult").plan({
         x: transform(f, plan1),
         y: [3, 5]
@@ -215,9 +217,9 @@ function test_add() {
 
 // --- Test the group by
 
-tasks("ns:sum")= {
+tasks.add("ns:sum", {
     inputs: {
-        x: { value: "xp:integer", sequence: true },
+        x: { value: "xp:integer", sequence: true }
     },
 
     run: function(p) {
@@ -227,7 +229,7 @@ tasks("ns:sum")= {
         }            
         return sum;
     }
-};
+});
 
 function test_groupby_all() {
     var plan1 = tasks("ns:identity").plan({ x: [1, 2, 3] });

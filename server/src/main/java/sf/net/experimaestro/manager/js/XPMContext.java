@@ -79,7 +79,7 @@ public class XPMContext implements AutoCloseable {
     /**
      * Get the scope where all the main objects are defined
      */
-    public static Scriptable init() throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+    synchronized public static Scriptable init() throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
         if (XPM_SCOPE == null) {
             ContextFactory factory = new ContextFactory();
             Context context = factory.enterContext();
