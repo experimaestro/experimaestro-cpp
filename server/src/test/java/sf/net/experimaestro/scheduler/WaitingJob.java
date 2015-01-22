@@ -110,7 +110,14 @@ public class WaitingJob extends Job {
     }
 
     public void restart(WaitingJobRunner.Action action) {
-        throw new NotImplementedException();
+        Transaction.run(em -> {
+            final WaitingJob job = em.find(WaitingJob.class, getId());
+            job.status().currentIndex = 0;
+            job.actions.clear();
+            job.actions.add(action);
+            setState(WAITING);
+        });
+
     }
 
     public static class Status {

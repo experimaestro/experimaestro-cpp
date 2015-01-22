@@ -48,6 +48,50 @@ public class SchedulerTest extends XPMEnvironment {
         getScheduler();
     }
 
+    @DataProvider()
+    static ComplexDependenciesParameters[][] complexDependenciesTestProvider() {
+        return new ComplexDependenciesParameters[][]{
+                {
+                        new ComplexDependenciesParameters("complex", -8451050260222287949l)
+                                .jobs(50, 50, 10)
+                                .dependencies(.2, 200)
+                                .failures(0.10, 3, 2)
+                                .token(3)
+                }
+        };
+    }
+
+    /**
+     * Check that these runners started one after the other
+     *
+     * @param runners The runners status check
+     */
+    static private int checkSequence(WaitingJob... runners) {
+        int errors = 0;
+        Job[] jobs = new Job[runners.length];
+
+        Transaction.run(em -> {
+            for (int i = 0; i < runners.length - 1; i++) {
+                jobs[i] = em.find(Job.class, runners[i].getId());
+            }
+        });
+
+        for (int i = 0; i < runners.length - 1; i++) {
+            if (jobs[i].getEndTimestamp() >= runners[i + 1].status().readyTimestamp) {
+                LOGGER.warn("The runners (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
+                        runners[i], System.identityHashCode(runners[i]), runners[i].getEndTimestamp(),
+                        runners[i + 1], System.identityHashCode(runners[i + 1]), runners[i + 1].status().readyTimestamp);
+                errors++;
+            } else
+                LOGGER.debug("The runners (%s/%x) and (%s/%x) started one after the other [%dms]",
+                        runners[i], System.identityHashCode(runners[i]), runners[i + 1],
+                        System.identityHashCode(runners[i + 1]),
+                        runners[i + 1].status().readyTimestamp - runners[i].getEndTimestamp());
+
+        }
+
+        return errors;
+    }
 
     @Test(description = "Run two jobs - one depend on the other status start")
     public void test_simple_dependency() throws
@@ -76,10 +120,9 @@ public class SchedulerTest extends XPMEnvironment {
 
         errors += checkSequence(jobs);
         errors += checkState(EnumSet.of(ResourceState.DONE), jobs);
-        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
+        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
 
     }
-
 
     @Test(description = "Run two jobs - one depend on the other status start, the first fails")
     public void test_failed_dependency() throws
@@ -106,127 +149,7 @@ public class SchedulerTest extends XPMEnvironment {
         int errors = 0;
         errors += checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
         errors += checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
-        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
-    }
-
-
-    final static public class Link implements Comparable<Link> {
-        int to, from;
-
-        public Link(int to, int from) {
-            this.to = to;
-            this.from = from;
-        }
-
-        public Link(long n) {
-            to = (int) floor(.5 + sqrt(2. * n + .25));
-            from = (int) (n - (to * (to - 1)) / 2);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Link link = (Link) o;
-
-            if (to != link.to) return false;
-            if (from != link.from) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = to;
-            result = 31 * result + from;
-            return result;
-        }
-
-        @Override
-        public int compareTo(Link o) {
-            int z = Integer.compare(to, o.to);
-            return z == 0 ? Integer.compare(from, o.from) : z;
-        }
-    }
-
-
-    static public class ComplexDependenciesParameters {
-        String name;
-        Long seed = null;
-
-        int maxExecutionTime = 50;
-        int minExecutionTime = 10;
-
-        // Number of jobs
-        int nbJobs = 20;
-
-
-        // Number of dependencies (among possible ones)
-        double dependencyRatio = .2;
-
-        // Maximum number of dependencies
-        int maxDeps = 200;
-
-        // Failure ratio
-        double failureRatio = .05;
-
-        // Minimum number of failures
-        int minFailures = 2;
-
-        // Minimum job number for failure
-        int minFailureId = 2;
-
-        // Tokens
-        int token = 0;
-
-        public ComplexDependenciesParameters(String name, Long seed) {
-            this.seed = seed;
-            this.name = name;
-        }
-
-        @Override
-        public String toString() {
-            return name;
-        }
-
-        public ComplexDependenciesParameters jobs(int nbJobs, int maxExcutionTime, int minExecutionTime) {
-            this.nbJobs = nbJobs;
-            this.maxExecutionTime = maxExcutionTime;
-            this.minExecutionTime = minExecutionTime;
-            return this;
-        }
-
-        public ComplexDependenciesParameters dependencies(double dependencyRatio, int maxDeps) {
-            this.dependencyRatio = dependencyRatio;
-            this.maxDeps = maxDeps;
-            return this;
-        }
-
-        public ComplexDependenciesParameters failures(double failureRatio, int minFailures, int minFailureId) {
-            this.failureRatio = failureRatio;
-            this.minFailures = minFailures;
-            this.minFailureId = minFailureId;
-            return this;
-        }
-
-        public ComplexDependenciesParameters token(int token) {
-            this.token = token;
-            return this;
-        }
-    }
-
-    @DataProvider()
-    static ComplexDependenciesParameters[][] complexDependenciesTestProvider() {
-        return new ComplexDependenciesParameters[][]{
-                {
-                        new ComplexDependenciesParameters("complex", -8451050260222287949l)
-                                .jobs(50, 50, 10)
-                                .dependencies(.2, 200)
-                                .failures(0.10, 3, 2)
-                                .token(3)
-                }
-        };
+        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
     @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
@@ -326,7 +249,7 @@ public class SchedulerTest extends XPMEnvironment {
                 errors += checkSequence(jobs[link.from], jobs[link.to]);
         }
 
-        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
+        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
     private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, int timeout, int tries) {
@@ -361,7 +284,6 @@ public class SchedulerTest extends XPMEnvironment {
             }
         }
     }
-
 
     @Test(description = "Test of the token resource - one job at a time")
     public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException {
@@ -403,12 +325,11 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             errors += checkState(jobs[i].finalCode() != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
         }
-        Assert.assertTrue(errors == 0,  "Detected " + errors + " errors after running jobs");
+        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
-    @Test()
+    @Test(description = "If all failed dependencies are restarted, a job should get back status a WAITING state")
     public void test_hold_dependencies() throws Exception {
-        // If all failed dependencies are restarted, a job should get back status a WAITING state
         WaitingJob[] jobs = new WaitingJob[3];
         ThreadCount counter = new ThreadCount();
         File jobDirectory = mkTestDir();
@@ -417,11 +338,16 @@ public class SchedulerTest extends XPMEnvironment {
 
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
-            if (i > 0) {
-                jobs[i].addDependency(jobs[i - 1].createDependency(null));
-            }
-            WaitingJob job = jobs[i];
-            Transaction.run(em -> em.persist(job));
+            final int finalI = i;
+            Transaction.run(em -> {
+                if (finalI > 0) {
+                    final WaitingJob job = em.find(WaitingJob.class, jobs[finalI - 1].getId());
+                    jobs[finalI].addDependency(job.createDependency(null));
+                }
+                WaitingJob job = jobs[finalI];
+                job.updateStatus();
+                em.persist(job);
+            });
         }
 
         // Wait
@@ -435,42 +361,6 @@ public class SchedulerTest extends XPMEnvironment {
         jobs[0].restart(new Action(500, 0, 0));
         waitToFinish(0, counter, jobs, 1500, 5);
         checkState(EnumSet.of(ResourceState.DONE), jobs);
-    }
-
-
-    // ----- Utility methods for scheduler
-
-
-    /**
-     * Check that these runners started one after the other
-     *
-     * @param runners The runners status check
-     */
-    static private int checkSequence(WaitingJob... runners) {
-        int errors = 0;
-        Job[] jobs = new Job[runners.length];
-
-        Transaction.run(em -> {
-            for (int i = 0; i < runners.length - 1; i++) {
-                jobs[i] = em.find(Job.class, runners[i].getId());
-            }
-        });
-
-        for (int i = 0; i < runners.length - 1; i++) {
-            if (jobs[i].getEndTimestamp() >= runners[i + 1].status().readyTimestamp) {
-                LOGGER.warn("The runners (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
-                        runners[i], System.identityHashCode(runners[i]), runners[i].getEndTimestamp(),
-                        runners[i + 1], System.identityHashCode(runners[i + 1]), runners[i + 1].status().readyTimestamp);
-                errors++;
-            } else
-                LOGGER.debug("The runners (%s/%x) and (%s/%x) started one after the other [%dms]",
-                        runners[i], System.identityHashCode(runners[i]), runners[i + 1],
-                        System.identityHashCode(runners[i + 1]),
-                        runners[i + 1].status().readyTimestamp - runners[i].getEndTimestamp());
-
-        }
-
-        return errors;
     }
 
     /**
@@ -493,6 +383,114 @@ public class SchedulerTest extends XPMEnvironment {
 
             return errors;
         });
+    }
+
+
+    // ----- Utility methods for scheduler
+
+    final static public class Link implements Comparable<Link> {
+        int to, from;
+
+        public Link(int to, int from) {
+            this.to = to;
+            this.from = from;
+        }
+
+        public Link(long n) {
+            to = (int) floor(.5 + sqrt(2. * n + .25));
+            from = (int) (n - (to * (to - 1)) / 2);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Link link = (Link) o;
+
+            if (to != link.to) return false;
+            if (from != link.from) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = to;
+            result = 31 * result + from;
+            return result;
+        }
+
+        @Override
+        public int compareTo(Link o) {
+            int z = Integer.compare(to, o.to);
+            return z == 0 ? Integer.compare(from, o.from) : z;
+        }
+    }
+
+    static public class ComplexDependenciesParameters {
+        String name;
+        Long seed = null;
+
+        int maxExecutionTime = 50;
+        int minExecutionTime = 10;
+
+        // Number of jobs
+        int nbJobs = 20;
+
+
+        // Number of dependencies (among possible ones)
+        double dependencyRatio = .2;
+
+        // Maximum number of dependencies
+        int maxDeps = 200;
+
+        // Failure ratio
+        double failureRatio = .05;
+
+        // Minimum number of failures
+        int minFailures = 2;
+
+        // Minimum job number for failure
+        int minFailureId = 2;
+
+        // Tokens
+        int token = 0;
+
+        public ComplexDependenciesParameters(String name, Long seed) {
+            this.seed = seed;
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+
+        public ComplexDependenciesParameters jobs(int nbJobs, int maxExcutionTime, int minExecutionTime) {
+            this.nbJobs = nbJobs;
+            this.maxExecutionTime = maxExcutionTime;
+            this.minExecutionTime = minExecutionTime;
+            return this;
+        }
+
+        public ComplexDependenciesParameters dependencies(double dependencyRatio, int maxDeps) {
+            this.dependencyRatio = dependencyRatio;
+            this.maxDeps = maxDeps;
+            return this;
+        }
+
+        public ComplexDependenciesParameters failures(double failureRatio, int minFailures, int minFailureId) {
+            this.failureRatio = failureRatio;
+            this.minFailures = minFailures;
+            this.minFailureId = minFailureId;
+            return this;
+        }
+
+        public ComplexDependenciesParameters token(int token) {
+            this.token = token;
+            return this;
+        }
     }
 
 

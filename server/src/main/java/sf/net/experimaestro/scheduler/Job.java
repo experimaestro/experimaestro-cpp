@@ -305,8 +305,22 @@ public class Job extends Resource {
 
             case DEPENDENCY_CHANGED:
                 Transaction.run((em, t) -> {
+                    // Retrieve message
                     final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
-                    em.find(Job.class, this.getId()).dependencyChanged(depMessage, em, t);
+                    final Job job = em.find(Job.class, this.getId());
+
+                    // Notify job
+                    final ResourceState oldState = job.getState();
+                    job.dependencyChanged(depMessage, em, t);
+
+                    t.boundary();
+
+                    if (job.getState() != oldState) {
+                        // Notify dependents
+                        job.notifyDependencies();
+                    }
+                    LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]", depMessage.toString(),
+                            job.getState(), oldState, job);
                 });
 
                 break;
@@ -315,6 +329,7 @@ public class Job extends Resource {
                 LOGGER.error("Received unknown self-message: %s", message);
 
         }
+
 
     }
 

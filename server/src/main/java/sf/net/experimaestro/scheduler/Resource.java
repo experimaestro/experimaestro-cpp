@@ -373,16 +373,16 @@ public abstract class Resource implements PostCommitListener {
 
         // Notify dependencies in turn
         Collection<Dependency> dependencies = getDependentResources();
-        LOGGER.info("Notifying dependencies from R%s [%d]", this, dependencies.size());
+        LOGGER.info("Notifying dependencies from %s [%d]", this, dependencies.size());
 
         for (Dependency dep : dependencies) {
             if (dep.status == DependencyStatus.UNACTIVE) {
-                LOGGER.debug("We won't notify [R%s] status [R%s] since the dependency is unactive", this, dep.getTo());
+                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is unactive", this, dep.getTo());
 
             } else
                 try {
                     // when the dependency status is null, the dependency is not active anymore
-                    LOGGER.debug("Notifying dependency: [R%s] status [R%s]; current dep. state=%s", this, dep.getTo(), dep.status);
+                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", this, dep.getTo(), dep.status);
                     // Preserves the previous state
                     DependencyStatus beforeState = dep.status;
 
@@ -397,9 +397,6 @@ public abstract class Resource implements PostCommitListener {
                         // Update the dependency in database
                         // Notify the resource that a dependency has changed
                         depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-                        LOGGER.debug("After notification [%s -> %s], state is %s for [%s]",
-                                beforeState, dep.status, depResource.getState(), depResource);
-
                     } else {
                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }
