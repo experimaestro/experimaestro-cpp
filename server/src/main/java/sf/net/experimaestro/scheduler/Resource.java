@@ -135,6 +135,12 @@ public abstract class Resource implements PostCommitListener {
     private Long resourceID;
 
     /**
+     * Version for optimistic locks
+     */
+    @Version
+    long version;
+
+    /**
      * Comparator on the database ID
      */
     static public final Comparator<Resource> ID_COMPARATOR = new Comparator<Resource>() {
@@ -247,9 +253,11 @@ public abstract class Resource implements PostCommitListener {
     /**
      * Notifies the resource that something happened
      *
+     * @param t
+     * @param em
      * @param message The message
      */
-    public void notify(Message message) {
+    public void notify(Transaction t, EntityManager em, Message message) {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 resourceID = null;
@@ -366,18 +374,17 @@ public abstract class Resource implements PostCommitListener {
 
     /**
      * Notify the dependencies that a resource has changed
+     * @param t The current transaction
+     * @param em The current entity manager
      */
-    public void notifyDependencies() {
-        // Join between active states
-        // TODO: should limit status the dependencies of some resources
-
+    public void notifyDependencies(Transaction t, EntityManager em) {
         // Notify dependencies in turn
         Collection<Dependency> dependencies = getDependentResources();
         LOGGER.info("Notifying dependencies from %s [%d]", this, dependencies.size());
 
         for (Dependency dep : dependencies) {
             if (dep.status == DependencyStatus.UNACTIVE) {
-                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is unactive", this, dep.getTo());
+                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", this, dep.getTo());
 
             } else
                 try {
@@ -396,7 +403,7 @@ public abstract class Resource implements PostCommitListener {
                         // We ensure nobody else can modify the resource first
                         // Update the dependency in database
                         // Notify the resource that a dependency has changed
-                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+                        depResource.notify(t, em, new DependencyChangedMessage(dep, beforeState, dep.status));
                     } else {
                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }
@@ -464,11 +471,13 @@ public abstract class Resource implements PostCommitListener {
         }
 
         // Remove
-        Transaction.run(em -> em.remove(this));
+        Transaction.run((em, t) -> {
+            em.remove(this);
+            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
+            this.notify(t, em, message);
+            notify(t, em, message);
+        });
 
-        SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
-        this.notify(message);
-        notify(message);
         this.delete = true;
     }
 

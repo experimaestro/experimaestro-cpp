@@ -22,7 +22,7 @@ import bpiwowar.argparser.EnumValue;
 
 /**
  * Locking mode.
- * <p/>
+ * <p>
  * Defines how a resource can be accessed. For the moment,
  * <ul>
  * <li>Read-only</li>

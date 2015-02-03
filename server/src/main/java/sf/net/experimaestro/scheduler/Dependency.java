@@ -38,14 +38,40 @@ abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Id
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "fromId")
     Resource from;
 
     @Id
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "toId")
     Resource to;
+
+    /**
+     * The state of this dependency
+     */
+    DependencyStatus status;
+    /**
+     * The lock (or null if no lock taken)
+     */
+    @OneToOne(cascade = CascadeType.ALL, optional = true)
+    private Lock lock;
+
+    @Version()
+    @Column(name="optlock")
+    private long version;
+
+    protected Dependency() {
+    }
+
+    public Dependency(Resource from) {
+        this.from = from;
+    }
+
+    protected Dependency(Resource from, Resource to) {
+        this.from = from;
+        this.to = to;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -67,27 +93,6 @@ abstract public class Dependency implements Serializable {
         return result;
     }
 
-    /**
-     * The state of this dependency
-     */
-    DependencyStatus status;
-    /**
-     * The lock (or null if no lock taken)
-     */
-    @OneToOne(optional = true)
-    private Lock lock;
-
-    protected Dependency() {
-    }
-
-    public Dependency(Resource from) {
-        this.from = from;
-    }
-
-    protected Dependency(Resource from, Resource to) {
-        this.from = from;
-        this.to = to;
-    }
 
     public boolean hasLock() {
         return lock != null;
@@ -156,18 +161,30 @@ abstract public class Dependency implements Serializable {
         return true;
     }
 
-    final public Lock lock(String pid) throws LockException {
+    final public Lock lock(EntityManager em, String pid) throws LockException {
         LOGGER.debug("Locking dependency %s", this);
-        lock = _lock(pid);
-        return lock;
+        try {
+            em.refresh(getFrom(), LockModeType.OPTIMISTIC);
+            em.refresh(this, LockModeType.OPTIMISTIC);
+            lock = _lock(pid);
+
+            return lock;
+        } catch(Throwable e) {
+            throw new LockException(e);
+        }
     }
 
-    public void unactivate() {
+    final public void unlock(EntityManager em) {
         LOGGER.debug("Unlocking dependency %s", this);
+        em.refresh(getFrom(), LockModeType.OPTIMISTIC);
+        em.refresh(this, LockModeType.OPTIMISTIC);
         assert lock != null : "Lock of an active dependency is null";
         lock.close();
         lock = null;
         status = DependencyStatus.UNACTIVE;
     }
 
+    public long getVersion() {
+        return version;
+    }
 }

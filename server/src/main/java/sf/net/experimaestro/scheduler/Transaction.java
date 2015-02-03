@@ -162,7 +162,12 @@ public class Transaction implements AutoCloseable {
 
     public void boundary() {
         LOGGER.info("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
-        transaction.commit();
+        try {
+            transaction.commit();
+        } catch(RollbackException e) {
+            status = Status.ROLLBACK;
+            throw e;
+        }
         transaction.begin();
         status = Status.BEGIN;
     }

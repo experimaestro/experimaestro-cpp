@@ -18,29 +18,29 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 
 /**
  * This lock calls {@linkplain TokenResource#unlock()} when
  * released.
- * TODO: maybe ensure that we only unlock valid locks (using an ID)
  */
 @Entity
 @DiscriminatorValue("token")
 class TokenLock extends Lock {
-    private String pid;
-    private String resourceId;
-    transient private TokenResource resource;
+    @ManyToOne
+    private TokenResource resource;
 
     protected TokenLock() {
     }
 
     public TokenLock(TokenResource resource) {
         this.resource = resource;
-        resourceId = resource.getIdentifier();
     }
 
 
@@ -53,8 +53,7 @@ class TokenLock extends Lock {
     }
 
     @Override
-    public void changeOwnership(String pid) {
-        this.pid = pid;
+    public void changeOwnership(String pid) throws LockException {
+        // TODO: maybe ensure that we only unlock valid locks (using an ID)
     }
-
 }

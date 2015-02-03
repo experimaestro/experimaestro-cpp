@@ -48,6 +48,14 @@ public class FileLock extends Lock {
     protected FileLock() {
     }
 
+
+    @Override
+    public String toString() {
+        return "FileLock{" +
+                "lockFile=" + lockFile +
+                '}';
+    }
+
     /**
      * Lock a file. If the file exists, waits for it to be deleted.
      *
@@ -56,8 +64,6 @@ public class FileLock extends Lock {
      */
     public FileLock(Path lockPath, boolean wait) throws LockException {
         this.lockFile = lockPath;
-
-        // FIXME: this is not reliable... but we rely on it for the moment!
         try {
             while (true) {
                 try {

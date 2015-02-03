@@ -295,6 +295,7 @@ public class SchedulerTest extends XPMEnvironment {
         TokenResource token = new TokenResource(locator, 1);
         Transaction.run(em -> em.persist(token));
 
+        // Sets 5 jobs
         WaitingJob[] jobs = new WaitingJob[5];
         BitSet failure = new BitSet();
         failure.set(3);

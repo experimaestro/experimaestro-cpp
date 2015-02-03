@@ -54,13 +54,17 @@ public class TokenDependency extends Dependency {
     @Override
     protected Lock _lock(String pid) throws LockException {
         TokenResource token = (TokenResource) getFrom();
-        synchronized (token) {
-            if (token.getUsedTokens() >= token.getLimit())
-                throw new LockException("All the tokens are already taken");
-
-            token.increaseUsedTokens();
-            LOGGER.debug("Taking one token (%s/%s)", token.getUsedTokens(), token.getLimit());
-            return new TokenLock(token);
+        if (token.getUsedTokens() >= token.getLimit()) {
+            LOGGER.debug("All tokens are already taken (%s/%s) [token %s for %s]",
+                    token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
+            throw new LockException("All the tokens are already taken");
         }
+
+        token.increaseUsedTokens();
+        LOGGER.debug("Taking one token (%s/%s) [token %s for %s]",
+                token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
+        return new TokenLock(token);
     }
+
+
 }

@@ -19,10 +19,7 @@ package sf.net.experimaestro.connectors;
  */
 
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.EndOfJobMessage;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;
@@ -30,7 +27,6 @@ import java.io.*;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -137,7 +133,8 @@ public abstract class XPMProcess {
                     }
 
                     try {
-                        job.notify(new EndOfJobMessage(code, System.currentTimeMillis()));
+                        final int _code = code;
+                        Transaction.run((em, t) -> job.notify(t, em, new EndOfJobMessage(_code, System.currentTimeMillis())));
                     } catch (RuntimeException e) {
                         LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
                     }
@@ -280,7 +277,7 @@ public abstract class XPMProcess {
             LOGGER.debug("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getPath());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
-            job.notify(new EndOfJobMessage(exitValue(), time));
+            Transaction.run((em, t) -> job.notify(t, em, new EndOfJobMessage(exitValue(), time)));
             dispose();
         }
     }

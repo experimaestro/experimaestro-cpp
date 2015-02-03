@@ -19,11 +19,11 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.PostLoad;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -51,8 +51,19 @@ public class TokenResource extends Resource {
      */
     private int usedTokens;
 
+    /**
+     * Keeps track of the old state
+     */
+    transient boolean wasBlocking;
+
+
 
     protected TokenResource() {
+    }
+
+    @PostLoad
+    void postLoad() {
+        wasBlocking = isBlocking();
     }
 
     /**
@@ -65,6 +76,7 @@ public class TokenResource extends Resource {
         super(null, path);
         this.limit = limit;
         this.usedTokens = 0;
+        this.wasBlocking = isBlocking();
         setState(ResourceState.DONE);
     }
 
@@ -133,10 +145,25 @@ public class TokenResource extends Resource {
      */
     synchronized void unlock() {
         --usedTokens;
-        LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
+        LOGGER.debug("Releasing one token (%s/%s) [version %d]", usedTokens, limit, version);
     }
 
     public void increaseUsedTokens() {
         ++usedTokens;
+        LOGGER.debug("Getting one more token (%s/%s) [version %d]", usedTokens, limit, version);
+    }
+
+    @Override
+    public void stored() {
+        // Notify scheduler state has changed
+        if (wasBlocking ^ isBlocking()) {
+            LOGGER.debug("Token %s changed of state (%s to %s): notifying dependencies",
+                    this, wasBlocking, isBlocking());
+            Transaction.run((em, t) -> notifyDependencies(t, em));
+        }
+    }
+
+    private boolean isBlocking() {
+        return usedTokens >= limit;
     }
 }

@@ -18,7 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
@@ -27,7 +26,6 @@ import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -46,58 +44,45 @@ import static java.lang.String.format;
  */
 final public class Scheduler {
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * Used for atomic series of locks
-     */
-    public static final String LockSync = "I am just a placeholder";
-
     /**
      * Thread local instance (there should be only one scheduler per thread)
      */
     private static Scheduler INSTANCE;
-
     /**
      * Simple asynchronous executor service (used for asynchronous notification)
      */
     final ExecutorService executorService;
-
+    final Boolean readyJobSemaphore = true;
     /**
      * Scheduler
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
     /**
      * The entity manager factory
      */
     EntityManagerFactory entityManagerFactory;
-
     /**
      * Listeners
      */
     HashSet<Listener> listeners = new HashSet<>();
-
     /**
      * True when the application is stopping
      */
     boolean stopping = false;
-
     /**
      * List of runners we started
      */
-    ArrayList<Thread> runners = new ArrayList<>();
-
-    /**
-     * Number of running runners
-     */
-    private ThreadCount counter = new ThreadCount();
-
-    private Timer resourceCheckTimer;
+    JobRunner runner;
 
     /**
      * A query that retrieves jobs that are ready, ordered by decreasing priority
      */
     CriteriaQuery<Job> readyJobsQuery;
+    /**
+     * Number of running runners
+     */
+    private ThreadCount counter = new ThreadCount();
+    private Timer resourceCheckTimer;
 
     /**
      * Initialise the task manager
@@ -160,13 +145,10 @@ final public class Scheduler {
 
 
         // Start the thread that start the jobs
-        LOGGER.info("Starting %d job runner threads", nbThreads);
-        for (int i = 0; i < nbThreads; i++) {
-            counter.add();
-            final JobRunner runner = new JobRunner("JobRunner@" + i);
-            runners.add(runner);
-            runner.start();
-        }
+        LOGGER.info("Starting the job runner thread");
+        counter.add();
+        runner = new JobRunner("JobRunner");
+        runner.start();
 
         executorService = Executors.newFixedThreadPool(1);
 
@@ -176,6 +158,17 @@ final public class Scheduler {
 
     public static Scheduler get() {
         return INSTANCE;
+    }
+
+    public static void notifyRunners() {
+        final Boolean semaphore = get().readyJobSemaphore;
+        synchronized (semaphore) {
+            semaphore.notify();
+        }
+    }
+
+    public static EntityManager manager() {
+        return get().entityManagerFactory.createEntityManager();
     }
 
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
@@ -207,6 +200,10 @@ final public class Scheduler {
         return CloseableIterator.of(result.iterator());
     }
 
+    // ----
+    // ---- TaskReference related methods
+    // ----
+
     /**
      * Add a listener for the changes in the resource states
      *
@@ -237,10 +234,6 @@ final public class Scheduler {
         return stopping;
     }
 
-    // ----
-    // ---- TaskReference related methods
-    // ----
-
     /**
      * Shutdown the scheduler
      */
@@ -259,11 +252,9 @@ final public class Scheduler {
 
         // Stop the threads
         LOGGER.info("Stopping runner and scheduler");
-        for (Thread thread : runners) {
-            thread.interrupt();
-        }
+        runner.interrupt();
         counter.resume();
-        runners.clear();
+        runner = null;
 
         if (executorService != null) {
             executorService.shutdown();
@@ -276,9 +267,6 @@ final public class Scheduler {
         entityManagerFactory = null;
         LOGGER.info("Scheduler stopped");
     }
-
-    final Boolean readyJobSemaphore = true;
-
 
     /**
      * Iterator on resources
@@ -303,17 +291,6 @@ final public class Scheduler {
         };
     }
 
-    public static void notifyRunners() {
-        final Boolean semaphore = get().readyJobSemaphore;
-        synchronized (semaphore) {
-            semaphore.notify();
-        }
-    }
-
-    public static EntityManager manager() {
-        return get().entityManagerFactory.createEntityManager();
-    }
-
     /**
      * This task runner takes a new task each time
      */
@@ -329,16 +306,21 @@ final public class Scheduler {
         @Override
         public void run() {
             try {
+                // Flag stating whether we should wait for something
+                boolean doWait = true;
+
                 while (true) {
                     if (isStopping())
                         return;
 
                     // ... and wait if we were not lucky (or there were no tasks)
                     try {
-                        synchronized (readyJobSemaphore) {
-                            LOGGER.debug("Going status sleep [%s]...", name);
-                            readyJobSemaphore.wait();
-                            LOGGER.debug("Waking up [%s]...", name);
+                        if (doWait) {
+                            synchronized (readyJobSemaphore) {
+                                LOGGER.debug("Going to sleep [%s]...", name);
+                                readyJobSemaphore.wait();
+                                LOGGER.debug("Waking up [%s]...", name);
+                            }
                         }
                     } catch (InterruptedException e) {
                         // The server stopped
@@ -347,59 +329,81 @@ final public class Scheduler {
 
 
                     // Try the next task
+                    Job job = null;
+                    doWait = false;
                     try (Transaction transaction = Transaction.create()) {
                         LOGGER.debug("Searching for ready jobs");
 
                         final EntityManager em = transaction.em();
-                        TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
-                        query.setMaxResults(1);
-                        query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
-                        List<Job> list = query.getResultList();
-                        if (list.isEmpty()) {
-                            LOGGER.debug("No job status run");
-                            continue;
+
+                        // We avoid race conditions by starting each job in isolation
+                            TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
+                            query.setMaxResults(1);
+                            query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+                            List<Job> list = query.getResultList();
+                            if (list.isEmpty()) {
+                                LOGGER.debug("No job status run");
+                                continue;
+                            }
+
+                            // Ensures we are the only ones
+                            job = list.get(0);
+                            if (job == null) {
+                                // Nothing happened, so we do not wait for more
+                                continue;
+                            }
+
+                            doWait = true;
+                            try {
+                                em.refresh(job, LockModeType.PESSIMISTIC_WRITE);
+                            } catch (LockTimeoutException e) {
+                                LOGGER.debug("Could not lock job %s", job);
+                                Scheduler.notifyRunners();
+                                continue;
+                            }
+
+                            if (job.getState() != ResourceState.READY) {
+                                LOGGER.debug("Job state is not READY anymore", job);
+                                Scheduler.notifyRunners();
+                                continue;
+                            }
+
+                            LOGGER.debug("Next task status run: %s", job);
+
+                            // Set the state status LOCKING
+                            try {
+                                job.setState(ResourceState.LOCKING);
+                                transaction.boundary();
+                            } catch (RollbackException e) {
+                                LOGGER.debug("Could not JPA lock %s", job);
+                                continue;
+                            }
+
+                            LOGGER.debug("Job %s was JPA locked", job);
+
+                            this.setName(name + "/" + job);
+                            try {
+                                job.run(em);
+
+                                LOGGER.info("Job %s has started", job);
+                            } catch (LockException e) {
+                                // We could not lock the resources: update the job state
+                                LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                                job.setState(ResourceState.WAITING);
+                                job.updateStatus();
+                            } catch (Throwable t) {
+                                LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                job.setState(ResourceState.ERROR);
+                            }
+                            transaction.commit();
+                            LOGGER.info("Finished launching %s", job);
+                            this.setName(name);
+                    } catch (RollbackException e) {
+                        LOGGER.warn("Rollback exception for %s", job);
+                    } finally {
+                        if (job != null) {
+                            LOGGER.debug("Finished the processing of %s", job);
                         }
-
-                        // Ensures we are the only ones
-                        Job job = list.get(0);
-                        try {
-                            em.lock(job, LockModeType.PESSIMISTIC_WRITE);
-                        } catch(LockTimeoutException e) {
-                            LOGGER.debug("Could not lock job %s", job);
-                            Scheduler.notifyRunners();
-                            continue;
-                        }
-
-                        if (job.getState() != ResourceState.READY) {
-                            LOGGER.debug("Job state is not READY anymore", job);
-                            Scheduler.notifyRunners();
-                            continue;
-                        }
-
-
-                        LOGGER.debug("Next task status run: %s", job);
-
-                        // Set the state status LOCKING
-                        job.setState(ResourceState.LOCKING);
-                        transaction.boundary();
-
-                        this.setName(name + "/" + job);
-                        try {
-                            job.run(em);
-
-                            LOGGER.info("Job %s has started", job);
-                        } catch (LockException e) {
-                            // We could not lock the resources: update the job state
-                            LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                            job.setState(ResourceState.WAITING);
-                            job.updateStatus();
-                        } catch (Throwable t) {
-                            LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                            job.setState(ResourceState.ERROR);
-                        }
-                        transaction.commit();
-                        LOGGER.info("Finished launching %s", job);
-                        this.setName(name);
                     }
                 }
             } finally {
