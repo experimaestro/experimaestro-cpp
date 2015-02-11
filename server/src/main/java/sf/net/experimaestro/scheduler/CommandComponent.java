@@ -59,7 +59,7 @@ public interface CommandComponent {
     default Stream<Dependency> dependencies() { return Stream.of(); }
 
     /** Prepare the command to be written */
-    default void prepare(CommandEnvironment environment) throws FileSystemException {}
+    default void prepare(CommandContext environment) throws IOException {}
 
     default void forEachCommand(Consumer<? super Command> consumer) {}
 }

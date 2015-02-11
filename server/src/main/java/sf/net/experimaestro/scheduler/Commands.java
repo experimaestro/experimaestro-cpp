@@ -152,7 +152,7 @@ public class Commands implements Iterable<Command> {
         commands.add(command);
     }
 
-    public void prepare(CommandEnvironment env) {
+    public void prepare(CommandContext env) {
         commands.forEach(c -> c.prepare(env));
     }
 

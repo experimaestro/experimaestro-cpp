@@ -18,7 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.vfs2.FileObject;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
@@ -29,6 +28,8 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Tests on commands
@@ -50,7 +51,7 @@ public class CommandTest  {
 
             final LocalhostConnector connector = LocalhostConnector.getInstance();
 
-            final String dataPath = connector.resolve(dataFile.getAbsolutePath());
+            final Path dataPath = connector.resolve(dataFile.getAbsolutePath());
 
 
             final Command subCommand = new Command();
@@ -61,18 +62,18 @@ public class CommandTest  {
             commands.add(command);
 
 
-            final String locatorPath = new File(directory.getFile(), "task").getAbsolutePath();
-            ResourceLocator locator = new ResourceLocator(connector, locatorPath);
-            final FileObject runFile = locator.resolve(connector, Resource.RUN_EXTENSION);
+            final Path locatorPath = new File(directory.getFile(), "task").toPath();
+//            ResourceLocator locator = new ResourceLocator(connector, locatorPath);
+            final Path runFile = Resource.RUN_EXTENSION.transform(locatorPath);
 
-            XPMScriptProcessBuilder builder = connector.scriptProcessBuilder(connector, runFile);
-            builder.directory(locator.getFile().getParent());
+            XPMScriptProcessBuilder builder = connector.scriptProcessBuilder(runFile);
+            builder.directory(directory.getFile().toPath());
 
             // Add commands
             builder.commands(commands);
 
             builder.redirectInput(AbstractCommandBuilder.Redirect.INHERIT);
-            final FileObject out = connector.resolveFile(new File(directory.getFile(), "output").getAbsolutePath());
+            final Path out = connector.resolveFile(new File(directory.getFile(), "output").getAbsolutePath());
             builder.redirectOutput(AbstractCommandBuilder.Redirect.to(out));
             builder.redirectError(AbstractCommandBuilder.Redirect.INHERIT);
 
@@ -82,7 +83,7 @@ public class CommandTest  {
 
             // Checks the output
 
-            try(BufferedReader in = new BufferedReader(new InputStreamReader(out.getContent().getInputStream()))) {
+            try(BufferedReader in = Files.newBufferedReader(out)) {
                 Assert.assertEquals(in.readLine(), "hello\thello");
                 Assert.assertEquals(in.readLine(), "world\tworld");
             }

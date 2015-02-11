@@ -31,6 +31,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
+import javax.tools.FileObject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -40,6 +41,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -73,7 +75,7 @@ public class Command implements CommandComponent, Serializable {
     /**
      * Files where the output stream should be copied
      */
-    ArrayList<FileObject> outputRedirects = new ArrayList<>();
+    ArrayList<java.nio.file.Path> outputRedirects = new ArrayList<>();
 
     /**
      * The error stream redirect.
@@ -85,7 +87,7 @@ public class Command implements CommandComponent, Serializable {
     /**
      * Files where the error stream should be copied
      */
-    ArrayList<FileObject> errorRedirects = new ArrayList<>();
+    ArrayList<java.nio.file.Path> errorRedirects = new ArrayList<>();
 
     @Expose
     public Command() {
@@ -110,7 +112,7 @@ public class Command implements CommandComponent, Serializable {
     }
 
     @Override
-    public void prepare(CommandEnvironment environment) {
+    public void prepare(CommandContext environment) {
         list.forEach(Streams.propagate(c -> c.prepare(environment)));
     }
 
@@ -194,18 +196,17 @@ public class Command implements CommandComponent, Serializable {
         return this.list;
     }
 
-    public ArrayList<FileObject> getOutputRedirects() {
+    public ArrayList<java.nio.file.Path> getOutputRedirects() {
         return outputRedirects;
     }
 
-    public ArrayList<FileObject> getErrorRedirects() {
+    public ArrayList<java.nio.file.Path> getErrorRedirects() {
         return errorRedirects;
     }
 
     /**
      * Used when the argument should be replaced by a pipe
      */
-    @Persistent
     public static class CommandOutput implements CommandComponent, Serializable {
         /**
          * The output
@@ -217,8 +218,8 @@ public class Command implements CommandComponent, Serializable {
         }
 
         @Override
-        public void prepare(CommandContext environment) throws FileSystemException {
-            final FileObject file = environment.getUniqueFile("command", ".pipe");
+        public void prepare(CommandContext environment) throws IOException {
+            final java.nio.file.Path file = environment.getUniqueFile("command", ".pipe");
             final Object o = environment.setData(this, file);
             if (o != null) throw new RuntimeException("CommandOutput data should be null");
             command.outputRedirects.add(file);
@@ -226,8 +227,8 @@ public class Command implements CommandComponent, Serializable {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws FileSystemException {
-            return environment.resolve((FileObject) environment.getData(this));
+        public java.lang.String toString(CommandContext environment) throws FileSystemException {
+            return environment.resolve((java.nio.file.Path) environment.getData(this));
         }
 
         @Override
@@ -386,7 +387,7 @@ public class Command implements CommandComponent, Serializable {
         }
 
         @Override
-        public void prepare(CommandEnvironment environment) {
+        public void prepare(CommandContext environment) {
             commands.prepare(environment);
         }
     }

@@ -99,7 +99,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
-        try (CommandContext env = new CommandContext.FolderEnvironment(connector, basepath, baseName)) {
+        try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
             // Prepare the commands
             commands().prepare(env);
 
@@ -141,7 +141,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             commands().forEachCommand(Streams.propagate(c -> {
-                for (FileObject file : Iterables.concat(c.getOutputRedirects(), c.getErrorRedirects())) {
+                for (Path file : Iterables.concat(c.getOutputRedirects(), c.getErrorRedirects())) {
                     writer.format("  rm -f %s;%n", env.resolve(file));
                 }
             }));
@@ -233,15 +233,15 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
+    private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
         final ArrayList<Command> list = commands.reorder();
 
         int detached = 0;
         for (Command command : list) {
             // Write files
-            final ArrayList<FileObject> outputRedirects = command.getOutputRedirects();
-            final ArrayList<FileObject> errorRedirects = command.getErrorRedirects();
-            for (FileObject file : Iterables.concat(outputRedirects, errorRedirects)) {
+            final ArrayList<Path> outputRedirects = command.getOutputRedirects();
+            final ArrayList<Path> errorRedirects = command.getErrorRedirects();
+            for (Path file : Iterables.concat(outputRedirects, errorRedirects)) {
                 writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
@@ -278,10 +278,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void printRedirections(CommandEnvironment env, int stream, PrintWriter writer, Redirect outputRedirect, List<FileObject> outputRedirects) throws FileSystemException {
+    private void printRedirections(CommandContext env, int stream, PrintWriter writer, Redirect outputRedirect, List<Path> outputRedirects) throws FileSystemException {
         if (!outputRedirects.isEmpty()) {
             writer.format(" %d> >(tee", stream);
-            for (FileObject file : outputRedirects) {
+            for (Path file : outputRedirects) {
                 writer.format(" \"%s\"", protect(env.resolve(file), QUOTED_SPECIAL));
             }
             writeRedirection(writer, outputRedirect, stream);

@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Closeable;
@@ -27,6 +28,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 
 import static java.lang.String.format;
 
@@ -41,7 +43,25 @@ public abstract class CommandContext implements Closeable {
      */
     protected final SingleHostConnector connector;
 
+    /**
+     * The auxiliary files created during the command launch
+     */
     ArrayList<Path> files = new ArrayList<>();
+
+    /**
+     * Auxiliary data stored during launch
+     */
+    IdentityHashMap<Object, Object> data = new IdentityHashMap<>();
+
+    /**
+     * Commands that should be run in detached mode
+     */
+    IdentityHashSet<Command> detached = new IdentityHashSet<>();
+
+    /**
+     * Count for unique file names
+     */
+    private int uniqueCount;
 
 
     public CommandContext(SingleHostConnector connector) {
@@ -55,6 +75,39 @@ public abstract class CommandContext implements Closeable {
     abstract Path getAuxiliaryFile(String prefix, String suffix) throws IOException;
 
     abstract public String getWorkingDirectory() throws FileSystemException;
+
+
+
+    public Object getData(Object key) {
+        return data.get(key);
+    }
+
+    public Object setData(Object key, Object value) {
+        return data.put(key, value);
+    }
+
+
+    /**
+     * Get a unique file name using a counter
+     * @param prefix The prefix
+     * @param suffix The suffix
+     * @return The file object
+     * @throws FileSystemException If a problem occurs while creating the file
+     */
+    Path getUniqueFile(String prefix, String suffix) throws IOException {
+        return getAuxiliaryFile(format("%s-%04d", prefix, uniqueCount++), suffix);
+    }
+
+
+    public boolean detached(Command command) {
+        return detached.contains(command);
+    }
+
+    public void detached(Command command, boolean value) {
+        if (value) detached.add(command);
+        else detached.remove(command);
+    }
+
 
     /**
      * A temporary environment: all the auxiliary files will be deleted

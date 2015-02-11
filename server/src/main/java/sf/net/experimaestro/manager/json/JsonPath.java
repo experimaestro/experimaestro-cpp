@@ -68,7 +68,7 @@ public class JsonPath implements Json {
 
     @Override
     public String toString() {
-        return format("FileObject(%s)", path.toString());
+        return format("Path(%s)", path.toString());
     }
 
     @Override
