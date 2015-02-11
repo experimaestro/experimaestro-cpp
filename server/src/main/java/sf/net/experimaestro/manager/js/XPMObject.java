@@ -18,7 +18,6 @@
 
 package sf.net.experimaestro.manager.js;
 
-import bpiwowar.argparser.utils.Introspection;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -36,7 +35,6 @@ import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
@@ -50,8 +48,6 @@ import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -628,7 +624,7 @@ public class XPMObject {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {
-                    return ((Command) argument).prepare(commandEnv);
+                    return ((Command) argument).toString(commandEnv);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

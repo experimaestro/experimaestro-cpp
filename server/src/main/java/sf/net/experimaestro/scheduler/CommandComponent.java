@@ -1,6 +1,9 @@
 package sf.net.experimaestro.scheduler;
 
+import org.apache.commons.vfs2.FileSystemException;
+
 import java.io.IOException;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -24,12 +27,12 @@ public interface CommandComponent {
     /**
      * Returns the path to the file of this component
      *
-     * @param environment Binds identifiers to file objects
+     * @param environment The command environment
      * @return A string representing the path to the file for this component, or null if this
      * command component has no direct string representation
      * @throws org.apache.commons.vfs2.FileSystemException
      */
-    default String prepare(CommandEnvironment environment) throws IOException {
+    default String toString(CommandEnvironment environment) throws IOException {
         return null;
     }
 
@@ -37,4 +40,8 @@ public interface CommandComponent {
         return Stream.of(this);
     }
 
+    /** Prepare the command to be written */
+    default void prepare(CommandEnvironment environment) throws FileSystemException {}
+
+    default void forEachCommand(Consumer<? super Command> consumer) {}
 }

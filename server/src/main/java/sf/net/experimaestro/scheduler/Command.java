@@ -24,11 +24,12 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.utils.Streams;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,7 +50,41 @@ import java.util.stream.Stream;
 public class Command implements CommandComponent {
     public final static Logger LOGGER = Logger.getLogger();
 
+    /**
+     * The list of components in this command
+     */
     ArrayList<CommandComponent> list;
+
+    /**
+     * The input redirect
+     * <p>
+     * Null indicates that the input should be the null device
+     */
+    AbstractCommandBuilder.Redirect inputRedirect = null;
+
+    /**
+     * The output stream redirect.
+     * <p>
+     * Null indicates that the output should be discarded
+     */
+    AbstractCommandBuilder.Redirect outputRedirect = null;
+
+    /**
+     * Files where the output stream should be copied
+     */
+    ArrayList<FileObject> outputRedirects = new ArrayList<>();
+
+    /**
+     * The error stream redirect.
+     * <p>
+     * Null indicates that the output should be discarded
+     */
+    AbstractCommandBuilder.Redirect errorRedirect = null;
+
+    /**
+     * Files where the error stream should be copied
+     */
+    ArrayList<FileObject> errorRedirects = new ArrayList<>();
 
     @Expose
     public Command() {
@@ -58,6 +93,24 @@ public class Command implements CommandComponent {
 
     public Command(Collection<? extends CommandComponent> c) {
         list = new ArrayList<>(c);
+    }
+
+    @Expose
+    CommandOutput output() {
+        return new CommandOutput(this);
+    }
+
+    public AbstractCommandBuilder.Redirect getOutputRedirect() {
+        return outputRedirect;
+    }
+
+    public AbstractCommandBuilder.Redirect getErrorRedirect() {
+        return errorRedirect;
+    }
+
+    @Override
+    public void prepare(CommandEnvironment environment) {
+        list.forEach(Streams.propagate(c -> c.prepare(environment)));
     }
 
     /**
@@ -119,7 +172,10 @@ public class Command implements CommandComponent {
     @Expose
     public void add(Object... arguments) {
         Arrays.asList(arguments).forEach(t -> {
-            if (t instanceof CommandComponent) {
+            if (t instanceof CommandOutput) {
+                // Creates a new command output to ensure we have a copy of the stream
+                list.add(new CommandOutput(((CommandOutput) t).getCommand()));
+            } else if (t instanceof CommandComponent) {
                 list.add((CommandComponent) t);
             } else if (t instanceof FileObject) {
                 list.add(new Path((FileObject) t));
@@ -129,10 +185,10 @@ public class Command implements CommandComponent {
         });
     }
 
-    public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+    public java.lang.String toString(CommandEnvironment environment) throws IOException {
         StringBuilder sb = new StringBuilder();
         for (CommandComponent component : list)
-            sb.append(component.prepare(environment));
+            sb.append(component.toString(environment));
         return sb.toString();
     }
 
@@ -140,6 +196,17 @@ public class Command implements CommandComponent {
         return this.list;
     }
 
+    public ArrayList<FileObject> getOutputRedirects() {
+        return outputRedirects;
+    }
+
+    public ArrayList<FileObject> getErrorRedirects() {
+        return errorRedirects;
+    }
+
+    /**
+     * Used when the argument should be replaced by a pipe
+     */
     @Persistent
     public static class CommandOutput implements CommandComponent {
         /**
@@ -147,19 +214,32 @@ public class Command implements CommandComponent {
          */
         Command command;
 
-        /**
-         * The object (or null if standard output)
-         */
-        String path;
-
-        public CommandOutput(Command command, String path) {
+        public CommandOutput(Command command) {
             this.command = command;
-            this.path = path;
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws FileSystemException {
-            throw new NotImplementedException();
+        public void prepare(CommandEnvironment environment) throws FileSystemException {
+            final FileObject file = environment.getUniqueFile("command", ".pipe");
+            final Object o = environment.setData(this, file);
+            if (o != null) throw new RuntimeException("CommandOutput data should be null");
+            command.outputRedirects.add(file);
+            environment.detached(command, true);
+        }
+
+        @Override
+        public java.lang.String toString(CommandEnvironment environment) throws FileSystemException {
+            return environment.resolve((FileObject) environment.getData(this));
+        }
+
+        @Override
+        public void forEachCommand(Consumer<? super Command> consumer) {
+            consumer.accept(command);
+            command.forEachCommand(consumer);
+        }
+
+        public Command getCommand() {
+            return command;
         }
     }
 
@@ -175,7 +255,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) {
+        public java.lang.String toString(CommandEnvironment environment) {
             return string;
         }
 
@@ -204,7 +284,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws FileSystemException {
+        public java.lang.String toString(CommandEnvironment environment) throws FileSystemException {
             FileObject object = Scheduler.getVFSManager().resolveFile(filename);
             return environment.resolve(object);
         }
@@ -230,7 +310,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandEnvironment environment) throws IOException {
             FileObject file = environment.getAuxiliaryFile(key, ".input");
             OutputStream out = file.getContent().getOutputStream();
             out.write(content);
@@ -254,7 +334,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandEnvironment environment) throws IOException {
             return environment.getWorkingDirectory();
         }
     }
@@ -305,8 +385,21 @@ public class Command implements CommandComponent {
             commands.forEachDependency(consumer);
         }
 
+        @Override
+        public void forEachCommand(Consumer<? super Command> consumer) {
+            for (Command command : commands) {
+                consumer.accept(command);
+                command.forEachCommand(consumer);
+            }
+        }
+
         public Commands commands() {
             return commands;
+        }
+
+        @Override
+        public void prepare(CommandEnvironment environment) {
+            commands.prepare(environment);
         }
     }
 
@@ -325,7 +418,7 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public java.lang.String prepare(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandEnvironment environment) throws IOException {
             FileObject file = environment.getAuxiliaryFile(key, ".json");
             try (OutputStream out = file.getContent().getOutputStream();
                  OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
