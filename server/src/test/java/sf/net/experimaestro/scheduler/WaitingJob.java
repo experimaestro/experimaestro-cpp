@@ -25,6 +25,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.PrimaryKeyJoinColumn;
 import java.io.File;
 import java.util.ArrayList;
@@ -87,7 +88,7 @@ public class WaitingJob extends Job {
 
         final ResourceState state = getState();
 
-        LOGGER.info("Stored with state %s", state);
+        LOGGER.info("Stored %s with state %s", this, state);
 
         switch (state) {
             case READY:
@@ -110,14 +111,14 @@ public class WaitingJob extends Job {
     }
 
     public void restart(WaitingJobRunner.Action action) {
-        Transaction.run(em -> {
-            final WaitingJob job = em.find(WaitingJob.class, getId());
-            job.status().currentIndex = 0;
-            job.actions.clear();
-            job.actions.add(action);
-            setState(WAITING);
-        });
+        Transaction.run(em -> em.find(WaitingJob.class, getId()).restart(action, em));
+    }
 
+    private void restart(WaitingJobRunner.Action action, EntityManager em) {
+        status().currentIndex = 0;
+        actions.clear();
+        actions.add(action);
+        setState(WAITING);
     }
 
     public static class Status {

@@ -353,15 +353,17 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Wait
         LOGGER.info("Waiting for job 0 status fail");
+        int errors = 0;
         waitToFinish(2, counter, jobs, 1500, 5);
-        checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
-        checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
+        errors +=checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
+        errors +=checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
 
         // We wait until the two jobs are stopped
         LOGGER.info("Restarting job 0 with happy ending");
         jobs[0].restart(new Action(500, 0, 0));
         waitToFinish(0, counter, jobs, 1500, 5);
-        checkState(EnumSet.of(ResourceState.DONE), jobs);
+        errors += checkState(EnumSet.of(ResourceState.DONE), jobs);
+        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
     /**
