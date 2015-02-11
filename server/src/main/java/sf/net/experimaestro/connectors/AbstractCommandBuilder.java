@@ -124,6 +124,11 @@ public abstract class AbstractCommandBuilder {
      */
     static public class Redirect {
         public static final Redirect PIPE = new Redirect(Type.PIPE, null);
+        /**
+         * Indicates that subprocess I/O source or destination will be the
+         * same as those of the current process.  This is the normal
+         * behavior of most operating system command interpreters (shells).
+         */
         public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
         private Path file;
         private String string;

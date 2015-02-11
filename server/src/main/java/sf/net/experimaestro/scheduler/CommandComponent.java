@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import java.io.IOException;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -42,12 +43,12 @@ public interface CommandComponent {
     /**
      * Returns the path status the file of this component
      *
-     * @param environment Binds identifiers status file objects
+     * @param environment The command environment
      * @return A string representing the path status the file for this component, or null if this
      * command component has no direct string representation
      * @throws java.nio.file.FileSystemException
      */
-    default String prepare(CommandContext environment) throws IOException {
+    default String toString(CommandContext environment) throws IOException {
         return null;
     }
 
@@ -56,4 +57,9 @@ public interface CommandComponent {
     }
 
     default Stream<Dependency> dependencies() { return Stream.of(); }
+
+    /** Prepare the command to be written */
+    default void prepare(CommandEnvironment environment) throws FileSystemException {}
+
+    default void forEachCommand(Consumer<? super Command> consumer) {}
 }

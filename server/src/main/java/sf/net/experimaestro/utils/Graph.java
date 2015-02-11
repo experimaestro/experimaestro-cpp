@@ -38,7 +38,7 @@ public class Graph {
      * @return A sorted list
      */
     static public <Node> ArrayList<Node> topologicalSort(
-            List<Node> graph,
+            Collection<Node> graph,
             Map<Node, ? extends Set<Node>> forward_edges,
             Map<Node, ? extends Set<Node>> backwards_edges) {
         ArrayList<Node> sorted_nodes = new ArrayList<>();

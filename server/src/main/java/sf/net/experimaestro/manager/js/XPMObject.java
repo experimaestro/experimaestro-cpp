@@ -639,7 +639,7 @@ public class XPMObject {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {
-                    return ((Command) argument).prepare(commandEnv);
+                    return ((Command) argument).toString(commandEnv);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

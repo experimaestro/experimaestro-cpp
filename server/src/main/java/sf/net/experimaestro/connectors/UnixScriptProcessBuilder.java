@@ -18,11 +18,16 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.Command.CommandOutput;
 import sf.net.experimaestro.scheduler.CommandComponent;
 import sf.net.experimaestro.scheduler.CommandContext;
 import sf.net.experimaestro.scheduler.Commands;
+import sf.net.experimaestro.utils.Streams;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -32,6 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
@@ -93,7 +99,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
-        try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
+        try (CommandContext env = new CommandContext.FolderEnvironment(connector, basepath, baseName)) {
+            // Prepare the commands
+            commands().prepare(env);
+
             // First generate the run file
             PrintWriter writer = new PrintWriter(Files.newOutputStream(runFile));
 
@@ -116,16 +125,29 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
             }
 
-            writer.format("%n#Checks that the locks are set%n");
-            for (String lockFile : lockFiles) {
-                writer.format("test -f %s || exit 017%n", lockFile);
+
+            if (!lockFiles.isEmpty()) {
+                writer.format("%n# Checks that the locks are set%n");
+                for (String lockFile : lockFiles) {
+                    writer.format("test -f %s || exit 017%n", lockFile);
+                }
             }
 
-            writer.format("%n%n# Set traps to remove locks when exiting%n%n");
-            writer.format("trap cleanup EXIT%n");
+            writer.format("%n%n# Set traps to cleanup (remove locks and temporary files, kill remaining processes) when exiting%n%n");
+            writer.format("trap cleanup EXIT SIGINT SIGTERM%n");
             writer.format("cleanup() {%n");
-            for (String lockFile : lockFiles)
-                writer.format("  rm -f %s;%n", lockFile);
+            for (String file : lockFiles) {
+                writer.format("  rm -f %s;%n", file);
+            }
+
+            commands().forEachCommand(Streams.propagate(c -> {
+                for (FileObject file : Iterables.concat(c.getOutputRedirects(), c.getErrorRedirects())) {
+                    writer.format("  rm -f %s;%n", env.resolve(file));
+                }
+            }));
+
+            // Kills remaining processes
+            writer.println("  jobs -pr | xargs kill");
             writer.format("}%n%n");
 
 
@@ -159,32 +181,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             writer.print(") ");
 
-            switch (output.type()) {
-                case INHERIT:
-                    break;
-                case APPEND:
-                    writer.format(" >> %s", protect(connector.resolve(output.file()), QUOTED_SPECIAL));
-                    break;
-                case WRITE:
-                    writer.format(" > %s", protect(connector.resolve(output.file()), QUOTED_SPECIAL));
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported output redirection type: " + input.type());
+            writeRedirection(writer, output, 1);
+            writeRedirection(writer, error, 2);
 
-            }
-
-            switch (error.type()) {
-                case INHERIT:
-                    break;
-                case APPEND:
-                    writer.format(" 2>> %s", protect(connector.resolve(error.file()), QUOTED_SPECIAL));
-                    break;
-                case WRITE:
-                    writer.format(" 2> %s", protect(connector.resolve(error.file()), QUOTED_SPECIAL));
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported error redirection type: " + input.type());
-            }
 
             writer.println();
             writer.print(exitScript);
@@ -214,10 +213,38 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     }
 
-    private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
-        commands.reorder();
+    private void writeRedirection(PrintWriter writer, Redirect redirect, int stream) throws FileSystemException {
+        if (redirect == null) {
+            writer.format(" %d> /dev/null", stream);
+        } else {
+            switch (redirect.type()) {
+                case INHERIT:
+                    break;
+                case APPEND:
+                    writer.format(" %d>> %s", stream, protect(connector.resolve(redirect.file()), QUOTED_SPECIAL));
+                    break;
+                case WRITE:
+                    writer.format(" %d> %s", stream, protect(connector.resolve(redirect.file()), QUOTED_SPECIAL));
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported output redirection type: " + input.type());
 
-        for (Command command : commands) {
+            }
+        }
+    }
+
+    private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
+        final ArrayList<Command> list = commands.reorder();
+
+        int detached = 0;
+        for (Command command : list) {
+            // Write files
+            final ArrayList<FileObject> outputRedirects = command.getOutputRedirects();
+            final ArrayList<FileObject> errorRedirects = command.getErrorRedirects();
+            for (FileObject file : Iterables.concat(outputRedirects, errorRedirects)) {
+                writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
+            }
+
             for (CommandComponent argument : command.list()) {
                 writer.print(' ');
                 if (argument instanceof Command.Pipe) {
@@ -228,11 +255,40 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                     writer.println();
                     writer.print(" )");
                 } else {
-                    writer.print(protect(argument.prepare(env), SHELL_SPECIAL));
+                    writer.print(protect(argument.toString(env), SHELL_SPECIAL));
                 }
             }
-            // Stop if an error occured
-            writer.println(" || exit $?");
+
+            printRedirections(env, 1, writer, command.getOutputRedirect(), outputRedirects);
+            printRedirections(env, 2, writer, command.getErrorRedirect(), errorRedirects);
+
+            if (env.detached(command)) {
+                // Just keep a pointer
+                writer.format(" & CHILD_%d=$!%n", detached);
+                detached++;
+            } else {
+                // Stop if an error occurred
+                writer.println(" || exit $?");
+            }
+        }
+
+        // Monitors detached jobs
+        for (int i = 0; i < detached; i++) {
+            writer.format("wait $CHILD_%d || exit $?%n", i);
+        }
+    }
+
+    private void printRedirections(CommandEnvironment env, int stream, PrintWriter writer, Redirect outputRedirect, List<FileObject> outputRedirects) throws FileSystemException {
+        if (!outputRedirects.isEmpty()) {
+            writer.format(" %d> >(tee", stream);
+            for (FileObject file : outputRedirects) {
+                writer.format(" \"%s\"", protect(env.resolve(file), QUOTED_SPECIAL));
+            }
+            writeRedirection(writer, outputRedirect, stream);
+            writer.write(")");
+        } else {
+            // Finally, write the main redirection
+            writeRedirection(writer, outputRedirect, stream);
         }
     }
 
