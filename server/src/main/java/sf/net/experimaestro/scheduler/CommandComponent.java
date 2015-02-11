@@ -43,5 +43,5 @@ public interface CommandComponent {
     /** Prepare the command to be written */
     default void prepare(CommandEnvironment environment) throws FileSystemException {}
 
-    default void forEachCommand(Consumer<? super Command> consumer) {}
+    default void forEachCommand(Consumer<? super AbstractCommand> consumer) {}
 }

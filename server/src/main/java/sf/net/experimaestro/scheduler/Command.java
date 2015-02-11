@@ -24,7 +24,6 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
-import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
@@ -47,44 +46,13 @@ import java.util.stream.Stream;
  */
 @Persistent
 @Exposed
-public class Command implements CommandComponent {
+public class Command extends AbstractCommand implements CommandComponent {
     public final static Logger LOGGER = Logger.getLogger();
 
     /**
      * The list of components in this command
      */
     ArrayList<CommandComponent> list;
-
-    /**
-     * The input redirect
-     * <p>
-     * Null indicates that the input should be the null device
-     */
-    AbstractCommandBuilder.Redirect inputRedirect = null;
-
-    /**
-     * The output stream redirect.
-     * <p>
-     * Null indicates that the output should be discarded
-     */
-    AbstractCommandBuilder.Redirect outputRedirect = null;
-
-    /**
-     * Files where the output stream should be copied
-     */
-    ArrayList<FileObject> outputRedirects = new ArrayList<>();
-
-    /**
-     * The error stream redirect.
-     * <p>
-     * Null indicates that the output should be discarded
-     */
-    AbstractCommandBuilder.Redirect errorRedirect = null;
-
-    /**
-     * Files where the error stream should be copied
-     */
-    ArrayList<FileObject> errorRedirects = new ArrayList<>();
 
     @Expose
     public Command() {
@@ -93,19 +61,6 @@ public class Command implements CommandComponent {
 
     public Command(Collection<? extends CommandComponent> c) {
         list = new ArrayList<>(c);
-    }
-
-    @Expose
-    CommandOutput output() {
-        return new CommandOutput(this);
-    }
-
-    public AbstractCommandBuilder.Redirect getOutputRedirect() {
-        return outputRedirect;
-    }
-
-    public AbstractCommandBuilder.Redirect getErrorRedirect() {
-        return errorRedirect;
     }
 
     @Override
@@ -128,6 +83,13 @@ public class Command implements CommandComponent {
             if (c instanceof SubCommand) {
                 ((SubCommand) c).forEachDependency(consumer);
             }
+        }
+    }
+
+    @Override
+    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
+        for(CommandComponent component: list) {
+            component.forEachCommand(consumer);
         }
     }
 
@@ -196,14 +158,6 @@ public class Command implements CommandComponent {
         return this.list;
     }
 
-    public ArrayList<FileObject> getOutputRedirects() {
-        return outputRedirects;
-    }
-
-    public ArrayList<FileObject> getErrorRedirects() {
-        return errorRedirects;
-    }
-
     /**
      * Used when the argument should be replaced by a pipe
      */
@@ -212,11 +166,15 @@ public class Command implements CommandComponent {
         /**
          * The output
          */
-        Command command;
+        AbstractCommand command;
 
-        public CommandOutput(Command command) {
+        protected CommandOutput() {}
+
+        public CommandOutput(AbstractCommand command) {
             this.command = command;
         }
+
+
 
         @Override
         public void prepare(CommandEnvironment environment) throws FileSystemException {
@@ -233,12 +191,12 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public void forEachCommand(Consumer<? super Command> consumer) {
+        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
             consumer.accept(command);
             command.forEachCommand(consumer);
         }
 
-        public Command getCommand() {
+        public AbstractCommand getCommand() {
             return command;
         }
     }
@@ -378,7 +336,7 @@ public class Command implements CommandComponent {
 
         @Override
         public Stream<? extends CommandComponent> allComponents() {
-            return commands.commands.parallelStream().flatMap(CommandComponent::allComponents);
+            return commands.commands.parallelStream().flatMap(AbstractCommand::allComponents);
         }
 
         public void forEachDependency(Consumer<Dependency> consumer) {
@@ -386,8 +344,8 @@ public class Command implements CommandComponent {
         }
 
         @Override
-        public void forEachCommand(Consumer<? super Command> consumer) {
-            for (Command command : commands) {
+        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
+            for (AbstractCommand command : commands) {
                 consumer.accept(command);
                 command.forEachCommand(consumer);
             }

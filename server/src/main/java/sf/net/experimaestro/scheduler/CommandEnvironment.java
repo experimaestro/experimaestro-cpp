@@ -45,7 +45,7 @@ public abstract class CommandEnvironment implements Closeable {
     /**
      * Commands that should be run in detached mode
      */
-    IdentityHashSet<Command> detached = new IdentityHashSet<>();
+    IdentityHashSet<AbstractCommand> detached = new IdentityHashSet<>();
 
     public CommandEnvironment(SingleHostConnector connector) {
         this.connector = connector;
@@ -79,11 +79,11 @@ public abstract class CommandEnvironment implements Closeable {
     }
 
 
-    public boolean detached(Command command) {
+    public boolean detached(AbstractCommand command) {
         return detached.contains(command);
     }
 
-    public void detached(Command command, boolean value) {
+    public void detached(AbstractCommand command, boolean value) {
         if (value) detached.add(command);
         else detached.remove(command);
     }

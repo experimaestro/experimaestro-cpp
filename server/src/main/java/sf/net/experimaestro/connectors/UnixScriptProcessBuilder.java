@@ -19,16 +19,10 @@
 package sf.net.experimaestro.connectors;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.omg.CORBA.Environment;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.scheduler.Command.CommandOutput;
-import sf.net.experimaestro.scheduler.CommandComponent;
-import sf.net.experimaestro.scheduler.CommandEnvironment;
-import sf.net.experimaestro.scheduler.Commands;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.Streams;
 
 import java.io.IOException;
@@ -231,10 +225,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     }
 
     private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
-        final ArrayList<Command> list = commands.reorder();
+        final ArrayList<AbstractCommand> list = commands.reorder();
 
         int detached = 0;
-        for (Command command : list) {
+        for (AbstractCommand command : list) {
             // Write files
             final ArrayList<FileObject> outputRedirects = command.getOutputRedirects();
             final ArrayList<FileObject> errorRedirects = command.getErrorRedirects();
@@ -242,17 +236,23 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
-            for (CommandComponent argument : command.list()) {
-                writer.print(' ');
-                if (argument instanceof Command.Pipe) {
-                    writer.print(" | ");
-                } else if (argument instanceof SubCommand) {
-                    writer.println(" (");
-                    writeCommands(env, writer, ((SubCommand) argument).commands());
-                    writer.println();
-                    writer.print(" )");
-                } else {
-                    writer.print(protect(argument.toString(env), SHELL_SPECIAL));
+            if (command instanceof Commands) {
+                writer.println("(");
+                writeCommands(env, writer, commands);
+                writer.println(")");
+            } else {
+                for (CommandComponent argument : ((Command)command).list()) {
+                    writer.print(' ');
+                    if (argument instanceof Command.Pipe) {
+                        writer.print(" | ");
+                    } else if (argument instanceof SubCommand) {
+                        writer.println(" (");
+                        writeCommands(env, writer, ((SubCommand) argument).commands());
+                        writer.println();
+                        writer.print(" )");
+                    } else {
+                        writer.print(protect(argument.toString(env), SHELL_SPECIAL));
+                    }
                 }
             }
 

@@ -1,0 +1,101 @@
+package sf.net.experimaestro.scheduler;
+
+/*
+ * This file is part of experimaestro.
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import com.sleepycat.persist.model.Persistent;
+import org.apache.commons.vfs2.FileObject;
+import sf.net.experimaestro.annotations.Expose;
+import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.connectors.AbstractCommandBuilder;
+
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
+/**
+ * Created by bpiwowar on 11/02/15.
+ */
+@Persistent
+@Exposed
+public abstract class AbstractCommand {
+    /**
+     * The input redirect
+     * <p>
+     * Null indicates that the input should be the null device
+     */
+    AbstractCommandBuilder.Redirect inputRedirect = null;
+    /**
+     * The output stream redirect.
+     * <p>
+     * Null indicates that the output should be discarded
+     */
+    AbstractCommandBuilder.Redirect outputRedirect = null;
+    /**
+     * Files where the output stream should be copied
+     */
+    ArrayList<FileObject> outputRedirects = new ArrayList<>();
+    /**
+     * The error stream redirect.
+     * <p>
+     * Null indicates that the output should be discarded
+     */
+    AbstractCommandBuilder.Redirect errorRedirect = null;
+    /**
+     * Files where the error stream should be copied
+     */
+    ArrayList<FileObject> errorRedirects = new ArrayList<>();
+
+    /**
+     * Process each dependency contained in a command or subcommand
+     * @param consumer The consumer to be fed
+     */
+    abstract public void forEachDependency(Consumer<Dependency> consumer);
+
+    /**
+     * Process each command
+     * @param consumer The consumer to be fed
+     */
+    public abstract void forEachCommand(Consumer<? super AbstractCommand> consumer);
+
+    public abstract void prepare(CommandEnvironment env);
+
+    public AbstractCommandBuilder.Redirect getOutputRedirect() {
+        return outputRedirect;
+    }
+
+    public AbstractCommandBuilder.Redirect getErrorRedirect() {
+        return errorRedirect;
+    }
+
+    public ArrayList<FileObject> getOutputRedirects() {
+        return outputRedirects;
+    }
+
+    public ArrayList<FileObject> getErrorRedirects() {
+        return errorRedirects;
+    }
+
+    @Expose
+    public Command.CommandOutput output() {
+        return new Command.CommandOutput(this);
+    }
+
+    abstract public Stream<? extends CommandComponent> allComponents();
+}
