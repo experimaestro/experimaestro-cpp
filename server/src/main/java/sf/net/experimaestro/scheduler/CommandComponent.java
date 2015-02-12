@@ -32,7 +32,7 @@ public interface CommandComponent {
      * command component has no direct string representation
      * @throws org.apache.commons.vfs2.FileSystemException
      */
-    default String toString(CommandEnvironment environment) throws IOException {
+    default String toString(CommandContext environment) throws IOException {
         return null;
     }
 
@@ -41,7 +41,7 @@ public interface CommandComponent {
     }
 
     /** Prepare the command to be written */
-    default void prepare(CommandEnvironment environment) throws FileSystemException {}
+    default void prepare(CommandContext environment) throws FileSystemException {}
 
     default void forEachCommand(Consumer<? super AbstractCommand> consumer) {}
 }

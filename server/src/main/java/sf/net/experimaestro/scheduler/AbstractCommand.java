@@ -25,7 +25,6 @@ import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -48,19 +47,11 @@ public abstract class AbstractCommand {
      */
     AbstractCommandBuilder.Redirect outputRedirect = null;
     /**
-     * Files where the output stream should be copied
-     */
-    ArrayList<FileObject> outputRedirects = new ArrayList<>();
-    /**
      * The error stream redirect.
      * <p>
      * Null indicates that the output should be discarded
      */
     AbstractCommandBuilder.Redirect errorRedirect = null;
-    /**
-     * Files where the error stream should be copied
-     */
-    ArrayList<FileObject> errorRedirects = new ArrayList<>();
 
     /**
      * Process each dependency contained in a command or subcommand
@@ -74,7 +65,7 @@ public abstract class AbstractCommand {
      */
     public abstract void forEachCommand(Consumer<? super AbstractCommand> consumer);
 
-    public abstract void prepare(CommandEnvironment env);
+    public abstract void prepare(CommandContext env);
 
     public AbstractCommandBuilder.Redirect getOutputRedirect() {
         return outputRedirect;
@@ -82,14 +73,6 @@ public abstract class AbstractCommand {
 
     public AbstractCommandBuilder.Redirect getErrorRedirect() {
         return errorRedirect;
-    }
-
-    public ArrayList<FileObject> getOutputRedirects() {
-        return outputRedirects;
-    }
-
-    public ArrayList<FileObject> getErrorRedirects() {
-        return errorRedirects;
     }
 
     @Expose

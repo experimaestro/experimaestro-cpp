@@ -138,7 +138,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         commands.add(command);
     }
 
-    public void prepare(CommandEnvironment env) {
+    public void prepare(CommandContext env) {
         commands.forEach(c -> c.prepare(env));
     }
 

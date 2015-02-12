@@ -276,6 +276,9 @@ public class JSUtils {
         if (value instanceof FileObject)
             return new JsonFileObject((FileObject) value);
 
+        if (value instanceof JSFileObject)
+            return new JsonFileObject(((JSFileObject) value).getFile());
+
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
 

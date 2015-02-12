@@ -35,8 +35,9 @@ import java.util.Map;
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
 
 /**
+ * Class that knows how to build UNIX scripts to run commands
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/9/12
  */
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
@@ -90,7 +91,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final FileObject basepath = runFile.getParent();
         final String baseName = runFile.getName().getBaseName();
 
-        try (CommandEnvironment env = new CommandEnvironment.FolderEnvironment(connector, basepath, baseName)) {
+        try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
             // Prepare the commands
             commands().prepare(env);
 
@@ -132,7 +133,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             commands().forEachCommand(Streams.propagate(c -> {
-                for (FileObject file : Iterables.concat(c.getOutputRedirects(), c.getErrorRedirects())) {
+                final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
+                for (FileObject file : Iterables.concat(namedRedirections.outputRedirections,
+                        namedRedirections.errorRedirections)) {
                     writer.format("  rm -f %s;%n", env.resolve(file));
                 }
             }));
@@ -224,22 +227,21 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void writeCommands(CommandEnvironment env, PrintWriter writer, Commands commands) throws IOException {
+    private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
         final ArrayList<AbstractCommand> list = commands.reorder();
 
         int detached = 0;
         for (AbstractCommand command : list) {
             // Write files
-            final ArrayList<FileObject> outputRedirects = command.getOutputRedirects();
-            final ArrayList<FileObject> errorRedirects = command.getErrorRedirects();
-            for (FileObject file : Iterables.concat(outputRedirects, errorRedirects)) {
+            final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(command, false);
+            for (FileObject file : Iterables.concat(namedRedirections.outputRedirections, namedRedirections.errorRedirections)) {
                 writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
             if (command instanceof Commands) {
                 writer.println("(");
-                writeCommands(env, writer, commands);
-                writer.println(")");
+                writeCommands(env, writer, (Commands)command);
+                writer.print(") ");
             } else {
                 for (CommandComponent argument : ((Command)command).list()) {
                     writer.print(' ');
@@ -256,8 +258,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 }
             }
 
-            printRedirections(env, 1, writer, command.getOutputRedirect(), outputRedirects);
-            printRedirections(env, 2, writer, command.getErrorRedirect(), errorRedirects);
+            printRedirections(env, 1, writer, command.getOutputRedirect(), namedRedirections.outputRedirections);
+            printRedirections(env, 2, writer, command.getErrorRedirect(), namedRedirections.errorRedirections);
 
             if (env.detached(command)) {
                 // Just keep a pointer
@@ -275,7 +277,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void printRedirections(CommandEnvironment env, int stream, PrintWriter writer, Redirect outputRedirect, List<FileObject> outputRedirects) throws FileSystemException {
+    private void printRedirections(CommandContext env, int stream, PrintWriter writer, Redirect outputRedirect, List<FileObject> outputRedirects) throws FileSystemException {
         if (!outputRedirects.isEmpty()) {
             writer.format(" %d> >(tee", stream);
             for (FileObject file : outputRedirects) {

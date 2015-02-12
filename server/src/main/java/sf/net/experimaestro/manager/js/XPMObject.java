@@ -620,7 +620,7 @@ public class XPMObject {
         AbstractProcessBuilder builder = connector.processBuilder();
 
 
-        try (CommandEnvironment commandEnv = new CommandEnvironment.Temporary(connector)) {
+        try (CommandContext commandEnv = new CommandContext.Temporary(connector)) {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {

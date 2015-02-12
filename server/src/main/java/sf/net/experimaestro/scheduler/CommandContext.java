@@ -19,7 +19,16 @@ import static java.lang.String.format;
  * The command environment is used when running a command to keep
  * track of all the data necessary for launching it.
  */
-public abstract class CommandEnvironment implements Closeable {
+public abstract class CommandContext implements Closeable {
+    static public class NamedPipeRedirections {
+        public ArrayList<FileObject> outputRedirections = new ArrayList<>();
+        public ArrayList<FileObject> errorRedirections = new ArrayList<>();
+    }
+    static private final NamedPipeRedirections EMPTY_REDIRECTIONS = new NamedPipeRedirections();
+
+    private IdentityHashMap<AbstractCommand, NamedPipeRedirections> namedPipeRedirectionsMap
+            = new IdentityHashMap<>();
+
     private final static Logger LOGGER = Logger.getLogger();
 
     /**
@@ -47,7 +56,7 @@ public abstract class CommandEnvironment implements Closeable {
      */
     IdentityHashSet<AbstractCommand> detached = new IdentityHashSet<>();
 
-    public CommandEnvironment(SingleHostConnector connector) {
+    public CommandContext(SingleHostConnector connector) {
         this.connector = connector;
     }
 
@@ -78,6 +87,17 @@ public abstract class CommandEnvironment implements Closeable {
         return getAuxiliaryFile(format("%s-%04d", prefix, uniqueCount++), suffix);
     }
 
+    public NamedPipeRedirections getNamedRedirections(AbstractCommand key, boolean create) {
+        NamedPipeRedirections x = namedPipeRedirectionsMap.get(key);
+        if (x == null) {
+            if (!create)
+                return EMPTY_REDIRECTIONS;
+            x = new NamedPipeRedirections();
+            namedPipeRedirectionsMap.put(key, x);
+        }
+        return x;
+    }
+
 
     public boolean detached(AbstractCommand command) {
         return detached.contains(command);
@@ -91,7 +111,7 @@ public abstract class CommandEnvironment implements Closeable {
     /**
      * A temporary environment: all the auxiliary files will be deleted
      */
-    static public class Temporary extends CommandEnvironment {
+    static public class Temporary extends CommandContext {
         public Temporary(SingleHostConnector connector) {
             super(connector);
         }
@@ -125,7 +145,7 @@ public abstract class CommandEnvironment implements Closeable {
      *
      * Will persist after the command has run.
      */
-    static public class FolderEnvironment extends CommandEnvironment {
+    static public class FolderContext extends CommandContext {
         /**
          * The base name for generated files
          */
@@ -135,7 +155,7 @@ public abstract class CommandEnvironment implements Closeable {
          */
         FileObject folder;
 
-        public FolderEnvironment(SingleHostConnector connector, FileObject basepath, String name) throws FileSystemException {
+        public FolderContext(SingleHostConnector connector, FileObject basepath, String name) throws FileSystemException {
             super(connector);
             this.folder = basepath;
             this.name = name;

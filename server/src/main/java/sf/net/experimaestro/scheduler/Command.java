@@ -26,6 +26,7 @@ import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonFileObject;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.Streams;
 import sf.net.experimaestro.utils.log.Logger;
@@ -64,7 +65,7 @@ public class Command extends AbstractCommand implements CommandComponent {
     }
 
     @Override
-    public void prepare(CommandEnvironment environment) {
+    public void prepare(CommandContext environment) {
         list.forEach(Streams.propagate(c -> c.prepare(environment)));
     }
 
@@ -141,13 +142,15 @@ public class Command extends AbstractCommand implements CommandComponent {
                 list.add((CommandComponent) t);
             } else if (t instanceof FileObject) {
                 list.add(new Path((FileObject) t));
+            } else if (t instanceof JsonFileObject) {
+                list.add(new Path( ((JsonFileObject)t).get()));
             } else {
                 list.add(new String(t.toString()));
             }
         });
     }
 
-    public java.lang.String toString(CommandEnvironment environment) throws IOException {
+    public java.lang.String toString(CommandContext environment) throws IOException {
         StringBuilder sb = new StringBuilder();
         for (CommandComponent component : list)
             sb.append(component.toString(environment));
@@ -177,17 +180,18 @@ public class Command extends AbstractCommand implements CommandComponent {
 
 
         @Override
-        public void prepare(CommandEnvironment environment) throws FileSystemException {
+        public void prepare(CommandContext environment) throws FileSystemException {
             final FileObject file = environment.getUniqueFile("command", ".pipe");
             final Object o = environment.setData(this, file);
             if (o != null) throw new RuntimeException("CommandOutput data should be null");
-            command.outputRedirects.add(file);
+            environment.getNamedRedirections(command, true).outputRedirections.add(file);
             environment.detached(command, true);
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws FileSystemException {
-            return environment.resolve((FileObject) environment.getData(this));
+        public java.lang.String toString(CommandContext environment) throws FileSystemException {
+            final Object data = environment.getData(this);
+            return environment.resolve((FileObject) data);
         }
 
         @Override
@@ -213,7 +217,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) {
+        public java.lang.String toString(CommandContext environment) {
             return string;
         }
 
@@ -242,7 +246,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws FileSystemException {
+        public java.lang.String toString(CommandContext environment) throws FileSystemException {
             FileObject object = Scheduler.getVFSManager().resolveFile(filename);
             return environment.resolve(object);
         }
@@ -268,7 +272,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandContext environment) throws IOException {
             FileObject file = environment.getAuxiliaryFile(key, ".input");
             OutputStream out = file.getContent().getOutputStream();
             out.write(content);
@@ -292,7 +296,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandContext environment) throws IOException {
             return environment.getWorkingDirectory();
         }
     }
@@ -356,7 +360,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public void prepare(CommandEnvironment environment) {
+        public void prepare(CommandContext environment) {
             commands.prepare(environment);
         }
     }
@@ -376,7 +380,7 @@ public class Command extends AbstractCommand implements CommandComponent {
         }
 
         @Override
-        public java.lang.String toString(CommandEnvironment environment) throws IOException {
+        public java.lang.String toString(CommandContext environment) throws IOException {
             FileObject file = environment.getAuxiliaryFile(key, ".json");
             try (OutputStream out = file.getContent().getOutputStream();
                  OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
