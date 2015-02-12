@@ -281,6 +281,9 @@ public class JSUtils {
         if (value instanceof Path)
             return new JsonPath((Path) value);
 
+        if (value instanceof JSPath)
+            return new JsonPath(((JSPath) value).getPath());
+
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
 

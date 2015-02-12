@@ -1152,7 +1152,7 @@ public class XPMObject {
         @JSFunction(value = "command_line_job", optional = 1)
         @JSHelp(value = COMMAND_LINE_JOB_HELP)
         public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
-                                         @JSArgument(type = "Array", name = "command") Command command,
+                                         @JSArgument(type = "Array", name = "command") AbstractCommand command,
                                          @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             Commands commands = new Commands(command);
             JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
@@ -1179,8 +1179,8 @@ public class XPMObject {
             Commands _commands;
             if (commands instanceof Commands) {
                 _commands = (Commands) commands;
-            } else if (commands instanceof Command) {
-                _commands = new Commands((Command) commands);
+            } else if (commands instanceof AbstractCommand) {
+                _commands = new Commands((AbstractCommand) commands);
             } else if (commands instanceof NativeArray) {
                 _commands = new Commands(JSCommand.getCommand(commands));
             } else {

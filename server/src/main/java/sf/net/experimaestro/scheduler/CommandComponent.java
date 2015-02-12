@@ -61,5 +61,5 @@ public interface CommandComponent {
     /** Prepare the command to be written */
     default void prepare(CommandContext environment) throws IOException {}
 
-    default void forEachCommand(Consumer<? super Command> consumer) {}
+    default void forEachCommand(Consumer<? super AbstractCommand> consumer) {}
 }

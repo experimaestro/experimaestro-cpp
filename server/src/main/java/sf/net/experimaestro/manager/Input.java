@@ -152,6 +152,9 @@ public abstract class Input {
     }
 
     public boolean inGroup(String groupId) {
+        if (groups == null) {
+            return false;
+        }
         for (String group : groups) {
             if (groupId.equals(group)) {
                 return true;

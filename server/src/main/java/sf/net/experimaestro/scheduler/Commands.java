@@ -24,7 +24,6 @@ import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.IdentityHashSet;
 
-import java.io.Serializable;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -32,16 +31,15 @@ import java.util.stream.Stream;
 /**
  * A full command
  * <p>
- * TODO: commands should be a subclass of Command
  */
 @Exposed
-public class Commands implements Iterable<Command> {
+public class Commands extends AbstractCommand implements Iterable<AbstractCommand> {
     /**
      * The list of commands status be executed
      * <p/>
      * The commands can refer status each other
      */
-    ArrayList<Command> commands = new ArrayList<>();
+    ArrayList<AbstractCommand> commands = new ArrayList<>();
 
     /**
      * List of dependencies attached to this command
@@ -60,14 +58,14 @@ public class Commands implements Iterable<Command> {
     /**
      * Construct with a set of commands
      */
-    public Commands(Command... commands) {
+    public Commands(AbstractCommand... commands) {
         this.commands = new ArrayList<>(Arrays.asList(commands));
     }
 
-    static private void fillEdges(IdentityHashSet<Command> graph, Map<Command, Set<Command>> forward_edges, Map<Command, Set<Command>> backwards_edges, Command command) {
+    static private void fillEdges(IdentityHashSet<AbstractCommand> graph, Map<AbstractCommand, Set<AbstractCommand>> forward_edges, Map<AbstractCommand, Set<AbstractCommand>> backwards_edges, AbstractCommand command) {
         command.allComponents().forEach(argument -> {
             if (argument instanceof Command.CommandOutput) {
-                final Command subCommand = ((Command.CommandOutput) argument).getCommand();
+                final AbstractCommand subCommand = ((Command.CommandOutput) argument).getCommand();
                 add(backwards_edges, command, subCommand);
                 add(forward_edges, subCommand, command);
 
@@ -77,8 +75,8 @@ public class Commands implements Iterable<Command> {
         });
     }
 
-    static private void add(Map<Command, Set<Command>> map, Command key, Command value) {
-        Set<Command> set = map.get(key);
+    static private void add(Map<AbstractCommand, Set<AbstractCommand>> map, AbstractCommand key, AbstractCommand value) {
+        Set<AbstractCommand> set = map.get(key);
         if (set == null) {
             set = new IdentityHashSet<>();
             map.put(key, set);
@@ -89,14 +87,14 @@ public class Commands implements Iterable<Command> {
     /**
      * Re-order the commands so that the dependencies are fulfilled
      */
-    public ArrayList<Command> reorder() {
-        final IdentityHashSet<Command> graph = new IdentityHashSet<>();
-        Map<Command, Set<Command>> forward_edges = new IdentityHashMap<>();
-        Map<Command, Set<Command>> backwards_edges = new IdentityHashMap<>();
+    public ArrayList<AbstractCommand> reorder() {
+        final IdentityHashSet<AbstractCommand> graph = new IdentityHashSet<>();
+        Map<AbstractCommand, Set<AbstractCommand>> forward_edges = new IdentityHashMap<>();
+        Map<AbstractCommand, Set<AbstractCommand>> backwards_edges = new IdentityHashMap<>();
 
-        Command previousCommand = null;
+        AbstractCommand previousCommand = null;
 
-        for (Command command : commands) {
+        for (AbstractCommand command : commands) {
             // Adds constraints on the graph: the order of the commands should be respected
             if (previousCommand != null) {
                 add(forward_edges, previousCommand, command);
@@ -115,7 +113,7 @@ public class Commands implements Iterable<Command> {
 
             fillEdges(graph, forward_edges, backwards_edges, command);
         }
-        final ArrayList<Command> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
+        final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
         if (!graph.isEmpty())
             throw new IllegalArgumentException("Command has a loop");
 
@@ -132,8 +130,17 @@ public class Commands implements Iterable<Command> {
         return Stream.concat(dependencies.stream(), commands.stream().flatMap(c -> c.dependencies()));
     }
 
+    public void forEachDependency(Consumer<Dependency> consumer) {
+        // Process our dependencies
+        for (Dependency dependency : dependencies) {
+            consumer.accept(dependency);
+        }
+
+        commands.stream().forEach(c -> c.forEachDependency(consumer));
+    }
+
     @Override
-    public Iterator<Command> iterator() {
+    public Iterator<AbstractCommand> iterator() {
         return commands.iterator();
     }
 
@@ -148,7 +155,7 @@ public class Commands implements Iterable<Command> {
                 '}';
     }
 
-    public void add(Command command) {
+    public void add(AbstractCommand command) {
         commands.add(command);
     }
 
@@ -156,10 +163,16 @@ public class Commands implements Iterable<Command> {
         commands.forEach(c -> c.prepare(env));
     }
 
-    public void forEachCommand(Consumer<? super Command> consumer) {
-        for(Command command: commands) {
+    @Override
+    public Stream<? extends CommandComponent> allComponents() {
+        return commands.stream().flatMap(AbstractCommand::allComponents);
+    }
+
+    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
+        for(AbstractCommand command: commands) {
             consumer.accept(command);
             command.forEachCommand(consumer);
         }
     }
+
 }

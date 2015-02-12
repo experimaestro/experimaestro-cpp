@@ -22,11 +22,8 @@ package sf.net.experimaestro.connectors;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.scheduler.Command.CommandOutput;
-import sf.net.experimaestro.scheduler.CommandComponent;
-import sf.net.experimaestro.scheduler.CommandContext;
-import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.Streams;
 
 import java.io.IOException;
@@ -43,7 +40,7 @@ import java.util.Map;
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
 
 /**
- * Script builder for UNIX systems (bash)
+ * Class that knows how to build UNIX scripts to run commands
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -141,7 +138,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             commands().forEachCommand(Streams.propagate(c -> {
-                for (Path file : Iterables.concat(c.getOutputRedirects(), c.getErrorRedirects())) {
+                final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
+                for (Path file : Iterables.concat(namedRedirections.outputRedirections,
+                        namedRedirections.errorRedirections)) {
                     writer.format("  rm -f %s;%n", env.resolve(file));
                 }
             }));
@@ -234,33 +233,38 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     }
 
     private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
-        final ArrayList<Command> list = commands.reorder();
+        final ArrayList<AbstractCommand> list = commands.reorder();
 
         int detached = 0;
-        for (Command command : list) {
+        for (AbstractCommand command : list) {
             // Write files
-            final ArrayList<Path> outputRedirects = command.getOutputRedirects();
-            final ArrayList<Path> errorRedirects = command.getErrorRedirects();
-            for (Path file : Iterables.concat(outputRedirects, errorRedirects)) {
+            final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(command, false);
+            for (Path file : Iterables.concat(namedRedirections.outputRedirections, namedRedirections.errorRedirections)) {
                 writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
-            for (CommandComponent argument : command.list()) {
-                writer.print(' ');
-                if (argument instanceof Command.Pipe) {
-                    writer.print(" | ");
-                } else if (argument instanceof SubCommand) {
-                    writer.println(" (");
-                    writeCommands(env, writer, ((SubCommand) argument).commands());
-                    writer.println();
-                    writer.print(" )");
-                } else {
-                    writer.print(protect(argument.toString(env), SHELL_SPECIAL));
+            if (command instanceof Commands) {
+                writer.println("(");
+                writeCommands(env, writer, (Commands)command);
+                writer.print(") ");
+            } else {
+                for (CommandComponent argument : ((Command)command).list()) {
+                    writer.print(' ');
+                    if (argument instanceof Command.Pipe) {
+                        writer.print(" | ");
+                    } else if (argument instanceof SubCommand) {
+                        writer.println(" (");
+                        writeCommands(env, writer, ((SubCommand) argument).commands());
+                        writer.println();
+                        writer.print(" )");
+                    } else {
+                        writer.print(protect(argument.toString(env), SHELL_SPECIAL));
+                    }
                 }
             }
 
-            printRedirections(env, 1, writer, command.getOutputRedirect(), outputRedirects);
-            printRedirections(env, 2, writer, command.getErrorRedirect(), errorRedirects);
+            printRedirections(env, 1, writer, command.getOutputRedirect(), namedRedirections.outputRedirections);
+            printRedirections(env, 2, writer, command.getErrorRedirect(), namedRedirections.errorRedirections);
 
             if (env.detached(command)) {
                 // Just keep a pointer

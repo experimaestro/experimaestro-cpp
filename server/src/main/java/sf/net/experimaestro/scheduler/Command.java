@@ -22,16 +22,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.gson.annotations.JsonAdapter;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
-import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.Streams;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
-import javax.tools.FileObject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -50,44 +49,13 @@ import java.util.stream.Stream;
  * @author B. Piwowarski
  */
 @Exposed
-public class Command implements CommandComponent, Serializable {
+public class Command extends AbstractCommand implements CommandComponent, Serializable {
     public final static Logger LOGGER = Logger.getLogger();
 
     /**
      * The list of components in this command
      */
     ArrayList<CommandComponent> list;
-
-    /**
-     * The input redirect
-     * <p>
-     * Null indicates that the input should be the null device
-     */
-    AbstractCommandBuilder.Redirect inputRedirect = null;
-
-    /**
-     * The output stream redirect.
-     * <p>
-     * Null indicates that the output should be discarded
-     */
-    AbstractCommandBuilder.Redirect outputRedirect = null;
-
-    /**
-     * Files where the output stream should be copied
-     */
-    ArrayList<java.nio.file.Path> outputRedirects = new ArrayList<>();
-
-    /**
-     * The error stream redirect.
-     * <p>
-     * Null indicates that the output should be discarded
-     */
-    AbstractCommandBuilder.Redirect errorRedirect = null;
-
-    /**
-     * Files where the error stream should be copied
-     */
-    ArrayList<java.nio.file.Path> errorRedirects = new ArrayList<>();
 
     @Expose
     public Command() {
@@ -96,19 +64,6 @@ public class Command implements CommandComponent, Serializable {
 
     public Command(Collection<? extends CommandComponent> c) {
         list = new ArrayList<>(c);
-    }
-
-    @Expose
-    CommandOutput output() {
-        return new CommandOutput(this);
-    }
-
-    public AbstractCommandBuilder.Redirect getOutputRedirect() {
-        return outputRedirect;
-    }
-
-    public AbstractCommandBuilder.Redirect getErrorRedirect() {
-        return errorRedirect;
     }
 
     @Override
@@ -129,6 +84,21 @@ public class Command implements CommandComponent, Serializable {
     @Override
     public Stream<Dependency> dependencies() {
         return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> ((SubCommand)c).dependencies());
+    }
+
+    public void forEachDependency(Consumer<Dependency> consumer) {
+        for (CommandComponent c : list) {
+            if (c instanceof SubCommand) {
+                ((SubCommand) c).forEachDependency(consumer);
+            }
+        }
+    }
+
+    @Override
+    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
+        for(CommandComponent component: list) {
+            component.forEachCommand(consumer);
+        }
     }
 
     @Override
@@ -177,8 +147,10 @@ public class Command implements CommandComponent, Serializable {
                 list.add(new CommandOutput(((CommandOutput) t).getCommand()));
             } else if (t instanceof CommandComponent) {
                 list.add((CommandComponent) t);
-            } else if (t instanceof Path) {
+            } else if (t instanceof java.nio.file.Path) {
                 list.add(new Path((java.nio.file.Path) t));
+            } else if (t instanceof JsonPath) {
+                list.add(new Path( ((JsonPath)t).get()));
             } else {
                 list.add(new String(t.toString()));
             }
@@ -196,13 +168,6 @@ public class Command implements CommandComponent, Serializable {
         return this.list;
     }
 
-    public ArrayList<java.nio.file.Path> getOutputRedirects() {
-        return outputRedirects;
-    }
-
-    public ArrayList<java.nio.file.Path> getErrorRedirects() {
-        return errorRedirects;
-    }
 
     /**
      * Used when the argument should be replaced by a pipe
@@ -211,33 +176,38 @@ public class Command implements CommandComponent, Serializable {
         /**
          * The output
          */
-        Command command;
+        AbstractCommand command;
 
-        public CommandOutput(Command command) {
+        protected CommandOutput() {}
+
+        public CommandOutput(AbstractCommand command) {
             this.command = command;
         }
+
+
 
         @Override
         public void prepare(CommandContext environment) throws IOException {
             final java.nio.file.Path file = environment.getUniqueFile("command", ".pipe");
             final Object o = environment.setData(this, file);
             if (o != null) throw new RuntimeException("CommandOutput data should be null");
-            command.outputRedirects.add(file);
+            environment.getNamedRedirections(command, true).outputRedirections.add(file);
             environment.detached(command, true);
         }
 
         @Override
         public java.lang.String toString(CommandContext environment) throws FileSystemException {
-            return environment.resolve((java.nio.file.Path) environment.getData(this));
+            final Object data = environment.getData(this);
+            return environment.resolve((java.nio.file.Path) data);
         }
 
         @Override
-        public void forEachCommand(Consumer<? super Command> consumer) {
+        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
             consumer.accept(command);
             command.forEachCommand(consumer);
         }
 
-        public Command getCommand() {
+        public AbstractCommand getCommand() {
             return command;
         }
     }
@@ -366,7 +336,7 @@ public class Command implements CommandComponent, Serializable {
 
         @Override
         public Stream<? extends CommandComponent> allComponents() {
-            return commands.commands.parallelStream().flatMap(CommandComponent::allComponents);
+            return commands.commands.parallelStream().flatMap(AbstractCommand::allComponents);
         }
 
         @Override
@@ -374,9 +344,13 @@ public class Command implements CommandComponent, Serializable {
             return commands.dependencies();
         }
 
+        public void forEachDependency(Consumer<Dependency> consumer) {
+            commands.forEachDependency(consumer);
+        }
+
         @Override
-        public void forEachCommand(Consumer<? super Command> consumer) {
-            for (Command command : commands) {
+        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
+            for (AbstractCommand command : commands) {
                 consumer.accept(command);
                 command.forEachCommand(consumer);
             }

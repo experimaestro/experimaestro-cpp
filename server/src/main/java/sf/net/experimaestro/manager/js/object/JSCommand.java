@@ -25,6 +25,7 @@ import org.mozilla.javascript.Wrapper;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.js.*;
+import sf.net.experimaestro.scheduler.AbstractCommand;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.CommandComponent;
 import sf.net.experimaestro.scheduler.StreamReference;
@@ -41,7 +42,7 @@ public class JSCommand extends JSBaseObject implements Wrapper {
     /**
      * The underlying command
      */
-    Command command;
+    AbstractCommand command;
     @JSProperty("out")
     StreamReference stream;
 

@@ -36,6 +36,15 @@ import static java.lang.String.format;
  * The context of a command
  */
 public abstract class CommandContext implements Closeable {
+    static public class NamedPipeRedirections {
+        public ArrayList<Path> outputRedirections = new ArrayList<>();
+        public ArrayList<Path> errorRedirections = new ArrayList<>();
+    }
+    static private final NamedPipeRedirections EMPTY_REDIRECTIONS = new NamedPipeRedirections();
+
+    private IdentityHashMap<AbstractCommand, NamedPipeRedirections> namedPipeRedirectionsMap
+            = new IdentityHashMap<>();
+
     private final static Logger LOGGER = Logger.getLogger();
 
     /**
@@ -56,13 +65,12 @@ public abstract class CommandContext implements Closeable {
     /**
      * Commands that should be run in detached mode
      */
-    IdentityHashSet<Command> detached = new IdentityHashSet<>();
+    IdentityHashSet<AbstractCommand> detached = new IdentityHashSet<>();
 
     /**
      * Count for unique file names
      */
     private int uniqueCount;
-
 
     public CommandContext(SingleHostConnector connector) {
         this.connector = connector;
@@ -98,12 +106,23 @@ public abstract class CommandContext implements Closeable {
         return getAuxiliaryFile(format("%s-%04d", prefix, uniqueCount++), suffix);
     }
 
+    public NamedPipeRedirections getNamedRedirections(AbstractCommand key, boolean create) {
+        NamedPipeRedirections x = namedPipeRedirectionsMap.get(key);
+        if (x == null) {
+            if (!create)
+                return EMPTY_REDIRECTIONS;
+            x = new NamedPipeRedirections();
+            namedPipeRedirectionsMap.put(key, x);
+        }
+        return x;
+    }
 
-    public boolean detached(Command command) {
+
+    public boolean detached(AbstractCommand command) {
         return detached.contains(command);
     }
 
-    public void detached(Command command, boolean value) {
+    public void detached(AbstractCommand command, boolean value) {
         if (value) detached.add(command);
         else detached.remove(command);
     }
@@ -141,6 +160,11 @@ public abstract class CommandContext implements Closeable {
         }
     }
 
+    /**
+     * A folder-based environment.
+     *
+     * Will persist after the command has run.
+     */
     static public class FolderContext extends CommandContext {
         /**
          * The base name for generated files

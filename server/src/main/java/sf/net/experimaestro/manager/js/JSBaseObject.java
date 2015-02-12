@@ -111,7 +111,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
                 // Adds all the ancestors methods
                 Class<?> superclass = aClass.getSuperclass();
-                if (JSBaseObject.class.isAssignableFrom(superclass)) {
+                if (JSBaseObject.class.isAssignableFrom(superclass) || superclass.getAnnotation(Exposed.class) != null) {
                     Map<String, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
                     for (Map.Entry<String, ArrayList<Method>> entry : superclassMethods.entrySet()) {
                         ArrayList<Method> previous = map.get(entry.getKey());
