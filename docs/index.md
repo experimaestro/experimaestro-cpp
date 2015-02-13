@@ -1,26 +1,36 @@
-# Welcome to experimaestro
+<head><title>Home</title></head>
 
-For full documentation visit [read the docs](http://experimaestro.readthedocs.org/en/latest/).
+# Presentation
 
-## Presentation
+Experimaestro is an experiment manager, and is composed of 
 
-Experimaestro is an experiment manager based on a server that contains a job scheduler (job dependencies, locking mechanisms) and a framework to describe the experiments with JavaScript or in Java.
-
-- A **job scheduler** that handles dependencies between jobs and provides locking mechanisms
+1. A [job scheduler](scheduler/index.md) that handles dependencies between jobs and provides locking mechanisms
    The job scheduler can be controlled via command line (`experimaestro` script) or via the web (where
-   you can easily monitor jobs in real time) and handles
-
-   1. Shell commands
-   2. OAR jobs
-   3. Hadoop jobs (*planned*)
-
-- A **modular experiment description framework**, that allows easy description of the various parts of experiments:
-    - Experiments are written in JavaScript or in Java (with annotations)
+   you can easily monitor jobs in real time)
+2. A [modular experiment description framework](manager/index.md), that allows easy description of the various parts of experiments:
+    - Experiments are written in JavaScript 
     - Tasks describe the components that can be used, take as input json objects and produce json objets as output
     - Tasks can be composed through the definition of an experimental plan
 
 Both modules can be used independently even though they were designed to work together.
 
 Experimaestro is in a **beta** state - which means that you might experience some bugs
-while using it; but as I use it on a daily basis, their number and importance is
+while using it; but as I use it on a daily basis, there number and importance is
 going down each day.
+
+# Example
+
+This is an example of how an experimental plan is built.
+
+First, we define two tasks. In the example,
+the two tasks are multiplication and addition of two numbers, but in practice 
+task launch jobs through the scheduler.
+<include file="src/test/resources/js/plan_composition.js" id="task"/>
+
+Then, we build an experimental plan composing the two tasks. This is done
+by first building `plan1` that calls the addition operation, and
+then by building `plan2` that takes as input the output of `plan1`.
+
+<include file="src/test/resources/js/plan_composition.js" id="run"/>
+
+

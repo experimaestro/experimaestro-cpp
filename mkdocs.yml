@@ -1,1 +1,9 @@
-site_name: My Docs
+site_name: experimaestro
+site_description: experimaestro Computer science experiments manager and scheduler
+pages:
+- [index.md, Home]
+- [scheduler/index.md, Scheduler]
+- [scheduler/connectors.md, Scheduler]
+- [manager/index.md, Manager]
+- [manager/json.md, Manager]
+- [manager/tasks.md, Manager]
