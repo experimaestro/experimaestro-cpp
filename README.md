@@ -4,7 +4,7 @@ experimaestro
 [![Build Status](https://travis-ci.org/bpiwowar/experimaestro.svg?branch=master)](https://travis-ci.org/bpiwowar/experimaestro)
 
 
-**[Documentation](http://xpm.bpiwowar.net/)**
+For full documentation visit [read the docs](http://experimaestro.readthedocs.org/en/latest/).
 
 Experimaestro is an experiment manager based on a server that contains a job scheduler (job dependencies, locking mechanisms) and a framework to describe the experiments with JavaScript or in Java.
 
