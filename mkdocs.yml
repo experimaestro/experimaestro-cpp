@@ -7,3 +7,4 @@ pages:
 - [manager/index.md, Manager]
 - [manager/json.md, Manager]
 - [manager/tasks.md, Manager]
+theme: readthedocs
