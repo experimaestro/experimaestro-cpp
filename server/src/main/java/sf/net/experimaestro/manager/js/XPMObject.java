@@ -757,15 +757,6 @@ public class XPMObject {
             return new JSResource(scheduler.getResource(locator));
         }
 
-        // -- Adds default locks
-        Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
-                ? taskContext.defaultLocks() : defaultLocks;
-        for (Map.Entry<? extends Resource, ?> lock : _defaultLocks.entrySet()) {
-            Dependency dependency = lock.getKey().createDependency(lock.getValue());
-            task.addDependency(dependency);
-        }
-
-
         // --- Environment
         task.environment = new TreeMap<>(environment);
 
@@ -868,9 +859,12 @@ public class XPMObject {
         // Update the task status now that it is initialized
         task.setGroup(defaultGroup);
 
+        taskContext.prepare(task);
+
         final Resource old = scheduler.getResource(locator);
         if (old != null) {
             // TODO: if equal, do not try to replace the task
+            taskContext.prepare(task);
             if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 old.init(scheduler);
@@ -914,6 +908,7 @@ public class XPMObject {
 
     public TaskContext newTaskContext() {
         return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger())
+                .addDefaultLocks(defaultLocks)
                 .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
     }
 
@@ -1010,8 +1005,12 @@ public class XPMObject {
 
         @JSFunction("set_default_lock")
         @JSHelp("Adds a new resource to lock for all jobs to be started")
-        public void setDefaultLock(Object resource, Object parameters) {
-            xpm.defaultLocks.put((Resource) unwrap(resource), parameters);
+        public void setDefaultLock(
+                @JSArgument(name = "resource", help = "The resource to be locked")
+                Resource resource,
+                @JSArgument(name = "parameters", help = "The parameters to be given at lock time")
+                Object parameters) {
+            xpm.defaultLocks.put(resource, parameters);
         }
 
         @JSFunction("token_resource")

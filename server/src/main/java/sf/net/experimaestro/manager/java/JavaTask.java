@@ -84,6 +84,8 @@ public class JavaTask extends Task {
                 pw.format("Locator: %s", locator.toString());
                 pw.flush();
             } else {
+                taskContext.prepare(task);
+
                 try {
                     if (old != null) {
                         // TODO: if equal, do not try to replace the task
