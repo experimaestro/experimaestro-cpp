@@ -77,11 +77,3 @@
    *  `xpm` is an object containing useful functions and properties
 
 
-# XPath handling
-
-  XPath are evaluated with the current node corresponding to the <<root element>> of the XML document.
-	
-## XPath Functions
-
-  * `parentPath(String)` returns the parent path. For example,
-    `xpm.xpath("xp:parentPath(path)", <a><path>/a/b/c</path></a>)` returns `a/b`.
