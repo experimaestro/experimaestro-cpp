@@ -76,11 +76,15 @@ def get_maxfd(default=DEFAULT_MAXFD):
 def collect_logger_fds(logger):
     """Yield all file descriptors currently opened by *logger*"""
     for handler in logger.root.handlers:
-        if isinstance(handler, (logging.StreamHandler, logging.FileHandler)):
-            yield handler.stream.fileno()
-        else:
-            raise TypeError("unsupported logging handler: {!r}"
-                            .format(handler))
+        for attrname in dir(handler):
+            attr = getattr(handler, attrname)
+            if hasattr(attr, "fileno"):
+                try:
+                    fileno = attr.fileno()
+                except Exception:
+                    pass
+                else:
+                    yield fileno
 
 def daemonize(daemon_func, main_func,
               daemon_cwd="/",
