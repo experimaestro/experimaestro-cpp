@@ -202,34 +202,35 @@ def daemonize(daemon_func, main_func,
     # Put the daemon in background
     child_pid = os.fork()
     if child_pid == 0: # child
-        daemon_logger.debug("configuring daemon process")
-        # Use absolute path to pid_file since we gonna change the current
-        # directory.
-        if pid_file is not None:
-            pid_file = os.path.abspath(pid_file)
-        ### Make sure we won't block any mounted file system or partition.
-        os.chdir(daemon_cwd)
-        daemon_logger.debug("changed current working directory to: {}"
-                            .format(daemon_cwd))
-        ### Create a new session and make sure we have no terminal
-        os.setsid()
-        daemon_logger.debug("new session created")
-        ### Close all opened files
-        sys.stdin.close()
-        sys.stdout.close()
-        sys.stderr.close()
-        logger_fds = set(collect_logger_fds(daemon_logger))
-        for fd in range(get_maxfd()):
-            if fd in logger_fds:
-                continue
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        daemon_logger.debug("closed all fds up to %d except %r",
-                            get_maxfd(), list(logger_fds))
-        exit_code = 0
         try:
+            daemon_logger.debug("configuring daemon process")
+            # Use absolute path to pid_file since we gonna change the current
+            # directory.
+            if pid_file is not None:
+                pid_file = os.path.abspath(pid_file)
+            ### Make sure we won't block any mounted file system or partition.
+            os.chdir(daemon_cwd)
+            daemon_logger.debug("changed current working directory to: {}"
+                                .format(daemon_cwd))
+            ### Create a new session and make sure we have no terminal
+            os.setsid()
+            daemon_logger.debug("new session created")
+            ### Close all opened files
+            sys.stdin.close()
+            sys.stdout.close()
+            sys.stderr.close()
+            logger_fds = set(collect_logger_fds(daemon_logger))
+            for fd in range(get_maxfd()):
+                if fd in logger_fds:
+                    continue
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            daemon_logger.debug("closed all fds up to %d except %r",
+                                get_maxfd(), list(logger_fds))
+            # TODO(Nicolas Despres): set default UMASK
+            exit_code = 0
             ### Install signal handler
             signal.signal(signal.SIGTERM, sighandler)
             daemon_logger.debug("installed SIGTERM handler: %s", sighandler)
