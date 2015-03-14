@@ -24,6 +24,7 @@ Should work with Python 2 or 3.
 Copyright (c) 2015 Nicolas Despres
 """
 
+
 from __future__ import print_function
 import os
 import sys
@@ -32,6 +33,7 @@ import logging.handlers
 import traceback
 import signal
 import errno
+import resource
 
 
 def _create_pid_file(pathname, logger):
@@ -57,6 +59,28 @@ def _remove_pid_file(pathname, logger):
                      pathname, type(e).__name__, str(e))
     else:
         logger.debug("pid file '%s' removed", pathname)
+
+DEFAULT_MAXFD = 1024
+
+def get_maxfd(default=DEFAULT_MAXFD):
+    """Return the maximum number of file descriptors."""
+    try:
+        maxfd = os.sysconf("SC_OPEN_MAX")
+    except (AttributeError, ValueError):
+        maxfd = default
+    r_maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+    if r_maxfd != resource.RLIM_INFINITY:
+        maxfd = r_maxfd
+    return maxfd
+
+def collect_logger_fds(logger):
+    """Yield all file descriptors currently opened by *logger*"""
+    for handler in logger.root.handlers:
+        if isinstance(handler, (logging.StreamHandler, logging.FileHandler)):
+            yield handler.stream.fileno()
+        else:
+            raise TypeError("unsupported logging handler: {!r}"
+                            .format(handler))
 
 def daemonize(daemon_func, main_func,
               daemon_cwd="/",
@@ -178,7 +202,6 @@ def daemonize(daemon_func, main_func,
     # Put the daemon in background
     child_pid = os.fork()
     if child_pid == 0: # child
-        daemon_logger.debug("*" * 80)
         daemon_logger.debug("configuring daemon process")
         # Use absolute path to pid_file since we gonna change the current
         # directory.
@@ -195,8 +218,16 @@ def daemonize(daemon_func, main_func,
         sys.stdin.close()
         sys.stdout.close()
         sys.stderr.close()
-        # os.close_range(3,
-        daemon_logger.debug("closed standard channels")
+        logger_fds = set(collect_logger_fds(daemon_logger))
+        for fd in range(get_maxfd()):
+            if fd in logger_fds:
+                continue
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        daemon_logger.debug("closed all fds up to %d except %r",
+                            get_maxfd(), list(logger_fds))
         exit_code = 0
         try:
             ### Install signal handler
