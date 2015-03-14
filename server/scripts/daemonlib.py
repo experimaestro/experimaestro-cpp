@@ -186,6 +186,7 @@ def daemonize(daemon_func, main_func,
         daemon_logger = logger
     else:
         raise ValueError("invalid logger value: {!r}".format(logger))
+    daemon_logger_fds = set(collect_logger_fds(daemon_logger))
     ### Setup SIGTERM callback
     if sigterm_callback is None:
         def interrupt_on_sigterm(signum, frame):
@@ -219,16 +220,16 @@ def daemonize(daemon_func, main_func,
             sys.stdin.close()
             sys.stdout.close()
             sys.stderr.close()
-            logger_fds = set(collect_logger_fds(daemon_logger))
-            for fd in range(get_maxfd()):
-                if fd in logger_fds:
+            maxfd = get_maxfd()
+            for fd in range(maxfd):
+                if fd in daemon_logger_fds:
                     continue
                 try:
                     os.close(fd)
                 except OSError:
                     pass
             daemon_logger.debug("closed all fds up to %d except %r",
-                                get_maxfd(), list(logger_fds))
+                                maxfd, list(daemon_logger_fds))
             # TODO(Nicolas Despres): set default UMASK
             exit_code = 0
             ### Install signal handler
