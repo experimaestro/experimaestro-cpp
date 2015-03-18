@@ -42,3 +42,19 @@ To install required python's modules type:
 ```sh
 pip3 install -r requirements.txt
 ```
+
+## shell completion
+
+To enable shell completion follow instructions in
+[argcomplete](https://pypi.python.org/pypi/argcomplete) documentation.
+
+Here is just what I did for *zsh*:
+* Add something like this to my `.zshrc`:
+  ```sh
+  # Register python completion
+  if type register-python-argcomplete &> /dev/null
+  then
+    eval "$(register-python-argcomplete 'experimaestro')"
+  fi
+  ```
+* Re-launch your shell: `exec zsh`
