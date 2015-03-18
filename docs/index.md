@@ -33,4 +33,12 @@ then by building `plan2` that takes as input the output of `plan1`.
 
 <include file="src/test/resources/js/plan_composition.js" id="run"/>
 
+# Installation
 
+You need a working `python3` interpreter on your system along with `pip3`.
+
+To install required python's modules type:
+
+```sh
+pip3 install -r requirements.txt
+```
