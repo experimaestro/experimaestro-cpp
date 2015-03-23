@@ -66,7 +66,7 @@
 
 ## Configuration
 
-  The server and clients are configured by a simple property file, located in the `.experimaestro` (by default) file in the user's home directory.
+  The server and clients are configured by a simple property file `settings.ini`, located in the `.experimaestro` (by default) file in the user's home directory.
 
     [server]
     ; Port for the Web server (and the XML-RPC server)
