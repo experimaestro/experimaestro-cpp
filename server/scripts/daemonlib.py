@@ -207,6 +207,7 @@ def daemonize(daemon_func, main_func,
     # Put the daemon in background
     child_pid = os.fork()
     if child_pid == 0: # child
+        exit_code = 0
         try:
             daemon_logger.debug("configuring daemon process")
             # Use absolute path to pid_file since we gonna change the current
@@ -235,7 +236,6 @@ def daemonize(daemon_func, main_func,
             daemon_logger.debug("closed all fds up to %d except %r",
                                 maxfd, list(daemon_logger_fds))
             # TODO(Nicolas Despres): set default UMASK
-            exit_code = 0
             ### Install signal handler
             signal.signal(signal.SIGTERM, sighandler)
             daemon_logger.debug("installed SIGTERM handler: %s", sighandler)
