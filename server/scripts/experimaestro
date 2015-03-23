@@ -257,7 +257,7 @@ class Configuration():
 
 def ping(json_server):
     try:
-        return json_server.ping() == "pong"
+        return json_server.ping({}) == "pong"
     except socket.error as e:
         return False
 
