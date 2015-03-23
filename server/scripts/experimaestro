@@ -72,13 +72,11 @@ def jarpaths():
 
 
 def start_jar(args, jarargs):
-    # --- See
-    # http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
-    # http://www.python.org/dev/peps/pep-3143/#python-daemon
-    # --- in order to create a daemon
+    import daemonlib
+    import time
 
-    raise Exception("Not implemented")
-    
+    conf = Configuration(args)
+    workdir = conf.config.sub("server")["database"]
 
     # Check what if we start using maven
     mvnFile = os.path.join(xpmdir, "pom.xml")
@@ -88,11 +86,12 @@ def start_jar(args, jarargs):
     if args.maven or mvnFile is not None:
         logging.info("Starting with maven")
         command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"]
+        jarargs = [ "server" ]
         if mvnFile is not None:
             command.append("--file")
             command.append(mvnFile)
         jarargs = [arg for arg in jarargs]
-        command.append("-Dexec.args=%s" % string.join(jarargs, " "))
+        command.append("-Dexec.args=%s" % " ".join(jarargs))
 
     else:
         jarpath = None
@@ -106,9 +105,24 @@ def start_jar(args, jarargs):
             raise Exception("Could not find experimaestro jar file")
         command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
 
-    # print command
-    logging.debug('Running command %s' % command)
-    subprocess.call(command)
+    def start_server(logger):
+        logger.info("Starting experimaestro server...")
+        subprocess.call(command,
+            stdout=open(os.path.join(workdir, "server.out"), "w"),
+            stderr=open(os.path.join(workdir, "server.err"), "w"))
+
+    def wait_server(pid):
+        logging.info("Waiting for server to start (PID=%s)...", pid)
+        json_server = conf.getJsonServer()
+        while not ping(json_server):
+            time.sleep(1)
+
+        logging.info("Server started...")
+
+    daemonlib.daemonize(start_server, wait_server,
+        daemon_cwd=workdir,
+        pid_file=os.path.join(workdir, "server.pid"))
+
 
 
 class Properties:
@@ -202,9 +216,9 @@ class Configuration():
         configfile = os.path.expanduser(args.config)
 
         # Initialise the server
-        config = getProperties(configfile)
+        self.config = getProperties(configfile)
 
-        clients = config.sub("client", None)
+        clients = self.config.sub("client", None)
         if clients is None:
             raise Exception("No client section in configuration file")
 
@@ -297,7 +311,7 @@ def command_run_js(args):
 
     logging.debug("Running JS scripts %s" % [s[0] for s in files])
 
-    params = {"files": files, "environment": dict(os.environ)}  
+    params = {"files": files, "environment": dict(os.environ)}
     if args.debug_port > 0:
         params["debug"] = args.debug_port
 
@@ -330,8 +344,8 @@ def command_run_js(args):
 def command_update(args):
     server = Configuration(args).getJsonServer()
     print("%d updated job(s)" % server.updateJobs({
-        "group": args.group, 
-        "recursive": args.recursive, 
+        "group": args.group,
+        "recursive": args.recursive,
         "states": get_states(args.states)
     }))
 
@@ -424,14 +438,14 @@ subparsers = parser.add_subparsers(help='Command', dest='command')
 parser.set_defaults(dir=xpmdir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
                     choices=["debug", "info", "warn"], default="info")
-parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
 parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
                     help="Experimaestro configuration file")
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
-subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
+p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
+p_start.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
