@@ -121,7 +121,7 @@ class Properties:
     def __getitem__(self, name):
         v = self.sub(name, None)
         if v is None:
-            raise Exception("No key %s in properties" % name)
+            raise Exception("No key '%s' in properties" % name)
         return v.map[0]
 
     def keys(self):

@@ -80,7 +80,8 @@
 
     [client]
 
-    url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
+    local.url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
+    local.default = true
 
 ## Starting experimaestro
 
