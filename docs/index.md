@@ -35,6 +35,11 @@ then by building `plan2` that takes as input the output of `plan1`.
 
 # Installation
 
+Experimaestro is implemented using several languages and thus, you
+have to install multiple ecosystem with the right version.
+
+## Python
+
 You need a working `python3` interpreter on your system along with `pip3`.
 
 To install required python's modules type:
@@ -42,6 +47,30 @@ To install required python's modules type:
 ```sh
 pip3 install -r requirements.txt
 ```
+
+## Java
+
+You need a working *Java 1.8* installation on your machine and
+*Maven 3* or higher.
+
+```sh
+mvn compile
+mvn install
+```
+
+Note that on a Linux box if you are not root and the alternative link
+is not set to the proper version (you can inspect that using
+`update-alternatives --display java`), you won't have the permission
+to update the link manually using `update-alternatives --config java`.
+The work around is to set the environment variable `JAVA_HOME` when
+calling maven. For example:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn compile
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn install
+```
+
+To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
 
 ## shell completion
 
