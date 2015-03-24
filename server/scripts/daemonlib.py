@@ -95,7 +95,8 @@ def daemonize(daemon_func, main_func,
                          "%(module)s:%(lineno)d %(message)s",
               log_date_format='%Y-%m-%dT%H:%M',
               sigterm_callback=None,
-              error_exit_code=255, interrupt_exit_code=2):
+              error_exit_code=255, interrupt_exit_code=2,
+              umask=0o022):
     """Calling this function make your process a daemon.
 
     It forks the process and call *daemon_func* in the child process and
@@ -235,7 +236,10 @@ def daemonize(daemon_func, main_func,
                     pass
             daemon_logger.debug("closed all fds up to %d except %r",
                                 maxfd, list(daemon_logger_fds))
-            # TODO(Nicolas Despres): set default UMASK
+            # We probably don't want the file mode creation mask inherited from
+            # the parent, so we give the child complete control over
+            # permissions.
+            os.umask(umask)
             ### Install signal handler
             signal.signal(signal.SIGTERM, sighandler)
             daemon_logger.debug("installed SIGTERM handler: %s", sighandler)
