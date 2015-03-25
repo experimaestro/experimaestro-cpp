@@ -24,6 +24,7 @@ Should work with Python 2 or 3.
 Copyright (c) 2015 Nicolas Despres
 """
 
+
 from __future__ import print_function
 import os
 import sys
@@ -32,6 +33,7 @@ import logging.handlers
 import traceback
 import signal
 import errno
+import resource
 
 
 def _create_pid_file(pathname, logger):
@@ -58,6 +60,32 @@ def _remove_pid_file(pathname, logger):
     else:
         logger.debug("pid file '%s' removed", pathname)
 
+DEFAULT_MAXFD = 1024
+
+def get_maxfd(default=DEFAULT_MAXFD):
+    """Return the maximum number of file descriptors."""
+    try:
+        maxfd = os.sysconf("SC_OPEN_MAX")
+    except (AttributeError, ValueError):
+        maxfd = default
+    r_maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+    if r_maxfd != resource.RLIM_INFINITY:
+        maxfd = r_maxfd
+    return maxfd
+
+def collect_logger_fds(logger):
+    """Yield all file descriptors currently opened by *logger*"""
+    for handler in logger.root.handlers:
+        for attrname in dir(handler):
+            attr = getattr(handler, attrname)
+            if hasattr(attr, "fileno"):
+                try:
+                    fileno = attr.fileno()
+                except Exception:
+                    pass
+                else:
+                    yield fileno
+
 def daemonize(daemon_func, main_func,
               daemon_cwd="/",
               pid_file=None,
@@ -67,7 +95,8 @@ def daemonize(daemon_func, main_func,
                          "%(module)s:%(lineno)d %(message)s",
               log_date_format='%Y-%m-%dT%H:%M',
               sigterm_callback=None,
-              error_exit_code=255, interrupt_exit_code=2):
+              error_exit_code=255, interrupt_exit_code=2,
+              umask=0o022):
     """Calling this function make your process a daemon.
 
     It forks the process and call *daemon_func* in the child process and
@@ -162,6 +191,7 @@ def daemonize(daemon_func, main_func,
         daemon_logger = logger
     else:
         raise ValueError("invalid logger value: {!r}".format(logger))
+    daemon_logger_fds = set(collect_logger_fds(daemon_logger))
     ### Setup SIGTERM callback
     if sigterm_callback is None:
         def interrupt_on_sigterm(signum, frame):
@@ -178,27 +208,38 @@ def daemonize(daemon_func, main_func,
     # Put the daemon in background
     child_pid = os.fork()
     if child_pid == 0: # child
-        daemon_logger.debug("*" * 80)
-        daemon_logger.debug("configuring daemon process")
-        # Use absolute path to pid_file since we gonna change the current
-        # directory.
-        if pid_file is not None:
-            pid_file = os.path.abspath(pid_file)
-        ### Make sure we won't block any mounted file system or partition.
-        os.chdir(daemon_cwd)
-        daemon_logger.debug("changed current working directory to: {}"
-                            .format(daemon_cwd))
-        ### Create a new session and make sure we have no terminal
-        os.setsid()
-        daemon_logger.debug("new session created")
-        ### Close all opened files
-        sys.stdin.close()
-        sys.stdout.close()
-        sys.stderr.close()
-        # os.close_range(3,
-        daemon_logger.debug("closed standard channels")
         exit_code = 0
         try:
+            daemon_logger.debug("configuring daemon process")
+            # Use absolute path to pid_file since we gonna change the current
+            # directory.
+            if pid_file is not None:
+                pid_file = os.path.abspath(pid_file)
+            ### Make sure we won't block any mounted file system or partition.
+            os.chdir(daemon_cwd)
+            daemon_logger.debug("changed current working directory to: {}"
+                                .format(daemon_cwd))
+            ### Create a new session and make sure we have no terminal
+            os.setsid()
+            daemon_logger.debug("new session created")
+            ### Close all opened files
+            sys.stdin.close()
+            sys.stdout.close()
+            sys.stderr.close()
+            maxfd = get_maxfd()
+            for fd in range(maxfd):
+                if fd in daemon_logger_fds:
+                    continue
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            daemon_logger.debug("closed all fds up to %d except %r",
+                                maxfd, list(daemon_logger_fds))
+            # We probably don't want the file mode creation mask inherited from
+            # the parent, so we give the child complete control over
+            # permissions.
+            os.umask(umask)
             ### Install signal handler
             signal.signal(signal.SIGTERM, sighandler)
             daemon_logger.debug("installed SIGTERM handler: %s", sighandler)
