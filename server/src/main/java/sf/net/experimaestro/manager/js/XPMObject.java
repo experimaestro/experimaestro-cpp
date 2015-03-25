@@ -540,9 +540,13 @@ public class XPMObject {
      */
     private XPMObject include(ResourceLocator scriptLocator, boolean repositoryMode) throws Exception {
 
+        ResourceLocator oldResourceLocator = currentResourceLocator;
+
         try (InputStream inputStream = scriptLocator.getFile().getContent().getInputStream()) {
             Scriptable scriptScope = scope;
             XPMObject xpmObject = this;
+            currentResourceLocator = scriptLocator;
+
             if (repositoryMode) {
                 // Run the script in a new environment
                 scriptScope = XPMContext.newScope();
@@ -555,6 +559,7 @@ public class XPMObject {
             final String sourceName = scriptLocator.getConnector() == LocalhostConnector.getInstance()
                     ? scriptLocator.getPath() : scriptLocator.toString();
 
+
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
@@ -562,6 +567,7 @@ public class XPMObject {
             throw new XPMRhinoException("File not found: %s", scriptLocator.getFile());
         } finally {
             threadXPM.set(this);
+            currentResourceLocator = oldResourceLocator;
         }
 
     }
