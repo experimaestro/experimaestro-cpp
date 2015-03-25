@@ -54,7 +54,10 @@ You need a working *Java 1.8* installation on your machine and
 *Maven 3* or higher.
 
 ```sh
+# From the project's root directory.
 mvn compile
+mvn install
+cd helper
 mvn install
 ```
 
@@ -66,8 +69,11 @@ The work around is to set the environment variable `JAVA_HOME` when
 calling maven. For example:
 
 ```sh
+# From the project's root directory.
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn compile
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn install
+cd helper
+mvn install
 ```
 
 To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
