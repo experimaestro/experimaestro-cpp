@@ -76,7 +76,7 @@
 
     [passwords]
 
-    USERNAME = PASSWORD, GROUP
+    USERNAME = PASSWORD, user
 
     [client]
 
