@@ -93,3 +93,20 @@ Here is just what I did for *zsh*:
   fi
   ```
 * Re-launch your shell: `exec zsh`
+
+# Test your installation
+
+To test your installation is working properly you can try to start a
+server like this:
+
+```sh
+experimaestro --verbose --debug start-server
+```
+
+You should get something like:
+
+```
+INFO:root:Starting with maven
+INFO:root:Waiting for server to start (PID=37851)...
+INFO:root:Server started...
+```
