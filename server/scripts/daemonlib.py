@@ -60,6 +60,24 @@ def _remove_pid_file(pathname, logger):
     else:
         logger.debug("pid file '%s' removed", pathname)
 
+def _build_signal_names_map():
+    return {attrvalue:attrname
+            for attrname, attrvalue in vars(signal).items()
+            if attrname.startswith("SIG") and isinstance(attrvalue, int)}
+
+def _log_signal_name(logger, exit_code):
+    assert exit_code < 0
+    sigmap = _build_signal_names_map()
+    signum = -exit_code
+    try:
+        signame = sigmap[signum]
+    except KeyError:
+        logger.debug("failed to interpret exit code %d as a signal number",
+                     exit_code)
+    else:
+        logger.debug("user's daemon received signal: %d (%s)",
+                     signum, signame)
+        
 DEFAULT_MAXFD = 1024
 
 def get_maxfd(default=DEFAULT_MAXFD):
@@ -284,6 +302,8 @@ def daemonize(daemon_func, main_func,
                 _remove_pid_file(pid_file, daemon_logger)
             daemon_logger.debug("user's daemon stopped with code: %d",
                                 exit_code)
+            if exit_code < 0:
+                _log_signal_name(daemon_logger, exit_code)
             os._exit(exit_code)
     else: # parent
         sys.exit(main_func(child_pid))
