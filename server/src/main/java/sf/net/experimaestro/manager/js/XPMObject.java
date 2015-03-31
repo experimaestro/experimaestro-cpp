@@ -175,7 +175,7 @@ public class XPMObject {
      * @param scheduler         The job scheduler
      * @param loggerRepository  The logger for the script
      * @param workdir           The working directory or null if none
-     * @param experimentId  The experiment ID
+     * @param experimentId      The experiment ID
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
@@ -557,11 +557,11 @@ public class XPMObject {
      */
     private XPMObject include(Path scriptPath, boolean repositoryMode) throws Exception {
 
-        ResourceLocator oldResourceLocator = currentResourceLocator;
+        Path oldResourceLocator = currentScriptPath;
         try (InputStream inputStream = Files.newInputStream(scriptPath)) {
             Scriptable scriptScope = scope;
             XPMObject xpmObject = this;
-            currentResourceLocator = scriptLocator;
+            currentScriptPath = scriptPath;
 
             if (repositoryMode) {
                 // Run the script in a new environment
@@ -582,7 +582,7 @@ public class XPMObject {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         } finally {
             threadXPM.set(this);
-            currentResourceLocator = oldResourceLocator;
+            currentScriptPath = oldResourceLocator;
         }
 
     }
@@ -780,8 +780,9 @@ public class XPMObject {
             }
 
 
-        // --- Environment
-        task.environment = new TreeMap<>(environment);
+            // --- Environment
+            task.environment = new TreeMap<>(environment);
+            ArrayList<Dependency> dependencies = new ArrayList<>();
 
             // --- Options
 
@@ -894,28 +895,15 @@ public class XPMObject {
                 // Add dependencies
                 dependencies.forEach(job::addDependency);
 
-<<<<<<< HEAD
                 // Register within an experimentId
                 if (experimentId != null) {
                     TaskReference reference = taskContext.getTaskReference();
                     reference.add(job);
                     em.persist(reference);
                 }
-                transaction.commit();
-=======
-        taskContext.prepare(task);
 
-        final Resource old = scheduler.getResource(locator);
-        if (old != null) {
-            // TODO: if equal, do not try to replace the task
-            taskContext.prepare(task);
-            if (!task.replace(old)) {
-                getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
-                old.init(scheduler);
-                return new JSResource(old);
-            } else {
-                getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
->>>>>>> master
+                taskContext.prepare(job);
+                transaction.commit();
             }
 
             this.submittedJobs.put(job.getPath(), job);
@@ -942,14 +930,11 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
-<<<<<<< HEAD
+//        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
+//                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
         return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
-                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
-=======
-        return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger())
                 .addDefaultLocks(defaultLocks)
-                .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
->>>>>>> master
+                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
     }
 
     public void setPath(Path locator) {
@@ -1060,7 +1045,7 @@ public class XPMObject {
                 if (resource == null) {
                     tokenResource = new TokenResource(Paths.get(path), 0);
                     em.persist(resource);
-               } else {
+                } else {
                     if (!(resource instanceof TokenResource))
                         throw new AssertionError(String.format("Resource %s exists and is not a token", path));
                     tokenResource = (TokenResource) resource;
@@ -1453,7 +1438,7 @@ public class XPMObject {
         public void set_experiment(String dotname, Path workdir) throws ExperimaestroCannotOverwrite {
             if (!xpm.simulate()) {
                 Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
-                try(Transaction t = Transaction.create()) {
+                try (Transaction t = Transaction.create()) {
                     t.em().persist(experiment);
                     xpm.experimentId = experiment.getId();
                     t.commit();

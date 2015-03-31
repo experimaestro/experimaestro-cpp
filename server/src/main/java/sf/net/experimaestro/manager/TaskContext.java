@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import java.nio.file.Path;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
+import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -45,7 +46,7 @@ public class TaskContext {
     /**
      * The default locks
      */
-    public Map<Resource<?>, Object> defaultLocks = new IdentityHashMap<>();
+    public Map<Resource, Object> defaultLocks = new IdentityHashMap<>();
     /**
      * The working directory
      */
@@ -83,7 +84,7 @@ public class TaskContext {
         return this;
     }
 
-    public TaskContext addDefaultLocks(Map<Resource<?>, Object> map) {
+    public TaskContext addDefaultLocks(Map<Resource, Object> map) {
         defaultLocks.putAll(map);
         return this;
     }
@@ -120,12 +121,12 @@ public class TaskContext {
         return simulate;
     }
 
-    public TaskContext defaultLocks(Map<Resource<?>, Object> defaultLocks) {
+    public TaskContext defaultLocks(Map<Resource, Object> defaultLocks) {
         this.defaultLocks = defaultLocks;
         return this;
     }
 
-    public Map<Resource<?>, Object> defaultLocks() {
+    public Map<Resource, Object> defaultLocks() {
         return defaultLocks;
     }
 
@@ -162,11 +163,11 @@ public class TaskContext {
      * Prepares the task with the current task context
      * @param resource
      */
-    public void prepare(Resource<JobData> resource) {
+    public void prepare(Resource resource) {
         // -- Adds default locks
         for (Map.Entry<? extends Resource, ?> lock : defaultLocks.entrySet()) {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
-            resource.addDependency(dependency);
+            ((Job)resource).addDependency(dependency);
         }
     }
 }
