@@ -73,9 +73,20 @@ def get_maxfd(default=DEFAULT_MAXFD):
         maxfd = r_maxfd
     return maxfd
 
+def iter_logger_handlers(logger):
+    # Code inspired from logging.Logger.hasHandler.
+    c = logger
+    while c:
+        for handler in c.handlers:
+            yield handler
+        if not c.propagate:
+            break
+        else:
+            c = c.parent
+
 def collect_logger_fds(logger):
     """Yield all file descriptors currently opened by *logger*"""
-    for handler in logger.root.handlers:
+    for handler in iter_logger_handlers(logger):
         for attrname in dir(handler):
             attr = getattr(handler, attrname)
             if hasattr(attr, "fileno"):
