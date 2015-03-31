@@ -141,7 +141,12 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }));
 
             // Kills remaining processes
-            writer.println("  jobs -pr | xargs kill");
+            // Compatibility note: --no-run-if-empty is GNU extension so
+            //   we check upstream to use gxargs on OSX.
+            writer.println("  for pid in $(jobs -pr)");
+            writer.println("  do");
+            writer.println("    kill $pid");
+            writer.println("  done");
             writer.format("}%n%n");
 
 
