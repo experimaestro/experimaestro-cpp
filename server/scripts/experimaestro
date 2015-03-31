@@ -126,9 +126,19 @@ def start_jar(args, jarargs):
     daemonlib.daemonize(start_server, wait_server,
         daemon_cwd=workdir,
         pid_file=os.path.join(workdir, "server.pid"),
-        log_level=logging.DEBUG if args.debug else logging.INFO)
-
-
+        log_level=logging.DEBUG if args.debug else logging.INFO,
+        # FIXME(Nicolas Despres): Turn close_fds to True:
+        #   In theory a gentle daemon closed all its opened fds before to start
+        #   (i.e. the copy of fds inherited from its parent). However, in
+        #   our case this leads to un-deterministic error such as the client
+        #   (i.e. run-js) complaining about the socket being already closed.
+        #   We can see in the daemon log that the daemon processs
+        #   (i.e. our child) closes some fds which are probably some socket
+        #   opened by the JsonServer or the like. It would require further
+        #   debugging to diagnostic that. In theory, closing in a child
+        #   process a socket created in the parent is not a problem, but in
+        #   our case things seems to work better when we do not close them.
+        close_fds=False)
 
 class Properties:
     def __init__(self, map=[None, {}]):
