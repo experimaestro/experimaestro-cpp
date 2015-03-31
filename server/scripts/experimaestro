@@ -181,36 +181,35 @@ class Properties:
 def getProperties(filename):
     """Get a dictionnary from a property file
    """
-    propFile = open(filename, "rU")
+    with open(filename, "rU") as propFile:
 
-    re_comment = re.compile(r"""[#;].*""")
-    re_section = re.compile(r"""^\[(\w+)\]$""")
-    re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
+        re_comment = re.compile(r"""[#;].*""")
+        re_section = re.compile(r"""^\[(\w+)\]$""")
+        re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
 
-    # Set some default values
-    props = Properties()
-    section = ""
+        # Set some default values
+        props = Properties()
+        section = ""
 
-    # Read the properties
-    for propLine in propFile:
-        propDef = propLine.strip()
-        if len(propDef) == 0 or re_comment.match(propDef):
-            continue
+        # Read the properties
+        for propLine in propFile:
+            propDef = propLine.strip()
+            if len(propDef) == 0 or re_comment.match(propDef):
+                continue
 
-        m = re_section.match(propDef)
-        if m is not None:
-            section = m.group(1) + "."
-            continue
+            m = re_section.match(propDef)
+            if m is not None:
+                section = m.group(1) + "."
+                continue
 
-        m = re_value.match(propDef)
-        if m is not None:
-            props.set(section + m.group(1), m.group(2))
-            continue
+            m = re_value.match(propDef)
+            if m is not None:
+                props.set(section + m.group(1), m.group(2))
+                continue
 
-        raise Exception("Could not read line [%s]" % propDef)
+            raise Exception("Could not read line [%s]" % propDef)
 
-    propFile.close()
-    return props
+        return props
 
 
 class Configuration():
