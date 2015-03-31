@@ -107,9 +107,12 @@ def start_jar(args, jarargs):
 
     def start_server(logger):
         logger.info("Starting experimaestro server...")
-        subprocess.call(command,
-            stdout=open(os.path.join(workdir, "server.out"), "w"),
-            stderr=open(os.path.join(workdir, "server.err"), "w"))
+        logger.debug("start command: {!r}".format(command))
+        with open(os.path.join(workdir, "server.out"), "w") as stdout, \
+             open(os.path.join(workdir, "server.err"), "w") as stderr:
+            return subprocess.call(command,
+                                   stdout=stdout,
+                                   stderr=stderr)
 
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
@@ -118,10 +121,12 @@ def start_jar(args, jarargs):
             time.sleep(1)
 
         logging.info("Server started...")
+        return 0
 
     daemonlib.daemonize(start_server, wait_server,
         daemon_cwd=workdir,
-        pid_file=os.path.join(workdir, "server.pid"))
+        pid_file=os.path.join(workdir, "server.pid"),
+        log_level=logging.DEBUG if args.debug else logging.INFO)
 
 
 
