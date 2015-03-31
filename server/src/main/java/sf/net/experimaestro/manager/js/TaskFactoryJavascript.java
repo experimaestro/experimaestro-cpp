@@ -243,10 +243,14 @@ public class TaskFactoryJavascript extends TaskFactory {
             if (definition.has("copy", definition)) {
                 final Object copyTo = definition.get("copy", definition);
                 if (copyTo instanceof Boolean) {
-                    input.setCopyTo(id);
+                    if ((Boolean)copyTo)
+                         input.setCopyTo(id);
                 } else {
                     input.setCopyTo(JSUtils.toString(copyTo));
                 }
+            } else {
+                // Copy parameters by default
+                input.setCopyTo(id);
             }
 
             // Set groups

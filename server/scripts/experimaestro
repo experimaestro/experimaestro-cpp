@@ -72,13 +72,11 @@ def jarpaths():
 
 
 def start_jar(args, jarargs):
-    # --- See
-    # http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
-    # http://www.python.org/dev/peps/pep-3143/#python-daemon
-    # --- in order to create a daemon
+    import daemonlib
+    import time
 
-    raise Exception("Not implemented")
-    
+    conf = Configuration(args)
+    workdir = conf.config.sub("server")["database"]
 
     # Check what if we start using maven
     mvnFile = os.path.join(xpmdir, "pom.xml")
@@ -88,11 +86,12 @@ def start_jar(args, jarargs):
     if args.maven or mvnFile is not None:
         logging.info("Starting with maven")
         command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"]
+        jarargs = [ "server" ]
         if mvnFile is not None:
             command.append("--file")
             command.append(mvnFile)
         jarargs = [arg for arg in jarargs]
-        command.append("-Dexec.args=%s" % string.join(jarargs, " "))
+        command.append("-Dexec.args=%s" % " ".join(jarargs))
 
     else:
         jarpath = None
@@ -106,10 +105,40 @@ def start_jar(args, jarargs):
             raise Exception("Could not find experimaestro jar file")
         command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
 
-    # print command
-    logging.debug('Running command %s' % command)
-    subprocess.call(command)
+    def start_server(logger):
+        logger.info("Starting experimaestro server...")
+        logger.debug("start command: {!r}".format(command))
+        with open(os.path.join(workdir, "server.out"), "w") as stdout, \
+             open(os.path.join(workdir, "server.err"), "w") as stderr:
+            return subprocess.call(command,
+                                   stdout=stdout,
+                                   stderr=stderr)
 
+    def wait_server(pid):
+        logging.info("Waiting for server to start (PID=%s)...", pid)
+        json_server = conf.getJsonServer()
+        while not ping(json_server):
+            time.sleep(1)
+
+        logging.info("Server started...")
+        return 0
+
+    daemonlib.daemonize(start_server, wait_server,
+        daemon_cwd=workdir,
+        pid_file=os.path.join(workdir, "server.pid"),
+        log_level=logging.DEBUG if args.debug else logging.INFO,
+        # FIXME(Nicolas Despres): Turn close_fds to True:
+        #   In theory a gentle daemon closed all its opened fds before to start
+        #   (i.e. the copy of fds inherited from its parent). However, in
+        #   our case this leads to un-deterministic error such as the client
+        #   (i.e. run-js) complaining about the socket being already closed.
+        #   We can see in the daemon log that the daemon processs
+        #   (i.e. our child) closes some fds which are probably some socket
+        #   opened by the JsonServer or the like. It would require further
+        #   debugging to diagnostic that. In theory, closing in a child
+        #   process a socket created in the parent is not a problem, but in
+        #   our case things seems to work better when we do not close them.
+        close_fds=False)
 
 class Properties:
     def __init__(self, map=[None, {}]):
@@ -121,7 +150,7 @@ class Properties:
     def __getitem__(self, name):
         v = self.sub(name, None)
         if v is None:
-            raise Exception("No key %s in properties" % name)
+            raise Exception("No key '%s' in properties" % name)
         return v.map[0]
 
     def keys(self):
@@ -162,36 +191,35 @@ class Properties:
 def getProperties(filename):
     """Get a dictionnary from a property file
    """
-    propFile = open(filename, "rU")
+    with open(filename, "rU") as propFile:
 
-    re_comment = re.compile(r"""[#;].*""")
-    re_section = re.compile(r"""^\[(\w+)\]$""")
-    re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
+        re_comment = re.compile(r"""[#;].*""")
+        re_section = re.compile(r"""^\[(\w+)\]$""")
+        re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
 
-    # Set some default values
-    props = Properties()
-    section = ""
+        # Set some default values
+        props = Properties()
+        section = ""
 
-    # Read the properties
-    for propLine in propFile:
-        propDef = propLine.strip()
-        if len(propDef) == 0 or re_comment.match(propDef):
-            continue
+        # Read the properties
+        for propLine in propFile:
+            propDef = propLine.strip()
+            if len(propDef) == 0 or re_comment.match(propDef):
+                continue
 
-        m = re_section.match(propDef)
-        if m is not None:
-            section = m.group(1) + "."
-            continue
+            m = re_section.match(propDef)
+            if m is not None:
+                section = m.group(1) + "."
+                continue
 
-        m = re_value.match(propDef)
-        if m is not None:
-            props.set(section + m.group(1), m.group(2))
-            continue
+            m = re_value.match(propDef)
+            if m is not None:
+                props.set(section + m.group(1), m.group(2))
+                continue
 
-        raise Exception("Could not read line [%s]" % propDef)
+            raise Exception("Could not read line [%s]" % propDef)
 
-    propFile.close()
-    return props
+        return props
 
 
 class Configuration():
@@ -202,9 +230,9 @@ class Configuration():
         configfile = os.path.expanduser(args.config)
 
         # Initialise the server
-        config = getProperties(configfile)
+        self.config = getProperties(configfile)
 
-        clients = config.sub("client", None)
+        clients = self.config.sub("client", None)
         if clients is None:
             raise Exception("No client section in configuration file")
 
@@ -257,7 +285,7 @@ class Configuration():
 
 def ping(json_server):
     try:
-        return json_server.ping() == "pong"
+        return json_server.ping({}) == "pong"
     except socket.error as e:
         return False
 
@@ -297,7 +325,7 @@ def command_run_js(args):
 
     logging.debug("Running JS scripts %s" % [s[0] for s in files])
 
-    params = {"files": files, "environment": dict(os.environ)}  
+    params = {"files": files, "environment": dict(os.environ)}
     if args.debug_port > 0:
         params["debug"] = args.debug_port
 
@@ -330,8 +358,8 @@ def command_run_js(args):
 def command_update(args):
     server = Configuration(args).getJsonServer()
     print("%d updated job(s)" % server.updateJobs({
-        "group": args.group, 
-        "recursive": args.recursive, 
+        "group": args.group,
+        "recursive": args.recursive,
         "states": get_states(args.states)
     }))
 
@@ -424,14 +452,14 @@ subparsers = parser.add_subparsers(help='Command', dest='command')
 parser.set_defaults(dir=xpmdir)
 parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
                     choices=["debug", "info", "warn"], default="info")
-parser.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
 parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
 parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
                     help="Experimaestro configuration file")
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
-subparser = subparsers.add_parser("start-server", help="Start the experimaestro server")
+p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
+p_start.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 

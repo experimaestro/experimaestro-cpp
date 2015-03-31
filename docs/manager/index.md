@@ -27,4 +27,4 @@ The main concepts of the manager are:
     or to a configuration task. Tasks can be composed in various ways to allow a compact representation of
     experimental plans.  Tasks are described further [this document](tasks.html)
 * Computational resources, named `connectors`, define a set of computers - how can a file be stored, how can a
-    command line be executed. More information can be found in this [document](connectors.html).
+    command line be executed. More information can be found in this [document](../scheduler/connectors.md).

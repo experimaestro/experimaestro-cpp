@@ -67,7 +67,7 @@ layout: default
 
 ## Configuration
 
-  The server and clients are configured by a simple property file, located in the `.experimaestro` (by default) file in the user's home directory.
+  The server and clients are configured by a simple property file `settings.ini`, located in the `.experimaestro` (by default) file in the user's home directory.
 
 {% highlight ini %}
 
@@ -81,7 +81,8 @@ database = /path/to/a/valid/folder
 USERNAME = PASSWORD, GROUP
 
 [client]
-url = http://USERNAME:PASSWORD@localhost:12345/
+local.url = http://USERNAME:PASSWORD@localhost:12345/xmlrpc
+local.default = true
 
 {% endhighlight %}
 

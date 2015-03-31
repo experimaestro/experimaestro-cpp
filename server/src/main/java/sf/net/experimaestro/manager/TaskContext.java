@@ -28,6 +28,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -44,7 +45,7 @@ public class TaskContext {
     /**
      * The default locks
      */
-    public Map<Resource, String> defaultLocks = ImmutableMap.of();
+    public Map<Resource<?>, Object> defaultLocks = new IdentityHashMap<>();
     /**
      * The working directory
      */
@@ -82,6 +83,11 @@ public class TaskContext {
         return this;
     }
 
+    public TaskContext addDefaultLocks(Map<Resource<?>, Object> map) {
+        defaultLocks.putAll(map);
+        return this;
+    }
+
     /**
      * Initialize a new task context
      *  @param scheduler        The scheduler
@@ -106,14 +112,20 @@ public class TaskContext {
 
     @Override
     public TaskContext clone() {
-        return new TaskContext(scheduler, experimentId, path, workingDirectory, logger, simulate, newTaskListeners);
+        return new TaskContext(scheduler, experimentId, path, workingDirectory, logger, simulate, newTaskListeners)
+                .addDefaultLocks(defaultLocks);
     }
 
     public boolean simulate() {
         return simulate;
     }
 
-    public Map<Resource, String> defaultLocks() {
+    public TaskContext defaultLocks(Map<Resource<?>, Object> defaultLocks) {
+        this.defaultLocks = defaultLocks;
+        return this;
+    }
+
+    public Map<Resource<?>, Object> defaultLocks() {
         return defaultLocks;
     }
 
@@ -144,5 +156,17 @@ public class TaskContext {
 
     public Logger getLogger(String loggerName) {
         return (Logger) logger.getLoggerRepository().getLogger(loggerName);
+    }
+
+    /**
+     * Prepares the task with the current task context
+     * @param resource
+     */
+    public void prepare(Resource<JobData> resource) {
+        // -- Adds default locks
+        for (Map.Entry<? extends Resource, ?> lock : defaultLocks.entrySet()) {
+            Dependency dependency = lock.getKey().createDependency(lock.getValue());
+            resource.addDependency(dependency);
+        }
     }
 }

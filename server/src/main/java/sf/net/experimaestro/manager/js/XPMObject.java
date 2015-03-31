@@ -557,9 +557,12 @@ public class XPMObject {
      */
     private XPMObject include(Path scriptPath, boolean repositoryMode) throws Exception {
 
+        ResourceLocator oldResourceLocator = currentResourceLocator;
         try (InputStream inputStream = Files.newInputStream(scriptPath)) {
             Scriptable scriptScope = scope;
             XPMObject xpmObject = this;
+            currentResourceLocator = scriptLocator;
+
             if (repositoryMode) {
                 // Run the script in a new environment
                 scriptScope = XPMContext.newScope();
@@ -571,6 +574,7 @@ public class XPMObject {
             // Avoid adding the protocol if this is a local file
             final String sourceName = scriptPath.toString();
 
+
             Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
 
             return xpmObject;
@@ -578,6 +582,7 @@ public class XPMObject {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         } finally {
             threadXPM.set(this);
+            currentResourceLocator = oldResourceLocator;
         }
 
     }
@@ -774,18 +779,9 @@ public class XPMObject {
                 return new JSResource(Resource.getByLocator(em, Paths.get(path.toString())));
             }
 
-            // -- Adds default locks
-            Map<? extends Resource, ?> _defaultLocks = taskContext != null && taskContext.defaultLocks() != null
-                    ? taskContext.defaultLocks() : defaultLocks;
-            ArrayList<Dependency> dependencies = new ArrayList<>();
-            for (Map.Entry<? extends Resource, ?> lock : _defaultLocks.entrySet()) {
-                Dependency dependency = lock.getKey().createDependency(lock.getValue());
-                dependencies.add(dependency);
-            }
 
-
-            // --- Environment
-            task.environment = new TreeMap<>(environment);
+        // --- Environment
+        task.environment = new TreeMap<>(environment);
 
             // --- Options
 
@@ -898,6 +894,7 @@ public class XPMObject {
                 // Add dependencies
                 dependencies.forEach(job::addDependency);
 
+<<<<<<< HEAD
                 // Register within an experimentId
                 if (experimentId != null) {
                     TaskReference reference = taskContext.getTaskReference();
@@ -905,6 +902,20 @@ public class XPMObject {
                     em.persist(reference);
                 }
                 transaction.commit();
+=======
+        taskContext.prepare(task);
+
+        final Resource old = scheduler.getResource(locator);
+        if (old != null) {
+            // TODO: if equal, do not try to replace the task
+            taskContext.prepare(task);
+            if (!task.replace(old)) {
+                getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
+                old.init(scheduler);
+                return new JSResource(old);
+            } else {
+                getRootLogger().info(String.format("Overwriting resource [%s]", task.getIdentifier()));
+>>>>>>> master
             }
 
             this.submittedJobs.put(job.getPath(), job);
@@ -931,8 +942,14 @@ public class XPMObject {
     }
 
     public TaskContext newTaskContext() {
+<<<<<<< HEAD
         return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
                 .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
+=======
+        return new TaskContext(scheduler, currentResourceLocator, workdir.get(), getRootLogger())
+                .addDefaultLocks(defaultLocks)
+                .addNewTaskListener(job -> submittedJobs.put(job.getLocator(), job));
+>>>>>>> master
     }
 
     public void setPath(Path locator) {
@@ -1024,8 +1041,12 @@ public class XPMObject {
 
         @JSFunction("set_default_lock")
         @JSHelp("Adds a new resource to lock for all jobs to be started")
-        public void setDefaultLock(Object resource, Object parameters) {
-            xpm.defaultLocks.put((Resource) unwrap(resource), parameters);
+        public void setDefaultLock(
+                @JSArgument(name = "resource", help = "The resource to be locked")
+                Resource resource,
+                @JSArgument(name = "parameters", help = "The parameters to be given at lock time")
+                Object parameters) {
+            xpm.defaultLocks.put(resource, parameters);
         }
 
         @JSFunction("token_resource")
