@@ -122,8 +122,8 @@ def daemonize(daemon_func, main_func,
 
     The *main_func* is called with the PID of the daemon.
     You should write this PID to a file so the daemon is easy to stop by
-    typing: kill `cat pid`. Each function must returns an integer which is
-    the exit status.
+    typing: kill `cat pid`. Both function must return an integer which is
+    the exit status (if None is returned exit status 0 is assumed).
     The daemon will creates its own session, changes its working directory
     to *daemon_cwd* and closes all its open files. For this reason, the
     *logging* module with a SysLogHandler or a FileHandler must be used by
@@ -255,7 +255,7 @@ def daemonize(daemon_func, main_func,
             sys.exit(daemon_func(daemon_logger))
         except SystemExit as e:
             daemon_logger.fatal("daemon exit with code {}".format(e.code))
-            exit_code = e.code
+            exit_code = 0 if e.code is None else e.code
         except KeyboardInterrupt as e:
             daemon_logger.fatal("daemon interrupted!")
             exit_code = interrupt_exit_code
