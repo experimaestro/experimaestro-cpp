@@ -223,10 +223,12 @@ def daemonize(daemon_func, main_func,
             os.setsid()
             daemon_logger.debug("new session created")
             ### Close all opened files
-            sys.stdin.close()
-            sys.stdout.close()
-            sys.stderr.close()
             maxfd = get_maxfd()
+            daemon_logger.debug("closing all fds up to %d except %r",
+                                maxfd, daemon_logger_fds)
+            for stream in (sys.stdin, sys.stdout, sys.stderr):
+                if stream.fileno() not in daemon_logger_fds:
+                    stream.close()
             for fd in range(maxfd):
                 if fd in daemon_logger_fds:
                     continue
@@ -235,7 +237,7 @@ def daemonize(daemon_func, main_func,
                 except OSError:
                     pass
             daemon_logger.debug("closed all fds up to %d except %r",
-                                maxfd, list(daemon_logger_fds))
+                                maxfd, daemon_logger_fds)
             # We probably don't want the file mode creation mask inherited from
             # the parent, so we give the child complete control over
             # permissions.
