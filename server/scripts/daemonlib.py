@@ -77,7 +77,29 @@ def _log_signal_name(logger, exit_code):
     else:
         logger.debug("user's daemon received signal: %d (%s)",
                      signum, signame)
-        
+
+def _close_opened_fds(logger, rejected_fds):
+    maxfd = get_maxfd()
+    closed_fds = set()
+    logger.debug("closing all fds up to %d except %r",
+                        maxfd, rejected_fds)
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if stream.fileno() not in rejected_fds:
+            if not stream.closed:
+                closed_fds.add(stream.fileno())
+                stream.close()
+    for fd in range(maxfd):
+        if fd in rejected_fds:
+            continue
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        else:
+            closed_fds.add(fd)
+    logger.debug("closed %d fds %r in range 0-%d except %r",
+                 len(closed_fds), closed_fds, maxfd, rejected_fds)
+
 DEFAULT_MAXFD = 1024
 
 def get_maxfd(default=DEFAULT_MAXFD):
@@ -125,7 +147,7 @@ def daemonize(daemon_func, main_func,
               log_date_format='%Y-%m-%dT%H:%M',
               sigterm_callback=None,
               error_exit_code=255, interrupt_exit_code=2,
-              umask=0o022):
+              umask=0o022, close_fds=True):
     """Calling this function make your process a daemon.
 
     It forks the process and call *daemon_func* in the child process and
@@ -154,9 +176,9 @@ def daemonize(daemon_func, main_func,
     typing: kill `cat pid`. Both function must return an integer which is
     the exit status (if None is returned exit status 0 is assumed).
     The daemon will creates its own session, changes its working directory
-    to *daemon_cwd* and closes all its open files. For this reason, the
-    *logging* module with a SysLogHandler or a FileHandler must be used by
-    the daemon to communicate.
+    to *daemon_cwd* and closes all its open files if close_fds is True.
+    For this reason, the *logging* module with a SysLogHandler or a
+    FileHandler must be used by the daemon to communicate.
 
     If you want to pass arguments to *daemon_func* or *main_func* uses
     *functools.partial* or make them a functor.
@@ -199,6 +221,9 @@ def daemonize(daemon_func, main_func,
         raise ValueError("invalid interrupt_exit_code value {} "
                          "(must be between 0 and 256 (exclusive)"
                          .format(interrupt_exit_code))
+    if close_fds is not True and close_fds is not False:
+        raise TypeError("close_fds must be True or False, not {!r}"
+                        .format(close_fds))
     ### Create the logger
     if logger is None:
         daemon_logger = logging.getLogger("daemon")
@@ -220,7 +245,8 @@ def daemonize(daemon_func, main_func,
         daemon_logger = logger
     else:
         raise ValueError("invalid logger value: {!r}".format(logger))
-    daemon_logger_fds = set(collect_logger_fds(daemon_logger))
+    if close_fds:
+        daemon_logger_fds = set(collect_logger_fds(daemon_logger))
     ### Setup SIGTERM callback
     if sigterm_callback is None:
         def interrupt_on_sigterm(signum, frame):
@@ -252,21 +278,10 @@ def daemonize(daemon_func, main_func,
             os.setsid()
             daemon_logger.debug("new session created")
             ### Close all opened files
-            maxfd = get_maxfd()
-            daemon_logger.debug("closing all fds up to %d except %r",
-                                maxfd, daemon_logger_fds)
-            for stream in (sys.stdin, sys.stdout, sys.stderr):
-                if stream.fileno() not in daemon_logger_fds:
-                    stream.close()
-            for fd in range(maxfd):
-                if fd in daemon_logger_fds:
-                    continue
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-            daemon_logger.debug("closed all fds up to %d except %r",
-                                maxfd, daemon_logger_fds)
+            if close_fds:
+                _close_opened_fds(daemon_logger, daemon_logger_fds)
+            else:
+                daemon_logger.debug("was not asked to close opened fds")
             # We probably don't want the file mode creation mask inherited from
             # the parent, so we give the child complete control over
             # permissions.
