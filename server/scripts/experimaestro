@@ -107,9 +107,12 @@ def start_jar(args, jarargs):
 
     def start_server(logger):
         logger.info("Starting experimaestro server...")
-        subprocess.call(command,
-            stdout=open(os.path.join(workdir, "server.out"), "w"),
-            stderr=open(os.path.join(workdir, "server.err"), "w"))
+        logger.debug("start command: {!r}".format(command))
+        with open(os.path.join(workdir, "server.out"), "w") as stdout, \
+             open(os.path.join(workdir, "server.err"), "w") as stderr:
+            return subprocess.call(command,
+                                   stdout=stdout,
+                                   stderr=stderr)
 
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
@@ -118,12 +121,24 @@ def start_jar(args, jarargs):
             time.sleep(1)
 
         logging.info("Server started...")
+        return 0
 
     daemonlib.daemonize(start_server, wait_server,
         daemon_cwd=workdir,
-        pid_file=os.path.join(workdir, "server.pid"))
-
-
+        pid_file=os.path.join(workdir, "server.pid"),
+        log_level=logging.DEBUG if args.debug else logging.INFO,
+        # FIXME(Nicolas Despres): Turn close_fds to True:
+        #   In theory a gentle daemon closed all its opened fds before to start
+        #   (i.e. the copy of fds inherited from its parent). However, in
+        #   our case this leads to un-deterministic error such as the client
+        #   (i.e. run-js) complaining about the socket being already closed.
+        #   We can see in the daemon log that the daemon processs
+        #   (i.e. our child) closes some fds which are probably some socket
+        #   opened by the JsonServer or the like. It would require further
+        #   debugging to diagnostic that. In theory, closing in a child
+        #   process a socket created in the parent is not a problem, but in
+        #   our case things seems to work better when we do not close them.
+        close_fds=False)
 
 class Properties:
     def __init__(self, map=[None, {}]):
@@ -176,36 +191,35 @@ class Properties:
 def getProperties(filename):
     """Get a dictionnary from a property file
    """
-    propFile = open(filename, "rU")
+    with open(filename, "rU") as propFile:
 
-    re_comment = re.compile(r"""[#;].*""")
-    re_section = re.compile(r"""^\[(\w+)\]$""")
-    re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
+        re_comment = re.compile(r"""[#;].*""")
+        re_section = re.compile(r"""^\[(\w+)\]$""")
+        re_value = re.compile(r"""([\w.]+)\s*=\s*(\S*)\s*""")
 
-    # Set some default values
-    props = Properties()
-    section = ""
+        # Set some default values
+        props = Properties()
+        section = ""
 
-    # Read the properties
-    for propLine in propFile:
-        propDef = propLine.strip()
-        if len(propDef) == 0 or re_comment.match(propDef):
-            continue
+        # Read the properties
+        for propLine in propFile:
+            propDef = propLine.strip()
+            if len(propDef) == 0 or re_comment.match(propDef):
+                continue
 
-        m = re_section.match(propDef)
-        if m is not None:
-            section = m.group(1) + "."
-            continue
+            m = re_section.match(propDef)
+            if m is not None:
+                section = m.group(1) + "."
+                continue
 
-        m = re_value.match(propDef)
-        if m is not None:
-            props.set(section + m.group(1), m.group(2))
-            continue
+            m = re_value.match(propDef)
+            if m is not None:
+                props.set(section + m.group(1), m.group(2))
+                continue
 
-        raise Exception("Could not read line [%s]" % propDef)
+            raise Exception("Could not read line [%s]" % propDef)
 
-    propFile.close()
-    return props
+        return props
 
 
 class Configuration():

@@ -60,6 +60,46 @@ def _remove_pid_file(pathname, logger):
     else:
         logger.debug("pid file '%s' removed", pathname)
 
+def _build_signal_names_map():
+    return {attrvalue:attrname
+            for attrname, attrvalue in vars(signal).items()
+            if attrname.startswith("SIG") and isinstance(attrvalue, int)}
+
+def _log_signal_name(logger, exit_code):
+    assert exit_code < 0
+    sigmap = _build_signal_names_map()
+    signum = -exit_code
+    try:
+        signame = sigmap[signum]
+    except KeyError:
+        logger.debug("failed to interpret exit code %d as a signal number",
+                     exit_code)
+    else:
+        logger.debug("user's daemon received signal: %d (%s)",
+                     signum, signame)
+
+def _close_opened_fds(logger, rejected_fds):
+    maxfd = get_maxfd()
+    closed_fds = set()
+    logger.debug("closing all fds up to %d except %r",
+                        maxfd, rejected_fds)
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if stream.fileno() not in rejected_fds:
+            if not stream.closed:
+                closed_fds.add(stream.fileno())
+                stream.close()
+    for fd in range(maxfd):
+        if fd in rejected_fds:
+            continue
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        else:
+            closed_fds.add(fd)
+    logger.debug("closed %d fds %r in range 0-%d except %r",
+                 len(closed_fds), closed_fds, maxfd, rejected_fds)
+
 DEFAULT_MAXFD = 1024
 
 def get_maxfd(default=DEFAULT_MAXFD):
@@ -73,9 +113,20 @@ def get_maxfd(default=DEFAULT_MAXFD):
         maxfd = r_maxfd
     return maxfd
 
+def iter_logger_handlers(logger):
+    # Code inspired from logging.Logger.hasHandler.
+    c = logger
+    while c:
+        for handler in c.handlers:
+            yield handler
+        if not c.propagate:
+            break
+        else:
+            c = c.parent
+
 def collect_logger_fds(logger):
     """Yield all file descriptors currently opened by *logger*"""
-    for handler in logger.root.handlers:
+    for handler in iter_logger_handlers(logger):
         for attrname in dir(handler):
             attr = getattr(handler, attrname)
             if hasattr(attr, "fileno"):
@@ -96,7 +147,7 @@ def daemonize(daemon_func, main_func,
               log_date_format='%Y-%m-%dT%H:%M',
               sigterm_callback=None,
               error_exit_code=255, interrupt_exit_code=2,
-              umask=0o022):
+              umask=0o022, close_fds=True):
     """Calling this function make your process a daemon.
 
     It forks the process and call *daemon_func* in the child process and
@@ -122,12 +173,12 @@ def daemonize(daemon_func, main_func,
 
     The *main_func* is called with the PID of the daemon.
     You should write this PID to a file so the daemon is easy to stop by
-    typing: kill `cat pid`. Each function must returns an integer which is
-    the exit status.
+    typing: kill `cat pid`. Both function must return an integer which is
+    the exit status (if None is returned exit status 0 is assumed).
     The daemon will creates its own session, changes its working directory
-    to *daemon_cwd* and closes all its open files. For this reason, the
-    *logging* module with a SysLogHandler or a FileHandler must be used by
-    the daemon to communicate.
+    to *daemon_cwd* and closes all its open files if close_fds is True.
+    For this reason, the *logging* module with a SysLogHandler or a
+    FileHandler must be used by the daemon to communicate.
 
     If you want to pass arguments to *daemon_func* or *main_func* uses
     *functools.partial* or make them a functor.
@@ -170,6 +221,9 @@ def daemonize(daemon_func, main_func,
         raise ValueError("invalid interrupt_exit_code value {} "
                          "(must be between 0 and 256 (exclusive)"
                          .format(interrupt_exit_code))
+    if close_fds is not True and close_fds is not False:
+        raise TypeError("close_fds must be True or False, not {!r}"
+                        .format(close_fds))
     ### Create the logger
     if logger is None:
         daemon_logger = logging.getLogger("daemon")
@@ -191,7 +245,8 @@ def daemonize(daemon_func, main_func,
         daemon_logger = logger
     else:
         raise ValueError("invalid logger value: {!r}".format(logger))
-    daemon_logger_fds = set(collect_logger_fds(daemon_logger))
+    if close_fds:
+        daemon_logger_fds = set(collect_logger_fds(daemon_logger))
     ### Setup SIGTERM callback
     if sigterm_callback is None:
         def interrupt_on_sigterm(signum, frame):
@@ -223,19 +278,10 @@ def daemonize(daemon_func, main_func,
             os.setsid()
             daemon_logger.debug("new session created")
             ### Close all opened files
-            sys.stdin.close()
-            sys.stdout.close()
-            sys.stderr.close()
-            maxfd = get_maxfd()
-            for fd in range(maxfd):
-                if fd in daemon_logger_fds:
-                    continue
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-            daemon_logger.debug("closed all fds up to %d except %r",
-                                maxfd, list(daemon_logger_fds))
+            if close_fds:
+                _close_opened_fds(daemon_logger, daemon_logger_fds)
+            else:
+                daemon_logger.debug("was not asked to close opened fds")
             # We probably don't want the file mode creation mask inherited from
             # the parent, so we give the child complete control over
             # permissions.
@@ -253,7 +299,7 @@ def daemonize(daemon_func, main_func,
             sys.exit(daemon_func(daemon_logger))
         except SystemExit as e:
             daemon_logger.fatal("daemon exit with code {}".format(e.code))
-            exit_code = e.code
+            exit_code = 0 if e.code is None else e.code
         except KeyboardInterrupt as e:
             daemon_logger.fatal("daemon interrupted!")
             exit_code = interrupt_exit_code
@@ -271,6 +317,8 @@ def daemonize(daemon_func, main_func,
                 _remove_pid_file(pid_file, daemon_logger)
             daemon_logger.debug("user's daemon stopped with code: %d",
                                 exit_code)
+            if exit_code < 0:
+                _log_signal_name(daemon_logger, exit_code)
             os._exit(exit_code)
     else: # parent
         sys.exit(main_func(child_pid))
