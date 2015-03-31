@@ -164,8 +164,6 @@ abstract public class Dependency implements Serializable {
     final public Lock lock(EntityManager em, String pid) throws LockException {
         LOGGER.debug("Locking dependency %s", this);
         try {
-            em.refresh(getFrom(), LockModeType.OPTIMISTIC);
-            em.refresh(this, LockModeType.OPTIMISTIC);
             lock = _lock(pid);
 
             return lock;
@@ -176,8 +174,6 @@ abstract public class Dependency implements Serializable {
 
     final public void unlock(EntityManager em) {
         LOGGER.debug("Unlocking dependency %s", this);
-        em.refresh(getFrom(), LockModeType.OPTIMISTIC);
-        em.refresh(this, LockModeType.OPTIMISTIC);
         assert lock != null : "Lock of an active dependency is null";
         lock.close();
         lock = null;

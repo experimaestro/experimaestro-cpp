@@ -889,6 +889,11 @@ public class XPMObject {
                 pw.format("Locator: %s", path.toString());
                 pw.flush();
             } else {
+                // Prepare job
+                if (taskContext != null) {
+                    taskContext.prepare(job);
+                }
+
                 // Store in scheduler
                 em.persist(job);
 
@@ -902,7 +907,6 @@ public class XPMObject {
                     em.persist(reference);
                 }
 
-                taskContext.prepare(job);
                 transaction.commit();
             }
 

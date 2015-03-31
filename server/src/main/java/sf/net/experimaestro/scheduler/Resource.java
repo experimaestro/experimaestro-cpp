@@ -318,9 +318,11 @@ public abstract class Resource implements PostCommitListener {
         if (this.state == state)
             return false;
         this.state = state;
-        if (this.isStored()) {
-            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
-        }
+
+        // FIXME: Should be done when the operation is committed
+//        if (this.isStored()) {
+//            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+//        }
         return true;
     }
 
@@ -373,7 +375,7 @@ public abstract class Resource implements PostCommitListener {
     }
 
     /**
-     * Notify the dependencies that a resource has changed
+     * Notify the dependencies that a resource has changed. Commits all the changes
      * @param t The current transaction
      * @param em The current entity manager
      */
@@ -404,6 +406,7 @@ public abstract class Resource implements PostCommitListener {
                         // Update the dependency in database
                         // Notify the resource that a dependency has changed
                         depResource.notify(t, em, new DependencyChangedMessage(dep, beforeState, dep.status));
+
                     } else {
                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                     }

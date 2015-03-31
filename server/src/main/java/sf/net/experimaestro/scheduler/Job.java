@@ -293,7 +293,8 @@ public class Job extends Resource {
 
 
     /**
-     * Called when a resource state has changed
+     * Called when a resource state has changed. After an update, the entity will be
+     * saved to the database and further cascading operations make take place.
      *
      * @param t The current transaction
      * @param em The current entity manager
@@ -321,6 +322,10 @@ public class Job extends Resource {
                 final ResourceState oldState = getState();
                 dependencyChanged(depMessage, em, t);
 
+                // Save changes
+                em.persist(this);
+                t.boundary();
+
                 if (getState() != oldState) {
                     // Notify dependents
                     notifyDependencies(t, em);
@@ -331,25 +336,24 @@ public class Job extends Resource {
                 break;
 
             default:
-                LOGGER.error("Received unknown self-message: %s", message);
-
+                super.notify(t, em, message);
         }
-
-
     }
 
+    /**
+     * Called when a dependency has changes.
+     *
+     * It performs the changes in the object but to not save it.
+     *
+     * @param message The message
+     * @param em The current entity manager
+     * @param t The current transaction
+     */
     private void dependencyChanged(DependencyChangedMessage message, EntityManager em, Transaction t) {
         LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
 
-        // Retrieve the dependency
-        final Resource _from = em.find(Resource.class, message.fromId);
-        final Dependency dependency = em.find(Dependency.class, new DependencyPK(_from.getId(), this.getId()));
-
-        // Use the cached value if we have one since it is most actual
-        DependencyStatus fromStatus = dependency.status;
-
-        int diff = (message.status.isOK() ? 1 : 0) - (fromStatus.isOK() ? 1 : 0);
-        int diffHold = (message.status.isBlocking() ? 1 : 0) - (fromStatus.isBlocking() ? 1 : 0);
+        int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
+        int diffHold = (message.newStatus.isBlocking() ? 1 : 0) - (message.oldStatus.isBlocking() ? 1 : 0);
 
         if (diff != 0 || diffHold != 0) {
             nbUnsatisfied -= diff;
@@ -370,15 +374,21 @@ public class Job extends Resource {
             assert nbUnsatisfied >= nbHolding;
         }
         LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
-                diff, diffHold, message.fromId, message.status);
+                diff, diffHold, message.fromId, message.newStatus);
     }
 
+    /**
+     * Called when the job has ended
+     * @param eoj The message
+     * @param em The entity manager
+     * @param t The transaction
+     */
     private void endOfJobMessage(EndOfJobMessage eoj, EntityManager em, Transaction t) {
         this.endTimestamp = eoj.timestamp;
 
         // TODO: copy done & code status main connector if needed
 
-        LOGGER.info("Job [%s] has ended with code %d", this.getPath(), eoj.code);
+        LOGGER.info("Job %s has ended with code %d", this, eoj.code);
 
         // (1) Change state
 
@@ -412,7 +422,8 @@ public class Job extends Resource {
             LOGGER.error("Could not dispose of the old process checker %s", e);
         }
 
-        t.commit();
+        em.persist(this);
+        t.boundary();
 
         // Notify our dependencies
         notifyDependencies(t, em);

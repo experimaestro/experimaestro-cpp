@@ -134,7 +134,10 @@ public abstract class XPMProcess {
 
                     try {
                         final int _code = code;
-                        Transaction.run((em, t) -> job.notify(t, em, new EndOfJobMessage(_code, System.currentTimeMillis())));
+                        Transaction.run((em, t) -> {
+                            // Get a fresh object and notify
+                            em.find(Job.class, job.getId()).notify(t, em, new EndOfJobMessage(_code, System.currentTimeMillis()));
+                        });
                     } catch (RuntimeException e) {
                         LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
                     }
