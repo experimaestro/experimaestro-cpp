@@ -30,13 +30,13 @@ import javax.persistence.Entity;
  */
 @Entity
 @DiscriminatorValue("token")
-public class TokenDependency extends Dependency {
+public class CountTokenDependency extends TokenRequirement {
     final static private Logger LOGGER = Logger.getLogger();
 
-    protected TokenDependency() {
+    protected CountTokenDependency() {
     }
 
-    public TokenDependency(Resource from) {
+    public CountTokenDependency(Token from) {
         super(from);
     }
 
@@ -45,26 +45,19 @@ public class TokenDependency extends Dependency {
         return "Token/" + super.toString();
     }
 
-    @Override
-    protected DependencyStatus _accept() {
-        TokenResource token = (TokenResource) getFrom();
-        return token.getUsedTokens() < token.getLimit() ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
-    }
 
     @Override
     protected Lock _lock(String pid) throws LockException {
-        TokenResource token = (TokenResource) getFrom();
+        TokenResource token = (TokenResource) getToken();
         if (token.getUsedTokens() >= token.getLimit()) {
             LOGGER.debug("All tokens are already taken (%s/%s) [token %s for %s]",
-                    token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
+                    token.getUsedTokens(), token.getLimit(), getToken(), getTo());
             throw new LockException("All the tokens are already taken");
         }
 
         token.increaseUsedTokens();
         LOGGER.debug("Taking one token (%s/%s) [token %s for %s]",
-                token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
+                token.getUsedTokens(), token.getLimit(), getToken(), getTo());
         return new TokenLock(token);
     }
-
-
 }

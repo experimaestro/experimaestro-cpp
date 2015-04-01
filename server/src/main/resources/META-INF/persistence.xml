@@ -51,7 +51,7 @@
         <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
         <class>sf.net.experimaestro.scheduler.ExclusiveDependency</class>
         <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
-        <class>sf.net.experimaestro.scheduler.TokenDependency</class>
+        <class>sf.net.experimaestro.scheduler.CountTokenDependency</class>
 
         <class>sf.net.experimaestro.locks.Lock</class>
         <class>sf.net.experimaestro.scheduler.StatusLock</class>
