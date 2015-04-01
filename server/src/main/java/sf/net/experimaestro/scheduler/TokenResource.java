@@ -21,8 +21,11 @@ package sf.net.experimaestro.scheduler;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
+import javax.persistence.PostLoad;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -31,10 +34,11 @@ import java.io.IOException;
  * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * @date 23/11/12
  */
 @Entity
-// FIXME: change name (when branch is master)
-public class TokenResource extends Token {
+@DiscriminatorValue(Resource.TOKEN_RESOURCE_TYPE)
+public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -65,14 +69,15 @@ public class TokenResource extends Token {
     /**
      * Creates a new token resource
      *
-     * @param identifier The token path
+     * @param path  The token path
      * @param limit The maximum number of tokens
      */
-    public TokenResource(String identifier, int limit) {
-        super(identifier);
+    public TokenResource(Path path, int limit) {
+        super(null, path);
         this.limit = limit;
         this.usedTokens = 0;
         this.wasBlocking = isBlocking();
+        setState(ResourceState.DONE);
     }
 
     /**
@@ -98,6 +103,7 @@ public class TokenResource extends Token {
         return usedTokens;
     }
 
+    @Override
     public JSONObject toJSON() throws IOException {
         JSONObject info = super.toJSON();
         JSONObject tokenInfo = new JSONObject();
@@ -109,13 +115,27 @@ public class TokenResource extends Token {
 
     @Override
     synchronized protected boolean doUpdateStatus() throws Exception {
+        LOGGER.debug("Updating token resource");
+        int used = 0;
+        for (Dependency dependency : getRequiredResources()) {
+            if (dependency.hasLock()) {
+                LOGGER.debug("Dependency [%s] has lock", dependency);
+                used++;
+            }
+        }
+
+        if (used != this.usedTokens) {
+            this.usedTokens = used;
+            return true;
+        }
+
         return false;
     }
 
 
     @Override
-    public CountTokenDependency createDependency(Object values) {
-        return new CountTokenDependency(this);
+    public TokenDependency createDependency(Object values) {
+        return new TokenDependency(this);
     }
 
     /**
@@ -146,7 +166,4 @@ public class TokenResource extends Token {
     private boolean isBlocking() {
         return usedTokens >= limit;
     }
-
-    private String id;
-
 }

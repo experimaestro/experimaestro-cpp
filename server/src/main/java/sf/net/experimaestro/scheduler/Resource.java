@@ -104,14 +104,12 @@ public abstract class Resource implements PostCommitListener {
     public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
 
     public static final String JOB_TYPE = "1";
+    public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
     protected List<Dependency> dependencyFrom = new ArrayList<>();
-
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    protected List<Token> tokens = new ArrayList<>();
 
     /**
      * The path with the connector
@@ -129,7 +127,6 @@ public abstract class Resource implements PostCommitListener {
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
     List<Dependency> dependencyTo = new ArrayList<>();
-
     /**
      * The resource ID
      */
