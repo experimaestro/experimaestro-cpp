@@ -69,8 +69,9 @@ final public class Scheduler {
      * True when the application is stopping
      */
     boolean stopping = false;
+
     /**
-     * List of runners we started
+     * The job runner (just one)
      */
     JobRunner runner;
 
@@ -310,8 +311,10 @@ final public class Scheduler {
                 boolean doWait = true;
 
                 while (true) {
-                    if (isStopping())
+                    // The server is stopping?
+                    if (isStopping()) {
                         return;
+                    }
 
                     // ... and wait if we were not lucky (or there were no tasks)
                     try {
@@ -329,31 +332,17 @@ final public class Scheduler {
 
 
                     // Try the next task
-                    Job job = null;
-                    doWait = false;
+                    doWait = true;
                     try (Transaction transaction = Transaction.create()) {
                         LOGGER.debug("Searching for ready jobs");
 
                         final EntityManager em = transaction.em();
 
-                        // We avoid race conditions by starting each job in isolation
-                            TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
-                            query.setMaxResults(1);
-                            query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
-                            List<Job> list = query.getResultList();
-                            if (list.isEmpty()) {
-                                LOGGER.debug("No job status run");
-                                continue;
-                            }
+                        /* TODO: consider a smarter way to retrieve good candidates (using a bloom filter for tokens) */
+                        TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
+                        List<Job> list = query.getResultList();
 
-                            // Ensures we are the only ones
-                            job = list.get(0);
-                            if (job == null) {
-                                // Nothing happened, so we do not wait for more
-                                continue;
-                            }
-
-                            doWait = true;
+                        for(Job job: list) {
                             try {
                                 em.refresh(job, LockModeType.PESSIMISTIC_WRITE);
                             } catch (LockTimeoutException e) {
@@ -366,6 +355,17 @@ final public class Scheduler {
                                 LOGGER.debug("Job state is not READY anymore", job);
                                 Scheduler.notifyRunners();
                                 continue;
+                            }
+
+                            // Checks the tokens
+                            for(Dependency dependency: job.getRequiredResources()) {
+                                if (dependency instanceof TokenDependency) {
+                                    TokenDependency tokenDependency = (TokenDependency) dependency;
+                                    if (!tokenDependency.canLock()) {
+                                        LOGGER.debug("Token dependency %s prevents running job", tokenDependency);
+                                        continue;
+                                    }
+                                }
                             }
 
                             LOGGER.debug("Next task status run: %s", job);
@@ -395,15 +395,16 @@ final public class Scheduler {
                                 LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                 job.setState(ResourceState.ERROR);
                             }
-                            transaction.commit();
+                            transaction.boundary();
                             LOGGER.info("Finished launching %s", job);
                             this.setName(name);
-                    } catch (RollbackException e) {
-                        LOGGER.warn("Rollback exception for %s", job);
-                    } finally {
-                        if (job != null) {
-                            LOGGER.debug("Finished the processing of %s", job);
                         }
+                    } catch (RollbackException e) {
+                        LOGGER.warn("Rollback exception");
+                    } catch(Exception e) {
+                        LOGGER.error("Caught an exception: %s", e);
+                        doWait = false;
+                    } finally {
                     }
                 }
             } finally {

@@ -27,6 +27,8 @@ import javax.persistence.Entity;
 
 /**
  * A token dependency
+ *
+ * The dependency is always satisfied - its satisfaction must be evaluated latter
  */
 @Entity
 @DiscriminatorValue("token")
@@ -45,10 +47,24 @@ public class TokenDependency extends Dependency {
         return "Token/" + super.toString();
     }
 
+    /**
+     * A token dependency is always OK. It is just before starting a job that
+     * we check the real state with {@link #canLock()}.
+     * @return OK_LOCK
+     */
     @Override
     protected DependencyStatus _accept() {
+        // Always return OK_LOCK for a token dependency
+        return DependencyStatus.OK_LOCK;
+    }
+
+    /**
+     * Checks whether we can obtain a lock for this token dependency
+     * @return true if {@linkplain #_lock} will be successful
+     */
+    public boolean canLock() {
         TokenResource token = (TokenResource) getFrom();
-        return token.getUsedTokens() < token.getLimit() ? DependencyStatus.OK_LOCK : DependencyStatus.WAIT;
+        return token.getUsedTokens() < token.getLimit();
     }
 
     @Override

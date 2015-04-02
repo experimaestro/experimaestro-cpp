@@ -65,28 +65,37 @@ public class SchedulerTest extends XPMEnvironment {
      * Check that these runners started one after the other
      *
      * @param runners The runners status check
+     * @param readyness true if a job must finish before the next is ready
+     * @param reorder true if jobs can be run in any order, but one at a time
      */
-    static private int checkSequence(WaitingJob... runners) {
+    static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) {
         int errors = 0;
         Job[] jobs = new Job[runners.length];
 
         Transaction.run(em -> {
-            for (int i = 0; i < runners.length - 1; i++) {
+            for (int i = 0; i < runners.length; i++) {
                 jobs[i] = em.find(Job.class, runners[i].getId());
             }
         });
 
-        for (int i = 0; i < runners.length - 1; i++) {
-            if (jobs[i].getEndTimestamp() >= runners[i + 1].status().readyTimestamp) {
+        if (reorder) {
+            Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp()));
+        }
+
+        for (int i = 0; i < jobs.length - 1; i++) {
+            final long nextTimestamp = readyness ? ((WaitingJob)jobs[i + 1]).status().readyTimestamp : jobs[i + 1].getStartTimestamp();
+            final long endTimestamp = jobs[i].getEndTimestamp();
+
+            if (endTimestamp >= nextTimestamp) {
                 LOGGER.warn("The runners (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
-                        runners[i], System.identityHashCode(runners[i]), runners[i].getEndTimestamp(),
-                        runners[i + 1], System.identityHashCode(runners[i + 1]), runners[i + 1].status().readyTimestamp);
+                        jobs[i], System.identityHashCode(jobs[i]), endTimestamp,
+                        jobs[i + 1], System.identityHashCode(jobs[i + 1]), nextTimestamp);
                 errors++;
             } else
                 LOGGER.debug("The runners (%s/%x) and (%s/%x) started one after the other [%dms]",
-                        runners[i], System.identityHashCode(runners[i]), runners[i + 1],
-                        System.identityHashCode(runners[i + 1]),
-                        runners[i + 1].status().readyTimestamp - runners[i].getEndTimestamp());
+                        jobs[i], System.identityHashCode(jobs[i]), jobs[i + 1],
+                        System.identityHashCode(jobs[i + 1]),
+                        nextTimestamp - endTimestamp);
 
         }
 
@@ -118,7 +127,7 @@ public class SchedulerTest extends XPMEnvironment {
         int errors = 0;
         waitToFinish(0, counter, jobs, 2500, 5);
 
-        errors += checkSequence(jobs);
+        errors += checkSequence(false, true, jobs);
         errors += checkState(EnumSet.of(ResourceState.DONE), jobs);
         Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
 
@@ -246,7 +255,7 @@ public class SchedulerTest extends XPMEnvironment {
         LOGGER.info("Checking job dependencies");
         for (Link link : dependencies) {
             if (states[link.from] == ResourceState.DONE && jobs[link.to].getState() == ResourceState.DONE)
-                errors += checkSequence(jobs[link.from], jobs[link.to]);
+                errors += checkSequence(false, true, jobs[link.from], jobs[link.to]);
         }
 
         Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
@@ -318,11 +327,11 @@ public class SchedulerTest extends XPMEnvironment {
         // Check that one started after the other (since only one must have been active
         // at a time)
         LOGGER.info("Checking the token test output");
-        Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp()));
 
+        // Retrieve all the jobs
 
         int errors = 0;
-        errors += checkSequence(jobs);
+        errors += checkSequence(true, false, jobs);
         for (int i = 0; i < jobs.length; i++) {
             errors += checkState(jobs[i].finalCode() != 0 ? EnumSet.of(ResourceState.ERROR) : EnumSet.of(ResourceState.DONE), jobs[i]);
         }

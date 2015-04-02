@@ -56,8 +56,6 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-
-
     protected TokenResource() {
     }
 
@@ -156,10 +154,10 @@ public class TokenResource extends Resource {
     @Override
     public void stored() {
         // Notify scheduler state has changed
-        if (wasBlocking ^ isBlocking()) {
-            LOGGER.debug("Token %s changed of state (%s to %s): notifying dependencies",
+        if (wasBlocking && !isBlocking()) {
+            LOGGER.debug("Token %s is not blocking anymore: notifying scheduler",
                     this, wasBlocking, isBlocking());
-            Transaction.run((em, t) -> notifyDependencies(t, em));
+            Scheduler.get().notifyRunners();
         }
     }
 
