@@ -64,9 +64,9 @@ public class SchedulerTest extends XPMEnvironment {
     /**
      * Check that these runners started one after the other
      *
-     * @param runners The runners status check
+     * @param runners   The runners status check
      * @param readyness true if a job must finish before the next is ready
-     * @param reorder true if jobs can be run in any order, but one at a time
+     * @param reorder   true if jobs can be run in any order, but one at a time
      */
     static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) {
         int errors = 0;
@@ -83,7 +83,7 @@ public class SchedulerTest extends XPMEnvironment {
         }
 
         for (int i = 0; i < jobs.length - 1; i++) {
-            final long nextTimestamp = readyness ? ((WaitingJob)jobs[i + 1]).status().readyTimestamp : jobs[i + 1].getStartTimestamp();
+            final long nextTimestamp = readyness ? ((WaitingJob) jobs[i + 1]).status().readyTimestamp : jobs[i + 1].getStartTimestamp();
             final long endTimestamp = jobs[i].getEndTimestamp();
 
             if (endTimestamp >= nextTimestamp) {
@@ -212,24 +212,28 @@ public class SchedulerTest extends XPMEnvironment {
 
         // --- Generate new jobs
         for (int i = 0; i < jobs.length; i++) {
+            final int j = i;
 
-            int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
-            jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(waitingTime, states[i] == ResourceState.DONE ? 0 : 1, 0));
+            Transaction.run(em -> {
+                int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
+                jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
 
-            ArrayList<String> deps = new ArrayList<>();
-            for (Link link : dependencies.subSet(new Link(i, 0), true, new Link(i, Integer.MAX_VALUE), true)) {
-                assert i == link.to;
-                jobs[i].addDependency(jobs[link.from].createDependency(null));
-                if (token != null)
-                    jobs[i].addDependency(token.createDependency(null));
-                if (states[link.from].isBlocking())
-                    states[i] = ResourceState.ON_HOLD;
-                deps.add(jobs[link.from].toString());
-            }
+                ArrayList<String> deps = new ArrayList<>();
+                for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
+                    assert j == link.to;
+                    final WaitingJob jobFrom = em.find(WaitingJob.class, jobs[link.from].getId());
+                    jobs[j].addDependency(jobFrom.createDependency(null));
+                    if (token != null) {
+                        jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
+                    }
+                    if (states[link.from].isBlocking())
+                        states[j] = ResourceState.ON_HOLD;
+                    deps.add(jobFrom.toString());
+                }
 
-            WaitingJob job = jobs[i];
-            Transaction.run(em -> em.persist(job));
-            LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[i], states[i], Output.toString(", ", deps));
+                em.persist(jobs[j]);
+                LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
+            });
         }
 
         LOGGER.info("Waiting for jobs status finish (%d remaining)", counter.getCount());
@@ -362,8 +366,8 @@ public class SchedulerTest extends XPMEnvironment {
         LOGGER.info("Waiting for job 0 status fail");
         int errors = 0;
         waitToFinish(0, counter, jobs, 1500, 5);
-        errors +=checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
-        errors +=checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
+        errors += checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
+        errors += checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
 
         // We wait until the two jobs are stopped
         LOGGER.info("Restarting job 0 with happy ending");
