@@ -52,7 +52,21 @@ public class SchedulerTest extends XPMEnvironment {
     static ComplexDependenciesParameters[][] complexDependenciesTestProvider() {
         return new ComplexDependenciesParameters[][]{
                 {
-                        new ComplexDependenciesParameters("complex", -8451050260222287949l)
+                        new ComplexDependenciesParameters("basic", 132481234l)
+                                .jobs(10, 50, 10)
+                                .dependencies(.5, 2)
+                                .failures(0, 0, 0)
+                                .token(0),
+                },
+                {
+                        new ComplexDependenciesParameters("failures", 132481234l)
+                                .jobs(10, 50, 10)
+                                .dependencies(.5, 2)
+                                .failures(0.10, 1, 0)
+                                .token(0),
+                },
+                {
+                        new ComplexDependenciesParameters("failures and tokens", -8451050260222287949l)
                                 .jobs(50, 50, 10)
                                 .dependencies(.2, 200)
                                 .failures(0.10, 3, 2)
@@ -231,6 +245,7 @@ public class SchedulerTest extends XPMEnvironment {
                     deps.add(jobFrom.toString());
                 }
 
+                jobs[j].updateStatus();
                 em.persist(jobs[j]);
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             });

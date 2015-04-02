@@ -361,6 +361,9 @@ final public class Scheduler {
                         List<Job> list = query.getResultList();
 
                         for (Job job : list) {
+                            // We got at least one job, we won't wait
+                            doWait = false;
+
                             try {
                                 em.refresh(job, LockModeType.PESSIMISTIC_WRITE);
                             } catch (LockTimeoutException e) {
