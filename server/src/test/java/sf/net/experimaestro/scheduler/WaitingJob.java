@@ -90,6 +90,18 @@ public class WaitingJob extends Job {
 
         LOGGER.info("Stored %s with state %s", this, state);
 
+        if (state.isFinished() && (oldState == null || !oldState.isFinished())) {
+            status().counter.del();
+            final int count = status().counter.getCount();
+            LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
+                    this, oldState, state, count + 1, count);
+        } else if (!state.isFinished() && oldState != null && oldState.isFinished()) {
+            status().counter.add();
+            final int count = status().counter.getCount();
+            LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
+                    this, oldState, state, count - 1, count);
+        }
+
         switch (state) {
             case READY:
                 status().readyTimestamp = System.currentTimeMillis();
@@ -97,7 +109,6 @@ public class WaitingJob extends Job {
             case DONE:
             case ERROR:
             case ON_HOLD:
-                status().counter.del();
                 break;
         }
     }
@@ -118,7 +129,11 @@ public class WaitingJob extends Job {
         status().currentIndex = 0;
         actions.clear();
         actions.add(action);
-        setState(WAITING);
+        try {
+            restart();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static class Status {

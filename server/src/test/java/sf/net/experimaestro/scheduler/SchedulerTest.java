@@ -344,8 +344,6 @@ public class SchedulerTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
         File jobDirectory = mkTestDir();
 
-        counter.add();
-
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             final int finalI = i;
@@ -363,7 +361,7 @@ public class SchedulerTest extends XPMEnvironment {
         // Wait
         LOGGER.info("Waiting for job 0 status fail");
         int errors = 0;
-        waitToFinish(2, counter, jobs, 1500, 5);
+        waitToFinish(0, counter, jobs, 1500, 5);
         errors +=checkState(EnumSet.of(ResourceState.ERROR), jobs[0]);
         errors +=checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1], jobs[2]);
 

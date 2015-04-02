@@ -51,6 +51,7 @@ abstract public class Dependency implements Serializable {
      * The state of this dependency
      */
     DependencyStatus status;
+
     /**
      * The lock (or null if no lock taken)
      */

@@ -71,14 +71,14 @@ public enum ResourceState {
      * States in which a resource can be notified
      */
     final static EnumSet<ResourceState> NOTIFIABLE_STATE
-            = EnumSet.complementOf(EnumSet.of(LOCKING, RUNNING, DONE, ON_HOLD, ERROR));
+            = EnumSet.complementOf(EnumSet.of(LOCKING, RUNNING, DONE, ERROR));
 
 
     /**
-     * States in which the job has been started (whatever the outcome)
+     * States in which the job has finished (whatever the outcome)
      */
-    final static EnumSet<ResourceState> STARTED_STATE
-            = EnumSet.of(DONE, ERROR, RUNNING);
+    final static EnumSet<ResourceState> FINISHED_STATE
+            = EnumSet.of(DONE, ERROR, ON_HOLD);
 
 
     /**
@@ -104,5 +104,9 @@ public enum ResourceState {
     @Override
     public String toString() {
         return super.toString().toLowerCase();
+    }
+
+    public boolean isFinished() {
+        return FINISHED_STATE.contains(this);
     }
 }

@@ -18,6 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
@@ -57,6 +59,7 @@ final public class Scheduler {
      * Scheduler
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     /**
      * The entity manager factory
      */
@@ -76,13 +79,19 @@ final public class Scheduler {
     JobRunner runner;
 
     /**
+     * Asynchronous notification
+     */
+    private Notifier notifier;
+
+
+    /**
      * A query that retrieves jobs that are ready, ordered by decreasing priority
      */
     CriteriaQuery<Job> readyJobsQuery;
     /**
      * Number of running runners
      */
-    private ThreadCount counter = new ThreadCount();
+    private ThreadCount runningThreadsCounter = new ThreadCount();
     private Timer resourceCheckTimer;
 
     /**
@@ -121,6 +130,7 @@ final public class Scheduler {
 
         entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro",
                 properties);
+
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
@@ -147,9 +157,15 @@ final public class Scheduler {
 
         // Start the thread that start the jobs
         LOGGER.info("Starting the job runner thread");
-        counter.add();
         runner = new JobRunner("JobRunner");
         runner.start();
+        runningThreadsCounter.add();
+
+        // Start the thread that notify dependencies
+        LOGGER.info("Starting the job runner thread");
+        notifier = new Notifier();
+        notifier.start();
+        runningThreadsCounter.add();
 
         executorService = Executors.newFixedThreadPool(1);
 
@@ -242,6 +258,9 @@ final public class Scheduler {
         if (entityManagerFactory == null && stopping) {
             return;
         }
+
+        LOGGER.info("Stopping the scheduler");
+
         stopping = true;
         // Stop the checker
         LOGGER.info("Closing resource checker");
@@ -254,8 +273,12 @@ final public class Scheduler {
         // Stop the threads
         LOGGER.info("Stopping runner and scheduler");
         runner.interrupt();
-        counter.resume();
+        notifier.interrupt();
+
+        // Wait for all threads to complete
+        runningThreadsCounter.resume();
         runner = null;
+        notifier = null;
 
         if (executorService != null) {
             executorService.shutdown();
@@ -310,12 +333,7 @@ final public class Scheduler {
                 // Flag stating whether we should wait for something
                 boolean doWait = true;
 
-                while (true) {
-                    // The server is stopping?
-                    if (isStopping()) {
-                        return;
-                    }
-
+                while (!isStopping()) {
                     // ... and wait if we were not lucky (or there were no tasks)
                     try {
                         if (doWait) {
@@ -342,7 +360,7 @@ final public class Scheduler {
                         TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
                         List<Job> list = query.getResultList();
 
-                        for(Job job: list) {
+                        for (Job job : list) {
                             try {
                                 em.refresh(job, LockModeType.PESSIMISTIC_WRITE);
                             } catch (LockTimeoutException e) {
@@ -358,7 +376,7 @@ final public class Scheduler {
                             }
 
                             // Checks the tokens
-                            for(Dependency dependency: job.getRequiredResources()) {
+                            for (Dependency dependency : job.getRequiredResources()) {
                                 if (dependency instanceof TokenDependency) {
                                     TokenDependency tokenDependency = (TokenDependency) dependency;
                                     if (!tokenDependency.canLock()) {
@@ -399,9 +417,12 @@ final public class Scheduler {
                             LOGGER.info("Finished launching %s", job);
                             this.setName(name);
                         }
+
+                        // Finished the loop
+                        transaction.commit();
                     } catch (RollbackException e) {
                         LOGGER.warn("Rollback exception");
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         LOGGER.error("Caught an exception: %s", e);
                         doWait = false;
                     } finally {
@@ -409,9 +430,105 @@ final public class Scheduler {
                 }
             } finally {
                 LOGGER.info("Shutting down job runner");
-                counter.del();
+                runningThreadsCounter.del();
             }
         }
     }
 
+
+    /**
+     * The queue for notifications
+     */
+    private LongOpenHashSet changedResources = new LongOpenHashSet();
+
+    /**
+     * Adds a changed resource to the queue
+     */
+    void addChangedResource(Resource resource) {
+        synchronized (changedResources) {
+                changedResources.add(resource.getId());
+
+            // Notify
+            changedResources.notify();
+        }
+    }
+
+    /**
+     * The notifier thread
+     */
+    private class Notifier extends Thread {
+        public Notifier() {
+            super("Notifier");
+        }
+
+        @Override
+        public void run() {
+            LOGGER.info("Starting notifier thread");
+
+            while (!isStopping()) {
+                try {
+                    final long resourceId;
+
+                    // Get the next resource ID
+                    synchronized (changedResources) {
+                        if (changedResources.isEmpty()) {
+                            try {
+                                changedResources.wait();
+                            } catch (InterruptedException e) {
+                            }
+                            continue;
+
+                        } else {
+                            final LongIterator iterator = changedResources.iterator();
+                            resourceId = iterator.next();
+                            iterator.remove();
+                        }
+                    }
+
+                    LOGGER.debug("Notifying dependencies from R%d", resourceId);
+                    // Notify all the dependencies
+                    Transaction.run((em, t) -> {
+                        Resource fromResource = em.find(Resource.class, resourceId);
+                        Collection<Dependency> dependencies = fromResource.getDependentResources();
+                        LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
+
+                        for (Dependency dep : dependencies) {
+                            if (dep.status == DependencyStatus.UNACTIVE) {
+                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
+
+                            } else
+                                try {
+                                    // when the dependency status is null, the dependency is not active anymore
+                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
+                                    // Preserves the previous state
+                                    DependencyStatus beforeState = dep.status;
+
+                                    if (dep.update()) {
+                                        final Resource depResource = dep.getTo();
+                                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                                            continue;
+                                        }
+
+                                        // Queue this change in dependency state
+                                        depResource.notify(t, em, new DependencyChangedMessage(dep, beforeState, dep.status));
+
+                                    } else {
+                                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+                                    }
+                                } catch (RuntimeException e) {
+                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
+                                }
+                        }
+                    });
+
+                } catch(Exception e) {
+                    LOGGER.error("Caught exception in notifier", e);
+                }
+            }
+
+            runningThreadsCounter.del();
+            LOGGER.info("Stopping notifier thread");
+        }
+    }
 }

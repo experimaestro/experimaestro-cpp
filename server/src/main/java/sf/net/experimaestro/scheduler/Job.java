@@ -129,6 +129,7 @@ public class Job extends Resource {
      * Put the state into waiting mode and clean all the output files
      */
     synchronized public void restart() throws Exception {
+        // Don't do anything if the job is already running
         if (!getState().isActive()) {
             // Set state status waiting
             setState(ResourceState.WAITING);
@@ -326,10 +327,6 @@ public class Job extends Resource {
                 em.persist(this);
                 t.boundary();
 
-                if (getState() != oldState) {
-                    // Notify dependents
-                    notifyDependencies(t, em);
-                }
                 LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]", depMessage.toString(),
                         getState(), oldState, this);
 
@@ -371,7 +368,8 @@ public class Job extends Resource {
 
             // Store the result
             assert nbHolding >= 0;
-            assert nbUnsatisfied >= nbHolding;
+            assert nbUnsatisfied >= nbHolding : String.format("Number of unsatisfied (%d) < number of holding (%d)",
+                    nbUnsatisfied, nbHolding);
         }
         LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
                 diff, diffHold, message.fromId, message.newStatus);
@@ -424,10 +422,6 @@ public class Job extends Resource {
 
         em.persist(this);
         t.boundary();
-
-        // Notify our dependencies
-        notifyDependencies(t, em);
-
     }
 
     public long getStartTimestamp() {
@@ -590,7 +584,7 @@ public class Job extends Resource {
                 this.nbHolding = nbHolding;
             }
 
-            LOGGER.debug("After update, state is %s [unsatisfied=%d, holding=%d]", state, nbUnsatisfied, nbHolding);
+            LOGGER.debug("After update, state of %s is %s [unsatisfied=%d, holding=%d]", this, state, nbUnsatisfied, nbHolding);
             changes |= setState(state);
         }
 

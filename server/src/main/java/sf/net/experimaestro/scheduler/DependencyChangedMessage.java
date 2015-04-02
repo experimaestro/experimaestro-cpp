@@ -38,4 +38,11 @@ final public class DependencyChangedMessage extends Message {
     public String toString() {
         return String.format("Dependency changed [%d / %s]", fromId, newStatus);
     }
+
+    public void merge(DependencyChangedMessage newMessage) {
+        assert fromId == newMessage.fromId;
+        assert oldStatus == newMessage.oldStatus;
+
+        newStatus = newMessage.newStatus;
+    }
 }

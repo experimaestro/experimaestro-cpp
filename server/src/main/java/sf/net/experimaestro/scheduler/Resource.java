@@ -159,6 +159,9 @@ public abstract class Resource implements PostCommitListener {
     /** Indicates that the resource is deleted */
     transient private boolean delete = false;
 
+    /** Keeps the state of the resource before saving */
+    protected transient ResourceState oldState;
+
     /**
      * Called when deserializing from database
      */
@@ -372,50 +375,13 @@ public abstract class Resource implements PostCommitListener {
 
     /** Called when the resource was persisted/updated and committed */
     public void stored() {
-    }
-
-    /**
-     * Notify the dependencies that a resource has changed. Commits all the changes
-     * @param t The current transaction
-     * @param em The current entity manager
-     */
-    public void notifyDependencies(Transaction t, EntityManager em) {
-        // Notify dependencies in turn
-        Collection<Dependency> dependencies = getDependentResources();
-        LOGGER.info("Notifying dependencies from %s [%d]", this, dependencies.size());
-
-        for (Dependency dep : dependencies) {
-            if (dep.status == DependencyStatus.UNACTIVE) {
-                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", this, dep.getTo());
-
-            } else
-                try {
-                    // when the dependency status is null, the dependency is not active anymore
-                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", this, dep.getTo(), dep.status);
-                    // Preserves the previous state
-                    DependencyStatus beforeState = dep.status;
-
-                    if (dep.update()) {
-                        final Resource depResource = dep.getTo();
-                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                            continue;
-                        }
-
-                        // We ensure nobody else can modify the resource first
-                        // Update the dependency in database
-                        // Notify the resource that a dependency has changed
-                        depResource.notify(t, em, new DependencyChangedMessage(dep, beforeState, dep.status));
-
-                    } else {
-                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
-                    }
-                } catch (RuntimeException e) {
-                    LOGGER.error(e, "Got an exception while notifying [%s]", this);
-                }
+        // We switched from finished to not finished -> notify
+        if (oldState != null && oldState.isFinished() ^ state.isFinished()) {
+            Scheduler.get().addChangedResource(this);
         }
-
     }
+
+
 
     /**
      * Store a resource
@@ -530,6 +496,11 @@ public abstract class Resource implements PostCommitListener {
      */
     static public class PrintConfig {
         public String detailURL;
+    }
+
+    @PostLoad
+    protected void _post_load() {
+        oldState = state;
     }
 
     @PostUpdate
