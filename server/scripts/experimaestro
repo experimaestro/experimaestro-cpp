@@ -112,7 +112,10 @@ def start_jar(args, jarargs):
              open(os.path.join(workdir, "server.err"), "w") as stderr:
             return subprocess.call(command,
                                    stdout=stdout,
-                                   stderr=stderr)
+                                   stderr=stderr,
+                                   # FIXME(Nicolas Despres): Same remarks
+                                   #  than for daemonlib.daemonize().
+                                   close_fds=False)
 
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
