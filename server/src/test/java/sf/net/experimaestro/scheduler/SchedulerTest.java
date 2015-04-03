@@ -30,6 +30,7 @@ import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.LockModeType;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -49,30 +50,57 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
     @DataProvider()
-    static ComplexDependenciesParameters[][] complexDependenciesTestProvider() {
-        return new ComplexDependenciesParameters[][]{
-                {
-                        new ComplexDependenciesParameters("basic", 132481234l)
-                                .jobs(10, 50, 10)
-                                .dependencies(.5, 2)
-                                .failures(0, 0, 0)
-                                .token(0),
-                },
-                {
-                        new ComplexDependenciesParameters("failures", 132481234l)
-                                .jobs(10, 50, 10)
-                                .dependencies(.5, 2)
-                                .failures(0.10, 1, 0)
-                                .token(0),
-                },
-                {
-                        new ComplexDependenciesParameters("failures and tokens", -8451050260222287949l)
-                                .jobs(50, 50, 10)
-                                .dependencies(.2, 200)
-                                .failures(0.10, 3, 2)
-                                .token(3)
+    static Object[][] complexDependenciesTestProvider() {
+
+
+        final LinkedList<ComplexDependenciesParameters> p = new LinkedList<>();
+
+        p.add(
+                new ComplexDependenciesParameters("basic", 132481234l)
+                        .jobs(10, 50, 10)
+                        .dependencies(.5, 2)
+                        .failures(0, 0, 0)
+                        .token(0)
+        );
+
+        p.add(
+                new ComplexDependenciesParameters("failures", 132481234l)
+                        .jobs(10, 50, 10)
+                        .dependencies(.5, 2)
+                        .failures(0.10, 1, 0)
+                        .token(0)
+        );
+
+        p.add(
+                new ComplexDependenciesParameters("failures-and-tokens", -8451050260222287949l)
+                        .jobs(150, 150, 10)
+                        .dependencies(.2, 50)
+                        .failures(0.10, 3, 2)
+                        .token(3)
+
+        );
+
+        final String property = System.getProperty("xpm.test.scheduler.complex.limit");
+        if (property != null) {
+            HashSet<String> only = new HashSet<>(Arrays.asList(property.split(",")));
+            LOGGER.info("Limits to complex dependency tests to [%s]", only);
+            Iterator<ComplexDependenciesParameters> it = p.iterator();
+            while (it.hasNext()) {
+                final String name = it.next().name;
+                if (!only.contains(name)) {
+                    LOGGER.info("Removing %s", name);
+                    it.remove();
                 }
-        };
+            }
+        }
+
+        final Object[][] objects = new Object[p.size()][];
+        Iterator<ComplexDependenciesParameters> it = p.iterator();
+        for (int i = 0; i < p.size(); i++) {
+            objects[i] = new Object[]{it.next()};
+        }
+
+        return objects;
     }
 
     /**
@@ -236,6 +264,7 @@ public class SchedulerTest extends XPMEnvironment {
                 for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
                     assert j == link.to;
                     final WaitingJob jobFrom = em.find(WaitingJob.class, jobs[link.from].getId());
+                    em.refresh(jobFrom, LockModeType.PESSIMISTIC_READ);
                     jobs[j].addDependency(jobFrom.createDependency(null));
                     if (token != null) {
                         jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
@@ -415,7 +444,7 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
 
-    // ----- Utility methods for scheduler
+// ----- Utility methods for scheduler
 
     final static public class Link implements Comparable<Link> {
         int to, from;

@@ -185,7 +185,7 @@ public abstract class XPMProcess {
             try {
                 lock.changeOwnership(pid);
             } catch (Throwable e) {
-                LOGGER.error("Could not adopt lock %s", lock);
+                LOGGER.error(e, "Could not adopt lock %s", lock);
             }
         }
     }

@@ -225,6 +225,7 @@ public class Job extends Resource {
                 for (Dependency dependency : getRequiredResources()) {
                     try {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
+                        em.refresh(dependency, LockModeType.PESSIMISTIC_WRITE);
                         final Lock lock = dependency.lock(em, pid);
                         em.persist(dependency);
                         em.persist(lock);
@@ -312,7 +313,11 @@ public class Job extends Resource {
 
             case END_OF_JOB:
                 // First, register our changes
-                this.endOfJobMessage((EndOfJobMessage) message, em, t);
+                em.refresh(this, LockModeType.PESSIMISTIC_WRITE);
+                endOfJobMessage((EndOfJobMessage) message, em, t);
+                em.persist(this);
+                LOGGER.info("WILL COMMIT %s WITH STATE %s", this, getState());
+                t.boundary();
                 break;
 
             case DEPENDENCY_CHANGED:
@@ -320,9 +325,8 @@ public class Job extends Resource {
                 final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
 
                 // Notify job
-                final ResourceState oldState = getState();
+                em.refresh(this, LockModeType.PESSIMISTIC_WRITE);
                 dependencyChanged(depMessage, em, t);
-
                 // Save changes
                 em.persist(this);
                 t.boundary();
@@ -392,6 +396,7 @@ public class Job extends Resource {
 
         // Update state
         setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
+        LOGGER.info("[0] WILL COMMIT %s WITH STATE %s", this, getState());
         // Dispose of the job monitor
         XPMProcess old = process;
         process = null;
@@ -400,8 +405,9 @@ public class Job extends Resource {
         LOGGER.debug("Release dependencies of job [%s]", this);
         final Collection<Dependency> deps = getRequiredResources();
         try {
-            for (Dependency dep : deps) {
-                dep.unlock(em);
+            for (Dependency dependency : deps) {
+                em.lock(dependency, LockModeType.PESSIMISTIC_WRITE);
+                dependency.unlock(em);
             }
         } catch (RuntimeException e) {
             LOGGER.error(e, "Error while unactivating dependencies");
@@ -420,8 +426,6 @@ public class Job extends Resource {
             LOGGER.error("Could not dispose of the old process checker %s", e);
         }
 
-        em.persist(this);
-        t.boundary();
     }
 
     public long getStartTimestamp() {
@@ -680,6 +684,7 @@ public class Job extends Resource {
     @Override
     public void stored() {
         super.stored();
+        LOGGER.debug("Job stored in state %s [old = %s]", getState(), oldState);
 
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");

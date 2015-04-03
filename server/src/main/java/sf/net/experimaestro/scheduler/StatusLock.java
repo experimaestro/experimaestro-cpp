@@ -163,6 +163,8 @@ public class StatusLock extends Lock {
                     for (Map.Entry<String, Boolean> x : processMap.entrySet())
                         out.format("%s %s%n", x.getKey(), x.getValue() ? "w" : "r");
                     out.close();
+
+                        Files.deleteIfExists(statusPath);
                     Files.move(tmpFile, statusPath);
                 }
             }

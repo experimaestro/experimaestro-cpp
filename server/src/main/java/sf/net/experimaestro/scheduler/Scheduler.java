@@ -389,18 +389,7 @@ final public class Scheduler {
                                 }
                             }
 
-                            LOGGER.debug("Next task status run: %s", job);
-
-                            // Set the state status LOCKING
-                            try {
-                                job.setState(ResourceState.LOCKING);
-                                transaction.boundary();
-                            } catch (RollbackException e) {
-                                LOGGER.debug("Could not JPA lock %s", job);
-                                continue;
-                            }
-
-                            LOGGER.debug("Job %s was JPA locked", job);
+                            LOGGER.debug("Job %s was JPA locked - now, we can run it", job);
 
                             this.setName(name + "/" + job);
                             try {
@@ -491,7 +480,7 @@ final public class Scheduler {
                     LOGGER.debug("Notifying dependencies from R%d", resourceId);
                     // Notify all the dependencies
                     Transaction.run((em, t) -> {
-                        Resource fromResource = em.find(Resource.class, resourceId);
+                        Resource fromResource = em.find(Resource.class, resourceId, LockModeType.PESSIMISTIC_READ);
                         Collection<Dependency> dependencies = fromResource.getDependentResources();
                         LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
 

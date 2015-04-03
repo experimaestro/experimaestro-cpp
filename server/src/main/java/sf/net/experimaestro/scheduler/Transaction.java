@@ -69,7 +69,7 @@ public class Transaction implements AutoCloseable {
         old = currentTransaction.get();
         currentTransaction.set(this);
         status = Status.BEGIN;
-        LOGGER.info("Transaction %s begins", System.identityHashCode(this));
+        LOGGER.debug("Transaction %s begins", System.identityHashCode(this));
     }
 
     static Transaction current() {
@@ -137,7 +137,7 @@ public class Transaction implements AutoCloseable {
     public void close() throws RollbackException {
         // Rollback if an error occurred
         if (status == Status.BEGIN) {
-            LOGGER.info("Transaction %s rollback", System.identityHashCode(this));
+            LOGGER.debug("Transaction %s rollback", System.identityHashCode(this));
             transaction.rollback();
         }
 
@@ -151,7 +151,7 @@ public class Transaction implements AutoCloseable {
 
     public void commit() {
         if (status == Status.BEGIN) {
-            LOGGER.info("Transaction %s commits", System.identityHashCode(this));
+            LOGGER.debug("Transaction %s commits", System.identityHashCode(this));
             transaction.commit();
             status = Status.COMMIT;
             if (listeners != null) {
@@ -161,7 +161,7 @@ public class Transaction implements AutoCloseable {
     }
 
     public void boundary() {
-        LOGGER.info("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
+        LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
         try {
             transaction.commit();
         } catch(RollbackException e) {

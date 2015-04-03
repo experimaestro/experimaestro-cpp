@@ -74,6 +74,15 @@ abstract public class Dependency implements Serializable {
         this.to = to;
     }
 
+    @PostLoad
+    void __debug_post_1() {
+        LOGGER.info("After load, dependency %s: lock %s", this, lock);
+    }
+    @PostPersist
+    void __debug_post_2() {
+        LOGGER.info("After persist, dependency %s: lock %s", this, lock);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
