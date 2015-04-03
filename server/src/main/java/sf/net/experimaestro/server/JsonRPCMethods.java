@@ -353,11 +353,12 @@ public class JsonRPCMethods extends HttpServlet {
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
 
-                Path locator = LocalhostConnector.getInstance().resolve(filename);
+                final LocalhostConnector connector = LocalhostConnector.getInstance();
+                Path locator = connector.resolve(filename);
                 if (isFile)
-                    result = jsXPM.evaluateReader(locator, new FileReader(filename), filename, 1, null);
+                    result = jsXPM.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
                 else
-                    result = jsXPM.evaluateString(locator, content, filename, 1, null);
+                    result = jsXPM.evaluateString(connector, locator, content, filename, 1, null);
 
             }
 

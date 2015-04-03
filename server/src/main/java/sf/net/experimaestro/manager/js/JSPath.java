@@ -85,7 +85,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
         if (level < 0)
             throw new IllegalArgumentException("Level is negative (" + level + ")");
 
-        Path ancestor = this.path;
+        Path ancestor = this.path.normalize();
         while (--level >= 0)
             ancestor = ancestor.getParent();
 

@@ -25,6 +25,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.plans.Constant;
@@ -172,25 +173,25 @@ public class XPMContext implements AutoCloseable {
 
     }
 
-    public Object evaluateReader(Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
+    public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
         try(Cleaner cleaner = new Cleaner()) {
-            XPMObject xpmObject = getXPMObject(locator, cleaner);
+            XPMObject xpmObject = getXPMObject(connector, locator, cleaner);
             XPMObject.threadXPM.set(xpmObject);
             return context.evaluateReader(xpmObject.scope, reader, filename, lineno, security);
         }
     }
 
-    public Object evaluateString(Path locator, String content, String filename, int lineno, Object security) throws Exception {
+    public Object evaluateString(LocalhostConnector connector, Path locator, String content, String filename, int lineno, Object security) throws Exception {
         try(Cleaner cleaner = new Cleaner()) {
-            XPMObject xpmObject = getXPMObject(locator, cleaner);
+            XPMObject xpmObject = getXPMObject(connector, locator, cleaner);
             XPMObject.threadXPM.set(xpmObject);
             return context.evaluateString(xpmObject.scope, content, filename, lineno, security);
         }
     }
 
-    private XPMObject getXPMObject(Path locator, Cleaner cleaner) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        // FIXME : null connector???
-        return new XPMObject(null, locator, context, environment, newScope(), repositories, scheduler, loggerRepository, cleaner, null, null);
+    private XPMObject getXPMObject(LocalhostConnector connector, Path locator, Cleaner cleaner)
+            throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+        return new XPMObject(connector, locator, context, environment, newScope(), repositories, scheduler, loggerRepository, cleaner, null, null);
     }
 
     public static Scriptable newScope() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {

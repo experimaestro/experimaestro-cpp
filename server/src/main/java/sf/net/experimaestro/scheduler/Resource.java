@@ -174,6 +174,12 @@ public abstract class Resource implements PostCommitListener {
         this.path = path;
     }
 
+    /**
+     * Get a resource by locator
+     * @param em The current entity manager
+     * @param path The path of the resource
+     * @return The resource or null if there is no such resource
+     */
     public static Resource getByLocator(EntityManager em, Path path) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
@@ -185,6 +191,9 @@ public abstract class Resource implements PostCommitListener {
         query.setParameter("path", path);
         List<Resource> result = query.getResultList();
         assert result.size() <= 1;
+
+        if (result.isEmpty())
+            return null;
 
         return result.get(0);
     }

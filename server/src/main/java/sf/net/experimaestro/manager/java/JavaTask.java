@@ -82,13 +82,14 @@ public class JavaTask extends Task {
         // --- Check if this wasn't already done
         try (Transaction transaction = Transaction.create()) {
             final Resource old = Resource.getByLocator(transaction.em(), path);
-            if (old != null && !old.canBeReplaced()) {
+            if (old == null || old.canBeReplaced()) {
                 final Logger taskLogger = taskContext.getLogger("JavaTask");
                 taskLogger.warn("Cannot override resource [%s]", old);
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());
 
                 CommandLineTask task = new CommandLineTask(commands);
+                Job job = new Job(javaFactory.connector, path);
 
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
@@ -97,7 +98,6 @@ public class JavaTask extends Task {
                     pw.format("Path: %s", path.toString());
                     pw.flush();
                 } else {
-                    Job job = new Job(javaFactory.connector, uniqueDir);
 
                     // --- Build the command
 
@@ -122,8 +122,8 @@ public class JavaTask extends Task {
                         }
                         transaction.commit();
                     }
-                    taskContext.startedJob(job);
                 }
+                taskContext.startedJob(job);
             }
         }
 

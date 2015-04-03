@@ -132,7 +132,7 @@ public class XPMObject {
      * List of submitted jobs (so that we don't submit them twice with the same script
      * by default)
      */
-    Map<Path, Resource> submittedJobs = new HashMap<>();
+    Map<String, Resource> submittedJobs = new HashMap<>();
     /**
      * Simulate flags: jobs will not be submitted (but commands will be evaluated)
      */
@@ -762,10 +762,9 @@ public class XPMObject {
             }
 
             // Resolve the path for the given connector
-            if (path instanceof Path) {
-                path = connector.getMainConnector().resolve((Path) path);
-            } else
+            if (!(path instanceof Path)) {
                 path = connector.getMainConnector().resolve(path.toString());
+            }
 
             job = new Job(connector, (Path) path);
             CommandLineTask task = new CommandLineTask(commands);
@@ -910,7 +909,7 @@ public class XPMObject {
                 transaction.commit();
             }
 
-            this.submittedJobs.put(job.getPath(), job);
+            this.submittedJobs.put(job.getPath().toString(), job);
 
             return new JSResource(job);
         }
@@ -938,7 +937,7 @@ public class XPMObject {
 //                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
         return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
                 .addDefaultLocks(defaultLocks)
-                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
+                .addNewTaskListener(job -> submittedJobs.put(job.getPath().toString(), job));
     }
 
     public void setPath(Path locator) {
@@ -1048,7 +1047,7 @@ public class XPMObject {
                 final TokenResource tokenResource;
                 if (resource == null) {
                     tokenResource = new TokenResource(Paths.get(path), 0);
-                    em.persist(resource);
+                    em.persist(tokenResource);
                 } else {
                     if (!(resource instanceof TokenResource))
                         throw new AssertionError(String.format("Resource %s exists and is not a token", path));

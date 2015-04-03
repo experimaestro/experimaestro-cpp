@@ -187,9 +187,11 @@ public class Introspection {
                 return Stream.empty();
             }
 
+            Stream<? extends ClassFile> base = Stream.empty();
             for (Path child : Files.newDirectoryStream(file)) {
-                return classesStream(child, levels - 1, packageName + "." + child.getFileName().toString());
+                base = Stream.concat(base, classesStream(child, levels - 1, packageName + "." + child.getFileName().toString()));
             }
+            return base;
 
         }
 

@@ -43,7 +43,8 @@ public class JSTokenResource extends JSResource {
     }
 
 
-    public void jsFunction_set_limit(int limit) {
+    @JSFunction("set_limit")
+    public void setLimit(int limit) {
         if (resource.getId() == null) {
             resource.setLimit(limit);
         }

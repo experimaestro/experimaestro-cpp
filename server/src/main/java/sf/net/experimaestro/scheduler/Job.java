@@ -692,4 +692,9 @@ public class Job extends Resource {
         }
 
     }
+
+    @Override
+    public Path outputFile() throws FileSystemException {
+        return jobRunner.outputFile(this);
+    }
 }

@@ -19,10 +19,14 @@ package sf.net.experimaestro.utils.introspection;
  */
 
 import com.google.common.collect.ImmutableMap;
+import sf.net.experimaestro.utils.FileSystem;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,8 +48,18 @@ public class ClassInfoLoader {
         this.classpath = classpath.clone();
         for (int i = 0; i < classpath.length; i++) {
             if (Files.isRegularFile(this.classpath[i])) {
-                this.classpath[i] = FileSystems.newFileSystem(this.classpath[i].toUri(), ImmutableMap.of(), null)
-                        .getPath("/");
+                final URI uri;
+                try {
+                    uri = new URI("jar:" + this.classpath[i].toUri().toString());
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+                    try {
+                        this.classpath[i] = FileSystems.getFileSystem(uri).getPath("/");
+                    } catch(FileSystemNotFoundException e) {
+                        this.classpath[i] = FileSystems.newFileSystem(uri, ImmutableMap.of(), null)
+                                .getPath("/");
+                    }
             }
         }
         this.classLoader = classLoader;
