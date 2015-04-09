@@ -18,8 +18,6 @@ package sf.net.experimaestro.locks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.hibernate.annotations.DiscriminatorFormula;
-import org.hibernate.annotations.DiscriminatorOptions;
 import sf.net.experimaestro.exceptions.LockException;
 
 import javax.persistence.*;

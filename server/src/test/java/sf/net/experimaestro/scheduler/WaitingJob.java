@@ -21,12 +21,10 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
-import javax.persistence.PrimaryKeyJoinColumn;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,7 +46,7 @@ public class WaitingJob extends Job {
     /**
      * The list of actions
      */
-    ArrayList<WaitingJobRunner.Action> actions;
+    ArrayList<WaitingJobProcess.Action> actions;
 
     /* The index in the static status list */
     int statusIndex;
@@ -59,7 +57,7 @@ public class WaitingJob extends Job {
     protected WaitingJob() {
     }
 
-    public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobRunner.Action... actions) {
+    public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {
         super(LocalhostConnector.getInstance(), new File(dir, debugId).toPath());
 
 
@@ -90,16 +88,24 @@ public class WaitingJob extends Job {
 
         LOGGER.info("Stored %s with state %s", this, state);
 
-        if (state.isFinished() && (oldState == null || !oldState.isFinished())) {
+        if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
             status().counter.del();
             final int count = status().counter.getCount();
             LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
                     this, oldState, state, count + 1, count);
-        } else if (!state.isFinished() && oldState != null && oldState.isFinished()) {
+        } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
             status().counter.add();
             final int count = status().counter.getCount();
             LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
                     this, oldState, state, count - 1, count);
+        }
+
+        // If we reached a final state
+        if (state.isFinished()) {
+            final int lockID = actions.get(status().currentIndex).removeLockID;
+            if (lockID > 0) {
+                IntLocks.removeLock(lockID);
+            }
         }
 
         switch (state) {
@@ -121,11 +127,11 @@ public class WaitingJob extends Job {
         return actions.get(status().currentIndex).code;
     }
 
-    public void restart(WaitingJobRunner.Action action) {
+    public void restart(WaitingJobProcess.Action action) {
         Transaction.run(em -> em.find(WaitingJob.class, getId()).restart(action, em));
     }
 
-    private void restart(WaitingJobRunner.Action action, EntityManager em) {
+    private void restart(WaitingJobProcess.Action action, EntityManager em) {
         status().currentIndex = 0;
         actions.clear();
         actions.add(action);

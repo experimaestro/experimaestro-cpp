@@ -51,9 +51,8 @@ import static java.lang.String.format;
 @SuppressWarnings("JpaAttributeTypeInspection")
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Table(name = "resources", indexes = @Index(columnList = "path"))
-//@Cacheable
 public abstract class Resource implements PostCommitListener {
     /**
      * Extension for the lock file
@@ -109,7 +108,7 @@ public abstract class Resource implements PostCommitListener {
     final static private Logger LOGGER = Logger.getLogger();
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
-    protected List<Dependency> dependencyFrom = new ArrayList<>();
+    private List<Dependency> dependencyFrom = new ArrayList<>();
 
     /**
      * The path with the connector
@@ -125,8 +124,10 @@ public abstract class Resource implements PostCommitListener {
     protected Connector connector;
 
 
+
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
-    List<Dependency> dependencyTo = new ArrayList<>();
+    private List<Dependency> dependencyTo = new ArrayList<>();
+
     /**
      * The resource ID
      */
@@ -138,7 +139,8 @@ public abstract class Resource implements PostCommitListener {
      * Version for optimistic locks
      */
     @Version
-    long version;
+    @Column(name="version")
+    protected long version;
 
     /**
      * Comparator on the database ID
@@ -278,14 +280,14 @@ public abstract class Resource implements PostCommitListener {
     }
 
     /**
-     * The set of dependencies that are dependent on this resource
+     * The set of resources the resource is dependent upon
      */
     public Collection<Dependency> getRequiredResources() {
         return dependencyTo;
     }
 
     /**
-     * The set of resources the resource is dependent upon
+     * The set of dependencies that are dependent on this resource
      */
     public Collection<Dependency> getDependentResources() {
         return dependencyFrom;
@@ -384,8 +386,8 @@ public abstract class Resource implements PostCommitListener {
 
     /** Called when the resource was persisted/updated and committed */
     public void stored() {
-        // We switched from finished to not finished -> notify
-        if (oldState != null && oldState.isFinished() ^ state.isFinished()) {
+        // We switched from a stopped state to a non stopped state : notify dependents
+        if (oldState != null && oldState.isUnactive() ^ state.isUnactive()) {
             Scheduler.get().addChangedResource(this);
         }
     }
@@ -510,6 +512,7 @@ public abstract class Resource implements PostCommitListener {
     @PostLoad
     protected void _post_load() {
         oldState = state;
+        LOGGER.info("Loaded %s (state %s) - version %d", this, state, version);
     }
 
     @PostUpdate

@@ -18,13 +18,12 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import javax.persistence.EntityManager;
+
 /**
- * A message
- *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 29/1/13
+ * A message between resources
  */
-public class Message {
+abstract public class Message {
     private Type type;
 
     public Message(Type type) {
@@ -35,7 +34,7 @@ public class Message {
         return type;
     }
 
-    static public enum Type {
+    public enum Type {
         STORED_IN_DATABASE,
         STATE_CHANGED,
         END_OF_JOB,

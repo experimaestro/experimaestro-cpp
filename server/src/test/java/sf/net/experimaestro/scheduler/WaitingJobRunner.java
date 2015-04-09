@@ -21,16 +21,11 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import java.io.Serializable;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Stream;
 
 /**
@@ -58,7 +53,7 @@ public class WaitingJobRunner extends JobRunner {
             throw new AssertionError("No next action");
         }
 
-        final Action action = ((WaitingJob)job).actions.get(status.currentIndex);
+        final WaitingJobProcess.Action action = ((WaitingJob)job).actions.get(status.currentIndex);
         return new WaitingJobProcess(job.getMainConnector(), job, action);
     }
 
@@ -72,35 +67,4 @@ public class WaitingJobRunner extends JobRunner {
         return Stream.of();
     }
 
-    public void restart(Action action) {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * An action of our job
-     */
-    static public class Action implements Serializable {
-        // Duration before exiting
-        long duration;
-
-        // Exit code
-        int code;
-
-        // Waiting time before restart (0 = no restart)
-        long restart;
-
-        Action() {
-        }
-
-        Action(long duration, int code, long restart) {
-            this.duration = duration;
-            this.code = code;
-            this.restart = restart;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("Action(duration=%dms, code=%d, restart=%dms)", duration, code, restart);
-        }
-    }
 }

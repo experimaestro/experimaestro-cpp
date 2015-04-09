@@ -18,6 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import javax.persistence.EntityManager;
+
 /**
  * A message
  * @author B. Piwowarski <benjamin@bpiwowar.net>

@@ -34,6 +34,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.File;
+import java.sql.Connection;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -94,6 +95,9 @@ final public class Scheduler {
     private ThreadCount runningThreadsCounter = new ThreadCount();
     private Timer resourceCheckTimer;
 
+    /** Messenger */
+    private final MessengerThread messengerThread;
+
     /**
      * Initialise the task manager
      *
@@ -119,6 +123,7 @@ final public class Scheduler {
         properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true;hsqldb.tx=mvcc", baseDirectory));
         properties.put("hibernate.connection.username", "");
         properties.put("hibernate.connection.password", "");
+        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_SERIALIZABLE));
 
         ArrayList<Class<?>> loadedClasses = new ArrayList<>();
         ServiceLoader<PersistentClassesAdder> services = ServiceLoader.load(PersistentClassesAdder.class);
@@ -166,6 +171,13 @@ final public class Scheduler {
         notifier = new Notifier();
         notifier.start();
         runningThreadsCounter.add();
+
+        // Start the thread that notify dependencies
+        LOGGER.info("Starting the messager thread");
+        messengerThread = new MessengerThread();
+        messengerThread.start();
+        runningThreadsCounter.add();
+
 
         executorService = Executors.newFixedThreadPool(1);
 
@@ -262,6 +274,7 @@ final public class Scheduler {
         LOGGER.info("Stopping the scheduler");
 
         stopping = true;
+
         // Stop the checker
         LOGGER.info("Closing resource checker");
         if (resourceCheckTimer != null) {
@@ -274,6 +287,7 @@ final public class Scheduler {
         LOGGER.info("Stopping runner and scheduler");
         runner.interrupt();
         notifier.interrupt();
+        messengerThread.interrupt();
 
         // Wait for all threads to complete
         runningThreadsCounter.resume();
@@ -393,7 +407,7 @@ final public class Scheduler {
 
                             this.setName(name + "/" + job);
                             try {
-                                job.run(em);
+                                job.run(em, transaction);
 
                                 LOGGER.info("Job %s has started", job);
                             } catch (LockException e) {
@@ -401,17 +415,16 @@ final public class Scheduler {
                                 LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                                 job.setState(ResourceState.WAITING);
                                 job.updateStatus();
+                                transaction.commit();
                             } catch (Throwable t) {
                                 LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                 job.setState(ResourceState.ERROR);
+                                transaction.commit();
                             }
-                            transaction.boundary();
                             LOGGER.info("Finished launching %s", job);
                             this.setName(name);
                         }
 
-                        // Finished the loop
-                        transaction.commit();
                     } catch (RollbackException e) {
                         LOGGER.warn("Rollback exception");
                     } catch (Exception e) {
@@ -427,6 +440,88 @@ final public class Scheduler {
         }
     }
 
+    final static private class MessagePackage {
+        public Message message;
+        public long destination;
+
+        public MessagePackage(Message message, Resource destination) {
+            this.message = message;
+            this.destination = destination.getId();
+        }
+    }
+
+    /**
+     * Queue for messages
+     */
+    private LinkedList<MessagePackage> messages = new LinkedList<>();
+
+    public void sendMessage(Resource destination, Message message) {
+        synchronized (messages) {
+            // Add
+            messages.add(new MessagePackage(message, destination));
+            // Notify
+            messages.notify();
+        }
+    }
+
+    /**
+     * The message thread
+     */
+    private class MessengerThread extends Thread {
+        public MessengerThread() {
+            super("Message");
+        }
+
+        @Override
+        public void run() {
+            LOGGER.info("Starting messager thread");
+
+            while (!isStopping()) {
+                try {
+                    final MessagePackage messagePackage;
+
+                    // Get the next resource ID
+                    synchronized (messages) {
+                        if (messages.isEmpty()) {
+                            try {
+                                messages.wait();
+                            } catch (InterruptedException e) {
+                            }
+                            continue;
+
+                        } else {
+                            messagePackage = messages.pop();
+                        }
+                    }
+
+                    // Notify all the dependencies
+                    Transaction.run((em, t) -> {
+                        // Retrieve the resource that changed - and lock it
+                        Resource destination = em.find(Resource.class, messagePackage.destination, LockModeType.PESSIMISTIC_WRITE);
+//                        em.refresh(destination, LockModeType.PESSIMISTIC_WRITE);
+                        LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
+                        try {
+                            destination.notify(t, em, messagePackage.message);
+                        } catch(Exception e) {
+                            LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), destination);
+                            synchronized (messages) {
+                                messages.push(messagePackage);
+                            }
+                        }
+                    });
+
+                } catch (Exception e) {
+                    LOGGER.error("Caught exception in notifier", e);
+                }
+            }
+
+            runningThreadsCounter.del();
+            LOGGER.info("Stopping notifier thread");
+        }
+
+
+    }
+
 
     /**
      * The queue for notifications
@@ -438,7 +533,7 @@ final public class Scheduler {
      */
     void addChangedResource(Resource resource) {
         synchronized (changedResources) {
-                changedResources.add(resource.getId());
+            changedResources.add(resource.getId());
 
             // Notify
             changedResources.notify();
@@ -480,11 +575,14 @@ final public class Scheduler {
                     LOGGER.debug("Notifying dependencies from R%d", resourceId);
                     // Notify all the dependencies
                     Transaction.run((em, t) -> {
+
+                        // Retrieve the resource that changed - and lock it
                         Resource fromResource = em.find(Resource.class, resourceId, LockModeType.PESSIMISTIC_READ);
                         Collection<Dependency> dependencies = fromResource.getDependentResources();
                         LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
 
                         for (Dependency dep : dependencies) {
+                            em.refresh(dep, LockModeType.PESSIMISTIC_WRITE);
                             if (dep.status == DependencyStatus.UNACTIVE) {
                                 LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
 
@@ -514,7 +612,7 @@ final public class Scheduler {
                         }
                     });
 
-                } catch(Exception e) {
+                } catch (Exception e) {
                     LOGGER.error("Caught exception in notifier", e);
                 }
             }

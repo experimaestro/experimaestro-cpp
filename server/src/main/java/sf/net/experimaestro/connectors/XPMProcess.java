@@ -132,15 +132,8 @@ public abstract class XPMProcess {
                         }
                     }
 
-                    try {
-                        final int _code = code;
-                        Transaction.run((em, t) -> {
-                            // Get a fresh object and notify
-                            em.find(Job.class, job.getId()).notify(t, em, new EndOfJobMessage(_code, System.currentTimeMillis()));
-                        });
-                    } catch (RuntimeException e) {
-                        LOGGER.warn(e, "Failed to notify end-of-job for %s", job);
-                    }
+                    final int _code = code;
+                    Scheduler.get().sendMessage(job, new EndOfJobMessage(_code, System.currentTimeMillis()));
                 }
             }.start();
         }
@@ -280,7 +273,7 @@ public abstract class XPMProcess {
             LOGGER.debug("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getPath());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
-            Transaction.run((em, t) -> job.notify(t, em, new EndOfJobMessage(exitValue(), time)));
+            Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(), time));
             dispose();
         }
     }

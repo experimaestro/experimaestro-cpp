@@ -87,6 +87,10 @@ public class CommandLineTask extends JobRunner {
      */
     private String jobErrorPath;
 
+    // For JPA
+    protected CommandLineTask() {
+    }
+
     /**
      * Constructs the commands line
      *

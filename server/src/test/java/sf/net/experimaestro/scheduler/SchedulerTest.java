@@ -38,7 +38,7 @@ import java.util.*;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
-import static sf.net.experimaestro.scheduler.WaitingJobRunner.Action;
+import static sf.net.experimaestro.scheduler.WaitingJobProcess.Action;
 
 public class SchedulerTest extends XPMEnvironment {
 
@@ -57,7 +57,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         p.add(
                 new ComplexDependenciesParameters("basic", 132481234l)
-                        .jobs(10, 50, 10)
+                        .jobs(10, 50, 5)
                         .dependencies(.5, 2)
                         .failures(0, 0, 0)
                         .token(0)
@@ -210,22 +210,30 @@ public class SchedulerTest extends XPMEnvironment {
         LOGGER.info("Seed is %d", seed);
         random.setSeed(seed);
 
-        int nbCouples = p.nbJobs * (p.nbJobs - 1) / 2;
-
-        final int maxDependencies = min(p.maxDeps, nbCouples);
-
+        // Prepares directory and counter
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
 
+        // Our set of jobs
         WaitingJob[] jobs = new WaitingJob[p.nbJobs];
 
         // --- Generate the dependencies
+
+        // Number of potential dependencies
+        int nbCouples = p.nbJobs * (p.nbJobs - 1) / 2;
+
+        // Maximum number of dependencies
+        final int maxDependencies = min(p.maxDeps, nbCouples);
+
+        // The list of dependencies
         TreeSet<Link> dependencies = new TreeSet<>();
 
+        // Number of generated dependencies
         int n = min(min((int) (long) (nbCouples * p.dependencyRatio * random.nextDouble()), Integer.MAX_VALUE), maxDependencies);
-
         long[] values = new long[n];
+        // Draw n dependencies among nbCouples possible
         RandomSampler.sample(n, nbCouples, n, 0, values, 0, random);
+
         LOGGER.debug("Sampling %d values from %d", n, nbCouples);
         for (long v : values) {
             final Link link = new Link(v);
@@ -247,9 +255,16 @@ public class SchedulerTest extends XPMEnvironment {
             states[((int) values2[i])] = ResourceState.ERROR;
 
         // --- Generate token resource
-        TokenResource token = null;
+        final TokenResource token;
         if (p.token > 0) {
-            Transaction.run(em -> em.persist(new TokenResource(XPMConnector.getInstance().resolve("test"), p.token)));
+            token = Transaction.evaluate(em -> {
+                final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
+                final TokenResource _token = new TokenResource(XPMConnector.getInstance().resolve(path), p.token);
+                em.persist(_token);
+                return _token;
+            });
+        } else {
+            token = null;
         }
 
         // --- Generate new jobs
@@ -263,15 +278,15 @@ public class SchedulerTest extends XPMEnvironment {
                 ArrayList<String> deps = new ArrayList<>();
                 for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
                     assert j == link.to;
-                    final WaitingJob jobFrom = em.find(WaitingJob.class, jobs[link.from].getId());
-                    em.refresh(jobFrom, LockModeType.PESSIMISTIC_READ);
+                    final WaitingJob jobFrom = em.find(WaitingJob.class, jobs[link.from].getId(), LockModeType.PESSIMISTIC_WRITE);
                     jobs[j].addDependency(jobFrom.createDependency(null));
-                    if (token != null) {
-                        jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
-                    }
                     if (states[link.from].isBlocking())
                         states[j] = ResourceState.ON_HOLD;
                     deps.add(jobFrom.toString());
+                }
+
+                if (token != null) {
+                    jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
                 }
 
                 jobs[j].updateStatus();
@@ -342,13 +357,49 @@ public class SchedulerTest extends XPMEnvironment {
         }
     }
 
+
+
+    @Test(description = "The required dependency ends before the new job is committed")
+    public void test_required_job_ends() throws IOException {
+        File jobDirectory = mkTestDir();
+        ThreadCount counter = new ThreadCount();
+
+        final int lockA = IntLocks.newLockID();
+        WaitingJob jobA = Transaction.evaluate(em -> {
+            WaitingJob job = new WaitingJob(counter, jobDirectory, "jobA",
+                    new Action(250, 0, 0).removeLock(lockA));
+            job.updateStatus();
+            em.persist(job);
+            return job;
+        });
+
+        WaitingJob jobB = Transaction.evaluate(em -> {
+            WaitingJob job = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
+            final WaitingJob _jobA = em.find(WaitingJob.class, jobA.getId(), LockModeType.PESSIMISTIC_WRITE);
+            LOGGER.info("GOT A LOCK FOR %s", _jobA);
+            job.addDependency(_jobA.createDependency(null));
+            job.updateStatus();
+            em.persist(job);
+
+            // Wait that A ends
+            IntLocks.waitLockID(lockA);
+
+            LOGGER.info("FINISHED LAUNCHING B");
+            return job;
+        });
+
+
+        waitToFinish(0, counter, new WaitingJob[]{jobA, jobB }, 1500, 5);
+
+    }
+
     @Test(description = "Test of the token resource - one job at a time")
     public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException {
 
         File jobDirectory = mkTestDir();
 
         ThreadCount counter = new ThreadCount();
-        Path locator = XPMConnector.getInstance().resolve("test");
+        Path locator = XPMConnector.getInstance().resolve("scheduler_test/test_token_resource");
         TokenResource token = new TokenResource(locator, 1);
         Transaction.run(em -> em.persist(token));
 
@@ -454,6 +505,12 @@ public class SchedulerTest extends XPMEnvironment {
             this.from = from;
         }
 
+        /**
+         * Initialize a link between two jobs from a single number
+         *
+         * The association is as follows 1 = 1-2, 2 = 1-3, 3 = 2-3, 4 = 1-4, ...
+         * @param n is
+         */
         public Link(long n) {
             to = (int) floor(.5 + sqrt(2. * n + .25));
             from = (int) (n - (to * (to - 1)) / 2);

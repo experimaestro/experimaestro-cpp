@@ -25,6 +25,8 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.persistence.*;
 import java.io.Serializable;
 
+import static java.lang.String.format;
+
 /**
  * What is the state of a dependency.
  * This class stores the previous state
@@ -59,7 +61,7 @@ abstract public class Dependency implements Serializable {
     private Lock lock;
 
     @Version()
-    @Column(name="optlock")
+    @Column(name="version")
     private long version;
 
     protected Dependency() {
@@ -76,11 +78,16 @@ abstract public class Dependency implements Serializable {
 
     @PostLoad
     void __debug_post_1() {
-        LOGGER.info("After load, dependency %s: lock %s", this, lock);
+        LOGGER.info("[DepNot] After load, dependency %s", this);
     }
     @PostPersist
     void __debug_post_2() {
-        LOGGER.info("After persist, dependency %s: lock %s", this, lock);
+        LOGGER.info("[DepNot] After persist, dependency %s", this);
+    }
+
+    @PostUpdate
+    void __debug_post_3() {
+        LOGGER.info("[DepNot] After update, dependency %s", this);
     }
 
     @Override
@@ -118,7 +125,7 @@ abstract public class Dependency implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Dep[%s-%s]; %s; %b", from, to, status, hasLock());
+        return format("Dep[%s-%s/v%d]; %s; %b", from, to, version, status, hasLock());
     }
 
     /**
@@ -175,7 +182,7 @@ abstract public class Dependency implements Serializable {
         LOGGER.debug("Locking dependency %s", this);
         try {
             lock = _lock(pid);
-
+            assert lock != null;
             return lock;
         } catch(Throwable e) {
             throw new LockException(e);
@@ -184,7 +191,7 @@ abstract public class Dependency implements Serializable {
 
     final public void unlock(EntityManager em) {
         LOGGER.debug("Unlocking dependency %s", this);
-        assert lock != null : "Lock of an active dependency is null";
+        assert lock != null : format("Lock of dependency %s is null", this);
         lock.close();
         lock = null;
         status = DependencyStatus.UNACTIVE;

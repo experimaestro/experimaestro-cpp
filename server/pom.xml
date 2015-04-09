@@ -33,7 +33,7 @@
 
         <jna.version>4.1.0</jna.version>
         <jetty.version>9.2.3.v20140905</jetty.version>
-        <hibernate.version>4.3.6.Final</hibernate.version>
+        <hibernate.version>4.3.8.Final</hibernate.version>
     </properties>
 
 

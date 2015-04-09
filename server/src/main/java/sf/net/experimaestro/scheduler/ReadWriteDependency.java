@@ -60,13 +60,13 @@ public class ReadWriteDependency extends Dependency {
     }
 
     @Override
-    synchronized protected DependencyStatus _accept() {
+    protected DependencyStatus _accept() {
         // The file was generated, so it is just a matter of locking
         return DependencyStatus.OK_LOCK;
     }
 
     @Override
-    synchronized protected Lock _lock(String pid) throws LockException {
+    protected Lock _lock(String pid) throws LockException {
         // Retrieve data about resource
         Resource resource = getFrom();
 

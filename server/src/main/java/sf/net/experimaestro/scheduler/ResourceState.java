@@ -75,6 +75,12 @@ public enum ResourceState {
 
 
     /**
+     * States in which the job is not active
+     */
+    final static EnumSet<ResourceState> UNACTIVE_STATE
+            = EnumSet.of(DONE, ERROR, ON_HOLD);
+
+    /**
      * States in which the job has finished (whatever the outcome)
      */
     final static EnumSet<ResourceState> FINISHED_STATE
@@ -104,6 +110,10 @@ public enum ResourceState {
     @Override
     public String toString() {
         return super.toString().toLowerCase();
+    }
+
+    public boolean isUnactive() {
+        return UNACTIVE_STATE.contains(this);
     }
 
     public boolean isFinished() {

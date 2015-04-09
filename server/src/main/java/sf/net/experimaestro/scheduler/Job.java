@@ -18,6 +18,7 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Iterables;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
@@ -183,8 +184,11 @@ public class Job extends Resource {
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run(EntityManager em) throws Exception {
+    synchronized final public void run(EntityManager em, Transaction transaction) throws Exception {
+        // Those locks are transfered to the process
         ArrayList<Lock> locks = new ArrayList<>();
+        // Those locks are used only in case of problem to unlock everything
+        ArrayList<Lock> depLocks = new ArrayList<>();
 
         try {
             // We are running (prevents other task status try status replace ourselves)
@@ -227,9 +231,7 @@ public class Job extends Resource {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
                         em.refresh(dependency, LockModeType.PESSIMISTIC_WRITE);
                         final Lock lock = dependency.lock(em, pid);
-                        em.persist(dependency);
-                        em.persist(lock);
-                        locks.add(lock);
+                        depLocks.add(lock);
                         LOGGER.debug("Running preparation - locked dependency [%s]", dependency);
                     } catch (LockException e) {
                         // Update & store this dependency
@@ -259,6 +261,7 @@ public class Job extends Resource {
 
                     process.adopt(locks);
                     locks = null;
+                    transaction.commit();
 
                     // Store the current state
                     LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
@@ -280,7 +283,7 @@ public class Job extends Resource {
         } finally {
             // Dispose of the locks that we own
             if (locks != null) {
-                for (Lock lock : locks) {
+                for (Lock lock : Iterables.concat(locks, depLocks)) {
                     try {
                         lock.close();
                     } catch (Throwable e) {
@@ -288,7 +291,11 @@ public class Job extends Resource {
                     }
                 }
             }
-            em.flush();
+        }
+
+        LOGGER.info("[STARTED JOB] Finished starting %s", this);
+        for(Dependency dep: getRequiredResources()) {
+            LOGGER.info("[STARTED JOB] Dependency: %s", dep);
         }
 
     }
@@ -303,7 +310,7 @@ public class Job extends Resource {
      * @param message The message
      */
     @Override
-    synchronized public void notify(Transaction t, EntityManager em, Message message) {
+    public void notify(Transaction t, EntityManager em, Message message) {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
@@ -314,9 +321,8 @@ public class Job extends Resource {
             case END_OF_JOB:
                 // First, register our changes
                 em.refresh(this, LockModeType.PESSIMISTIC_WRITE);
+                LOGGER.info("LOCK MODE (%s) = %s", this, em.getLockMode(this));
                 endOfJobMessage((EndOfJobMessage) message, em, t);
-                em.persist(this);
-                LOGGER.info("WILL COMMIT %s WITH STATE %s", this, getState());
                 t.boundary();
                 break;
 
@@ -388,25 +394,15 @@ public class Job extends Resource {
     private void endOfJobMessage(EndOfJobMessage eoj, EntityManager em, Transaction t) {
         this.endTimestamp = eoj.timestamp;
 
-        // TODO: copy done & code status main connector if needed
-
         LOGGER.info("Job %s has ended with code %d", this, eoj.code);
 
-        // (1) Change state
 
-        // Update state
-        setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
-        LOGGER.info("[0] WILL COMMIT %s WITH STATE %s", this, getState());
-        // Dispose of the job monitor
-        XPMProcess old = process;
-        process = null;
-
-        // (2) required resources
+        // (1) Release required resources
         LOGGER.debug("Release dependencies of job [%s]", this);
-        final Collection<Dependency> deps = getRequiredResources();
+        final Collection<Dependency> requiredResources = getRequiredResources();
         try {
-            for (Dependency dependency : deps) {
-                em.lock(dependency, LockModeType.PESSIMISTIC_WRITE);
+            for (Dependency dependency : requiredResources) {
+                em.refresh(dependency, LockModeType.PESSIMISTIC_WRITE);
                 dependency.unlock(em);
             }
         } catch (RuntimeException e) {
@@ -414,18 +410,21 @@ public class Job extends Resource {
         }
 
 
-        // (2) disposing of old XPM process
+        // (2) dispose old XPM process
 
         try {
-            LOGGER.debug("Disposing of old XPM process [%s]", old);
-            if (old != null) {
-                old.dispose();
-                em.remove(old);
+            LOGGER.debug("Disposing of old XPM process [%s]", process);
+            if (process != null) {
+                em.refresh(process, LockModeType.PESSIMISTIC_WRITE);
+                process.dispose();
+                process = null;
             }
         } catch (Exception e) {
             LOGGER.error("Could not dispose of the old process checker %s", e);
         }
 
+        // (3) Change state (DONE or ERROR depending on the end of job status code)
+        setState(eoj.code == 0 ? ResourceState.DONE : ResourceState.ERROR);
     }
 
     public long getStartTimestamp() {
@@ -532,12 +531,14 @@ public class Job extends Resource {
      */
     public void addDependency(Dependency dependency) {
         dependency.to = this;
-        this.dependencyTo.add(dependency);
+        this.getRequiredResources().add(dependency);
         dependency.update();
         if (!dependency.status.isOK()) {
             nbUnsatisfied++;
         }
-        dependency.from.dependencyFrom.add(dependency);
+
+        // Add to the required resource list
+        dependency.from.getDependentResources().add(dependency);
     }
 
     public void removeDependency(Dependency dependency) {
@@ -684,7 +685,10 @@ public class Job extends Resource {
     @Override
     public void stored() {
         super.stored();
-        LOGGER.debug("Job stored in state %s [old = %s]", getState(), oldState);
+        LOGGER.debug("Job (version %d) stored in state %s [old = %s]", version, getState(), oldState);
+        for(Dependency dep: getRequiredResources()) {
+            LOGGER.debug(" w/dependency %s", dep);
+        }
 
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");

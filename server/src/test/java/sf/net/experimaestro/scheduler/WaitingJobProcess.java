@@ -18,13 +18,18 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Entity;
+import javax.persistence.Transient;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,14 +49,14 @@ class WaitingJobProcess extends XPMProcess {
     /**
      * The action
      */
-    WaitingJobRunner.Action action;
+    Action action;
     private long timestamp;
 
     public WaitingJobProcess() {
         LOGGER.debug("Default constructor for MyXPMProcess");
     }
 
-    public WaitingJobProcess(SingleHostConnector connector, Job job, WaitingJobRunner.Action action) {
+    public WaitingJobProcess(SingleHostConnector connector, Job job, Action action) {
         super(connector, "1", job);
         assert action != null;
         this.timestamp = System.currentTimeMillis();
@@ -76,8 +81,16 @@ class WaitingJobProcess extends XPMProcess {
         synchronized (this) {
             LOGGER.debug("Starting status wait - " + job + " - " + action);
             long toWait = action.duration - (System.currentTimeMillis() - timestamp);
-            if (toWait > 0) wait(toWait);
+            if (toWait > 0) {
+                wait(toWait);
+            }
             LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
+
+            if (action.lockID > 0) {
+                LOGGER.debug("Waiting for lock ID %d", action.lockID);
+                IntLocks.waitLockID(action.lockID);
+                LOGGER.debug("Lock ID %d released", action.lockID);
+            }
         }
 
         // Schedule a restart
@@ -86,13 +99,16 @@ class WaitingJobProcess extends XPMProcess {
             scheduler.schedule(() -> {
                 LOGGER.debug("Restarting job %s[%d]", job.getId());
                 try {
-                    ((WaitingJob)job).status().currentIndex++;
+                    ((WaitingJob) job).status().currentIndex++;
                     job.restart();
+                    // Take one
+                    ((WaitingJob) job).status().counter.del();
                 } catch (Exception e) {
                     throw new AssertionError("Could not restart job", e);
                 }
             }, action.restart, TimeUnit.MILLISECONDS);
         }
+
 
         return action.code;
     }
@@ -127,4 +143,52 @@ class WaitingJobProcess extends XPMProcess {
     }
 
 
+
+    /**
+     * An action of our job
+     *
+     * Specifies the duration (of the job and before restarting), as well
+     * as a potential lock
+     */
+    static public class Action implements Serializable {
+        // Duration before exiting
+        long duration;
+
+        // wait for lock before exiting
+        int lockID = 0;
+
+        // remove this lock
+        int removeLockID = 0;
+
+        // Exit code
+        int code;
+
+        // Waiting time before restart (0 = no restart)
+        long restart;
+
+        Action() {
+        }
+
+        Action(long duration, int code, long restart) {
+            this.duration = duration;
+            this.code = code;
+            this.restart = restart;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Action(duration=%dms, code=%d, restart=%dms)", duration, code, restart);
+        }
+
+        public Action waitLock(int lockID) {
+            this.lockID = lockID;
+            return this;
+        }
+
+        public Action removeLock(int removeLockID) {
+            this.removeLockID = removeLockID;
+            return this;
+        }
+
+    }
 }
