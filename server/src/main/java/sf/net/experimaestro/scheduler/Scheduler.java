@@ -95,7 +95,9 @@ final public class Scheduler {
     private ThreadCount runningThreadsCounter = new ThreadCount();
     private Timer resourceCheckTimer;
 
-    /** Messenger */
+    /**
+     * Messenger
+     */
     private final MessengerThread messengerThread;
 
     /**
@@ -123,7 +125,7 @@ final public class Scheduler {
         properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true;hsqldb.tx=mvcc", baseDirectory));
         properties.put("hibernate.connection.username", "");
         properties.put("hibernate.connection.password", "");
-        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_SERIALIZABLE));
+        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_REPEATABLE_READ));
 
         ArrayList<Class<?>> loadedClasses = new ArrayList<>();
         ServiceLoader<PersistentClassesAdder> services = ServiceLoader.load(PersistentClassesAdder.class);
@@ -133,8 +135,7 @@ final public class Scheduler {
 
         properties.put(org.hibernate.jpa.AvailableSettings.LOADED_CLASSES, loadedClasses);
 
-        entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro",
-                properties);
+        entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro", properties);
 
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
@@ -370,7 +371,7 @@ final public class Scheduler {
 
                         final EntityManager em = transaction.em();
 
-                        /* TODO: consider a smarter way to retrieve good candidates (using a bloom filter for tokens) */
+                        /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
                         TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
                         List<Job> list = query.getResultList();
 
@@ -495,20 +496,19 @@ final public class Scheduler {
                     }
 
                     // Notify all the dependencies
-                    Transaction.run((em, t) -> {
-                        // Retrieve the resource that changed - and lock it
-                        Resource destination = em.find(Resource.class, messagePackage.destination, LockModeType.PESSIMISTIC_WRITE);
-//                        em.refresh(destination, LockModeType.PESSIMISTIC_WRITE);
-                        LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
-                        try {
+                    try {
+                        Transaction.run((em, t) -> {
+                            // Retrieve the resource that changed - and lock it
+                            Resource destination = em.find(Resource.class, messagePackage.destination, LockModeType.PESSIMISTIC_WRITE);
+                            LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
                             destination.notify(t, em, messagePackage.message);
-                        } catch(Exception e) {
-                            LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), destination);
-                            synchronized (messages) {
-                                messages.push(messagePackage);
-                            }
+                        });
+                    } catch (RollbackException e) {
+                        LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
+                        synchronized (messages) {
+                            messages.push(messagePackage);
                         }
-                    });
+                    }
 
                 } catch (Exception e) {
                     LOGGER.error("Caught exception in notifier", e);

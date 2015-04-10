@@ -260,11 +260,15 @@ public class Job extends Resource {
                     process = startJob(locks);
 
                     process.adopt(locks);
-                    locks = null;
                     transaction.commit();
+
+                    locks = null;
 
                     // Store the current state
                     LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
+                    for(Dependency dep: getRequiredResources()) {
+                        LOGGER.info("[STARTED JOB] Dependency: %s", dep);
+                    }
 
                     // Flush to database
                 } catch (Throwable e) {
@@ -283,8 +287,10 @@ public class Job extends Resource {
         } finally {
             // Dispose of the locks that we own
             if (locks != null) {
+                LOGGER.info("An error occurred: disposing locks");
                 for (Lock lock : Iterables.concat(locks, depLocks)) {
                     try {
+                        LOGGER.info("Disposing of lock %s", lock);
                         lock.close();
                     } catch (Throwable e) {
                         LOGGER.error(e, "Could not close lock %s", lock);
@@ -293,10 +299,6 @@ public class Job extends Resource {
             }
         }
 
-        LOGGER.info("[STARTED JOB] Finished starting %s", this);
-        for(Dependency dep: getRequiredResources()) {
-            LOGGER.info("[STARTED JOB] Dependency: %s", dep);
-        }
 
     }
 
@@ -320,7 +322,7 @@ public class Job extends Resource {
 
             case END_OF_JOB:
                 // First, register our changes
-                em.refresh(this, LockModeType.PESSIMISTIC_WRITE);
+                em.refresh(this, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
                 LOGGER.info("LOCK MODE (%s) = %s", this, em.getLockMode(this));
                 endOfJobMessage((EndOfJobMessage) message, em, t);
                 t.boundary();

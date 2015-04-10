@@ -375,7 +375,7 @@ public class SchedulerTest extends XPMEnvironment {
 
         WaitingJob jobB = Transaction.evaluate(em -> {
             WaitingJob job = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
-            final WaitingJob _jobA = em.find(WaitingJob.class, jobA.getId(), LockModeType.PESSIMISTIC_WRITE);
+            final WaitingJob _jobA = em.find(WaitingJob.class, jobA.getId(), LockModeType.PESSIMISTIC_FORCE_INCREMENT);
             LOGGER.info("GOT A LOCK FOR %s", _jobA);
             job.addDependency(_jobA.createDependency(null));
             job.updateStatus();
