@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
@@ -55,7 +56,12 @@ final public class Scheduler {
      * Simple asynchronous executor service (used for asynchronous notification)
      */
     final ExecutorService executorService;
-    final Boolean readyJobSemaphore = true;
+
+    /**
+     * Whether we should look at the list of ready jobs or not
+     */
+    final MutableBoolean readyJobSemaphore = new MutableBoolean(false);
+
     /**
      * Scheduler
      */
@@ -125,7 +131,16 @@ final public class Scheduler {
         properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true;hsqldb.tx=mvcc", baseDirectory));
         properties.put("hibernate.connection.username", "");
         properties.put("hibernate.connection.password", "");
-        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_REPEATABLE_READ));
+
+        /* From HSQLDB http://hsqldb.org/doc/guide/sessions-chapt.html#snc_tx_mvcc
+
+        In MVCC mode
+        - locks are at the row level
+        - no shared (i.e. read) locks
+        - in TRANSACTION_READ_COMMITTED mode: if a session wants to read/write a row that was written by another one => wait
+        - in TRANSACTION_REPEATABLE_READ: if a session wants to write the same row than another one => exception
+        */
+        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_READ_COMMITTED));
 
         ArrayList<Class<?>> loadedClasses = new ArrayList<>();
         ServiceLoader<PersistentClassesAdder> services = ServiceLoader.load(PersistentClassesAdder.class);
@@ -191,8 +206,9 @@ final public class Scheduler {
     }
 
     public static void notifyRunners() {
-        final Boolean semaphore = get().readyJobSemaphore;
+        final MutableBoolean semaphore = get().readyJobSemaphore;
         synchronized (semaphore) {
+            semaphore.setValue(true);
             semaphore.notify();
         }
     }
@@ -346,26 +362,27 @@ final public class Scheduler {
         public void run() {
             try {
                 // Flag stating whether we should wait for something
-                boolean doWait = true;
-
                 while (!isStopping()) {
                     // ... and wait if we were not lucky (or there were no tasks)
-                    try {
-                        if (doWait) {
-                            synchronized (readyJobSemaphore) {
+                    synchronized (readyJobSemaphore) {
+
+                        while (!readyJobSemaphore.booleanValue()) {
+                            try {
                                 LOGGER.debug("Going to sleep [%s]...", name);
                                 readyJobSemaphore.wait();
                                 LOGGER.debug("Waking up [%s]...", name);
+                            } catch (InterruptedException e) {
+                                // The server stopped
+                                break;
                             }
                         }
-                    } catch (InterruptedException e) {
-                        // The server stopped
-                        break;
+
+                        // Set it to false
+                        readyJobSemaphore.setValue(false);
                     }
 
 
                     // Try the next task
-                    doWait = true;
                     try (Transaction transaction = Transaction.create()) {
                         LOGGER.debug("Searching for ready jobs");
 
@@ -376,35 +393,36 @@ final public class Scheduler {
                         List<Job> list = query.getResultList();
 
                         for (Job job : list) {
-                            // We got at least one job, we won't wait
-                            doWait = false;
+                            job.lock(transaction, true);
+                            em.refresh(job);
 
-                            try {
-                                em.refresh(job, LockModeType.PESSIMISTIC_WRITE);
-                            } catch (LockTimeoutException e) {
-                                LOGGER.debug("Could not lock job %s", job);
-                                Scheduler.notifyRunners();
-                                continue;
-                            }
+                            LOGGER.debug("Looking at %s", job);
 
                             if (job.getState() != ResourceState.READY) {
+                                transaction.boundary();
                                 LOGGER.debug("Job state is not READY anymore", job);
                                 Scheduler.notifyRunners();
                                 continue;
                             }
 
                             // Checks the tokens
-                            for (Dependency dependency : job.getRequiredResources()) {
+                            boolean tokensAvailable = true;
+                            for (Dependency dependency : job.getDependencies()) {
                                 if (dependency instanceof TokenDependency) {
                                     TokenDependency tokenDependency = (TokenDependency) dependency;
                                     if (!tokenDependency.canLock()) {
-                                        LOGGER.debug("Token dependency %s prevents running job", tokenDependency);
-                                        continue;
+                                        LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
+                                        tokensAvailable = false;
+                                        break;
                                     }
+                                    LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
                                 }
                             }
-
-                            LOGGER.debug("Job %s was JPA locked - now, we can run it", job);
+                            if (!tokensAvailable) {
+                                // Remove locks
+                                transaction.boundary();
+                                continue;
+                            }
 
                             this.setName(name + "/" + job);
                             try {
@@ -416,21 +434,23 @@ final public class Scheduler {
                                 LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
                                 job.setState(ResourceState.WAITING);
                                 job.updateStatus();
-                                transaction.commit();
+                                transaction.boundary();
+                                LOGGER.info("Finished launching %s", job);
+                            } catch (RollbackException e) {
+                                throw e;
                             } catch (Throwable t) {
                                 LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                 job.setState(ResourceState.ERROR);
-                                transaction.commit();
+                                transaction.boundary();
+                            } finally {
+                                this.setName(name);
                             }
-                            LOGGER.info("Finished launching %s", job);
-                            this.setName(name);
                         }
 
                     } catch (RollbackException e) {
                         LOGGER.warn("Rollback exception");
                     } catch (Exception e) {
-                        LOGGER.error("Caught an exception: %s", e);
-                        doWait = false;
+                        LOGGER.error("Caught an exception: %s", e.toString());
                     } finally {
                     }
                 }
@@ -499,11 +519,11 @@ final public class Scheduler {
                     try {
                         Transaction.run((em, t) -> {
                             // Retrieve the resource that changed - and lock it
-                            Resource destination = em.find(Resource.class, messagePackage.destination, LockModeType.PESSIMISTIC_WRITE);
+                            Resource destination = em.find(Resource.class, messagePackage.destination);
                             LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
                             destination.notify(t, em, messagePackage.message);
                         });
-                    } catch (RollbackException e) {
+                    } catch (PersistenceException e) {
                         LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
                         synchronized (messages) {
                             messages.push(messagePackage);
@@ -577,12 +597,13 @@ final public class Scheduler {
                     Transaction.run((em, t) -> {
 
                         // Retrieve the resource that changed - and lock it
-                        Resource fromResource = em.find(Resource.class, resourceId, LockModeType.PESSIMISTIC_READ);
-                        Collection<Dependency> dependencies = fromResource.getDependentResources();
+                        Resource fromResource = em.find(Resource.class, resourceId);
+                        fromResource.lock(t, false);
+
+                        Collection<Dependency> dependencies = fromResource.getOutgoingDependencies();
                         LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
 
                         for (Dependency dep : dependencies) {
-                            em.refresh(dep, LockModeType.PESSIMISTIC_WRITE);
                             if (dep.status == DependencyStatus.UNACTIVE) {
                                 LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
 

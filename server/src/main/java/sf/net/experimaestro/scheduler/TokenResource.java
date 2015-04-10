@@ -115,7 +115,7 @@ public class TokenResource extends Resource {
     synchronized protected boolean doUpdateStatus() throws Exception {
         LOGGER.debug("Updating token resource");
         int used = 0;
-        for (Dependency dependency : getRequiredResources()) {
+        for (Dependency dependency : getDependencies()) {
             if (dependency.hasLock()) {
                 LOGGER.debug("Dependency [%s] has lock", dependency);
                 used++;

@@ -18,12 +18,15 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.jcraft.jsch.agentproxy.Identity;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
+import java.util.HashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -39,13 +42,19 @@ public class Transaction implements AutoCloseable {
      */
     private final EntityTransaction transaction;
 
-    /** Old transaction */
+    /**
+     * Old transaction
+     */
     private final Transaction old;
 
-    /** Current status of the transaction */
+    /**
+     * Current status of the transaction
+     */
     Status status;
 
-    /** The attached entity manager */
+    /**
+     * The attached entity manager
+     */
     private EntityManager entityManager;
 
     /**
@@ -53,8 +62,15 @@ public class Transaction implements AutoCloseable {
      */
     private boolean ownEntityManager;
 
-    /** Methods to evaluate after commit  */
+    /**
+     * Methods to evaluate after commit
+     */
     IdentityHashSet<PostCommitListener> listeners = null;
+
+    /**
+     * List of locks on entities
+     */
+    HashMap<Object, EntityLock> locks = new HashMap<>();
 
     static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
@@ -133,28 +149,43 @@ public class Transaction implements AutoCloseable {
 
     @Override
     public void close() throws RollbackException {
-        // Rollback if an error occurred
-        if (status == Status.BEGIN) {
-            LOGGER.debug("Transaction %s rollback", System.identityHashCode(this));
-            transaction.rollback();
-        }
+        try {
+            // Rollback if an error occurred
+            if (status == Status.BEGIN) {
+                LOGGER.debug("Transaction %s rollback", System.identityHashCode(this));
+                transaction.rollback();
+            }
 
-        // Close the entity manager if necessary
-        if (ownEntityManager) {
-            entityManager.close();
-        }
+            // Close the entity manager if necessary
+            if (ownEntityManager) {
+                entityManager.close();
+            }
 
-        currentTransaction.set(old);
+            currentTransaction.set(old);
+        } finally {
+            for (EntityLock lock : locks.values()) {
+                lock.close();
+            }
+            locks.clear();
+        }
     }
 
     public void commit() {
-        if (status == Status.BEGIN) {
-            LOGGER.debug("Transaction %s commits", System.identityHashCode(this));
-            transaction.commit();
-            status = Status.COMMIT;
-            if (listeners != null) {
-                listeners.forEach(f -> f.postCommit(this));
+        try {
+            if (status == Status.BEGIN) {
+                LOGGER.debug("Transaction %s commits", System.identityHashCode(this));
+                transaction.commit();
+                status = Status.COMMIT;
+                if (listeners != null) {
+                    listeners.forEach(f -> f.postCommit(this));
+                }
             }
+        } finally {
+            // Clear locks
+            for (EntityLock lock : locks.values()) {
+                lock.close();
+            }
+            locks.clear();
         }
     }
 
@@ -162,7 +193,7 @@ public class Transaction implements AutoCloseable {
         LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
         try {
             transaction.commit();
-        } catch(RollbackException e) {
+        } catch (RollbackException e) {
             status = Status.ROLLBACK;
             throw e;
         }
@@ -176,7 +207,28 @@ public class Transaction implements AutoCloseable {
         listeners.add(f);
     }
 
-    static public enum Status {
+    public EntityLock getLock(Object object) {
+        return locks.get(object);
+    }
+
+    public void putLock(Object o, EntityLock lock) {
+        locks.put(o, lock);
+    }
+
+    public EntityLock lock(SharedLongLocks locks, Long id, boolean exclusive) {
+        EntityLock lock = getLock(this);
+
+        if (lock == null) {
+            lock = locks.lock(id, exclusive);
+            putLock(this, lock);
+        } else {
+            lock.makeExclusive();
+        }
+
+        return lock;
+    }
+
+    public enum Status {
         BEGIN,
         COMMIT,
         ROLLBACK

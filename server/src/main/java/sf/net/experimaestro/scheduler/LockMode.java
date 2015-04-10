@@ -42,7 +42,7 @@ public enum LockMode {
     /**
      * The resouce is locked globally (e.g. a generated file)
      */
-    @EnumValue(value = "exclusive-writer", help = "Creates a resource that can be read by many, but need exclusive write access")
+    @EnumValue(value = "shared-writer", help = "Creates a resource that can be read by many, but need shared write access")
     EXCLUSIVE_WRITER,
 
     /**

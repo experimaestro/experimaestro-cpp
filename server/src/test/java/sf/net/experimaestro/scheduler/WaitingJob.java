@@ -142,6 +142,10 @@ public class WaitingJob extends Job {
         }
     }
 
+    public long totalTime() {
+        return actions.stream().mapToLong(a -> a.duration + a.restart).sum();
+    }
+
     public static class Status {
         // Current index (action status run)
         int currentIndex;

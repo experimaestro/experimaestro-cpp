@@ -61,7 +61,7 @@ public class ThreadCount {
      * Wait until the count is less than a given value
      *
      * @param n       The minimum value of the counter
-     * @param timeout The timeout after which we exit
+     * @param timeout The timeout (in ms) after which we exit
      * @param reset   Resets the time out each time the counter is changed
      */
     public void resume(int n, long timeout, boolean reset) {

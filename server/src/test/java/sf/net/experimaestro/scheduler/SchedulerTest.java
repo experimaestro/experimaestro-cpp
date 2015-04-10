@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import bpiwowar.argparser.utils.Output;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
@@ -41,6 +42,8 @@ import static java.lang.String.format;
 import static sf.net.experimaestro.scheduler.WaitingJobProcess.Action;
 
 public class SchedulerTest extends XPMEnvironment {
+    // Time to  process a job
+    static final long JOB_PROCESSING_TIME = 500;
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -73,8 +76,8 @@ public class SchedulerTest extends XPMEnvironment {
 
         p.add(
                 new ComplexDependenciesParameters("failures-and-tokens", -8451050260222287949l)
-                        .jobs(150, 150, 10)
-                        .dependencies(.2, 50)
+                        .jobs(100, 150, 10)
+                        .dependencies(.2, 25)
                         .failures(0.10, 3, 2)
                         .token(3)
 
@@ -153,16 +156,16 @@ public class SchedulerTest extends XPMEnvironment {
 
         // Create two jobs: job1, and job2 that depends on job1
         WaitingJob[] jobs = new WaitingJob[2];
-        Transaction.run((em, t) -> {
-            for (int i = 0; i < jobs.length; i++) {
-                jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, 0, 0));
-                if (i > 0) {
-                    jobs[i].addDependency(jobs[i - 1].createDependency(null));
+        for (int i = 0; i < jobs.length; i++) {
+            final int finalI = i;
+            Transaction.run((em, t) -> {
+                jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, 0, 0));
+                if (finalI > 0) {
+                    jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
                 }
-                jobs[i].updateStatus();
-                em.persist(jobs[i]);
-            }
-        });
+                em.persist(jobs[finalI]);
+            });
+        }
 
         LOGGER.info("Waiting for operations status finish");
 
@@ -190,7 +193,6 @@ public class SchedulerTest extends XPMEnvironment {
                 if (i > 0) {
                     jobs[i].addDependency(jobs[i - 1].createDependency(null));
                 }
-                jobs[i].updateStatus();
                 em.persist(jobs[i]);
             }
         });
@@ -202,6 +204,7 @@ public class SchedulerTest extends XPMEnvironment {
         errors += checkState(EnumSet.of(ResourceState.ON_HOLD), jobs[1]);
         Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
+
 
     @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
     public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException {
@@ -267,6 +270,8 @@ public class SchedulerTest extends XPMEnvironment {
             token = null;
         }
 
+        final MutableLong totalTime = new MutableLong();
+
         // --- Generate new jobs
         for (int i = 0; i < jobs.length; i++) {
             final int j = i;
@@ -275,30 +280,31 @@ public class SchedulerTest extends XPMEnvironment {
                 int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
                 jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
 
+                totalTime.add(jobs[j].totalTime() + JOB_PROCESSING_TIME);
+
                 ArrayList<String> deps = new ArrayList<>();
                 for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
                     assert j == link.to;
-                    final WaitingJob jobFrom = em.find(WaitingJob.class, jobs[link.from].getId(), LockModeType.PESSIMISTIC_WRITE);
-                    jobs[j].addDependency(jobFrom.createDependency(null));
+                    jobs[j].addDependency(jobs[link.from].createDependency(null));
                     if (states[link.from].isBlocking())
                         states[j] = ResourceState.ON_HOLD;
-                    deps.add(jobFrom.toString());
+                    deps.add(jobs[link.from].toString());
                 }
 
                 if (token != null) {
                     jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
                 }
 
-                jobs[j].updateStatus();
                 em.persist(jobs[j]);
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             });
         }
 
-        LOGGER.info("Waiting for jobs status finish (%d remaining)", counter.getCount());
 
-        int timeout = p.maxExecutionTime + 5000;
-        waitToFinish(0, counter, jobs, timeout, 5);
+        LOGGER.info("Waiting for jobs status finish (%d remaining) / total time = %dms",
+                counter.getCount(), totalTime.longValue());
+
+        waitToFinish(0, counter, jobs, totalTime.longValue(), 5);
 
         waitBeforeCheck();
 
@@ -306,8 +312,9 @@ public class SchedulerTest extends XPMEnvironment {
 
         LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
 
-        if (count > 0)
+        if (count > 0) {
             LOGGER.error("Time out: %d jobs were not processed", count);
+        }
 
         // --- Check
         LOGGER.info("Checking job states");
@@ -324,7 +331,7 @@ public class SchedulerTest extends XPMEnvironment {
         Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
-    private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, int timeout, int tries) {
+    private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, long timeout, int tries) {
         int loop = 0;
         while (counter.getCount() > limit && loop++ < tries) {
             counter.resume(limit, timeout, true);
@@ -358,7 +365,6 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
 
-
     @Test(description = "The required dependency ends before the new job is committed")
     public void test_required_job_ends() throws IOException {
         File jobDirectory = mkTestDir();
@@ -368,28 +374,26 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob jobA = Transaction.evaluate(em -> {
             WaitingJob job = new WaitingJob(counter, jobDirectory, "jobA",
                     new Action(250, 0, 0).removeLock(lockA));
-            job.updateStatus();
             em.persist(job);
             return job;
         });
 
         WaitingJob jobB = Transaction.evaluate(em -> {
             WaitingJob job = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
-            final WaitingJob _jobA = em.find(WaitingJob.class, jobA.getId(), LockModeType.PESSIMISTIC_FORCE_INCREMENT);
-            LOGGER.info("GOT A LOCK FOR %s", _jobA);
-            job.addDependency(_jobA.createDependency(null));
-            job.updateStatus();
-            em.persist(job);
+            job.addDependency(jobA.createDependency(null));
 
             // Wait that A ends
             IntLocks.waitLockID(lockA);
+
+            em.persist(job);
+
 
             LOGGER.info("FINISHED LAUNCHING B");
             return job;
         });
 
 
-        waitToFinish(0, counter, new WaitingJob[]{jobA, jobB }, 1500, 5);
+        waitToFinish(0, counter, new WaitingJob[]{jobA, jobB}, 1500, 5);
 
     }
 
@@ -412,9 +416,7 @@ public class SchedulerTest extends XPMEnvironment {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
             final WaitingJob job = jobs[i];
             Transaction.run(em -> {
-                final TokenResource _token = em.find(TokenResource.class, token.getId());
-                job.addDependency(_token.createDependency(null));
-                job.updateStatus();
+                job.addDependency(token.createDependency(null));
                 em.persist(job);
             });
         }
@@ -448,11 +450,9 @@ public class SchedulerTest extends XPMEnvironment {
             final int finalI = i;
             Transaction.run(em -> {
                 if (finalI > 0) {
-                    final WaitingJob job = em.find(WaitingJob.class, jobs[finalI - 1].getId());
-                    jobs[finalI].addDependency(job.createDependency(null));
+                    jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
                 }
                 WaitingJob job = jobs[finalI];
-                job.updateStatus();
                 em.persist(job);
             });
         }
@@ -507,8 +507,9 @@ public class SchedulerTest extends XPMEnvironment {
 
         /**
          * Initialize a link between two jobs from a single number
-         *
+         * <p>
          * The association is as follows 1 = 1-2, 2 = 1-3, 3 = 2-3, 4 = 1-4, ...
+         *
          * @param n is
          */
         public Link(long n) {

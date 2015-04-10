@@ -25,6 +25,8 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 
+import static java.lang.String.format;
+
 /**
  * A token dependency
  *
@@ -44,7 +46,7 @@ public class TokenDependency extends Dependency {
 
     @Override
     public String toString() {
-        return "Token/" + super.toString();
+        return format("Token[%s]/%s", from, super.toString());
     }
 
     /**

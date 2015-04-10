@@ -71,11 +71,11 @@ public class FileLock extends Lock {
                     break;
                 } catch (FileAlreadyExistsException e) {
                     if (!wait) {
-                        throw new LockException();
+                        throw new LockException("The lock file %s already exists", lockPath);
                     }
 
                     try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
-                        lockPath.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                        lockPath.getParent().register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
                         watcher.take();
                     } catch (NoSuchFileException f) {
                         // file was deleted before we started to monitor it

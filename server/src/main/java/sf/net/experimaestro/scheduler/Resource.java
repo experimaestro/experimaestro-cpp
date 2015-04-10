@@ -22,6 +22,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
@@ -51,7 +52,7 @@ import static java.lang.String.format;
 @SuppressWarnings("JpaAttributeTypeInspection")
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Table(name = "resources", indexes = @Index(columnList = "path"))
 public abstract class Resource implements PostCommitListener {
     /**
@@ -108,7 +109,7 @@ public abstract class Resource implements PostCommitListener {
     final static private Logger LOGGER = Logger.getLogger();
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
-    private List<Dependency> dependencyFrom = new ArrayList<>();
+    private List<Dependency> outgoingDependencies = new ArrayList<>();
 
     /**
      * The path with the connector
@@ -126,7 +127,7 @@ public abstract class Resource implements PostCommitListener {
 
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
-    private List<Dependency> dependencyTo = new ArrayList<>();
+    private List<Dependency> ingoingDependencies = new ArrayList<>();
 
     /**
      * The resource ID
@@ -282,15 +283,15 @@ public abstract class Resource implements PostCommitListener {
     /**
      * The set of resources the resource is dependent upon
      */
-    public Collection<Dependency> getRequiredResources() {
-        return dependencyTo;
+    public Collection<Dependency> getDependencies() {
+        return ingoingDependencies;
     }
 
     /**
      * The set of dependencies that are dependent on this resource
      */
-    public Collection<Dependency> getDependentResources() {
-        return dependencyFrom;
+    public Collection<Dependency> getOutgoingDependencies() {
+        return outgoingDependencies;
     }
 
     /**
@@ -309,6 +310,10 @@ public abstract class Resource implements PostCommitListener {
         return path;
     }
 
+    /**
+     * Get the identifier of this task
+     * @return Return a stringified version of the path
+     */
     public String getIdentifier() {
         return getPath().toString();
     }
@@ -437,7 +442,7 @@ public abstract class Resource implements PostCommitListener {
         if (getState() == ResourceState.RUNNING)
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
 
-        Collection<Dependency> dependencies = getDependentResources();
+        Collection<Dependency> dependencies = getOutgoingDependencies();
         if (!dependencies.isEmpty()) {
             if (recursive) {
                 for (Dependency dependency : dependencies) {
@@ -478,11 +483,11 @@ public abstract class Resource implements PostCommitListener {
     }
 
     protected void doReplaceBy(Resource resource) {
-        this.dependencyFrom.clear();
-        this.dependencyFrom.addAll(resource.dependencyFrom);
+        this.outgoingDependencies.clear();
+        this.outgoingDependencies.addAll(resource.outgoingDependencies);
 
-        this.dependencyTo.clear();
-        this.dependencyTo.addAll(resource.dependencyTo);
+        this.ingoingDependencies.clear();
+        this.ingoingDependencies.addAll(resource.ingoingDependencies);
 
         this.state = resource.state;
     }
@@ -501,6 +506,10 @@ public abstract class Resource implements PostCommitListener {
     }
 
 
+    static private SharedLongLocks resourceLocks = new SharedLongLocks();
+    public EntityLock lock(Transaction t, boolean exclusive) {
+        return t.lock(resourceLocks, this.getId(), exclusive);
+    }
 
     /**
      * Defines how printing should be done
@@ -515,16 +524,20 @@ public abstract class Resource implements PostCommitListener {
         LOGGER.info("Loaded %s (state %s) - version %d", this, state, version);
     }
 
+    /** Called after an INSERT or UPDATE */
     @PostUpdate
     @PostPersist
     protected void _post_update() {
         Transaction.current().registerPostCommit(this);
     }
 
+    /** Called before adding this entity to the database */
     @PrePersist
     protected void _pre_persist() {
         final Transaction transaction = Transaction.current();
         final EntityManager em = transaction.em();
+
+        // Find the connector in the database
         if (connector != null && !em.contains(connector)) {
             // Add the connector
             final Connector other = em.find(Connector.class, connector.getIdentifier());
@@ -533,6 +546,17 @@ public abstract class Resource implements PostCommitListener {
             }
         }
 
+        // Lock all the dependencies
+        // This avoids to miss any notification
+        for(Dependency dependency: getDependencies()) {
+            if (!em.contains(dependency.from)) {
+                dependency.from = em.find(Resource.class, dependency.from.getId());
+            }
+            dependency.from.lock(transaction, false);
+        }
+
+        // Update the status
+        updateStatus();
     }
 
     @Override

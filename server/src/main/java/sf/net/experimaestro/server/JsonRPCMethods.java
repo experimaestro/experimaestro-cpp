@@ -27,13 +27,10 @@ import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
-import org.apache.log4j.spi.LoggerFactory;
-import org.apache.log4j.spi.RootLogger;
 import org.eclipse.jetty.server.Server;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
@@ -514,7 +511,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = resource.getDependentResources();
+        final Collection<Dependency> deps = resource.getOutgoingDependencies();
 
         if (deps.isEmpty())
             return 0;
@@ -936,10 +933,10 @@ public class JsonRPCMethods extends HttpServlet {
 //        }
 //
 //        // We have to wait for read lock resources to be generated
-//        for (Object readLock : readLocks) {
-//            Resource resource = scheduler.getResource(toResourceLocator(readLock));
+//        for (Object sharedLock : readLocks) {
+//            Resource resource = scheduler.getResource(toResourceLocator(sharedLock));
 //            if (resource == null)
-//                throw new RuntimeException("Resource " + readLock
+//                throw new RuntimeException("Resource " + sharedLock
 //                        + " was not found");
 //            job.addDependency(resource, LockType.READ_ACCESS);
 //        }
