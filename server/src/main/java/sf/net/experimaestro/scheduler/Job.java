@@ -260,7 +260,7 @@ public class Job extends Resource {
                 process = startJob(locks);
 
                 process.adopt(locks);
-                transaction.commit();
+                transaction.boundary();
 
                 locks = null;
 
@@ -324,8 +324,6 @@ public class Job extends Resource {
 
             case END_OF_JOB:
                 // First, register our changes
-                this.lock(t, true);
-                LOGGER.info("LOCK MODE (%s) = %s", this, em.getLockMode(this));
                 endOfJobMessage((EndOfJobMessage) message, em, t);
                 t.boundary();
                 break;
@@ -335,7 +333,6 @@ public class Job extends Resource {
                 final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
 
                 // Notify job
-                this.lock(t, true);
                 dependencyChanged(depMessage, em, t);
                 // Save changes
                 em.persist(this);
@@ -418,10 +415,12 @@ public class Job extends Resource {
         // (2) dispose old XPM process
 
         try {
-            LOGGER.debug("Disposing of old XPM process [%s]", process);
             if (process != null) {
+                LOGGER.debug("Disposing of old XPM process [%s]", process);
                 process.dispose();
                 process = null;
+            } else {
+                LOGGER.warn("There was no XPM process attached...");
             }
         } catch (Exception e) {
             LOGGER.error("Could not dispose of the old process checker %s", e);
@@ -534,6 +533,11 @@ public class Job extends Resource {
      * @param dependency The dependency
      */
     public void addDependency(Dependency dependency) {
+        if (prepared) {
+            throw new AssertionError("Adding dependency on a saved resource");
+        }
+        // We do not add it to the source dependency since
+        // this will be done latter
         dependency.to = this;
         this.getDependencies().add(dependency);
         dependency.update();
@@ -541,8 +545,6 @@ public class Job extends Resource {
             nbUnsatisfied++;
         }
 
-        // Add to the required resource list
-        dependency.from.getOutgoingDependencies().add(dependency);
     }
 
     public void removeDependency(Dependency dependency) {

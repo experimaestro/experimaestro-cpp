@@ -894,7 +894,7 @@ public class XPMObject {
                 }
 
                 // Store in scheduler
-                em.persist(job);
+                job.save(transaction, em);
 
                 // Add dependencies
                 dependencies.forEach(job::addDependency);

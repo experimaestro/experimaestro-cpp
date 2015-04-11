@@ -68,6 +68,7 @@ public class FileLock extends Lock {
             while (true) {
                 try {
                     Files.createFile(lockPath);
+                    LOGGER.debug("Created lock file %s", lockFile);
                     break;
                 } catch (FileAlreadyExistsException e) {
                     if (!wait) {
@@ -76,6 +77,7 @@ public class FileLock extends Lock {
 
                     try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
                         lockPath.getParent().register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                        LOGGER.debug("Waiting for lock file %s", lockFile);
                         watcher.take();
                     } catch (NoSuchFileException f) {
                         // file was deleted before we started to monitor it
@@ -114,8 +116,11 @@ public class FileLock extends Lock {
                 LOGGER.error(e);
             }
             lockFile = null;
-            if (!success)
+            if (!success) {
                 LOGGER.warn("Could not delete lock file %s", lockFile);
+            } else {
+                LOGGER.debug("Deleted lock file %s", lockFile);
+            }
         }
     }
 

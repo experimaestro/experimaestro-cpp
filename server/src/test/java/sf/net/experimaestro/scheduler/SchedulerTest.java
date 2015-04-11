@@ -260,10 +260,10 @@ public class SchedulerTest extends XPMEnvironment {
         // --- Generate token resource
         final TokenResource token;
         if (p.token > 0) {
-            token = Transaction.evaluate(em -> {
+            token = Transaction.evaluate((em, t) -> {
                 final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
                 final TokenResource _token = new TokenResource(XPMConnector.getInstance().resolve(path), p.token);
-                em.persist(_token);
+                _token.save(t, em);
                 return _token;
             });
         } else {
@@ -276,7 +276,7 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             final int j = i;
 
-            Transaction.run(em -> {
+            Transaction.run((em, t) -> {
                 int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
                 jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
 
@@ -295,7 +295,7 @@ public class SchedulerTest extends XPMEnvironment {
                     jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
                 }
 
-                em.persist(jobs[j]);
+                jobs[j].save(t, em);
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             });
         }

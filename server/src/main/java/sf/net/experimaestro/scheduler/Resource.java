@@ -511,6 +511,10 @@ public abstract class Resource implements PostCommitListener {
         return t.lock(resourceLocks, this.getId(), exclusive);
     }
 
+    public static void lock(Transaction transaction, long resourceId, boolean exclusive) {
+        transaction.lock(resourceLocks, resourceId, exclusive);
+    }
+
     /**
      * Defines how printing should be done
      */
@@ -521,6 +525,7 @@ public abstract class Resource implements PostCommitListener {
     @PostLoad
     protected void _post_load() {
         oldState = state;
+        prepared = true;
         LOGGER.info("Loaded %s (state %s) - version %d", this, state, version);
     }
 
@@ -531,12 +536,10 @@ public abstract class Resource implements PostCommitListener {
         Transaction.current().registerPostCommit(this);
     }
 
-    /** Called before adding this entity to the database */
-    @PrePersist
-    protected void _pre_persist() {
-        final Transaction transaction = Transaction.current();
-        final EntityManager em = transaction.em();
 
+    transient boolean prepared = false;
+
+    public void save(Transaction transaction, EntityManager em) {
         // Find the connector in the database
         if (connector != null && !em.contains(connector)) {
             // Add the connector
@@ -546,17 +549,30 @@ public abstract class Resource implements PostCommitListener {
             }
         }
 
+
         // Lock all the dependencies
         // This avoids to miss any notification
         for(Dependency dependency: getDependencies()) {
+            dependency.from.lock(transaction, false);
             if (!em.contains(dependency.from)) {
                 dependency.from = em.find(Resource.class, dependency.from.getId());
+            } else {
+                em.refresh(dependency.from);
             }
-            dependency.from.lock(transaction, false);
         }
+        prepared = true;
+        em.persist(this);
 
         // Update the status
         updateStatus();
+    }
+
+    /** Called before adding this entity to the database */
+    @PrePersist
+    protected void _pre_persist() {
+        if (!prepared) {
+            throw new AssertionError("The object has not been prepared");
+        }
     }
 
     @Override
@@ -564,6 +580,7 @@ public abstract class Resource implements PostCommitListener {
         if (delete) {
             clean();
         } else {
+            LOGGER.info("Resource %s stored with version=%s", this, version);
             stored();
         }
     }

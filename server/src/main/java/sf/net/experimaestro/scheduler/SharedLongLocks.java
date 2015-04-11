@@ -22,7 +22,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import sf.net.experimaestro.exceptions.LockException;
 
 /**
- * Sets of locks indexed by ID
+ * Sets of locks indexed by long integer IDs
  */
 final public class SharedLongLocks {
     /**
@@ -32,7 +32,7 @@ final public class SharedLongLocks {
     private Long2IntOpenHashMap locks = new Long2IntOpenHashMap();
 
     /**
-     * An lock
+     * A lock (shared or exclusive)
      */
     private class Lock implements EntityLock {
         private final long id;

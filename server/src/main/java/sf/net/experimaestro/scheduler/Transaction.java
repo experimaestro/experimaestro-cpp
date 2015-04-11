@@ -182,23 +182,27 @@ public class Transaction implements AutoCloseable {
             }
         } finally {
             // Clear locks
-            for (EntityLock lock : locks.values()) {
-                lock.close();
-            }
+            locks.values().forEach(sf.net.experimaestro.scheduler.EntityLock::close);
             locks.clear();
         }
     }
 
     public void boundary() {
-        LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
         try {
-            transaction.commit();
-        } catch (RollbackException e) {
-            status = Status.ROLLBACK;
-            throw e;
+            LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
+            try {
+                transaction.commit();
+            } catch (RollbackException e) {
+                status = Status.ROLLBACK;
+                throw e;
+            }
+            transaction.begin();
+            status = Status.BEGIN;
+        } finally {
+            // Clear locks
+            locks.values().forEach(sf.net.experimaestro.scheduler.EntityLock::close);
+            locks.clear();
         }
-        transaction.begin();
-        status = Status.BEGIN;
     }
 
     public void registerPostCommit(PostCommitListener f) {
