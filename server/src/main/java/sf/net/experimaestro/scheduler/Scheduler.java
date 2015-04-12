@@ -450,7 +450,8 @@ final public class Scheduler {
                     } catch (RollbackException e) {
                         LOGGER.warn("Rollback exception");
                     } catch (Exception e) {
-                        LOGGER.error("Caught an exception: %s", e.toString());
+                        // FIXME: should do something smarter
+                        LOGGER.error(e, "Caught an exception");
                     } finally {
                     }
                 }

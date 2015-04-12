@@ -18,15 +18,21 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 
+import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
- * Created by bpiwowar on 11/02/15.
+ * An abstract command
  */
 @Exposed
 public abstract class AbstractCommand {
@@ -63,6 +69,8 @@ public abstract class AbstractCommand {
 
     public abstract void prepare(CommandContext env);
 
+    protected AbstractCommand() {}
+
     public AbstractCommandBuilder.Redirect getOutputRedirect() {
         return outputRedirect;
     }
@@ -77,7 +85,6 @@ public abstract class AbstractCommand {
     }
 
     abstract public Stream<? extends CommandComponent> allComponents();
-
 
     public abstract Stream<? extends Dependency> dependencies();
 }
