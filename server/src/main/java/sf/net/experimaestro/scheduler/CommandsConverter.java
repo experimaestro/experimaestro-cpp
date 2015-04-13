@@ -25,6 +25,8 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.utils.gson.JsonAdapter;
 import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 
 import javax.persistence.AttributeConverter;
@@ -40,8 +42,9 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
     final static public GsonBuilder builder = new GsonBuilder();
 
     static {
-        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
+        builder.registerTypeAdapter(Json.class, new JsonAdapter());
         builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
+        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
     }
 
     @Override

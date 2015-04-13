@@ -74,7 +74,7 @@ public interface Json {
      * @param out
      * @throws IOException
      */
-    public void write(Writer out) throws IOException;
+    void write(Writer out) throws IOException;
 
 
 }
