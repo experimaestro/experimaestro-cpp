@@ -550,6 +550,7 @@ public class Job extends Resource {
         }
         // We do not add it to the source dependency since
         // this will be done latter
+        // TODO: check if this is not done latter... remove ?
         dependency.to = this;
         this.getDependencies().add(dependency);
         dependency.update();
@@ -559,9 +560,6 @@ public class Job extends Resource {
 
     }
 
-    public void removeDependency(Dependency dependency) {
-        throw new NotImplementedException();
-    }
 
     @Override
     synchronized protected boolean doUpdateStatus() throws Exception {
@@ -691,13 +689,17 @@ public class Job extends Resource {
 
     public void setJobRunner(JobRunner jobRunner) {
         if (this.jobRunner != null) {
-            jobRunner.dependencies().forEach(d -> removeDependency(d));
+            jobRunner.dependencies().forEach(d -> {
+                getOutgoingDependencies().remove(d);
+            });
         }
 
         this.jobRunner = jobRunner;
         this.jobRunner.job = this;
         // Adds all dependencies from the job runner
-        jobRunner.dependencies().forEach(this::addDependency);
+        jobRunner.dependencies().forEach(dependency -> {
+            getOutgoingDependencies().add(dependency);
+        });
     }
 
     @Override

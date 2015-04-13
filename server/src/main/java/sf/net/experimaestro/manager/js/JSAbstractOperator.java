@@ -35,7 +35,7 @@ import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSNamespaceContext;
-import sf.net.experimaestro.utils.Streams;
+import sf.net.experimaestro.utils.Functional;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
@@ -213,7 +213,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
             try(Transaction transaction = Transaction.create()) {
                 Experiment experiment = transaction.em().find(Experiment.class, experimentId);
                 IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
-                map.values().forEach(Streams.propagate(t -> transaction.em().persist(t)));
+                map.values().forEach(Functional.propagate(t -> transaction.em().persist(t)));
                 planContext.setTaskOperatorMap(map);
                 transaction.commit();
             }

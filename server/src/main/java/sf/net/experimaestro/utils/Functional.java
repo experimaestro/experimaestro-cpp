@@ -18,7 +18,7 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.StreamException;
+import sf.net.experimaestro.exceptions.WrappedException;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,10 +26,11 @@ import java.util.function.Function;
 /**
  * Streams utility functions
  */
-public class Streams {
+public class Functional {
     public interface ExceptionalConsumer<T> {
         void apply(T t) throws Exception;
     }
+
     /** Propagate exceptions by wrapping them into a runtime exception */
     public static <V> Consumer<V> propagate(ExceptionalConsumer<V> callable) {
         return t -> {
@@ -38,7 +39,7 @@ public class Streams {
             } catch (RuntimeException e) {
                 throw e;
             } catch (Exception e) {
-                throw new StreamException(e);
+                throw new WrappedException(e);
             }
         };
     }
@@ -66,7 +67,7 @@ public class Streams {
             } catch (RuntimeException e) {
                 throw e;
             } catch (Exception e) {
-                throw new StreamException(e);
+                throw new WrappedException(e);
             }
         };
     }

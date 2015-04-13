@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.testng.annotations.Factory;
-import sf.net.experimaestro.utils.Streams;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -29,7 +29,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 
 /**
  * Runs the scripts contained in the directory "test/resources/js"
@@ -65,7 +64,7 @@ public class ScriptTest  {
                         path.getFileName().toString().endsWith(".js")
                         && !path.getFileName().toString().endsWith(".inc.js")
                         && (testFile == null || path.getFileName().toString().equals(testFile)))
-                .map(Streams.propagateFunction(path -> new JavaScriptChecker(path)))
+                .map(Functional.propagateFunction(path -> new JavaScriptChecker(path)))
                 .toArray(n -> new JavaScriptChecker[n]);
     }
 

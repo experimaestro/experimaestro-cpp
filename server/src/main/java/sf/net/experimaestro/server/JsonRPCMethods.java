@@ -42,9 +42,11 @@ import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
@@ -289,23 +291,25 @@ public class JsonRPCMethods extends HttpServlet {
      */
     @RPCMethod(help = "Returns detailed information about a job (Json format)")
     public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException {
-        Resource resource = getResource(resourceId);
+        return Transaction.evaluate(Functional.propagateFunction(em -> {
+            Resource resource = getResource(em, resourceId);
 
-        if (resource == null)
-            throw new XPMRuntimeException("No resource with id [%s]", resourceId);
+            if (resource == null)
+                throw new XPMRuntimeException("No resource with id [%s]", resourceId);
 
 
-        return resource.toJSON();
+            return resource.toJSON();
+        }));
     }
 
 
     // -------- RPC METHODS -------
 
-    private Resource getResource(String resourceId) {
+    private Resource getResource(EntityManager em, String resourceId) {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
-            resource = Transaction.evaluate(em -> em.find(Resource.class, rid));
+            resource = em.find(Resource.class, rid);
         } catch (NumberFormatException e) {
             throw new RuntimeException(e);
         }
@@ -545,33 +549,34 @@ public class JsonRPCMethods extends HttpServlet {
             @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
             @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
     ) throws Exception {
+        return Transaction.evaluate(Functional.propagateFunction(em -> {
+            int nbUpdated = 0;
+            Resource resource = getResource(em, id);
+            if (resource == null)
+                throw new XPMRuntimeException("Job not found [%s]", id);
 
-        int nbUpdated = 0;
-        Resource resource = getResource(id);
-        if (resource == null)
-            throw new XPMRuntimeException("Job not found [%s]", id);
+            final ResourceState rsrcState = resource.getState();
 
-        final ResourceState rsrcState = resource.getState();
+            if (rsrcState == ResourceState.RUNNING)
+                throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
-        if (rsrcState == ResourceState.RUNNING)
-            throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+            // The job is active, so we have nothing to do
+            if (rsrcState.isActive())
+                return 0;
 
-        // The job is active, so we have nothing to do
-        if (rsrcState.isActive())
-            return 0;
+            if (!restartDone && rsrcState == ResourceState.DONE)
+                return 0;
 
-        if (!restartDone && rsrcState == ResourceState.DONE)
-            return 0;
+            ((Job) resource).restart();
+            nbUpdated++;
 
-        ((Job) resource).restart();
-        nbUpdated++;
+            // If the job was done, we need to restart the dependences
+            if (recursive && rsrcState == ResourceState.DONE) {
+                nbUpdated += invalidate(resource);
+            }
 
-        // If the job was done, we need to restart the dependences
-        if (recursive && rsrcState == ResourceState.DONE) {
-            nbUpdated += invalidate(resource);
-        }
-
-        return nbUpdated;
+            return nbUpdated;
+        }));
     }
 
     /**
@@ -609,48 +614,50 @@ public class JsonRPCMethods extends HttpServlet {
                       @RPCArgument(name = "states", required = false) String[] statesNames,
                       @RPCArgument(name = "recursive", required = false) Boolean _recursive
     ) throws Exception {
-        int n = 0;
-        EnumSet<ResourceState> states = getStates(statesNames);
-        boolean recursive = _recursive != null ? _recursive : false;
+        return Transaction.evaluate(Functional.propagateFunction(em -> {
+            int n = 0;
+            EnumSet<ResourceState> states = getStates(statesNames);
+            boolean recursive = _recursive != null ? _recursive : false;
 
-        Pattern idPattern = _idIsRegexp != null && _idIsRegexp ?
-                Pattern.compile(id) : null;
+            Pattern idPattern = _idIsRegexp != null && _idIsRegexp ?
+                    Pattern.compile(id) : null;
 
-        if (id != null && !id.equals("") && idPattern == null) {
-            final Resource resource = getResource(id);
-            if (resource == null)
-                throw new XPMCommandException("Job not found [%s]", id);
+            if (id != null && !id.equals("") && idPattern == null) {
+                final Resource resource = getResource(em, id);
+                if (resource == null)
+                    throw new XPMCommandException("Job not found [%s]", id);
 
 
-            if (!states.contains(resource.getState()))
-                throw new XPMCommandException("Resource [%s] state [%s] not in [%s]",
-                        resource, resource.getState(), states);
-            resource.delete(recursive);
-            n = 1;
-        } else {
-            // TODO order the tasks so that dependencies are removed first
-            HashSet<Resource> toRemove = new HashSet<>();
-            try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
-                while (resources.hasNext()) {
-                    Resource resource = resources.next();
-                    if (idPattern != null) {
-                        if (!idPattern.matcher(resource.getIdentifier()).matches())
-                            continue;
-                    }
-                    try {
-                        toRemove.add(resource);
-                    } catch (Exception e) {
-                        // TODO should output this to the caller
-                    }
-                    n++;
-                }
-            }
-
-            for (Resource resource : toRemove)
+                if (!states.contains(resource.getState()))
+                    throw new XPMCommandException("Resource [%s] state [%s] not in [%s]",
+                            resource, resource.getState(), states);
                 resource.delete(recursive);
+                n = 1;
+            } else {
+                // TODO order the tasks so that dependencies are removed first
+                HashSet<Resource> toRemove = new HashSet<>();
+                try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
+                    while (resources.hasNext()) {
+                        Resource resource = resources.next();
+                        if (idPattern != null) {
+                            if (!idPattern.matcher(resource.getIdentifier()).matches())
+                                continue;
+                        }
+                        try {
+                            toRemove.add(resource);
+                        } catch (Exception e) {
+                            // TODO should output this to the caller
+                        }
+                        n++;
+                    }
+                }
 
-        }
-        return n;
+                for (Resource resource : toRemove)
+                    resource.delete(recursive);
+
+            }
+            return n;
+        }));
     }
 
     @RPCMethod(help = "Listen to XPM events")

@@ -26,7 +26,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
-import sf.net.experimaestro.utils.Streams;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Column;
@@ -68,7 +68,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public void prepare(CommandContext environment) {
-        list.forEach(Streams.propagate(c -> c.prepare(environment)));
+        list.forEach(Functional.propagate(c -> c.prepare(environment)));
     }
 
     /**

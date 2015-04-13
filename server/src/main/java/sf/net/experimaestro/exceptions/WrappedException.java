@@ -19,10 +19,10 @@ package sf.net.experimaestro.exceptions;
  */
 
 /**
- * Created by bpiwowar on 23/10/14.
+ * A wrapped exception
  */
-public class StreamException extends XPMRuntimeException {
-    public StreamException(Exception e) {
+public class WrappedException extends XPMRuntimeException {
+    public WrappedException(Exception e) {
         super(e);
     }
 }

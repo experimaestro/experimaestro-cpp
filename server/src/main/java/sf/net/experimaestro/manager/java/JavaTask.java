@@ -111,10 +111,11 @@ public class JavaTask extends Task {
                             taskLogger.info(String.format("Overwriting resource [%s]", task));
                         } catch (ExperimaestroCannotOverwrite e) {
                             taskLogger.warn("Cannot override resource [%s]", old);
+                            throw new RuntimeException(e);
                         }
-                    } else {
-                        job.save(transaction);
                     }
+
+                    job.save(transaction);
                     taskLogger.info("Stored task %s [%s]", job.getPath(), job.getId());
                     transaction.commit();
                 }

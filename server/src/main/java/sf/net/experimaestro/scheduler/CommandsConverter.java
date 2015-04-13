@@ -29,6 +29,7 @@ import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 
 import javax.persistence.AttributeConverter;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 
 /**
@@ -41,8 +42,6 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
     static {
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
         builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
-
-//        builder.registerTypeAdapter(AbstractCommand.class, new AbstractCommand.CommandAdapter());
     }
 
     @Override
@@ -63,33 +62,35 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
-            if (rawType.equals(AbstractCommand.class)
-                    || rawType.equals(CommandComponent.class))
+            if (!rawType.isArray() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
                 return new AbstractObjectAdapter(gson, type);
             return null;
         }
 
     }
 
-    private static class AbstractObjectAdapter<T> extends TypeAdapter<T> {
+    private static class AbstractObjectAdapter extends TypeAdapter {
         private final Gson gson;
+        // This is for debug - remove ?
+        private final TypeToken type;
 
         public <T> AbstractObjectAdapter(Gson gson, TypeToken<T> type) {
             this.gson = gson;
+            this.type = type;
         }
 
         @Override
-        public void write(JsonWriter out, T value) throws IOException {
+        public void write(JsonWriter out, Object value) throws IOException {
             out.beginArray();
             final Class<?> aClass = value.getClass();
-            if (aClass.isArray()) throw new AssertionError("Cannot handle arrays");
+            assert ! aClass.isArray();
             out.value(aClass.getName());
             gson.toJson(value, value.getClass(), out);
             out.endArray();
         }
 
         @Override
-        public T read(JsonReader in) throws IOException {
+        public Object read(JsonReader in) throws IOException {
             in.beginArray();
             final String classname = in.nextString();
             final Object o;
@@ -100,7 +101,7 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
                 throw new RuntimeException(e);
             }
             in.endArray();
-            return (T) o;
+            return o;
         }
     }
 }

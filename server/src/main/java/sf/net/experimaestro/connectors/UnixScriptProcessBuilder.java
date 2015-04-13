@@ -20,11 +20,9 @@ package sf.net.experimaestro.connectors;
 
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.scheduler.Command.CommandOutput;
-import sf.net.experimaestro.utils.Streams;
+import sf.net.experimaestro.utils.Functional;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -137,7 +135,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.format("  rm -f %s;%n", file);
             }
 
-            commands().forEachCommand(Streams.propagate(c -> {
+            commands().forEachCommand(Functional.propagate(c -> {
                 final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
                 for (Path file : Iterables.concat(namedRedirections.outputRedirections,
                         namedRedirections.errorRedirections)) {
