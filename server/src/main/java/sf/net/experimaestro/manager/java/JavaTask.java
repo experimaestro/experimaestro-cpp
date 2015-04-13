@@ -80,49 +80,45 @@ public class JavaTask extends Task {
         }
 
         // --- Check if this wasn't already done
+        final Logger taskLogger = taskContext.getLogger("JavaTask");
+
         try (Transaction transaction = Transaction.create()) {
             final Resource old = Resource.getByLocator(transaction.em(), path);
-            if (old == null || old.canBeReplaced()) {
-                final Logger taskLogger = taskContext.getLogger("JavaTask");
-                taskLogger.warn("Cannot override resource [%s]", old);
+            if (old != null && !old.canBeReplaced()) {
+                taskLogger.info("Cannot overwrite task %s [%d]", old.getPath(), old.getId());
+            } else {
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());
 
                 CommandLineTask task = new CommandLineTask(commands);
-                Job job = new Job(javaFactory.connector, path);
 
+                // --- Build the command
+
+                Job job = new Job(javaFactory.connector, path);
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", task.toString());
                     pw.format("Command: %s%n", task.getCommands().toString());
-                    pw.format("Path: %s", path.toString());
+                    pw.format("Path: %s", path);
                     pw.flush();
                 } else {
+                    job.setJobRunner(task);
 
-                    // --- Build the command
-
-                    if (taskContext.simulate()) {
-                        PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
-                        pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-                        pw.format("Command: %s%n", task.getCommands().toString());
-                        pw.format("Path: %s", path);
-                        pw.flush();
-                    } else {
-                        if (old != null) {
-                            // TODO: if equal, do not try to replace the task
-                            try {
-                                old.replaceBy(job);
-                                job.setJobRunner(task);
-                                taskLogger.info(String.format("Overwriting resource [%s]", task));
-                            } catch (ExperimaestroCannotOverwrite e) {
-                                taskLogger.warn("Cannot override resource [%s]", old);
-                            }
-                        } else {
-                            transaction.em().persist(task);
+                    if (old != null) {
+                        try {
+                            old.replaceBy(job);
+                            job = (Job) old;
+                            taskLogger.info(String.format("Overwriting resource [%s]", task));
+                        } catch (ExperimaestroCannotOverwrite e) {
+                            taskLogger.warn("Cannot override resource [%s]", old);
                         }
-                        transaction.commit();
+                    } else {
+                        job.save(transaction);
                     }
+                    taskLogger.info("Stored task %s [%s]", job.getPath(), job.getId());
+                    transaction.commit();
                 }
+
                 taskContext.startedJob(job);
             }
         }

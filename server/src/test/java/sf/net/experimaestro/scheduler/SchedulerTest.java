@@ -162,7 +162,7 @@ public class SchedulerTest extends XPMEnvironment {
                 if (finalI > 0) {
                     jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
                 }
-                jobs[finalI].save(em, t);
+                jobs[finalI].save(t);
             });
         }
 
@@ -193,7 +193,7 @@ public class SchedulerTest extends XPMEnvironment {
                 if (finalI > 0) {
                     jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
                 }
-                jobs[finalI].save(em, t);
+                jobs[finalI].save(t);
             });
         }
 
@@ -264,7 +264,7 @@ public class SchedulerTest extends XPMEnvironment {
             token = Transaction.evaluate((em, t) -> {
                 final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
                 final TokenResource _token = new TokenResource(XPMConnector.getInstance().resolve(path), p.token);
-                _token.save(em, t);
+                _token.save(t);
                 return _token;
             });
         } else {
@@ -296,7 +296,7 @@ public class SchedulerTest extends XPMEnvironment {
                     jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
                 }
 
-                jobs[j].save(em, t);
+                jobs[j].save(t);
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             });
         }
@@ -375,7 +375,7 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob jobA = Transaction.evaluate((em, t) -> {
             WaitingJob job = new WaitingJob(counter, jobDirectory, "jobA",
                     new Action(250, 0, 0).removeLock(lockA));
-            job.save(em, t);
+            job.save(t);
             return job;
         });
 
@@ -385,7 +385,7 @@ public class SchedulerTest extends XPMEnvironment {
 
             // Wait that A ends
             IntLocks.waitLockID(lockA);
-            job.save(em, t);
+            job.save(t);
 
 
             LOGGER.info("FINISHED LAUNCHING B");
@@ -405,7 +405,7 @@ public class SchedulerTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
         Path locator = XPMConnector.getInstance().resolve("scheduler_test/test_token_resource");
         TokenResource token = new TokenResource(locator, 1);
-        Transaction.run((em, t) -> token.save(em, t));
+        Transaction.run((em, t) -> token.save(t));
 
         // Sets 5 jobs
         WaitingJob[] jobs = new WaitingJob[5];
@@ -417,7 +417,7 @@ public class SchedulerTest extends XPMEnvironment {
             final WaitingJob job = jobs[i];
             Transaction.run((em, t) -> {
                 job.addDependency(token.createDependency(null));
-                job.save(em, t);
+                job.save(t);
             });
         }
 
@@ -453,7 +453,7 @@ public class SchedulerTest extends XPMEnvironment {
                     jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
                 }
                 WaitingJob job = jobs[finalI];
-                job.save(em, t);
+                job.save(t);
             });
         }
 

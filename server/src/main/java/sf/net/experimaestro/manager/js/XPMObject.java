@@ -893,11 +893,11 @@ public class XPMObject {
                     taskContext.prepare(job);
                 }
 
-                // Store in scheduler
-                job.save(em, transaction);
-
                 // Add dependencies
                 dependencies.forEach(job::addDependency);
+
+                // Store in scheduler
+                job.save(transaction);
 
                 // Register within an experimentId
                 if (experimentId != null) {
@@ -1042,12 +1042,12 @@ public class XPMObject {
         public Scriptable getTokenResource(
                 @JSArgument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
-            return Transaction.evaluate(em -> {
+            return Transaction.evaluate((em, t) -> {
                 final Resource resource = Resource.getByLocator(em, Paths.get(path));
                 final TokenResource tokenResource;
                 if (resource == null) {
                     tokenResource = new TokenResource(Paths.get(path), 0);
-                    em.persist(tokenResource);
+                    tokenResource.save(t);
                 } else {
                     if (!(resource instanceof TokenResource))
                         throw new AssertionError(String.format("Resource %s exists and is not a token", path));

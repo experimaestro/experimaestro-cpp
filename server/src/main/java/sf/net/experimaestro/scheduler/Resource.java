@@ -557,7 +557,8 @@ public abstract class Resource implements PostCommitListener {
 
     transient boolean prepared = false;
 
-    public void save(EntityManager em, Transaction transaction) {
+    public void save(Transaction transaction) {
+        final EntityManager em = transaction.em();
         // Find the connector in the database
         if (connector != null && !em.contains(connector)) {
             // Add the connector

@@ -25,9 +25,11 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 
 import javax.persistence.AttributeConverter;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * Converts a command into a JSON string
@@ -38,6 +40,8 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
 
     static {
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
+        builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
+
 //        builder.registerTypeAdapter(AbstractCommand.class, new AbstractCommand.CommandAdapter());
     }
 
