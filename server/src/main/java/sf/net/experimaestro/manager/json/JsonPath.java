@@ -19,7 +19,10 @@ package sf.net.experimaestro.manager.json;
  */
 
 import java.nio.file.Path;
+
+import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
@@ -87,5 +90,18 @@ public class JsonPath implements Json {
         out.write('"');
         out.write(JSONValue.escape(get().toString()));
         out.write('"');
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.beginObject();
+
+        out.name("value");
+        out.value(get().toUri().toString());
+
+        out.name(Manager.XP_TYPE.toString());
+        out.value(Manager.XP_PATH.toString());
+
+        out.endObject();
     }
 }

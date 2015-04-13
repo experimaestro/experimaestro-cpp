@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 
 import java.io.IOException;
@@ -70,5 +71,10 @@ public class JsonNull implements Json {
     @Override
     public void write(Writer out) throws IOException {
         out.write("null");
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.nullValue();
     }
 }

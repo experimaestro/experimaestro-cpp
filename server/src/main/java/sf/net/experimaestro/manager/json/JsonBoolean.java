@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
@@ -65,6 +66,10 @@ public class JsonBoolean implements Json {
         out.write(toString());
     }
 
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.value(value);
+    }
 
     @Override
     public QName type() {

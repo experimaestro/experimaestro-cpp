@@ -42,7 +42,7 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
     final static public GsonBuilder builder = new GsonBuilder();
 
     static {
-        builder.registerTypeAdapter(Json.class, new JsonAdapter());
+        builder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
         builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
     }
@@ -65,6 +65,9 @@ public class CommandsConverter implements AttributeConverter<Commands, String> {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
+            if (rawType.equals(Json.class)) {
+                return null;
+            }
             if (!rawType.isArray() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
                 return new AbstractObjectAdapter(gson, type);
             return null;

@@ -20,8 +20,9 @@ package sf.net.experimaestro.utils.gson;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.*;
 
 import java.io.IOException;
 
@@ -31,10 +32,59 @@ import java.io.IOException;
 public class JsonAdapter extends TypeAdapter<Json> {
     @Override
     public void write(JsonWriter out, Json value) throws IOException {
+        value.write(out);
     }
 
     @Override
     public Json read(JsonReader in) throws IOException {
+        readValue(in);
+        return null;
+    }
+
+    private Json readValue(JsonReader in) throws IOException {
+        final JsonToken peek = in.peek();
+        switch(peek) {
+            case BEGIN_ARRAY:
+                in.beginArray();
+                JsonArray array = new JsonArray();
+                while (in.peek() != JsonToken.END_ARRAY) {
+                    array.add(readValue(in));
+                }
+                in.endArray();
+                return array;
+
+            case BEGIN_OBJECT:
+                in.beginObject();
+                JsonObject object = new JsonObject();
+                while (in.peek() != JsonToken.END_OBJECT) {
+                    final String name = in.nextName();
+                    final Json value = readValue(in);
+                    object.put(name, value);
+                }
+                in.endObject();
+                return object;
+
+            case BOOLEAN:
+                return new JsonBoolean(in.nextBoolean());
+
+            case NUMBER:
+                final double value = in.nextDouble();
+                if (value == Math.round(value))
+                    return new JsonInteger((long) value);
+                return new JsonReal(value);
+
+            case STRING:
+                return new JsonString(in.nextString());
+
+            case NULL:
+                return JsonNull.getSingleton();
+
+            case NAME:
+            case END_OBJECT:
+            case END_ARRAY:
+            case END_DOCUMENT:
+                throw new AssertionError("Not expecting " + peek);
+        }
         return null;
     }
 }

@@ -19,6 +19,9 @@ package sf.net.experimaestro.manager.js;
  */
 
 import java.nio.file.FileSystemException;
+
+import com.google.gson.stream.JsonWriter;
+import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -220,5 +223,10 @@ public class JSNode extends JSBaseObject implements Json {
     @Override
     public void write(Writer out) throws IOException {
         out.write(JSONValue.escape(XMLUtils.toString(node)));
+    }
+
+    @Override
+    public void write(JsonWriter out) {
+        throw new NotImplementedException();
     }
 }

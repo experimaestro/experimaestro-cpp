@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.json;
  */
 
 import java.nio.file.FileSystemException;
+
+import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
@@ -153,6 +155,16 @@ public class JsonObject
                 entry.getValue().write(out);
         }
         out.write('}');
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.beginObject();
+        for (Map.Entry<String, Json> entry : this.entrySet()) {
+            out.name(entry.getKey());
+            entry.getValue().write(out);
+        }
+        out.endObject();
     }
 
     @Override

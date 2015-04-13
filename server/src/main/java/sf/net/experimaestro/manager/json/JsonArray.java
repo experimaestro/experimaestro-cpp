@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.utils.Output;
@@ -67,6 +68,15 @@ public class JsonArray extends ArrayList<Json> implements Json {
             json.write(out);
         }
         out.write(']');
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.beginArray();
+        for (Json json : this) {
+            json.write(out);
+        }
+        out.endArray();
     }
 
     @Override

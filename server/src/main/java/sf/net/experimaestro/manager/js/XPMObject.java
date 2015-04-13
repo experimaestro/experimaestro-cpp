@@ -686,7 +686,7 @@ public class XPMObject {
 
             int error = p.waitFor();
             if (error != 0) {
-                throw new XPMRhinoException("Error while evaluating command");
+                throw new XPMRhinoException("Command returned an error code %d", error);
             }
             return sb.toString();
         }

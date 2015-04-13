@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
@@ -59,6 +60,11 @@ public class JsonReal implements Json {
     @Override
     public void write(Writer out) throws IOException {
         JSONValue.writeJSONString(value, out);
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.value(value);
     }
 
     @Override

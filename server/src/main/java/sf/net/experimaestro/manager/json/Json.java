@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 
 import java.io.IOException;
@@ -77,4 +78,9 @@ public interface Json {
     void write(Writer out) throws IOException;
 
 
+    /**
+     * Write with a structured writer
+     * @param out The writer
+     */
+    void write(JsonWriter out) throws IOException;
 }

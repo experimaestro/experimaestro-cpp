@@ -18,6 +18,8 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.scheduler.Resource;
@@ -82,6 +84,19 @@ public class JsonResource implements Json {
                 resource.getPath().toString(),
                 ValueType.XP_RESOURCE.toString()
         ));
+    }
+
+    @Override
+    public void write(JsonWriter out) throws IOException {
+        out.beginObject();
+
+        out.name("value");
+        out.value(resource.getPath().toString());
+
+        out.name(Manager.XP_TYPE.toString());
+        out.value(Manager.XP_RESOURCE.toString());
+
+        out.endObject();
     }
 
 }
