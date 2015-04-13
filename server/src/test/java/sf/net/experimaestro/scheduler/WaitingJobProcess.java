@@ -24,6 +24,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -40,6 +41,8 @@ import java.util.concurrent.TimeUnit;
 @Entity
 class WaitingJobProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
+
+    transient private Thread waitingThread;
 
     /**
      * A scheduler for restarts
@@ -82,6 +85,7 @@ class WaitingJobProcess extends XPMProcess {
             LOGGER.debug("Starting status wait - " + job + " - " + action);
             long toWait = action.duration - (System.currentTimeMillis() - timestamp);
             if (toWait > 0) {
+                waitingThread = Thread.currentThread();
                 wait(toWait);
             }
             LOGGER.debug("Ending the wait - %s (time = %d)", job, System.currentTimeMillis() - timestamp);
@@ -140,6 +144,9 @@ class WaitingJobProcess extends XPMProcess {
 
     @Override
     public void destroy() {
+        if (waitingThread != null) {
+            waitingThread.interrupt();
+        }
     }
 
 

@@ -40,12 +40,12 @@ abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Id
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne()
     @JoinColumn(name = "fromId")
     Resource from;
 
     @Id
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne()
     @JoinColumn(name = "toId")
     Resource to;
 
@@ -74,20 +74,6 @@ abstract public class Dependency implements Serializable {
     protected Dependency(Resource from, Resource to) {
         this.from = from;
         this.to = to;
-    }
-
-    @PostLoad
-    void __debug_post_1() {
-        LOGGER.info("[DepNot] After load, dependency %s", this);
-    }
-    @PostPersist
-    void __debug_post_2() {
-        LOGGER.info("[DepNot] After persist, dependency %s", this);
-    }
-
-    @PostUpdate
-    void __debug_post_3() {
-        LOGGER.info("[DepNot] After update, dependency %s", this);
     }
 
     @Override

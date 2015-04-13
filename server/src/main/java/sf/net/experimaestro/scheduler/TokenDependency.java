@@ -46,7 +46,7 @@ public class TokenDependency extends Dependency {
 
     @Override
     public String toString() {
-        return format("Token[%s]/%s", from, super.toString());
+        return format("Token[%s]/%s", from.toDetailedString(), super.toString());
     }
 
     /**

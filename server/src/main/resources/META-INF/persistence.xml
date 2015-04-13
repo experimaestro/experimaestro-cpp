@@ -38,6 +38,7 @@
 
         <class>sf.net.experimaestro.connectors.XPMProcess</class>
         <class>sf.net.experimaestro.connectors.OARProcess</class>
+        <class>sf.net.experimaestro.connectors.LocalProcess</class>
 
         <class>sf.net.experimaestro.connectors.OARLauncher</class>
 

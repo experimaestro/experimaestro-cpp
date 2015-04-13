@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.Iterables;
+import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
@@ -30,7 +31,6 @@ import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.*;
 import java.io.IOException;
@@ -174,7 +174,7 @@ public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-        process = jobRunner.startJob(locks);
+        process = jobRunner.prepareJob(locks);
         return process;
     }
 
@@ -229,7 +229,10 @@ public class Job extends Resource {
                 for (Dependency dependency : getDependencies()) {
                     try {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
-                        dependency.from.lock(transaction, false); // Ensures the dependency does not change
+                        dependency.from.lock(transaction, true); // Ensures the dependency does not change
+                        em.refresh(dependency);
+                        em.refresh(dependency.from);
+
                         final Lock lock = dependency.lock(em, pid);
                         depLocks.add(lock);
                         LOGGER.debug("Running preparation - locked dependency [%s]", dependency);
@@ -240,7 +243,6 @@ public class Job extends Resource {
                         throw e;
                     } catch (PersistenceException e) {
                         LOGGER.debug(e, "Persistence exception [%s] while locking dependency [%s]", e, dependency);
-                        dependency.unlock(em);
                         final LockException lockException = new LockException(e);
                         Resource resource = dependency.getFrom();
                         lockException.addContext("While locking status run %s", resource);
@@ -256,13 +258,14 @@ public class Job extends Resource {
                 setState(ResourceState.RUNNING);
                 startTimestamp = System.currentTimeMillis();
 
-                // Start the task and transfer locking handling status those
+                // Commits all the changes so far
+                transaction.boundary(true);
+
+                // Now, starts the job
                 process = startJob(locks);
-
                 process.adopt(locks);
-                transaction.boundary();
-
                 locks = null;
+                transaction.boundary();
 
                 // Store the current state
                 LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
@@ -289,6 +292,11 @@ public class Job extends Resource {
         } finally {
             // Dispose of the locks that we own
             if (locks != null) {
+                if (process != null) {
+                    LOGGER.info("An error occurred: disposing process");
+                    process.destroy();
+                }
+
                 LOGGER.info("An error occurred: disposing locks");
                 for (Lock lock : Iterables.concat(locks, depLocks)) {
                     try {
@@ -334,12 +342,10 @@ public class Job extends Resource {
 
                 // Notify job
                 dependencyChanged(depMessage, em, t);
-                // Save changes
-                em.persist(this);
                 t.boundary();
 
-                LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]", depMessage.toString(),
-                        getState(), oldState, this);
+                LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]",
+                        depMessage.toString(), getState(), oldState, this);
 
                 break;
 
@@ -396,16 +402,24 @@ public class Job extends Resource {
     private void endOfJobMessage(EndOfJobMessage eoj, EntityManager em, Transaction t) {
         this.endTimestamp = eoj.timestamp;
 
-        LOGGER.info("Job %s has ended with code %d", this, eoj.code);
+        // Lock all the required dependencies and refresh
 
+        LOGGER.info("Job %s has ended with code %d", this, eoj.code);
 
         // (1) Release required resources
         LOGGER.debug("Release dependencies of job [%s]", this);
-        final Collection<Dependency> requiredResources = getDependencies();
         try {
+            final Collection<Dependency> requiredResources = getDependencies();
             for (Dependency dependency : requiredResources) {
-                em.refresh(dependency, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
-                dependency.unlock(em);
+                try {
+                    dependency.from.lock(t, true);
+                    em.refresh(dependency.from);
+                    em.refresh(dependency);
+                    dependency.unlock(em);
+
+                } catch(Throwable e) {
+                    LOGGER.error(e, "Error while unlocking dependency %s", dependency);
+                }
             }
         } catch (RuntimeException e) {
             LOGGER.error(e, "Error while unactivating dependencies");
@@ -485,8 +499,6 @@ public class Job extends Resource {
         super.printXML(out, config);
 
         out.format("<h2>Locking status</h2>%n");
-
-//        getData().printXML();
 
         if (getState() == ResourceState.DONE
                 || getState() == ResourceState.ERROR
@@ -691,10 +703,6 @@ public class Job extends Resource {
     @Override
     public void stored() {
         super.stored();
-        LOGGER.debug("Job (version %d) stored in state %s [old = %s]", version, getState(), oldState);
-        for (Dependency dep : getDependencies()) {
-            LOGGER.debug(" w/dependency %s", dep);
-        }
 
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");

@@ -78,6 +78,10 @@ public class TokenResource extends Resource {
         setState(ResourceState.DONE);
     }
 
+    public String toDetailedString() {
+        return String.format("%s [%d/%d]", super.toDetailedString(), usedTokens, limit);
+    }
+
     /**
      * Set the new limit that will take effect at the next locking request (does not
      * invalidate current locks)

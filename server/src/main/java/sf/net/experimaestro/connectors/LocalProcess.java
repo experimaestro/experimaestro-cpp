@@ -88,8 +88,9 @@ class LocalProcess extends XPMProcess {
     @Override
     public int exitValue() {
         // Try the easy way
-        if (process != null)
+        if (process != null) {
             return process.exitValue();
+        }
 
         return super.exitValue();
     }

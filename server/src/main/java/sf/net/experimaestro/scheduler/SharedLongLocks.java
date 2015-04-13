@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
-import sf.net.experimaestro.exceptions.LockException;
 
 /**
  * Sets of locks indexed by long integer IDs

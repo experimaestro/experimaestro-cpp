@@ -18,8 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.jcraft.jsch.agentproxy.Identity;
-import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -35,7 +33,7 @@ import java.util.function.Function;
 /**
  * A JPA transaction that can be used in try-resource blocks
  */
-public class Transaction implements AutoCloseable {
+final public class Transaction implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * The underlying transaction
@@ -70,7 +68,7 @@ public class Transaction implements AutoCloseable {
     /**
      * List of locks on entities
      */
-    HashMap<Object, EntityLock> locks = new HashMap<>();
+    private HashMap<Object, EntityLock> locks = new HashMap<>();
 
     static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
@@ -181,13 +179,24 @@ public class Transaction implements AutoCloseable {
                 }
             }
         } finally {
-            // Clear locks
-            locks.values().forEach(sf.net.experimaestro.scheduler.EntityLock::close);
-            locks.clear();
+            clearLocks();
         }
     }
 
+
+    /**
+     * Commits & prepare a new transaction
+     */
     public void boundary() {
+        boundary(false);
+    }
+
+    /**
+     * Commits and prepapres a new transaction
+     *
+     * @param keepLocks If true, all the locks are kept
+     */
+    public void boundary(boolean keepLocks) {
         try {
             LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
             try {
@@ -199,9 +208,9 @@ public class Transaction implements AutoCloseable {
             transaction.begin();
             status = Status.BEGIN;
         } finally {
-            // Clear locks
-            locks.values().forEach(sf.net.experimaestro.scheduler.EntityLock::close);
-            locks.clear();
+            if (!keepLocks) {
+                clearLocks();
+            }
         }
     }
 
@@ -211,22 +220,60 @@ public class Transaction implements AutoCloseable {
         listeners.add(f);
     }
 
-    public EntityLock getLock(Object object) {
-        return locks.get(object);
+    public void clearLocks() {
+        locks.values().forEach(sf.net.experimaestro.scheduler.EntityLock::close);
+        locks.clear();
     }
 
-    public void putLock(Object o, EntityLock lock) {
-        locks.put(o, lock);
+    static public class SharedLongReference {
+        SharedLongLocks locks;
+        long id;
+
+        public SharedLongReference(SharedLongLocks locks, long id) {
+            this.locks = locks;
+            this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || !(o instanceof SharedLongReference))
+                return false;
+
+            SharedLongReference that = (SharedLongReference) o;
+
+            if (id != that.id) return false;
+            return locks.equals(that.locks);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = locks.hashCode();
+            result = 31 * result + (int) (id ^ (id >>> 32));
+            return result;
+        }
     }
 
-    public EntityLock lock(SharedLongLocks locks, Long id, boolean exclusive) {
-        EntityLock lock = getLock(this);
+    /**
+     * Locks an entity (should implements hash code and equals)
+     *
+     * @param locks
+     * @param id
+     * @param exclusive
+     * @return
+     */
+    public EntityLock lock(SharedLongLocks locks, long id, boolean exclusive) {
+        final SharedLongReference key = new SharedLongReference(locks, id);
+        EntityLock lock = this.locks.get(key);
 
         if (lock == null) {
             lock = locks.lock(id, exclusive);
-            putLock(this, lock);
+            this.locks.put(key, lock);
         } else {
-            lock.makeExclusive();
+            if (exclusive) {
+                lock.makeExclusive();
+            }
         }
 
         return lock;

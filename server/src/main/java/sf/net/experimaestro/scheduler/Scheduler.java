@@ -25,9 +25,7 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.CloseableIterator;
-import sf.net.experimaestro.utils.ThreadCount;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;
@@ -399,9 +397,8 @@ final public class Scheduler {
                             LOGGER.debug("Looking at %s", job);
 
                             if (job.getState() != ResourceState.READY) {
-                                transaction.boundary();
                                 LOGGER.debug("Job state is not READY anymore", job);
-                                Scheduler.notifyRunners();
+                                transaction.clearLocks();
                                 continue;
                             }
 
@@ -420,7 +417,7 @@ final public class Scheduler {
                             }
                             if (!tokensAvailable) {
                                 // Remove locks
-                                transaction.boundary();
+                                transaction.clearLocks();
                                 continue;
                             }
 
@@ -437,7 +434,12 @@ final public class Scheduler {
                                 transaction.boundary();
                                 LOGGER.info("Finished launching %s", job);
                             } catch (RollbackException e) {
-                                throw e;
+                                LOGGER.error(e, "Rollback exception");
+                                synchronized (readyJobSemaphore) {
+                                    readyJobSemaphore.setValue(true);
+                                }
+
+                                break;
                             } catch (Throwable t) {
                                 LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                 job.setState(ResourceState.ERROR);
@@ -462,29 +464,39 @@ final public class Scheduler {
         }
     }
 
-    final static private class MessagePackage {
+    final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
         public Message message;
         public long destination;
+        public long timestamp;
 
-        public MessagePackage(Message message, Resource destination) {
+        public MessagePackage(Message message, Resource destination, long timestamp) {
             this.message = message;
             this.destination = destination.getId();
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public int compareTo(MessagePackage o) {
+            return Long.compare(this.timestamp, o.timestamp);
         }
     }
 
     /**
      * Queue for messages
      */
-    private LinkedList<MessagePackage> messages = new LinkedList<>();
+    Heap<MessagePackage> messages = new Heap<>();
 
     public void sendMessage(Resource destination, Message message) {
         synchronized (messages) {
-            // Add
-            messages.add(new MessagePackage(message, destination));
+            // Add the message (with a timestamp one ms before the time, to avoid locks)
+            messages.add(new MessagePackage(message, destination, System.currentTimeMillis() - 1));
             // Notify
             messages.notify();
         }
     }
+
+    /** Time added when rescheduling */
+    static final long  RESCHEDULING_DELTA_TIME = 250;
 
     /**
      * The message thread
@@ -498,21 +510,32 @@ final public class Scheduler {
         public void run() {
             LOGGER.info("Starting messager thread");
 
-            while (!isStopping()) {
+            mainLoop: while (!isStopping()) {
                 try {
-                    final MessagePackage messagePackage;
-
                     // Get the next resource ID
-                    synchronized (messages) {
-                        if (messages.isEmpty()) {
-                            try {
-                                messages.wait();
-                            } catch (InterruptedException e) {
+                    final MessagePackage messagePackage;
+                    while (true) {
+                        synchronized (messages) {
+                            LOGGER.debug("Waiting for the next message");
+                            long wait = 0;
+                            if (!messages.isEmpty()) {
+                                wait = messages.peek().timestamp - System.currentTimeMillis();
+                                LOGGER.debug("Next message has a waiting time of %d", wait);
                             }
-                            continue;
 
-                        } else {
-                            messagePackage = messages.pop();
+                            if (wait >= 0) {
+                                try {
+                                    messages.wait(wait);
+                                } catch (InterruptedException e) {
+                                    if (isStopping())
+                                        break mainLoop;
+                                }
+                                continue;
+
+                            } else {
+                                messagePackage = messages.pop();
+                                break;
+                            }
                         }
                     }
 
@@ -520,19 +543,21 @@ final public class Scheduler {
                     try {
                         Transaction.run((em, t) -> {
                             // Retrieve the resource that changed - and lock it
-                            Resource.lock(t, messagePackage.destination, true);
                             Resource destination = em.find(Resource.class, messagePackage.destination);
+                            Resource.lock(t, messagePackage.destination, true);
+                            em.refresh(destination);
                             LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
                             destination.notify(t, em, messagePackage.message);
                         });
-                    } catch (PersistenceException e) {
+                    } catch (Throwable e) {
                         LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
                         synchronized (messages) {
-                            messages.push(messagePackage);
+                            messagePackage.timestamp = System.currentTimeMillis() + RESCHEDULING_DELTA_TIME;
+                            messages.add(messagePackage);
                         }
                     }
 
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     LOGGER.error("Caught exception in notifier", e);
                 }
             }

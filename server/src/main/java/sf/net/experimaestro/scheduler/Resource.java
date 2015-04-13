@@ -108,9 +108,6 @@ public abstract class Resource implements PostCommitListener {
 
     final static private Logger LOGGER = Logger.getLogger();
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "from")
-    private List<Dependency> outgoingDependencies = new ArrayList<>();
-
     /**
      * The path with the connector
      */
@@ -121,12 +118,20 @@ public abstract class Resource implements PostCommitListener {
      * The connector
      */
     @JoinColumn(name = "connector", updatable = false)
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     protected Connector connector;
 
+    /**
+     * The outgoing dependencies (resources that depend on this)
+     */
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
+    private List<Dependency> outgoingDependencies = new ArrayList<>();
 
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "to")
+    /**
+     * The ingoing dependencies (resources that we depend upon)
+     */
+    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
     private List<Dependency> ingoingDependencies = new ArrayList<>();
 
     /**
@@ -212,10 +217,22 @@ public abstract class Resource implements PostCommitListener {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Resource && resourceID == ((Resource)obj).resourceID;
+    }
+
+    @Override
     public String toString() {
         if (resourceID == null)
             return "R-";
         return format("R%d", resourceID);
+    }
+
+    /**
+     * Returns a detailed description
+     */
+    public String toDetailedString() {
+        return toString() + "@" + version;
     }
 
     /**
@@ -507,6 +524,7 @@ public abstract class Resource implements PostCommitListener {
 
 
     static private SharedLongLocks resourceLocks = new SharedLongLocks();
+
     public EntityLock lock(Transaction t, boolean exclusive) {
         return t.lock(resourceLocks, this.getId(), exclusive);
     }
@@ -526,7 +544,7 @@ public abstract class Resource implements PostCommitListener {
     protected void _post_load() {
         oldState = state;
         prepared = true;
-        LOGGER.info("Loaded %s (state %s) - version %d", this, state, version);
+        LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);
     }
 
     /** Called after an INSERT or UPDATE */
@@ -539,7 +557,7 @@ public abstract class Resource implements PostCommitListener {
 
     transient boolean prepared = false;
 
-    public void save(Transaction transaction, EntityManager em) {
+    public void save(EntityManager em, Transaction transaction) {
         // Find the connector in the database
         if (connector != null && !em.contains(connector)) {
             // Add the connector

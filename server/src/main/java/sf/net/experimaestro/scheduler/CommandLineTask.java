@@ -129,7 +129,7 @@ public class CommandLineTask extends JobRunner {
 
 
     @Override
-    public XPMProcess startJob(ArrayList<Lock> locks) throws Exception {
+    public XPMProcess prepareJob(ArrayList<Lock> locks) throws Exception {
         SingleHostConnector singleHostConnector = job.getMainConnector();
 
         final Path runFile = Resource.RUN_EXTENSION.transform(job.getPath());
