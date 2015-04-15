@@ -37,8 +37,7 @@ public class JsonAdapter extends TypeAdapter<Json> {
 
     @Override
     public Json read(JsonReader in) throws IOException {
-        readValue(in);
-        return null;
+        return readValue(in);
     }
 
     private Json readValue(JsonReader in) throws IOException {

@@ -115,6 +115,12 @@ public class XPMObject {
      * Used to close objects at the end of the execution of a script
      */
     private final Cleaner cleaner;
+
+    /**
+     * The logger
+     */
+    private Logger taskLogger;
+
     /**
      * The connector for default inclusion
      */
@@ -209,7 +215,8 @@ public class XPMObject {
         this.workdir = workdir == null ? new Holder<>(null) : workdir;
         this.rootLogger = Logger.getLogger(loggerRepository);
         this.experimentId = experimentId;
-
+        this.taskLogger = LOGGER
+        ;
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
 
@@ -830,7 +837,7 @@ public class XPMObject {
                 // --- Resources to lock
                 if (options.has("lock", options)) {
                     List locks = (List) options.get("lock", options);
-                    for (int i = (int) locks.size(); --i >= 0; ) {
+                    for (int i = locks.size(); --i >= 0; ) {
                         Object lock_i = JSUtils.unwrap(locks.get(i));
                         Dependency dependency = null;
 
@@ -888,13 +895,25 @@ public class XPMObject {
                 pw.format("Locator: %s", path.toString());
                 pw.flush();
             } else {
-                // Prepare job
+                // Prepare
                 if (taskContext != null) {
                     taskContext.prepare(job);
                 }
 
                 // Add dependencies
                 dependencies.forEach(job::addDependency);
+
+                final Resource old = Resource.getByLocator(transaction.em(), job.getPath());
+                if (old != null) {
+                    if (!old.canBeReplaced()) {
+                        taskLogger.info("Cannot overwrite task %s [%d]", old.getPath(), old.getId());
+                    } else {
+                        taskLogger.info("Replacing resource %s [%d]", old.getPath(), old.getId());
+                        old.lock(transaction, true);
+                        old.replaceBy(job);
+                        job = (Job) old;
+                    }
+                }
 
                 // Store in scheduler
                 job.save(transaction);
@@ -946,6 +965,7 @@ public class XPMObject {
 
     public void setTaskContext(TaskContext taskContext) {
         this.taskContext = taskContext;
+        this.taskLogger = taskContext != null ? taskContext.getLogger("XPM") : LOGGER;
     }
 
     /**

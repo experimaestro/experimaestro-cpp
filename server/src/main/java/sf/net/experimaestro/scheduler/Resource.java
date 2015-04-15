@@ -22,7 +22,6 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
@@ -36,10 +35,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -125,14 +121,15 @@ public abstract class Resource implements PostCommitListener {
      * The outgoing dependencies (resources that depend on this)
      */
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
-    private List<Dependency> outgoingDependencies = new ArrayList<>();
-
+    @MapKey(name = "to")
+    private Map<Long, Dependency> outgoingDependencies = new HashMap<>();
 
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
-    private List<Dependency> ingoingDependencies = new ArrayList<>();
+    @MapKey(name = "from")
+    private Map<Long, Dependency> ingoingDependencies = new HashMap<>();
 
     /**
      * The resource ID
@@ -145,7 +142,7 @@ public abstract class Resource implements PostCommitListener {
      * Version for optimistic locks
      */
     @Version
-    @Column(name="version")
+    @Column(name = "version")
     protected long version;
 
     /**
@@ -164,10 +161,14 @@ public abstract class Resource implements PostCommitListener {
     @Column(name = "state")
     private ResourceState state = ResourceState.ON_HOLD;
 
-    /** Indicates that the resource is deleted */
+    /**
+     * Indicates that the resource is deleted
+     */
     transient private boolean delete = false;
 
-    /** Keeps the state of the resource before saving */
+    /**
+     * Keeps the state of the resource before saving
+     */
     protected transient ResourceState oldState;
 
     /**
@@ -184,7 +185,8 @@ public abstract class Resource implements PostCommitListener {
 
     /**
      * Get a resource by locator
-     * @param em The current entity manager
+     *
+     * @param em   The current entity manager
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
@@ -218,7 +220,7 @@ public abstract class Resource implements PostCommitListener {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Resource && resourceID == ((Resource)obj).resourceID;
+        return obj instanceof Resource && resourceID == ((Resource) obj).resourceID;
     }
 
     @Override
@@ -301,14 +303,14 @@ public abstract class Resource implements PostCommitListener {
      * The set of resources the resource is dependent upon
      */
     public Collection<Dependency> getDependencies() {
-        return ingoingDependencies;
+        return ingoingDependencies.values();
     }
 
     /**
      * The set of dependencies that are dependent on this resource
      */
     public Collection<Dependency> getOutgoingDependencies() {
-        return outgoingDependencies;
+        return outgoingDependencies.values();
     }
 
     /**
@@ -329,6 +331,7 @@ public abstract class Resource implements PostCommitListener {
 
     /**
      * Get the identifier of this task
+     *
      * @return Return a stringified version of the path
      */
     public String getIdentifier() {
@@ -406,14 +409,20 @@ public abstract class Resource implements PostCommitListener {
     public void clean() {
     }
 
-    /** Called when the resource was persisted/updated and committed */
+    protected Dependency addIngoingDependency(Dependency dependency) {
+        dependency.to = this;
+        return this.ingoingDependencies.put(dependency.getFrom().getId(), dependency);
+    }
+
+    /**
+     * Called when the resource was persisted/updated and committed
+     */
     public void stored() {
         // We switched from a stopped state to a non stopped state : notify dependents
         if (oldState != null && oldState.isUnactive() ^ state.isUnactive()) {
             Scheduler.get().addChangedResource(this);
         }
     }
-
 
 
     /**
@@ -500,11 +509,30 @@ public abstract class Resource implements PostCommitListener {
     }
 
     protected void doReplaceBy(Resource resource) {
-        this.outgoingDependencies.clear();
-        this.outgoingDependencies.addAll(resource.outgoingDependencies);
+        final EntityManager em = Transaction.current().em();
 
-        this.ingoingDependencies.clear();
-        this.ingoingDependencies.addAll(resource.ingoingDependencies);
+        // Copy ingoing dependencies
+        Map<Long, Dependency> oldIngoing = this.ingoingDependencies;
+        this.ingoingDependencies = new HashMap<>();
+
+        // Re-add old matching dependencies
+        oldIngoing.entrySet().stream()
+                .forEach(entry -> {
+                    final Dependency dependency = resource.ingoingDependencies.get(entry.getKey());
+                    if (dependency != null) {
+                        entry.getValue().replaceBy(dependency);
+                        this.ingoingDependencies.put(entry.getKey(), entry.getValue());
+                    }
+                });
+
+        // Add new dependencies
+        resource.ingoingDependencies.entrySet().stream()
+                .forEach(entry -> {
+                    if (!oldIngoing.containsKey(entry.getKey())) {
+                        entry.getValue().to = this;
+                        this.ingoingDependencies.put(entry.getKey(), entry.getValue());
+                    }
+                });
 
         this.state = resource.state;
     }
@@ -526,11 +554,22 @@ public abstract class Resource implements PostCommitListener {
     static private SharedLongLocks resourceLocks = new SharedLongLocks();
 
     public EntityLock lock(Transaction t, boolean exclusive) {
-        return t.lock(resourceLocks, this.getId(), exclusive);
+        return t.lock(resourceLocks, this.getId(), exclusive, 0);
     }
 
-    public static void lock(Transaction transaction, long resourceId, boolean exclusive) {
-        transaction.lock(resourceLocks, resourceId, exclusive);
+    public EntityLock lock(Transaction t, boolean exclusive, long timeout) {
+        return t.lock(resourceLocks, this.getId(), exclusive, timeout);
+    }
+
+    /**
+     * Lock a resource by ID
+     * @param transaction
+     * @param resourceId
+     * @param exclusive
+     * @param timeout Timeout
+     */
+    public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
+        return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
     }
 
     /**
@@ -547,7 +586,9 @@ public abstract class Resource implements PostCommitListener {
         LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);
     }
 
-    /** Called after an INSERT or UPDATE */
+    /**
+     * Called after an INSERT or UPDATE
+     */
     @PostUpdate
     @PostPersist
     protected void _post_update() {
@@ -571,14 +612,31 @@ public abstract class Resource implements PostCommitListener {
 
         // Lock all the dependencies
         // This avoids to miss any notification
-        for(Dependency dependency: getDependencies()) {
-            dependency.from.lock(transaction, false);
-            if (!em.contains(dependency.from)) {
-                dependency.from = em.find(Resource.class, dependency.from.getId());
-            } else {
-                em.refresh(dependency.from);
+
+
+        boolean dependenciesLocked = false;
+        List<EntityLock> locks = new ArrayList<>();
+        while (!dependenciesLocked) {
+            // We loop until we get all the locks - using a timeout just in case
+            for (Dependency dependency : getDependencies()) {
+                final EntityLock lock = dependency.from.lock(transaction, false, 100);
+                if (lock != null) {
+                    for(EntityLock _lock: locks) {
+                        _lock.close();
+                    }
+                    continue;
+                }
+
+                locks.add(lock);
+                if (!em.contains(dependency.from)) {
+                    dependency.from = em.find(Resource.class, dependency.from.getId());
+                } else {
+                    em.refresh(dependency.from);
+                }
             }
+            dependenciesLocked = true;
         }
+
         prepared = true;
         em.persist(this);
 
@@ -586,7 +644,9 @@ public abstract class Resource implements PostCommitListener {
         updateStatus();
     }
 
-    /** Called before adding this entity to the database */
+    /**
+     * Called before adding this entity to the database
+     */
     @PrePersist
     protected void _pre_persist() {
         if (!prepared) {

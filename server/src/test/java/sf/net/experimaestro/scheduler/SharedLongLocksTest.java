@@ -28,7 +28,7 @@ public class SharedLongLocksTest {
 
         new Thread( () -> {
             IntLocks.removeLock(lockThread1Ready);
-            try(EntityLock ignored = locks.sharedLock(1)) {
+            try(EntityLock ignored = locks.sharedLock(1, 0)) {
                 IntLocks.waitLockID(LockThread3Ready);
                 IntLocks.removeLock(lockThread1Locked);
                 pause(500);
@@ -40,7 +40,7 @@ public class SharedLongLocksTest {
         new Thread( () -> {
             IntLocks.removeLock(lockThread2Ready);
             IntLocks.waitLockID(lockThread1Locked);
-            try(EntityLock ignored = locks.sharedLock(1)) {
+            try(EntityLock ignored = locks.sharedLock(1, 0)) {
                 IntLocks.waitLockID(LockThread3Ready);
                 pause(500);
                 list.add(1);
@@ -53,7 +53,7 @@ public class SharedLongLocksTest {
             IntLocks.waitLockID(lockThread1Ready);
             IntLocks.waitLockID(lockThread2Ready);
             IntLocks.removeLock(LockThread3Ready);
-            try (EntityLock ignored = locks.exclusiveLock(1)) {
+            try (EntityLock ignored = locks.exclusiveLock(1, 0)) {
                 list.add(2);
             }
             latch.countDown();
@@ -77,7 +77,7 @@ public class SharedLongLocksTest {
         new Thread(() -> {
             IntLocks.removeLock(lockThread1Ready);
             IntLocks.waitLockID(lockThread2Ready);
-            try(EntityLock ignored = locks.exclusiveLock(1)) {
+            try(EntityLock ignored = locks.exclusiveLock(1, 0)) {
                 list.add(2);
             }
             latch.countDown();
@@ -85,7 +85,7 @@ public class SharedLongLocksTest {
 
         new Thread( () -> {
             IntLocks.waitLockID(lockThread1Ready);
-            try(EntityLock ignored = locks.exclusiveLock(1)) {
+            try(EntityLock ignored = locks.exclusiveLock(1, 0)) {
                 IntLocks.removeLock(lockThread2Ready);
                 pause(500);
                 list.add(1);

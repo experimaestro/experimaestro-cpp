@@ -551,8 +551,7 @@ public class Job extends Resource {
         // We do not add it to the source dependency since
         // this will be done latter
         // TODO: check if this is not done latter... remove ?
-        dependency.to = this;
-        this.getDependencies().add(dependency);
+        addIngoingDependency(dependency);
         dependency.update();
         if (!dependency.status.isOK()) {
             nbUnsatisfied++;
@@ -679,6 +678,7 @@ public class Job extends Resource {
     @Override
     protected void doReplaceBy(Resource resource) {
         super.doReplaceBy(resource);
+
         Job job = (Job) resource;
         this.priority = job.priority;
         this.startTimestamp = job.startTimestamp;
@@ -696,10 +696,9 @@ public class Job extends Resource {
 
         this.jobRunner = jobRunner;
         this.jobRunner.job = this;
+
         // Adds all dependencies from the job runner
-        jobRunner.dependencies().forEach(dependency -> {
-            getOutgoingDependencies().add(dependency);
-        });
+        jobRunner.dependencies().forEach(this::addIngoingDependency);
     }
 
     @Override

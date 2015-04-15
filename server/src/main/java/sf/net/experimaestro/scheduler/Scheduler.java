@@ -544,7 +544,7 @@ final public class Scheduler {
                         Transaction.run((em, t) -> {
                             // Retrieve the resource that changed - and lock it
                             Resource destination = em.find(Resource.class, messagePackage.destination);
-                            Resource.lock(t, messagePackage.destination, true);
+                            Resource.lock(t, messagePackage.destination, true, 0);
                             em.refresh(destination);
                             LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
                             destination.notify(t, em, messagePackage.message);

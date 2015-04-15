@@ -186,4 +186,17 @@ abstract public class Dependency implements Serializable {
     public long getVersion() {
         return version;
     }
+
+    public void replaceBy(Dependency dependency) {
+        assert dependency.from.getId() == this.from.getId();
+        assert dependency.to.getId() == this.to.getId();
+        if (dependency.getClass() != dependency.getClass())
+            throw new AssertionError("Cannot replace dependency");
+
+        doReplaceBy(dependency);
+    }
+
+    void doReplaceBy(Dependency dependency) {
+
+    }
 }

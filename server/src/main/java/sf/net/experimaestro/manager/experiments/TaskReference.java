@@ -30,8 +30,9 @@ import java.util.Collection;
  */
 @Entity
 public class TaskReference {
-    @Id
-    long id = -1;
+    @Id()
+    @GeneratedValue()
+    long id;
 
     /**
      * The parents

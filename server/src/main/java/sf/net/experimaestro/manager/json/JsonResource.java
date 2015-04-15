@@ -90,7 +90,7 @@ public class JsonResource implements Json {
     public void write(JsonWriter out) throws IOException {
         out.beginObject();
 
-        out.name("value");
+        out.name(Manager.XP_VALUE.toString());
         out.value(resource.getPath().toString());
 
         out.name(Manager.XP_TYPE.toString());

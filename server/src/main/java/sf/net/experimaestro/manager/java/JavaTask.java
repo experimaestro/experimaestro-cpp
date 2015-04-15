@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.java;
 
 import org.apache.log4j.Level;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
@@ -95,6 +96,7 @@ public class JavaTask extends Task {
                 // --- Build the command
 
                 Job job = new Job(javaFactory.connector, path);
+                taskContext.prepare(job);
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", task.toString());
@@ -105,6 +107,7 @@ public class JavaTask extends Task {
                     job.setJobRunner(task);
 
                     if (old != null) {
+                        old.lock(transaction, true);
                         try {
                             old.replaceBy(job);
                             job = (Job) old;
@@ -122,6 +125,13 @@ public class JavaTask extends Task {
 
                 taskContext.startedJob(job);
             }
+        } catch(XPMRuntimeException e) {
+            e.addContext("while storing task %s", path);
+            throw e;
+        } catch(RuntimeException e) {
+            final XPMRuntimeException e2 = new XPMRuntimeException(e);
+            e2.addContext("while storing task %s", path);
+            throw e2;
         }
 
         // --- Fill some fields in returned json

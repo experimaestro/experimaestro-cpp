@@ -20,6 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
+import java.util.function.Function;
+
 /**
  * Sets of locks indexed by long integer IDs
  */
@@ -34,21 +36,25 @@ final public class SharedLongLocks {
      * A lock (shared or exclusive)
      */
     private class Lock implements EntityLock {
-        private final long id;
+        private long id;
         boolean shared;
 
-        public Lock(long id, boolean exclusive) {
+        public Lock(long id, boolean shared) {
             this.id = id;
-            this.shared = exclusive;
+            this.shared = shared;
         }
 
         @Override
         public boolean isShared() {
+            assert id >= 0;
+
             return shared;
         }
 
         @Override
-        public void makeExclusive()  {
+        public void makeExclusive(long timeout) {
+            assert id >= 0;
+
             if (shared) {
                 synchronized (locks) {
                     int value = locks.get(id);
@@ -65,59 +71,84 @@ final public class SharedLongLocks {
 
         @Override
         public void close() {
-            synchronized (locks) {
-                if (shared) {
-                    final int value = locks.get(id);
-                    assert value > 0;
-                    locks.put(id, value - 1);
-                    if (value == 1) {
+            if (id >= 0) {
+                synchronized (locks) {
+                    if (shared) {
+                        final int value = locks.get(id);
+                        assert value > 0;
+                        locks.put(id, value - 1);
+                        if (value == 1) {
+                            locks.notifyAll();
+                        }
+                    } else {
+                        final int remove = locks.remove(id);
+                        assert remove < 0;
                         locks.notifyAll();
                     }
-                } else {
-                    final int remove = locks.remove(id);
-                    assert remove < 0;
-                    locks.notifyAll();
                 }
             }
+            id = -1;
+        }
+
+        @Override
+        public boolean isClosed() {
+            return id < 0;
         }
     }
 
 
-    public EntityLock lock(long id, boolean exclusive) {
+    public EntityLock lock(long id, boolean exclusive, long timeout) {
         if (exclusive) {
-            return exclusiveLock(id);
+            return exclusiveLock(id, timeout);
         }
-        return sharedLock(id);
+        return sharedLock(id, timeout);
     }
 
-    public Lock sharedLock(long id) {
+
+    protected Lock getLock(long id, long timeout, Function<Integer, Boolean> shouldWait, Function<Integer, Integer> computeValue, boolean shared) {
         synchronized (locks) {
             int value;
-            while ((value = locks.get(id)) < 0) {
+            final long startTime = System.currentTimeMillis();
+
+            while (shouldWait.apply(value = locks.get(id))) {
+
+                if (timeout > 0 && System.currentTimeMillis() - startTime >= timeout) {
+                    return null;
+                }
+
                 try {
-                    locks.wait();
+                    locks.wait(timeout);
                 } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
             }
 
             // Add us
-            locks.put(id, value + 1);
+            locks.put(id, computeValue.apply(value).intValue());
         }
-        return new Lock(id, true);
+        return new Lock(id, shared);
     }
 
-    public Lock exclusiveLock(long id) {
-        synchronized (locks) {
-            while (locks.get(id) != 0) {
-                try {
-                    locks.wait();
-                } catch (InterruptedException e) {
-                }
-            }
 
-            // Add us
-            locks.put(id, -1);
-        }
-        return new Lock(id, false);
+    /**
+     * Acquire a shared lock
+     *
+     * @param id      The ID of the resource
+     * @param timeout An optional timeout, or 0 if no timeout
+     * @return A lock, or null if timeout is greater than 0 and the lock could not be acquired
+     */
+    public Lock sharedLock(long id, long timeout) {
+        return getLock(id, timeout, x -> x < 0, x -> x + 1, true);
+    }
+
+    /**
+     * Acquire an exclusive lock
+     *
+     * @param id      The ID of the resource
+     * @param timeout An optional timeout, or 0 if no timeout
+     * @return A lock, or null if timeout is greater than 0 and the lock could not be acquired
+     */
+    public Lock exclusiveLock(long id, long timeout) {
+        return getLock(id, timeout, x -> x != 0, x -> -1, true);
     }
 }

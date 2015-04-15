@@ -261,18 +261,22 @@ final public class Transaction implements AutoCloseable {
      * @param locks
      * @param id
      * @param exclusive
+     * @param timeout
      * @return
      */
-    public EntityLock lock(SharedLongLocks locks, long id, boolean exclusive) {
+    public EntityLock lock(SharedLongLocks locks, long id, boolean exclusive, long timeout) {
         final SharedLongReference key = new SharedLongReference(locks, id);
         EntityLock lock = this.locks.get(key);
+        if (lock != null && lock.isClosed()) {
+            lock = null;
+        }
 
         if (lock == null) {
-            lock = locks.lock(id, exclusive);
+            lock = locks.lock(id, exclusive, timeout);
             this.locks.put(key, lock);
         } else {
             if (exclusive) {
-                lock.makeExclusive();
+                lock.makeExclusive(timeout);
             }
         }
 

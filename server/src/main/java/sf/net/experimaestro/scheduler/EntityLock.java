@@ -18,8 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LockException;
-
 /**
  * An entity lock
  */
@@ -27,9 +25,12 @@ interface EntityLock extends AutoCloseable {
     /** Returns true if shared */
     boolean isShared();
 
-    /** Make shared */
-    default void makeExclusive() {}
+    /** Make shared
+     * @param timeout*/
+    default void makeExclusive(long timeout) {}
 
     @Override
     void close();
+
+    boolean isClosed();
 }
