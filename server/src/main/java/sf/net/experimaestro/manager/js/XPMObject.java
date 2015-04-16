@@ -213,8 +213,7 @@ public class XPMObject {
         this.workdir = workdir == null ? new Holder<>(null) : workdir;
         this.rootLogger = Logger.getLogger(loggerRepository);
         this.experimentId = experimentId;
-        this.taskLogger = LOGGER
-        ;
+        this.taskLogger = LOGGER;
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
 

@@ -154,11 +154,11 @@ public class TaskContext {
     }
 
     public Logger getLogger(String loggerName) {
-        return (Logger) logger.getLoggerRepository().getLogger(loggerName);
+        return (Logger) logger.getLoggerRepository().getLogger(loggerName, Logger.factory());
     }
 
     /**
-     * Prepares the task with the current task context
+     * Prepares the task with the current task context∂
      * @param resource
      */
     public void prepare(Resource resource) {

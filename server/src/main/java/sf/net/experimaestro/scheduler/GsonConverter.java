@@ -24,6 +24,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.utils.gson.JsonAdapter;
@@ -32,12 +33,19 @@ import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import javax.persistence.AttributeConverter;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.nio.file.Path;
 
 /**
  * Converts a command into a JSON string
  */
-public class JobConverter implements AttributeConverter<Commands, String> {
+public class GsonConverter<T> implements AttributeConverter<T, String> {
+
+    private final Type type;
+
+    GsonConverter(Type type) {
+        this.type = type;
+    }
 
     final static public GsonBuilder builder = new GsonBuilder();
 
@@ -48,17 +56,17 @@ public class JobConverter implements AttributeConverter<Commands, String> {
     }
 
     @Override
-    public String convertToDatabaseColumn(Commands commands) {
+    public String convertToDatabaseColumn(T object) {
         Gson gson = builder.create();
-        final String json = gson.toJson(commands);
+        final String json = gson.toJson(object, type);
         return json;
     }
 
     @Override
-    public Commands convertToEntityAttribute(String json) {
+    public T convertToEntityAttribute(String json) {
         Gson gson = builder.create();
-        final Commands commands = gson.fromJson(json, Commands.class);
-        return commands;
+        final Object commands = gson.fromJson(json, type);
+        return (T)commands;
     }
 
     private static class AbstractObjectFactory implements TypeAdapterFactory {
@@ -87,16 +95,24 @@ public class JobConverter implements AttributeConverter<Commands, String> {
 
         @Override
         public void write(JsonWriter out, Object value) throws IOException {
-            out.beginArray();
-            final Class<?> aClass = value.getClass();
-            assert ! aClass.isArray();
-            out.value(aClass.getName());
-            gson.toJson(value, value.getClass(), out);
-            out.endArray();
+            if (value == null) {
+                out.nullValue();
+            } else {
+                out.beginArray();
+                final Class<?> aClass = value.getClass();
+                assert !aClass.isArray();
+                out.value(aClass.getName());
+                gson.toJson(value, value.getClass(), out);
+                out.endArray();
+            }
         }
 
         @Override
         public Object read(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
+                return null;
+            }
+
             in.beginArray();
             final String classname = in.nextString();
             final Object o;

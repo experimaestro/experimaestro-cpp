@@ -53,6 +53,7 @@ public class CommandLineTask extends JobRunner {
      * Working directory
      */
     public String workingDirectory;
+
     /**
      * Our command line launcher
      */

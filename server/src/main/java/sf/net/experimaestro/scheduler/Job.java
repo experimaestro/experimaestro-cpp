@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
@@ -85,7 +84,7 @@ public class Job extends Resource {
     @JoinColumn(name = "process")
     XPMProcess process;
 
-    @Convert(converter = JobConverter.class)
+    @Convert(converter = JobRunnerConverter.class)
     @Column(columnDefinition="VARCHAR(128000)")
     JobRunner jobRunner;
 
@@ -716,5 +715,13 @@ public class Job extends Resource {
     @Override
     public Path outputFile() throws FileSystemException {
         return jobRunner.outputFile(this);
+    }
+
+    @PostLoad
+    protected void postLoad() {
+        super.postLoad();
+        if (jobRunner != null) {
+            jobRunner.job = this;
+        }
     }
 }

@@ -581,7 +581,7 @@ public abstract class Resource implements PostCommitListener {
     }
 
     @PostLoad
-    protected void _post_load() {
+    protected void postLoad() {
         oldState = state;
         prepared = true;
         LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);

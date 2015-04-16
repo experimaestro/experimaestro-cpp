@@ -31,7 +31,8 @@ import java.util.stream.Stream;
  * Base class for all jobs
  */
 public abstract class JobRunner {
-    Job job;
+    /** The associated job */
+    transient Job job;
 
     /**
      * This is where the real job gets done

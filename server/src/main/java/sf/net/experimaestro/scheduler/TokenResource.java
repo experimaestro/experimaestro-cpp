@@ -60,7 +60,8 @@ public class TokenResource extends Resource {
     }
 
     @PostLoad
-    void postLoad() {
+    protected void postLoad() {
+        super.postLoad();
         wasBlocking = isBlocking();
     }
 

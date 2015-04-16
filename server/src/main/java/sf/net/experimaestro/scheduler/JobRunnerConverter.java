@@ -18,15 +18,13 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.List;
+import javax.persistence.AttributeConverter;
 
 /**
- * Extra configuration for Hibernate
+ * A convrter for JobRunner
  */
-public class TestClassAdder implements PersistentClassesAdder {
-    @Override
-    public void add(List<Class<?>> classes) {
-        classes.add(WaitingJob.class);
-        classes.add(WaitingJobProcess.class);
+public class JobRunnerConverter extends GsonConverter<JobRunner> implements AttributeConverter<JobRunner, String> {
+    public JobRunnerConverter() {
+        super(JobRunner.class);
     }
 }

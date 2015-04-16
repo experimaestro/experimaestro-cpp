@@ -169,9 +169,9 @@ public final class Logger extends org.apache.log4j.Logger {
             forcedLog(FQCN, level, String.format(format, values), null);
     }
 
-    static public interface Factory extends LoggerFactory {
+    public interface Factory extends LoggerFactory {
         @Override
-        public Logger makeNewLoggerInstance(String name);
+        Logger makeNewLoggerInstance(String name);
     }
 
     /**
