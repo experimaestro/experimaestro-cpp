@@ -35,7 +35,7 @@ import java.nio.file.Path;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-@DiscriminatorValue("shared")
+@DiscriminatorValue("exclusive")
 public class ExclusiveDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 
