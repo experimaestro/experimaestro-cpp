@@ -26,7 +26,10 @@ import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.JSUtils;
 
+import javax.tools.FileObject;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * Simple JavaScript interface to a connector object
@@ -57,7 +60,7 @@ public class JSConnector extends JSBaseObject implements JSConstructable {
     }
 
     @JSFunction
-    public FileObject path(String filepath) throws FileSystemException {
+    public Path path(String filepath) throws FileSystemException {
         return getConnector().getMainConnector().resolveFile(filepath);
     }
 
