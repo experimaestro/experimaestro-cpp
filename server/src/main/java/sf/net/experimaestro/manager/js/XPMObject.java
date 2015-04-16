@@ -80,7 +80,7 @@ public class XPMObject {
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
-    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
+    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock", "connector"));
     /**
      * Logging should be directed to an output
      */
@@ -865,12 +865,13 @@ public class XPMObject {
         // Update the task status now that it is initialized
         task.setGroup(defaultGroup);
 
-        taskContext.prepare(task);
+        if (taskContext != null) {
+            taskContext.prepare(task);
+        }
 
         final Resource old = scheduler.getResource(locator);
         if (old != null) {
             // TODO: if equal, do not try to replace the task
-            taskContext.prepare(task);
             if (!task.replace(old)) {
                 getRootLogger().warn(String.format("Cannot override resource [%s]", task.getIdentifier()));
                 old.init(scheduler);

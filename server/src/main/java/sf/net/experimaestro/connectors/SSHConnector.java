@@ -170,8 +170,9 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public FileSystem doGetFileSystem() throws FileSystemException {
+        final String uri = String.format("sftp://%s@%s:%d/", username, hostname, port);
         final FileSystem fileSystem = VFS.getManager()
-                .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
+                .resolveFile(uri, options.getOptions()).getFileSystem();
         return fileSystem;
     }
 
