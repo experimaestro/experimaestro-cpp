@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.connectors.SSHOptions;
-import sf.net.experimaestro.utils.JSUtils;
 
 /**
  * JavaScript wrapper for SSH connection options
@@ -28,9 +27,8 @@ import sf.net.experimaestro.utils.JSUtils;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 9/10/12
  */
-public class JSSSHOptions extends JSConnectorOptions {
+public class JSSSHOptions extends JSConnectorOptions implements Wrapper {
     SSHOptions options = new SSHOptions();
-
 
     public SSHOptions getOptions() {
         return options;
@@ -42,7 +40,12 @@ public class JSSSHOptions extends JSConnectorOptions {
     }
 
     @JSFunction("set_stream_proxy")
-    public void setStreamProxy(String uri, Object sshOptions) {
-        options.setStreamProxy(uri, ((JSSSHOptions) JSUtils.unwrap(sshOptions)).options);
+    public void setStreamProxy(String uri, SSHOptions sshOptions) {
+        options.setStreamProxy(uri, sshOptions);
+    }
+
+    @Override
+    public Object unwrap() {
+        return options;
     }
 }

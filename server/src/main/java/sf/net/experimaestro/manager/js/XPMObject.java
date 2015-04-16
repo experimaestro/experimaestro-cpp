@@ -86,9 +86,7 @@ public class XPMObject {
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
-
-    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock"));
-
+    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock", "connector"));
     /**
      * Logging should be directed to an output
      */

@@ -32,11 +32,9 @@ import java.net.URISyntaxException;
  * Simple JavaScript interface to a connector object
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 12/6/12
  */
-public class JSConnector extends ScriptableObject {
+public class JSConnector extends JSBaseObject implements JSConstructable {
     private Connector connector;
-
 
     public JSConnector() {
     }
@@ -45,23 +43,10 @@ public class JSConnector extends ScriptableObject {
         this.connector = connector;
     }
 
-    public static JSConnector jsConstructor(Context cx, Object[] args,
-                                            Function ctorObj,
-                                            boolean inNewExpr) {
-        final int nbArgs = args.length;
-        if (nbArgs < 1 || nbArgs > 2)
-            throw new IllegalArgumentException("Connector constructor takes one or two arguments");
-
-        final String uriString = Context.toString(args[0]);
-
-        ConnectorOptions options = null;
-        if (nbArgs == 2) {
-            options = ((JSConnectorOptions) JSUtils.unwrap(args[1])).getOptions();
-        }
-
+    @JSFunction(optional = 1)
+    public JSConnector(String uriString, ConnectorOptions options) {
         try {
-            Connector connector = Connector.create(uriString, options);
-            return new JSConnector(connector);
+            this.connector = Connector.create(uriString, options);
         } catch (URISyntaxException e) {
             throw new XPMRuntimeException(e);
         }
@@ -69,6 +54,11 @@ public class JSConnector extends ScriptableObject {
 
     Connector getConnector() {
         return connector;
+    }
+
+    @JSFunction
+    public FileObject path(String filepath) throws FileSystemException {
+        return getConnector().getMainConnector().resolveFile(filepath);
     }
 
     @Override
