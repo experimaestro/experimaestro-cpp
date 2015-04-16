@@ -42,13 +42,11 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
 public class CommandLineTask extends JobRunner {
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * The environment
      */
-    @Column(length = 65536 /* 65 ko of data */)
     public TreeMap<String, String> environment = null;
 
     /**
@@ -63,8 +61,6 @@ public class CommandLineTask extends JobRunner {
     /**
      * The command status execute
      */
-    @Convert(converter = CommandsConverter.class)
-    @Column(columnDefinition="VARCHAR(100000)")
     private Commands commands;
 
     /**

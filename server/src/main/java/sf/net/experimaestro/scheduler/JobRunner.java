@@ -30,14 +30,7 @@ import java.util.stream.Stream;
 /**
  * Base class for all jobs
  */
-@Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class JobRunner {
-    @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
-    private Long id;
-
-    @OneToOne(mappedBy = "jobRunner")
     Job job;
 
     /**
@@ -58,11 +51,6 @@ public abstract class JobRunner {
      * @throws FileSystemException
      */
     abstract Path outputFile(Job job) throws FileSystemException;
-
-
-    public long getId() {
-        return id;
-    }
 
     public abstract Stream<Dependency> dependencies();
 }

@@ -149,6 +149,12 @@ final public class SharedLongLocks {
      * @return A lock, or null if timeout is greater than 0 and the lock could not be acquired
      */
     public Lock exclusiveLock(long id, long timeout) {
-        return getLock(id, timeout, x -> x != 0, x -> -1, true);
+        return getLock(id, timeout, x -> x != 0, x -> -1, false);
+    }
+
+    int getLockValue(long id) {
+        synchronized (locks) {
+            return locks.get(id);
+        }
     }
 }

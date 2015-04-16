@@ -85,9 +85,10 @@ public class Job extends Resource {
     @JoinColumn(name = "process")
     XPMProcess process;
 
-    @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "runner")
+    @Convert(converter = JobConverter.class)
+    @Column(columnDefinition="VARCHAR(128000)")
     JobRunner jobRunner;
+
     /**
      * Number of unsatisfied jobs
      */

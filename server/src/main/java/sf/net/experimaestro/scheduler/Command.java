@@ -318,7 +318,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         /**
          * The commands
          */
-        @Convert(converter = CommandsConverter.class)
+        @Convert(converter = JobConverter.class)
         @Column(columnDefinition="VARCHAR(100000)")
         Commands commands;
 

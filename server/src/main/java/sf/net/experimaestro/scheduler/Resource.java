@@ -122,14 +122,14 @@ public abstract class Resource implements PostCommitListener {
      */
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
     @MapKey(name = "to")
-    private Map<Long, Dependency> outgoingDependencies = new HashMap<>();
+    private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
 
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
     @MapKey(name = "from")
-    private Map<Long, Dependency> ingoingDependencies = new HashMap<>();
+    private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
 
     /**
      * The resource ID
@@ -411,7 +411,7 @@ public abstract class Resource implements PostCommitListener {
 
     protected Dependency addIngoingDependency(Dependency dependency) {
         dependency.to = this;
-        return this.ingoingDependencies.put(dependency.getFrom().getId(), dependency);
+        return this.ingoingDependencies.put(dependency.getFrom(), dependency);
     }
 
     /**
@@ -512,7 +512,7 @@ public abstract class Resource implements PostCommitListener {
         final EntityManager em = Transaction.current().em();
 
         // Copy ingoing dependencies
-        Map<Long, Dependency> oldIngoing = this.ingoingDependencies;
+        Map<Resource, Dependency> oldIngoing = this.ingoingDependencies;
         this.ingoingDependencies = new HashMap<>();
 
         // Re-add old matching dependencies
@@ -563,10 +563,11 @@ public abstract class Resource implements PostCommitListener {
 
     /**
      * Lock a resource by ID
+     *
      * @param transaction
      * @param resourceId
      * @param exclusive
-     * @param timeout Timeout
+     * @param timeout     Timeout
      */
     public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
         return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
@@ -621,20 +622,22 @@ public abstract class Resource implements PostCommitListener {
             for (Dependency dependency : getDependencies()) {
                 final EntityLock lock = dependency.from.lock(transaction, false, 100);
                 if (lock != null) {
-                    for(EntityLock _lock: locks) {
+                    for (EntityLock _lock : locks) {
                         _lock.close();
                     }
                     continue;
                 }
-
-                locks.add(lock);
-                if (!em.contains(dependency.from)) {
-                    dependency.from = em.find(Resource.class, dependency.from.getId());
-                } else {
-                    em.refresh(dependency.from);
-                }
+                break;
             }
             dependenciesLocked = true;
+        }
+
+        for (Dependency dependency : getDependencies()) {
+            if (!em.contains(dependency.from)) {
+                dependency.from = em.find(Resource.class, dependency.from.getId());
+            } else {
+                em.refresh(dependency.from);
+            }
         }
 
         prepared = true;

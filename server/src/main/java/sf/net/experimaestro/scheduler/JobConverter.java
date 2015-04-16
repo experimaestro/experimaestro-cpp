@@ -37,7 +37,7 @@ import java.nio.file.Path;
 /**
  * Converts a command into a JSON string
  */
-public class CommandsConverter implements AttributeConverter<Commands, String> {
+public class JobConverter implements AttributeConverter<Commands, String> {
 
     final static public GsonBuilder builder = new GsonBuilder();
 

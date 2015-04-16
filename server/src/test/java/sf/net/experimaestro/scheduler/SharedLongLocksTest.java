@@ -3,6 +3,7 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -61,6 +62,7 @@ public class SharedLongLocksTest {
 
         latch.await();
         assertOrdered(list);
+        Assert.assertEquals(locks.getLockValue(1), 0, "The lock value should be 0 when no locks are taken");
     }
 
 
@@ -95,6 +97,7 @@ public class SharedLongLocksTest {
 
         latch.await();
         assertOrdered(list);
+        Assert.assertEquals(locks.getLockValue(1), 0, "The lock value should be 0 when no locks are taken");
     }
 
 
