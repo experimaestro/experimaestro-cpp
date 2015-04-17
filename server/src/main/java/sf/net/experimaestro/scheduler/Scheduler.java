@@ -116,13 +116,6 @@ final public class Scheduler {
 
         INSTANCE = this;
 
-        // Get the parameters
-        /*
-      Number of threads running concurrently (excluding any server)
-     */
-        int nbThreads = 10;
-
-
         // Initialise the database
         LOGGER.info("Initialising database in directory %s", baseDirectory);
         HashMap<String, Object> properties = new HashMap<>();
@@ -232,16 +225,14 @@ final public class Scheduler {
      * @param states The states of the resource
      * @return A closeable iterator
      */
-    public CloseableIterator<Resource> resources(EnumSet<ResourceState> states) {
-        List<Resource> result = Transaction.evaluate((EntityManager em) -> {
-            CriteriaBuilder criteria = entityManagerFactory.getCriteriaBuilder();
-            CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
-            Root<Resource> root = cq.from(Resource.class);
-            cq.where(root.get("state").in(states));
-            TypedQuery<Resource> query = em.createQuery(cq);
-            return query.getResultList();
-        });
-        return CloseableIterator.of(result.iterator());
+    public CloseableIterator<Resource> resources(EntityManager em, EnumSet<ResourceState> states) {
+
+        CriteriaBuilder criteria = entityManagerFactory.getCriteriaBuilder();
+        CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
+        Root<Resource> root = cq.from(Resource.class);
+        cq.where(root.get("state").in(states));
+        TypedQuery<Resource> query = em.createQuery(cq);
+        return CloseableIterator.of(query.getResultList().iterator());
     }
 
     // ----
@@ -495,8 +486,10 @@ final public class Scheduler {
         }
     }
 
-    /** Time added when rescheduling */
-    static final long  RESCHEDULING_DELTA_TIME = 250;
+    /**
+     * Time added when rescheduling
+     */
+    static final long RESCHEDULING_DELTA_TIME = 250;
 
     /**
      * The message thread
@@ -510,7 +503,8 @@ final public class Scheduler {
         public void run() {
             LOGGER.info("Starting messager thread");
 
-            mainLoop: while (!isStopping()) {
+            mainLoop:
+            while (!isStopping()) {
                 try {
                     // Get the next resource ID
                     final MessagePackage messagePackage;

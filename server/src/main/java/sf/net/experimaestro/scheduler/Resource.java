@@ -654,9 +654,10 @@ public abstract class Resource implements PostCommitListener {
     @Override
     public void postCommit(Transaction transaction) {
         if (delete) {
+            LOGGER.debug("Resource %s removed", this, version);
             clean();
         } else {
-            LOGGER.info("Resource %s stored with version=%s", this, version);
+            LOGGER.debug("Resource %s stored with version=%s", this, version);
             stored();
         }
     }
