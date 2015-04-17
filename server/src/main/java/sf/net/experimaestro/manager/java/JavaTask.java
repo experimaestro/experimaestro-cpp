@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.java;
  */
 
 import org.apache.log4j.Level;
+import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONUtil;
+import org.mozilla.javascript.XPMHelper;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -30,6 +32,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -56,8 +59,9 @@ public class JavaTask extends Task {
         // Copy the parameters
         JsonObject json = new JsonObject();
         for (Map.Entry<String, Value> entry : values.entrySet()) {
-            if (entry.getValue().isSet())
+            if (entry.getValue().isSet()) {
                 json.put(entry.getKey(), entry.getValue().get());
+            }
         }
 
         // Computes the running directory
@@ -107,7 +111,10 @@ public class JavaTask extends Task {
                     job.setJobRunner(task);
 
                     if (old != null) {
+                        // Lock and refresh the resource to be overwritten
                         old.lock(transaction, true);
+                        transaction.em().refresh(old);
+
                         try {
                             old.replaceBy(job);
                             job = (Job) old;

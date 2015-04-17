@@ -162,14 +162,14 @@ public class JSNode extends JSBaseObject implements Json {
     @JSFunction(scope = true)
     public JSPath path(Context cx, Scriptable scope) throws FileSystemException {
         XPMObject xpm = XPMObject.getXPMObject(scope);
-        return new JSPath(getAttribute(node, Manager.XP_PATH));
+        return new JSPath(getAttribute(node, ValueType.XP_PATH));
 
     }
 
     @JSFunction(scope = true)
     public JSPath path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
         NodeList nodeList = get_one_node(scope, xpath);
-        return new JSPath(getAttribute(nodeList.item(0), Manager.XP_PATH));
+        return new JSPath(getAttribute(nodeList.item(0), ValueType.XP_PATH));
     }
 
     @JSFunction(scope = true)

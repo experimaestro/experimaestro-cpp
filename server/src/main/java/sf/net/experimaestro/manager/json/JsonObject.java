@@ -108,9 +108,10 @@ public class JsonObject
                             throw new AssertionError("json value is not a boolean but" + value.getClass());
                         return value.get();
 
-                    // TODO: do those checks
+                    // TODO: do checks
                     case "directory":
                     case "file":
+                    case "path":
                         return Paths.get(value.get().toString());
                     default:
                         throw new XPMRuntimeException("Un-handled type [%s]", parsedType);

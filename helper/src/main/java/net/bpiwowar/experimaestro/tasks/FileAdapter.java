@@ -34,7 +34,7 @@ public class FileAdapter extends ReaderTypeAdapter<File> {
     public File read(JsonReader in) throws IOException {
         final String s = in.nextString();
 
-        if (s.startsWith("file://")) {
+        if (s.startsWith(FILE_PROTOCOL)) {
             return new File(s.substring(FILE_PROTOCOL.length()));
         }
 

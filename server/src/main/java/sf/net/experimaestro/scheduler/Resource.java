@@ -607,23 +607,22 @@ public abstract class Resource implements PostCommitListener {
 
         // Lock all the dependencies
         // This avoids to miss any notification
-
-
-        boolean dependenciesLocked = false;
         List<EntityLock> locks = new ArrayList<>();
-        while (!dependenciesLocked) {
+        lockDependencies: while (true) {
             // We loop until we get all the locks - using a timeout just in case
             for (Dependency dependency : getDependencies()) {
                 final EntityLock lock = dependency.from.lock(transaction, false, 100);
-                if (lock != null) {
+                if (lock == null) {
                     for (EntityLock _lock : locks) {
                         _lock.close();
                     }
-                    continue;
+                    continue lockDependencies;
                 }
-                break;
+
+                locks.add(lock);
             }
-            dependenciesLocked = true;
+
+            break;
         }
 
         for (Dependency dependency : getDependencies()) {

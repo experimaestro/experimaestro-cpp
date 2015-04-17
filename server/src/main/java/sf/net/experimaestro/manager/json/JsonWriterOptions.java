@@ -33,7 +33,7 @@ public class JsonWriterOptions {
     /**
      * Default set of ignored options
      */
-    public static final Set<QName> DEFAULT_IGNORE = ImmutableSet.of(ValueType.XP_RESOURCE, ValueType.XP_FILE);
+    public static final Set<QName> DEFAULT_IGNORE = ImmutableSet.of(ValueType.XP_RESOURCE, ValueType.XP_PATH, ValueType.XP_FILE, ValueType.XP_DIRECTORY);
     public Set<QName> ignore = DEFAULT_IGNORE;
     public static final JsonWriterOptions DEFAULT_OPTIONS = new JsonWriterOptions();
     public boolean simplifyValues = true;

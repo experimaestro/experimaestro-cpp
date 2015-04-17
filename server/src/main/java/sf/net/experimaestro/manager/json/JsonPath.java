@@ -61,12 +61,12 @@ public class JsonPath implements Json {
 
     @Override
     public QName type() {
-        return ValueType.XP_FILE;
+        return ValueType.XP_PATH;
     }
 
     @Override
     public boolean canIgnore(JsonWriterOptions options) {
-        return options.ignore.contains(ValueType.XP_FILE);
+        return options.ignore.contains(ValueType.XP_PATH);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class JsonPath implements Json {
 
     @Override
     public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        if (options.ignore.contains(ValueType.XP_FILE)) {
+        if (options.ignore.contains(ValueType.XP_PATH)) {
             writer.write("null");
         } else {
             writer.write('"');
@@ -100,7 +100,7 @@ public class JsonPath implements Json {
         out.value(get().toUri().toString());
 
         out.name(Manager.XP_TYPE.toString());
-        out.value(Manager.XP_PATH.toString());
+        out.value(ValueType.XP_PATH.toString());
 
         out.endObject();
     }

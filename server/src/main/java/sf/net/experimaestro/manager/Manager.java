@@ -51,7 +51,6 @@ import static java.lang.String.format;
 public class Manager {
 
     public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
-    public static final QName XP_PATH = new QName(EXPERIMAESTRO_NS, "path");
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");

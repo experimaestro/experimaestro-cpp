@@ -42,7 +42,14 @@ public class ValueType extends Type {
     static final public QName XP_INTEGER = registerAtomicType(Manager.EXPERIMAESTRO_NS, "integer");
     static final public QName XP_BOOLEAN = registerAtomicType(Manager.EXPERIMAESTRO_NS, "boolean");
     static final public QName XP_RESOURCE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "resource");
+
+    /** Type path is generic (file or directory) */
+    public static final QName XP_PATH = registerAtomicType(Manager.EXPERIMAESTRO_NS, "path");
+    /** Corresponds to a file on disk */
     public static final QName XP_FILE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "file");
+    /** Corresponds to a directory on disk */
+    public static final QName XP_DIRECTORY = registerAtomicType(Manager.EXPERIMAESTRO_NS, "directory");
+
     public static final QName XP_XML = registerAtomicType(Manager.EXPERIMAESTRO_NS, "xml");
 
     public ValueType(QName type) {
@@ -90,7 +97,7 @@ public class ValueType extends Type {
     }
 
     static public Json wrap(Path value) {
-        return wrapString(value.toString(), XP_FILE);
+        return wrapString(value.toString(), XP_PATH);
     }
 
     public static Json wrapObject(Object value) {

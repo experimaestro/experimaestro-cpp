@@ -84,9 +84,10 @@ public class Job extends Resource {
     @JoinColumn(name = "process")
     XPMProcess process;
 
-    @Convert(converter = JobRunnerConverter.class)
-    @Column(columnDefinition="VARCHAR(128000)")
-    JobRunner jobRunner;
+    @Column(name="jobRunner", columnDefinition="VARCHAR(128000)")
+    String jobRunnerString;
+
+    transient private JobRunner jobRunner;
 
     /**
      * Number of unsatisfied jobs
@@ -174,7 +175,7 @@ public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-        process = jobRunner.prepareJob(locks);
+        process = getJobRunner().prepareJob(locks);
         return process;
     }
 
@@ -649,13 +650,6 @@ public class Job extends Resource {
     /**
      * Remove a file linked status this job
      */
-    private void removeJobFile(String extension) {
-        removeJobFile(new FileNameTransformer("", extension));
-    }
-
-    /**
-     * Remove a file linked status this job
-     */
     private void removeJobFile(FileNameTransformer t) {
         try {
             final Path file = t.transform(path);
@@ -675,6 +669,7 @@ public class Job extends Resource {
     }
 
 
+
     @Override
     protected void doReplaceBy(Resource resource) {
         super.doReplaceBy(resource);
@@ -685,17 +680,23 @@ public class Job extends Resource {
         this.endTimestamp = job.endTimestamp;
         this.priority = job.priority;
 
-        // Dependencies have been taken care of
-        this.jobRunner = ((Job)resource).jobRunner;
+        // Dependencies of job runner have been taken care of
+        // no need to add them
+        this.jobRunnerString = job.jobRunnerString;
+        this.jobRunner = job.getJobRunner();
     }
 
+
     public void setJobRunner(JobRunner jobRunner) {
-        if (this.jobRunner != null) {
+        if (this.jobRunnerString != null) {
             throw new AssertionError("Job runner has already been set");
         }
 
+        // Sets the job runner and its string version
         this.jobRunner = jobRunner;
-        this.jobRunner.job = this;
+        this.jobRunnerString = JobRunnerConverter.INSTANCE.convertToDatabaseColumn(jobRunner);
+
+        this.getJobRunner().job = this;
 
         // Adds all dependencies from the job runner
         jobRunner.dependencies().forEach(this::addIngoingDependency);
@@ -714,14 +715,19 @@ public class Job extends Resource {
 
     @Override
     public Path outputFile() throws FileSystemException {
-        return jobRunner.outputFile(this);
+        return getJobRunner().outputFile(this);
     }
 
     @PostLoad
     protected void postLoad() {
         super.postLoad();
-        if (jobRunner != null) {
+    }
+
+    public JobRunner getJobRunner() {
+        if (jobRunnerString != null && jobRunner == null) {
+            jobRunner = JobRunnerConverter.INSTANCE.convertToEntityAttribute(jobRunnerString);
             jobRunner.job = this;
         }
+        return jobRunner;
     }
 }

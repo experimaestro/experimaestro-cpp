@@ -24,6 +24,8 @@ import javax.persistence.AttributeConverter;
  * A convrter for JobRunner
  */
 public class JobRunnerConverter extends GsonConverter<JobRunner> implements AttributeConverter<JobRunner, String> {
+    final static JobRunnerConverter INSTANCE = new JobRunnerConverter();
+
     public JobRunnerConverter() {
         super(JobRunner.class);
     }
