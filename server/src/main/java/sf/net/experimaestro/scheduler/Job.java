@@ -684,14 +684,14 @@ public class Job extends Resource {
         this.startTimestamp = job.startTimestamp;
         this.endTimestamp = job.endTimestamp;
         this.priority = job.priority;
-        this.setJobRunner(((Job) resource).jobRunner);
+
+        // Dependencies have been taken care of
+        this.jobRunner = ((Job)resource).jobRunner;
     }
 
     public void setJobRunner(JobRunner jobRunner) {
         if (this.jobRunner != null) {
-            jobRunner.dependencies().forEach(d -> {
-                getOutgoingDependencies().remove(d);
-            });
+            throw new AssertionError("Job runner has already been set");
         }
 
         this.jobRunner = jobRunner;

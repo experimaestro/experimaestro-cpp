@@ -273,6 +273,9 @@ final public class Transaction implements AutoCloseable {
 
         if (lock == null) {
             lock = locks.lock(id, exclusive, timeout);
+            if (lock == null) {
+                return null;
+            }
             this.locks.put(key, lock);
         } else {
             if (exclusive) {

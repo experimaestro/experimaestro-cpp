@@ -509,29 +509,23 @@ public abstract class Resource implements PostCommitListener {
     }
 
     protected void doReplaceBy(Resource resource) {
-        final EntityManager em = Transaction.current().em();
-
-        // Copy ingoing dependencies
-        Map<Resource, Dependency> oldIngoing = this.ingoingDependencies;
-        this.ingoingDependencies = new HashMap<>();
-
-        // Re-add old matching dependencies
-        oldIngoing.entrySet().stream()
-                .forEach(entry -> {
-                    final Dependency dependency = resource.ingoingDependencies.get(entry.getKey());
-                    if (dependency != null) {
-                        entry.getValue().replaceBy(dependency);
-                        this.ingoingDependencies.put(entry.getKey(), entry.getValue());
-                    }
-                });
+        // Remove dependencies that are not anymore
+        final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
+        while (iterator.hasNext()) {
+            final Map.Entry<Resource, Dependency> entry = iterator.next();
+            final Dependency dependency = resource.ingoingDependencies.remove(entry.getKey());
+            if (dependency != null) {
+                entry.getValue().replaceBy(dependency);
+            } else {
+                iterator.remove();
+            }
+        }
 
         // Add new dependencies
         resource.ingoingDependencies.entrySet().stream()
                 .forEach(entry -> {
-                    if (!oldIngoing.containsKey(entry.getKey())) {
-                        entry.getValue().to = this;
-                        this.ingoingDependencies.put(entry.getKey(), entry.getValue());
-                    }
+                    entry.getValue().to = this;
+                    this.ingoingDependencies.put(entry.getKey(), entry.getValue());
                 });
 
         this.state = resource.state;

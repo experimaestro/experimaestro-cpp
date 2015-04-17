@@ -20,6 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import java.io.Serializable;
 
+import static java.lang.String.format;
+
 /**
 * The key of the dependency
 */
@@ -56,4 +58,8 @@ public class DependencyPK implements Serializable {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return format("DependencyPK{%d -> %d}", from, to);
+    }
 }

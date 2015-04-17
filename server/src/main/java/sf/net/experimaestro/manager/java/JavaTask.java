@@ -111,7 +111,7 @@ public class JavaTask extends Task {
                         try {
                             old.replaceBy(job);
                             job = (Job) old;
-                            taskLogger.info(String.format("Overwriting resource [%s]", task));
+                            taskLogger.info(String.format("Overwriting resource [%s]", job));
                         } catch (ExperimaestroCannotOverwrite e) {
                             taskLogger.warn("Cannot override resource [%s]", old);
                             throw new RuntimeException(e);
