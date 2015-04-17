@@ -28,8 +28,6 @@ xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
 
-logging.basicConfig(level=logging.INFO)
-
 class JsonRPCMethod:
     def __init__(self, url, name, jsonid):
         self.url = url
@@ -515,6 +513,7 @@ argcomplete.autocomplete(args)
 numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
     raise ValueError('Invalid log level: %s' % args.loglevel)
+logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
 if args.command is None:
     parser.print_help()
