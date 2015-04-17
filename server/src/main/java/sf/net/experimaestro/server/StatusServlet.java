@@ -84,23 +84,25 @@ public class StatusServlet extends XPMServlet {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
-                try (final CloseableIterator<Resource> resources = scheduler.resources(EnumSet.of(state))) {
-                    while (resources.hasNext()) {
-                        Resource resource = resources.next();
-                        if (resource.getState() == state) {
-                            out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
-                            try {
-                                out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-                                out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getPath());
-                            } catch (Throwable t) {
-                                out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
+                Transaction.run(em -> {
+                    try (final CloseableIterator<Resource> resources = scheduler.resources(em, EnumSet.of(state))) {
+                        while (resources.hasNext()) {
+                            Resource resource = resources.next();
+                            if (resource.getState() == state) {
+                                out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
+                                try {
+                                    out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                                    out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
+                                    out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getPath());
+                                } catch (Throwable t) {
+                                    out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
+                                }
                             }
                         }
+                    } catch (CloseException e) {
+                        LOGGER.warn("Error while closing the iterator");
                     }
-                } catch (CloseException e) {
-                    LOGGER.warn("Error while closing the iterator");
-                }
+                });
                 out.println("</ul></div>");
             }
             out.println("</div>");

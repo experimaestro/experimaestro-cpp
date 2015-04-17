@@ -80,7 +80,7 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
             if (rawType.equals(Json.class)) {
                 return null;
             }
-            if (!rawType.isArray() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
+            if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
                 return new AbstractObjectAdapter(gson, type);
             return null;
         }

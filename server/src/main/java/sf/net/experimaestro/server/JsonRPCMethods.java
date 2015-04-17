@@ -35,6 +35,7 @@ import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ContextualException;
 import sf.net.experimaestro.exceptions.XPMCommandException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -58,6 +59,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.utils.Functional.propagate;
 
 /**
  * Json RPC methods
@@ -590,16 +592,26 @@ public class JsonRPCMethods extends HttpServlet {
     ) throws Exception {
         EnumSet<ResourceState> states = getStates(statesNames);
 
-        int nbUpdated = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
-                if (resource.updateStatus())
-                    nbUpdated++;
+        return Transaction.evaluate((em, t) -> {
+            int nbUpdated = 0;
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, states)) {
+                while (resources.hasNext()) {
+                    Resource resource = resources.next();
+                    resource.lock(t, true);
+                    em.refresh(resource);
+                    if (resource.updateStatus()) {
+                        nbUpdated++;
+                        t.boundary();
+                    } else {
+                        t.clearLocks();
+                    }
+                }
+            } catch (CloseException e) {
+                throw new RuntimeException(e);
             }
-        }
+            return nbUpdated;
+        });
 
-        return nbUpdated;
     }
 
     /**
@@ -636,7 +648,7 @@ public class JsonRPCMethods extends HttpServlet {
             } else {
                 // TODO order the tasks so that dependencies are removed first
                 HashSet<Resource> toRemove = new HashSet<>();
-                try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
+                try (final CloseableIterator<Resource> resources = scheduler.resources(em, states)) {
                     while (resources.hasNext()) {
                         Resource resource = resources.next();
                         if (idPattern != null) {
@@ -716,18 +728,21 @@ public class JsonRPCMethods extends HttpServlet {
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
 
-
-        int n = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(statesSet)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
-                if (resource instanceof Job) {
-                    ((Job) resource).stop();
-                    n++;
+        return Transaction.evaluate(em -> {
+            int n = 0;
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, statesSet)) {
+                while (resources.hasNext()) {
+                    Resource resource = resources.next();
+                    if (resource instanceof Job) {
+                        ((Job) resource).stop();
+                        n++;
+                    }
                 }
+            } catch (CloseException e) {
+                throw new RuntimeException(e);
             }
-        }
-        return n;
+            return n;
+        });
     }
 
     @RPCMethod(help = "Kill one or more jobs")
@@ -800,20 +815,21 @@ public class JsonRPCMethods extends HttpServlet {
         List<Map<String, String>> list = new ArrayList<>();
         boolean recursive = _recursive == null ? false : _recursive;
 
-
-        try (final CloseableIterator<Resource> resources = scheduler.resources(set)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
-                Map<String, String> map = new HashMap<>();
-                map.put("type", resource.getClass().getCanonicalName());
-                map.put("state", resource.getState().toString());
-                map.put("name", resource.getPath().toString());
-                list.add(map);
+        return Transaction.evaluate(em -> {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, set)) {
+                while (resources.hasNext()) {
+                    Resource resource = resources.next();
+                    Map<String, String> map = new HashMap<>();
+                    map.put("type", resource.getClass().getCanonicalName());
+                    map.put("state", resource.getState().toString());
+                    map.put("name", resource.getPath().toString());
+                    list.add(map);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return list;
+            return list;
+        });
     }
 
     /**
