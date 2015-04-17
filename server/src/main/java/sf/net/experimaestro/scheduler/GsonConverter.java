@@ -27,8 +27,10 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.utils.gson.ByteArrayAdapter;
 import sf.net.experimaestro.utils.gson.JsonAdapter;
 import sf.net.experimaestro.utils.gson.JsonPathAdapter;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.AttributeConverter;
 import java.io.IOException;
@@ -40,6 +42,7 @@ import java.nio.file.Path;
  * Converts a command into a JSON string
  */
 public class GsonConverter<T> implements AttributeConverter<T, String> {
+    final static private Logger LOGGER = Logger.getLogger();
 
     private final Type type;
 
@@ -52,6 +55,7 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
     static {
         builder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
         builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
+        builder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
     }
 
@@ -66,7 +70,7 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
     public T convertToEntityAttribute(String json) {
         Gson gson = builder.create();
         final Object commands = gson.fromJson(json, type);
-        return (T)commands;
+        return (T) commands;
     }
 
     private static class AbstractObjectFactory implements TypeAdapterFactory {
@@ -113,17 +117,23 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
                 return null;
             }
 
-            in.beginArray();
-            final String classname = in.nextString();
-            final Object o;
             try {
-                final Class<?> aClass = Class.forName(classname);
-                o = gson.fromJson(in, aClass);
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
+                in.beginArray();
+                final String classname = in.nextString();
+                final Object o;
+                try {
+                    final Class<?> aClass = Class.forName(classname);
+                    o = gson.fromJson(in, aClass);
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+                in.endArray();
+                return o;
+            } catch (IllegalArgumentException e) {
+                LOGGER.error("Error while reading type %s", this.type);
+                throw e;
             }
-            in.endArray();
-            return o;
+
         }
     }
 }
