@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.FileSystemException;
 import org.mozilla.javascript.Wrapper;
@@ -43,7 +44,7 @@ public class JSResource extends JSBaseObject implements Wrapper {
     }
 
     @JSFunction("output")
-    public Path output() throws FileSystemException {
+    public Path output() throws IOException {
         return resource.outputFile();
     }
 

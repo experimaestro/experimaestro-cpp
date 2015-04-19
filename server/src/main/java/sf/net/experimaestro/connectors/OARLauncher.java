@@ -91,7 +91,7 @@ public class OARLauncher implements Launcher {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws FileSystemException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
         return new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
     }
 

@@ -224,7 +224,7 @@ public class CommandLineTask extends JobRunner {
     }
 
     @Override
-    public Path outputFile(Job job) throws FileSystemException {
+    public Path outputFile(Job job) throws IOException {
         if (jobOutputPath != null) {
             return job.getMainConnector().resolveFile(jobOutputPath);
         }

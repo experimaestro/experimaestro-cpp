@@ -23,9 +23,15 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.FileSystemException;
+
+import com.pastdev.jsch.DefaultSessionFactory;
+import com.pastdev.jsch.file.SshFileSystem;
+import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -41,6 +47,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.Map;
 
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
@@ -50,6 +57,7 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class SSHConnector extends SingleHostConnector {
+    static final private Logger LOGGER = Logger.getLogger();
 
     static final int SSHD_DEFAULT_PORT = 22;
 
@@ -59,7 +67,6 @@ public class SSHConnector extends SingleHostConnector {
      * Port
      */
     int port = SSHD_DEFAULT_PORT;
-    static final private Logger LOGGER = Logger.getLogger();
     /**
      * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
@@ -81,6 +88,9 @@ public class SSHConnector extends SingleHostConnector {
      * Cached SSH session
      */
     transient private SSHSession _session;
+
+    /** The file system */
+    transient private UnixSshFileSystem filesystem;
 
     /**
      * Used for serialization
@@ -140,17 +150,27 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    protected Path getTemporaryDirectory() throws FileSystemException {
+    protected Path getTemporaryDirectory() throws IOException {
         return getFileSystem().getPath(temporaryPath);
     }
 
     @Override
-    public FileSystem doGetFileSystem() throws FileSystemException {
+    public FileSystem doGetFileSystem() throws IOException {
+        if (filesystem != null) {
+            return filesystem;
+        }
 
-//        final FileSystem fileSystem = VFS.getManager()
-//                .resolveFile(String.format("sftp://%s@%s:%d/", username, hostname, port), options.getOptions()).getFileSystem();
-//        return fileSystem;
-        throw new NotImplementedException();
+        try {
+            URI uri = new URI( "ssh.unix://" + username + "@" + hostname + ":" + port + "/" );
+            DefaultSessionFactory defaultSessionFactory = new DefaultSessionFactory(username, hostname, 22 );
+            Map<String, Object> environment = new HashMap<>();
+            environment.put( "defaultSessionFactory", defaultSessionFactory );
+
+            filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
+            return filesystem;
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
     }
 
     @Override
@@ -159,7 +179,7 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws FileSystemException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
         return new UnixScriptProcessBuilder(scriptFile, this);
     }
 
@@ -294,7 +314,7 @@ public class SSHConnector extends SingleHostConnector {
 
     public class SSHProcessBuilder extends AbstractProcessBuilder {
 
-        private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) throws FileSystemException {
+        private void setStream(StringBuilder commandBuilder, Redirect output, StreamSetter streamSetter) throws IOException {
             final Redirect.Type type = output == null ? Redirect.Type.INHERIT : output.type();
 
             switch (type) {
@@ -371,7 +391,7 @@ public class SSHConnector extends SingleHostConnector {
                 channel.setPty(!detach());
 
                 channel.connect();
-            } catch (JSchException | FileSystemException e) {
+            } catch (JSchException | IOException e) {
                 throw new LaunchException(e);
             }
 

@@ -69,7 +69,7 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    protected boolean contains(FileSystem fileSystem) throws FileSystemException {
+    protected boolean contains(FileSystem fileSystem) throws IOException {
         return fileSystem.equals(getFileSystem());
     }
 
@@ -84,12 +84,12 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
-    protected Path getTemporaryDirectory() throws FileSystemException {
+    protected Path getTemporaryDirectory() throws IOException {
         return getFileSystem().getPath(TMPDIR);
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws FileSystemException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
         return new UnixScriptProcessBuilder(scriptFile, this);
     }
 

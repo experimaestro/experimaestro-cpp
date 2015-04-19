@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.FileSystemException;
 
@@ -33,7 +34,7 @@ public class DefaultLauncher implements Launcher {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws FileSystemException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
         return connector.scriptProcessBuilder(scriptFile);
     }
 }

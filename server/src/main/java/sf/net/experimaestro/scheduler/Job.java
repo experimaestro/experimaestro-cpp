@@ -718,7 +718,7 @@ public class Job extends Resource {
     }
 
     @Override
-    public Path outputFile() throws FileSystemException {
+    public Path outputFile() throws IOException {
         return getJobRunner().outputFile(this);
     }
 

@@ -60,11 +60,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      */
     private String donePath;
 
-    public UnixScriptProcessBuilder(Path file, SingleHostConnector connector) throws FileSystemException {
+    public UnixScriptProcessBuilder(Path file, SingleHostConnector connector) throws IOException {
         super(connector, file, null);
     }
 
-    public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws FileSystemException {
+    public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws IOException {
         super(connector, scriptFile, processBuilder);
     }
 
@@ -215,7 +215,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     }
 
-    private void writeRedirection(PrintWriter writer, Redirect redirect, int stream) throws FileSystemException {
+    private void writeRedirection(PrintWriter writer, Redirect redirect, int stream) throws IOException {
         if (redirect == null) {
             writer.format(" %d> /dev/null", stream);
         } else {
@@ -285,7 +285,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void printRedirections(CommandContext env, int stream, PrintWriter writer, Redirect outputRedirect, List<Path> outputRedirects) throws FileSystemException {
+    private void printRedirections(CommandContext env, int stream, PrintWriter writer, Redirect outputRedirect, List<Path> outputRedirects) throws IOException {
         if (!outputRedirects.isEmpty()) {
             writer.format(" %d> >(tee", stream);
             for (Path file : outputRedirects) {
@@ -301,17 +301,17 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
 
     @Override
-    public void removeLock(Path lockFile) throws FileSystemException {
+    public void removeLock(Path lockFile) throws IOException {
         lockFiles.add(protect(connector.resolve(lockFile), SHELL_SPECIAL));
     }
 
     @Override
-    public void exitCodeFile(Path exitCodeFile) throws FileSystemException {
+    public void exitCodeFile(Path exitCodeFile) throws IOException {
         exitCodePath = connector.resolve(exitCodeFile);
     }
 
     @Override
-    public void doneFile(Path doneFile) throws FileSystemException {
+    public void doneFile(Path doneFile) throws IOException {
         donePath = connector.resolve(doneFile);
     }
 }

@@ -479,7 +479,7 @@ public class XPMObject {
         return object.toString();
     }
 
-    private static Path getPath(Connector connector, Object stdout) throws FileSystemException {
+    private static Path getPath(Connector connector, Object stdout) throws IOException {
         if (stdout instanceof String || stdout instanceof ConsString)
             return connector.getMainConnector().resolveFile(stdout.toString());
 

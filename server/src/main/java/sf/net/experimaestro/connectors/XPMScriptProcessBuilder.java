@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.FileSystemException;
 import sf.net.experimaestro.scheduler.Commands;
@@ -54,7 +55,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     private Commands commands;
 
-    public XPMScriptProcessBuilder(SingleHostConnector connector, Path scriptFile, AbstractProcessBuilder processBuilder) throws FileSystemException {
+    public XPMScriptProcessBuilder(SingleHostConnector connector, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
         this.connector = connector;
         this.scriptFile = scriptFile;
         this.path = connector.resolve(scriptFile);
@@ -72,9 +73,9 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
         return commands;
     }
 
-    public abstract void removeLock(Path lockFile) throws FileSystemException;
+    public abstract void removeLock(Path lockFile) throws IOException;
 
-    public abstract void exitCodeFile(Path exitCodeFile) throws FileSystemException;
+    public abstract void exitCodeFile(Path exitCodeFile) throws IOException;
 
-    public abstract void doneFile(Path doneFile) throws FileSystemException;
+    public abstract void doneFile(Path doneFile) throws IOException;
 }

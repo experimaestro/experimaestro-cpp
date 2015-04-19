@@ -19,7 +19,6 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.Wrapper;
-import org.mozilla.javascript.annotations.JSFunction;
 import sf.net.experimaestro.connectors.SSHOptions;
 
 /**

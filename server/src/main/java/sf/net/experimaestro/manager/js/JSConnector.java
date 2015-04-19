@@ -27,6 +27,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.tools.FileObject;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
@@ -60,7 +61,7 @@ public class JSConnector extends JSBaseObject implements JSConstructable {
     }
 
     @JSFunction
-    public Path path(String filepath) throws FileSystemException {
+    public Path path(String filepath) throws IOException {
         return getConnector().getMainConnector().resolveFile(filepath);
     }
 

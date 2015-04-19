@@ -22,6 +22,7 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 
 import javax.persistence.*;
+import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ public abstract class JobRunner {
      * @return
      * @throws FileSystemException
      */
-    abstract Path outputFile(Job job) throws FileSystemException;
+    abstract Path outputFile(Job job) throws FileSystemException, IOException;
 
     public abstract Stream<Dependency> dependencies();
 }

@@ -70,7 +70,7 @@ abstract public class SingleHostConnector extends Connector {
     /**
      * Get the underlying filesystem
      */
-    protected abstract FileSystem doGetFileSystem() throws FileSystemException;
+    protected abstract FileSystem doGetFileSystem() throws IOException;
 
     /**
      * Get the underlying file system
@@ -78,7 +78,7 @@ abstract public class SingleHostConnector extends Connector {
      * @return
      * @throws FileSystemException
      */
-    public FileSystem getFileSystem() throws FileSystemException {
+    public FileSystem getFileSystem() throws IOException {
         if (filesystem == null)
             return filesystem = doGetFileSystem();
         return filesystem;
@@ -91,7 +91,7 @@ abstract public class SingleHostConnector extends Connector {
      * @return A file object
      * @throws FileSystemException
      */
-    public Path resolveFile(String path) throws FileSystemException {
+    public Path resolveFile(String path) throws IOException {
         return getFileSystem().getPath(path);
     }
 
@@ -101,7 +101,7 @@ abstract public class SingleHostConnector extends Connector {
      * Throws an exception when the file name cannot be resolved, i.e. when
      * the file object is not
      */
-    public String resolve(Path file) throws FileSystemException {
+    public String resolve(Path file) throws IOException {
         if (!contains(file.getFileSystem())) {
             throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
         }
@@ -112,7 +112,7 @@ abstract public class SingleHostConnector extends Connector {
     /**
      * Returns true if the filesystem matches
      */
-    protected abstract boolean contains(FileSystem fileSystem) throws FileSystemException;
+    protected abstract boolean contains(FileSystem fileSystem) throws IOException;
 
     /**
      * Returns a process builder
@@ -134,10 +134,10 @@ abstract public class SingleHostConnector extends Connector {
         return Files.createTempFile(getTemporaryDirectory(), prefix, suffix);
     }
 
-    protected abstract Path getTemporaryDirectory() throws FileSystemException;
+    protected abstract Path getTemporaryDirectory() throws FileSystemException, IOException;
 
     @Override
-    public Path resolve(String path) throws FileSystemException {
+    public Path resolve(String path) throws IOException {
         return getFileSystem().getPath(path);
     }
 
@@ -148,5 +148,5 @@ abstract public class SingleHostConnector extends Connector {
      * @throws FileSystemException if an exception occurs while accessing the script file
      */
     abstract public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile)
-            throws FileSystemException;
+            throws IOException;
 }

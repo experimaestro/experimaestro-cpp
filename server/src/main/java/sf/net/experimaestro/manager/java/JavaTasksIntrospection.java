@@ -60,7 +60,7 @@ public class JavaTasksIntrospection {
         Path[] classpath = Arrays.stream(paths).map(path -> {
             try {
                 return connector.getMainConnector().resolveFile(path);
-            } catch (FileSystemException e) {
+            } catch (IOException e) {
                 throw new XPMRuntimeException(e, "Could not resolve path %s", path);
             }
         }).toArray(n -> new Path[n]);

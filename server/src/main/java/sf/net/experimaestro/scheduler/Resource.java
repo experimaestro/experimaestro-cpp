@@ -376,7 +376,7 @@ public abstract class Resource implements PostCommitListener {
     /**
      * Returns the main output file for this resource
      */
-    public Path outputFile() throws FileSystemException {
+    public Path outputFile() throws IOException {
         throw new IllegalAccessError("No output file for resources of type " + this.getClass());
     }
 

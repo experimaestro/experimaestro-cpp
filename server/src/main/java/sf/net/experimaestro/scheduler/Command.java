@@ -196,7 +196,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         }
 
         @Override
-        public java.lang.String toString(CommandContext environment) throws FileSystemException {
+        public java.lang.String toString(CommandContext environment) throws IOException {
             final Object data = environment.getData(this);
             return environment.resolve((java.nio.file.Path) data);
         }
@@ -245,7 +245,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         }
 
         @Override
-        public java.lang.String toString(CommandContext environment) throws FileSystemException {
+        public java.lang.String toString(CommandContext environment) throws IOException {
             return environment.resolve(file);
         }
 
@@ -389,7 +389,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
                         .resolveFile(f -> {
                             try {
                                 return environment.resolve(f);
-                            } catch (FileSystemException e) {
+                            } catch (IOException e) {
                                 throw new XPMRuntimeException(e);
                             }
                         });

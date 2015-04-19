@@ -250,7 +250,7 @@
         <dependency>
             <groupId>com.pastdev</groupId>
             <artifactId>jsch-nio</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.4</version>
         </dependency>
 
         <dependency>

@@ -19,6 +19,7 @@ package sf.net.experimaestro.connectors;
  */
 
 import javax.persistence.*;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
@@ -117,5 +118,5 @@ public abstract class Connector implements Comparable<Connector> {
         return new ConnectorDelegator(this);
     }
 
-    public abstract Path resolve(String path) throws FileSystemException;
+    public abstract Path resolve(String path) throws FileSystemException, IOException;
 }

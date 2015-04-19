@@ -76,13 +76,13 @@ public abstract class CommandContext implements Closeable {
         this.connector = connector;
     }
 
-    public String resolve(Path file) throws FileSystemException {
+    public String resolve(Path file) throws IOException {
         return connector.resolve(file);
     }
 
     abstract Path getAuxiliaryFile(String prefix, String suffix) throws IOException;
 
-    abstract public String getWorkingDirectory() throws FileSystemException;
+    abstract public String getWorkingDirectory() throws IOException;
 
 
 
@@ -187,7 +187,7 @@ public abstract class CommandContext implements Closeable {
         }
 
         @Override
-        public String getWorkingDirectory() throws FileSystemException {
+        public String getWorkingDirectory() throws IOException {
             return connector.resolve(folder);
         }
 
