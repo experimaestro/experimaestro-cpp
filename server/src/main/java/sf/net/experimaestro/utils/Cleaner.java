@@ -54,7 +54,7 @@ public class Cleaner implements AutoCloseable {
         while (iterator.hasNext()) {
             final AutoCloseable value = iterator.next();
             value.close();
-            iterator.remove();
         }
+        list.clear();
     }
 }

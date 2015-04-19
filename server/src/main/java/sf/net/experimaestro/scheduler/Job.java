@@ -29,7 +29,7 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
-import sf.net.experimaestro.utils.gson.JobRunnerConverter;
+import sf.net.experimaestro.utils.jpa.JobRunnerConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;

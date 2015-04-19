@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package sf.net.experimaestro.utils.jpa;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,15 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.jcraft.jsch.IdentityRepository;
-import com.jcraft.jsch.JSch;
+import sf.net.experimaestro.connectors.SSHOptions;
+
+import javax.persistence.AttributeConverter;
 
 /**
- * Created by bpiwowar on 24/10/14.
+ * SSH options converter
  */
-public interface AgentRepositoryFactory {
-    IdentityRepository create(JSch jsch);
+public class SSHOptionsConverter extends GsonConverter<SSHOptions> implements AttributeConverter<SSHOptions, String> {
+    public SSHOptionsConverter() {
+        super(SSHOptions.class);
+    }
 }

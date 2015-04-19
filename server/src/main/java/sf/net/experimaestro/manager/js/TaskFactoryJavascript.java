@@ -309,7 +309,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
     @Override
     public JSAbstractTask create() {
-        // Get the "create" constructor
+        // Get the "createSSHAgentIdentityRepository" constructor
         Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
         // If we don't have one, then it might be a "direct" task, i.e.

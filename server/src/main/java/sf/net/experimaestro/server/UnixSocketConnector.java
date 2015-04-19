@@ -74,7 +74,7 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * <p>Construct a Server Connector with the passed Connection factories.</p>
      *
      * @param server    The {@link Server} this connector will accept connection for.
-     * @param factories Zero or more {@link org.eclipse.jetty.server.ConnectionFactory} instances used to create and configure connections.
+     * @param factories Zero or more {@link org.eclipse.jetty.server.ConnectionFactory} instances used to createSSHAgentIdentityRepository and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
@@ -106,7 +106,7 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * @param server            The {@link Server} this connector will accept connection for.
      * @param sslContextFactory If non null, then a {@link org.eclipse.jetty.server.SslConnectionFactory} is instantiated and prepended to the
      *                          list of ConnectionFactories, with the first factory being the default protocol for the SslConnectionFactory.
-     * @param factories         Zero or more {@link ConnectionFactory} instances used to create and configure connections.
+     * @param factories         Zero or more {@link ConnectionFactory} instances used to createSSHAgentIdentityRepository and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,
@@ -122,10 +122,10 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
      * @param executor   An executor used to run tasks for handling requests, acceptors and selectors. I
      *                   If null then use the servers executor
      * @param scheduler  A scheduler used to schedule timeouts. If null then use the servers scheduler
-     * @param bufferPool A ByteBuffer pool used to allocate buffers.  If null then create a private pool with default configuration.
+     * @param bufferPool A ByteBuffer pool used to allocate buffers.  If null then createSSHAgentIdentityRepository a private pool with default configuration.
      * @param acceptors  the number of acceptor threads to use, or 0 for a default value. Acceptors accept new TCP/IP connections.
      * @param selectors  the number of selector threads, or 0 for a default value. Selectors notice and schedule established connection that can make IO progress.
-     * @param factories  Zero or more {@link ConnectionFactory} instances used to create and configure connections.
+     * @param factories  Zero or more {@link ConnectionFactory} instances used to createSSHAgentIdentityRepository and configure connections.
      */
     public UnixSocketConnector(
             @Name("server") Server server,

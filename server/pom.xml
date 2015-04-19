@@ -238,15 +238,9 @@
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.51</version>
+            <version>0.1.52</version>
         </dependency>
 
-        <!--        <dependency>
-                    <groupId>jsch-agent-proxy</groupId>
-                    <artifactId>jsch-agent-proxy</artifactId>
-                    <version>0.0.4-SNAPSHOT</version>
-                </dependency>
-        -->
         <dependency>
             <groupId>com.pastdev</groupId>
             <artifactId>jsch-nio</artifactId>

@@ -22,68 +22,55 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-
-import java.net.URISyntaxException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
-
 import com.pastdev.jsch.DefaultSessionFactory;
-import com.pastdev.jsch.file.SshFileSystem;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
 import sf.net.experimaestro.utils.log.Logger;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
 
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
- * SSH connector backed up by commons VFS
+ * SSH connector backed up by jsch-nio
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Entity
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
 
-    static final int SSHD_DEFAULT_PORT = 22;
-
+    /** Temporary path on host */
     public String temporaryPath = "/tmp";
 
-    /**
-     * Port
-     */
-    int port = SSHD_DEFAULT_PORT;
     /**
      * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
      */
-    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<SSHConnector, SSHSession>();
-    /**
-     * Username
-     */
-    String username;
-    /**
-     * Hostname to connect to
-     */
-    String hostname;
+    static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<>();
+
     /**
      * Connection options
      */
+    @Convert(converter = SSHOptionsConverter.class)
+    @Column(length = 65536)
     private SSHOptions options = new SSHOptions();
+
     /**
      * Cached SSH session
      */
@@ -95,7 +82,11 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Used for serialization
      */
-    private SSHConnector() {
+    protected SSHConnector() {
+    }
+
+    public SSHConnector(String username, String hostname) {
+        this(username, hostname, 0, null);
     }
 
     /**
@@ -106,14 +97,12 @@ public class SSHConnector extends SingleHostConnector {
      * @param port
      */
     public SSHConnector(String username, String hostname, int port) {
-        super(String.format("ssh://%s@%s:%d", username, port, hostname));
-        this.username = username;
-        this.hostname = hostname;
-        this.port = port < 0 ? SSHD_DEFAULT_PORT : port;
+        this(username, hostname, port, null);
     }
 
-    public SSHConnector(String username, String hostname) {
-        this(username, hostname, SSHD_DEFAULT_PORT);
+
+    public SSHConnector(URI uri, ConnectorOptions options) {
+        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
     }
 
     /**
@@ -124,15 +113,13 @@ public class SSHConnector extends SingleHostConnector {
      */
     public SSHConnector(String username, String hostname, int port, ConnectorOptions options) {
         super(String.format("ssh://%s:%d@%s", username, port, hostname));
-        this.username = username;
-        this.hostname = hostname;
-        this.port = port > 0 ? port : SSHD_DEFAULT_PORT;
-        if (options != null)
-            this.options = (SSHOptions) options;
-    }
+        this.options = options != null ? ((SSHOptions) options).copy() : new SSHOptions();
 
-    public SSHConnector(URI uri, ConnectorOptions options) {
-        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
+        this.options.setHostName(hostname);
+        this.options.setUserName(username);
+        if (port > 0) {
+            this.options.setPort(port);
+        }
     }
 
     @Override
@@ -146,7 +133,7 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public String getHostName() {
-        return hostname;
+        return options.getHostName();
     }
 
     @Override
@@ -161,10 +148,18 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         try {
-            URI uri = new URI( "ssh.unix://" + username + "@" + hostname + ":" + port + "/" );
-            DefaultSessionFactory defaultSessionFactory = new DefaultSessionFactory(username, hostname, 22 );
+            URI uri = new URI( "ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + "/" );
+
+            try {
+                return FileSystems.getFileSystem(uri);
+            } catch(FileSystemNotFoundException e) {
+                // just ignore
+            }
+
+            final DefaultSessionFactory sessionFactory = options.getSessionFactory();
+
             Map<String, Object> environment = new HashMap<>();
-            environment.put( "defaultSessionFactory", defaultSessionFactory );
+            environment.put( "defaultSessionFactory", sessionFactory );
 
             filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
             return filesystem;
@@ -183,18 +178,18 @@ public class SSHConnector extends SingleHostConnector {
         return new UnixScriptProcessBuilder(scriptFile, this);
     }
 
-    ChannelSftp newSftpChannel() throws JSchException, FileSystemException {
+    ChannelSftp newSftpChannel() throws JSchException, IOException {
         return (ChannelSftp) getSession().openChannel("sftp");
     }
 
-    ChannelExec newExecChannel() throws JSchException, FileSystemException {
+    ChannelExec newExecChannel() throws JSchException, IOException {
         return (ChannelExec) getSession().openChannel("exec");
     }
 
     /**
      * Get the session (creates it if necessary)
      */
-    private Session getSession() throws JSchException, FileSystemException {
+    private Session getSession() throws JSchException, IOException {
         if (_session == null) {
             _session = sessions.get(this);
             if (_session == null) {
@@ -217,97 +212,17 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     /**
-     * An SSH process
-     */
-    public static class SSHProcess extends XPMProcess {
-
-        transient private ChannelExec channel;
-
-        private SSHProcess() {
-        }
-
-        public SSHProcess(SingleHostConnector connector, Job job, ChannelExec channel) {
-            super(connector, null, job);
-            this.channel = channel;
-            startWaitProcess();
-        }
-
-        @Override
-        public OutputStream getOutputStream() {
-            try {
-                return channel.getOutputStream();
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e);
-            }
-        }
-
-        @Override
-        public InputStream getInputStream() {
-            try {
-                return channel.getInputStream();
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e);
-            }
-        }
-
-        @Override
-        public InputStream getErrorStream() {
-            try {
-                return channel.getErrStream();
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e);
-            }
-        }
-
-        @Override
-        public int waitFor() throws InterruptedException {
-            if (channel != null)
-                return super.waitFor();
-
-            while (channel.isConnected()) {
-                Thread.sleep(1000);
-            }
-            return channel.getExitStatus();
-        }
-
-        @Override
-        public int exitValue() {
-            return channel.getExitStatus();
-        }
-
-        @Override
-        public void destroy() {
-            if (channel != null) {
-                channel.disconnect();
-                channel = null;
-            }
-        }
-
-        protected void finalize() throws Throwable {
-            destroy();
-            super.finalize();
-        }
-
-
-        @Override
-        public boolean isRunning() {
-            return channel.isConnected();
-        }
-    }
-
-    /**
      * an SSH session
      */
     class SSHSession {
         public Session session;
 
-        SSHSession() throws JSchException, FileSystemException {
+        SSHSession() throws JSchException, IOException {
             init();
         }
 
-        void init() throws JSchException, FileSystemException {
-//            session = createConnection(hostname, port, username.toCharArray(), null, options.getOptions());
-            throw new NotImplementedException();
+        void init() throws JSchException, IOException {
+            session = options.getSessionFactory().newSession();
         }
 
     }
@@ -386,7 +301,8 @@ public class SSHConnector extends SingleHostConnector {
 
 
                 String command = commandBuilder.toString();
-                LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, username, hostname);
+                LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, options.getUserName(),
+                        options.getHostName());
                 channel.setCommand(command);
                 channel.setPty(!detach());
 

@@ -138,7 +138,7 @@ public class ScriptSource {
 				start = 0;
 			}
 		}
-		//create the sparse array and populate the valid line numbers
+		//createSSHAgentIdentityRepository the sparse array and populate the valid line numbers
 		if(max == 0) {
 			this.lines = NO_LINES;
 		}

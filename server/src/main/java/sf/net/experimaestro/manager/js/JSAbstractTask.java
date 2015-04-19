@@ -56,7 +56,7 @@ public abstract class JSAbstractTask extends Task {
 //        // first of all we request out
 //        // DOM-implementation:
 //        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-//        // then we have to create document-loader:
+//        // then we have to createSSHAgentIdentityRepository document-loader:
 //        DocumentBuilder loader;
 //        try {
 //            loader = factory.newDocumentBuilder();

@@ -25,7 +25,7 @@ import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import java.util.List;
 
 /**
- * This class is used to create processes on a given host through a
+ * This class is used to createSSHAgentIdentityRepository processes on a given host through a
  * specific connection method (e.g. direct, ssh).
  * <p/>
  * This class borrows heavily from {@linkplain java.lang.ProcessBuilder},

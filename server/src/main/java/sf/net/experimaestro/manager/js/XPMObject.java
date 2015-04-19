@@ -559,6 +559,7 @@ public class XPMObject {
      * @param repositoryMode If true, runs in a separate environement
      * @throws Exception if something goes wrong
      */
+
     private XPMObject include(Path scriptPath, boolean repositoryMode) throws Exception {
 
         Path oldResourceLocator = currentScriptPath;
@@ -631,7 +632,7 @@ public class XPMObject {
     }
 
     /**
-     * Simple evaluation of shell commands (does not create a job)
+     * Simple evaluation of shell commands (does not createSSHAgentIdentityRepository a job)
      *
      * @return
      * @throws IOException
@@ -640,22 +641,29 @@ public class XPMObject {
     public String evaluate(Object jsargs, NativeObject options) throws Exception {
         Command command = JSCommand.getCommand(jsargs);
 
+        // Get the connector
+        final Connector commandConnector;
+        if (options != null && options.has("connector", options)) {
+            commandConnector = ((JSConnector) options.get("connector", options)).getConnector();
+        } else {
+            commandConnector = this.connector;
+        }
+
         // Run the process and captures the output
-        AbstractProcessBuilder builder = connector.getMainConnector().processBuilder();
+        AbstractProcessBuilder builder = commandConnector.getMainConnector().processBuilder();
 
-
-        try (CommandContext commandEnv = new CommandContext.Temporary(connector.getMainConnector())) {
+        try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector.getMainConnector())) {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {
-                    return ((Command) argument).toString(commandEnv);
+                    return argument.toString(commandEnv);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             })));
 
             if (options != null && options.has("stdout", options)) {
-                Path stdout = getPath(connector, unwrap(options.get("stdout", options)));
+                Path stdout = getPath(commandConnector, unwrap(options.get("stdout", options)));
                 builder.redirectOutput(AbstractCommandBuilder.Redirect.to(stdout));
             } else {
                 builder.redirectOutput(AbstractCommandBuilder.Redirect.PIPE);

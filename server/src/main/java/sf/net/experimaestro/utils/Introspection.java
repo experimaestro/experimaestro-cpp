@@ -219,7 +219,7 @@ public class Introspection {
                     // removes the .class extension
                     String classname = files[i].getName().substring(0,
                             files[i].getName().length() - 6);
-                    // Try to create an instance of the object
+                    // Try to createSSHAgentIdentityRepository an instance of the object
                     try {
                         classname = packageName + "." + classname;
                         final Class<?> oclass = cl.loadClass(classname);

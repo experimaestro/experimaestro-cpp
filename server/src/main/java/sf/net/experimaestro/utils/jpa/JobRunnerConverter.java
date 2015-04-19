@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package sf.net.experimaestro.utils.jpa;
 
 /*
  * This file is part of experimaestro.
@@ -18,8 +18,17 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.scheduler.JobRunner;
+
+import javax.persistence.AttributeConverter;
+
 /**
- * Created by bpiwowar on 24/10/14.
+ * A converter for JobRunner
  */
-public interface IdentityRepositoryFactory {
+public class JobRunnerConverter extends GsonConverter<JobRunner> implements AttributeConverter<JobRunner, String> {
+    public final static JobRunnerConverter INSTANCE = new JobRunnerConverter();
+
+    public JobRunnerConverter() {
+        super(JobRunner.class);
+    }
 }

@@ -134,7 +134,7 @@ abstract public class SingleHostConnector extends Connector {
         return Files.createTempFile(getTemporaryDirectory(), prefix, suffix);
     }
 
-    protected abstract Path getTemporaryDirectory() throws FileSystemException, IOException;
+    protected abstract Path getTemporaryDirectory() throws IOException;
 
     @Override
     public Path resolve(String path) throws IOException {
@@ -143,7 +143,7 @@ abstract public class SingleHostConnector extends Connector {
 
     /**
      * Creates a script builder
-     * @param scriptFile The path to the script file to create
+     * @param scriptFile The path to the script file to createSSHAgentIdentityRepository
      * @return A builder
      * @throws FileSystemException if an exception occurs while accessing the script file
      */

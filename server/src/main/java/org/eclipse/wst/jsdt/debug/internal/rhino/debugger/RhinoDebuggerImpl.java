@@ -164,7 +164,7 @@ public class RhinoDebuggerImpl implements Debugger, ContextFactory.Listener {
 	/**
 	 * Composes a {@link URI} representing the path to the source of the given script
 	 * 
-	 * @param script the script to create a {@link URI} for
+	 * @param script the script to createSSHAgentIdentityRepository a {@link URI} for
 	 * @param properties any special properties @see {@link #parseSourceProperties(String)}
 	 * @return the {@link URI} for the source or <code>null</code>
 	 */
@@ -193,7 +193,7 @@ public class RhinoDebuggerImpl implements Debugger, ContextFactory.Listener {
 				if (sourceFile.exists())
 					return sourceFile.toURI();
 				
-				//try to just create a URI from the name
+				//try to just createSSHAgentIdentityRepository a URI from the name
 				try {
 					return new URI(sourceName);
 				} catch(URISyntaxException e) {

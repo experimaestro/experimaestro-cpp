@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.gson;
+package sf.net.experimaestro.utils.jpa;
 
 /*
  * This file is part of experimaestro.

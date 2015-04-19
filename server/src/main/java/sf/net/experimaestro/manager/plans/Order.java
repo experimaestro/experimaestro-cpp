@@ -131,10 +131,10 @@ public class Order<T> implements Iterable<Set<T>> {
     }
 
     /**
-     * Add an operator to the last set to be sorted (and create a new one if asked)
+     * Add an operator to the last set to be sorted (and createSSHAgentIdentityRepository a new one if asked)
      *
      * @param t      The element
-     * @param newSet Whether to create a new set
+     * @param newSet Whether to createSSHAgentIdentityRepository a new set
      */
     public void add(T t, boolean newSet) {
         if (list.isEmpty() || newSet)

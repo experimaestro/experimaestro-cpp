@@ -428,6 +428,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
+            if (obj == null) {
+                return Undefined.instance;
+            }
+
             if (obj instanceof Path)
                 return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
             if (obj instanceof Node) {

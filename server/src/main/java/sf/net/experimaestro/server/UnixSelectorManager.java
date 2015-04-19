@@ -165,7 +165,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
     /**
      * <p>Factory method for {@link ManagedSelector}.</p>
      *
-     * @param id an identifier for the {@link ManagedSelector to create}
+     * @param id an identifier for the {@link ManagedSelector to createSSHAgentIdentityRepository}
      * @return a new {@link ManagedSelector}
      */
     protected ManagedSelector newSelector(int id) {
@@ -243,7 +243,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
     }
 
     /**
-     * <p>Factory method to create {@link EndPoint}.</p>
+     * <p>Factory method to createSSHAgentIdentityRepository {@link EndPoint}.</p>
      * <p>This method is invoked as a result of the registration of a channel via {@link #connect(SocketChannel, Object)}
      * or {@link #accept(jnr.unixsocket.UnixSocketChannel)}.</p>
      *
@@ -257,7 +257,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
     protected abstract UnixSelectChannelEndPoint newEndPoint(UnixSocketChannel channel, ManagedSelector selectSet, SelectionKey selectionKey) throws IOException;
 
     /**
-     * <p>Factory method to create {@link Connection}.</p>
+     * <p>Factory method to createSSHAgentIdentityRepository {@link Connection}.</p>
      *
      * @param channel    the channel associated to the connection
      * @param endpoint   the endpoint
