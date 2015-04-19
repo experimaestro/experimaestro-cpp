@@ -1467,7 +1467,8 @@ public class XPMObject {
             JavaTasksIntrospection.addToRepository(xpm.repository, connector, paths);
         }
 
-        @JSFunction
+        @JSFunction()
+        @JSHelp("Set the experiment for all future commands")
         public void set_experiment(String dotname, Path workdir) throws ExperimaestroCannotOverwrite {
             if (!xpm.simulate()) {
                 Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);

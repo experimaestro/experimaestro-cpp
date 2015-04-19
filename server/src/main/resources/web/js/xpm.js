@@ -124,13 +124,19 @@ var resource_action_callback = function() {
 
 // --- action: Get the details of a resource
 var resource_link_callback = function() {
+    var resourcePath = $(this).text();
+    var resourceID = $(this).parent().attr("name");
+
     $.jsonRPC.request('getResourceInformation', {
-        params: [ $(this).parent().attr("name") ],
+        params: [ resourceID ],
         success: function(r) {
+            $("#resource-detail-title").text("Resource #" + resourceID);
+            $("#resource-detail-path").text(resourcePath);
+
             // Set the content
-            $("#resource-detail").jstree(true).destroy();
-            $("#resource-detail").empty().append(json2html(r.result));
-            $("#resource-detail").jstree();
+            $("#resource-detail-content").jstree(true).destroy();
+            $("#resource-detail-content").empty().append(json2html(r.result));
+            $("#resource-detail-content").jstree();
 
             // Activate the detail tab
             $( "#tab-main" ).tabs( "option", "active", 1);
@@ -154,7 +160,7 @@ $().ready(function() {
 
     // Filter resource lists
     $(".xpm-resource-list").each(function() { listFilter($(this)); });
-    $("#resource-detail").jstree();
+    $("#resource-detail-content").jstree();
 
     // Tabs
     $( ".tab" ).tabs();

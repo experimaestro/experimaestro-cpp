@@ -37,11 +37,6 @@ public enum ResourceState {
     READY,
 
     /**
-     * Job is in locking mode (before running)
-     */
-    LOCKING,
-
-    /**
      * For a job only: The job is currently running
      */
     RUNNING,
@@ -71,7 +66,7 @@ public enum ResourceState {
      * States in which a resource can be notified
      */
     final static EnumSet<ResourceState> NOTIFIABLE_STATE
-            = EnumSet.complementOf(EnumSet.of(LOCKING, RUNNING, DONE, ERROR));
+            = EnumSet.complementOf(EnumSet.of(RUNNING, DONE, ERROR));
 
 
     /**
@@ -103,7 +98,7 @@ public enum ResourceState {
      * @return
      */
     public boolean isActive() {
-        return this == WAITING || this == LOCKING || this == RUNNING || this == READY;
+        return this == WAITING || this == RUNNING || this == READY;
     }
 
 

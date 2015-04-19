@@ -145,6 +145,8 @@ public abstract class Resource implements PostCommitListener {
     @Column(name = "version")
     protected long version;
 
+
+
     /**
      * Comparator on the database ID
      */
@@ -227,6 +229,7 @@ public abstract class Resource implements PostCommitListener {
     public String toString() {
         if (resourceID == null)
             return "R-";
+
         return format("R%d", resourceID);
     }
 

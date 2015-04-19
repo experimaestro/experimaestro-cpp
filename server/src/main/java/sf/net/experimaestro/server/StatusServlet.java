@@ -107,7 +107,9 @@ public class StatusServlet extends XPMServlet {
             }
             out.println("</div>");
 
-            out.println("<div id='resource-detail'></div>");
+            out.println("<div id='resource-detail'><h2 id=\"resource-detail-title\"></h2>" +
+                    "<div id=\"resource-detail-path\"></div>" +
+                    "<div id=\"resource-detail-content\"></div></div>");
             out.println("</div>"); // end of tab
 
             out.println("</body></html>");
