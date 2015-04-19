@@ -202,8 +202,8 @@ public class SSHOptions extends ConnectorOptions {
         public void connect( SocketFactory socketFactory, String host, int port, int timeout ) throws Exception {
             if (session == null || !session.isConnected()) {
                 session = sessionFactory.newSession();
+                session.connect();
             }
-            session.connect();
 
             channel = session.getStreamForwarder( host, port );
             inputStream = channel.getInputStream();
