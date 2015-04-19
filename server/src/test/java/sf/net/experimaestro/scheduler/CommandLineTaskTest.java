@@ -45,7 +45,7 @@ public class CommandLineTaskTest {
         directory.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void test() throws Exception {
         String workingDirectory = new String(directory.toString());
         Map<String, String> environment = new HashMap<>();
