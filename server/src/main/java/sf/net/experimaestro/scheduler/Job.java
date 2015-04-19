@@ -43,8 +43,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 
-import static java.lang.String.format;
-
 /**
  * A job is a resource that can be run - that starts and ends (which
  * differentiate it with a server) and generate data
@@ -82,15 +80,20 @@ public class Job extends Resource {
      * Our job monitor (null when there is no attached process)
      */
     @Basic(fetch = FetchType.LAZY)
+    @OneToOne(optional = true, cascade = CascadeType.ALL, orphanRemoval = true)
     XPMProcess process;
 
-    /** The process */
+    /**
+     * The process
+     */
 
-    @Column(name="jobRunner", columnDefinition="VARCHAR(128000)")
+    @Column(name = "jobRunner", columnDefinition = "VARCHAR(128000)")
     @Basic(fetch = FetchType.LAZY)
     String jobRunnerString;
 
-    /** The unserialized job runner */
+    /**
+     * The unserialized job runner
+     */
     transient private JobRunner jobRunner;
 
     /**
@@ -420,7 +423,7 @@ public class Job extends Resource {
                     em.refresh(dependency);
                     dependency.unlock(em);
 
-                } catch(Throwable e) {
+                } catch (Throwable e) {
                     LOGGER.error(e, "Error while unlocking dependency %s", dependency);
                 }
             }
@@ -669,7 +672,6 @@ public class Job extends Resource {
         // TODO: assert object is nothing
         return new ReadWriteDependency(this);
     }
-
 
 
     @Override

@@ -64,7 +64,7 @@ public abstract class XPMProcess {
     /**
      * The job to notify when finished with this
      */
-    @OneToOne(fetch= FetchType.LAZY, mappedBy = "process")
+    @OneToOne(fetch= FetchType.LAZY, optional = false, mappedBy = "process")
     protected Job job;
 
     /**

@@ -210,7 +210,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
     @JSFunction("get_path")
     @JSHelp("Get the file path, ignoring the file scheme")
     public String get_path() {
-        return path.toUri().toString();
+        return path.toUri().getPath();
     }
 
     static class MyPrintWriter extends PrintWriter {

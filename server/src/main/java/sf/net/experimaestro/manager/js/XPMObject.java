@@ -900,13 +900,24 @@ public class XPMObject {
                 // Add dependencies
                 dependencies.forEach(job::addDependency);
 
+                // Register within an experimentId
+                if (experimentId != null) {
+                    TaskReference reference = taskContext.getTaskReference();
+                    reference.add(job);
+                    em.persist(reference);
+                }
+
                 final Resource old = Resource.getByLocator(transaction.em(), job.getPath());
+
+                // Replace old if necessary
                 if (old != null) {
                     if (!old.canBeReplaced()) {
                         taskLogger.info("Cannot overwrite task %s [%d]", old.getPath(), old.getId());
+                        return new JSResource(old);
                     } else {
                         taskLogger.info("Replacing resource %s [%d]", old.getPath(), old.getId());
                         old.lock(transaction, true);
+                        em.refresh(old);
                         old.replaceBy(job);
                         job = (Job) old;
                     }
@@ -915,12 +926,6 @@ public class XPMObject {
                 // Store in scheduler
                 job.save(transaction);
 
-                // Register within an experimentId
-                if (experimentId != null) {
-                    TaskReference reference = taskContext.getTaskReference();
-                    reference.add(job);
-                    em.persist(reference);
-                }
 
                 transaction.commit();
             }

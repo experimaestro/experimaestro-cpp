@@ -263,7 +263,7 @@ final public class Scheduler {
     public void notify(Message message) {
         for (Listener listener : listeners) {
             listener.notify(message);
-    }
+        }
     }
 
     protected boolean isStopping() {
