@@ -772,7 +772,6 @@ public class XPMObject {
 
             job = new Job(connector, (Path) path);
             CommandLineTask task = new CommandLineTask(commands);
-            job.setJobRunner(task);
             if (submittedJobs.containsKey(path)) {
                 getRootLogger().info("Not submitting %s [duplicate]", path);
                 if (simulate()) {
@@ -885,6 +884,7 @@ public class XPMObject {
 
 
             job.setState(ResourceState.WAITING);
+            job.setJobRunner(task);
             if (simulate()) {
                 PrintWriter pw = new LoggerPrintWriter(getRootLogger(), Level.INFO);
                 pw.format("[SIMULATE] Starting job: %s%n", task.toString());

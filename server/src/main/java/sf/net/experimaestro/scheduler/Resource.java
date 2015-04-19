@@ -654,9 +654,13 @@ public abstract class Resource implements PostCommitListener {
     public void postCommit(Transaction transaction) {
         if (delete) {
             LOGGER.debug("Resource %s removed", this, version);
+            Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
             clean();
         } else {
             LOGGER.debug("Resource %s stored with version=%s", this, version);
+            if (oldState != state) {
+                Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+            }
             stored();
         }
     }

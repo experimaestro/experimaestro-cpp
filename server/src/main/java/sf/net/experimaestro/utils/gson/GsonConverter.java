@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils.gson;
 
 /*
  * This file is part of experimaestro.
@@ -54,7 +54,7 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
 
     static {
         builder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
-        builder.registerTypeAdapter(Path.class, new JsonPathAdapter());
+        builder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
         builder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
     }

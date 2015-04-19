@@ -261,8 +261,9 @@ final public class Scheduler {
      * Notify
      */
     public void notify(Message message) {
-        for (Listener listener : listeners)
+        for (Listener listener : listeners) {
             listener.notify(message);
+    }
     }
 
     protected boolean isStopping() {

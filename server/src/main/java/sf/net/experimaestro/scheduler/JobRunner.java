@@ -43,7 +43,7 @@ public abstract class JobRunner {
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */
-    public abstract XPMProcess prepareJob(ArrayList<Lock> locks) throws Exception;
+    public abstract XPMProcess start(ArrayList<Lock> locks) throws Exception;
 
     /**
      * Returns the output file

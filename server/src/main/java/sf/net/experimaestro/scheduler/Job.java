@@ -29,6 +29,7 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
+import sf.net.experimaestro.utils.gson.JobRunnerConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;
@@ -80,13 +81,16 @@ public class Job extends Resource {
     /**
      * Our job monitor (null when there is no attached process)
      */
-    @OneToOne(fetch = FetchType.LAZY, optional = true, cascade = CascadeType.ALL)
-    @JoinColumn(name = "process")
+    @Basic(fetch = FetchType.LAZY)
     XPMProcess process;
 
+    /** The process */
+
     @Column(name="jobRunner", columnDefinition="VARCHAR(128000)")
+    @Basic(fetch = FetchType.LAZY)
     String jobRunnerString;
 
+    /** The unserialized job runner */
     transient private JobRunner jobRunner;
 
     /**
@@ -175,7 +179,7 @@ public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-        process = getJobRunner().prepareJob(locks);
+        process = getJobRunner().start(locks);
         return process;
     }
 
@@ -342,7 +346,7 @@ public class Job extends Resource {
                 final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
 
                 // Notify job
-                dependencyChanged(depMessage, em, t);
+                dependencyChanged(depMessage);
                 t.boundary();
 
                 LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]",
@@ -361,10 +365,8 @@ public class Job extends Resource {
      * It performs the changes in the object but to not save it.
      *
      * @param message The message
-     * @param em      The current entity manager
-     * @param t       The current transaction
      */
-    private void dependencyChanged(DependencyChangedMessage message, EntityManager em, Transaction t) {
+    private void dependencyChanged(DependencyChangedMessage message) {
         LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);

@@ -71,10 +71,14 @@ public abstract class XPMServlet extends HttpServlet {
         out.format("<link type=\"text/css\" href=\"/css/%s/jquery-ui-1.10.2.custom.min.css\" rel=\"stylesheet\"></link>%n",
                 serverSettings.style.toString().toLowerCase()
         );
+
+        out.format("<link type=\"text/css\" href=\"/js/jstree/themes/default/style.min.css\" rel=\"stylesheet\"></link>%n");
+
         out.format("<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/css/style.css\">\n");
         out.format("<script type=\"text/javascript\" src=\"/js/jquery-1.9.1.min.js\"></script>\n");
         out.format("<script type=\"text/javascript\" src=\"/js/jquery-ui-1.10.2.custom.min.js\"></script>\n");
         out.format("<script type=\"text/javascript\" src=\"/js/jquery.jsonrpc.js\"></script>\n");
+        out.format("<script type=\"text/javascript\" src=\"/js/jstree/jstree.min.js\"></script>\n");
 
         out.format("<script type=\"text/javascript\" src=\"/js/jquery.ba-hashchange.min.js\"></script>\n");
         out.format("<script type=\"text/javascript\" src='/js/noty/jquery.noty.js'></script>%n");

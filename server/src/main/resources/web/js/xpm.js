@@ -94,7 +94,7 @@ var resource_action_callback = function() {
             success: function(r) {
                 noty({text: "Succesful restart", type: 'success', timeout: 5000});
             },
-            error: jsonrpc_error,
+            error: jsonrpc_error
         });
     } else if (this.name == "delete") {
         var rsrcid = $(this).parent().attr("name");
@@ -128,7 +128,9 @@ var resource_link_callback = function() {
         params: [ $(this).parent().attr("name") ],
         success: function(r) {
             // Set the content
+            $("#resource-detail").jstree(true).destroy();
             $("#resource-detail").empty().append(json2html(r.result));
+            $("#resource-detail").jstree();
 
             // Activate the detail tab
             $( "#tab-main" ).tabs( "option", "active", 1);
@@ -152,6 +154,7 @@ $().ready(function() {
 
     // Filter resource lists
     $(".xpm-resource-list").each(function() { listFilter($(this)); });
+    $("#resource-detail").jstree();
 
     // Tabs
     $( ".tab" ).tabs();

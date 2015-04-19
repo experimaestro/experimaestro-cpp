@@ -19,7 +19,10 @@ package sf.net.experimaestro.connectors;
  */
 
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.EndOfJobMessage;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;

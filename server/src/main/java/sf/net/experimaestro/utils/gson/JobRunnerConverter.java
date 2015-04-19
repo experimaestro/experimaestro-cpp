@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils.gson;
 
 /*
  * This file is part of experimaestro.
@@ -18,13 +18,15 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.scheduler.JobRunner;
+
 import javax.persistence.AttributeConverter;
 
 /**
  * A convrter for JobRunner
  */
 public class JobRunnerConverter extends GsonConverter<JobRunner> implements AttributeConverter<JobRunner, String> {
-    final static JobRunnerConverter INSTANCE = new JobRunnerConverter();
+    public final static JobRunnerConverter INSTANCE = new JobRunnerConverter();
 
     public JobRunnerConverter() {
         super(JobRunner.class);
