@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.experiments;
  */
 
 import java.nio.file.Path;
+
+import com.sun.istack.internal.NotNull;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.jpa.PathConverter;
@@ -31,35 +33,50 @@ import java.util.Collection;
  * An experiment
  */
 @Entity
-@Table(name = "experiments")
 @Exposed
+@Table(name = "experiments", uniqueConstraints = {@UniqueConstraint(columnNames = {"identifier", "timestamp"})})
 public class Experiment {
-    /** Experiment taskId */
+    /**
+     * Experiment unique identifier
+     */
     @Id
     long id;
 
-    /** Tasks */
+    /**
+     * Tasks
+     */
     @ManyToMany(fetch = FetchType.LAZY)
     Collection<TaskReference> tasks = new ArrayList<>();
 
-    /** Working directory */
+    /**
+     * Working directory
+     */
     @SuppressWarnings("JpaAttributeTypeInspection")
     Path workingDirectory;
 
-    /** Timestamp */
+    /**
+     * Timestamp
+     */
     private long timestamp;
 
-    /** Identifier */
+    /**
+     * String identifier
+     */
+    @NotNull
     String identifier;
 
-    /** Scheduler */
+    /**
+     * Scheduler
+     */
     transient private Scheduler scheduler;
 
-    protected Experiment() {}
+    protected Experiment() {
+    }
 
     /**
      * New task
-     * @param identifier The experiment taskId
+     *
+     * @param identifier       The experiment taskId
      * @param workingDirectory The working directory for this experiment
      */
     public Experiment(String identifier, long timestamp, Path workingDirectory) {
@@ -74,5 +91,13 @@ public class Experiment {
 
     public long getId() {
         return id;
+    }
+
+    public Object getName() {
+        return identifier;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 }

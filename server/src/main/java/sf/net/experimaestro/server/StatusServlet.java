@@ -18,7 +18,10 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.manager.experiments.Experiment;
+import sf.net.experimaestro.manager.experiments.Experiment_;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
@@ -28,6 +31,11 @@ import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.Metamodel;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -35,6 +43,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 /**
  * Gives the current task status
@@ -43,6 +52,7 @@ import java.util.EnumSet;
  */
 public class StatusServlet extends XPMServlet {
     public static final String RESOURCE_PATH = "/resource/";
+    public static final String EXPERIMENTS_PATH= "/experiments";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -73,7 +83,7 @@ public class StatusServlet extends XPMServlet {
                     "<p><span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>\n" +
                     "</div>\n");
 
-            out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li></ul>");
+            out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li><li><a href='/status/experiments'>Experiments</a></li></ul>");
             out.println("<div id=\"resources\" class=\"tab\"><ul>");
             for (ResourceState state : values) {
                 out.format("<li><a href=\"#state-%s\"><span>%s</span> (<span id=\"state-%s-count\">0</span>)</a></li>", state, state, state);
@@ -113,6 +123,24 @@ public class StatusServlet extends XPMServlet {
             out.println("</div>"); // end of tab
 
             out.println("</body></html>");
+            return;
+        }
+
+        if (localPath.equals(EXPERIMENTS_PATH)) {
+            final PrintWriter out = startHTMLResponse(response);
+            Transaction.run(em -> {
+                final CriteriaBuilder cb = em.getCriteriaBuilder();
+                final CriteriaQuery<Experiment> cq = cb.createQuery(Experiment.class);
+                final Root<Experiment> experiment = cq.from(Experiment.class);
+
+                cq.orderBy(cb.desc(experiment.get(Experiment_.timestamp)));
+                final List<Experiment> experiments = em.createQuery(cq).getResultList();
+
+                for(Experiment o: experiments) {
+                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
+                }
+            });
+            out.print("<div>hello world</div>");
             return;
         }
 

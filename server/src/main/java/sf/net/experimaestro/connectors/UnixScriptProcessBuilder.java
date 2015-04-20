@@ -43,6 +43,7 @@ import static sf.net.experimaestro.scheduler.Command.SubCommand;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
+    private String shPath = "/bin/bash";
 
     public static final String SHELL_SPECIAL = " \"'<>\n";
     public static final String QUOTED_SPECIAL = "\"$";
@@ -50,15 +51,29 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      * Lock files to delete
      */
     ArrayList<String> lockFiles = new ArrayList<>();
-    private String shPath = "/bin/bash";
+
+
     /**
      * File where the exit code is written
      */
     private String exitCodePath;
+
     /**
      * File where the exit code is written
      */
     private String donePath;
+
+    /**
+     * Commands to be executed to notify the end of the job
+     */
+    Commands endOfJobCommands;
+
+    /**
+     * Commands
+     * @param file
+     * @param connector
+     * @throws IOException
+     */
 
     public UnixScriptProcessBuilder(Path file, SingleHostConnector connector) throws IOException {
         super(connector, file, null);
@@ -66,6 +81,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws IOException {
         super(connector, scriptFile, processBuilder);
+    }
+
+    /** Sets end of job commands */
+    public void endOfJobCommands(Commands commands) {
+        this.endOfJobCommands = commands;
     }
 
     /**
