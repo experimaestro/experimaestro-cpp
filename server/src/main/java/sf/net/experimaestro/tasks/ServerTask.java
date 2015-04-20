@@ -32,11 +32,11 @@ import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
-import org.eclipse.jetty.util.thread.ThreadPool;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -124,12 +124,19 @@ public class ServerTask extends AbstractTask {
         }
 
 
-        ServletContextHandler context = new ServletContextHandler(webServer, "/");
+        HandlerList collection = new HandlerList();
+
+        // --- Non secure context
+
+        ServletContextHandler nonSecureContext = new ServletContextHandler(collection, "/");
+        nonSecureContext.getServletHandler().setEnsureDefaultServlet(false); // no 404 default page
+        nonSecureContext.addServlet(new ServletHolder(new NotificationServlet(serverSettings, scheduler)), "/notification/*");
+
+        // --- Sets the password on all pages
+
+        ServletContextHandler context = new ServletContextHandler(collection, "/");
         ConstraintSecurityHandler csh = getSecurityHandler();
-
-
         context.setSecurityHandler(csh);
-
 
         // --- Add the JSON RPC servlet
 
@@ -138,14 +145,11 @@ public class ServerTask extends AbstractTask {
         final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
         context.addServlet(jsonServletHolder, "/json-rpc");
 
-
         // --- Add the web socket servlet
-        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories);
-//        webSocketServlet.init(new XPMXMLRpcServlet.Config(xmlRpcServlet));
 
+        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories);
         final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
         context.addServlet(webSocketServletHolder, "/web-socket");
-
 
         // --- Add the status servlet
 
@@ -153,33 +157,31 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the status servlet
 
-        context.addServlet(new ServletHolder(new TasksServlet(serverSettings, repositories,
-                scheduler)), "/tasks/*");
+        final ServletHolder taskServlet = new ServletHolder(new TasksServlet(serverSettings, repositories,
+                scheduler));
+        context.addServlet(taskServlet, "/tasks/*");
 
 
         // --- Add the JS Help servlet
 
         context.addServlet(new ServletHolder(new JSHelpServlet(serverSettings)), "/jshelp/*");
 
-
         // --- Add the default servlet
 
         context.addServlet(new ServletHolder(new ContentServlet(serverSettings)), "/*");
-
 
         // final URL warUrl =
         // this.getClass().getClassLoader().getResource("web");
         // final String warUrlString = warUrl.toExternalForm();
         // server.setHandler(new WebAppContext(warUrlString, "/"));
 
-        // --- start the server
+        // --- Sets the main handler
+        webServer.setHandler(collection);
+
+        // --- start the server and wait
 
         webServer.start();
-        ThreadPool threadPool = webServer.getThreadPool();
-
-
-        // --- Wait for servers to close
-        threadPool.join();
+        webServer.join();
 
 
         LOGGER.info("Servers are stopped. Clean exit!");

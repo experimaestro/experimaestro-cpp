@@ -734,4 +734,8 @@ public class Job extends Resource {
         }
         return jobRunner;
     }
+
+    public XPMProcess getProcess() {
+        return process;
+    }
 }

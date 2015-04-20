@@ -33,6 +33,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.util.*;
 import java.util.concurrent.*;
@@ -109,7 +110,7 @@ final public class Scheduler {
      *
      * @param baseDirectory The directory where the XPM database will be stored
      */
-    public Scheduler(File baseDirectory) {
+    public Scheduler(File baseDirectory) throws IOException {
         if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
@@ -145,7 +146,6 @@ final public class Scheduler {
 
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
-
 
         // Create reused criteria queries
         CriteriaBuilder builder = entityManagerFactory.getCriteriaBuilder();
@@ -208,6 +208,14 @@ final public class Scheduler {
         return get().entityManagerFactory.createEntityManager();
     }
 
+    /**
+     * Check if the process has ended at a given rate
+     *
+     * @param process
+     * @param rate
+     * @param units
+     * @return
+     */
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
             try {

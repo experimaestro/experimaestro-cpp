@@ -114,7 +114,6 @@ public abstract class XPMProcess {
     /**
      * Set up a notifiction using {@linkplain java.lang.Process#waitFor()}.
      */
-
     protected void startWaitProcess() {
         LOGGER.debug("XPM Process %s constructed", connector);
 
