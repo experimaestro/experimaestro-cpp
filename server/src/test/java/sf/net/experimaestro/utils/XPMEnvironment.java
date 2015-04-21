@@ -98,6 +98,9 @@ public class XPMEnvironment {
                 serverConfiguration.setDelimiterParsingDisabled(true);
                 serverConfiguration.setProperty("passwords." + testUser, format("%s, user", testPassword));
 
+                // Just to avoid reading the default configuration file
+                serverConfiguration.setFile(mainDirectory);
+
                 server.setConfiguration(serverConfiguration);
 
                 server.wait(false); // No need to wait

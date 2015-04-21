@@ -24,7 +24,6 @@ import com.thetransactioncompany.jsonrpc2.client.ConnectionConfigurator;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 import junit.framework.Assert;
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;

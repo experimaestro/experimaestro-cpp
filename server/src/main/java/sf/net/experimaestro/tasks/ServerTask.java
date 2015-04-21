@@ -83,7 +83,7 @@ public class ServerTask extends AbstractTask {
      * Server thread
      */
     public int execute() throws Throwable {
-        if (configuration == null) {
+        if (configuration == null || configuration.getFile() == null) {
             final File file = new File(new File(System.getProperty("user.home"), ".experimaestro"), "settings.ini");
             LOGGER.info("Using the default configuration file " + file);
             configuration = new HierarchicalINIConfiguration(file);
