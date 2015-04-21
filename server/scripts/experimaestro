@@ -17,6 +17,8 @@ import json
 import argcomplete
 import socket
 import requests
+import signal
+import errno
 
 # --- Set some variables
 
@@ -27,8 +29,6 @@ xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file
 
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
-
-logging.basicConfig(level=logging.INFO)
 
 class JsonRPCMethod:
     def __init__(self, url, name, jsonid):
@@ -119,11 +119,39 @@ def start_jar(args, jarargs):
 
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
+        logging.debug("this is a debug message")
         json_server = conf.getJsonServer()
-        while not ping(json_server):
+        logging.debug("info after getting json server")
+        TIMEOUT = 30 # sec
+        started_at = time.time()
+        nattempt = 0
+        last_error = None
+        while True:
+            try:
+                nattempt += 1
+                logging.debug("%d attempt to ping server...", nattempt)
+                rc = raw_ping(json_server)
+            except requests.exceptions.ConnectionError as e:
+                # This test is kind of dirty but for some reasons the
+                # 'requests' module does not use the Built-in ConnectionError
+                # and the 'errno' attribute of the exception always returns
+                # None.
+                if e.args[0].args[1].errno != errno.ECONNREFUSED:
+                    logging.error("Ping failed: %s", e)
+                last_error = e
+            else:
+                if rc:
+                    logging.info("Server started...")
+                    break
+            if time.time() - started_at >= TIMEOUT: # sec
+                logging.fatal("Timeout after %ds pinging the server",
+                              TIMEOUT)
+                if last_error is not None:
+                    logging.fatal("Last error was: %s", last_error)
+                logging.debug("Send SIGTERM to process group %d", pid)
+                os.kill(-pid, signal.SIGTERM)
+                break
             time.sleep(1)
-
-        logging.info("Server started...")
         return 0
 
     daemonlib.daemonize(start_server, wait_server,
@@ -285,10 +313,12 @@ class Configuration():
 
 # --- Server
 
+def raw_ping(json_server):
+    return json_server.ping({}) == "pong"
 
 def ping(json_server):
     try:
-        return json_server.ping({}) == "pong"
+        return raw_ping(json_server)
     except socket.error as e:
         return False
 
@@ -515,6 +545,7 @@ argcomplete.autocomplete(args)
 numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
     raise ValueError('Invalid log level: %s' % args.loglevel)
+logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
 if args.command is None:
     parser.print_help()
