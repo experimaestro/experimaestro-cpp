@@ -147,8 +147,13 @@ public class TokenResource extends Resource {
      * @return
      */
     synchronized void unlock() {
-        --usedTokens;
-        LOGGER.debug("Releasing one token (%s/%s) [version %d]", usedTokens, limit, version);
+        if (usedTokens >= 0) {
+            --usedTokens;
+            LOGGER.debug("Releasing one token (%s/%s) [version %d]", usedTokens, limit, version);
+        } else {
+            LOGGER.warn("Attempt to release non existent token (%d/%d) [version %d]", usedTokens, limit, version);
+            usedTokens = 0;
+        }
     }
 
     public void increaseUsedTokens() {
