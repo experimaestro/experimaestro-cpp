@@ -45,7 +45,6 @@ import java.util.Stack;
  * Json-RPC2 servlet
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 28/3/13
  */
 public class JsonRPCServlet extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
@@ -113,7 +112,7 @@ public class JsonRPCServlet extends HttpServlet {
             ServletOutputStream outputStream = resp.getOutputStream();
             final PrintWriter pw = new PrintWriter(outputStream);
 
-            resp.setContentType("text/json");
+            resp.setContentType("application/json");
             resp.setStatus(HttpServletResponse.SC_OK);
 
             jsonRPCMethods = new JsonRPCMethods(server, scheduler, repository, new JSONRPCRequest() {

@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
 import org.testng.annotations.*;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
@@ -57,7 +56,7 @@ public class JavaScriptChecker extends XPMEnvironment {
     private Scriptable scope;
 
     public JavaScriptChecker(Path file) throws
-            IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+            Throwable {
         this.file = file;
         this.content = getFileContent(file);
 
@@ -69,7 +68,7 @@ public class JavaScriptChecker extends XPMEnvironment {
         scope = XPMContext.newScope();
 
         xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
-                repository, getScheduler(), null, new Cleaner(), null, null);
+                repository, prepare().getScheduler(), null, new Cleaner(), null, null);
 
         // Adds some special functions available for tests only
         JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});

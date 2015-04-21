@@ -50,7 +50,7 @@ public class ScriptTest  {
      * @throws IOException
      */
     @Factory
-    public Object[] jsFactories() throws IOException, URISyntaxException {
+    public Object[] jsFactories() throws Throwable {
         final XPMEnvironment environment = new XPMEnvironment();
 
         final String testFile = System.getProperty(JS_TEST_FILE_KEY);

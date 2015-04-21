@@ -57,14 +57,33 @@ public class ServerTask extends AbstractTask {
     public static final String KEY_SERVER_SOCKET = "server.socket";
     public static final String XPM_REALM = "xpm-realm";
     final static Logger LOGGER = Logger.getLogger();
+    public static final String JSON_RPC_PATH = "/json-rpc";
+
     @ArgumentClass(prefix = "conf", help = "Configuration file for the XML RPC call")
     HierarchicalINIConfiguration configuration;
+
+    /** The scheduler */
+    private Scheduler scheduler;
+
+    /** Should we wait ? */
+    boolean wait = true;
+
+    /** The port the web server was started */
+    private int port;
+
+    public void setConfiguration(HierarchicalINIConfiguration configuration) {
+        this.configuration = configuration;
+    }
+
+    public void wait(boolean wait) {
+        this.wait = wait;
+    }
 
     /**
      * Server thread
      */
     public int execute() throws Throwable {
-        if (configuration == null || configuration.getFile() == null) {
+        if (configuration == null) {
             final File file = new File(new File(System.getProperty("user.home"), ".experimaestro"), "settings.ini");
             LOGGER.info("Using the default configuration file " + file);
             configuration = new HierarchicalINIConfiguration(file);
@@ -75,7 +94,7 @@ public class ServerTask extends AbstractTask {
         ServerSettings serverSettings = new ServerSettings(configuration.subset("server"));
 
         // --- Get the port
-        int port = configuration.getInt("server.port", 8080);
+        port = configuration.getInt("server.port", 8080);
         LOGGER.info("Starting server on port %d", port);
 
         // --- Set up the task manager
@@ -84,7 +103,7 @@ public class ServerTask extends AbstractTask {
             throw new IllegalArgumentException("No 'database' in 'server' section of the configuration file");
 
         File taskmanagerDirectory = new File(property);
-        final Scheduler scheduler = new Scheduler(taskmanagerDirectory);
+        scheduler = new Scheduler(taskmanagerDirectory);
 
         // Early initialization to detect errors
         XPMContext.init();
@@ -143,7 +162,7 @@ public class ServerTask extends AbstractTask {
         final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, scheduler, repositories);
         JsonRPCMethods.initMethods();
         final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
-        context.addServlet(jsonServletHolder, "/json-rpc");
+        context.addServlet(jsonServletHolder, JSON_RPC_PATH);
 
         // --- Add the web socket servlet
 
@@ -181,7 +200,10 @@ public class ServerTask extends AbstractTask {
         // --- start the server and wait
 
         webServer.start();
-        webServer.join();
+
+        if (wait) {
+            webServer.join();
+        }
 
 
         LOGGER.info("Servers are stopped. Clean exit!");
@@ -209,8 +231,9 @@ public class ServerTask extends AbstractTask {
             File passwordFile = new File(passwordProperty);
             loginService = new HashLoginService(XPM_REALM, passwordFile
                     .getAbsolutePath());
-        } else
+        } else {
             loginService = new HashLoginService(XPM_REALM);
+        }
 
         // Read passwords
         final SubnodeConfiguration passwords = configuration.getSection("passwords");
@@ -234,4 +257,11 @@ public class ServerTask extends AbstractTask {
     }
 
 
+    public Scheduler getScheduler() {
+        return scheduler;
+    }
+
+    public int getPort() {
+        return port;
+    }
 }

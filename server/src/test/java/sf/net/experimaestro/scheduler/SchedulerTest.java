@@ -47,8 +47,8 @@ public class SchedulerTest extends XPMEnvironment {
     final static private Logger LOGGER = Logger.getLogger();
 
     @BeforeSuite
-    public static void setup() throws IOException {
-        getScheduler();
+    public static void setup() throws Throwable {
+        prepare();
     }
 
     @DataProvider()

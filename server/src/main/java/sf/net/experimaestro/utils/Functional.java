@@ -56,7 +56,7 @@ public class Functional {
     }
 
     public interface ExceptionalFunction<R, T> {
-        T apply(R r) throws Exception;
+        T apply(R r) throws Throwable;
     }
 
     /** Propagate exceptions by wrapping them into a runtime exception */
@@ -66,7 +66,7 @@ public class Functional {
                 return function.apply(r);
             } catch (RuntimeException e) {
                 throw e;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 throw new WrappedException(e);
             }
         };

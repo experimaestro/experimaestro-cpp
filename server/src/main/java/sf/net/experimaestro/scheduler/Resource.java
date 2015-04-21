@@ -50,7 +50,7 @@ import static java.lang.String.format;
 @DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Table(name = "resources", indexes = @Index(columnList = "path"))
-public abstract class Resource implements PostCommitListener {
+public class Resource implements PostCommitListener {
     /**
      * Extension for the lock file
      */
@@ -297,7 +297,6 @@ public abstract class Resource implements PostCommitListener {
     public void notify(Transaction t, EntityManager em, Message message) {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
-                resourceID = null;
                 break;
         }
     }
@@ -372,9 +371,11 @@ public abstract class Resource implements PostCommitListener {
      * Creates a new dependency on this resource
      *
      * @param type The parameters for the dependency
-     * @return a new dependency
+     * @return a new dependency or null if this object does not need to be locked
      */
-    public abstract Dependency createDependency(Object type);
+    public Dependency createDependency(Object type) {
+        return null;
+    }
 
     /**
      * Returns the main output file for this resource
@@ -486,11 +487,14 @@ public abstract class Resource implements PostCommitListener {
 
         // Remove
         Transaction.run((em, t) -> {
-            em.remove(this);
-            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
+            Resource ourselves = em.find(Resource.class, getId());
+            em.remove(ourselves);
+            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, ourselves);
             this.notify(t, em, message);
             notify(t, em, message);
+
         });
+
 
         this.delete = true;
     }

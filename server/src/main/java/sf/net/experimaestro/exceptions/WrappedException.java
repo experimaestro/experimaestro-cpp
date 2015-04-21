@@ -22,7 +22,7 @@ package sf.net.experimaestro.exceptions;
  * A wrapped exception
  */
 public class WrappedException extends XPMRuntimeException {
-    public WrappedException(Exception e) {
+    public WrappedException(Throwable e) {
         super(e);
     }
 }

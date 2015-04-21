@@ -31,7 +31,7 @@ public abstract class JSONRPCRequest {
 
     public void endMessage(String requestID, Object message) throws IOException {
         JSONObject answer = getJSONPartialAnswer(requestID);
-        answer.put("error", null);
+//        answer.put("error", null);
         answer.put("result", message);
 
         sendJSONString(answer.toJSONString());

@@ -85,17 +85,17 @@ public class WaitingJob extends Job {
 
         final ResourceState state = getState();
 
-        LOGGER.info("Stored %s with state %s", this, state);
+        LOGGER.debug("Stored %s with state %s", this, state);
 
         if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
             status().counter.del();
             final int count = status().counter.getCount();
-            LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
+            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
                     this, oldState, state, count + 1, count);
         } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
             status().counter.add();
             final int count = status().counter.getCount();
-            LOGGER.info("Job %s went from %s to %s [counter = %d to %d]",
+            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
                     this, oldState, state, count - 1, count);
         }
 

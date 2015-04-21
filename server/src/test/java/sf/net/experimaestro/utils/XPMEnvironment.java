@@ -18,15 +18,21 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.configuration.HierarchicalINIConfiguration;
+import org.apache.commons.lang.RandomStringUtils;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeSuite;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.tasks.ServerTask;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+
+import static java.lang.String.format;
+import static sf.net.experimaestro.manager.js.SSHServer.findFreeLocalPort;
 
 /**
  * Ensures that only one scheduler is opened throughout the tests
@@ -38,7 +44,9 @@ public class XPMEnvironment {
 
     static final private Integer token = 0;
 
-    private static Scheduler scheduler;
+    private static ServerTask server;
+    public static String testUser = "test";
+    public static String testPassword;
 
     private static TemporaryDirectory directory;
 
@@ -71,20 +79,43 @@ public class XPMEnvironment {
         return directory;
     }
 
-    public static Scheduler getScheduler() throws IOException {
+    public static ServerTask prepare() throws Throwable {
         synchronized (token) {
-            if (scheduler == null) {
+            if (server == null) {
                 LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
-                final File dbFile = new File(getDirectory().getFile(), "db");
+                final File mainDirectory = getDirectory().getFile();
+
+                final File dbFile = new File(mainDirectory, "db");
                 dbFile.mkdir();
-                scheduler = new Scheduler(dbFile);
+
+                server = new ServerTask();
+
+                HierarchicalINIConfiguration serverConfiguration = new HierarchicalINIConfiguration();
+                serverConfiguration.setProperty("server.database", dbFile.getAbsolutePath());
+                serverConfiguration.setProperty("server.name", "test");
+                serverConfiguration.setProperty("server.port", findFreeLocalPort());
+                testPassword = RandomStringUtils.randomAlphanumeric(10);
+                serverConfiguration.setDelimiterParsingDisabled(true);
+                serverConfiguration.setProperty("passwords." + testUser, format("%s, user", testPassword));
+
+                server.setConfiguration(serverConfiguration);
+
+                server.wait(false); // No need to wait
+                server.execute();
+
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    LOGGER.info("Stopping scheduler");
-                    scheduler.close();
-                    LOGGER.info("Scheduler stopped");
+                    LOGGER.info("Stopping server");
+                    try {
+                        server.close();
+                    } catch (Exception e) {
+                        LOGGER.error(e, "Could not close the server");
+                    }
+                    LOGGER.info("Scheduler server");
                 }));
+
+
             }
         }
-        return scheduler;
+        return server;
     }
 }
