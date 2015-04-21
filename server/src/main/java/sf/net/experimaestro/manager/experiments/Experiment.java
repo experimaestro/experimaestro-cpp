@@ -18,14 +18,11 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
-
-import com.sun.istack.internal.NotNull;
 import sf.net.experimaestro.annotations.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.jpa.PathConverter;
 
 import javax.persistence.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -62,7 +59,6 @@ public class Experiment {
     /**
      * String identifier
      */
-    @NotNull
     String identifier;
 
     /**
