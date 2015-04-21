@@ -25,7 +25,10 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.*;
+import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.Heap;
+import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;

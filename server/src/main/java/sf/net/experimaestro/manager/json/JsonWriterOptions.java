@@ -19,10 +19,10 @@ package sf.net.experimaestro.manager.json;
  */
 
 import com.google.common.collect.ImmutableSet;
-import java.nio.file.Path;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 
+import java.nio.file.Path;
 import java.util.Set;
 import java.util.function.Function;
 

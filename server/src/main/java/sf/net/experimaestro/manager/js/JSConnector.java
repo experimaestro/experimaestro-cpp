@@ -18,18 +18,12 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.JSUtils;
 
-import javax.tools.FileObject;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 
 /**

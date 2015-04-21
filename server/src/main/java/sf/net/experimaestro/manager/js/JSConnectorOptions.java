@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.connectors.ConnectorOptions;
 
 /**

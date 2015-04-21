@@ -19,7 +19,6 @@ package sf.net.experimaestro.connectors;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 
 import javax.persistence.DiscriminatorColumn;

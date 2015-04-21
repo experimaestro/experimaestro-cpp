@@ -52,14 +52,13 @@ import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.utils.Functional.propagate;
 
 /**
  * Json RPC methods
@@ -253,7 +252,7 @@ public class JsonRPCMethods extends HttpServlet {
             }
             Object result = argmax.method.invoke(this, args);
             mos.endMessage(requestID, result);
-        } catch (XPMCommandException e) {
+        } catch(InvocationTargetException e) {
             LOGGER.info("Error while handling JSON request [%s]", e);
             try {
                 Throwable t = e;
@@ -750,7 +749,7 @@ public class JsonRPCMethods extends HttpServlet {
         int n = 0;
         for (Object id : JobIds) {
             try (Transaction transaction = Transaction.create()) {
-                final Resource resource = Resource.getByLocator(transaction.em(), Paths.get(id.toString()));
+                final Resource resource = Resource.getByLocator(transaction.em(), id.toString());
                 if (resource instanceof Job) {
                     if (((Job) resource).stop()) {
                         n++;
@@ -773,7 +772,7 @@ public class JsonRPCMethods extends HttpServlet {
         ResourceState rsrcState;
         Resource resource;
         try (Transaction transaction = Transaction.create()) {
-            resource = Resource.getByLocator(transaction.em(), Paths.get(name));
+            resource = Resource.getByLocator(transaction.em(), name);
 
             if (resource == null)
                 throw new XPMRuntimeException("Job not found [%s]", name);
@@ -822,7 +821,7 @@ public class JsonRPCMethods extends HttpServlet {
                     Map<String, String> map = new HashMap<>();
                     map.put("type", resource.getClass().getCanonicalName());
                     map.put("state", resource.getState().toString());
-                    map.put("name", resource.getPath().toString());
+                    map.put("name", resource.getLocator().toString());
                     list.add(map);
                 }
             } catch (Exception e) {

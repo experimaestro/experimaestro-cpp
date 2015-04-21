@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager;
 
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.scheduler.Commands;
-import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.util.Map;
 

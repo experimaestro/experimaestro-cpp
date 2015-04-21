@@ -18,9 +18,6 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
@@ -29,7 +26,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static java.lang.String.format;

@@ -29,13 +29,10 @@ import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Column;
-import javax.persistence.Convert;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
-import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;

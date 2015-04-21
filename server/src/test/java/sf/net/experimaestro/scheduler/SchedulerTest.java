@@ -24,7 +24,6 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.RandomSampler;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -33,7 +32,6 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.*;
 
 import static java.lang.Math.*;
@@ -263,7 +261,7 @@ public class SchedulerTest extends XPMEnvironment {
         if (p.token > 0) {
             token = Transaction.evaluate((em, t) -> {
                 final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
-                final TokenResource _token = new TokenResource(XPMConnector.getInstance().resolve(path), p.token);
+                final TokenResource _token = new TokenResource(path, p.token);
                 _token.save(t);
                 return _token;
             });
@@ -403,8 +401,7 @@ public class SchedulerTest extends XPMEnvironment {
         File jobDirectory = mkTestDir();
 
         ThreadCount counter = new ThreadCount();
-        Path locator = XPMConnector.getInstance().resolve("scheduler_test/test_token_resource");
-        TokenResource token = new TokenResource(locator, 1);
+        TokenResource token = new TokenResource("scheduler_test/test_token_resource", 1);
         Transaction.run((em, t) -> token.save(t));
 
         // Sets 5 jobs

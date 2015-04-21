@@ -24,7 +24,6 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 
 import java.util.Iterator;

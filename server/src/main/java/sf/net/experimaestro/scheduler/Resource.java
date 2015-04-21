@@ -33,7 +33,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -49,7 +48,7 @@ import static java.lang.String.format;
 @Entity(name = "resources")
 @DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@Table(name = "resources", indexes = @Index(columnList = "path"))
+@Table(name = "resources", indexes = @Index(columnList = "locator"))
 public class Resource implements PostCommitListener {
     /**
      * Extension for the lock file
@@ -105,10 +104,24 @@ public class Resource implements PostCommitListener {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
+     * The resource ID
+     */
+    @Id
+    @GeneratedValue(strategy = GenerationType.TABLE)
+    private Long resourceID;
+
+    /**
+     * Version for optimistic locks
+     */
+    @Version
+    @Column(name = "version")
+    protected long version;
+
+    /**
      * The path with the connector
      */
-    @Column(name = "path", updatable = false)
-    protected Path path;
+    @Column(name = "locator", updatable = false)
+    protected String locator;
 
     /**
      * The connector
@@ -130,20 +143,6 @@ public class Resource implements PostCommitListener {
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
     @MapKey(name = "from")
     private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
-
-    /**
-     * The resource ID
-     */
-    @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
-    private Long resourceID;
-
-    /**
-     * Version for optimistic locks
-     */
-    @Version
-    @Column(name = "version")
-    protected long version;
 
 
 
@@ -180,9 +179,13 @@ public class Resource implements PostCommitListener {
         LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
-    public Resource(Connector connector, Path path) {
+    public Resource(Connector connector, Path path) throws IOException {
+        this(connector, path.toString());
+    }
+
+    public Resource(Connector connector, String name) {
         this.connector = connector;
-        this.path = path;
+        this.locator = name;
     }
 
     /**
@@ -192,15 +195,15 @@ public class Resource implements PostCommitListener {
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
-    public static Resource getByLocator(EntityManager em, Path path) {
+    public static Resource getByLocator(EntityManager em, String path) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
         Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("path").in(cb.parameter(Path.class, "path")));
+        cq.where(root.get("locator").in(cb.parameter(String.class, "locator")));
 
 
         TypedQuery<Resource> query = em.createQuery(cq);
-        query.setParameter("path", path);
+        query.setParameter("locator", path);
         List<Resource> result = query.getResultList();
         assert result.size() <= 1;
 
@@ -327,8 +330,26 @@ public class Resource implements PostCommitListener {
      *
      * @return The task unique from
      */
+    public String getLocator() {
+        return locator;
+    }
+
+    /** Cached Path */
+    transient private Path path;
+
+    /**
+     * Get a filesystem path
+     */
     public Path getPath() {
-        return path;
+        if (path != null) {
+            return path;
+        }
+
+        try {
+            return path = connector.resolve(locator);
+        } catch (IOException e) {
+            throw new AssertionError("Unexpected conversion error", e);
+        }
     }
 
     /**
@@ -337,7 +358,7 @@ public class Resource implements PostCommitListener {
      * @return Return a stringified version of the path
      */
     public String getIdentifier() {
-        return getPath().toString();
+        return getLocator().toString();
     }
 
     /**
@@ -393,7 +414,7 @@ public class Resource implements PostCommitListener {
      */
     @Deprecated
     public void printXML(PrintWriter out, PrintConfig config) {
-        out.format("<div><b>Resource id</b>: %s</h2>", getPath());
+        out.format("<div><b>Resource id</b>: %s</h2>", getLocator());
         out.format("<div><b>Status</b>: %s</div>", getState());
     }
 
@@ -499,8 +520,8 @@ public class Resource implements PostCommitListener {
         this.delete = true;
     }
 
-    public Path getFileWithExtension(FileNameTransformer extension) throws FileSystemException {
-        return extension.transform(path);
+    public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
+        return extension.transform(connector.resolve(locator));
     }
 
     final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
@@ -508,8 +529,8 @@ public class Resource implements PostCommitListener {
             throw new ExperimaestroCannotOverwrite("Class %s and %s differ", resource.getClass(), this.getClass());
         }
 
-        if (!resource.getPath().equals(this.path)) {
-            throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getPath(), this.getPath());
+        if (!resource.getLocator().equals(this.locator)) {
+            throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), this.getLocator());
         }
 
         doReplaceBy(resource);
@@ -615,7 +636,8 @@ public class Resource implements PostCommitListener {
         // Lock all the dependencies
         // This avoids to miss any notification
         List<EntityLock> locks = new ArrayList<>();
-        lockDependencies: while (true) {
+        lockDependencies:
+        while (true) {
             // We loop until we get all the locks - using a timeout just in case
             for (Dependency dependency : getDependencies()) {
                 final EntityLock lock = dependency.from.lock(transaction, false, 100);

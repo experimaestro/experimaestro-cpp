@@ -24,8 +24,6 @@ import com.google.gson.stream.JsonWriter;
 import org.apache.ws.commons.util.Base64;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * A JSON adapter

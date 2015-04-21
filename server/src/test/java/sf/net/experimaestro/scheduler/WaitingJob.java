@@ -58,7 +58,7 @@ public class WaitingJob extends Job {
     }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {
-        super(LocalhostConnector.getInstance(), new File(dir, debugId).toPath());
+        super(LocalhostConnector.getInstance(), new File(dir, debugId).toString());
 
         JobRunner jobRunner = new WaitingJobRunner();
 

@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -30,6 +29,7 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
 

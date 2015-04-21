@@ -18,15 +18,12 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.FileSystemException;
-
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;

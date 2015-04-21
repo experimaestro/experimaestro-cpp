@@ -117,16 +117,21 @@ public class Job extends Resource {
      * The job is by default initialized as "WAITING": its state should be updated after
      * the initialization has finished
      */
-    public Job(Connector connector, Path path) {
+    public Job(Connector connector, Path path) throws IOException {
+        super(connector, path);
+        setState(ResourceState.WAITING);
+    }
+
+    public Job(Connector connector, String path) {
         super(connector, path);
         setState(ResourceState.WAITING);
     }
 
     private boolean isDone() {
         try {
-            return Files.exists(DONE_EXTENSION.transform(path));
+            return Files.exists(DONE_EXTENSION.transform(getPath()));
         } catch (Exception e) {
-            LOGGER.error("Error while checking if " + getPath() + DONE_EXTENSION + " exists");
+            LOGGER.error("Error while checking if " + getLocator() + DONE_EXTENSION + " exists");
             return false;
         }
     }
@@ -212,7 +217,7 @@ public class Job extends Resource {
 
                 // Try status lock - discard if something goes wrong
                 try {
-                    locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(path), false));
+                    locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(getPath()), false));
                 } catch (LockException | IOException e) {
                     LOGGER.info("Could not lock job [%s]: %s", this, e);
                     throw e;
@@ -491,7 +496,7 @@ public class Job extends Resource {
 
                 JSONObject dep = new JSONObject();
                 dependencies.add(dep);
-                dep.put("from", resource.getPath().toString());
+                dep.put("from", resource.getLocator().toString());
                 dep.put("fromId", resource.getId());
                 dep.put("status", dependency.toString());
             }
@@ -538,7 +543,7 @@ public class Job extends Resource {
                         "<li><a href=\"%s/resource/%d\">%s</a>: %s</li>",
                         config.detailURL,
                         resource.getId(),
-                        resource.getPath(),
+                        resource.getLocator(),
                         dependency);
             }
             out.println("</ul>");
@@ -572,7 +577,7 @@ public class Job extends Resource {
         boolean changes = super.doUpdateStatus();
 
         // Check the done file
-        final Path doneFile = DONE_EXTENSION.transform(path);
+        final Path doneFile = DONE_EXTENSION.transform(getPath());
         if (Files.exists(doneFile) && getState() != ResourceState.DONE) {
             changes = true;
             if (this instanceof Job) {
@@ -657,12 +662,12 @@ public class Job extends Resource {
      */
     private void removeJobFile(FileNameTransformer t) {
         try {
-            final Path file = t.transform(path);
+            final Path file = t.transform(getPath());
             if (Files.exists(file)) {
                 Files.delete(file);
             }
         } catch (IOException e) {
-            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getPath(), t);
+            LOGGER.info(e, "Could not remove '%s' file: %s / %s", getLocator(), t);
         }
     }
 

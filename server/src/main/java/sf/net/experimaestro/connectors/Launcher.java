@@ -20,8 +20,8 @@ package sf.net.experimaestro.connectors;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Path;
 import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * sf.net.experimaestro.connectors

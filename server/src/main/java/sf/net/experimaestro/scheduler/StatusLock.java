@@ -47,7 +47,7 @@ public class StatusLock extends Lock {
     final static private Logger LOGGER = Logger.getLogger();
 
     @SuppressWarnings("JpaAttributeTypeInspection")
-    Path path;
+    String path;
 
     @OneToOne
     SingleHostConnector connector;
@@ -75,7 +75,7 @@ public class StatusLock extends Lock {
     protected StatusLock() {
     }
 
-    public StatusLock(SingleHostConnector connector, Path path, String pid, boolean writeAccess) throws LockException {
+    public StatusLock(SingleHostConnector connector, String path, String pid, boolean writeAccess) throws LockException {
         this.connector = connector;
         this.path = path;
         this.pid = pid;
@@ -117,6 +117,12 @@ public class StatusLock extends Lock {
     public void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws LockException {
         // --- Lock the resource
+        Path path = null;
+        try {
+            path = connector.resolve(this.path);
+        } catch (IOException e) {
+            throw new LockException(e);
+        }
         try (Lock ignored = connector.createLockFile(LOCK_EXTENSION.transform(path), true)) {
             Path statusPath = STATUS_EXTENSION.transform(path);
 

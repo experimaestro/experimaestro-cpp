@@ -18,11 +18,12 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.scheduler.Resource;
+
+import java.io.IOException;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * A resource
@@ -61,7 +62,7 @@ public class JSResource extends JSBaseObject implements Wrapper {
     @Override
     @JSFunction("toString")
     public String toString() {
-        return resource == null ? "[null]" : ("[Resource " + resource.getPath().toString() + "]");
+        return resource == null ? "[null]" : ("[Resource " + resource.getLocator().toString() + "]");
     }
 
     @JSFunction

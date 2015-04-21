@@ -23,10 +23,8 @@ import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;

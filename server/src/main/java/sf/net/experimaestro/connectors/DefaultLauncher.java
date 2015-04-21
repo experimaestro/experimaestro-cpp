@@ -20,7 +20,6 @@ package sf.net.experimaestro.connectors;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.FileSystemException;
 
 /**
  * A default launcher uses the SingleHostConnector process builders

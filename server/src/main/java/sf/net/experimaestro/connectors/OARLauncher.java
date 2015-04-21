@@ -18,8 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
-import java.nio.file.FileSystemException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -32,7 +30,11 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * A command line launcher with OAR
@@ -111,7 +113,7 @@ public class OARLauncher implements Launcher {
 
         @Override
         public XPMProcess start() throws LaunchException, IOException {
-            final String path = connector.resolve(job.getPath());
+            final String path = job.getLocator();
             final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
             String[] command = new String[]{oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run"};

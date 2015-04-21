@@ -18,8 +18,6 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.FileSystemException;
-
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONValue;
@@ -30,7 +28,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
@@ -45,6 +42,7 @@ import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystemException;
 
 /**
  * A wrapper around a DOM node

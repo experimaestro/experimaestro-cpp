@@ -18,8 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.scheduler.Scheduler;
-
 import javax.persistence.OneToOne;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;

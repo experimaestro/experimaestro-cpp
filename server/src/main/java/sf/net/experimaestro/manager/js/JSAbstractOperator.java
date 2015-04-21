@@ -34,8 +34,8 @@ import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Transaction;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;

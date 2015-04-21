@@ -18,7 +18,6 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.annotations.Expose;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.Experiment_;
@@ -34,8 +33,6 @@ import sf.net.experimaestro.utils.log.Logger;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
-import javax.persistence.metamodel.EntityType;
-import javax.persistence.metamodel.Metamodel;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -103,7 +100,7 @@ public class StatusServlet extends XPMServlet {
                                 try {
                                     out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
                                     out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                    out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getPath());
+                                    out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getLocator());
                                 } catch (Throwable t) {
                                     out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                                 }
@@ -156,7 +153,7 @@ public class StatusServlet extends XPMServlet {
             PrintWriter out = startHTMLResponse(response);
 
             Resource resource = Transaction.evaluate(em -> em.find(Resource.class, resourceId));
-            header(out, String.format("Details of resource %s", resource.getPath()));
+            header(out, String.format("Details of resource %s", resource.getLocator()));
 
             if (resource != null) {
                 PrintConfig config = new PrintConfig();
@@ -165,7 +162,7 @@ public class StatusServlet extends XPMServlet {
                 resource.printXML(out, config);
                 out.format("</div>");
             } else {
-                out.format("Could not retrieve resource <b>%s</b>", resource.getPath());
+                out.format("Could not retrieve resource <b>%s</b>", resource.getLocator());
             }
 
             out.println("</body></html>");

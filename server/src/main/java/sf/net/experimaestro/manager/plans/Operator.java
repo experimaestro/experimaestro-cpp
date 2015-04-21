@@ -26,7 +26,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
-import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.json.Json;

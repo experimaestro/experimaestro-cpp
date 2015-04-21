@@ -19,7 +19,6 @@ package sf.net.experimaestro.utils.introspection;
  */
 
 import com.google.common.collect.ImmutableMap;
-import sf.net.experimaestro.utils.FileSystem;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;

@@ -18,14 +18,14 @@ package sf.net.experimaestro.utils.introspection;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;

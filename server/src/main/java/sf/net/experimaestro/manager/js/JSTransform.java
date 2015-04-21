@@ -25,10 +25,10 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
+import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.Iterator;

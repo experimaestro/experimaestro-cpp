@@ -18,10 +18,10 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.FileSystemException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
+import java.nio.file.FileSystemException;
 import java.util.List;
 
 /**

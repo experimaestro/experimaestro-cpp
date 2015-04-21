@@ -25,8 +25,8 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
-import sf.net.experimaestro.manager.plans.functions.MergeFunction;
 import sf.net.experimaestro.manager.plans.ProductReference;
+import sf.net.experimaestro.manager.plans.functions.MergeFunction;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 

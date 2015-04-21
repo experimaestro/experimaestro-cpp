@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.js.object;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
@@ -32,6 +31,7 @@ import sf.net.experimaestro.scheduler.StreamReference;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 

@@ -19,9 +19,6 @@ package sf.net.experimaestro.manager;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.XPMObject;
@@ -36,6 +33,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Map.Entry;

@@ -32,7 +32,6 @@ import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -202,11 +201,10 @@ public class JavaTaskFactory extends TaskFactory {
                         if (o instanceof Resource) {
                             resource = (Resource) o;
                         } else {
-                            final java.nio.file.Path locator = Paths.get(o.toString());
-                            resource = Resource.getByLocator(em, locator);
+                            resource = Resource.getByLocator(em, o.toString());
                             if (resource == null) {
                                 throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                                        locator, getId());
+                                        o.toString(), getId());
                             }
                         }
                         final Dependency lock = resource.createDependency("READ");

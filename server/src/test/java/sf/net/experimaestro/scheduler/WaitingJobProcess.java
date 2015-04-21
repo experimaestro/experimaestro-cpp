@@ -18,16 +18,11 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.persistence.Entity;
-import javax.persistence.Transient;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;

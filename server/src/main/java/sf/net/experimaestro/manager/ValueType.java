@@ -18,11 +18,11 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.nio.file.Path;
 import java.util.HashSet;
 
 /**

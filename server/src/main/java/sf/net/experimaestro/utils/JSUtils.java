@@ -19,7 +19,6 @@ package sf.net.experimaestro.utils;
  */
 
 import com.google.common.collect.AbstractIterator;
-import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
@@ -35,6 +34,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.lang.reflect.Array;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

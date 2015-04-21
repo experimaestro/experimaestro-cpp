@@ -19,10 +19,7 @@ package sf.net.experimaestro.manager.java;
  */
 
 import org.apache.log4j.Level;
-import org.eclipse.wst.jsdt.debug.internal.rhino.transport.JSONUtil;
-import org.mozilla.javascript.XPMHelper;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
@@ -32,7 +29,6 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -84,13 +80,16 @@ public class JavaTask extends Task {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");
         }
 
+
         // --- Check if this wasn't already done
+        String _path = path.toString();
+
         final Logger taskLogger = taskContext.getLogger("JavaTask");
 
         try (Transaction transaction = Transaction.create()) {
-            final Resource old = Resource.getByLocator(transaction.em(), path);
+            final Resource old = Resource.getByLocator(transaction.em(), _path);
             if (old != null && !old.canBeReplaced()) {
-                taskLogger.info("Cannot overwrite task %s [%d]", old.getPath(), old.getId());
+                taskLogger.info("Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());
@@ -99,7 +98,7 @@ public class JavaTask extends Task {
 
                 // --- Build the command
 
-                Job job = new Job(javaFactory.connector, path);
+                Job job = new Job(javaFactory.connector, _path);
                 taskContext.prepare(job);
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
@@ -126,7 +125,7 @@ public class JavaTask extends Task {
                     }
 
                     job.save(transaction);
-                    taskLogger.info("Stored task %s [%s]", job.getPath(), job.getId());
+                    taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                     transaction.commit();
                 }
 
@@ -146,9 +145,9 @@ public class JavaTask extends Task {
         json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
         json.put(Manager.XP_RESOURCE.toString(), path.toString());
 
-        for (PathArgument _path : javaFactory.pathArguments) {
-            Path relativePath = uniqueDir.resolve(_path.relativePath);
-            json.put(_path.jsonName, new JsonPath(relativePath));
+        for (PathArgument __path : javaFactory.pathArguments) {
+            Path relativePath = uniqueDir.resolve(__path.relativePath);
+            json.put(__path.jsonName, new JsonPath(relativePath));
         }
 
         return json;

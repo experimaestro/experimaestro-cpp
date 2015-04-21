@@ -18,23 +18,12 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.ReadLineIterator;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.*;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static sf.net.experimaestro.scheduler.Resource.LOCK_EXTENSION;
-import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
 
 /**
  * One can write, many can read
@@ -70,6 +59,6 @@ public class ReadWriteDependency extends Dependency {
         // Retrieve data about resource
         Resource resource = getFrom();
 
-        return new StatusLock(resource.getConnector().getMainConnector(), resource.getPath(), pid, false);
+        return new StatusLock(resource.getConnector().getMainConnector(), resource.getLocator(), pid, false);
     }
 }

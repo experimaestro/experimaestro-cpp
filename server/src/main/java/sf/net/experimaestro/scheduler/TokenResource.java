@@ -25,7 +25,6 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PostLoad;
 import java.io.IOException;
-import java.nio.file.Path;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -71,7 +70,7 @@ public class TokenResource extends Resource {
      * @param path  The token path
      * @param limit The maximum number of tokens
      */
-    public TokenResource(Path path, int limit) {
+    public TokenResource(String path, int limit) {
         super(null, path);
         this.limit = limit;
         this.usedTokens = 0;

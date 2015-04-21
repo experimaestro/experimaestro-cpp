@@ -34,7 +34,6 @@ import java.lang.reflect.Method;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -86,7 +85,8 @@ public class XPMObject {
     public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
-    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(ImmutableSet.of("stdin", "stdout", "lock", "connector"));
+    static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(
+            ImmutableSet.of("stdin", "stdout", "lock", "connector", "launcher"));
     /**
      * Logging should be directed to an output
      */
@@ -786,7 +786,7 @@ public class XPMObject {
                     return new JSResource(submittedJobs.get(path));
                 }
 
-                return new JSResource(Resource.getByLocator(em, Paths.get(path.toString())));
+                return new JSResource(Resource.getByLocator(em, connector.resolve((Path)path)));
             }
 
 
@@ -858,12 +858,11 @@ public class XPMObject {
                                 resource = (Resource) depObject;
                             } else {
                                 final String rsrcPath = Context.toString(depObject);
-                                Path depLocator = connector.resolve(rsrcPath);
-                                resource = Resource.getByLocator(em, depLocator);
+                                resource = Resource.getByLocator(em, rsrcPath);
                                 if (resource == null)
                                     if (simulate()) {
-                                        if (!submittedJobs.containsKey(depLocator))
-                                            LOGGER.error("The dependency [%s] cannot be found", depLocator);
+                                        if (!submittedJobs.containsKey(rsrcPath))
+                                            LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
                                     } else {
                                         throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
                                     }
@@ -915,15 +914,15 @@ public class XPMObject {
                     em.persist(reference);
                 }
 
-                final Resource old = Resource.getByLocator(transaction.em(), job.getPath());
+                final Resource old = Resource.getByLocator(transaction.em(), job.getLocator());
 
                 // Replace old if necessary
                 if (old != null) {
                     if (!old.canBeReplaced()) {
-                        taskLogger.info("Cannot overwrite task %s [%d]", old.getPath(), old.getId());
+                        taskLogger.info("Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
                         return new JSResource(old);
                     } else {
-                        taskLogger.info("Replacing resource %s [%d]", old.getPath(), old.getId());
+                        taskLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
                         old.lock(transaction, true);
                         em.refresh(old);
                         old.replaceBy(job);
@@ -938,7 +937,7 @@ public class XPMObject {
                 transaction.commit();
             }
 
-            this.submittedJobs.put(job.getPath().toString(), job);
+            this.submittedJobs.put(job.getLocator().toString(), job);
 
             return new JSResource(job);
         }
@@ -966,7 +965,7 @@ public class XPMObject {
 //                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
         return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
                 .addDefaultLocks(defaultLocks)
-                .addNewTaskListener(job -> submittedJobs.put(job.getPath().toString(), job));
+                .addNewTaskListener(job -> submittedJobs.put(job.getLocator().toString(), job));
     }
 
     public void setPath(Path locator) {
@@ -1073,10 +1072,10 @@ public class XPMObject {
                 @JSArgument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
             return Transaction.evaluate((em, t) -> {
-                final Resource resource = Resource.getByLocator(em, Paths.get(path));
+                final Resource resource = Resource.getByLocator(em, path);
                 final TokenResource tokenResource;
                 if (resource == null) {
-                    tokenResource = new TokenResource(Paths.get(path), 0);
+                    tokenResource = new TokenResource(path, 0);
                     tokenResource.save(t);
                 } else {
                     if (!(resource instanceof TokenResource))
@@ -1451,7 +1450,7 @@ public class XPMObject {
                         }
                         return resource;
                     } else {
-                        return Transaction.evaluate(em -> Resource.getByLocator(em, Paths.get(uri)));
+                        return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
                     }
                 }
 

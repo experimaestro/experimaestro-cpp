@@ -27,7 +27,10 @@ import sf.net.experimaestro.connectors.XPMScriptProcessBuilder;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 

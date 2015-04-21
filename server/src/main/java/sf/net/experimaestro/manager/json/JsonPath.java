@@ -18,8 +18,6 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
-
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.Manager;
@@ -28,6 +26,7 @@ import sf.net.experimaestro.manager.ValueType;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Path;
 
 import static java.lang.String.format;
 

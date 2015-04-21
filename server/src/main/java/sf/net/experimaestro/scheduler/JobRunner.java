@@ -21,7 +21,6 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 
-import javax.persistence.*;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;

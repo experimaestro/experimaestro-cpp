@@ -26,9 +26,6 @@ import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.SessionFactory;
-import com.pastdev.jsch.proxy.SshProxy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -38,7 +35,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
 
 /**
  * All the options for connecting to a host through SSH

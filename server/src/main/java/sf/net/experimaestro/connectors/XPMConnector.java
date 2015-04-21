@@ -23,7 +23,6 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
 import javax.persistence.Entity;
-import java.io.File;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;

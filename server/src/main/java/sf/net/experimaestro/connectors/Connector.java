@@ -119,4 +119,8 @@ public abstract class Connector implements Comparable<Connector> {
     }
 
     public abstract Path resolve(String path) throws FileSystemException, IOException;
+
+    public String resolve(Path path) throws IOException {
+        return getMainConnector().resolve(path);
+    }
 }

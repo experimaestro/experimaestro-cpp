@@ -19,7 +19,6 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import java.nio.file.Path;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.annotations.Expose;
@@ -30,6 +29,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.scheduler.Resource;
 
 import java.lang.reflect.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;

@@ -19,7 +19,9 @@ package sf.net.experimaestro.server;
  */
 
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.Transaction;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

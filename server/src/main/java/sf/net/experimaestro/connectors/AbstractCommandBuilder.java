@@ -18,11 +18,11 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 /**

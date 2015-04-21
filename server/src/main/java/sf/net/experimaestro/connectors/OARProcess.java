@@ -23,7 +23,6 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import java.io.InputStream;

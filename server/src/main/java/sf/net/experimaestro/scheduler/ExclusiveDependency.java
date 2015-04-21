@@ -25,7 +25,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import java.nio.file.FileSystemException;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -52,7 +52,7 @@ public class ExclusiveDependency extends Dependency {
         try {
             file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
             return Files.exists(file) ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
-        } catch (FileSystemException e) {
+        } catch (IOException e) {
             LOGGER.error(e, "Error while checking the presence of lock file for [%s]", from);
             return DependencyStatus.ERROR;
 
@@ -67,7 +67,7 @@ public class ExclusiveDependency extends Dependency {
             Path file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
             final Lock lockFile = new FileLock(file, true);
             return lockFile;
-        } catch (FileSystemException e) {
+        } catch (IOException e) {
             throw new LockException(e);
         }
     }

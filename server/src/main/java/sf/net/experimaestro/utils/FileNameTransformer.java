@@ -18,8 +18,8 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.file.Path;
 import java.nio.file.FileSystemException;
+import java.nio.file.Path;
 
 /**
  * Transforms the filename
