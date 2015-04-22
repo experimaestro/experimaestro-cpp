@@ -26,13 +26,14 @@ import sf.net.experimaestro.manager.scripting.Expose;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.sql.Wrapper;
 
 /**
  * Simple JavaScript interface to a connector object
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSConnector extends JSBaseObject implements JSConstructable {
+public class JSConnector extends JSBaseObject implements JSConstructable, org.mozilla.javascript.Wrapper {
     private Connector connector;
 
     public JSConnector() {
@@ -65,4 +66,8 @@ public class JSConnector extends JSBaseObject implements JSConstructable {
         return "Connector";
     }
 
+    @Override
+    public Object unwrap() {
+        return connector;
+    }
 }

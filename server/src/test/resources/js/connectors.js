@@ -52,25 +52,33 @@ function test_local() {
 
 */
 
-
-// --- One SSH host
-
-// TODO: enable when SSH is back
-function disabled_test_ssh() {
-	var sshOptions = SSHOptions();
-	sshOptions.password = "user";
-
+function get_ssh_connector() {
 	var port = sshd_server();
 	logger.info("SSH server on port " + port);
 
-	var big_ssh = new Connector("ssh://user@localhost" + ":" + port);
-	include_repository(big_ssh, repository_path.get_path());
-    logger.info("Included repository");
+	var sshOptions = SSHOptions();
+	sshOptions.password("user");
+	sshOptions.check_host(false);
+
+	return new Connector("ssh://user@localhost" + ":" + port, sshOptions);
+}
+
+function test_ssh() {
+	var server = get_ssh_connector();
+	include_repository(server, repository_path.get_path());
+    logger.info("Included SSH repository");
 
 	var task = tasks("{a.b.c}task").create();
 	task.set("x", 10);
 	var r = task.run();
 	check(r);
+}
+
+function test_share() {
+	var server = get_ssh_connector();
+	define_share("test", "root", server, "/");
+	var p = path("shares:test://root/" + repository_path.resolve("../../hello"));
+	assert_equals(p.readAll(), "world");
 }
 
 // --- Use a group of machines (disabled)

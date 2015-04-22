@@ -28,6 +28,8 @@ import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.SessionFactory;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,6 +42,7 @@ import java.net.URISyntaxException;
  * All the options for connecting to a host through SSH
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class SSHOptions extends ConnectorOptions {
     /**
      * Username
@@ -55,6 +58,11 @@ public class SSHOptions extends ConnectorOptions {
      * Password - TODO: encrypt before storing
      */
     private String password;
+
+    /**
+     * Check host
+     */
+    boolean checkHost = true;
 
     /** Default SSH port */
     static final int SSHD_DEFAULT_PORT = 22;
@@ -80,6 +88,11 @@ public class SSHOptions extends ConnectorOptions {
      */
     private ProxyConfiguration proxy;
 
+    @Expose
+    public SSHOptions() {
+
+    }
+
     public void setCompression(String compression) {
         this.compression = compression;
     }
@@ -104,6 +117,8 @@ public class SSHOptions extends ConnectorOptions {
         factory.setUsername(username);
         factory.setPort(port);
 
+        factory.setConfig("StrictHostKeyChecking", checkHost ? "yes" : "no");
+
 //        // Use root file system
         if (compression != null) {
             throw new NotImplementedException();
@@ -120,10 +135,6 @@ public class SSHOptions extends ConnectorOptions {
         return factory;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
     public IdentityRepository createSSHAgentIdentityRepository() {
         try {
             USocketFactory usf = new JNAUSocketFactory();
@@ -137,24 +148,39 @@ public class SSHOptions extends ConnectorOptions {
         }
     }
 
+    @Expose("hostname")
     public void setHostName(String hostname) {
         this.hostname = hostname;
     }
 
-    public void setUserName(String username) {
-        this.username = username;
-    }
-
+    @Expose("port")
     public void setPort(int port) {
         this.port = port;
     }
 
+    @Expose("username")
+    public void setUserName(String username) {
+        this.username = username;
+    }
+
+    @Expose("password")
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    @Expose("hostname")
     public String getHostName() {
         return hostname;
     }
 
+    @Expose("username")
     public String getUserName() {
         return username;
+    }
+
+    @Expose("check_host")
+    public void checkHost(boolean check) {
+        this.checkHost = check;
     }
 
     public SSHOptions copy() {
@@ -167,6 +193,7 @@ public class SSHOptions extends ConnectorOptions {
         options.setCompression(compression);
         options.setUseSSHAgent(useSSHAgent);
 
+        options.checkHost = this.checkHost;
         options.proxy = proxy;
 
         return options;

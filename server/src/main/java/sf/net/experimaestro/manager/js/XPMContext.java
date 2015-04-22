@@ -25,7 +25,9 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.SSHOptions;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.plans.Constant;
@@ -116,6 +118,8 @@ public class XPMContext implements AutoCloseable {
 
             JSBaseObject.defineClass(XPM_SCOPE, Command.class);
             JSBaseObject.defineClass(XPM_SCOPE, Constant.class);
+            JSBaseObject.defineClass(XPM_SCOPE, ConnectorOptions.class);
+            JSBaseObject.defineClass(XPM_SCOPE, SSHOptions.class);
 
             // Add global functions
             for (JSUtils.FunctionDefinition definition : definitions)

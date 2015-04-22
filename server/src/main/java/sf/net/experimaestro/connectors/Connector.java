@@ -42,9 +42,10 @@ public abstract class Connector implements Comparable<Connector> {
      * Each connector has a unique integer ID
      */
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.TABLE)
     Long id;
 
+    /** The unique identifier, as produced by the connector */
     String identifier;
 
     public Connector(String identifier) {
@@ -140,5 +141,9 @@ public abstract class Connector implements Comparable<Connector> {
 
     public String resolve(Path path) throws IOException {
         return getMainConnector().resolve(path);
+    }
+
+    public long getKey() {
+        return id;
     }
 }

@@ -18,9 +18,11 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Exposed;
+
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 25/6/12
  */
+@Exposed
 public abstract class ConnectorOptions {
 }

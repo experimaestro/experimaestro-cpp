@@ -28,7 +28,7 @@ import java.util.Collection;
 @Entity
 @Table(
         name = "shares",
-        uniqueConstraints = @UniqueConstraint(name = "shares", columnNames = {"host", "share"})
+        uniqueConstraints = @UniqueConstraint(name = "shares", columnNames = {"host", "name"})
 )
 public class NetworkShare {
     @Id

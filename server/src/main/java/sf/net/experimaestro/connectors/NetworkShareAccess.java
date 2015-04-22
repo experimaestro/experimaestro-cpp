@@ -21,18 +21,19 @@ package sf.net.experimaestro.connectors;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import java.io.Serializable;
 
 /**
  * An access to a network share
  */
 @Entity
-public class NetworkShareAccess {
+public class NetworkShareAccess implements Serializable {
     /**
      * The host that allows us to access the data
      */
     @Id
     @ManyToOne
-    Connector connector;
+    SingleHostConnector connector;
 
     @Id
     @ManyToOne
@@ -69,5 +70,24 @@ public class NetworkShareAccess {
 
     public void setPath(String path) {
         this.path = path;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        NetworkShareAccess that = (NetworkShareAccess) o;
+
+        if (!connector.equals(that.connector)) return false;
+        return share.equals(that.share);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = connector.hashCode();
+        result = 31 * result + share.hashCode();
+        return result;
     }
 }

@@ -86,7 +86,6 @@ public class XPMObject {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
 
-    public static final String DEFAULT_GROUP = "XPM_DEFAULT_GROUP";
     final static ThreadLocal<XPMObject> threadXPM = new ThreadLocal<>();
     final static private Logger LOGGER = Logger.getLogger();
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(
@@ -1497,8 +1496,6 @@ public class XPMObject {
         public void set_workdir(Path workdir) throws FileSystemException {
             xpm.workdir.set(workdir);
         }
-
-
 
     }
 
