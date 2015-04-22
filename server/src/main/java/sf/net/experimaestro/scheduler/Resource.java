@@ -20,8 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -626,7 +625,7 @@ public class Resource implements PostCommitListener {
         // Find the connector in the database
         if (connector != null && !em.contains(connector)) {
             // Add the connector
-            final Connector other = em.find(Connector.class, connector.getIdentifier());
+            final Connector other = Connector.find(em, connector.getIdentifier());
             if (other != null) {
                 connector = other;
             }

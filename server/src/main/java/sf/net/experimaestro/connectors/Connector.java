@@ -19,6 +19,9 @@ package sf.net.experimaestro.connectors;
  */
 
 import javax.persistence.*;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,11 +45,13 @@ public abstract class Connector implements Comparable<Connector> {
      * Each connector has a unique integer ID
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
-    Long id;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
 
-    /** The unique identifier, as produced by the connector */
-    String identifier;
+    /**
+     * The string identifier
+     */
+    private String identifier;
 
     public Connector(String identifier) {
         this.identifier = identifier;
@@ -145,5 +150,24 @@ public abstract class Connector implements Comparable<Connector> {
 
     public long getKey() {
         return id;
+
+    /**
+     * Find a connector given its string ID
+     * @param em The entity manager
+     * @param identifier The string identifier
+     * @return The connector in database or null if none exist
+     */
+    public static Connector find(EntityManager em, String identifier) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaQuery<Connector> q = cb.createQuery(Connector.class);
+
+        final Root<Connector> shares = q.from(Connector.class);
+        q.select(shares).where(shares.get(Connector_.identifier).in(identifier));
+
+        try {
+            return em.createQuery(q).getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
     }
 }

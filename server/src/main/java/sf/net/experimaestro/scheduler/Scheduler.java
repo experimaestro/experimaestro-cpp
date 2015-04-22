@@ -360,7 +360,10 @@ final public class Scheduler {
             CriteriaBuilder cb = em.getCriteriaBuilder();
 
             // Bug when connector not in DB... but it should be
-            SingleHostConnector _connector = em.find(SingleHostConnector.class, connector.getKey());
+            final SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
+            if (_connector == null) {
+                em.persist(_connector);
+            }
 
             final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
             final Root<NetworkShare> shares = q.from(NetworkShare.class);
