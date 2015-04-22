@@ -49,9 +49,9 @@ public abstract class JobRunner {
      * Returns the output file
      * @param job
      * @return
-     * @throws FileSystemException
+     * @throws IOException If something goes wrong
      */
-    abstract Path outputFile(Job job) throws FileSystemException, IOException;
+    abstract Path outputFile(Job job) throws IOException;
 
     public abstract Stream<Dependency> dependencies();
 }

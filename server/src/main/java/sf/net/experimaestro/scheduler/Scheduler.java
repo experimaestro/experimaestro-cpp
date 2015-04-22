@@ -359,6 +359,11 @@ final public class Scheduler {
         Transaction.run(em -> {
             CriteriaBuilder cb = em.getCriteriaBuilder();
 
+            final SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
+            if (_connector == null) {
+                em.persist(_connector);
+            }
+
             final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
             final Root<NetworkShare> shares = q.from(NetworkShare.class);
             q.select(shares)
@@ -370,12 +375,12 @@ final public class Scheduler {
             if (resultList.isEmpty()) {
                 final NetworkShare networkShare = new NetworkShare(host, name);
                 em.persist(networkShare);
-                final NetworkShareAccess access = new NetworkShareAccess(networkShare, connector, path, priority);
+                final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
                 em.persist(access);
             } else {
                 final NetworkShare networkShare = resultList.get(0);
                 for (NetworkShareAccess access : networkShare.getAccess()) {
-                    if (access.is(connector)) {
+                    if (access.is(_connector)) {
                         // Found it - just update
                         access.setPath(path);
                         access.setPriority(priority);
@@ -383,7 +388,7 @@ final public class Scheduler {
                     }
                 }
 
-                final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, connector, path, priority);
+                final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, _connector, path, priority);
                 em.persist(networkShareAccess);
 
             }

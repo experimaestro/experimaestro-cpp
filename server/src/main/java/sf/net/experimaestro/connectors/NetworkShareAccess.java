@@ -21,12 +21,13 @@ package sf.net.experimaestro.connectors;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import java.io.Serializable;
 
 /**
  * An access to a network share
  */
 @Entity
-public class NetworkShareAccess {
+public class NetworkShareAccess implements Serializable {
     /**
      * The host that allows us to access the data
      */
