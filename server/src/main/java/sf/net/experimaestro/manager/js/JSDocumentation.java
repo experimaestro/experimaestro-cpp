@@ -22,6 +22,9 @@ import bpiwowar.argparser.utils.Introspection;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.Argument;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.Documentation;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
@@ -43,13 +46,13 @@ import static java.lang.String.format;
  */
 public class JSDocumentation {
     static void documentMethod(Documentation.DefinitionList methods, Method method, String name) {
-        sf.net.experimaestro.manager.js.JSFunction xpmjsfunction = method.getAnnotation(sf.net.experimaestro.manager.js.JSFunction.class);
+        Expose xpmjsfunction = method.getAnnotation(Expose.class);
         if (xpmjsfunction != null) {
             if (!xpmjsfunction.value().equals(""))
                 name = xpmjsfunction.value();
         }
 
-        JSFunction jsfunction = method.getAnnotation(JSFunction.class);
+        Expose jsfunction = method.getAnnotation(Expose.class);
         if (name == null && jsfunction != null) {
             name = jsfunction.value();
             if (name.equals(""))
@@ -74,7 +77,7 @@ public class JSDocumentation {
         }
 
         Documentation.Container help = new Documentation.Container();
-        final JSHelp jsHelp = method.getAnnotation(JSHelp.class);
+        final Help jsHelp = method.getAnnotation(Help.class);
 
         if (jsHelp != null)
             help.add(new Documentation.Text(jsHelp.value()));
@@ -105,7 +108,7 @@ public class JSDocumentation {
             // No JSHelp
             final Documentation.Text text = new Documentation.Text();
             names = text;
-            final JSArgument returnAnnotation = method.getAnnotation(JSArgument.class);
+            final Argument returnAnnotation = method.getAnnotation(Argument.class);
             String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
             text.format("%s%s %s(", prefix, returnType, name);
@@ -121,8 +124,8 @@ public class JSDocumentation {
                 String argType = null;
 
                 for (Annotation a : parameters[i].getAnnotations()) {
-                    if (a instanceof JSArgument) {
-                        final JSArgument jsArg = (JSArgument) a;
+                    if (a instanceof Argument) {
+                        final Argument jsArg = (Argument) a;
                         argName = jsArg.equals("") ? argName : jsArg.name();
                         argType = jsArg.type();
                         if (jsArg.help() != null)
@@ -214,14 +217,14 @@ public class JSDocumentation {
 
                 // A javascript object based on JSBaseObject
                 if (JSBaseObject.class.isAssignableFrom(clazz)) {
-                    JSFunction annotation = method.getAnnotation(JSFunction.class);
+                    Expose annotation = method.getAnnotation(Expose.class);
                     if (annotation != null)
                         documentMethod(methods, method, name);
                     continue;
                 }
 
                 if (ScriptableObject.class.isAssignableFrom(clazz)) {
-                    if (method.getAnnotation(JSFunction.class) != null) {
+                    if (method.getAnnotation(Expose.class) != null) {
                         if (method.getName().startsWith("js_")) {
                             name = method.getName();
                         } else {

@@ -21,7 +21,7 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
-import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -345,6 +345,49 @@ final public class Scheduler {
                 return resultList.iterator();
             }
         };
+    }
+
+    /**
+     * Defines a share
+     *
+     * @param host The host name for the share
+     * @param name The name of the share on the hosts
+     * @param connector The single host connector where this
+     * @param path The path on the connector
+     */
+    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
+        Transaction.run(em -> {
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+
+            final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
+            final Root<NetworkShare> shares = q.from(NetworkShare.class);
+            q.select(shares)
+                    .where(shares.get(NetworkShare_.host).in(host))
+                    .where(shares.get(NetworkShare_.name).in(name));
+            final List<NetworkShare> resultList = em.createQuery(q).getResultList();
+            assert(resultList.size() <= 1);
+
+            if (resultList.isEmpty()) {
+                final NetworkShare networkShare = new NetworkShare(host, name);
+                em.persist(networkShare);
+                final NetworkShareAccess access = new NetworkShareAccess(networkShare, connector, path, priority);
+                em.persist(access);
+            } else {
+                final NetworkShare networkShare = resultList.get(0);
+                for (NetworkShareAccess access : networkShare.getAccess()) {
+                    if (access.is(connector)) {
+                        // Found it - just update
+                        access.setPath(path);
+                        access.setPriority(priority);
+                        return;
+                    }
+                }
+
+                final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, connector, path, priority);
+                em.persist(networkShareAccess);
+
+            }
+        });
     }
 
     /**

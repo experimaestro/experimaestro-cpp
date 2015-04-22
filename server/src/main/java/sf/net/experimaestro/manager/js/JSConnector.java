@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.js;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.scripting.Expose;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -41,7 +42,7 @@ public class JSConnector extends JSBaseObject implements JSConstructable {
         this.connector = connector;
     }
 
-    @JSFunction(optional = 1)
+    @Expose(optional = 1)
     public JSConnector(String uriString, ConnectorOptions options) {
         try {
             this.connector = Connector.create(uriString, options);
@@ -54,7 +55,7 @@ public class JSConnector extends JSBaseObject implements JSConstructable {
         return connector;
     }
 
-    @JSFunction
+    @Expose
     public Path path(String filepath) throws IOException {
         return getConnector().getMainConnector().resolveFile(filepath);
     }

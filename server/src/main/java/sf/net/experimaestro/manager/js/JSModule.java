@@ -25,6 +25,7 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Module;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -41,7 +42,7 @@ public class JSModule extends JSBaseObject {
      * @param jsScope  The scope where the object was created
      * @param jsObject The object itself
      */
-    @JSFunction
+    @Expose
     public JSModule(XPMObject xpm, Repository repository, Scriptable jsScope,
                     NativeObject jsObject) {
         this.xpm = xpm;

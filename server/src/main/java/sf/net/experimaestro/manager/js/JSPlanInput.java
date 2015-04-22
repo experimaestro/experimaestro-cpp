@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.NativeArray;
 import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 
 /**
@@ -31,12 +32,12 @@ import sf.net.experimaestro.utils.JSUtils;
 public class JSPlanInput extends JSAbstractOperator {
     Operator operator;
 
-    @JSFunction
+    @Expose
     public JSPlanInput(NativeArray array) {
         this(null, array);
     }
 
-    @JSFunction
+    @Expose
     public JSPlanInput(String name, NativeArray array) {
         Constant constant = new Constant(name);
         this.operator = constant;

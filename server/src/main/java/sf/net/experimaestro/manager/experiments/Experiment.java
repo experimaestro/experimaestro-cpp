@@ -18,7 +18,7 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 import javax.persistence.*;

@@ -20,8 +20,8 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import sf.net.experimaestro.annotations.Expose;
-import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.json.Json;
 
 import java.util.*;

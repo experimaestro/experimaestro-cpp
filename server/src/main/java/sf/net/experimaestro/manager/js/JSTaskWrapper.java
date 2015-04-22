@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 
 /**
@@ -37,7 +38,7 @@ public class JSTaskWrapper extends JSBaseObject {
     private final Task task;
     private final XPMObject xpm;
 
-    @JSFunction
+    @Expose
     public JSTaskWrapper(Task task, XPMObject xpm) {
         this.task = task;
         this.xpm = xpm;
@@ -53,18 +54,18 @@ public class JSTaskWrapper extends JSBaseObject {
         super.put(name, start, value);
     }
 
-    @JSFunction(value = "set", scope = true)
+    @Expose(value = "set", scope = true)
     public void set(Context cx, Scriptable scope, String id, Object value) throws NoSuchParameter {
         DotName qid = DotName.parse(id);
         task.setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
     }
 
-    @JSFunction("run")
+    @Expose("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
         return new JSJson(task.run(xpm.newTaskContext().simulate(simulate)));
     }
 
-    @JSFunction("run")
+    @Expose("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
         return new JSJson(task.run(xpm.newTaskContext().simulate(false)));
     }

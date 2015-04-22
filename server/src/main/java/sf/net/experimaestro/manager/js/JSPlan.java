@@ -29,6 +29,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.*;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -56,7 +57,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      *
      * @param plan
      */
-    @JSFunction
+    @Expose
     public JSPlan(Plan plan) {
         this.plan = plan;
     }
@@ -67,13 +68,13 @@ public class JSPlan extends JSAbstractOperator implements Callable {
      * @param factory
      * @param object
      */
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSPlan(Context cx, Scriptable scope, TaskFactory factory, NativeObject object) throws XPathExpressionException {
         plan = new Plan(factory);
         plan.add(getMappings(object, scope));
     }
 
-    @JSFunction
+    @Expose
     public JSPlan(TaskFactory factory) {
         this.plan = new Plan(factory);
     }
@@ -197,12 +198,12 @@ public class JSPlan extends JSAbstractOperator implements Callable {
 
     }
 
-    @JSFunction(value = "run", scope = true)
+    @Expose(value = "run", scope = true)
     public Object run(Context context, Scriptable scope) throws XPathExpressionException {
         return run(context, scope, false);
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public Object simulate(Context context, Scriptable scope) throws XPathExpressionException {
         return run(context, scope, true);
     }
@@ -263,7 +264,7 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
 
-    @JSFunction(value = "add", scope = true)
+    @Expose(value = "add", scope = true)
     public void add(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
         plan.add(getMappings(object, scope));
     }

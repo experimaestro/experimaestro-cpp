@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Resource;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ public class JSResource extends JSBaseObject implements Wrapper {
 
     private Resource resource;
 
-    @JSFunction
+    @Expose
     public JSResource(Resource resource) {
         this.resource = resource;
     }
@@ -44,28 +45,28 @@ public class JSResource extends JSBaseObject implements Wrapper {
         return "Resource";
     }
 
-    @JSFunction("output")
+    @Expose("output")
     public Path output() throws IOException {
         return resource.outputFile();
     }
 
-    @JSFunction
+    @Expose
     public Path file() throws FileSystemException {
         return resource.getPath();
     }
 
-    @JSFunction
+    @Expose
     public Path resolve(String path) throws FileSystemException {
         return resource.getPath().getParent().resolve(path);
     }
 
     @Override
-    @JSFunction("toString")
+    @Expose("toString")
     public String toString() {
         return resource == null ? "[null]" : ("[Resource " + resource.getLocator().toString() + "]");
     }
 
-    @JSFunction
+    @Expose
     public JSDependency lock(String lockType) {
         return new JSDependency(resource.createDependency(lockType));
     }

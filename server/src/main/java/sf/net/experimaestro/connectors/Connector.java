@@ -28,20 +28,23 @@ import java.nio.file.Path;
 /**
  * This class represents any layer that can get between a host where files can be stored
  * and possibly where a command can be executed.
- * <p/>
+ * <p>
  * Connectors are stored in the database so that they can be used
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Entity
-@Table(name = "connector")
+@Table(name = "connector", uniqueConstraints = @UniqueConstraint(name = "identifier", columnNames = "identifier"))
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Connector implements Comparable<Connector> {
     /**
      * Each connector has a unique integer ID
      */
-    @Id()
+    @Id
+    @GeneratedValue
+    Long id;
+
     String identifier;
 
     public Connector(String identifier) {
@@ -49,6 +52,21 @@ public abstract class Connector implements Comparable<Connector> {
     }
 
     protected Connector() {
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Connector connector = (Connector) o;
+
+        return identifier.equals(connector.identifier);
+    }
+
+    @Override
+    public int hashCode() {
+        return identifier.hashCode();
     }
 
     /**

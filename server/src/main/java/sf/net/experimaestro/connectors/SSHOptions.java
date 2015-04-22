@@ -27,7 +27,7 @@ import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.SessionFactory;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 
 import java.io.IOException;
 import java.io.InputStream;

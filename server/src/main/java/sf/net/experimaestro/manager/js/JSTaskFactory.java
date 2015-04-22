@@ -22,12 +22,14 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
@@ -45,19 +47,19 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
     final static private Logger LOGGER = Logger.getLogger();
     TaskFactory factory;
 
-    @JSFunction
+    @Expose
     public JSTaskFactory(Scriptable scope, NativeObject jsObject,
                          Repository repository) throws ValueMismatchException {
         this(getQName(scope, jsObject, "id", false), scope, jsObject, repository);
     }
 
-    @JSFunction
+    @Expose
     public JSTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                          Repository repository) throws ValueMismatchException {
         factory = new TaskFactoryJavascript(qname, scope, jsObject, repository);
     }
 
-    @JSFunction
+    @Expose
     public JSTaskFactory(TaskFactory factory) {
         this.factory = factory;
     }
@@ -76,34 +78,34 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
         throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
     }
 
-    @JSFunction("create")
+    @Expose("create")
     public JSTaskWrapper create() {
         return new JSTaskWrapper(factory.create(), xpm());
     }
 
-    @JSFunction("commands")
+    @Expose("commands")
     public Commands commands(JsonObject json) {
         return factory.commands(json, xpm()._simulate);
     }
 
-    @JSFunction(value = "run", scope = true)
+    @Expose(value = "run", scope = true)
     public Object run(Context context, Scriptable scope, NativeObject object) throws XPathExpressionException {
         return plan(context, scope, object).run(context, scope);
     }
 
-    @JSHelp("Creates a plan from this task")
-    @JSFunction(value = "plan", scope = true)
+    @Help("Creates a plan from this task")
+    @Expose(value = "plan", scope = true)
     public JSPlan plan(Context cx, Scriptable scope, NativeObject object) throws XPathExpressionException {
         return newObject(cx, scope, JSPlan.class, this, object);
     }
 
-    @JSHelp("Creates a plan from this task")
-    @JSFunction(value = "plan", scope = true)
+    @Help("Creates a plan from this task")
+    @Expose(value = "plan", scope = true)
     public JSPlan plan(Context cx, Scriptable scope) {
         return newObject(cx, scope, JSPlan.class);
     }
 
-    @JSFunction(value = "simulate", scope = true)
+    @Expose(value = "simulate", scope = true)
     public Object simulate(Context context, Scriptable scope, NativeObject parameters) throws Exception {
         final JSPlan plan = plan(context, scope, parameters);
         return plan.simulate(context, scope);

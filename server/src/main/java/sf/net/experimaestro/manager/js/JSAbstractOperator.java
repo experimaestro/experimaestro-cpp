@@ -24,6 +24,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
@@ -32,6 +33,7 @@ import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.Functional;
@@ -63,8 +65,8 @@ public abstract class JSAbstractOperator extends JSBaseObject {
      */
     abstract Operator getOperator();
 
-    @JSFunction(scope = true)
-    @JSHelp("Runs an XQuery against the input: each returned item is a new input")
+    @Expose(scope = true)
+    @Help("Runs an XQuery against the input: each returned item is a new input")
     public JSAbstractOperator select(Context context, Scriptable scope, String query) throws XPathExpressionException {
         JsonPathFunction function = new JsonPathFunction(query, scope);
         Operator operator = new FunctionOperator(function);
@@ -72,12 +74,12 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return new JSOperator(operator);
     }
 
-    @JSFunction
+    @Expose
     public JSOperator group_by(JSAbstractOperator... operators) {
         return group_by(Manager.XP_ARRAY, operators);
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSOperator group_by(Context cx, Scriptable scope, String name, JSAbstractOperator... operators) {
         return group_by(QName.parse(name, new JSNamespaceContext(scope)), operators);
     }
@@ -108,12 +110,12 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return new JSOperator(groupBy);
     }
 
-    @JSFunction
+    @Expose
     public JSOperator copy() {
         return new JSOperator(getOperator().copy(true));
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
         if (objects.length == 0)
             return this;
@@ -124,7 +126,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return JSTasks.merge(cx, scope, outputType, allObjects);
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, String key, Object... objects) {
         Object allObjects[] = new Object[objects.length + 1];
         System.arraycopy(objects, 0, allObjects, 1, objects.length);
@@ -135,7 +137,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return JSTasks.merge(cx, scope, outputType, allObjects);
     }
 
-    @JSFunction("to_dot")
+    @Expose("to_dot")
     public String toDot(boolean simplify) throws XPathExpressionException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
@@ -146,7 +148,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return baos.toString();
     }
 
-    @JSFunction("to_dot")
+    @Expose("to_dot")
     public String toDOT(boolean simplify, boolean initialize) throws XPathExpressionException {
         Operator operator = getOperator(simplify, initialize);
 
@@ -159,7 +161,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return baos.toString();
     }
 
-    @JSFunction(value = "set_default_locks", optional = 1)
+    @Expose(value = "set_default_locks", optional = 1)
     public void setDefaultLock(Object locks) {
         if (locks != null) {
             throw new NotImplementedException("Set default lock on operators");
@@ -180,23 +182,23 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return operator;
     }
 
-    @JSFunction
+    @Expose
     public Object run() throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(false, false);
     }
 
-    @JSFunction
+    @Expose
     public Object simulate() throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(true, false);
     }
 
-    @JSFunction
+    @Expose
     public Object simulate(boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
         return doRun(true, details);
     }
 
-    @JSFunction
-    @JSHelp("Wrap each output into an array")
+    @Expose
+    @Help("Wrap each output into an array")
     public JSOperator arrays() {
         final FunctionOperator operator = new FunctionOperator(ArrayWrap.INSTANCE);
         operator.addParent(this.getOperator());

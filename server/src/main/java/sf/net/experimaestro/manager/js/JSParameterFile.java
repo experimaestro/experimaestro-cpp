@@ -18,6 +18,8 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Expose;
+
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -31,23 +33,23 @@ public class JSParameterFile extends JSBaseObject {
     private byte[] value;
 
 
-    @JSFunction
+    @Expose
     public JSParameterFile(String key, byte[] value) {
         this.setKey(key);
         this.setValue(value);
     }
 
-    @JSFunction
+    @Expose
     public JSParameterFile(String key, JSBaseObject object) {
         this(key, object.getBytes());
     }
 
-    @JSFunction
+    @Expose
     public JSParameterFile(String key, String value, String encoding) throws UnsupportedEncodingException {
         this(key, value.getBytes(encoding));
     }
 
-    @JSFunction
+    @Expose
     public JSParameterFile(String key, String value) throws UnsupportedEncodingException {
         this(key, value, "UTF-8");
     }

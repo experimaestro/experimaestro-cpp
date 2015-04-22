@@ -21,9 +21,12 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonPath;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
@@ -45,42 +48,42 @@ public class JSPath extends JSBaseObject implements Wrapper {
     public JSPath() {
     }
 
-    @JSFunction
+    @Expose
     public JSPath(Path path) {
         this.path = path;
     }
 
-    @JSFunction
+    @Expose
     public JSPath(String path) throws FileSystemException {
         this.path = Paths.get(path);
     }
 
     @Override
-    @JSFunction("toString")
+    @Expose("toString")
     public String toString() {
         return path == null ? "[null]" : path.toString();
     }
 
-    @JSFunction("toSource")
+    @Expose("toSource")
     public String toSource() {
         return String.format("new Path(%s)", path.toString());
     }
 
 
-    @JSHelp(value = "Get the parent file object")
-    @JSFunction("get_parent")
+    @Help(value = "Get the parent file object")
+    @Expose("get_parent")
     public JSPath getParent() throws FileSystemException {
         return get_ancestor(1);
     }
 
-    @JSFunction("resolve")
+    @Expose("resolve")
     public JSPath resolve(String path) throws FileSystemException {
         return new JSPath(this.path.resolve(path));
     }
 
-    @JSHelp(value = "Get the n<sup>th</sup> ancestor of this file object",
-            arguments = @JSArguments(@JSArgument(type = "Integer", name = "levels")))
-    @JSFunction("get_ancestor")
+    @Help(value = "Get the n<sup>th</sup> ancestor of this file object",
+            arguments = @JSArguments(@Argument(type = "Integer", name = "levels")))
+    @Expose("get_ancestor")
     public JSPath get_ancestor(int level) throws FileSystemException {
         if (level < 0)
             throw new IllegalArgumentException("Level is negative (" + level + ")");
@@ -93,10 +96,10 @@ public class JSPath extends JSBaseObject implements Wrapper {
     }
 
 
-    @JSFunction("path")
-    @JSHelp(value = "Returns a file object corresponding to the path given in the arguments. " +
+    @Expose("path")
+    @Help(value = "Returns a file object corresponding to the path given in the arguments. " +
             "Each name given corresponds to a new path component starting from this file object.",
-            arguments = @JSArguments({@JSArgument(type = "String", name = "name"), @JSArgument(name = "...")}))
+            arguments = @JSArguments({@Argument(type = "String", name = "name"), @Argument(name = "...")}))
     public JSPath path(Object... args) throws FileSystemException {
         Path current = path;
         for (int i = 0; i < args.length; i++) {
@@ -133,32 +136,32 @@ public class JSPath extends JSBaseObject implements Wrapper {
     }
 
 
-    @JSFunction("mkdirs")
-    @JSHelp("Creates this folder, if it does not exist.  Also creates any ancestor\n" +
+    @Expose("mkdirs")
+    @Help("Creates this folder, if it does not exist.  Also creates any ancestor\n" +
             "folders which do not exist.  This method does nothing if the folder\n" +
             "already exists.")
     public void mkdirs() throws IOException {
         Files.createDirectories(path);
     }
 
-    @JSFunction("exists")
+    @Expose("exists")
     public boolean exists() throws FileSystemException {
         return Files.exists(path);
     }
 
-    @JSFunction("get_size")
+    @Expose("get_size")
     public long get_size() throws IOException {
         return Files.size(path);
     }
 
-    @JSFunction("add_extension")
-    @JSHelp("Adds an extension to the current filename")
+    @Expose("add_extension")
+    @Help("Adds an extension to the current filename")
     public Object add_extension(String extension) throws FileSystemException {
         return path.getParent().resolve(path.getFileName().getName(0) + extension);
     }
 
-    @JSFunction
-    @JSHelp("Removes extension to the current filename")
+    @Expose
+    @Help("Removes extension to the current filename")
     public Object remove_extension(String extension) throws FileSystemException {
         String baseName = path.getFileName().getName(0).toString();
         if (baseName.endsWith(extension))
@@ -166,9 +169,9 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return path.getParent().resolve(baseName);
     }
 
-    @JSFunction
-    @JSHelp("Find all the matching files within this folder")
-    public JSJson find_matching_files(@JSArgument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
+    @Expose
+    @Help("Find all the matching files within this folder")
+    public JSJson find_matching_files(@Argument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
         final Pattern pattern = Pattern.compile(regexp);
         final JsonArray array = new JsonArray();
         DirectoryStream<Path> paths = Files.newDirectoryStream(path, f -> pattern.matcher(f.getFileName().toString()).matches());
@@ -180,8 +183,8 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return new JSJson(array);
     }
 
-    @JSFunction
-    public void copy_to(@JSArgument(name = "destination") JSPath destination) throws IOException {
+    @Expose
+    public void copy_to(@Argument(name = "destination") JSPath destination) throws IOException {
         Files.copy(path, destination.path);
     }
 
@@ -190,14 +193,14 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return path;
     }
 
-    @JSFunction
+    @Expose
     public PrintWriter output_stream() throws IOException {
         final OutputStream output = Files.newOutputStream(path);
         final PrintWriter writer = new MyPrintWriter(xpm(), output);
         return writer;
     }
 
-    @JSFunction
+    @Expose
     public BufferedReader input_stream() throws IOException {
         final BufferedReader reader = new BufferedReader(new MyInputStreamReader(xpm(), Files.newInputStream(path)));
         return reader;
@@ -207,8 +210,8 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return path;
     }
 
-    @JSFunction("get_path")
-    @JSHelp("Get the file path, ignoring the file scheme")
+    @Expose("get_path")
+    @Help("Get the file path, ignoring the file scheme")
     public String get_path() {
         return path.toUri().getPath();
     }

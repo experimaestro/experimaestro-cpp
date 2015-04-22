@@ -21,12 +21,14 @@ package sf.net.experimaestro.manager.js;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
@@ -44,17 +46,17 @@ import static com.google.common.collect.Range.closed;
 public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     private final Json json;
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSJson(Context sc, Scriptable scope, NativeObject object) {
         this.json = JSUtils.toJSON(scope, object);
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public JSJson(Context sc, Scriptable scope, NativeArray object) {
         this.json = JSUtils.toJSON(scope, object);
     }
 
-    @JSFunction
+    @Expose
     public JSJson(Json json) {
         this.json = json;
         if (json instanceof JSBaseObject)
@@ -65,7 +67,7 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         return json;
     }
 
-    @JSFunction
+    @Expose
     public String join(String separator) {
         if (!(json instanceof JsonArray)) {
             throw new IllegalArgumentException("Can only join JSON arrays");
@@ -74,12 +76,12 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
     }
 
     @Override
-    @JSFunction
+    @Expose
     public String toString() {
         return json.toString();
     }
 
-    @JSFunction
+    @Expose
     public String toSource() {
         StringWriter writer = new StringWriter();
         try {
@@ -168,7 +170,7 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         return super.has(index, start);
     }
 
-    @JSFunction
+    @Expose
     public String get_descriptor() throws IOException {
         StringWriter writer = new StringWriter();
         json.writeDescriptorString(writer);
@@ -180,18 +182,18 @@ public class JSJson extends JSBaseObject implements JSConstructable, Wrapper {
         return json;
     }
 
-    @JSFunction
+    @Expose
     public boolean is_array() {
         return json instanceof JsonArray;
     }
 
-    @JSFunction
+    @Expose
     public boolean is_object() {
         return json instanceof JsonObject;
     }
 
-    @JSFunction(value = "as_parameter_file", optional = 1)
-    @JSHelp("Creates a parameter file from this JSON")
+    @Expose(value = "as_parameter_file", optional = 1)
+    @Help("Creates a parameter file from this JSON")
     public Command.ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         if (connector == null) {

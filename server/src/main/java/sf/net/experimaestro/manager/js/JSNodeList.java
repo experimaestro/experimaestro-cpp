@@ -26,8 +26,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.RangeUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -45,7 +47,7 @@ import static com.google.common.collect.Range.closed;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 7/3/13
  */
-@JSHelp("A list of XML nodes")
+@Help("A list of XML nodes")
 public class JSNodeList extends JSBaseObject implements Iterable<Node> {
     private final NodeList list;
 
@@ -73,7 +75,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         return (Iterator<Node>) XMLUtils.iterable(list).iterator();
     }
 
-    @JSFunction("toSource")
+    @Expose("toSource")
     public String toSource() {
         return Output.toString(
                 "",
@@ -83,7 +85,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
     }
 
 
-    @JSFunction(value = "get_string", scope = true)
+    @Expose(value = "get_string", scope = true)
     public String getString(Context context, Scriptable scope, String expression) throws XPathExpressionException {
         XPathExpression xpath = XMLUtils.parseXPath(expression, JSUtils.getNamespaceContext(scope));
         StringBuilder sb = new StringBuilder();
@@ -94,7 +96,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         return sb.toString();
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public Object toE4X(Context cx, Scriptable scope) {
         Document document = XMLUtils.newDocument();
         DocumentFragment fragment = document.createDocumentFragment();
@@ -103,7 +105,7 @@ public class JSNodeList extends JSBaseObject implements Iterable<Node> {
         return JSUtils.domToE4X(fragment, cx, scope);
     }
 
-    @JSFunction(scope = true, optional = 1)
+    @Expose(scope = true, optional = 1)
     public String resource(Context cx, Scriptable scope, String expression) throws XPathExpressionException {
         List<Node> list = evaluate_xpath(scope, expression);
         if (list.size() != 1)

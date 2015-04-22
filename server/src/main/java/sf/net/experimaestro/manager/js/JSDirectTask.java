@@ -19,11 +19,13 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -137,12 +139,12 @@ public class JSDirectTask extends JSAbstractTask {
          */
         private NativeObject jsFactory;
 
-        @JSFunction
+        @Expose
         public JSTask(NativeObject jsFactory) {
             this.jsFactory = jsFactory;
         }
 
-        @JSFunction(scope = true, optionalsAtStart = true, optional = 2)
+        @Expose(scope = true, optionalsAtStart = true, optional = 2)
         public JSPath unique_directory(Context cx, Scriptable scope, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
@@ -151,7 +153,7 @@ public class JSDirectTask extends JSAbstractTask {
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
 
-        @JSFunction(scope = true)
+        @Expose(scope = true)
         public JSPath unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
@@ -162,8 +164,8 @@ public class JSDirectTask extends JSAbstractTask {
         }
 
 
-        @JSFunction()
-        @JSHelp("Returns a Json object corresponding to inputs of a given group (shallow copy)")
+        @Expose()
+        @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
         public JSJson group(String groupId, JsonObject p) {
             JsonObject json = new JsonObject();
             for (Entry<String, Input> x : getFactory().getInputs().entrySet()) {

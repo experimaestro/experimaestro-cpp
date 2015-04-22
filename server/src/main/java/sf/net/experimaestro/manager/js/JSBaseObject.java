@@ -21,8 +21,8 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.annotations.Expose;
-import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
@@ -92,7 +92,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 map = description.methods;
                 for (Method method : aClass.getDeclaredMethods()) {
                     // Js function case
-                    final JSFunction jsFunction = method.getAnnotation(JSFunction.class);
+                    final Expose jsFunction = method.getAnnotation(Expose.class);
 
                     if (jsFunction != null) {
                         addMethod(map, method, jsFunction.value(), jsFunction.call());
@@ -124,7 +124,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
                 // Add constructors
                 for (Constructor<?> constructor : aClass.getConstructors()) {
-                    final JSFunction annotation = constructor.getAnnotation(JSFunction.class);
+                    final Expose annotation = constructor.getAnnotation(Expose.class);
                     if (annotation != null) {
                         description.constructors.add(constructor);
                         continue;

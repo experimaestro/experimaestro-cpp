@@ -18,8 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.annotations.Expose;
-import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 
 import java.util.function.Consumer;

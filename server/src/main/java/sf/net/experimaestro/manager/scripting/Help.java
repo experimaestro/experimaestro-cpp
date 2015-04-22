@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,35 +18,20 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.js.JSArguments;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JSFunction {
-    String value() default "";
 
-    /**
-     * Whether the constructor takes scope & context
-     */
-    boolean scope() default false;
+public @interface Help {
+    /* Basic description */
+    String value();
 
-
-    /**
-     * Marks a function that is used when the object is called
-     */
-    boolean call() default false;
-
-    /**
-     * Number of arguments that are optional.
-     */
-    int optional() default 0;
-
-    /**
-     * Optional arguments are at the beginning when true
-     */
-    boolean optionalsAtStart() default false;
+    /* List of arguments when using the variable style assignement */
+    JSArguments[] arguments() default {};
 }

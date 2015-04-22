@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.scripting.Expose;
 
 /**
  * Wrapper for operators
@@ -27,7 +28,7 @@ import sf.net.experimaestro.manager.plans.Operator;
 public class JSOperator extends JSAbstractOperator {
     private final Operator operator;
 
-    @JSFunction
+    @Expose
     public JSOperator(Operator operator) {
         this.operator = operator;
     }

@@ -31,7 +31,7 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;

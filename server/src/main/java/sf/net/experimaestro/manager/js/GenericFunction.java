@@ -25,6 +25,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
@@ -63,7 +64,7 @@ public abstract class GenericFunction implements Callable {
         Object methodArgs[] = new Object[types.length];
 
         // --- Add context and scope if needed
-        JSFunction annotation = executable.getAnnotation(JSFunction.class);
+        Expose annotation = executable.getAnnotation(Expose.class);
 
         final boolean useScope = annotation == null ? false : annotation.scope();
         if (useScope) {
@@ -109,7 +110,7 @@ public abstract class GenericFunction implements Callable {
         final boolean isVarArgs = executable.isVarArgs();
 
         // Get the annotations
-        JSFunction annotation = declaration.executable.getAnnotation(JSFunction.class);
+        Expose annotation = declaration.executable.getAnnotation(Expose.class);
         final boolean scopeAnnotation = annotation == null ? false : annotation.scope();
         int optional = annotation == null ? 0 : annotation.optional();
 

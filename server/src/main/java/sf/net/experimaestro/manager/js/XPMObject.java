@@ -9,6 +9,9 @@ import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
@@ -299,7 +302,7 @@ public class XPMObject {
      *
      * @return A {@JSPath}
      */
-    @JSHelp("Returns a Path corresponding to the path")
+    @Help("Returns a Path corresponding to the path")
     static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         if (args.length != 1)
             throw new IllegalArgumentException("path() needs one argument");
@@ -323,11 +326,11 @@ public class XPMObject {
         throw new XPMRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
 
-    @JSHelp(
+    @Help(
             value = "Format a string",
             arguments = @JSArguments({
-                    @JSArgument(name = "format", type = "String", help = "The string used to format"),
-                    @JSArgument(name = "arguments...", type = "Object", help = "A list of objects")
+                    @Argument(name = "format", type = "String", help = "The string used to format"),
+                    @Argument(name = "arguments...", type = "Object", help = "A list of objects")
             })
     )
     static public String js_format(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
@@ -378,7 +381,7 @@ public class XPMObject {
         return new JSPath(xpm.currentScriptPath);
     }
 
-    @JSHelp(value = "Returns a file relative to the current connector")
+    @Help(value = "Returns a file relative to the current connector")
     public static Scriptable js_file(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
         XPMObject xpm = getXPM(thisObj);
         if (args.length != 1)
@@ -388,7 +391,7 @@ public class XPMObject {
                 new Object[]{xpm.currentScriptPath.getParent().resolve(arg)});
     }
 
-    @JSHelp(value = "Unwrap an annotated XML value into a native JS object")
+    @Help(value = "Unwrap an annotated XML value into a native JS object")
     public static Object js_unwrap(Object object) {
         return object.toString();
     }
@@ -786,7 +789,7 @@ public class XPMObject {
                     return new JSResource(submittedJobs.get(path));
                 }
 
-                return new JSResource(Resource.getByLocator(em, connector.resolve((Path)path)));
+                return new JSResource(Resource.getByLocator(em, connector.resolve((Path) path)));
             }
 
 
@@ -1025,7 +1028,7 @@ public class XPMObject {
     static public class JSXPM extends JSBaseObject {
         XPMObject xpm;
 
-        @JSFunction
+        @Expose
         public JSXPM() {
         }
 
@@ -1050,26 +1053,26 @@ public class XPMObject {
             return "XPM";
         }
 
-        @JSFunction("set_property")
+        @Expose("set_property")
         public void setProperty(String name, Object object) {
             final Object x = unwrap(object);
             xpm.properties.put(name, object);
         }
 
-        @JSFunction("set_default_lock")
-        @JSHelp("Adds a new resource to lock for all jobs to be started")
+        @Expose("set_default_lock")
+        @Help("Adds a new resource to lock for all jobs to be started")
         public void setDefaultLock(
-                @JSArgument(name = "resource", help = "The resource to be locked")
+                @Argument(name = "resource", help = "The resource to be locked")
                 Resource resource,
-                @JSArgument(name = "parameters", help = "The parameters to be given at lock time")
+                @Argument(name = "parameters", help = "The parameters to be given at lock time")
                 Object parameters) {
             xpm.defaultLocks.put(resource, parameters);
         }
 
-        @JSFunction("token_resource")
-        @JSHelp("Retrieve (or creates) a token resource with a given xpath")
+        @Expose("token_resource")
+        @Help("Retrieve (or creates) a token resource with a given xpath")
         public Scriptable getTokenResource(
-                @JSArgument(name = "path", help = "The path of the resource") String path
+                @Argument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
             return Transaction.evaluate((em, t) -> {
                 final Resource resource = Resource.getByLocator(em, path);
@@ -1087,33 +1090,33 @@ public class XPMObject {
             });
         }
 
-        @JSFunction()
+        @Expose()
         public void log() {
 
         }
 
-        @JSFunction("logger")
+        @Expose("logger")
         public Scriptable getLogger(String name) {
             return xpm.newObject(JSLogger.class, xpm, name);
         }
 
 
-        @JSFunction("log_level")
-        @JSHelp(value = "Sets the logger debug level")
+        @Expose("log_level")
+        @Help(value = "Sets the logger debug level")
         public void setLogLevel(
-                @JSArgument(name = "name") String name,
-                @JSArgument(name = "level") String level
+                @Argument(name = "name") String name,
+                @Argument(name = "level") String level
         ) {
             Logger.getLogger(xpm.loggerRepository, name).setLevel(Level.toLevel(level));
         }
 
 
-        @JSFunction("get_script_path")
+        @Expose("get_script_path")
         public String getScriptPath() {
             return xpm.currentScriptPath.toString();
         }
 
-        @JSFunction("get_script_file")
+        @Expose("get_script_file")
         public JSPath getScriptFile() throws FileSystemException {
             return new JSPath(xpm.currentScriptPath);
         }
@@ -1121,7 +1124,7 @@ public class XPMObject {
         /**
          * Add a module
          */
-        @JSFunction("add_module")
+        @Expose("add_module")
         public JSModule addModule(Object object) {
             JSModule module = new JSModule(xpm, xpm.repository, xpm.scope, (NativeObject) object);
             LOGGER.debug("Adding module [%s]", module.module.getId());
@@ -1135,7 +1138,7 @@ public class XPMObject {
          * @param object
          * @return
          */
-        @JSFunction("add_task_factory")
+        @Expose("add_task_factory")
         public Scriptable add_task_factory(NativeObject object) throws ValueMismatchException {
             JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
             xpm.repository.addFactory(factory.factory);
@@ -1143,12 +1146,12 @@ public class XPMObject {
                     new Object[]{factory});
         }
 
-        @JSFunction("get_task")
+        @Expose("get_task")
         public Scriptable getTask(QName name) {
             return xpm.getTask(name);
         }
 
-        @JSFunction("get_task")
+        @Expose("get_task")
         public Scriptable getTask(
                 String namespaceURI,
                 String localName) {
@@ -1156,7 +1159,7 @@ public class XPMObject {
         }
 
 
-        @JSFunction(value = "evaluate", optional = 1)
+        @Expose(value = "evaluate", optional = 1)
         public String evaluate(
                 NativeArray command,
                 NativeObject options
@@ -1164,55 +1167,55 @@ public class XPMObject {
             return xpm.evaluate(command, options);
         }
 
-        @JSFunction("file")
-        @JSHelp(value = "Returns a file relative to the current connector")
-        public Scriptable file(@JSArgument(name = "filepath") String filepath) throws FileSystemException {
+        @Expose("file")
+        @Help(value = "Returns a file relative to the current connector")
+        public Scriptable file(@Argument(name = "filepath") String filepath) throws FileSystemException {
             return xpm.context.newObject(xpm.scope, JSPath.JSCLASSNAME,
                     new Object[]{xpm, xpm.currentScriptPath.resolve(filepath)});
         }
 
-        @JSFunction
-        public Scriptable file(@JSArgument(name = "file") JSPath file) throws FileSystemException {
+        @Expose
+        public Scriptable file(@Argument(name = "file") JSPath file) throws FileSystemException {
             return file;
         }
 
 
-        @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
-                                         @JSArgument(type = "Array", name = "command") NativeArray jsargs,
-                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+        @Expose(value = "command_line_job", optional = 1)
+        @Help(value = COMMAND_LINE_JOB_HELP)
+        public Scriptable commandlineJob(@Argument(name = "jobId") Object path,
+                                         @Argument(type = "Array", name = "command") NativeArray jsargs,
+                                         @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             Commands commands = new Commands(JSCommand.getCommand(jsargs));
             JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
             return jsResource;
         }
 
-        @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object path,
-                                         @JSArgument(type = "Array", name = "command") AbstractCommand command,
-                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+        @Expose(value = "command_line_job", optional = 1)
+        @Help(value = COMMAND_LINE_JOB_HELP)
+        public Scriptable commandlineJob(@Argument(name = "jobId") Object path,
+                                         @Argument(type = "Array", name = "command") AbstractCommand command,
+                                         @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             Commands commands = new Commands(command);
             JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
             return jsResource;
         }
 
-        @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@JSArgument(name = "jobId") Object jobId,
+        @Expose(value = "command_line_job", optional = 1)
+        @Help(value = COMMAND_LINE_JOB_HELP)
+        public Scriptable commandlineJob(@Argument(name = "jobId") Object jobId,
                                          Commands commands,
-                                         @JSArgument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
+                                         @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             JSResource jsResource = xpm.commandlineJob(jobId, commands, jsoptions);
             return jsResource;
         }
 
-        @JSFunction(value = "command_line_job", optional = 1)
-        @JSHelp(value = COMMAND_LINE_JOB_HELP)
+        @Expose(value = "command_line_job", optional = 1)
+        @Help(value = COMMAND_LINE_JOB_HELP)
         public Scriptable commandlineJob(
                 JsonObject json,
-                @JSArgument(name = "jobId") Object jobId,
+                @Argument(name = "jobId") Object jobId,
                 Object commands,
-                @JSArgument(type = "Map", name = "options") NativeObject jsOptions) throws Exception {
+                @Argument(type = "Map", name = "options") NativeObject jsOptions) throws Exception {
 
             Commands _commands;
             if (commands instanceof Commands) {
@@ -1237,8 +1240,8 @@ public class XPMObject {
          *
          * @param qname A qualified name
          */
-        @JSFunction("declare_alternative")
-        @JSHelp(value = "Declare a qualified name as an alternative input")
+        @Expose("declare_alternative")
+        @Help(value = "Declare a qualified name as an alternative input")
         public void declareAlternative(Object qname) {
             AlternativeType type = new AlternativeType((QName) qname);
             xpm.repository.addType(type);
@@ -1250,40 +1253,40 @@ public class XPMObject {
          *
          * @param xml an E4X object
          */
-        @JSFunction("output_e4x")
-        @JSHelp("Outputs the E4X XML object")
-        public void outputE4X(@JSArgument(name = "xml", help = "The XML object") Object xml) {
+        @Expose("output_e4x")
+        @Help("Outputs the E4X XML object")
+        public void outputE4X(@Argument(name = "xml", help = "The XML object") Object xml) {
             final Iterable<? extends Node> list = JSCommand.xmlAsList(JSUtils.toDOM(null, xml));
             for (Node node : list) {
                 output(node);
             }
         }
 
-        @JSFunction("publish")
-        @JSHelp("Publish the repository on the web server")
+        @Expose("publish")
+        @Help("Publish the repository on the web server")
         public void publish() throws InterruptedException {
             TasksServlet.updateRepository(xpm.currentScriptPath.toString(), xpm.repository);
         }
 
-        @JSFunction
-        @JSHelp("Set the simulate flag: When true, the jobs are not submitted but just output")
+        @Expose
+        @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
         public boolean simulate(boolean simulate) {
             boolean old = xpm._simulate;
             xpm._simulate = simulate;
             return simulate;
         }
 
-        @JSFunction
+        @Expose
         public boolean simulate() {
             return xpm._simulate;
         }
 
-        @JSFunction
+        @Expose
         public String env(String key, String value) {
             return xpm.environment.put(key, value);
         }
 
-        @JSFunction
+        @Expose
         public String env(String key) {
             return xpm.environment.get(key);
         }
@@ -1309,12 +1312,12 @@ public class XPMObject {
     static class XPMFunctions {
         XPMObject xpm;
 
-        @JSFunction
+        @Expose
         public XPMFunctions(XPMObject xpm) {
             this.xpm = xpm;
         }
 
-        @JSFunction(scope = true, value = "merge")
+        @Expose(scope = true, value = "merge")
         static public NativeObject merge(Context cx, Scriptable scope, Object... objects) {
             NativeObject returned = new NativeObject();
 
@@ -1345,36 +1348,36 @@ public class XPMObject {
         }
 
 
-        @JSFunction(scope = true)
+        @Expose(scope = true)
         public static String digest(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
             Json json = JSUtils.toJSON(scope, jsons);
             return Manager.getDigest(json);
         }
 
-        @JSFunction(scope = true)
+        @Expose(scope = true)
         public static String descriptor(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
             Json json = JSUtils.toJSON(scope, jsons);
             return Manager.getDescriptor(json);
         }
 
-        @JSFunction(scope = true)
-        @JSHelp(value = "Transform plans outputs with a function")
+        @Expose(scope = true)
+        @Help(value = "Transform plans outputs with a function")
         public static Scriptable transform(Context cx, Scriptable scope, Callable f, JSAbstractOperator... operators) throws FileSystemException {
             return new JSTransform(cx, scope, f, operators);
         }
 
-        @JSFunction
+        @Expose
         public static JSInput input(String name) {
             return new JSInput(name);
         }
 
-        @JSFunction(value = "_")
+        @Expose(value = "_")
         @JSDeprecated
         public static Object _get_value(Object object) {
             return get_value(object);
         }
 
-        @JSFunction("$")
+        @Expose("$")
         public static Object get_value(Object object) {
             object = unwrap(object);
             if (object instanceof Json)
@@ -1383,14 +1386,14 @@ public class XPMObject {
             return object;
         }
 
-        @JSFunction("assert")
+        @Expose("assert")
         public static void _assert(boolean condition, String format, Object... objects) {
             if (!condition)
                 throw new EvaluatorException("assertion failed: " + String.format(format, objects));
         }
 
-        @JSFunction()
-        @JSHelp("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
+        @Expose()
+        @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
                 "to lock the resources below")
         public NativeArray get_locks(String lockMode, JsonObject json) {
             ArrayList<Dependency> dependencies = new ArrayList<>();
@@ -1420,8 +1423,8 @@ public class XPMObject {
             }
         }
 
-        @JSFunction(value = "$$", scope = true)
-        @JSHelp("Get the resource associated with the json object")
+        @Expose(value = "$$", scope = true)
+        @Help("Get the resource associated with the json object")
         public JSResource get_resource(Context cx, Scriptable scope, Json json) {
             Resource resource = null;
             if (json instanceof JsonObject) {
@@ -1458,16 +1461,16 @@ public class XPMObject {
             return null;
         }
 
-        @JSFunction(value = "java_repository", optional = 1, optionalsAtStart = true)
-        @JSHelp("Include a repository from introspection of a java project")
+        @Expose(value = "java_repository", optional = 1, optionalsAtStart = true)
+        @Help("Include a repository from introspection of a java project")
         public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
             if (connector == null)
                 connector = LocalhostConnector.getInstance();
             JavaTasksIntrospection.addToRepository(xpm.repository, connector, paths);
         }
 
-        @JSFunction()
-        @JSHelp("Set the experiment for all future commands")
+        @Expose()
+        @Help("Set the experiment for all future commands")
         public void set_experiment(String dotname, Path workdir) throws ExperimaestroCannotOverwrite {
             if (!xpm.simulate()) {
                 Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
@@ -1480,11 +1483,18 @@ public class XPMObject {
             xpm.workdir.set(workdir);
         }
 
-        @JSFunction
+        @Expose
         public void set_workdir(Path workdir) throws FileSystemException {
             xpm.workdir.set(workdir);
         }
 
+        @Expose(optional = 1)
+        @Help("Defines a new relationship between a network share and a path on a connector")
+        public void define_share(@Argument(name = "host", help="The logical host") String host,
+                                 @Argument(name = "share") String share,
+                                 SingleHostConnector connector, String path, Integer priority) {
+            Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
+        }
 
     }
 

@@ -29,6 +29,7 @@ import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.Function;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.Iterator;
@@ -43,7 +44,7 @@ public class JSTransform extends JSAbstractOperator implements Function {
 
     private final FunctionOperator operator;
 
-    @JSFunction
+    @Expose
     public JSTransform(Context cx, Scriptable scope, Callable f, JSAbstractOperator[] operators) {
         this.cx = cx;
         this.scope = scope;

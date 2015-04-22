@@ -27,6 +27,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -42,7 +43,7 @@ public class JSCopy extends JSPlan {
     private final Map<String, Input> inputs = new HashMap<>();
 
 
-    @JSFunction
+    @Expose
     public JSCopy(Context cx, Scriptable scope, String outputType, NativeObject plan) throws XPathExpressionException {
         this.outputType = new Type(QName.parse(outputType, new JSNamespaceContext(scope)));
         this.plan = new Plan(new AnonymousTaskFactory());

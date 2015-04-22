@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.Union;
+import sf.net.experimaestro.manager.scripting.Expose;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -28,7 +29,7 @@ import sf.net.experimaestro.manager.plans.Union;
 public class JSUnion extends JSAbstractOperator {
     Union union = new Union();
 
-    @JSFunction
+    @Expose
     public JSUnion(JSAbstractOperator... operators) {
         for (JSAbstractOperator operator : operators)
             union.addParent(operator.getOperator());

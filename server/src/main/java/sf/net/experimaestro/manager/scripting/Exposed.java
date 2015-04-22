@@ -1,4 +1,4 @@
-package sf.net.experimaestro.annotations;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -24,11 +24,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks objects that are exposed in scripting languages that can
- * interact with experimaestro
+ * Marks objects that have exposed methods
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
-public @interface Expose {
-    String value() default "";
+@Target(ElementType.TYPE)
+public @interface Exposed {
 }

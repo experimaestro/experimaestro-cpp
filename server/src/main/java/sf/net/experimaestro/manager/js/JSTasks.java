@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
@@ -27,6 +28,7 @@ import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.MergeFunction;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 
@@ -37,11 +39,11 @@ import javax.xml.xpath.XPathExpressionException;
  * @date 7/2/13
  */
 public class JSTasks extends JSBaseObject implements RefCallable {
-    @JSFunction
+    @Expose
     public JSTasks() {
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     static public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
         Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
         ProductReference pr = new ProductReference();
@@ -75,13 +77,13 @@ public class JSTasks extends JSBaseObject implements RefCallable {
         return new JSOperator(operator);
     }
 
-    @JSFunction(value = "set", scope = true)
+    @Expose(value = "set", scope = true)
     public JSTaskFactory set(Context cx, Scriptable scope, String qname, NativeObject definition) {
         QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
         return new TaskRef(id).set(cx, definition);
     }
 
-    @JSFunction(value = "get", scope = true)
+    @Expose(value = "get", scope = true)
     public Object get(Context cx, Scriptable scope, String qname) {
         QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
         return new TaskRef(id).get(cx);
@@ -115,14 +117,14 @@ public class JSTasks extends JSBaseObject implements RefCallable {
         return new TaskRef(id);
     }
 
-    @JSFunction(scope = true)
+    @Expose(scope = true)
     public void add(Context cx, Scriptable scope, String qname, NativeObject taskDescription) {
         QName id = QName.parse(JSUtils.toString(qname), JSUtils.getNamespaceContext(scope));
         new TaskRef(id).set(cx, taskDescription);
     }
 
-    @JSFunction(scope = true)
-    @JSHelp(value = "Creates an anonymous task that will copy its input as output")
+    @Expose(scope = true)
+    @Help(value = "Creates an anonymous task that will copy its input as output")
     public JSCopy copy(Context cx, Scriptable scope, String qname, NativeObject plan) throws XPathExpressionException {
         return new JSCopy(cx, scope, qname, plan);
     }

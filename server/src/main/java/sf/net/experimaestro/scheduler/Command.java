@@ -20,8 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.annotations.JsonAdapter;
-import sf.net.experimaestro.annotations.Expose;
-import sf.net.experimaestro.annotations.Exposed;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonPath;

@@ -18,7 +18,7 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 
 import java.io.IOException;
 import java.net.URI;

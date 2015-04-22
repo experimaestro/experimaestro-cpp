@@ -1,4 +1,4 @@
-package sf.net.experimaestro.annotations;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,17 @@ package sf.net.experimaestro.annotations;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 
 /**
- * Marks objects that have exposed methods
+ * Help for an argument of a method
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Exposed {
+public @interface Argument {
+    String name() default "";
+
+    String type() default "";
+
+    String help() default "";
 }

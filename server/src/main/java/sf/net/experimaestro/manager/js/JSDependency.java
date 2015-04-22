@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.scheduler.Dependency;
 
 /**
@@ -30,7 +31,7 @@ public class JSDependency extends JSBaseObject implements Wrapper {
      */
     private Dependency dependency;
 
-    @JSFunction
+    @Expose
     public JSDependency(Dependency dependency) {
         this.dependency = dependency;
     }
