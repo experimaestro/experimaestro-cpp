@@ -10,6 +10,7 @@ import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Functions;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.connectors.*;
@@ -228,6 +229,15 @@ public class XPMObject {
         for (Map.Entry<String, ArrayList<Method>> entry : functionsMap.entrySet()) {
             MethodFunction function = new MethodFunction(entry.getKey());
             function.add(xpmFunctions, entry.getValue());
+            ScriptableObject.putProperty(scope, entry.getKey(), function);
+        }
+
+        // Add functions from our the common scripting base
+        Map<String, ArrayList<Method>> scriptingFunctionsMap = JSBaseObject.analyzeClass(Functions.class).methods;
+        final Functions scriptingFunctions = new Functions();
+        for (Map.Entry<String, ArrayList<Method>> entry : scriptingFunctionsMap.entrySet()) {
+            MethodFunction function = new MethodFunction(entry.getKey());
+            function.add(scriptingFunctions, entry.getValue());
             ScriptableObject.putProperty(scope, entry.getKey(), function);
         }
 
@@ -1488,13 +1498,7 @@ public class XPMObject {
             xpm.workdir.set(workdir);
         }
 
-        @Expose(optional = 1)
-        @Help("Defines a new relationship between a network share and a path on a connector")
-        public void define_share(@Argument(name = "host", help="The logical host") String host,
-                                 @Argument(name = "share") String share,
-                                 SingleHostConnector connector, String path, Integer priority) {
-            Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
-        }
+
 
     }
 
