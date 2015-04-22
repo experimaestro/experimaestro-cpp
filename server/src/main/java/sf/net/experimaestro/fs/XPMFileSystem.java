@@ -19,6 +19,7 @@ package sf.net.experimaestro.fs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.connectors.NetworkShare;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -31,17 +32,16 @@ import java.util.Set;
  */
 public class XPMFileSystem extends FileSystem {
     public static final String PATH_SEPARATOR = "/";
+    public static XPMFileSystem instance = new XPMFileSystem();
 
-    public static FileSystem instance = new XPMFileSystem();
 
     @Override
     public FileSystemProvider provider() {
-        return null;
+        return XPMFileSystemProvider.instance;
     }
 
     @Override
     public void close() throws IOException {
-        // Close containing file systems
     }
 
     @Override
@@ -64,6 +64,10 @@ public class XPMFileSystem extends FileSystem {
         throw new NotImplementedException();
     }
 
+    /**
+     * Each store corresponds to one network share
+     * @return
+     */
     @Override
     public Iterable<FileStore> getFileStores() {
         // Should return the list of network shares
@@ -77,6 +81,20 @@ public class XPMFileSystem extends FileSystem {
 
     @Override
     public Path getPath(String first, String... more) {
+//        try {
+//            final String scheme = baseURI.getScheme();
+//            final String host = baseURI.getHost();
+//            return Transaction.evaluate(em -> {
+//                final NetworkShare networkShare = NetworkShare.find(em, scheme, host);
+//                if (networkShare == null) {
+//                    throw new FileSystemNotFoundException("no filesystem defined for " + uri.toString());
+//                }
+//                return new XPMFileSystem(networkShare);
+//            });
+//        } catch (URISyntaxException e) {
+//            throw new FileSystemNotFoundException("Cannot parse URI " + uri);
+//        }
+
         throw new NotImplementedException();
     }
 

@@ -19,8 +19,12 @@ package sf.net.experimaestro.connectors;
  */
 
 import javax.persistence.*;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Defines relationships between single host connectors and network shares
@@ -66,5 +70,29 @@ public class NetworkShare {
 
     public void add(NetworkShareAccess networkShareAccess) {
         access.add(networkShareAccess);
+    }
+
+    /**
+     * Find a connector given its string ID
+     *
+     * @param em   The entity manager
+     * @param host The host name
+     * @param name The share name
+     * @return The connector in database or null if none exist
+     */
+    public static NetworkShare find(EntityManager em, String host, String name) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+
+        final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
+        final Root<NetworkShare> shares = q.from(NetworkShare.class);
+        q.select(shares)
+                .where(shares.get(NetworkShare_.host).in(host))
+                .where(shares.get(NetworkShare_.name).in(name));
+
+        final List<NetworkShare> resultList = em.createQuery(q).getResultList();
+        assert (resultList.size() <= 1);
+        if (resultList.isEmpty())
+            return null;
+        return resultList.get(0);
     }
 }

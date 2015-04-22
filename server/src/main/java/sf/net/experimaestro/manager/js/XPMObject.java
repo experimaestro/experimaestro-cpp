@@ -9,10 +9,6 @@ import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Functions;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
@@ -21,6 +17,10 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.*;
+import sf.net.experimaestro.manager.scripting.Argument;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Functions;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
@@ -35,9 +35,12 @@ import javax.xml.xpath.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -312,7 +315,7 @@ public class XPMObject {
      * @return A {@JSPath}
      */
     @Help("Returns a Path corresponding to the path")
-    static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+    static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException, URISyntaxException {
         if (args.length != 1)
             throw new IllegalArgumentException("path() needs one argument");
 
@@ -329,8 +332,13 @@ public class XPMObject {
         if (o instanceof Path)
             return xpm.newObject(JSPath.class, o);
 
-        if (o instanceof String)
-            return xpm.newObject(JSPath.class, xpm.currentScriptPath.getParent().resolve(o.toString()));
+        if (o instanceof String) {
+            final Path path = Paths.get(new URI(o.toString()));
+            if (!path.isAbsolute()) {
+                return xpm.newObject(JSPath.class, xpm.currentScriptPath.getParent().resolve(path));
+            }
+            return path;
+        }
 
         throw new XPMRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
@@ -372,7 +380,7 @@ public class XPMObject {
     /**
      * Sets the current workdir
      */
-    static public void js_set_workdir(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
+    static public void js_set_workdir(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException, URISyntaxException {
         XPMObject xpm = getXPM(thisObj);
         xpm.workdir.set(((JSPath) js_path(cx, thisObj, args, funObj)).getPath());
     }

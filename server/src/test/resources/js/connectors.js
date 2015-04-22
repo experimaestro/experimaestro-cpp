@@ -77,8 +77,8 @@ function test_ssh() {
 function test_share() {
 	var server = get_ssh_connector();
 	define_share("test", "root", server, "/");
-	var p = path("shares:test://root/" + repository_path.resolve("../../hello"));
-	assert_equals(p.readAll(), "world");
+	var p = path("shares:test://root/" + repository_path.resolve("../../hello").get_path());
+	assert_equals(p.read_all(), "world");
 }
 
 // --- Use a group of machines (disabled)

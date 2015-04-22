@@ -18,10 +18,12 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.connectors.NetworkShare;
+import sf.net.experimaestro.scheduler.Transaction;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -35,9 +37,11 @@ import java.util.Set;
  * The XPM file system provider
  */
 public class XPMFileSystemProvider extends FileSystemProvider {
+    public static FileSystemProvider instance = new XPMFileSystemProvider();
+
     @Override
     public String getScheme() {
-        return "xpm";
+        return "shares";
     }
 
     @Override
@@ -47,17 +51,12 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public FileSystem getFileSystem(URI uri) {
-//        UnixSshFileSystem fileSystem = fileSystemMap.get( uri.resolve( PATH_SEPARATOR_STRING ) );
-//        if ( fileSystem == null ) {
-//            throw new FileSystemNotFoundException( "no filesystem defined for " + uri.toString() );
-//        }
-//        return fileSystem;
-        throw new FileSystemNotFoundException( "no filesystem defined for " + uri.toString() );
+        return XPMFileSystem.instance;
     }
 
     @Override
     public Path getPath(URI uri) {
-        throw new NotImplementedException();
+        return getFileSystem(uri).getPath(uri.getPath());
     }
 
     @Override

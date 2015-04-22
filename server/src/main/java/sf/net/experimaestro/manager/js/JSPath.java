@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.*;
+import java.nio.CharBuffer;
 import java.nio.file.*;
 import java.util.Iterator;
 import java.util.List;
@@ -93,6 +94,18 @@ public class JSPath extends JSBaseObject implements Wrapper {
             ancestor = ancestor.getParent();
 
         return new JSPath(ancestor);
+    }
+
+    @Expose("read_all")
+    public String readAll() throws IOException {
+        try(BufferedReader reader = Files.newBufferedReader(path)) {
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+            return content.toString();
+        }
     }
 
 

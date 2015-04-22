@@ -142,7 +142,7 @@ public abstract class Connector implements Comparable<Connector> {
         return new ConnectorDelegator(this);
     }
 
-    public abstract Path resolve(String path) throws FileSystemException, IOException;
+    public abstract Path resolve(String path) throws IOException;
 
     public String resolve(Path path) throws IOException {
         return getMainConnector().resolve(path);
@@ -150,6 +150,7 @@ public abstract class Connector implements Comparable<Connector> {
 
     public long getKey() {
         return id;
+    }
 
     /**
      * Find a connector given its string ID

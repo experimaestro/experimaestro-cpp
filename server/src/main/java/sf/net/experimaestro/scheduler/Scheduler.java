@@ -30,6 +30,7 @@ import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.nio.ch.Net;
 
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -360,27 +361,20 @@ final public class Scheduler {
             CriteriaBuilder cb = em.getCriteriaBuilder();
 
             // Bug when connector not in DB... but it should be
-            final SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
+            SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
             if (_connector == null) {
-                em.persist(_connector);
+                em.persist(connector);
+                _connector = connector;
             }
 
-            final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
-            final Root<NetworkShare> shares = q.from(NetworkShare.class);
-            q.select(shares)
-                    .where(shares.get(NetworkShare_.host).in(host))
-                    .where(shares.get(NetworkShare_.name).in(name));
-            final List<NetworkShare> resultList = em.createQuery(q).getResultList();
-            assert (resultList.size() <= 1);
+            NetworkShare networkShare = NetworkShare.find(em, host, name);
 
-
-            if (resultList.isEmpty()) {
-                final NetworkShare networkShare = new NetworkShare(host, name);
+            if (networkShare == null) {
+                networkShare = new NetworkShare(host, name);
                 em.persist(networkShare);
                 final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
                 em.persist(access);
             } else {
-                final NetworkShare networkShare = resultList.get(0);
                 for (NetworkShareAccess access : networkShare.getAccess()) {
                     if (access.is(_connector)) {
                         // Found it - just update
