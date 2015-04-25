@@ -18,25 +18,33 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.connectors.NetworkShare;
+import sf.net.experimaestro.connectors.NetworkShareAccess;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.scheduler.Transaction;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
+
+import static java.lang.String.format;
 
 /**
  * The XPM file system provider
  */
 public class XPMFileSystemProvider extends FileSystemProvider {
+    final static private Logger LOGGER = Logger.getLogger();
     public static FileSystemProvider instance = new XPMFileSystemProvider();
 
     @Override
@@ -56,37 +64,64 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public Path getPath(URI uri) {
-        return getFileSystem(uri).getPath(uri.getPath());
+        return XPMFileSystem.instance.getPath(uri);
     }
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        return null;
+        XPMPath _path = (XPMPath)path;
+
+        final SeekableByteChannel channel = Transaction.evaluate(em -> {
+            final NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
+            NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
+            Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
+            for (NetworkShareAccess access : accesses) {
+                final SingleHostConnector connector = access.getConnector();
+                final String hostPath = access.getPath();
+                try {
+                    final Path hostPathObject = connector
+                            .resolveFile(hostPath)
+                            .resolve(_path.getLocalPath())
+                            .normalize();
+
+                    return Files.newByteChannel(hostPathObject);
+                } catch (IOException e) {
+                    LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
+                    continue;
+                }
+            }
+            return null;
+        });
+        if (channel == null) {
+            throw new IOException(format("Could not find a valid mount point for %s", path));
+        }
+
+        return channel;
     }
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void delete(Path path) throws IOException {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
-
+        throw new NotImplementedException();
     }
 
     @Override
@@ -96,36 +131,36 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public boolean isHidden(Path path) throws IOException {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public FileStore getFileStore(Path path) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-
+        throw new NotImplementedException();
     }
 }

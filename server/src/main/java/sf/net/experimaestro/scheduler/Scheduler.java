@@ -358,9 +358,7 @@ final public class Scheduler {
      */
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
         Transaction.run(em -> {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-
-            // Bug when connector not in DB... but it should be
+            // Find the connector in DB
             SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
             if (_connector == null) {
                 em.persist(connector);
@@ -371,8 +369,10 @@ final public class Scheduler {
 
             if (networkShare == null) {
                 networkShare = new NetworkShare(host, name);
-                em.persist(networkShare);
                 final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
+
+                networkShare.add(access);
+                em.persist(networkShare);
                 em.persist(access);
             } else {
                 for (NetworkShareAccess access : networkShare.getAccess()) {

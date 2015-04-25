@@ -90,4 +90,16 @@ public class NetworkShareAccess implements Serializable {
         result = 31 * result + share.hashCode();
         return result;
     }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public SingleHostConnector getConnector() {
+        return connector;
+    }
+
+    public String getPath() {
+        return path;
+    }
 }

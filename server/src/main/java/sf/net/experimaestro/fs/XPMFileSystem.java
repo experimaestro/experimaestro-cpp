@@ -18,10 +18,11 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.pastdev.jsch.file.UnixSshPath;
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.connectors.NetworkShare;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
@@ -81,21 +82,16 @@ public class XPMFileSystem extends FileSystem {
 
     @Override
     public Path getPath(String first, String... more) {
-//        try {
-//            final String scheme = baseURI.getScheme();
-//            final String host = baseURI.getHost();
-//            return Transaction.evaluate(em -> {
-//                final NetworkShare networkShare = NetworkShare.find(em, scheme, host);
-//                if (networkShare == null) {
-//                    throw new FileSystemNotFoundException("no filesystem defined for " + uri.toString());
-//                }
-//                return new XPMFileSystem(networkShare);
-//            });
-//        } catch (URISyntaxException e) {
-//            throw new FileSystemNotFoundException("Cannot parse URI " + uri);
-//        }
+        if ( more == null || more.length == 0 ) {
+            return new XPMPath(this, null, first );
+        }
 
-        throw new NotImplementedException();
+        StringBuilder builder = new StringBuilder( first );
+        for ( String part : more ) {
+            builder.append( PATH_SEPARATOR )
+                    .append( part );
+        }
+        return new XPMPath(this, null, builder.toString());
     }
 
     @Override
@@ -111,5 +107,9 @@ public class XPMFileSystem extends FileSystem {
     @Override
     public WatchService newWatchService() throws IOException {
         throw new NotImplementedException();
+    }
+
+    public Path getPath(URI uri) {
+        return new XPMPath(this, uri.getHost(), uri.getPath());
     }
 }

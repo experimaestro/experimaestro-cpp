@@ -19,144 +19,189 @@ package sf.net.experimaestro.fs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.utils.Output;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.*;
+import java.util.Arrays;
 import java.util.Iterator;
 
+import static java.lang.String.format;
+
 /**
- *
+ * An XPM path
  */
 public class XPMPath implements Path {
+    private final String host;
+    private final String share;
+    private final String[] parts;
+
+    public XPMPath(XPMFileSystem fileSystem, String host, String path) {
+        this.host = host;
+
+        assert !path.isEmpty();
+
+        String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
+        assert parts[0].isEmpty();
+
+        // Get share name
+        if (parts.length < 1) {
+            throw new IllegalArgumentException("Hostname should be specified");
+        }
+        this.share = parts[1];
+
+        // Get the rest of the path
+        int newLength = parts.length - 2;
+        this.parts = new String[newLength];
+        System.arraycopy(parts, 2, this.parts, 0, newLength);
+    }
+
     @Override
     public FileSystem getFileSystem() {
-        throw new NotImplementedException();
+        return XPMFileSystem.instance;
     }
 
     @Override
     public boolean isAbsolute() {
-        return false;
+        return true;
     }
 
     @Override
     public Path getRoot() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path getFileName() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path getParent() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public int getNameCount() {
-        return 0;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path getName(int index) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path subpath(int beginIndex, int endIndex) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public boolean startsWith(Path other) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public boolean startsWith(String other) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public boolean endsWith(Path other) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public boolean endsWith(String other) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path normalize() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path resolve(Path other) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path resolve(String other) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path resolveSibling(Path other) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path resolveSibling(String other) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path relativize(Path other) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public URI toUri() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path toAbsolutePath() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Path toRealPath(LinkOption... options) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public File toFile() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Iterator<Path> iterator() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public int compareTo(Path other) {
-        return 0;
+        throw new NotImplementedException();
+    }
+
+    public String getHostName() {
+        return host;
+    }
+
+    public String getShareName() {
+        return share;
+    }
+
+    @Override
+    public String toString() {
+        return format("shares://%s/%s", host, share, Output.toString(XPMFileSystem.PATH_SEPARATOR, parts));
+    }
+
+    public String getLocalPath() {
+        return Output.toString(XPMFileSystem.PATH_SEPARATOR, parts);
     }
 }

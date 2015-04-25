@@ -77,7 +77,7 @@ function test_ssh() {
 function test_share() {
 	var server = get_ssh_connector();
 	define_share("test", "root", server, "/");
-	var p = path("shares:test://root/" + repository_path.resolve("../../hello").get_path());
+	var p = path("shares://test/root" + repository_path.resolve("../../hello").get_path());
 	assert_equals(p.read_all(), "world");
 }
 
