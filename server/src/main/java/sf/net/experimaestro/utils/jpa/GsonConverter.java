@@ -33,15 +33,17 @@ import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.AttributeConverter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.file.Path;
 
 /**
  * Converts a command into a JSON string
  */
-public class GsonConverter<T> implements AttributeConverter<T, String> {
+public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
     final static private Logger LOGGER = Logger.getLogger();
 
     private final Type type;
@@ -60,16 +62,21 @@ public class GsonConverter<T> implements AttributeConverter<T, String> {
     }
 
     @Override
-    public String convertToDatabaseColumn(T object) {
+    public byte[] convertToDatabaseColumn(T object) {
         Gson gson = builder.create();
-        final String json = gson.toJson(object, type);
-        return json;
+        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        final Writer writer = new OutputStreamWriter(buffer);
+        Appendable a = null;
+        gson.toJson(object, type, writer);
+        return buffer.toByteArray();
     }
 
     @Override
-    public T convertToEntityAttribute(String json) {
+    public T convertToEntityAttribute(byte[] json) {
         Gson gson = builder.create();
-        final Object commands = gson.fromJson(json, type);
+        final ByteArrayInputStream buffer = new ByteArrayInputStream(json);
+        final InputStreamReader reader = new InputStreamReader(buffer);
+        final Object commands = gson.fromJson(reader, type);
         return (T) commands;
     }
 

@@ -86,10 +86,11 @@ public class Job extends Resource {
     /**
      * The process
      */
-
+    // FIXME: varchar does not seem right here!
     @Column(name = "jobRunner", columnDefinition = "BLOB")
+    @Lob
     @Basic(fetch = FetchType.LAZY)
-    String jobRunnerString;
+    byte[] jobRunnerString;
 
     /**
      * The unserialized job runner

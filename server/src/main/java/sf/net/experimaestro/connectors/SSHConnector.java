@@ -36,6 +36,7 @@ import org.apache.commons.lang.NotImplementedException;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -67,9 +68,9 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Connection options
      */
-    @Convert(converter = SSHOptionsConverter.class)
-    @Column(length = 65536)
-    private SSHOptions options = new SSHOptions();
+    @Convert(converter = SSHOptionsConverter.class, disableConversion = true)
+    @Lob
+    transient private SSHOptions options = new SSHOptions();
 
     /**
      * Cached SSH session

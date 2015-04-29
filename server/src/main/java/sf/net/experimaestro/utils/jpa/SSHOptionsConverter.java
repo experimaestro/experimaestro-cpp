@@ -25,7 +25,7 @@ import javax.persistence.AttributeConverter;
 /**
  * SSH options converter
  */
-public class SSHOptionsConverter extends GsonConverter<SSHOptions> implements AttributeConverter<SSHOptions, String> {
+public class SSHOptionsConverter extends GsonConverter<SSHOptions> implements AttributeConverter<SSHOptions, byte[]> {
     public SSHOptionsConverter() {
         super(SSHOptions.class);
     }
