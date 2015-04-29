@@ -51,7 +51,7 @@ class JsonRPCMethod:
 
         error = response.get("error", None)
         if not error is None:
-            raise Exception("Error while calling method %s: [%d] %s" % (self.name, error["code"], error["message"]))
+            raise RuntimeError("Error while calling method %s: [%d] %s" % (self.name, error["code"], error["message"]))
         return response["result"]
 
 class JsonRPCClient:
@@ -102,7 +102,7 @@ def start_jar(args, jarargs):
                 break
 
         if jarpath is None:
-            raise Exception("Could not find experimaestro jar file")
+            raise RuntimeError("Could not find experimaestro jar file")
         command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
 
     def start_server(logger):
@@ -181,7 +181,7 @@ class Properties:
     def __getitem__(self, name):
         v = self.sub(name, None)
         if v is None:
-            raise Exception("No key '%s' in properties" % name)
+            raise KeyError("No key '%s' in properties" % name)
         return v.map[0]
 
     def keys(self):
@@ -248,7 +248,7 @@ def getProperties(filename):
                 props.set(section + m.group(1), m.group(2))
                 continue
 
-            raise Exception("Could not read line [%s]" % propDef)
+            raise RuntimeError("Could not read line [%s]" % propDef)
 
         return props
 
@@ -265,7 +265,7 @@ class Configuration():
 
         clients = self.config.sub("client", None)
         if clients is None:
-            raise Exception("No client section in configuration file")
+            raise RuntimeError("No client section in configuration file")
 
         if args.server is None:
             if len(clients) > 1:
@@ -276,9 +276,9 @@ class Configuration():
                             args.server = name
                             logging.debug("Default server is %s" % name)
                         else:
-                            raise Exception("More than one client defined as default in configuration file")
+                            raise RuntimeError("More than one client defined as default in configuration file")
                 if args.server is None:
-                    raise Exception("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
+                    raise RuntimeError("More than one client [%d] in configuration file (%s): use the --server option or make one client the default"
                                     % (len(clients), ",".join(clients.keys())))
             else:
                 for name, client in clients:
