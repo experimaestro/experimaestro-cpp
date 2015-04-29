@@ -362,31 +362,26 @@ def command_run_js(args):
     if args.debug_port > 0:
         params["debug"] = args.debug_port
 
-    try:
-        code = 0
-        msg = json.dumps({"id": 1, "method": "run-javascript", "params": params})
-        client.send(msg)
-        while client is not None:
-            message = client.recv()
-            o = json.loads(message)
-            if type(o) == dict:
-                if o["id"]:
-                    if o.get("error", 0) != 0:
-                        code = o["error"]["code"]
-                        sys.stderr.write("%s\n" % o["error"]["message"])
-                    break
+    code = 0
+    msg = json.dumps({"id": 1, "method": "run-javascript", "params": params})
+    client.send(msg)
+    while client is not None:
+        message = client.recv()
+        o = json.loads(message)
+        if type(o) == dict:
+            if o["id"]:
+                if o.get("error", 0) != 0:
+                    code = o["error"]["code"]
+                    sys.stderr.write("%s\n" % o["error"]["message"])
+                break
+            else:
+                result = o["result"]
+                if result["stream"] == "out":
+                    sys.stdout.write(result["value"])
                 else:
-                    result = o["result"]
-                    if result["stream"] == "out":
-                        sys.stdout.write(result["value"])
-                    else:
-                        sys.stdout.write(result["value"])
+                    sys.stdout.write(result["value"])
 
-        sys.exit(code)
-    except Exception as e:
-        print(e)
-        sys.exit(1)
-
+    sys.exit(code)
 
 def command_update(args):
     server = Configuration(args).getJsonServer()
