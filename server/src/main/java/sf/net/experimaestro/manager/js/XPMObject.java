@@ -1466,7 +1466,7 @@ public class XPMObject {
                     if (xpm.simulate()) {
                         final Resource resource = xpm.submittedJobs.get(uri);
                         if (resource == null) {
-                            throw new XPMRhinoException("Resource with URI [%s] does not exist", uri);
+                            return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
                         }
                         return resource;
                     } else {
