@@ -87,7 +87,7 @@ public class Job extends Resource {
      * The process
      */
 
-    @Column(name = "jobRunner", columnDefinition = "VARCHAR(128000)")
+    @Column(name = "jobRunner", columnDefinition = "BLOB")
     @Basic(fetch = FetchType.LAZY)
     String jobRunnerString;
 
