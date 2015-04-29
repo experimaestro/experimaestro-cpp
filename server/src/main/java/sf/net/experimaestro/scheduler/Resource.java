@@ -126,7 +126,7 @@ public class Resource implements PostCommitListener {
      * The connector
      */
     @JoinColumn(name = "connector", updatable = false)
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @ManyToOne(cascade = CascadeType.PERSIST)
     protected Connector connector;
 
     /**
