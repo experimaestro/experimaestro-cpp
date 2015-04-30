@@ -27,7 +27,8 @@
         <class>sf.net.experimaestro.utils.jpa.QNameConverter</class>
         <class>sf.net.experimaestro.utils.jpa.FileConverter</class>
         <class>sf.net.experimaestro.utils.jpa.PathConverter</class>
-        <class>sf.net.experimaestro.utils.jpa.GsonConverter</class>
+        <class>sf.net.experimaestro.utils.jpa.JobRunnerConverter</class>
+        <class>sf.net.experimaestro.utils.jpa.SSHOptionsConverter</class>
 
         <!-- Connectors -->
         <class>sf.net.experimaestro.connectors.Connector</class>

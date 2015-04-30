@@ -21,6 +21,10 @@
 var script_path = script_file().get_parent();
 var repository_path = script_path.path("connectors.inc.js");
 
+function assert_true(r) {
+    if (!r)
+        throw new java.lang.String.format("Test did not return true");
+}
 
 // Check the answer
 function check(r) {
@@ -78,7 +82,9 @@ function test_share() {
 	var server = get_ssh_connector();
 	define_share("test", "root", server, "/");
 	var p = path("shares://test/root" + repository_path.resolve("../../hello").get_path());
-	assert_equals(p.read_all(), "world");
+	var s = p.read_all();
+	logger.info("Read: [%s]", s);
+	assert_true(s == "world\n");
 }
 
 // --- Use a group of machines (disabled)

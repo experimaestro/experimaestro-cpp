@@ -18,7 +18,7 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.compress.utils.IOUtils;
+import com.pastdev.jsch.IOUtils;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.util.SecurityUtils;
@@ -48,7 +48,7 @@ import java.util.List;
  * An embedded SSH server (used for testing)
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/8/12
+ * x@date 15/8/12
  */
 public class SSHServer {
     static final private Logger LOGGER = Logger.getLogger();
@@ -146,8 +146,8 @@ public class SSHServer {
      * @param inputStream
      * @param out
      */
-    static private void copyStream(final InputStream inputStream, final OutputStream out) {
-        new Thread("Stream copy") {
+    static private Thread copyStream(final InputStream inputStream, final OutputStream out) {
+        final Thread thread = new Thread("Stream copy") {
             @Override
             public void run() {
                 try {
@@ -156,18 +156,21 @@ public class SSHServer {
                     throw new AssertionError("I/O error", e);
                 } finally {
                     try {
+                        out.flush();
                         out.close();
                     } catch (IOException e) {
                         throw new AssertionError("I/O error", e);
                     }
                 }
             }
-        }.start();
+        };
+        thread.start();
+        return thread;
     }
 
     /**
      * The command factory for the SSH server:
-     * Handles two commands: id -u and id -G
+     * Handles command through basic splitting - use with care!
      */
     private static class TestCommandFactory extends ScpCommandFactory {
 
@@ -200,8 +203,9 @@ public class SSHServer {
                 @Override
                 public void start(Environment env) throws IOException {
                     final ProcessBuilder builder = new ProcessBuilder();
-                    // basic split -- just for test!
-                    builder.command(command.split("(?!\\\\) "));
+
+                    // Use sh for splitting
+                    builder.command("sh", "-c", command);
 
                     if (out != null)
                         builder.redirectOutput(ProcessBuilder.Redirect.PIPE);
@@ -211,19 +215,20 @@ public class SSHServer {
                     final Process process = builder.start();
 
 
-                    if (out != null) {
-                        copyStream(process.getInputStream(), out);
-                    }
-
-                    if (err != null) {
-                        copyStream(process.getErrorStream(), err);
-                    }
+                    final Thread outThread = out == null ? null : copyStream(process.getInputStream(), out);
+                    final Thread errThread = err == null ? null : copyStream(process.getErrorStream(), err);
 
                     new Thread() {
                         @Override
                         public void run() {
                             try {
                                 final int exitValue = process.waitFor();
+                                LOGGER.info("Process finished [%d]", exitValue);
+                                if (outThread != null)
+                                    outThread.join();
+                                if (errThread != null)
+                                    errThread.join();
+
                                 callback.onExit(exitValue);
                             } catch (InterruptedException e) {
                                 callback.onExit(-1);

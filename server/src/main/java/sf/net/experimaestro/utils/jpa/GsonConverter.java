@@ -69,6 +69,7 @@ public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
         gson.toJson(object, type, writer);
         try {
             writer.flush();
+            buffer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

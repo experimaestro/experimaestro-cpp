@@ -1,4 +1,4 @@
-package sf.net.experimaestro.fs;
+package sf.net.experimaestro.sshfs;
 
 /*
  * This file is part of experimaestro.
@@ -34,22 +34,22 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
 import static java.lang.String.format;
 
 /**
- * The XPM file system provider
+ * The SSH file system provider
  */
-public class XPMFileSystemProvider extends FileSystemProvider {
+public class SshFileSystemProvider extends FileSystemProvider {
     final static private Logger LOGGER = Logger.getLogger();
-    public static FileSystemProvider instance = new XPMFileSystemProvider();
+
+    public static FileSystemProvider instance = new SshFileSystemProvider();
 
     @Override
     public String getScheme() {
-        return "shares";
+        return "ssh";
     }
 
     @Override
@@ -59,44 +59,17 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public FileSystem getFileSystem(URI uri) {
-        return XPMFileSystem.instance;
+        return SshFileSystem.instance;
     }
 
     @Override
     public Path getPath(URI uri) {
-        return XPMFileSystem.instance.getPath(uri);
+        return SshFileSystem.instance.getPath(uri);
     }
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        XPMPath _path = (XPMPath)path;
-
-        final SeekableByteChannel channel = Transaction.evaluate(em -> {
-            final NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
-            NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
-            Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
-            for (NetworkShareAccess access : accesses) {
-                final SingleHostConnector connector = access.getConnector();
-                final String hostPath = access.getPath();
-                try {
-                    final Path hostPathObject = connector
-                            .resolveFile(hostPath)
-                            .resolve(_path.getLocalPath())
-                            .normalize();
-
-                    return Files.newByteChannel(hostPathObject, StandardOpenOption.READ);
-                } catch (IOException e) {
-                    LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
-                    continue;
-                }
-            }
-            return null;
-        });
-        if (channel == null) {
-            throw new IOException(format("Could not find a valid mount point for %s", path));
-        }
-
-        return channel;
+        throw new NotImplementedException();
     }
 
     @Override

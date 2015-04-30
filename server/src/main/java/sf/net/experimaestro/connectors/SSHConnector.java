@@ -68,9 +68,8 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Connection options
      */
-    @Convert(converter = SSHOptionsConverter.class, disableConversion = true)
-    @Lob
-    transient private SSHOptions options = new SSHOptions();
+    @Convert(converter = SSHOptionsConverter.class)
+    private SSHOptions options = new SSHOptions();
 
     /**
      * Cached SSH session
