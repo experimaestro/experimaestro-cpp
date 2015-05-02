@@ -18,6 +18,8 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.utils.Output;
 
@@ -203,5 +205,17 @@ public class XPMPath implements Path {
 
     public String getLocalPath() {
         return Output.toString(XPMFileSystem.PATH_SEPARATOR, parts);
+    }
+
+    /**
+     * Returns the contextualized path
+     * @param path The base path
+     * @return The full path
+     */
+    public String getLocalStringPath(String path) {
+        String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
+
+        return XPMFileSystem.PATH_SEPARATOR + Output.toString(XPMFileSystem.PATH_SEPARATOR,
+                Iterables.concat(Arrays.asList(parts), Arrays.asList(this.parts)));
     }
 }

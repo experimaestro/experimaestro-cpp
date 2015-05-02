@@ -18,10 +18,16 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.fs.XPMPath;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Path;
+
+import static java.lang.String.format;
 
 /**
  * An access to a network share
@@ -101,5 +107,12 @@ public class NetworkShareAccess implements Serializable {
 
     public String getPath() {
         return path;
+    }
+
+    public String resolve(XPMPath path) throws IOException {
+        if (!path.getHostName().equals(share.host) || !path.getShareName().equals(share.name)) {
+            throw new IllegalArgumentException(format("Cannot resolve %s for share %s", path, share));
+        }
+        return path.getLocalStringPath(this.path);
     }
 }

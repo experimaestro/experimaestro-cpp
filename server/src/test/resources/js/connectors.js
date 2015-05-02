@@ -1,4 +1,4 @@
-	/*
+/*
  * This file is part of experimaestro.
  * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
  *
@@ -28,74 +28,87 @@ function assert_true(r) {
 
 // Check the answer
 function check(r) {
-	var v = _(r);
-	var expected = "experimaestro rocks";
-	if (v != expected) {
-		throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
+    var v = _(r);
+    var expected = "experimaestro rocks";
+    if (v != expected) {
+        throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
     }
 }
 
 /*
- 
-	Local connector
+
+ Local connector
 
  */
 
 function test_local() {
-	include_repository(repository_path);
-	var task = xpm.get_task("a.b.c", "task");
-	task.set("x", 10);
-	var r = task.run();
-	check(r);
+    include_repository(repository_path);
+    var task = xpm.get_task("a.b.c", "task");
+    task.set("x", 10);
+    var r = task.run();
+    check(r);
 }
 
 /*
 
-	SSH connectors
+ SSH connectors
 
 
-*/
+ */
 
 function get_ssh_connector() {
-	var port = sshd_server();
-	logger.info("SSH server on port " + port);
+    var port = sshd_server();
+    logger.info("SSH server on port " + port);
 
-	var sshOptions = SSHOptions();
-	sshOptions.password("user");
-	sshOptions.check_host(false);
+    var sshOptions = SSHOptions();
+    sshOptions.password("user");
+    sshOptions.check_host(false);
 
-	return new Connector("ssh://user@localhost" + ":" + port, sshOptions);
+    return new Connector("ssh://user@localhost" + ":" + port, sshOptions);
 }
 
-function test_ssh() {
-	var server = get_ssh_connector();
-	include_repository(server, repository_path.get_path());
+
+// Test an SSH share
+function test_share() {
+    var server = get_ssh_connector();
+    define_share("test", "root", server, "/");
+    var p = path("shares://test/root" + repository_path.get_ancestor(2).resolve("hello").get_path());
+    var s = p.read_all();
+    logger.info("Read (share): [%s]", s);
+    assert_true(s == "world\n");
+}
+
+// Test resolution of a shared volume
+function test_share_resolution() {
+    var server = get_ssh_connector();
+    define_share("test", "root", server, "/");
+    var p = path("shares://test/root" + repository_path.get_ancestor(2).resolve("hello").get_path());
+    var s = xpm.evaluate(["/bin/cat", p], { connector: server });
+    logger.info("Read (share resolution): [%s]", s);
+    assert_true(s == "world");
+}
+
+// Test
+function disabled_test_ssh_repository() {
+    var server = get_ssh_connector();
+    include_repository(server, repository_path.get_path());
     logger.info("Included SSH repository");
 
-	var task = tasks("{a.b.c}task").create();
-	task.set("x", 10);
-	var r = task.run();
-	check(r);
-}
-
-function test_share() {
-	var server = get_ssh_connector();
-	define_share("test", "root", server, "/");
-	var p = path("shares://test/root" + repository_path.resolve("../../hello").get_path());
-	var s = p.read_all();
-	logger.info("Read: [%s]", s);
-	assert_true(s == "world\n");
+    var task = tasks("{a.b.c}task").create();
+    task.set("x", 10);
+    var r = task.run();
+    check(r);
 }
 
 // --- Use a group of machines (disabled)
 function disabled_test_ssh_group() {
-	var ssh1 = new Connector("ssh://localhost:223");
-	var ssh2 = new Connector("ssh://localhost:2132");
+    var ssh1 = new Connector("ssh://localhost:223");
+    var ssh2 = new Connector("ssh://localhost:2132");
 
-	var group = new ConnectorGroup(ssh1, ssh2);
+    var group = new ConnectorGroup(ssh1, ssh2);
 
-	// Choose (randomly) one connector in the group, and parse the repository
-	// that will be associated to all repositories
-	include_repository(group, repository_path);
+    // Choose (randomly) one connector in the group, and parse the repository
+    // that will be associated to all repositories
+    include_repository(group, repository_path);
 
 }

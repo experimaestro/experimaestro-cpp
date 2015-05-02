@@ -18,9 +18,12 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.fs.XPMPath;
+
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -90,6 +93,36 @@ public class NetworkShare {
                 .where(shares.get(NetworkShare_.name).in(name));
 
         final List<NetworkShare> resultList = em.createQuery(q).getResultList();
+        assert (resultList.size() <= 1);
+        if (resultList.isEmpty())
+            return null;
+        return resultList.get(0);
+    }
+
+    /**
+     * Find a network share for
+     *
+     * @param em        The entity manager
+     * @param connector The single host connector
+     * @param path      The network share path <code>share://host/root/path</code> path
+     * @return
+     */
+    public static NetworkShareAccess find(EntityManager em, SingleHostConnector connector, XPMPath path) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+
+        final CriteriaQuery<NetworkShareAccess> q = cb.createQuery(NetworkShareAccess.class);
+        final Root<NetworkShareAccess> accesses = q.from(NetworkShareAccess.class);
+
+        // Select those with our connector
+        q.where(cb.equal(accesses.get(NetworkShareAccess_.connector), connector));
+
+        // Join with network share
+        Join<NetworkShareAccess, NetworkShare> share = accesses.join(NetworkShareAccess_.share);
+        share.on(cb.equal(share.get(NetworkShare_.host), path.getHostName()),
+                cb.equal(share.get(NetworkShare_.name), path.getShareName()));
+
+        final TypedQuery<NetworkShareAccess> query = em.createQuery(q);
+        final List<NetworkShareAccess> resultList = query.getResultList();
         assert (resultList.size() <= 1);
         if (resultList.isEmpty())
             return null;

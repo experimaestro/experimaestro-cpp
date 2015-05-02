@@ -19,7 +19,9 @@ package sf.net.experimaestro.connectors;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.Transaction;
 
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
@@ -30,6 +32,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.utils.Functional.propagate;
+import static sf.net.experimaestro.utils.Functional.propagateFunction;
 
 /**
  * A connector that corresponds to a single host.
@@ -101,6 +105,20 @@ abstract public class SingleHostConnector extends Connector {
      * the file object is not
      */
     public String resolve(Path file) throws IOException {
+        if (file instanceof XPMPath) {
+            String resolve = Transaction.evaluate(propagateFunction(em -> {
+                XPMPath xpmPath = (XPMPath) file;
+                NetworkShareAccess access = NetworkShare.find(em, this, xpmPath);
+                if (access != null) {
+                    return access.resolve(xpmPath);
+                }
+                return null;
+            }));
+            if (resolve != null) {
+                return resolve;
+            }
+        }
+
         if (!contains(file.getFileSystem())) {
             throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
         }
