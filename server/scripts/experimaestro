@@ -87,6 +87,8 @@ def start_jar(args, jarargs):
     import time
 
     conf = Configuration(args)
+    os.environ["EXPERIMAESTRO_CONFIG_FILE"] = conf.configfile
+
     workdir = conf.config.sub("server")["database"]
     mkdir_p(workdir)
 
@@ -270,10 +272,10 @@ class Configuration():
         """Get the configuration from command line and configuration file"""
 
         # Get the configuration
-        configfile = os.path.expanduser(args.config)
+        self.configfile = os.path.expanduser(args.config)
 
         # Initialise the server
-        self.config = getProperties(configfile)
+        self.config = getProperties(self.configfile)
 
         clients = self.config.sub("client", None)
         if clients is None:
