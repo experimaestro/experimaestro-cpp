@@ -38,6 +38,11 @@
 
 
     <repositories>
+        <repository>
+            <id>oss-snapshot</id>
+            <name>OSS snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
     </repositories>
 
     <build>
@@ -241,7 +246,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.pastdev</groupId>
+            <groupId>net.bpiwowar</groupId>
             <artifactId>jsch-nio</artifactId>
             <version>0.1.5-SNAPSHOT</version>
         </dependency>
