@@ -84,8 +84,16 @@ public class ServerTask extends AbstractTask {
      */
     public int execute() throws Throwable {
         if (configuration == null || configuration.getFile() == null) {
-            final File file = new File(new File(System.getProperty("user.home"), ".experimaestro"), "settings.ini");
-            LOGGER.info("Using the default configuration file " + file);
+            final String envConfFile = System.getenv("EXPERIMAESTRO_CONFIG_FILE");
+            File file = null;
+            if (envConfFile != null) {
+                file = new File(envConfFile);
+                LOGGER.info("Using configuration file set in environment: '" + file + "'");
+            } else {
+                file = new File(new File(System.getProperty("user.home"), ".experimaestro"), "settings.ini");
+                LOGGER.info("Using the default configuration file " + file);
+            }
+            assert file != null;
             configuration = new HierarchicalINIConfiguration(file);
         }
         LOGGER.info("Reading configuration from " + configuration.getFileName());

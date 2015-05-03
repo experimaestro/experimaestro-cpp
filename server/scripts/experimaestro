@@ -30,6 +30,17 @@ xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
 
+def mkdir_p(path):
+    """Similar to ``mkdir -p path``.
+    """
+    if not path:
+        return
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise e
+
 class JsonRPCMethod:
     def __init__(self, url, name, jsonid):
         self.url = url
@@ -76,7 +87,10 @@ def start_jar(args, jarargs):
     import time
 
     conf = Configuration(args)
+    os.environ["EXPERIMAESTRO_CONFIG_FILE"] = conf.configfile
+
     workdir = conf.config.sub("server")["database"]
+    mkdir_p(workdir)
 
     # Check what if we start using maven
     mvnFile = os.path.join(xpmdir, "pom.xml")
@@ -258,10 +272,10 @@ class Configuration():
         """Get the configuration from command line and configuration file"""
 
         # Get the configuration
-        configfile = os.path.expanduser(args.config)
+        self.configfile = os.path.expanduser(args.config)
 
         # Initialise the server
-        self.config = getProperties(configfile)
+        self.config = getProperties(self.configfile)
 
         clients = self.config.sub("client", None)
         if clients is None:
