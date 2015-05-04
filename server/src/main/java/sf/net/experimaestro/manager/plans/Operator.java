@@ -26,9 +26,16 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
+import sf.net.experimaestro.manager.js.JSOperator;
+import sf.net.experimaestro.manager.js.JsonPathFunction;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.WrappedResult;
@@ -43,6 +50,7 @@ import java.util.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public abstract class Operator {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -715,5 +723,13 @@ public abstract class Operator {
 
     }
 
+    @Expose(scope = true)
+    @Help("Runs an XQuery against the input: each returned item is a new input")
+    public Operator select(Context context, Scriptable scope, String query) throws XPathExpressionException {
+        JsonPathFunction function = new JsonPathFunction(query, scope);
+        Operator operator = new FunctionOperator(function);
+        operator.addParent(this);
+        return operator;
+    }
 
 }

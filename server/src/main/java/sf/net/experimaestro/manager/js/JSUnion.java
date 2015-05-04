@@ -35,6 +35,11 @@ public class JSUnion extends JSAbstractOperator {
             union.addParent(operator.getOperator());
     }
 
+    @Expose
+    public void add(JSAbstractOperator operator) {
+        union.addParent(operator.getOperator());
+    }
+
     @Override
     Operator getOperator() {
         return union;
