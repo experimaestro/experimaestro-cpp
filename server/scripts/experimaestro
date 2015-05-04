@@ -472,7 +472,7 @@ def command_rm(args):
 
 def command_log_level(args):
     server = Configuration(args).getJsonServer()
-    server.setLogLevel(args.id[0], args.level[0])
+    server.setLogLevel({"identifier": args.id[0], "level": args.level[0]})
 
 # --- Utility functions
 
@@ -543,7 +543,7 @@ p_kill.add_argument('jobid', nargs="+", help="The job URIs")
 
 p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
 p_log_level.add_argument('id', nargs=1, help='The logger ID')
-p_log_level.add_argument('level', nargs=1, choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
+p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
 
 subparsers.add_parser("ping", help="Ping the server")
 
