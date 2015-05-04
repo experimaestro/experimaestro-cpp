@@ -101,6 +101,12 @@ public class ServerTask extends AbstractTask {
         // --- Get the server settings
         ServerSettings serverSettings = new ServerSettings(configuration.subset("server"));
 
+
+        Scheduler.badmd5 = configuration.getBoolean("server.badmd5", true);
+        if (Scheduler.badmd5) {
+            LOGGER.warn("!!!!!!! Server set to use BAD MD5 !!!!!!!! Warning! This (default) setting will be removed in the future: use badmd5 = false in the configuration file");
+        }
+
         // --- Get the port
         port = configuration.getInt("server.port", 8080);
         LOGGER.info("Starting server on port %d", port);

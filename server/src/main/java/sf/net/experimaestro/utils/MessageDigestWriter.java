@@ -18,6 +18,8 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.scheduler.Scheduler;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Writer;
@@ -53,7 +55,8 @@ public class MessageDigestWriter extends Writer implements Closeable {
     @Override
     public void write(char[] cbuf, int off, int len) throws IOException {
         ByteBuffer bbuf = charset.encode(CharBuffer.wrap(cbuf, off, len));
-        outputStream.write(bbuf.array());
+        if (Scheduler.badmd5) { outputStream.write(bbuf.array()); }
+        else { outputStream.write(bbuf.array(), bbuf.position(), bbuf.limit()); }
     }
 
     @Override
