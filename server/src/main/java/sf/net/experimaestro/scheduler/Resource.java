@@ -219,12 +219,12 @@ public class Resource implements PostCommitListener {
 
     @Override
     public int hashCode() {
-        return resourceID.hashCode();
+        return getLocator().hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Resource && resourceID == ((Resource) obj).resourceID;
+        return obj instanceof Resource && locator.equals(((Resource) obj).getLocator());
     }
 
     @Override
