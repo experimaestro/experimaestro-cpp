@@ -171,7 +171,18 @@ final public class Scheduler {
         for (Resource resource : query.getResultList()) {
             LOGGER.info("Job %s is running: starting a watcher", resource);
             Job job = (Job) resource;
-            job.process.init(job);
+            if (job.process != null) {
+                job.process.init(job);
+            } else {
+                Transaction.run(em -> {
+                    // Set the job state to ERROR (and update the state in case it was finished)
+                    // The job should take care of setting a new process if the job is still running
+                    Job _job = em.find(Job.class, job.getId());
+                    _job.setState(ResourceState.ERROR);
+                    _job.updateStatus();
+                    LOGGER.error("No process attached to a running job. New status is: %s", _job.getState());
+                });
+            }
             resource.updateStatus();
         }
 
