@@ -178,6 +178,9 @@ final public class Transaction implements AutoCloseable {
                     listeners.forEach(f -> f.postCommit(this));
                 }
             }
+        } catch (RollbackException e) {
+            status = Status.ROLLBACK;
+            throw e;
         } finally {
             clearLocks();
         }
@@ -199,12 +202,7 @@ final public class Transaction implements AutoCloseable {
     public void boundary(boolean keepLocks) {
         try {
             LOGGER.debug("Transaction %s boundary (commit and begin)", System.identityHashCode(this));
-            try {
-                transaction.commit();
-            } catch (RollbackException e) {
-                status = Status.ROLLBACK;
-                throw e;
-            }
+            commit();
             transaction.begin();
             status = Status.BEGIN;
         } finally {

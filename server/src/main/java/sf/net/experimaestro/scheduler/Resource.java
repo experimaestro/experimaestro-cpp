@@ -603,9 +603,16 @@ public class Resource implements PostCommitListener {
 
     @PostLoad
     protected void postLoad() {
-        oldState = state;
+        cacheState();
         prepared = true;
         LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);
+    }
+
+    /**
+     * Cache the current state to allow notification when resource is stored in database
+     */
+    protected void cacheState() {
+        oldState = state;
     }
 
     /**
@@ -690,6 +697,7 @@ public class Resource implements PostCommitListener {
                 Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
             }
             stored();
+            cacheState();
         }
     }
 }
