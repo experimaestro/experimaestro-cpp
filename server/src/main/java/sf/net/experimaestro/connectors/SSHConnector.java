@@ -170,7 +170,11 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     protected boolean contains(FileSystem fileSystem) throws FileSystemException {
-        throw new NotImplementedException();
+        try {
+            return doGetFileSystem().equals(this.filesystem);
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     @Override

@@ -45,7 +45,7 @@ public class NetworkShare {
     @Version
     private long version;
 
-    @OneToMany(fetch = FetchType.LAZY)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "share")
     private Collection<NetworkShareAccess> access;
 
     /**

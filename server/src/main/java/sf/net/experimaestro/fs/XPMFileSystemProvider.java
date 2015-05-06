@@ -69,22 +69,33 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        XPMPath _path = (XPMPath)path;
+        final Path hostPathObject = resolvePath((XPMPath) path);
 
-        final SeekableByteChannel channel = Transaction.evaluate(em -> {
-            final NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
+
+        SeekableByteChannel channel = Files.newByteChannel(hostPathObject, StandardOpenOption.READ);
+        if (channel == null) {
+            throw new IOException(format("Could not find a valid mount point for %s", path));
+        }
+
+        return channel;
+    }
+
+    protected Path resolvePath(Path path) {
+        XPMPath _path = (XPMPath) path;
+
+        return Transaction.evaluate(em -> {
+            NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
             NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
             Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
             for (NetworkShareAccess access : accesses) {
                 final SingleHostConnector connector = access.getConnector();
                 final String hostPath = access.getPath();
                 try {
-                    final Path hostPathObject = connector
+                    return connector
                             .resolveFile(hostPath)
                             .resolve(_path.getLocalPath())
                             .normalize();
 
-                    return Files.newByteChannel(hostPathObject, StandardOpenOption.READ);
                 } catch (IOException e) {
                     LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
                     continue;
@@ -92,11 +103,6 @@ public class XPMFileSystemProvider extends FileSystemProvider {
             }
             return null;
         });
-        if (channel == null) {
-            throw new IOException(format("Could not find a valid mount point for %s", path));
-        }
-
-        return channel;
     }
 
     @Override
@@ -106,6 +112,8 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        Path path = resolvePath(dir);
+        Files.createDirectory(path);
         throw new NotImplementedException();
     }
 
@@ -141,7 +149,8 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public void checkAccess(Path path, AccessMode... modes) throws IOException {
-        throw new NotImplementedException();
+        final Path _path = resolvePath(path);
+        _path.getFileSystem().provider().checkAccess(_path, modes);
     }
 
     @Override

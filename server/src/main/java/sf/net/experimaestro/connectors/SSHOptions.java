@@ -101,6 +101,7 @@ public class SSHOptions extends ConnectorOptions {
         this.useSSHAgent = useSSHAgent;
     }
 
+    @Expose("set_stream_proxy")
     public void setStreamProxy(String uri, SSHOptions sshOptions) {
         try {
             proxy = new NCProxyConfiguration(uri, sshOptions);

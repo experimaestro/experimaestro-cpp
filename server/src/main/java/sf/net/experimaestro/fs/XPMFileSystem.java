@@ -18,7 +18,6 @@ package sf.net.experimaestro.fs;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.pastdev.jsch.file.UnixSshPath;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.io.IOException;
@@ -83,7 +82,7 @@ public class XPMFileSystem extends FileSystem {
     @Override
     public Path getPath(String first, String... more) {
         if ( more == null || more.length == 0 ) {
-            return new XPMPath(this, null, first );
+            return new XPMPath(null, first );
         }
 
         StringBuilder builder = new StringBuilder( first );
@@ -91,7 +90,7 @@ public class XPMFileSystem extends FileSystem {
             builder.append( PATH_SEPARATOR )
                     .append( part );
         }
-        return new XPMPath(this, null, builder.toString());
+        return new XPMPath(null, builder.toString());
     }
 
     @Override
@@ -110,6 +109,6 @@ public class XPMFileSystem extends FileSystem {
     }
 
     public Path getPath(URI uri) {
-        return new XPMPath(this, uri.getHost(), uri.getPath());
+        return new XPMPath(uri.getHost(), uri.getPath());
     }
 }

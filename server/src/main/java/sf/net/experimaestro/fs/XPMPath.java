@@ -19,7 +19,6 @@ package sf.net.experimaestro.fs;
  */
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.utils.Output;
 
@@ -40,7 +39,7 @@ public class XPMPath implements Path {
     private final String share;
     private final String[] parts;
 
-    public XPMPath(XPMFileSystem fileSystem, String host, String path) {
+    public XPMPath(String host, String path) {
         this.host = host;
 
         assert !path.isEmpty();
@@ -58,6 +57,12 @@ public class XPMPath implements Path {
         int newLength = parts.length - 2;
         this.parts = new String[newLength];
         System.arraycopy(parts, 2, this.parts, 0, newLength);
+    }
+
+    public XPMPath(String host, String share, String[] parts) {
+        this.host = host;
+        this.share = share;
+        this.parts = parts;
     }
 
     @Override
@@ -82,7 +87,9 @@ public class XPMPath implements Path {
 
     @Override
     public Path getParent() {
-        throw new NotImplementedException();
+        if (parts.length == 0)
+            return this;
+        return new XPMPath(host, share, Arrays.copyOfRange(parts, 0, parts.length - 1));
     }
 
     @Override
@@ -157,7 +164,7 @@ public class XPMPath implements Path {
 
     @Override
     public Path toAbsolutePath() {
-        throw new NotImplementedException();
+        return this;
     }
 
     @Override

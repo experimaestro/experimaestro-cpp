@@ -20,9 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.fs.XPMPath;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.ManyToOne;
+import javax.persistence.*;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -39,10 +37,12 @@ public class NetworkShareAccess implements Serializable {
      */
     @Id
     @ManyToOne
+    @JoinColumn(name = "connector")
     SingleHostConnector connector;
 
     @Id
     @ManyToOne
+    @JoinColumn(name = "share")
     NetworkShare share;
 
     /**

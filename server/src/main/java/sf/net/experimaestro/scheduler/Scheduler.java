@@ -186,15 +186,8 @@ final public class Scheduler {
             resource.updateStatus();
         }
 
-
-        // Start the thread that start the jobs
-        LOGGER.info("Starting the job runner thread");
-        runner = new JobRunner("JobRunner");
-        runner.start();
-        runningThreadsCounter.add();
-
         // Start the thread that notify dependencies
-        LOGGER.info("Starting the job runner thread");
+        LOGGER.info("Starting the notifier thread");
         notifier = new Notifier();
         notifier.start();
         runningThreadsCounter.add();
@@ -203,6 +196,14 @@ final public class Scheduler {
         LOGGER.info("Starting the messager thread");
         messengerThread = new MessengerThread();
         messengerThread.start();
+        runningThreadsCounter.add();
+
+
+        // Start the thread that start the jobs
+        LOGGER.info("Starting the job runner thread");
+        readyJobSemaphore.setValue(true);
+        runner = new JobRunner("JobRunner");
+        runner.start();
         runningThreadsCounter.add();
 
 

@@ -86,7 +86,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         Map<String, ArrayList<Method>> map;
         synchronized (CLASS_DESCRIPTION) {
             if (description == null) {
-                description = new ClassDescription();
+                description = new ClassDescription(aClass);
                 CLASS_DESCRIPTION.put(aClass, description);
 
                 map = description.methods;
@@ -248,7 +248,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public String getClassName() {
-        return JSBaseObject.getClassName(this.getClass());
+        return JSBaseObject.getClassName(classDescription.theClass);
     }
 
     @Override
@@ -391,6 +391,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     static public class ClassDescription {
         /**
+         * Base class (real class or wrapped class)
+         */
+        final Class<?> theClass;
+
+        /**
          * The constructors
          */
         ArrayList<Constructor<?>> constructors = new ArrayList<>();
@@ -404,6 +409,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
          * Properties
          */
         Map<String, Field> fields = new HashMap<>();
+
+        public ClassDescription(Class<?> theClass) {
+            this.theClass = theClass;
+        }
     }
 
     /**
