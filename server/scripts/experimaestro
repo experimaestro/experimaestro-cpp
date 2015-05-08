@@ -410,18 +410,21 @@ def command_ls(args):
     server = Configuration(args).getJsonServer()
     response = server.listJobs({"group": args.group, "states": get_states(args.states), "recursive": args.recursive})
     for l in response:
-        state = l.get("state", "?").upper()
-        if state == 'ERROR':
-            print(cformat("#RED;%s" % l))
-        elif state == 'DONE':
-            print(cformat("#GREEN;%s" % l))
-        elif state == 'RUNNING':
-            print(cformat("#CYAN;%s" % l))
-        elif state == 'ON_HOLD':
-            print(cformat("#YELLOW;%s" % l))
+        if args.color:
+            state = l.get("state", "?").upper()
+            if state == 'ERROR':
+                print(cformat("#RED;%s" % l))
+            elif state == 'DONE':
+                print(cformat("#GREEN;%s" % l))
+            elif state == 'RUNNING':
+                print(cformat("#CYAN;%s" % l))
+            elif state == 'ON_HOLD':
+                print(cformat("#YELLOW;%s" % l))
+            else:
+                print(l)
         else:
-            print(l)
-
+            json.dump(l, sys.stdout)
+            sys.stdout.write("\n")
 
 def command_ping(args):
     r = Configuration(args).getJsonServer().ping({})
@@ -521,6 +524,7 @@ job_specification.add_argument('--recursive', dest="recursive", action="store_tr
 subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
 
 p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification])
+p_ls.add_argument("--color", action="store_true", default=False, help="Whether to color the output")
 
 subparsers.add_parser("list-methods", help="List Json RPC methods")
 
