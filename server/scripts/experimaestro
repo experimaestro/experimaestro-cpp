@@ -442,7 +442,8 @@ def command_list_methods(args):
 
 def command_information(args):
     server = Configuration(args).getJsonServer()
-    print(server.getResourceInformation(args.resourceId[0]))
+    json.dump(server.getResourceInformation(args.resourceId[0]), sys.stdout)
+    sys.stdout.write("\n")
 
 
 def command_invalidate(args):
