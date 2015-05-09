@@ -136,7 +136,9 @@ def start_jar(args, jarargs):
         logging.debug("this is a debug message")
         json_server = conf.getJsonServer()
         logging.debug("info after getting json server")
-        TIMEOUT = 30 # sec
+        TIMEOUT = args.timeout # sec
+        if TIMEOUT <= 0:
+            raise ValueError("invalid timeout value: {}".format(TIMEOUT))
         started_at = time.time()
         nattempt = 0
         last_error = None
@@ -502,6 +504,7 @@ parser.add_argument("--server", dest="server", action="store", help="The experim
 
 p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
 p_start.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
+p_start.add_argument("--timeout", action="store", default=30, type=int, help="Timeout (in second) to ping server")
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
