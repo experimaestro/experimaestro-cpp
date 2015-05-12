@@ -110,11 +110,6 @@ final public class Scheduler {
     private final MessengerThread messengerThread;
 
     /**
-     * FIXME: REMOVE WHEN OK
-     */
-    public static boolean badmd5 = false;
-
-    /**
      * Initialise the task manager
      *
      * @param baseDirectory The directory where the XPM database will be stored

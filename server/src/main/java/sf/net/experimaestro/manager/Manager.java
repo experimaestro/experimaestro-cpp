@@ -24,7 +24,6 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.MessageDigestWriter;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -208,9 +207,6 @@ public class Manager {
         MessageDigestWriter writer = new MessageDigestWriter(Charset.forName("UTF-8"), "MD5");
         json.writeDescriptorString(writer);
         writer.close();
-
-        if (Scheduler.badmd5)
-            return DatatypeConverter.printHexBinary(writer.getDigest());
 
         return DatatypeConverter.printHexBinary(writer.getDigest()).toLowerCase();
     }

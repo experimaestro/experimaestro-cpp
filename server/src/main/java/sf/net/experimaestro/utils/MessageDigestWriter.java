@@ -55,8 +55,7 @@ public class MessageDigestWriter extends Writer implements Closeable {
     @Override
     public void write(char[] cbuf, int off, int len) throws IOException {
         ByteBuffer bbuf = charset.encode(CharBuffer.wrap(cbuf, off, len));
-        if (Scheduler.badmd5) { outputStream.write(bbuf.array()); }
-        else { outputStream.write(bbuf.array(), bbuf.position(), bbuf.limit()); }
+        outputStream.write(bbuf.array(), bbuf.position(), bbuf.limit());
     }
 
     @Override
