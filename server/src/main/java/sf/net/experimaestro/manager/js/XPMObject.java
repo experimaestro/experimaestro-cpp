@@ -17,6 +17,7 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.*;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Functions;
@@ -93,22 +94,12 @@ public class XPMObject {
     final static private Logger LOGGER = Logger.getLogger();
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(
             ImmutableSet.of("stdin", "stdout", "lock", "connector", "launcher"));
-    /**
-     * Logging should be directed to an output
-     */
-    final Hierarchy loggerRepository;
+
     /**
      * Our scope (global among javascripts)
      */
     final Scriptable scope;
-    /**
-     * The experiment repository
-     */
-    private final Repository repository;
-    /**
-     * The task scheduler
-     */
-    private final Scheduler scheduler;
+
     /**
      * The environment
      */
@@ -134,23 +125,28 @@ public class XPMObject {
      * Properties set by the script that will be returned
      */
     Map<String, Object> properties = new HashMap<>();
+
     /**
      * Default locks for new jobs
      */
     Map<Resource, Object> defaultLocks = new TreeMap<>(Resource.ID_COMPARATOR);
+
     /**
      * List of submitted jobs (so that we don't submit them twice with the same script
      * by default)
      */
     Map<String, Resource> submittedJobs = new HashMap<>();
+
     /**
      * Simulate flags: jobs will not be submitted (but commands will be evaluated)
      */
     boolean _simulate;
+
     /**
      * TaskReference context for this XPM object
      */
-    private TaskContext taskContext;
+    private ScriptContext taskContext;
+
     /**
      * The current work dir
      */
@@ -175,15 +171,18 @@ public class XPMObject {
     private Connector connector;
 
     /**
+     * The script context associated to this XPM object
+     */
+    private ScriptContext scriptContext;
+
+    /**
      * Initialise a new XPM object
      *
+     * @param scriptContext The script execution context
      * @param currentScriptPath The xpath to the current script
      * @param context           The JS context
      * @param environment       The environment variables
      * @param scope             The JS scope for execution
-     * @param repository        The task repository
-     * @param scheduler         The job scheduler
-     * @param loggerRepository  The logger for the script
      * @param workdir           The working directory or null if none
      * @param experimentId      The experiment ID
      * @throws IllegalAccessException
@@ -193,31 +192,27 @@ public class XPMObject {
      * @throws NoSuchMethodException
      */
     XPMObject(
+            ScriptContext scriptContext,
             Connector connector,
             Path currentScriptPath,
             Context context,
             Map<String, String> environment,
             Scriptable scope,
-            Repository repository,
-            Scheduler scheduler,
-            Hierarchy loggerRepository,
             Cleaner cleaner,
             Holder<Path> workdir,
             Long experimentId)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentScriptPath);
+        this.scriptContext = scriptContext;
         this.currentScriptPath = currentScriptPath;
         this.connector = connector;
         this.context = context;
         this.environment = environment;
         this.scope = scope;
-        this.repository = repository;
-        this.scheduler = scheduler;
-        this.loggerRepository = loggerRepository;
         this.cleaner = cleaner;
         this.workdir = workdir == null ? new Holder<>(null) : workdir;
-        this.rootLogger = Logger.getLogger(loggerRepository);
+        this.rootLogger = scriptContext.getLogger("");
         this.experimentId = experimentId;
         this.taskLogger = LOGGER;
 
@@ -520,7 +515,7 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(connector, scriptpath, context, newEnvironment, scriptScope, repository, scheduler, loggerRepository, cleaner, workdir, experimentId);
+        final XPMObject clone = new XPMObject(scriptContext.copy(), connector, scriptpath, context, newEnvironment, scriptScope, cleaner, workdir, experimentId);
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = this.submittedJobs;
         clone._simulate = _simulate;
@@ -627,7 +622,7 @@ public class XPMObject {
      * @return
      */
     public Scriptable getTaskFactory(String namespace, String id) {
-        TaskFactory factory = repository.getFactory(new QName(namespace, id));
+        TaskFactory factory = scriptContext.getFactory(new QName(namespace, id));
         LOGGER.debug("Creating a new JS task factory %s", factory.getId());
         return context.newObject(scope, "TaskFactory",
                 new Object[]{Context.javaToJS(factory, scope)});
@@ -644,7 +639,7 @@ public class XPMObject {
     }
 
     public Scriptable getTask(QName qname) {
-        TaskFactory factory = repository.getFactory(qname);
+        TaskFactory factory = scriptContext.getFactory(qname);
         if (factory == null)
             throw new XPMRuntimeException("Could not find a task with name [%s]", qname);
         LOGGER.info("Creating a new JS task [%s]", factory.getId());
@@ -973,26 +968,18 @@ public class XPMObject {
     }
 
     Repository getRepository() {
-        return repository;
+        return scriptContext.getRepository();
     }
 
     public Scheduler getScheduler() {
-        return scheduler;
-    }
-
-    public TaskContext newTaskContext() {
-//        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
-//                .addNewTaskListener(job -> submittedJobs.put(job.getPath(), job));
-        return new TaskContext(scheduler, experimentId, currentScriptPath, workdir.get(), getRootLogger(), false, null)
-                .addDefaultLocks(defaultLocks)
-                .addNewTaskListener(job -> submittedJobs.put(job.getLocator().toString(), job));
+        return scriptContext.getScheduler();
     }
 
     public void setPath(Path locator) {
         this.currentScriptPath = locator;
     }
 
-    public void setTaskContext(TaskContext taskContext) {
+    public void setTaskContext(ScriptContext taskContext) {
         this.taskContext = taskContext;
         this.taskLogger = taskContext != null ? taskContext.getLogger("XPM") : LOGGER;
     }
@@ -1019,6 +1006,14 @@ public class XPMObject {
 
     public Connector getConnector() {
         return connector;
+    }
+
+    public ScriptContext newScriptContext() {
+        return scriptContext.copy();
+    }
+
+    public ScriptContext getScriptContext() {
+        return scriptContext;
     }
 
 
@@ -1124,7 +1119,7 @@ public class XPMObject {
                 @Argument(name = "name") String name,
                 @Argument(name = "level") String level
         ) {
-            Logger.getLogger(xpm.loggerRepository, name).setLevel(Level.toLevel(level));
+            xpm().scriptContext.getLogger(name).setLevel(Level.toLevel(level));
         }
 
 
@@ -1143,9 +1138,9 @@ public class XPMObject {
          */
         @Expose("add_module")
         public JSModule addModule(Object object) {
-            JSModule module = new JSModule(xpm, xpm.repository, xpm.scope, (NativeObject) object);
+            JSModule module = new JSModule(xpm, xpm.getRepository(), xpm.scope, (NativeObject) object);
             LOGGER.debug("Adding module [%s]", module.module.getId());
-            xpm.repository.addModule(module.module);
+            xpm.getRepository().addModule(module.module);
             return module;
         }
 
@@ -1157,8 +1152,8 @@ public class XPMObject {
          */
         @Expose("add_task_factory")
         public Scriptable add_task_factory(NativeObject object) throws ValueMismatchException {
-            JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.repository);
-            xpm.repository.addFactory(factory.factory);
+            JSTaskFactory factory = new JSTaskFactory(xpm.scope, object, xpm.getRepository());
+            xpm.getRepository().addFactory(factory.factory);
             return xpm.context.newObject(xpm.scope, "TaskFactory",
                     new Object[]{factory});
         }
@@ -1261,7 +1256,7 @@ public class XPMObject {
         @Help(value = "Declare a qualified name as an alternative input")
         public void declareAlternative(Object qname) {
             AlternativeType type = new AlternativeType((QName) qname);
-            xpm.repository.addType(type);
+            xpm.getRepository().addType(type);
         }
 
 
@@ -1282,7 +1277,7 @@ public class XPMObject {
         @Expose("publish")
         @Help("Publish the repository on the web server")
         public void publish() throws InterruptedException {
-            TasksServlet.updateRepository(xpm.currentScriptPath.toString(), xpm.repository);
+            TasksServlet.updateRepository(xpm.currentScriptPath.toString(), xpm.getRepository());
         }
 
         @Expose
@@ -1483,7 +1478,7 @@ public class XPMObject {
         public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
             if (connector == null)
                 connector = LocalhostConnector.getInstance();
-            JavaTasksIntrospection.addToRepository(xpm.repository, connector, paths);
+            JavaTasksIntrospection.addToRepository(xpm.getRepository(), connector, paths);
         }
 
         @Expose()

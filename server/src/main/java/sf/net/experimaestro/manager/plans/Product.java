@@ -42,8 +42,8 @@ public class Product extends NAryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
-        return new ProductIterator(planContext);
+    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+        return new ProductIterator(scriptContext);
     }
 
 
@@ -64,15 +64,15 @@ public class Product extends NAryOperator {
 
     public abstract class AbstractProductIterator extends AbstractIterator<ReturnValue> {
         final Iterator<Value>[] inputs;
-        final PlanContext planContext;
+        final ScriptContext scriptContext;
         boolean first;
         Value[] current;
 
-        public AbstractProductIterator(PlanContext planContext) {
-            this.planContext = planContext;
+        public AbstractProductIterator(ScriptContext scriptContext) {
+            this.scriptContext = scriptContext;
             inputs = new Iterator[parents.size()];
             for (int i = 0; i < parents.size(); i++)
-                inputs[i] = parents.get(i).iterator(planContext);
+                inputs[i] = parents.get(i).iterator(scriptContext);
             first = true;
             current = new Value[inputs.length];
         }
@@ -120,8 +120,8 @@ public class Product extends NAryOperator {
     }
 
     class ProductIterator extends AbstractProductIterator {
-        public ProductIterator(PlanContext planContext) {
-            super(planContext);
+        public ProductIterator(ScriptContext scriptContext) {
+            super(scriptContext);
         }
 
         @Override
@@ -134,7 +134,7 @@ public class Product extends NAryOperator {
             for (int i = 0; i < parents.size(); i++) {
                 if (next(i)) {
                     for (int j = i; --j >= 0; ) {
-                        inputs[j] = parents.get(j).iterator(planContext);
+                        inputs[j] = parents.get(j).iterator(scriptContext);
                         next(j);
                     }
 

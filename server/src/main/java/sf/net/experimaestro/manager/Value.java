@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
@@ -79,19 +80,19 @@ public abstract class Value {
      *
      * @param taskContext
      */
-    public abstract void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException;
+    public abstract void process(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException;
 
     /**
      * Get the value
      * <p/>
-     * This method is called by a {@link Task} after {@link #process(TaskContext)}.
+     * This method is called by a {@link Task} after {@link #process(ScriptContext)}.
      *
      * @return A valid XML document or null if not set
      */
     public abstract Json get();
 
     /**
-     * This method is called once by a {@link Task} after {@link #process(TaskContext)}.
+     * This method is called once by a {@link Task} after {@link #process(ScriptContext)}.
      *
      * @param task
      */

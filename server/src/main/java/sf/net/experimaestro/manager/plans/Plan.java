@@ -106,14 +106,14 @@ public class Plan extends Operator {
     /**
      * Run this plan
      *
-     * @param planContext
+     * @param scriptContext
      * @return An iterator over the generated XML values
      */
-    public Iterator<Json> run(PlanContext planContext) throws XPathExpressionException {
+    public Iterator<Json> run(ScriptContext scriptContext) throws XPathExpressionException {
         Operator operator = prepare(true, true);
 
         // Now run
-        final Iterator<Value> iterator = operator.iterator(planContext);
+        final Iterator<Value> iterator = operator.iterator(scriptContext);
 
         return Iterators.transform(iterator, new Function<Value, Json>() {
             @Override
@@ -175,7 +175,6 @@ public class Plan extends Operator {
 
         for (Multimap<DotName, Operator> inputs : inputsList) {
             TaskOperator self = new TaskOperator(this);
-            self.scope = this.scope;
 
             if (inputs.isEmpty()) {
                 self.addParent(new Constant(JsonNull.getSingleton()));
@@ -301,7 +300,7 @@ public class Plan extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
+    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
         throw new UnsupportedOperationException();
     }
 

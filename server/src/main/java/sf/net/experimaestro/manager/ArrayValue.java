@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -50,7 +51,7 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public void process(TaskContext taskContext) {
+    public void process(ScriptContext taskContext) {
     }
 
     @Override

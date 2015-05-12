@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -40,7 +41,7 @@ public class JsonValue extends Value {
     }
 
     @Override
-    public void process(TaskContext taskContext) {
+    public void process(ScriptContext taskContext) {
         // If there is no value, takes the default
         if (value == null && input.defaultValue != null) {
             LOGGER.debug("Setting default value [%s]", input.defaultValue);

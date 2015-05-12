@@ -21,9 +21,9 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 
 public abstract class JSAbstractTask extends Task {
     protected Scriptable jsScope;
@@ -83,11 +83,11 @@ public abstract class JSAbstractTask extends Task {
     }
 
     @Override
-    public Json doRun(TaskContext taskContext) {
+    public Json doRun(ScriptContext taskContext) {
         return jsrun(taskContext);
     }
 
-    abstract protected Json jsrun(TaskContext taskContext);
+    abstract protected Json jsrun(ScriptContext taskContext);
 
 
 }

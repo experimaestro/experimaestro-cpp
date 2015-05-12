@@ -30,7 +30,6 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.js.JSOperator;
 import sf.net.experimaestro.manager.js.JsonPathFunction;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.Expose;
@@ -59,12 +58,11 @@ public abstract class Operator {
      */
     protected String name;
 
-    public DynamicContext scope = new DynamicContext();
-
     /**
      * Size of the output (1 per default)
      */
     int outputSize = 1;
+
     /**
      * List of mappings for context
      */
@@ -238,10 +236,6 @@ public abstract class Operator {
             parent.getAncestors(ancestors);
     }
 
-    public void setDefaultLocks(Map<Resource, String> defaultLocks) {
-        scope.defaultLocks = new HashMap<>(defaultLocks);
-    }
-
     public void addParents(Operator... parents) {
         for (Operator parent : parents) {
             addParent(parent);
@@ -251,31 +245,28 @@ public abstract class Operator {
     /**
      * Creates a new iterator
      *
-     * @param planContext Options
+     * @param scriptContext Options
      * @return A new iterator over return values
      */
-    protected abstract Iterator<ReturnValue> _iterator(PlanContext planContext);
+    protected abstract Iterator<ReturnValue> _iterator(ScriptContext scriptContext);
 
 
 //    CachedIterable<Value> cachedIterable;
 //    PlanContext cachedOptions;
 
     // TODO: implement the cache
-    public Iterator<Value> iterator(PlanContext planContext) {
-        // Update the context with the operator environment
-        planContext = planContext.add(scope);
-
+    public Iterator<Value> iterator(ScriptContext scriptContext) {
         // No cache: just return the iterator
         if (!cacheIterator())
-            return new OperatorIterator(planContext);
+            return new OperatorIterator(scriptContext);
 
         // Retrieve the cached iterable or retrieve it
-        CachedIterable<Value> cachedIterable = planContext.getCachedIterable(this);
+        CachedIterable<Value> cachedIterable = scriptContext.getCachedIterable(this);
 
         if (cachedIterable == null) {
             LOGGER.debug("Setting up a cached iterator");
-            cachedIterable = new CachedIterable<>(new OperatorIterator(planContext));
-            planContext.setCachedIterable(this, cachedIterable);
+            cachedIterable = new CachedIterable<>(new OperatorIterator(scriptContext));
+            scriptContext.setCachedIterable(this, cachedIterable);
         } else {
             // Use the cached values
             LOGGER.debug("Using cached iterator");
@@ -684,10 +675,10 @@ public abstract class Operator {
         Iterator<ReturnValue> iterator;
         private long id = 0;
 
-        OperatorIterator(PlanContext planContext) {
-            iterator = _iterator(planContext);
-            if (planContext.counts() != null)
-                planContext.counts().put(Operator.this, this.counter = new MutableInt(0));
+        OperatorIterator(ScriptContext scriptContext) {
+            iterator = _iterator(scriptContext);
+            if (scriptContext.counts() != null)
+                scriptContext.counts().put(Operator.this, this.counter = new MutableInt(0));
             else
                 this.counter = null;
         }

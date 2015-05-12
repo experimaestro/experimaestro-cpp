@@ -161,14 +161,14 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         return baos.toString();
     }
 
-    @Expose(value = "set_default_locks", optional = 1)
-    public void setDefaultLock(Object locks) {
-        if (locks != null) {
-            throw new NotImplementedException("Set default lock on operators");
-        }
-        Map<Resource, String> _empty = ImmutableMap.of();
-        getOperator().setDefaultLocks(_empty);
-    }
+//    @Expose(value = "set_default_locks", optional = 1)
+//    public void setDefaultLock(Object locks) {
+//        if (locks != null) {
+//            throw new NotImplementedException("Set default lock on operators");
+//        }
+//        Map<Resource, String> _empty = ImmutableMap.of();
+//        getOperator().setDefaultLocks(_empty);
+//    }
 
     private Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
         Operator operator = getOperator();
@@ -206,8 +206,8 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     private Object doRun(boolean simulate, boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
-        PlanContext planContext = new PlanContext(xpm().newTaskContext().clone().simulate(simulate));
-        planContext.counts(details);
+        ScriptContext scriptContext = xpm().newScriptContext();
+        scriptContext.counts(details);
 
         // If we have an experimentId, get the task reference and store them
         Long experimentId = xpm().experimentId;
@@ -216,7 +216,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
                 Experiment experiment = transaction.em().find(Experiment.class, experimentId);
                 IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
                 map.values().forEach(Functional.propagate(t -> transaction.em().persist(t)));
-                planContext.setTaskOperatorMap(map);
+                scriptContext.setTaskOperatorMap(map);
                 transaction.commit();
             }
         }
@@ -225,7 +225,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         ArrayList<JSJson> result = new ArrayList<>();
         Operator operator = getOperator(true, true);
 
-        final Iterator<Value> nodes = operator.iterator(planContext);
+        final Iterator<Value> nodes = operator.iterator(scriptContext);
         while (nodes.hasNext()) {
             result.add(new JSJson(nodes.next().getNodes()[0]));
         }
@@ -235,7 +235,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
-        operator.printDOT(ps, planContext.counts());
+        operator.printDOT(ps, scriptContext.counts());
         ps.flush();
 
         return new NativeArray(new Object[]{result, baos.toString()});

@@ -59,7 +59,7 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
+    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
         return Iterators.transform(values.iterator(), input -> new ReturnValue(null, input));
     }
 

@@ -23,11 +23,11 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
@@ -51,7 +51,7 @@ public class JavaTask extends Task {
 
 
     @Override
-    public Json doRun(TaskContext taskContext) {
+    public Json doRun(ScriptContext taskContext) {
         // Copy the parameters
         JsonObject json = new JsonObject();
         for (Map.Entry<String, Value> entry : values.entrySet()) {

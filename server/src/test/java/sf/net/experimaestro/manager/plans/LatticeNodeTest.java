@@ -22,11 +22,12 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
@@ -44,6 +45,7 @@ import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class LatticeNodeTest {
+    final static public Logger LOGGER = Logger.getLogger();
 
     static BitSet set(int... ints) {
         final BitSet bitSet = new BitSet();
@@ -419,7 +421,7 @@ public class LatticeNodeTest {
 
             op.prepare();
             op.init();
-            final PlanContext pc = new PlanContext(new TaskContext(null, null, null, null, null, false, null));
+            final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext();
 
             final Iterator<Value> iterator = op.iterator(pc);
             while (iterator.hasNext()) {
@@ -476,8 +478,8 @@ public class LatticeNodeTest {
         }
 
         @Override
-        protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
-            return new FakeIterator(planContext);
+        protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+            return new FakeIterator(scriptContext);
         }
 
         @Override
@@ -486,8 +488,8 @@ public class LatticeNodeTest {
         }
 
         private class FakeIterator extends ProductIterator {
-            public FakeIterator(PlanContext planContext) {
-                super(planContext);
+            public FakeIterator(ScriptContext scriptContext) {
+                super(scriptContext);
             }
 
             @Override

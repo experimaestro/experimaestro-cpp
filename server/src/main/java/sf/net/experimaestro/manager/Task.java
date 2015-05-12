@@ -23,6 +23,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -118,16 +119,16 @@ public abstract class Task {
      * @param taskContext
      * @return An XML description of the output
      */
-    public abstract Json doRun(TaskContext taskContext);
+    public abstract Json doRun(ScriptContext taskContext);
 
     /**
      * Run this task.
      * <p/>
-     * Calls {@linkplain #doRun(TaskContext)}
+     * Calls {@linkplain #doRun(ScriptContext)}
      *
      * @param taskContext
      */
-    final public Json run(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
+    final public Json run(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
         LOGGER.debug("Running task [%s]", factory == null ? "n/a" : factory.id);
 
         // (1) Get the inputs so that dependent ones are evaluated latter

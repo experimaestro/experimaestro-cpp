@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Map;
@@ -109,7 +110,7 @@ public class AlternativeValue extends Value {
     }
 
     @Override
-    public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
+    public void process(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
         // If the value has not been set
         if (value == null) {
             // If the task has not been set, try to use default value

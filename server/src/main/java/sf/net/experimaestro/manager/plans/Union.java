@@ -39,7 +39,7 @@ public class Union extends NAryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
+    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
 
         return new AbstractIterator<ReturnValue>() {
             int parent = -1;
@@ -50,7 +50,7 @@ public class Union extends NAryOperator {
                 while (parent < 0 || !iterator.hasNext()) {
                     if (++parent >= getParents().size())
                         return endOfData();
-                    iterator = Union.this.getParent(parent).iterator(planContext);
+                    iterator = Union.this.getParent(parent).iterator(scriptContext);
                 }
 
                 Value value = iterator.next();

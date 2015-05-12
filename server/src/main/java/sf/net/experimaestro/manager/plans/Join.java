@@ -45,8 +45,8 @@ public class Join extends Product {
     ArrayList<JoinReference> joins = new ArrayList<>();
 
     @Override
-    protected Iterator<ReturnValue> _iterator(PlanContext planContext) {
-        return new JoinIterator(planContext);
+    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+        return new JoinIterator(scriptContext);
     }
 
     @Override
@@ -159,7 +159,7 @@ public class Join extends Product {
             }
         }
 
-        private JoinIterator(PlanContext simulate) {
+        private JoinIterator(ScriptContext simulate) {
             super(simulate);
         }
 

@@ -705,6 +705,9 @@ final public class Scheduler {
 
                                     if (dep.update()) {
                                         final Resource depResource = dep.getTo();
+                                        depResource.lock(t, true);
+                                        em.refresh(depResource);
+
                                         if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
                                             LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
                                             continue;

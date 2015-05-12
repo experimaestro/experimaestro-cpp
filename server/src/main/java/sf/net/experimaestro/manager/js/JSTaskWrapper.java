@@ -62,11 +62,11 @@ public class JSTaskWrapper extends JSBaseObject {
 
     @Expose("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(xpm.newTaskContext().simulate(simulate)));
+        return new JSJson(task.run(xpm.newScriptContext().simulate(simulate)));
     }
 
     @Expose("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(xpm.newTaskContext().simulate(false)));
+        return new JSJson(task.run(xpm.newScriptContext().simulate(false)));
     }
 }

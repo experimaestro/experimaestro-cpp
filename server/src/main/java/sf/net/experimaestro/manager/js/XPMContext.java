@@ -31,6 +31,7 @@ import sf.net.experimaestro.connectors.SSHOptions;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.plans.Constant;
+import sf.net.experimaestro.manager.plans.StaticContext;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Cleaner;
@@ -76,8 +77,7 @@ public class XPMContext implements AutoCloseable {
     private final Context context;
     private final Map<String, String> environment;
     private final Repositories repositories;
-    private final Scheduler scheduler;
-    private final Hierarchy loggerRepository;
+    private final StaticContext staticContext;
 
     /**
      * Get the scope where all the main objects are defined
@@ -138,8 +138,7 @@ public class XPMContext implements AutoCloseable {
 
     public XPMContext(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
         this.repositories = repositories;
-        this.scheduler = scheduler;
-        this.loggerRepository = loggerRepository;
+        this.staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
         // --- Debugging via JSDT
         // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
         ContextFactory factory = new ContextFactory();
@@ -195,7 +194,7 @@ public class XPMContext implements AutoCloseable {
 
     private XPMObject getXPMObject(LocalhostConnector connector, Path locator, Cleaner cleaner)
             throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        return new XPMObject(connector, locator, context, environment, newScope(), repositories, scheduler, loggerRepository, cleaner, null, null);
+        return new XPMObject(staticContext.scriptContext(), connector, locator, context, environment, newScope(), cleaner, null, null);
     }
 
     public static Scriptable newScope() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {

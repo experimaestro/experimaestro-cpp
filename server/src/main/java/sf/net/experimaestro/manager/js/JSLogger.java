@@ -41,7 +41,7 @@ public class JSLogger extends JSBaseObject {
     @Expose
     public JSLogger(XPMObject xpm, String name) {
         this.xpm = xpm;
-        logger = Logger.getLogger(xpm.loggerRepository, name);
+        logger = xpm.getScriptContext().getLogger(name);
     }
 
     static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {

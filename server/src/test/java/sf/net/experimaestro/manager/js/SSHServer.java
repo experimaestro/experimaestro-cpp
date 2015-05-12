@@ -20,12 +20,14 @@ package sf.net.experimaestro.manager.js;
 
 import com.pastdev.jsch.IOUtils;
 import org.apache.sshd.SshServer;
+import org.apache.sshd.common.ForwardingFilter;
 import org.apache.sshd.common.NamedFactory;
+import org.apache.sshd.common.Session;
+import org.apache.sshd.common.SshdSocketAddress;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
-import org.apache.sshd.server.ForwardingFilter;
 import org.apache.sshd.server.auth.UserAuthNone;
 import org.apache.sshd.server.command.ScpCommandFactory;
 import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
@@ -92,23 +94,30 @@ public class SSHServer {
         Server.setSubsystemFactories(list);
         Server.setPasswordAuthenticator((username, password, session) -> username != null && username.equals(password));
         Server.setPublickeyAuthenticator((username, key, session) -> true);
-        Server.setForwardingFilter(new ForwardingFilter() {
-            public boolean canConnect(InetSocketAddress address, ServerSession session) {
-                return true;
-            }
-
-            public boolean canForwardAgent(ServerSession session) {
-                return true;
-            }
-
-            public boolean canForwardX11(ServerSession session) {
-                return true;
-            }
-
-            public boolean canListen(InetSocketAddress address, ServerSession session) {
-                return true;
-            }
-        });
+//        Server.setTcpipForwarderFactory();
+//        Server.setForwardingFilter(new ForwardingFilter() {
+//            @Override
+//            public boolean canForwardAgent(Session session) {
+//                return true;
+//            }
+//
+//            @Override
+//            public boolean canForwardX11(Session session) {
+//                return false;
+//            }
+//
+//            @Override
+//            public boolean canListen(SshdSocketAddress sshdSocketAddress, Session session) {
+//                return false;
+//            }
+//
+//            @Override
+//            public boolean canConnect(SshdSocketAddress sshdSocketAddress, Session session) {
+//                return true;
+//            }
+//
+//
+//        });
         // Allows the execution of commands
         Server.setCommandFactory(new ScpCommandFactory(new TestCommandFactory()));
         // HACK Start

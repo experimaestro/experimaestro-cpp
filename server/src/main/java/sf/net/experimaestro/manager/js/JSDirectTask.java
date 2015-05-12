@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -73,7 +74,7 @@ public class JSDirectTask extends JSAbstractTask {
     }
 
     @Override
-    public Json jsrun(TaskContext taskContext) {
+    public Json jsrun(ScriptContext taskContext) {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();

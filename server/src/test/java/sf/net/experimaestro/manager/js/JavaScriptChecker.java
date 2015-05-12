@@ -26,6 +26,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.plans.StaticContext;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMEnvironment;
@@ -69,15 +71,17 @@ public class JavaScriptChecker extends XPMEnvironment {
 
         scope = XPMContext.newScope();
 
-        xpm = new XPMObject(LocalhostConnector.getInstance(), file, context, environment, scope,
-                repository, prepare().getScheduler(), null, new Cleaner(), null, null);
+        ScriptContext scriptContext = new StaticContext(prepare().getScheduler()).repository(repository).scriptContext();
+        try(Cleaner cleaner = new Cleaner()) {
+            xpm = new XPMObject(scriptContext, LocalhostConnector.getInstance(), file, context, environment, scope, cleaner, null, null);
 
-        // Adds some special functions available for tests only
-        JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
+            // Adds some special functions available for tests only
+            JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
-        XPMObject.threadXPM.set(xpm);
-        context.evaluateReader(scope, new StringReader(content),
-                file.toString(), 1, null);
+            XPMObject.threadXPM.set(xpm);
+            context.evaluateReader(scope, new StringReader(content),
+                    file.toString(), 1, null);
+        }
     }
 
     @Override

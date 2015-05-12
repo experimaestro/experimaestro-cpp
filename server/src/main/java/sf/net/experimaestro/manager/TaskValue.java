@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 
 public class TaskValue extends Value {
     private Task task;
@@ -49,7 +50,7 @@ public class TaskValue extends Value {
     }
 
     @Override
-    public void process(TaskContext taskContext) throws NoSuchParameter, ValueMismatchException {
+    public void process(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
         if (value == null) {
             // Run unless a value was set
             value = task.run(taskContext);

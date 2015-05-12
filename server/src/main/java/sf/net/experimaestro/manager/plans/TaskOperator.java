@@ -27,7 +27,6 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskContext;
 import sf.net.experimaestro.manager.json.Json;
 
 import java.util.Iterator;
@@ -75,14 +74,14 @@ public class TaskOperator extends UnaryOperator {
     /**
      * Creates an iterator
      *
-     * @param planContext The current context
+     * @param scriptContext The current context
      */
     @Override
-    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
+    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator(planContext) : ImmutableList.of(new Value(new Json[0])).iterator();
+                    input.iterator(scriptContext) : ImmutableList.of(new Value(new Json[0])).iterator();
 
             @Override
             protected ReturnValue computeNext() {
@@ -101,10 +100,8 @@ public class TaskOperator extends UnaryOperator {
                 }
 
                 try {
-                    TaskContext taskContext = planContext.getTaskContext();
-                    planContext.setTaskOperator(TaskOperator.this);
-                    final Json result = task.run(taskContext);
-                    planContext.setTaskOperator(null);
+                    scriptContext.setTaskOperator(TaskOperator.this);
+                    final Json result = task.run(scriptContext);
                     return new ReturnValue(new DefaultContexts(value.context), result);
                 } catch (NoSuchParameter | ValueMismatchException e) {
                     throw new XPMRuntimeException(e);
@@ -138,11 +135,8 @@ public class TaskOperator extends UnaryOperator {
     @Override
     protected String getName() {
         return String.format("task %s(%s)", plan.getFactory().getId(), Output.toString(", ", mappings.entrySet(),
-                new Formatter<Map.Entry<DotName, Integer>>() {
-                    @Override
-                    public String format(Map.Entry<DotName, Integer> o) {
-                        return String.format("%s/%d", o.getKey(), o.getValue());
-                    }
+                o -> {
+                    return String.format("%s/%d", o.getKey(), o.getValue());
                 }));
     }
 

@@ -50,9 +50,9 @@ public class FunctionOperator extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final PlanContext planContext) {
+    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
         return new AbstractIterator<ReturnValue>() {
-            Iterator<Value> iterator = input.iterator(planContext);
+            Iterator<Value> iterator = input.iterator(scriptContext);
             public Iterator<? extends Json> innerIterator = ImmutableSet.<Json>of().iterator();
             DefaultContexts contexts;
 
