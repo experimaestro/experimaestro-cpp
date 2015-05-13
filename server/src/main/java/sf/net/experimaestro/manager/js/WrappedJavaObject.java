@@ -22,6 +22,9 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaClass;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.manager.scripting.ClassDescription;
+import sf.net.experimaestro.manager.scripting.ConstructorFunction;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
 
 /**
  * An object with exposed fields
@@ -59,10 +62,11 @@ public class WrappedJavaObject extends JSBaseObject implements Wrapper {
 
         @Override
         public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-            ClassDescription description = analyzeClass((Class) javaClass);
-            String className = JSBaseObject.getClassName((Class) javaClass);
-            ConstructorFunction constructorFunction = new ConstructorFunction(className, description.constructors);
-            Object object = constructorFunction.call(cx, scope, null, args);
+            ClassDescription description = ClassDescription.analyzeClass((Class) javaClass);
+            String className = ClassDescription.getClassName((Class) javaClass);
+            ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
+            JavaScriptContext jcx = new JavaScriptContext(cx, scope);
+            Object object = constructorFunction.call(jcx, /* FIXME */ null, null, args);
 
             return new WrappedJavaObject(cx, scope, object);
 

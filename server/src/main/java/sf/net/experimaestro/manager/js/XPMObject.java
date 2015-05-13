@@ -16,11 +16,7 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Argument;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Functions;
-import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.server.TasksServlet;
 import sf.net.experimaestro.utils.Cleaner;
@@ -191,28 +187,28 @@ public class XPMObject {
         // --- Add new objects
 
         // Add functions from our Function object
-        Map<String, ArrayList<Method>> functionsMap = JSBaseObject.analyzeClass(XPMFunctions.class).methods;
+        Map<String, ArrayList<Method>> functionsMap = ClassDescription.analyzeClass(XPMFunctions.class).getMethods();
         final XPMFunctions xpmFunctions = new XPMFunctions(this);
         for (Map.Entry<String, ArrayList<Method>> entry : functionsMap.entrySet()) {
             MethodFunction function = new MethodFunction(entry.getKey());
             function.add(xpmFunctions, entry.getValue());
-            ScriptableObject.putProperty(scope, entry.getKey(), function);
+            ScriptableObject.putProperty(scope, entry.getKey(), new JavaScriptFunction(function));
         }
 
         // Add functions from our the common scripting base
-        Map<String, ArrayList<Method>> scriptingFunctionsMap = JSBaseObject.analyzeClass(Functions.class).methods;
+        Map<String, ArrayList<Method>> scriptingFunctionsMap = ClassDescription.analyzeClass(Functions.class).getMethods();
         final Functions scriptingFunctions = new Functions();
         for (Map.Entry<String, ArrayList<Method>> entry : scriptingFunctionsMap.entrySet()) {
             MethodFunction function = new MethodFunction(entry.getKey());
             function.add(scriptingFunctions, entry.getValue());
-            ScriptableObject.putProperty(scope, entry.getKey(), function);
+            ScriptableObject.putProperty(scope, entry.getKey(), new JavaScriptFunction(function));
         }
 
         // tasks object
         XPMContext.addNewObject(context, scope, "tasks", "Tasks", new Object[]{});
 
         // logger
-        XPMContext.addNewObject(context, scope, "logger", JSBaseObject.getClassName(JSLogger.class), new Object[]{this, "xpm"});
+        XPMContext.addNewObject(context, scope, "logger", ClassDescription.getClassName(JSLogger.class), new Object[]{this, "xpm"});
 
         // xpm object
         XPMContext.addNewObject(context, scope, "xpm", "XPM", new Object[]{});
@@ -580,7 +576,7 @@ public class XPMObject {
      * Creates a new JavaScript object
      */
     Scriptable newObject(Class<?> aClass, Object... arguments) {
-        return context.newObject(scope, JSBaseObject.getClassName(aClass), arguments);
+        return context.newObject(scope, ClassDescription.getClassName(aClass), arguments);
     }
 
     /**
@@ -1289,8 +1285,8 @@ public class XPMObject {
         }
     }
 
-
-    static class XPMFunctions {
+    @Exposed
+    public static class XPMFunctions {
         XPMObject xpm;
 
         @Expose
@@ -1404,10 +1400,10 @@ public class XPMObject {
             }
         }
 
-        @Expose(value = "$$", scope = true)
+        @Expose(value = "$$")
         @Help("Get the resource associated with the json object")
-        public Resource get_resource(Context cx, Scriptable scope, Json json) {
-            Resource resource = null;
+        public Resource get_resource(Json json) {
+            Resource resource;
             if (json instanceof JsonObject) {
                 resource = getResource((JsonObject) json);
             } else {

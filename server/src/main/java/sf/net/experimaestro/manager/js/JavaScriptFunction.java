@@ -18,55 +18,27 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.Iterables;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.AbstractList;
-import java.util.ArrayList;
+import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 /**
- * Represents all the methods with the same name within the same object
+ * Wrapper for a function in javascript
  */
-class MethodFunction extends GenericFunction implements org.mozilla.javascript.Function {
-    final String name;
-    final ArrayList<Group> groups = new ArrayList<>();
-    public MethodFunction(String name) {
-        this.name = name;
-    }
+public class JavaScriptFunction implements Function {
+    private final MethodFunction function;
 
-    public boolean isEmpty() {
-        return groups.isEmpty();
+    public JavaScriptFunction(MethodFunction function) {
+        this.function = function;
     }
 
     @Override
-    protected String getName() {
-        return name;
-    }
-
-    @Override
-    protected Iterable<MethodDeclaration> declarations() {
-        return Iterables.concat(new AbstractList<Iterable<MethodDeclaration>>() {
-            @Override
-            public Iterable<MethodDeclaration> get(final int index) {
-                Group group = groups.get(index);
-                return Iterables.transform(group.methods,
-                        m -> new MethodDeclaration(group.thisObject, m));
-            }
-
-            @Override
-            public int size() {
-                return groups.size();
-            }
-        });
-    }
-
-    public void add(Object thisObj, ArrayList<Method> methods) {
-        groups.add(new Group(thisObj, methods));
+    public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
+        JavaScriptContext jcx = new JavaScriptContext(context, scope);
+        XPMObject xpm = XPMObject.getThreadXPM();
+        return function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
     }
 
     @Override
@@ -153,36 +125,4 @@ class MethodFunction extends GenericFunction implements org.mozilla.javascript.F
     public boolean hasInstance(Scriptable instance) {
         throw new NotImplementedException();
     }
-
-    /**
-     * Represent all the methods from a given ancestor (or self)
-     */
-    static class Group {
-        final Object thisObject;
-        ArrayList<Method> methods = new ArrayList<>();
-
-        Group(Object thisObject, ArrayList<Method> methods) {
-            this.thisObject = thisObject;
-            this.methods = methods;
-        }
-    }
-
-    static public class MethodDeclaration extends Declaration<Method> {
-        final Object baseObject;
-        final Method method;
-
-        public MethodDeclaration(Object baseObject, Method method) {
-            super(method);
-            this.baseObject = baseObject;
-            this.method = method;
-        }
-
-        @Override
-        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
-            boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
-            return method.invoke(isStatic ? null : baseObject, transformedArgs);
-        }
-    }
-
-
 }

@@ -22,6 +22,7 @@ import bpiwowar.argparser.utils.Introspection;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.manager.scripting.Expose;
@@ -153,7 +154,7 @@ public class JSDocumentation {
 
     private static String javascriptName(Class<?> aClass) {
         if (JSBaseObject.class.isAssignableFrom(aClass)) {
-            return JSBaseObject.getClassName(aClass);
+            return ClassDescription.getClassName(aClass);
         }
 
         if (aClass.isArray())
@@ -239,7 +240,7 @@ public class JSDocumentation {
 
                 documentMethod(methods, method, name);
             }
-            classes.add(new Documentation.Text(JSBaseObject.getClassName(clazz)), methods);
+            classes.add(new Documentation.Text(ClassDescription.getClassName(clazz)), methods);
 
         }
 

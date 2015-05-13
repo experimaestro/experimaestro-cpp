@@ -225,6 +225,14 @@
             <version>1.7.6</version>
         </dependency>
 
+        <!-- Python -->
+        <dependency>
+            <groupId>org.python</groupId>
+            <artifactId>jython-standalone</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+
+
         <dependency>
             <groupId>net.bpiwowar</groupId>
             <artifactId>argj</artifactId>

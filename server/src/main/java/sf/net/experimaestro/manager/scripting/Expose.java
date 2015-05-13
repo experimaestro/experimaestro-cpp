@@ -34,7 +34,9 @@ public @interface Expose {
 
     /**
      * Whether the constructor takes scope & context
+     * @deprecated The context should be used to build language agnostic functions
      */
+    @Deprecated
     boolean scope() default false;
 
 
@@ -52,4 +54,11 @@ public @interface Expose {
      * Optional arguments are at the beginning when true
      */
     boolean optionalsAtStart() default false;
+
+    /**
+     * Whether the context should be passed (language and script context)
+     * @return True if the first argument should be a {@linkplain ScriptContext} object
+     */
+    boolean context() default false;
+
 }

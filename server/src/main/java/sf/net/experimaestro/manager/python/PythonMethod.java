@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -18,13 +18,22 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import org.python.core.PyObject;
+import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 /**
- * Marks properties within JSBaseObject javascript objects
+ * Python wrapper for object methods
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface JSProperty {
-    String value() default "";
+class PythonMethod extends PyObject {
+    private MethodFunction methodFunction;
+
+    public PythonMethod(MethodFunction methodFunction) {
+        this.methodFunction = methodFunction;
+    }
+
+    @Override
+    public PyObject __call__(PyObject[] args, String[] keywords) {
+        return PythonContext.wrap(methodFunction.call(null, null, null, args));
+
+    }
 }

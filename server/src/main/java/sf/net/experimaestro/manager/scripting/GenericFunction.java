@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -24,12 +24,14 @@ import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
+import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
@@ -41,23 +43,22 @@ import static java.lang.Math.max;
 import static java.lang.StrictMath.min;
 
 /**
- * Base class for javascript methods or constructors
+ * Base class for scripting methods or constructors
  */
-public abstract class GenericFunction implements Callable {
+public abstract class GenericFunction {
 
     static private final com.google.common.base.Function IDENTITY = Functions.identity();
 
     /**
      * Transform the arguments
      *
-     * @param cx
-     * @param scope
-     * @param declaration
+     * @param cx The script context
+     * @param lcx
+     *@param declaration
      * @param args
-     * @param offset      The offset within the target parameters
-     * @return
+     * @param offset      The offset within the target parameters    @return
      */
-    static Object[] transform(Context cx, Scriptable scope, Declaration declaration, Object[]
+    static Object[] transform(LanguageContext lcx, ScriptContext cx, Declaration declaration, Object[]
             args, Function[] converters, int offset) {
         final Executable executable = declaration.executable();
         final Class<?>[] types = executable.getParameterTypes();
@@ -65,11 +66,19 @@ public abstract class GenericFunction implements Callable {
 
         // --- Add context and scope if needed
         Expose annotation = executable.getAnnotation(Expose.class);
+        if (annotation != null && (annotation.scope() && annotation.context())) {
+            throw new UnsupportedOperationException("Annotations scope and context cannot be used at the same time");
+        }
 
-        final boolean useScope = annotation == null ? false : annotation.scope();
-        if (useScope) {
-            methodArgs[0] = cx;
-            methodArgs[1] = scope;
+        if (annotation == null ? false : annotation.scope()) {
+            JavaScriptContext jcx = (JavaScriptContext)lcx;
+            methodArgs[0] = jcx.context();
+            methodArgs[1] = jcx.scope();
+        }
+
+        if (annotation == null ? false : annotation.context()) {
+            methodArgs[0] = lcx;
+            methodArgs[1] = cx;
         }
 
         // --- Copy the non vararg parameters
@@ -96,14 +105,14 @@ public abstract class GenericFunction implements Callable {
     /**
      * Gives a score to a given declaration
      *
-     * @param scope
+     * @param cx The script context
      * @param declaration The underlying method or constructor
      * @param args        The arguments
      * @param converters  A list of converters that will be filled by this method
      * @param offset      The offset for the converters
      * @return A score (minimum integer if no conversion is possible)
      */
-    static int score(Scriptable scope, Declaration declaration, Object[] args, Function[] converters, MutableInt offset) {
+    static int score(LanguageContext lcx, ScriptContext cx, Declaration declaration, Object[] args, Function[] converters, MutableInt offset) {
 
         final Executable executable = declaration.executable();
         final Class<?>[] types = executable.getParameterTypes();
@@ -111,13 +120,15 @@ public abstract class GenericFunction implements Callable {
 
         // Get the annotations
         Expose annotation = declaration.executable.getAnnotation(Expose.class);
+        final boolean contextAnnotation = annotation == null ? false : annotation.context();
         final boolean scopeAnnotation = annotation == null ? false : annotation.scope();
         int optional = annotation == null ? 0 : annotation.optional();
 
         // Start the scoring
         Converter converter = new Converter();
+
         // Offset in the types
-        offset.setValue(scopeAnnotation ? 2 : 0);
+        offset.setValue(contextAnnotation || scopeAnnotation ? 2 : 0);
 
         // Number of "true" arguments (not scope, not vararg)
         final int nbArgs = types.length - offset.intValue() - (isVarArgs ? 1 : 0);
@@ -140,7 +151,7 @@ public abstract class GenericFunction implements Callable {
         // Normal arguments
         for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
             final Object o = args[i];
-            converters[i] = converter.converter(scope, o, types[i + offset.intValue()]);
+            converters[i] = converter.converter(lcx, cx, o, types[i + offset.intValue()]);
         }
 
         // Var args
@@ -149,7 +160,7 @@ public abstract class GenericFunction implements Callable {
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final Object o = args[nbArgs + i];
-                converters[nbArgs + i] = converter.converter(scope, o, type);
+                converters[nbArgs + i] = converter.converter(lcx, cx, o, type);
             }
         }
 
@@ -163,8 +174,7 @@ public abstract class GenericFunction implements Callable {
 
     protected abstract <T extends Declaration> Iterable<T> declarations();
 
-    @Override
-    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+    public Object call(LanguageContext lcx, ScriptContext cx, Object thisObj, Object[] args) {
         Declaration argmax = null;
         int max = Integer.MIN_VALUE;
 
@@ -174,7 +184,7 @@ public abstract class GenericFunction implements Callable {
 
         for (Declaration method : declarations()) {
             MutableInt offset = new MutableInt(0);
-            int score = score(scope, method, args, converters, offset);
+            int score = score(lcx, cx, method, args, converters, offset);
             if (score > max) {
                 max = score;
                 argmax = method;
@@ -188,7 +198,7 @@ public abstract class GenericFunction implements Callable {
         if (argmax == null) {
             String context = "";
             if (thisObj instanceof JSBaseObject)
-                context = " in an object of class " + JSBaseObject.getClassName(thisObj.getClass());
+                context = " in an object of class " + ClassDescription.getClassName(thisObj.getClass());
 
             throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)%s",
                     getName(),
@@ -199,7 +209,7 @@ public abstract class GenericFunction implements Callable {
 
         // Call the constructor
         try {
-            Object[] transformedArgs = transform(cx, scope, argmax, args, argmaxConverters, argMaxOffset);
+            Object[] transformedArgs = transform(lcx, cx, argmax, args, argmaxConverters, argMaxOffset);
             final Object result = argmax.invoke(transformedArgs);
             if (result == null) return Undefined.instance;
 
@@ -227,7 +237,7 @@ public abstract class GenericFunction implements Callable {
         }
 
         public abstract Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
-
+        
     }
 
     static public class ListConverter implements Function {
@@ -263,7 +273,7 @@ public abstract class GenericFunction implements Callable {
     static public class Converter {
         int score = Integer.MAX_VALUE;
 
-        Function converter(Scriptable scope, Object o, Class<?> type) {
+        Function converter(LanguageContext lcx, ScriptContext cx, Object o, Class<?> type) {
             if (o == null) {
                 score--;
                 return IDENTITY;
@@ -292,7 +302,7 @@ public abstract class GenericFunction implements Callable {
                     final ListConverter listConverter = new ListConverter(innerType);
 
                     while (iterator.hasNext()) {
-                        listConverter.add(converter(scope, iterator.next(), innerType));
+                        listConverter.add(converter(lcx, cx, iterator.next(), innerType));
                         if (score == Integer.MIN_VALUE) {
                             return null;
                         }
@@ -332,14 +342,15 @@ public abstract class GenericFunction implements Callable {
             // Native object to JSON
             if (o instanceof NativeObject && Json.class.isAssignableFrom(type)) {
                 score -= 10;
-                return nativeObject -> JSUtils.toJSON(scope, nativeObject);
+                JavaScriptContext jcx = (JavaScriptContext)lcx;
+                return nativeObject -> JSUtils.toJSON(jcx.scope(), nativeObject);
             }
 
 
             // Everything else failed... unwrap and try again
             if (o instanceof Wrapper) {
                 score -= 1;
-                Function converter = converter(scope, ((Wrapper) o).unwrap(), type);
+                Function converter = converter(lcx, cx, ((Wrapper) o).unwrap(), type);
                 return converter != null ? new Unwrapper(converter) : null;
             }
 

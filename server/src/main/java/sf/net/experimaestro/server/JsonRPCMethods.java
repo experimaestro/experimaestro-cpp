@@ -34,10 +34,13 @@ import org.json.simple.JSONValue;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
+import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
+import sf.net.experimaestro.manager.python.PythonContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Functional;
@@ -311,6 +314,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     /**
      * Get a resource by ID or by locator
+     *
      * @param em
      * @param resourceId
      * @return
@@ -337,6 +341,98 @@ public class JsonRPCMethods extends HttpServlet {
         logger.setLevel(Level.toLevel(level));
         return 0;
     }
+
+    /**
+     * Run javascript
+     */
+    @RPCMethod(name = "run-python", help = "Run a python file")
+    public String runPython(@RPCArgument(name = "files") List<JSONArray> files,
+                            @RPCArgument(name = "environment") Map<String, String> environment,
+                            @RPCArgument(name = "debug", required = false) Integer debugPort) {
+
+        final StringWriter errString = new StringWriter();
+//        final PrintWriter err = new PrintWriter(errString);
+
+        final Hierarchy loggerRepository = getScriptLogger();
+
+        // TODO: should be a one shot repository - ugly
+        Repositories repositories = new Repositories(new File("/").toPath());
+        repositories.add(repository, 0);
+
+        // Creates and enters a Context. The Context stores information
+        // about the execution environment of a script.
+        try (PythonContext pythonContext =
+                     new PythonContext(environment, repositories, scheduler, loggerRepository,
+                             getRequestOutputStream(), getRequestErrorStream())
+        ) {
+            Object result = null;
+            for (JSONArray filePointer : files) {
+                boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
+                final String content = isFile ? null : filePointer.get(1).toString();
+                final String filename = filePointer.get(0).toString();
+
+                final LocalhostConnector connector = LocalhostConnector.getInstance();
+                Path locator = connector.resolve(filename);
+                if (isFile) {
+                    result = pythonContext.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
+                } else {
+                    result = pythonContext.evaluateString(connector, locator, content, filename, 1, null);
+                }
+            }
+
+            if (result != null)
+                LOGGER.debug("Returns %s", result.toString());
+            else
+                LOGGER.debug("Null result");
+
+            return result != null && result != Scriptable.NOT_FOUND &&
+                    result != Undefined.instance ? result.toString() : "";
+
+        } catch (ExitException e) {
+            if (e.getCode() == 0) {
+                return null;
+            }
+            throw e;
+        } catch (Throwable e) {
+            Throwable wrapped = e;
+            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
+            while (wrapped.getCause() != null)
+                wrapped = wrapped.getCause();
+
+            LOGGER.printException(Level.INFO, wrapped);
+
+            org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
+
+            logger.error(wrapped.toString());
+
+            for (Throwable ee = e; ee != null; ee = ee.getCause()) {
+                if (ee instanceof ContextualException) {
+                    ContextualException ce = (ContextualException) ee;
+                    List<String> context = ce.getContext();
+                    if (!context.isEmpty()) {
+                        logger.error("[Context]");
+                        for (String s : context) {
+                            logger.error(s);
+                        }
+                    }
+                }
+            }
+
+            if (wrapped instanceof NotImplementedException)
+                logger.error(format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]));
+
+            logger.error("[Stack trace]");
+            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
+            for (ScriptStackElement x : scriptStackTrace) {
+                logger.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
+            }
+
+
+            throw new RuntimeException(errString.toString());
+
+        }
+    }
+
 
     /**
      * Run javascript

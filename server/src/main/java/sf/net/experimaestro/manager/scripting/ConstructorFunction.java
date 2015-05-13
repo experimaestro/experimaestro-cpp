@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -25,7 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 
 /**
- * Created by bpiwowar on 10/9/14.
+ * Corresponds to an object constructor
  */
 public class ConstructorFunction extends GenericFunction {
     ArrayList<Constructor<?>> constructors = new ArrayList<>();

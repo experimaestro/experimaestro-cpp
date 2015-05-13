@@ -352,6 +352,34 @@ def command_stop_server(args):
     server.shutdown({})
 
 
+def command_run_python(args):
+    conf = Configuration(args)
+    client = conf.getWebSocketServer()
+
+    # Get the command line
+    files = []
+
+    if args.pre:
+        files.append(["<pre>", args.pre])
+
+    for filename in args.files:
+        filepath = os.path.abspath(filename)
+        if not conf.remote:
+            files.append([filepath, None])
+        else:
+            files.append([filepath, open(filepath).read()])
+
+    if args.post:
+        files.append(["<post>", args.post])
+
+    logging.debug("Running python scripts %s" % [s[0] for s in files])
+
+    params = {"files": files, "environment": dict(os.environ)}
+
+    run_server_command(client, "run-python", params)
+
+
+
 def command_run_js(args):
     conf = Configuration(args)
     client = conf.getWebSocketServer()
@@ -519,12 +547,16 @@ p_start.add_argument("--timeout", action="store", default=30, type=int, help="Ti
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
 
+# --- Scripting
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_python = subparsers.add_parser("run-python", help="Run Python script in server")
 p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
-p_run_js.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
-p_run_js.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
-p_run_js.add_argument("--post", dest="post", help="Execute this javascript after the files")
-p_run_js.add_argument('files', nargs='*', help='')
+for p in [p_run_js, p_run_python]:
+    p.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
+    p.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
+    p.add_argument("--post", dest="post", help="Execute this javascript after the files")
+    p.add_argument('files', nargs='*', help='')
+
 
 
 job_specification = argparse.ArgumentParser(add_help=False)

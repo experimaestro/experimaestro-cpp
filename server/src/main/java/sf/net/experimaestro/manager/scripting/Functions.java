@@ -25,6 +25,7 @@ import sf.net.experimaestro.scheduler.Scheduler;
 /**
  * General functions available to all scripting languages
  */
+@Exposed
 public class Functions {
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")

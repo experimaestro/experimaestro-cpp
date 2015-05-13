@@ -21,18 +21,18 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.manager.scripting.ClassDescription;
+import sf.net.experimaestro.manager.scripting.ConstructorFunction;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.MethodFunction;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -43,7 +43,6 @@ import static java.lang.String.format;
  * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
-    final static private HashMap<Class<?>, ClassDescription> CLASS_DESCRIPTION = new HashMap<>();
     private XPMObject xpm;
 
     private ClassDescription classDescription;
@@ -52,18 +51,18 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     public JSBaseObject() {
         final Class<? extends JSBaseObject> aClass = getClass();
-        this.classDescription = analyzeClass(aClass);
+        this.classDescription = ClassDescription.analyzeClass(aClass);
     }
 
     public JSBaseObject(Class<?> wrappedClass) {
-        this.classDescription = analyzeClass(wrappedClass);
+        this.classDescription = ClassDescription.analyzeClass(wrappedClass);
     }
 
     /**
      * Create a new JS object
      */
     public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
-        return (T) cx.newObject(scope, getClassName(aClass), args);
+        return (T) cx.newObject(scope, ClassDescription.getClassName(aClass), args);
     }
 
     /**
@@ -71,140 +70,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      */
     final static XPMObject xpm() {
         return XPMObject.getThreadXPM();
-    }
-
-    /**
-     * Analyze a class and returns the multi-map of names to methods
-     * <p/>
-     * Any constructor annotated with JSFunction is a valid functoin
-     *
-     * @param aClass
-     * @return
-     */
-    static ClassDescription analyzeClass(Class<?> aClass) {
-        ClassDescription description = CLASS_DESCRIPTION.get(aClass);
-        Map<String, ArrayList<Method>> map;
-        synchronized (CLASS_DESCRIPTION) {
-            if (description == null) {
-                description = new ClassDescription(aClass);
-                CLASS_DESCRIPTION.put(aClass, description);
-
-                map = description.methods;
-                for (Method method : aClass.getDeclaredMethods()) {
-                    // Js function case
-                    final Expose jsFunction = method.getAnnotation(Expose.class);
-
-                    if (jsFunction != null) {
-                        addMethod(map, method, jsFunction.value(), jsFunction.call());
-                        continue;
-                    }
-
-                    // Exposed case
-                    final Expose expose = method.getAnnotation(Expose.class);
-                    if (expose != null) {
-                        addMethod(map, method, expose.value(), false);
-                        continue;
-                    }
-
-
-                }
-
-                // Adds all the ancestors methods
-                Class<?> superclass = aClass.getSuperclass();
-                if (JSBaseObject.class.isAssignableFrom(superclass) || superclass.getAnnotation(Exposed.class) != null) {
-                    Map<String, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
-                    for (Map.Entry<String, ArrayList<Method>> entry : superclassMethods.entrySet()) {
-                        ArrayList<Method> previous = map.get(entry.getKey());
-                        if (previous != null)
-                            previous.addAll(entry.getValue());
-                        else
-                            map.put(entry.getKey(), entry.getValue());
-                    }
-                }
-
-                // Add constructors
-                for (Constructor<?> constructor : aClass.getConstructors()) {
-                    final Expose annotation = constructor.getAnnotation(Expose.class);
-                    if (annotation != null) {
-                        description.constructors.add(constructor);
-                        continue;
-                    }
-
-                    // Exposed case
-                    final Expose expose = constructor.getAnnotation(Expose.class);
-                    if (expose != null) {
-                        description.constructors.add(constructor);
-                        continue;
-                    }
-
-                }
-                if (description.constructors.isEmpty() && JSBaseObject.class.isAssignableFrom(aClass)) {
-                    try {
-                        description.constructors.add(aClass.getConstructor());
-                    } catch (NoSuchMethodException e) {
-                        throw new XPMRuntimeException("Could not find any constructor in %s", aClass);
-                    }
-                }
-
-
-                // Add fields
-                for (Field field : aClass.getFields()) {
-                    JSProperty annotation = field.getAnnotation(JSProperty.class);
-                    if (annotation != null) {
-                        final String name = annotation.value().equals("") ? field.getName() : annotation.value();
-                        description.fields.put(name, field);
-                    }
-                }
-
-            }
-        }
-        return description;
-    }
-
-    /**
-     * @param map    The list of methods
-     * @param method The method
-     * @param name   The name of the method (or empty if using the method name)
-     * @param call   Whether this method is used when the object is "called"
-     */
-    private static void addMethod(Map<String, ArrayList<Method>> map, Method method, String name, boolean call) {
-        if ((method.getModifiers() & Modifier.PUBLIC) == 0)
-            throw new AssertionError("The method " + method + " is not public");
-        if (call) {
-            if (!name.equals("")) {
-                throw new AssertionError("Method " + method + " should not defined a name since" +
-                        "it is will be called directly.");
-            }
-            name = null;
-        } else if ("".equals(name)) {
-            name = method.getName();
-        }
-
-        ArrayList<Method> methods = map.get(name);
-        if (methods == null) {
-            map.put(name, methods = new ArrayList<>());
-        }
-        methods.add(method);
-    }
-
-    /**
-     * Returns the class name
-     */
-    static String getClassName(Class<?> aClass) {
-        JSObjectDescription annotation = aClass.getAnnotation(JSObjectDescription.class);
-        if (annotation != null && !"".equals(annotation.name()))
-            return annotation.name();
-
-        Exposed exposed = aClass.getAnnotation(Exposed.class);
-        if (exposed != null) {
-            return aClass.getSimpleName();
-        }
-
-        if (!aClass.getSimpleName().startsWith("JS")) {
-            throw new AssertionError(format("Class %s does not start with JS as it should", aClass.getName()));
-        }
-
-        return aClass.getSimpleName().substring(2);
     }
 
     /**
@@ -224,7 +89,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             // If not a JSObject descendent, we handle this with standard JS procedure
             if (JSConstructable.class.isAssignableFrom(aClass)) {
                 // Use our own constructor
-                final String name = JSBaseObject.getClassName(aClass);
+                final String name = ClassDescription.getClassName(aClass);
                 scope = ScriptableObject.getTopLevelScope(scope);
                 final NativeJavaClass nativeJavaClass = new MyNativeJavaClass(scope, (Class<? extends Scriptable>) aClass);
                 scope.put(name, scope, nativeJavaClass);
@@ -232,7 +97,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
             }
         } else {
-            final String name = JSBaseObject.getClassName(aClass);
+            final String name = ClassDescription.getClassName(aClass);
             scope.put(name, scope, new WrappedJavaObject.WrappedClass(aClass));
         }
     }
@@ -243,23 +108,26 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         MethodFunction function = getMethodFunction(null);
         if (function.isEmpty())
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
-        return function.call(cx, scope, thisObj, args);
+        JavaScriptContext jcx = new JavaScriptContext(cx, scope);
+        XPMObject xpm = XPMObject.getThreadXPM();
+        return function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, args);
     }
 
     @Override
     public String getClassName() {
-        return JSBaseObject.getClassName(classDescription.theClass);
+        return ClassDescription.getClassName(classDescription.getWrappedClass());
     }
 
     @Override
     public Object get(String name, Scriptable start) {
         // Search for a function
         MethodFunction function = getMethodFunction(name);
-        if (!function.isEmpty())
-            return function;
+        if (!function.isEmpty()) {
+            return new JavaScriptFunction(function);
+        }
 
         // Search for a property
-        final Field field = classDescription.fields.get(name);
+        final Field field = classDescription.getFields().get(name);
         if (field != null) {
             try {
                 return field.get(this);
@@ -273,7 +141,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     private MethodFunction getMethodFunction(String name) {
         MethodFunction function = new MethodFunction(name);
 
-        ArrayList<Method> methods = this.classDescription.methods.get(name);
+        ArrayList<Method> methods = this.classDescription.getMethods().get(name);
         if (methods != null && !methods.isEmpty())
             function.add(thisObject(), methods);
 
@@ -281,7 +149,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
             if (prototype instanceof JSBaseObject) {
                 JSBaseObject jsPrototype = (JSBaseObject) prototype;
-                methods = jsPrototype.classDescription.methods.get(name);
+                methods = jsPrototype.classDescription.getMethods().get(name);
                 if (methods != null && !methods.isEmpty())
                     function.add(jsPrototype, methods);
             }
@@ -305,7 +173,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public boolean has(String name, Scriptable start) {
-        return classDescription.methods.containsKey(name) || classDescription.fields.containsKey(name);
+        return classDescription.getMethods().containsKey(name) || classDescription.getFields().containsKey(name);
     }
 
     @Override
@@ -315,9 +183,9 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        final Field field = classDescription.fields.get(name);
+        final Field field = classDescription.getFields().get(name);
         if (field != null) {
-            if (classDescription.fields.containsKey(name)) {
+            if (classDescription.getFields().containsKey(name)) {
                 try {
                     field.set(this, value);
                     return;
@@ -387,32 +255,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     protected JSBaseObject setXPM(XPMObject xpm) {
         this.xpm = xpm;
         return this;
-    }
-
-    static public class ClassDescription {
-        /**
-         * Base class (real class or wrapped class)
-         */
-        final Class<?> theClass;
-
-        /**
-         * The constructors
-         */
-        ArrayList<Constructor<?>> constructors = new ArrayList<>();
-
-        /**
-         * The class methods
-         */
-        Map<String, ArrayList<Method>> methods = new HashMap<>();
-
-        /**
-         * Properties
-         */
-        Map<String, Field> fields = new HashMap<>();
-
-        public ClassDescription(Class<?> theClass) {
-            this.theClass = theClass;
-        }
     }
 
     /**
@@ -487,7 +329,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public String getClassName() {
-            return JSBaseObject.getClassName(this.staticType);
+            return ClassDescription.getClassName(this.staticType);
         }
     }
 
@@ -498,10 +340,13 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-            ClassDescription description = analyzeClass((Class) javaObject);
-            String className = JSBaseObject.getClassName((Class) javaObject);
-            ConstructorFunction constructorFunction = new ConstructorFunction(className, description.constructors);
-            Object object = constructorFunction.call(cx, scope, null, args);
+            ClassDescription description = ClassDescription.analyzeClass((Class) javaObject);
+            String className = ClassDescription.getClassName((Class) javaObject);
+            ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
+            JavaScriptContext jcx = new JavaScriptContext(cx, scope);
+            XPMObject threadXPM = XPMObject.getThreadXPM();
+            Object object = constructorFunction.call(jcx,
+                    threadXPM != null ? threadXPM.getScriptContext() : null, null, args);
 
             return (Scriptable) object;
 
