@@ -57,7 +57,7 @@ public class Job extends Resource {
 
     final static private Logger LOGGER = Logger.getLogger();
     /**
-     * The priority of the job (the higher, the more urgent)
+     * The priority of the job (the higher, the more urgent)z
      */
     int priority;
     /**

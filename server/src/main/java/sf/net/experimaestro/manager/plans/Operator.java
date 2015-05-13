@@ -35,7 +35,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;

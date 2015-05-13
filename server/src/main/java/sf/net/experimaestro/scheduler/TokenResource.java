@@ -19,6 +19,8 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
@@ -37,6 +39,7 @@ import java.io.IOException;
  */
 @Entity
 @DiscriminatorValue(Resource.TOKEN_RESOURCE_TYPE)
+@Exposed
 public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -80,21 +83,6 @@ public class TokenResource extends Resource {
 
     public String toDetailedString() {
         return String.format("%s [%d/%d]", super.toDetailedString(), usedTokens, limit);
-    }
-
-    /**
-     * Set the new limit that will take effect at the next locking request (does not
-     * invalidate current locks)
-     *
-     * @param limit The new limit
-     * @return true if the limit was changed
-     */
-    public boolean setLimit(int limit) {
-        if (this.limit == limit) {
-            return false;
-        }
-        this.limit = limit;
-        return true;
     }
 
     public int getLimit() {
@@ -173,4 +161,21 @@ public class TokenResource extends Resource {
     private boolean isBlocking() {
         return usedTokens >= limit;
     }
+
+    @Expose("set_limit")
+    public void setLimit(final int limit) {
+        // Get a database copy of this resource first
+        Transaction.run((em, t) -> {
+            this.lock(t, true);
+            TokenResource self = em.find(TokenResource.class, getId());
+            if (limit != self.limit) {
+                self.limit = limit;
+                if (!isBlocking()) {
+                    // Notify runners if nothing
+                    Scheduler.notifyRunners();
+                }
+            }
+        });
+    }
+
 }

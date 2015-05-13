@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

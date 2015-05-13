@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.functions.Function;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
 import java.util.Map;

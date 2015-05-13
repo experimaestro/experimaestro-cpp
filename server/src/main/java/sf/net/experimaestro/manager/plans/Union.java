@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.collect.AbstractIterator;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
 import java.util.List;

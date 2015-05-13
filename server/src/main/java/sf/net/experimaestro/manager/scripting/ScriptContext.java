@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -23,6 +23,9 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.experiments.TaskReference;
+import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.plans.TaskOperator;
+import sf.net.experimaestro.manager.plans.Value;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;

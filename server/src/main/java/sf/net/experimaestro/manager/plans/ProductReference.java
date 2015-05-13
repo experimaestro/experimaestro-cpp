@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.*;
 

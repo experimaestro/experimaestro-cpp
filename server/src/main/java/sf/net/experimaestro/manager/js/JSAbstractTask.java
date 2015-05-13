@@ -23,7 +23,7 @@ import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 public abstract class JSAbstractTask extends Task {
     protected Scriptable jsScope;

@@ -27,6 +27,7 @@ import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonNull;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 

@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;

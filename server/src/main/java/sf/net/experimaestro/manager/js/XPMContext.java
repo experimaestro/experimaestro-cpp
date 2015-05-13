@@ -25,22 +25,34 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SSHOptions;
+import sf.net.experimaestro.connectors.XPMConnector;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.plans.Constant;
-import sf.net.experimaestro.manager.plans.ScriptContext;
-import sf.net.experimaestro.manager.plans.StaticContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -117,10 +129,26 @@ public class XPMContext implements AutoCloseable {
                 JSBaseObject.defineClass(XPM_SCOPE, aClass);
             }
 
-            JSBaseObject.defineClass(XPM_SCOPE, Command.class);
-            JSBaseObject.defineClass(XPM_SCOPE, Constant.class);
-            JSBaseObject.defineClass(XPM_SCOPE, ConnectorOptions.class);
-            JSBaseObject.defineClass(XPM_SCOPE, SSHOptions.class);
+            String classname = null;
+            try (InputStream in = XPMContext.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
+                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+                Document document = builder.parse(in);
+                XPath xPath = XPathFactory.newInstance().newXPath();
+
+                NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
+                for (int i = 0; i < classes.getLength(); ++i) {
+                    classname = classes.item(i).getTextContent();
+                    JSBaseObject.defineClass(XPM_SCOPE, XPMContext.class.getClassLoader().loadClass(classname));
+                }
+            } catch (IOException e) {
+                throw new XPMRuntimeException("Cannot find scripting file");
+            } catch (ParserConfigurationException | SAXException | XPathExpressionException e) {
+                throw new XPMRuntimeException(e, "Error with XML processing");
+            } catch (ClassNotFoundException e) {
+                throw new XPMRuntimeException(e, "Could not find class %s", classname);
+            }
+
 
             // Add global functions
             for (JSUtils.FunctionDefinition definition : definitions)

@@ -449,9 +449,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof Json) {
                 return new JSJson((Json) obj).setXPM(XPMObject.getXPM(scope));
             }
-            if (obj instanceof Resource) {
-                return new JSResource((Resource) obj).setXPM(XPMObject.getXPM(scope));
-            }
             if (obj.getClass().getAnnotation(Exposed.class) != null) {
                 return new WrappedJavaObject(cx, scope, obj);
             }
@@ -477,10 +474,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof Path) {
                 return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
             }
-
-            if (obj instanceof Resource)
-                return new JSResource((Resource) obj).setXPM(XPMObject.getXPM(scope));
-
 
             return super.wrapNewObject(cx, scope, obj);
         }

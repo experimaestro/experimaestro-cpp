@@ -28,6 +28,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.io.PrintStream;
 import java.util.*;

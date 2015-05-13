@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.plans;
 import org.apache.log4j.spi.LoggerRepository;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**

@@ -18,8 +18,6 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
@@ -34,7 +32,7 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
 import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.JSNamespaceContext;

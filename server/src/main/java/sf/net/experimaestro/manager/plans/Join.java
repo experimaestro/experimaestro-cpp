@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.CartesianProduct;
 import sf.net.experimaestro.utils.log.Logger;
 

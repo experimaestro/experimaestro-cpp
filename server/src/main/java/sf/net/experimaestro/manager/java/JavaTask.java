@@ -27,7 +27,7 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;

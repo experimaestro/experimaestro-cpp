@@ -23,6 +23,7 @@ import com.google.common.collect.Iterators;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.*;
 

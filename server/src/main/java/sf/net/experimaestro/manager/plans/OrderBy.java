@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.io.PrintStream;
 import java.util.*;

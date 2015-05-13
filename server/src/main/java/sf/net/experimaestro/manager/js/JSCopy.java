@@ -27,7 +27,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 

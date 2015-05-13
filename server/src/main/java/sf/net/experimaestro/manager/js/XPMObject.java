@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.*;
 import org.w3c.dom.Document;
@@ -17,7 +16,7 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Argument;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Functions;
@@ -738,7 +737,7 @@ public class XPMObject {
      * @return
      * @throws Exception
      */
-    public JSResource commandlineJob(Object path, Commands commands, NativeObject options) throws Exception {
+    public Resource commandlineJob(Object path, Commands commands, NativeObject options) throws Exception {
         try (Transaction transaction = Transaction.create()) {
             EntityManager em = transaction.em();
 
@@ -768,10 +767,10 @@ public class XPMObject {
             if (submittedJobs.containsKey(path)) {
                 getRootLogger().info("Not submitting %s [duplicate]", path);
                 if (simulate()) {
-                    return new JSResource(submittedJobs.get(path));
+                    return job;
                 }
 
-                return new JSResource(Resource.getByLocator(em, connector.resolve((Path) path)));
+                return Resource.getByLocator(em, connector.resolve((Path) path));
             }
 
 
@@ -906,7 +905,7 @@ public class XPMObject {
                     if (!old.canBeReplaced()) {
                         taskLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
                                 "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                        return new JSResource(old);
+                        return old;
                     } else {
                         taskLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
                         old.lock(transaction, true);
@@ -925,7 +924,7 @@ public class XPMObject {
 
             this.submittedJobs.put(job.getLocator().toString(), job);
 
-            return new JSResource(job);
+            return job;
         }
 
     }
@@ -1057,7 +1056,7 @@ public class XPMObject {
 
         @Expose("token_resource")
         @Help("Retrieve (or creates) a token resource with a given xpath")
-        public Scriptable getTokenResource(
+        public TokenResource getTokenResource(
                 @Argument(name = "path", help = "The path of the resource") String path
         ) throws ExperimaestroCannotOverwrite {
             return Transaction.evaluate((em, t) -> {
@@ -1072,7 +1071,7 @@ public class XPMObject {
                     tokenResource = (TokenResource) resource;
                 }
 
-                return xpm.context.newObject(xpm.scope, "TokenResource", new Object[]{tokenResource});
+                return tokenResource;
             });
         }
 
@@ -1168,36 +1167,33 @@ public class XPMObject {
 
         @Expose(value = "command_line_job", optional = 1)
         @Help(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@Argument(name = "jobId") Object path,
+        public Resource commandlineJob(@Argument(name = "jobId") Object path,
                                          @Argument(type = "Array", name = "command") NativeArray jsargs,
                                          @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             Commands commands = new Commands(JSCommand.getCommand(jsargs));
-            JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
-            return jsResource;
+            return xpm.commandlineJob(path, commands, jsoptions);
         }
 
         @Expose(value = "command_line_job", optional = 1)
         @Help(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@Argument(name = "jobId") Object path,
+        public Resource commandlineJob(@Argument(name = "jobId") Object path,
                                          @Argument(type = "Array", name = "command") AbstractCommand command,
                                          @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
             Commands commands = new Commands(command);
-            JSResource jsResource = xpm.commandlineJob(path, commands, jsoptions);
-            return jsResource;
+            return xpm.commandlineJob(path, commands, jsoptions);
         }
 
         @Expose(value = "command_line_job", optional = 1)
         @Help(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(@Argument(name = "jobId") Object jobId,
+        public Resource commandlineJob(@Argument(name = "jobId") Object jobId,
                                          Commands commands,
                                          @Argument(type = "Map", name = "options") NativeObject jsoptions) throws Exception {
-            JSResource jsResource = xpm.commandlineJob(jobId, commands, jsoptions);
-            return jsResource;
+            return xpm.commandlineJob(jobId, commands, jsoptions);
         }
 
         @Expose(value = "command_line_job", optional = 1)
         @Help(value = COMMAND_LINE_JOB_HELP)
-        public Scriptable commandlineJob(
+        public Resource commandlineJob(
                 JsonObject json,
                 @Argument(name = "jobId") Object jobId,
                 Object commands,
@@ -1214,11 +1210,11 @@ public class XPMObject {
                 throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
             }
 
-            JSResource jsResource = xpm.commandlineJob(jobId, _commands, jsOptions);
+            Resource resource = xpm.commandlineJob(jobId, _commands, jsOptions);
 
             // Update the json
-            json.put(Manager.XP_RESOURCE.toString(), new JsonResource((Resource) jsResource.unwrap()));
-            return jsResource;
+            json.put(Manager.XP_RESOURCE.toString(), new JsonResource(resource));
+            return resource;
         }
 
         /**
@@ -1257,7 +1253,6 @@ public class XPMObject {
         @Expose
         @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
         public boolean simulate(boolean simulate) {
-            boolean old = xpm._simulate;
             xpm._simulate = simulate;
             return simulate;
         }
@@ -1411,7 +1406,7 @@ public class XPMObject {
 
         @Expose(value = "$$", scope = true)
         @Help("Get the resource associated with the json object")
-        public JSResource get_resource(Context cx, Scriptable scope, Json json) {
+        public Resource get_resource(Context cx, Scriptable scope, Json json) {
             Resource resource = null;
             if (json instanceof JsonObject) {
                 resource = getResource((JsonObject) json);
@@ -1420,7 +1415,7 @@ public class XPMObject {
             }
 
             if (resource != null) {
-                return new JSResource(resource);
+                return resource;
             }
             throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
         }

@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.AbstractIterator;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.Arrays;

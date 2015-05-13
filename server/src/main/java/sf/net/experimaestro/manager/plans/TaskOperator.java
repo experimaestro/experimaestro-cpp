@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.Formatter;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
@@ -28,6 +27,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
 import java.util.Map;

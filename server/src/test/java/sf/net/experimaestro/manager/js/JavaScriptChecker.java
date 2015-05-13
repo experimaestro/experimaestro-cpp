@@ -26,9 +26,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.plans.ScriptContext;
-import sf.net.experimaestro.manager.plans.StaticContext;
-import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMEnvironment;
 

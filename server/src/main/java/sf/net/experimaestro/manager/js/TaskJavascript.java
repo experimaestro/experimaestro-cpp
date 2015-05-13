@@ -25,7 +25,7 @@ import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 

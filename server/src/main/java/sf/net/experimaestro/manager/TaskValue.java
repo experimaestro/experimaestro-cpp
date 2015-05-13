@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.plans.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 public class TaskValue extends Value {
     private Task task;

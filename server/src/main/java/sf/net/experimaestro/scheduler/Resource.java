@@ -23,6 +23,8 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -32,6 +34,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -48,6 +51,7 @@ import static java.lang.String.format;
 @DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Table(name = "resources", indexes = @Index(columnList = "locator"))
+@Exposed
 public class Resource implements PostCommitListener {
     /**
      * Extension for the lock file
@@ -228,6 +232,7 @@ public class Resource implements PostCommitListener {
     }
 
     @Override
+    @Expose
     public String toString() {
         if (resourceID == null)
             return "R-";
@@ -699,5 +704,29 @@ public class Resource implements PostCommitListener {
             stored();
             cacheState();
         }
+
+        // Move back to false
+        prepared = false;
     }
+
+    @Expose("output")
+    public Path output() throws IOException {
+        return outputFile();
+    }
+
+    @Expose
+    public Path file() throws FileSystemException {
+        return getPath();
+    }
+
+    @Expose
+    public Path resolve(String path) throws FileSystemException {
+        return getPath().getParent().resolve(path);
+    }
+
+    @Expose
+    public Dependency lock(String lockType) {
+        return createDependency(lockType);
+    }
+
 }
