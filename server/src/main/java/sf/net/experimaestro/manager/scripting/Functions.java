@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.ExitException;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
@@ -38,5 +39,12 @@ public class Functions {
                              @Argument(name = "priority")
                              Integer priority) {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
+    }
+
+    @Expose(optional = 2)
+    public void exit(int code, String message, Object... objects) {
+        if (message == null) throw new ExitException(code);
+        if (objects == null) throw new ExitException(code, message);
+        throw new ExitException(code, message, objects);
     }
 }

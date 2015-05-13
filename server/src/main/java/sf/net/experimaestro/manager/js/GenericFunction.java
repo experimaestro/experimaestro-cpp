@@ -204,8 +204,11 @@ public abstract class GenericFunction implements Callable {
             if (result == null) return Undefined.instance;
 
             return result;
-        } catch (XPMRhinoException e) {
-            throw e;
+        }  catch(InvocationTargetException e) {
+            if (e.getCause() instanceof XPMRhinoException) {
+                throw (XPMRhinoException)e.getCause();
+            }
+            throw new WrappedException(new XPMRhinoException(e.getCause()));
         } catch (Throwable e) {
             throw new WrappedException(new XPMRhinoException(e));
         }

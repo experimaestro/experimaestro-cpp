@@ -35,10 +35,7 @@ import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.ContextualException;
-import sf.net.experimaestro.exceptions.XPMCommandException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.scheduler.*;
@@ -252,7 +249,13 @@ public class JsonRPCMethods extends HttpServlet {
             }
             Object result = argmax.method.invoke(this, args);
             mos.endMessage(requestID, result);
-        } catch(InvocationTargetException e) {
+        } catch (ExitException e) {
+            try {
+                mos.error(requestID, e.getCode(), e.getMessage());
+            } catch (IOException e2) {
+                LOGGER.error(e2, "Could not send the return code");
+            }
+        } catch (InvocationTargetException e) {
             LOGGER.info("Error while handling JSON request [%s]", e);
             try {
                 Throwable t = e;
@@ -372,6 +375,11 @@ public class JsonRPCMethods extends HttpServlet {
             return result != null && result != Scriptable.NOT_FOUND &&
                     result != Undefined.instance ? result.toString() : "";
 
+        } catch (ExitException e) {
+            if (e.getCode() == 0) {
+                return null;
+            }
+            throw e;
         } catch (Throwable e) {
             Throwable wrapped = e;
             LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
