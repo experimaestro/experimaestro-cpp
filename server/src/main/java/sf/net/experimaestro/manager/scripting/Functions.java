@@ -42,7 +42,9 @@ public class Functions {
     }
 
     @Expose(optional = 2)
-    public void exit(int code, String message, Object... objects) {
+    public void exit(@Argument(name = "code", help = "The exit code") int code,
+                     @Argument(name = "message", help = "Formatting template") String message,
+                     @Argument(name = "objects", help = "Formatting arguments") Object... objects) {
         if (message == null) throw new ExitException(code);
         if (objects == null) throw new ExitException(code, message);
         throw new ExitException(code, message, objects);
