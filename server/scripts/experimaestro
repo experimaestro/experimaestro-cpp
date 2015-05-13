@@ -378,8 +378,12 @@ def command_run_js(args):
     if args.debug_port > 0:
         params["debug"] = args.debug_port
 
+    run_server_command(client, "run-javascript", params)
+
+# Run a command using web sockets
+def run_server_command(client, command, params):
     code = 0
-    msg = json.dumps({"id": 1, "method": "run-javascript", "params": params})
+    msg = json.dumps({"id": 1, "method": command, "params": params})
     client.send(msg)
     while client is not None:
         message = client.recv()
@@ -462,8 +466,8 @@ def command_kill(args):
     print("Killed %d jobs" % n)
 
 def command_generate_files(args):
-    server = Configuration(args).getJsonServer()
-    n = server.generateFiles({"jobs": args.jobid})
+    client = Configuration(args).getWebSocketServer()
+    run_server_command(client, "generateFiles", {"jobs": args.jobid})
 
 def command_rm(args):
     server = Configuration(args).getJsonServer()
