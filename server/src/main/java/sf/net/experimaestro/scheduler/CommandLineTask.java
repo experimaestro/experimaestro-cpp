@@ -124,7 +124,7 @@ public class CommandLineTask extends JobRunner {
 
 
     @Override
-    public XPMProcess start(ArrayList<Lock> locks) throws Exception {
+    public XPMProcess start(ArrayList<Lock> locks, boolean fake) throws Exception {
         SingleHostConnector singleHostConnector = job.getMainConnector();
 
         final Path runFile = Resource.RUN_EXTENSION.transform(job.getPath());
@@ -178,7 +178,7 @@ public class CommandLineTask extends JobRunner {
         builder.removeLock(Resource.LOCK_EXTENSION.transform(job.getPath()));
 
         // Start
-        return builder.start();
+        return builder.start(fake);
     }
 
     public JSONObject toJSON() throws IOException {

@@ -461,6 +461,9 @@ def command_kill(args):
     n = server.kill({"jobs": args.jobid})
     print("Killed %d jobs" % n)
 
+def command_generate_files(args):
+    server = Configuration(args).getJsonServer()
+    n = server.generateFiles({"jobs": args.jobid})
 
 def command_rm(args):
     server = Configuration(args).getJsonServer()
@@ -547,7 +550,11 @@ p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=
 p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 p_kill = subparsers.add_parser("kill", help="Kill a job")
-p_kill.add_argument('jobid', nargs="+", help="The job URIs")
+p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
+p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
+p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
 
 p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
 p_log_level.add_argument('id', nargs=1, help='The logger ID')

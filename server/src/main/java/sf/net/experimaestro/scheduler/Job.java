@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
@@ -183,13 +184,18 @@ public class Job extends Resource {
      * This is where the real job gets done
      *
      * @param locks The locks that were taken
+     * @param fake Do everything as if starting but do not start the process
      * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */
-    protected XPMProcess startJob(ArrayList<Lock> locks) throws Throwable {
-        process = getJobRunner().start(locks);
+    protected XPMProcess startJob(ArrayList<Lock> locks, boolean fake) throws Throwable {
+        process = getJobRunner().start(locks, fake);
         return process;
+    }
+
+    public void generateFiles() throws Throwable {
+        startJob(Lists.newArrayList(), true);
     }
 
 
@@ -276,7 +282,7 @@ public class Job extends Resource {
                 transaction.boundary(true);
 
                 // Now, starts the job
-                process = startJob(locks);
+                process = startJob(locks, false);
                 process.adopt(locks);
                 locks = null;
                 transaction.boundary();

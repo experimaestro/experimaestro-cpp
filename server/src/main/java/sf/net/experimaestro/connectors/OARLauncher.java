@@ -112,7 +112,8 @@ public class OARLauncher implements Launcher {
         }
 
         @Override
-        public XPMProcess start() throws LaunchException, IOException {
+        public XPMProcess start(boolean fake) throws LaunchException, IOException {
+            if (fake) return null;
             final String path = job.getLocator();
             final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
@@ -126,7 +127,7 @@ public class OARLauncher implements Launcher {
             processBuilder.redirectError(Redirect.PIPE);
 
             // START OAR and retrieves the process ID
-            final XPMProcess process = processBuilder.start();
+            final XPMProcess process = processBuilder.start(fake);
 
             final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String s;

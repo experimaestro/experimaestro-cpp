@@ -27,6 +27,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
+
 /**
  * Base class for all jobs
  */
@@ -39,11 +41,23 @@ public abstract class JobRunner {
      *
      *
      * @param locks The locks that were taken
+     * @param fake Use this to prepare everything without starting the process
+     * @return The process corresponding status the job (or null if fake is true)
+     * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
+     *                   return the process (unless fake is true)
+     */
+    public abstract XPMProcess start(ArrayList<Lock> locks, boolean fake) throws Exception;
+
+    /**
+     * Start a process
+     * @param locks The locks that were taken
      * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
      */
-    public abstract XPMProcess start(ArrayList<Lock> locks) throws Exception;
+    public XPMProcess start(ArrayList<Lock> locks) throws Exception {
+        return start(locks, false);
+    }
 
     /**
      * Returns the output file

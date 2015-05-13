@@ -108,7 +108,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     }
 
     @Override
-    final public XPMProcess start() throws LaunchException, IOException {
+    final public XPMProcess start(boolean fake) throws LaunchException, IOException {
         final Path runFile = connector.resolveFile(path);
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
@@ -227,7 +227,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             processBuilder.job(job);
 
-            return processBuilder.start();
+            return processBuilder.start(fake);
         } catch (Exception e) {
             throw new LaunchException(e);
         }

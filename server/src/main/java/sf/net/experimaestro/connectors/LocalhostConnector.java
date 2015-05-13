@@ -123,7 +123,8 @@ public class LocalhostConnector extends SingleHostConnector {
 
 
         @Override
-        public XPMProcess start() throws LaunchException, IOException {
+        public XPMProcess start(boolean fake) throws LaunchException, IOException {
+            if (fake) return null;
             java.lang.ProcessBuilder builder = new java.lang.ProcessBuilder();
 
             // Set the environment

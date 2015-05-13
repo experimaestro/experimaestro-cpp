@@ -309,13 +309,19 @@ public class JsonRPCMethods extends HttpServlet {
 
     // -------- RPC METHODS -------
 
+    /**
+     * Get a resource by ID or by locator
+     * @param em
+     * @param resourceId
+     * @return
+     */
     private Resource getResource(EntityManager em, String resourceId) {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
             resource = em.find(Resource.class, rid);
         } catch (NumberFormatException e) {
-            throw new RuntimeException(e);
+            return em.find(Resource.class, resourceId);
         }
         return resource;
     }
@@ -431,8 +437,8 @@ public class JsonRPCMethods extends HttpServlet {
         final Logger root = new Logger("root");
         root.setLevel(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root) {
-            public org.apache.log4j.Logger getLogger(String name) {
-                return this.getLogger(name, new Logger.DefaultFactory());
+            public Logger getLogger(String name) {
+                return (Logger) this.getLogger(name, new Logger.DefaultFactory());
             }
         };
         BufferedWriter stringWriter = getRequestErrorStream();
@@ -752,12 +758,27 @@ public class JsonRPCMethods extends HttpServlet {
         });
     }
 
+    @RPCMethod(help = "Generate files for starting associated process")
+    public void generateFiles(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
+        final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+        for (String id : JobIds) {
+            try (Transaction transaction = Transaction.create()) {
+                final Resource resource = getResource(transaction.em(), id);
+                if (resource instanceof Job) {
+                    ((Job) resource).generateFiles();
+                }
+            } catch (Throwable throwable) {
+                logger.error("Could not retrieve resource [%s]", id);
+            }
+        }
+    }
+
     @RPCMethod(help = "Kill one or more jobs")
     public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
         int n = 0;
-        for (Object id : JobIds) {
+        for (String id : JobIds) {
             try (Transaction transaction = Transaction.create()) {
-                final Resource resource = Resource.getByLocator(transaction.em(), id.toString());
+                final Resource resource = getResource(transaction.em(), id);
                 if (resource instanceof Job) {
                     if (((Job) resource).stop()) {
                         n++;

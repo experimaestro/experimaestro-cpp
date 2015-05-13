@@ -31,12 +31,9 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
 import sf.net.experimaestro.utils.log.Logger;
-import org.apache.commons.lang.NotImplementedException;
 
-import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -255,7 +252,8 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         @Override
-        public XPMProcess start() throws LaunchException {
+        public XPMProcess start(boolean fake) throws LaunchException {
+            if (fake) return null;
             final ChannelExec channel;
             try {
                 channel = newExecChannel();

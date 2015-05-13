@@ -85,9 +85,12 @@ public abstract class AbstractCommandBuilder {
     /**
      * Start the process and return an Experimaestro process
      *
-     * @return A valid {@linkplain sf.net.experimaestro.connectors.XPMProcess}
+     * @return A valid {@linkplain sf.net.experimaestro.connectors.XPMProcess} or null if fake is true
+     * @param fake True if the process should not be started (but all files should be generated)
      */
-    abstract public XPMProcess start() throws LaunchException, IOException;
+    abstract public XPMProcess start(boolean fake) throws LaunchException, IOException;
+
+    final public XPMProcess start() throws IOException, LaunchException { return start(false); }
 
     public AbstractCommandBuilder redirectError(AbstractProcessBuilder.Redirect destination) {
         if (!destination.isWriter())

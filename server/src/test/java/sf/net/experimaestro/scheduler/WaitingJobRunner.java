@@ -46,7 +46,9 @@ public class WaitingJobRunner extends JobRunner {
     }
 
     @Override
-    public XPMProcess start(ArrayList<Lock> locks) {
+    public XPMProcess start(ArrayList<Lock> locks, boolean fake) {
+        if (fake) return null;
+
         WaitingJob.Status status = status();
         assert status.readyTimestamp > 0;
         if (status.currentIndex >= ((WaitingJob)job).actions.size()) {
