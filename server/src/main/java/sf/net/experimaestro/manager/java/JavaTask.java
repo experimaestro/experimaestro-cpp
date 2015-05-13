@@ -64,7 +64,7 @@ public class JavaTask extends Task {
         Path uniqueDir;
         Path path;
         try {
-            final Path file = taskContext.workingDirectory;
+            final Path file = taskContext.getWorkingDirectory();
             if (file == null)
                 throw new XPMRuntimeException("Working directory is not set");
 
@@ -89,7 +89,9 @@ public class JavaTask extends Task {
         try (Transaction transaction = Transaction.create()) {
             final Resource old = Resource.getByLocator(transaction.em(), _path);
             if (old != null && !old.canBeReplaced()) {
-                taskLogger.info("Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+
+                taskLogger.log(old.getState() == ResourceState.DONE ?
+                        Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());

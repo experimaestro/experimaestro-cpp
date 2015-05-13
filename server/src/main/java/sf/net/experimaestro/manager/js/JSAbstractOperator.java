@@ -210,7 +210,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         scriptContext.counts(details);
 
         // If we have an experimentId, get the task reference and store them
-        Long experimentId = xpm().experimentId;
+        Long experimentId = xpm().getScriptContext().getExperimentId();
         if (experimentId != null) {
             try(Transaction transaction = Transaction.create()) {
                 Experiment experiment = transaction.em().find(Experiment.class, experimentId);

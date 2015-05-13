@@ -71,9 +71,8 @@ public class JavaScriptChecker extends XPMEnvironment {
 
         scope = XPMContext.newScope();
 
-        ScriptContext scriptContext = new StaticContext(prepare().getScheduler()).repository(repository).scriptContext();
-        try(Cleaner cleaner = new Cleaner()) {
-            xpm = new XPMObject(scriptContext, LocalhostConnector.getInstance(), file, context, environment, scope, cleaner, null, null);
+        try(ScriptContext scriptContext = new StaticContext(prepare().getScheduler()).repository(repository).scriptContext()) {
+            xpm = new XPMObject(scriptContext, LocalhostConnector.getInstance(), file, context, environment, scope);
 
             // Adds some special functions available for tests only
             JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});

@@ -31,6 +31,7 @@ import sf.net.experimaestro.connectors.SSHOptions;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.plans.Constant;
+import sf.net.experimaestro.manager.plans.ScriptContext;
 import sf.net.experimaestro.manager.plans.StaticContext;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -177,24 +178,24 @@ public class XPMContext implements AutoCloseable {
     }
 
     public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
-        try(Cleaner cleaner = new Cleaner()) {
-            XPMObject xpmObject = getXPMObject(connector, locator, cleaner);
+        try(ScriptContext scriptContext =  staticContext.scriptContext()) {
+            XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
             XPMObject.threadXPM.set(xpmObject);
             return context.evaluateReader(xpmObject.scope, reader, filename, lineno, security);
         }
     }
 
     public Object evaluateString(LocalhostConnector connector, Path locator, String content, String filename, int lineno, Object security) throws Exception {
-        try(Cleaner cleaner = new Cleaner()) {
-            XPMObject xpmObject = getXPMObject(connector, locator, cleaner);
+        try(ScriptContext scriptContext =  staticContext.scriptContext()) {
+            XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
             XPMObject.threadXPM.set(xpmObject);
             return context.evaluateString(xpmObject.scope, content, filename, lineno, security);
         }
     }
 
-    private XPMObject getXPMObject(LocalhostConnector connector, Path locator, Cleaner cleaner)
+    private XPMObject getXPMObject(LocalhostConnector connector, Path locator, ScriptContext scriptContext)
             throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        return new XPMObject(staticContext.scriptContext(), connector, locator, context, environment, newScope(), cleaner, null, null);
+            return new XPMObject(scriptContext, connector, locator, context, environment, newScope());
     }
 
     public static Scriptable newScope() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {

@@ -28,6 +28,7 @@ import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.CachedIterable;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -44,10 +45,10 @@ import java.util.function.Consumer;
  * This class hides away what is part of the static context and
  * what if part of the dynamic one
  */
-final public class ScriptContext {
+final public class ScriptContext implements AutoCloseable {
 
     /** Default locks */
-    public Updatable<Map<Resource, Object>> defaultLocks;
+    Updatable<Map<Resource, Object>> defaultLocks;
 
     /** Priority */
     Updatable<Integer> priority;
@@ -60,7 +61,7 @@ final public class ScriptContext {
     /**
      * The working directory
      */
-    public Path workingDirectory;
+    Updatable<Path> workingDirectory;
 
 
     /**
@@ -103,24 +104,38 @@ final public class ScriptContext {
      */
     final StaticContext staticContext;
 
+    /**
+     * The resource cleaner
+     * <p>
+     * Used to close objects at the end of the execution of a script
+     */
+    Cleaner cleaner;
+
+
     public ScriptContext(StaticContext staticContext) {
         this.staticContext = staticContext;
+        this.cleaner = new Cleaner();
 
         defaultLocks = new Updatable<>(new HashMap<>(), x -> new HashMap(x));
-        experimentId = Updatable.create(0L);
+        experimentId = Updatable.create(null);
         priority = Updatable.create(0);
         simulate = Updatable.create(false);
+        workingDirectory = Updatable.create(null);
+
 
     }
 
 
     public ScriptContext(ScriptContext other) {
         staticContext = other.staticContext;
+        cleaner = other.cleaner;
+        counts = other.counts;
 
         defaultLocks = other.defaultLocks.reference();
         experimentId = other.experimentId.reference();
         priority = other.priority.reference();
         simulate = other.simulate.reference();
+        workingDirectory = other.workingDirectory.reference();
 
         counts = other.counts;
     }
@@ -136,7 +151,7 @@ final public class ScriptContext {
     }
 
     public boolean simulate() {
-        return simulate();
+        return simulate.get();
     }
 
     public void setCachedIterable(Object key, CachedIterable<Value> cachedIterable) {
@@ -228,5 +243,42 @@ final public class ScriptContext {
 
     public Repository getRepository() {
         return staticContext.repository;
+    }
+
+    public Map<Resource, Object> getDefaultLocks() {
+        return defaultLocks.get();
+    }
+
+    public int getPriority() {
+        return priority.get();
+    }
+
+    public void setPriority(int priority) {
+        this.priority.set(priority);
+    }
+
+    public Path getWorkingDirectory() {
+        return workingDirectory.get();
+    }
+
+    public void setWorkingDirectory(Path workingDirectory) {
+        this.workingDirectory.set(workingDirectory);
+    }
+
+    public Long getExperimentId() {
+        return experimentId.get();
+    }
+
+    public Cleaner getCleaner() {
+        return cleaner;
+    }
+
+    public void setExperimentId(long experimentId) {
+        this.experimentId.set(experimentId);
+    }
+
+    @Override
+    public void close() throws Exception {
+        cleaner.close();
     }
 }

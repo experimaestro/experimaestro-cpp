@@ -104,12 +104,6 @@ public class XPMObject {
      * The environment
      */
     private final Map<String, String> environment;
-    /**
-     * The resource cleaner
-     * <p>
-     * Used to close objects at the end of the execution of a script
-     */
-    private final Cleaner cleaner;
 
     /**
      * The logger
@@ -148,10 +142,6 @@ public class XPMObject {
     private ScriptContext taskContext;
 
     /**
-     * The current work dir
-     */
-    private Holder<Path> workdir;
-    /**
      * The context (local)
      */
     private Context context;
@@ -159,11 +149,6 @@ public class XPMObject {
      * Root logger
      */
     private Logger rootLogger;
-
-    /**
-     * Current experimentId
-     */
-    Long experimentId;
 
     /**
      * The current connector
@@ -178,29 +163,23 @@ public class XPMObject {
     /**
      * Initialise a new XPM object
      *
-     * @param scriptContext The script execution context
+     * @param scriptContext     The script execution context
      * @param currentScriptPath The xpath to the current script
      * @param context           The JS context
      * @param environment       The environment variables
      * @param scope             The JS scope for execution
-     * @param workdir           The working directory or null if none
-     * @param experimentId      The experiment ID
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws InvocationTargetException
      * @throws SecurityException
      * @throws NoSuchMethodException
      */
-    XPMObject(
-            ScriptContext scriptContext,
-            Connector connector,
-            Path currentScriptPath,
-            Context context,
-            Map<String, String> environment,
-            Scriptable scope,
-            Cleaner cleaner,
-            Holder<Path> workdir,
-            Long experimentId)
+    XPMObject(ScriptContext scriptContext,
+              Connector connector,
+              Path currentScriptPath,
+              Context context,
+              Map<String, String> environment,
+              Scriptable scope)
             throws IllegalAccessException, InstantiationException,
             InvocationTargetException, SecurityException, NoSuchMethodException {
         LOGGER.debug("Current script is %s", currentScriptPath);
@@ -210,10 +189,7 @@ public class XPMObject {
         this.context = context;
         this.environment = environment;
         this.scope = scope;
-        this.cleaner = cleaner;
-        this.workdir = workdir == null ? new Holder<>(null) : workdir;
-        this.rootLogger = scriptContext.getLogger("");
-        this.experimentId = experimentId;
+        this.rootLogger = scriptContext.getLogger(currentScriptPath.getFileName().toString());
         this.taskLogger = LOGGER;
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
@@ -377,7 +353,7 @@ public class XPMObject {
      */
     static public void js_set_workdir(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException, URISyntaxException {
         XPMObject xpm = getXPM(thisObj);
-        xpm.workdir.set(((JSPath) js_path(cx, thisObj, args, funObj)).getPath());
+        xpm.getScriptContext().setWorkingDirectory(((JSPath) js_path(cx, thisObj, args, funObj)).getPath());
     }
 
     /**
@@ -515,7 +491,7 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(scriptContext.copy(), connector, scriptpath, context, newEnvironment, scriptScope, cleaner, workdir, experimentId);
+        final XPMObject clone = new XPMObject(scriptContext.copy(), connector, scriptpath, context, newEnvironment, scriptScope);
         clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = this.submittedJobs;
         clone._simulate = _simulate;
@@ -923,7 +899,7 @@ public class XPMObject {
                 dependencies.forEach(job::addDependency);
 
                 // Register within an experimentId
-                if (experimentId != null) {
+                if (getScriptContext().getExperimentId() != null) {
                     TaskReference reference = taskContext.getTaskReference();
                     reference.add(job);
                     em.persist(reference);
@@ -934,7 +910,8 @@ public class XPMObject {
                 // Replace old if necessary
                 if (old != null) {
                     if (!old.canBeReplaced()) {
-                        taskLogger.info("Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                        taskLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
+                                "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
                         return new JSResource(old);
                     } else {
                         taskLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
@@ -960,11 +937,15 @@ public class XPMObject {
     }
 
     public void register(Closeable closeable) {
-        cleaner.register(closeable);
+        cleaner().register(closeable);
     }
 
     public void unregister(AutoCloseable autoCloseable) {
-        cleaner.unregister(autoCloseable);
+        cleaner().unregister(autoCloseable);
+    }
+
+    final private Cleaner cleaner() {
+        return getScriptContext().getCleaner();
     }
 
     Repository getRepository() {
@@ -995,10 +976,9 @@ public class XPMObject {
      */
     public JSPath uniqueDirectory(Scriptable scope, Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
         if (basedir == null) {
-            if (workdir.get() == null)
+            if ((basedir = getScriptContext().getWorkingDirectory()) == null) {
                 throw new XPMRuntimeException("Working directory was not set before unique_directory() is called");
-
-            basedir = workdir.get();
+            }
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
         return new JSPath(Manager.uniqueDirectory(basedir, prefix, id, json));
@@ -1488,16 +1468,16 @@ public class XPMObject {
                 Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
                 try (Transaction t = Transaction.create()) {
                     t.em().persist(experiment);
-                    xpm.experimentId = experiment.getId();
+                    xpm.getScriptContext().setExperimentId(experiment.getId());
                     t.commit();
                 }
             }
-            xpm.workdir.set(workdir);
+            xpm.getScriptContext().setWorkingDirectory(workdir);
         }
 
         @Expose
         public void set_workdir(Path workdir) throws FileSystemException {
-            xpm.workdir.set(workdir);
+            xpm.getScriptContext().setWorkingDirectory(workdir);
         }
 
     }

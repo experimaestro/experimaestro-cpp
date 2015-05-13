@@ -40,27 +40,36 @@
         <class>sf.net.experimaestro.connectors.NetworkShare</class>
         <class>sf.net.experimaestro.connectors.NetworkShareAccess</class>
 
-        <class>sf.net.experimaestro.scheduler.TokenResource</class>
 
+        <!-- Processes -->
         <class>sf.net.experimaestro.connectors.XPMProcess</class>
         <class>sf.net.experimaestro.connectors.OARProcess</class>
         <class>sf.net.experimaestro.connectors.LocalProcess</class>
 
         <class>sf.net.experimaestro.connectors.OARLauncher</class>
 
+        <!-- Resources -->
+
         <class>sf.net.experimaestro.scheduler.Resource</class>
         <class>sf.net.experimaestro.scheduler.Job</class>
+        <class>sf.net.experimaestro.scheduler.TokenResource</class>
 
+        <!-- Dependencies -->
         <class>sf.net.experimaestro.scheduler.Dependency</class>
         <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
         <class>sf.net.experimaestro.scheduler.ExclusiveDependency</class>
         <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
         <class>sf.net.experimaestro.scheduler.TokenDependency</class>
 
+        <!-- Locks -->
         <class>sf.net.experimaestro.locks.Lock</class>
         <class>sf.net.experimaestro.scheduler.StatusLock</class>
         <class>sf.net.experimaestro.locks.FileLock</class>
         <class>sf.net.experimaestro.scheduler.TokenLock</class>
+
+        <!-- Experiments -->
+        <class>sf.net.experimaestro.manager.experiments.Experiment</class>
+        <class>sf.net.experimaestro.manager.experiments.TaskReference</class>
 
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
 

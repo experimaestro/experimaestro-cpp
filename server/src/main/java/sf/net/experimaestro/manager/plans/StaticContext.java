@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import org.apache.log4j.spi.LoggerRepository;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
@@ -43,6 +44,7 @@ public class StaticContext {
      * Task repository
      */
     Repository repository;
+
 
     public StaticContext(Scheduler scheduler, LoggerRepository loggerRepository) {
         this.scheduler = scheduler;
