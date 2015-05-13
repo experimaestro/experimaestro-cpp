@@ -81,6 +81,7 @@ public class Constant extends Operator {
         values.addAll(source.values);
     }
 
+    @Expose
     public void add(Json document) {
         values.add(document);
     }
