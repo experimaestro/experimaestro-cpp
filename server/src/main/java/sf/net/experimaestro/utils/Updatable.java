@@ -60,7 +60,7 @@ final public class Updatable<T> {
      * Returns a value that can be modified
      */
     public T modify() {
-        if (copier != null)
+        if (copier == null)
             throw new UnsupportedOperationException("Cannot modify immutable value");
 
         if (modified) return value;

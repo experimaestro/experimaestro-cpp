@@ -121,11 +121,6 @@ public class XPMObject {
     Map<String, Object> properties = new HashMap<>();
 
     /**
-     * Default locks for new jobs
-     */
-    Map<Resource, Object> defaultLocks = new TreeMap<>(Resource.ID_COMPARATOR);
-
-    /**
      * List of submitted jobs (so that we don't submit them twice with the same script
      * by default)
      */
@@ -492,7 +487,6 @@ public class XPMObject {
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
         final XPMObject clone = new XPMObject(scriptContext.copy(), connector, scriptpath, context, newEnvironment, scriptScope);
-        clone.defaultLocks.putAll(this.defaultLocks);
         clone.submittedJobs = this.submittedJobs;
         clone._simulate = _simulate;
         return clone;
@@ -1058,7 +1052,7 @@ public class XPMObject {
                 Resource resource,
                 @Argument(name = "parameters", help = "The parameters to be given at lock time")
                 Object parameters) {
-            xpm.defaultLocks.put(resource, parameters);
+            xpm.scriptContext.addDefaultLock(resource, parameters);
         }
 
         @Expose("token_resource")

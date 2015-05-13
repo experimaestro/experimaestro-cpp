@@ -281,4 +281,8 @@ final public class ScriptContext implements AutoCloseable {
     public void close() throws Exception {
         cleaner.close();
     }
+
+    public void addDefaultLock(Resource resource, Object parameters) {
+        defaultLocks.modify().put(resource, parameters);
+    }
 }
