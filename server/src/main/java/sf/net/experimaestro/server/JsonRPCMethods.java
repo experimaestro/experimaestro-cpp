@@ -321,7 +321,7 @@ public class JsonRPCMethods extends HttpServlet {
             long rid = Long.parseLong(resourceId);
             resource = em.find(Resource.class, rid);
         } catch (NumberFormatException e) {
-            return em.find(Resource.class, resourceId);
+            return Resource.getByLocator(em, resourceId);
         }
         return resource;
     }
