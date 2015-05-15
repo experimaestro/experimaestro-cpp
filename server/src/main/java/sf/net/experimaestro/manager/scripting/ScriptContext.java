@@ -34,6 +34,7 @@ import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
+import sun.font.Script;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,6 +50,13 @@ import java.util.function.Consumer;
  * what if part of the dynamic one
  */
 final public class ScriptContext implements AutoCloseable {
+    final static private Logger LOGGER = Logger.getLogger();
+
+    /** The thread local context */
+    private final static ThreadLocal<ScriptContext> threadContext = new ThreadLocal<>();
+
+    /** Previous context */
+    private ScriptContext oldCurrent = null;
 
     /** Default locks */
     Updatable<Map<Resource, Object>> defaultLocks;
@@ -282,10 +290,23 @@ final public class ScriptContext implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        cleaner.close();
+        if (threadContext.get() != this) {
+            LOGGER.error("Current thread context is not ourselves");
+        }
+
+        if (oldCurrent != null) {
+            threadContext.set(oldCurrent);
+        } else {
+            cleaner.close();
+        }
     }
 
     public void addDefaultLock(Resource resource, Object parameters) {
         defaultLocks.modify().put(resource, parameters);
     }
+
+    static public ScriptContext threadContext() {
+        return threadContext.get();
+    }
+
 }
