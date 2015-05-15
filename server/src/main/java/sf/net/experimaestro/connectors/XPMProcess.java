@@ -19,10 +19,7 @@ package sf.net.experimaestro.connectors;
  */
 
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.EndOfJobMessage;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.*;
@@ -75,7 +72,7 @@ public abstract class XPMProcess {
     /**
      * The host where this process is running (or give an access to the process, e.g. for OAR processes)
      */
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     SingleHostConnector connector;
 
     /**
@@ -109,6 +106,20 @@ public abstract class XPMProcess {
      * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
      */
     protected XPMProcess() {
+    }
+
+    @PrePersist
+    void prePersist() {
+        EntityManager em = Transaction.current().em();
+
+        // Find the connector in the database if it exists
+        if (connector != null && !em.contains(connector)) {
+            // Add the connector
+            final Connector other = Connector.find(em, connector.getIdentifier());
+            if (other != null) {
+                connector = (SingleHostConnector)other;
+            }
+        }
     }
 
     /**
