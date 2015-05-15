@@ -18,8 +18,13 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 
@@ -28,16 +33,43 @@ import java.nio.file.Path;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public interface Launcher extends Serializable {
+@Exposed
+public abstract class Launcher implements Serializable {
+    /**
+     * The notification URL
+     */
+    private URL notificationURL;
+
     /**
      * Creates and returns a new process builder
      *
      * @return A process builder
      */
-    AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
+    public abstract AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
 
     /**
      * Returns a script process builder that can be run
      */
-    XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException;
+    public abstract XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException;
+
+    /**
+     * Sets the notification URL
+     */
+    @Expose("set_notification_url")
+    public void setNotificationURL(String url) throws MalformedURLException {
+        setNotificationURL(new URL(url));
+    }
+
+    public void setNotificationURL(URL url) {
+        this.notificationURL = url;
+    }
+
+    /**
+     * Gets the notification URL
+     *
+     * @return
+     */
+    public URL getNotificationURL() {
+        return notificationURL;
+    }
 }

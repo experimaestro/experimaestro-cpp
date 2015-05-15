@@ -481,10 +481,12 @@ public class XPMObject {
      * Clone properties from this XPM instance
      */
     private XPMObject clone(Path scriptpath, Scriptable scriptScope, TreeMap<String, String> newEnvironment) throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        final XPMObject clone = new XPMObject(scriptContext.copy(), connector, scriptpath, context, newEnvironment, scriptScope);
-        clone.submittedJobs = this.submittedJobs;
-        clone._simulate = _simulate;
-        return clone;
+        try(final ScriptContext copy = scriptContext.copy()) {
+            final XPMObject clone = new XPMObject(copy, connector, scriptpath, context, newEnvironment, scriptScope);
+            clone.submittedJobs = this.submittedJobs;
+            clone._simulate = _simulate;
+            return clone;
+        }
     }
 
     public Logger getRootLogger() {
@@ -774,9 +776,13 @@ public class XPMObject {
             task.environment = new TreeMap<>(environment);
             ArrayList<Dependency> dependencies = new ArrayList<>();
 
+            // --- Set defaults
+            if (scriptContext.getDefaultLauncher() != null) {
+                task.setLauncher(scriptContext.getDefaultLauncher());
+            }
+
+
             // --- Options
-
-
             if (options != null) {
 
                 final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
@@ -790,7 +796,7 @@ public class XPMObject {
                 if (options.has("launcher", options)) {
                     final Object launcher = options.get("launcher", options);
                     if (launcher != null && !(launcher instanceof UniqueTag))
-                        task.setLauncher(((JSLauncher) launcher).getLauncher());
+                        task.setLauncher((Launcher) ((Wrapper) launcher).unwrap());
 
                 }
 
@@ -977,30 +983,8 @@ public class XPMObject {
         return connector;
     }
 
-    public ScriptContext newScriptContext() {
-        return scriptContext.copy();
-    }
-
     public ScriptContext getScriptContext() {
         return scriptContext;
-    }
-
-
-    static public class Holder<T> {
-        private T value;
-
-        Holder(T value) {
-            this.value = value;
-        }
-
-        T get() {
-            return value;
-        }
-
-        void set(T value) {
-            this.value = value;
-        }
-
     }
 
 
@@ -1050,31 +1034,6 @@ public class XPMObject {
             xpm.scriptContext.addDefaultLock(resource, parameters);
         }
 
-        @Expose("token_resource")
-        @Help("Retrieve (or creates) a token resource with a given xpath")
-        public TokenResource getTokenResource(
-                @Argument(name = "path", help = "The path of the resource") String path
-        ) throws ExperimaestroCannotOverwrite {
-            return Transaction.evaluate((em, t) -> {
-                final Resource resource = Resource.getByLocator(em, path);
-                final TokenResource tokenResource;
-                if (resource == null) {
-                    tokenResource = new TokenResource(path, 0);
-                    tokenResource.save(t);
-                } else {
-                    if (!(resource instanceof TokenResource))
-                        throw new AssertionError(String.format("Resource %s exists and is not a token", path));
-                    tokenResource = (TokenResource) resource;
-                }
-
-                return tokenResource;
-            });
-        }
-
-        @Expose()
-        public void log() {
-
-        }
 
         @Expose("logger")
         public Scriptable getLogger(String name) {

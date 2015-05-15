@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.connectors.DirectLauncher;
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
@@ -74,16 +76,15 @@ final public class ScriptContext implements AutoCloseable {
      */
     Updatable<Path> workingDirectory;
 
-
     /**
      * Whether we should simulate
      */
     private Updatable<Boolean> simulate;
 
     /**
-     * Resource path
+     * The default launcher
      */
-    private Path path;
+    private Updatable<Launcher> defaultLauncher;
 
     /**
      * List of listeners for new jobs
@@ -124,6 +125,9 @@ final public class ScriptContext implements AutoCloseable {
 
 
     public ScriptContext(StaticContext staticContext) {
+        if (threadContext.get() != null)
+            throw new IllegalStateException("Cannot create a new script context if another one is active");
+
         this.staticContext = staticContext;
         this.cleaner = new Cleaner();
 
@@ -132,12 +136,12 @@ final public class ScriptContext implements AutoCloseable {
         priority = Updatable.create(0);
         simulate = Updatable.create(false);
         workingDirectory = Updatable.create(null);
-
-
+        defaultLauncher = Updatable.create(new DirectLauncher());
+        threadContext.set(this);
     }
 
 
-    public ScriptContext(ScriptContext other) {
+    private ScriptContext(ScriptContext other) {
         staticContext = other.staticContext;
         cleaner = other.cleaner;
         counts = other.counts;
@@ -147,6 +151,7 @@ final public class ScriptContext implements AutoCloseable {
         priority = other.priority.reference();
         simulate = other.simulate.reference();
         workingDirectory = other.workingDirectory.reference();
+        defaultLauncher = other.defaultLauncher.reference();
 
         counts = other.counts;
     }
@@ -289,14 +294,13 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (threadContext.get() != this) {
             LOGGER.error("Current thread context is not ourselves");
         }
 
-        if (oldCurrent != null) {
-            threadContext.set(oldCurrent);
-        } else {
+        threadContext.set(oldCurrent);
+        if (oldCurrent == null) {
             cleaner.close();
         }
     }
@@ -309,4 +313,11 @@ final public class ScriptContext implements AutoCloseable {
         return threadContext.get();
     }
 
+    public void setDefaultLauncher(Launcher defaultLauncher) {
+        this.defaultLauncher.set(defaultLauncher);
+    }
+
+    public Launcher getDefaultLauncher() {
+        return defaultLauncher.get();
+    }
 }

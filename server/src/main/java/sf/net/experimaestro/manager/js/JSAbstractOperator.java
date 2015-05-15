@@ -204,39 +204,40 @@ public abstract class JSAbstractOperator extends JSBaseObject {
     }
 
     private Object doRun(boolean simulate, boolean details) throws XPathExpressionException, ExperimaestroCannotOverwrite {
-        ScriptContext scriptContext = xpm().newScriptContext();
-        scriptContext.counts(details);
+        try(ScriptContext scriptContext = xpm().getScriptContext().copy()) {
+            scriptContext.counts(details);
 
-        // If we have an experimentId, get the task reference and store them
-        Long experimentId = xpm().getScriptContext().getExperimentId();
-        if (experimentId != null) {
-            try(Transaction transaction = Transaction.create()) {
-                Experiment experiment = transaction.em().find(Experiment.class, experimentId);
-                IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
-                map.values().forEach(Functional.propagate(t -> transaction.em().persist(t)));
-                scriptContext.setTaskOperatorMap(map);
-                transaction.commit();
+            // If we have an experimentId, get the task reference and store them
+            Long experimentId = xpm().getScriptContext().getExperimentId();
+            if (experimentId != null) {
+                try (Transaction transaction = Transaction.create()) {
+                    Experiment experiment = transaction.em().find(Experiment.class, experimentId);
+                    IdentityHashMap<TaskOperator, TaskReference> map = getOperator().getTaskOperatorMap(experiment);
+                    map.values().forEach(Functional.propagate(t -> transaction.em().persist(t)));
+                    scriptContext.setTaskOperatorMap(map);
+                    transaction.commit();
+                }
             }
+
+
+            ArrayList<JSJson> result = new ArrayList<>();
+            Operator operator = getOperator(true, true);
+
+            final Iterator<Value> nodes = operator.iterator(scriptContext);
+            while (nodes.hasNext()) {
+                result.add(new JSJson(nodes.next().getNodes()[0]));
+            }
+
+            if (!details)
+                return result.toArray(new JSJson[result.size()]);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream ps = new PrintStream(baos);
+            operator.printDOT(ps, scriptContext.counts());
+            ps.flush();
+
+            return new NativeArray(new Object[]{result, baos.toString()});
         }
-
-
-        ArrayList<JSJson> result = new ArrayList<>();
-        Operator operator = getOperator(true, true);
-
-        final Iterator<Value> nodes = operator.iterator(scriptContext);
-        while (nodes.hasNext()) {
-            result.add(new JSJson(nodes.next().getNodes()[0]));
-        }
-
-        if (!details)
-            return result.toArray(new JSJson[result.size()]);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(baos);
-        operator.printDOT(ps, scriptContext.counts());
-        ps.flush();
-
-        return new NativeArray(new Object[]{result, baos.toString()});
     }
 
 

@@ -18,6 +18,9 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -26,7 +29,12 @@ import java.nio.file.Path;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class DefaultLauncher implements Launcher {
+@Exposed
+public class DirectLauncher extends Launcher {
+    @Expose
+    public DirectLauncher() {
+    }
+
     @Override
     public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
         return connector.processBuilder();
@@ -34,6 +42,8 @@ public class DefaultLauncher implements Launcher {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
-        return connector.scriptProcessBuilder(scriptFile);
+        final XPMScriptProcessBuilder xpmScriptProcessBuilder = connector.scriptProcessBuilder(scriptFile);
+        xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
+        return xpmScriptProcessBuilder;
     }
 }

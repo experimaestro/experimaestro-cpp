@@ -27,6 +27,7 @@ import sf.net.experimaestro.utils.Functional;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static sf.net.experimaestro.scheduler.Command.SubCommand;
 
 /**
@@ -69,6 +71,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     /**
      * Commands
+     *
      * @param file
      * @param connector
      * @throws IOException
@@ -82,7 +85,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         super(connector, scriptFile, processBuilder);
     }
 
-    /** Sets end of job commands */
+    /**
+     * Sets end of job commands
+     */
     public void endOfJobCommands(Commands commands) {
         this.endOfJobCommands = commands;
     }
@@ -135,6 +140,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                     writer.format("export %s=\"%s\"%n", pair.getKey(), protect(pair.getValue(), QUOTED_SPECIAL));
             }
 
+            // Adds notification URL to script
+            if (notificationURL != null) {
+                writer.format("export XPM_NOTIFICATION_URL=\"%s\"%n", protect(notificationURL.toString(), QUOTED_SPECIAL));
+            }
+
             if (directory() != null) {
                 writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
             }
@@ -149,27 +159,40 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             writer.format("%n%n# Set traps to cleanup (remove locks and temporary files, kill remaining processes) when exiting%n%n");
             writer.format("trap cleanup EXIT SIGINT SIGTERM%n");
+
+            // --- CLEANUP
+
             writer.format("cleanup() {%n");
+
+            // Remove traps
+            writer.format("trap - EXIT SIGINT SIGTERM%n");
+
+            // Remove locks
             for (String file : lockFiles) {
                 writer.format("  rm -f %s;%n", file);
             }
 
+            // Remove temporary files
             commands().forEachCommand(Functional.propagate(c -> {
                 final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
                 for (Path file : Iterables.concat(namedRedirections.outputRedirections,
                         namedRedirections.errorRedirections)) {
-                    writer.format("  rm -f %s;%n", env.resolve(file));
+                    writer.format(" rm -f %s;%n", env.resolve(file));
                 }
             }));
 
-            // Kills remaining processes
-            // Compatibility note: --no-run-if-empty is GNU extension so
-            //   we check upstream to use gxargs on OSX.
-            writer.println("  for pid in $(jobs -pr)");
-            writer.println("  do");
-            writer.println("    kill $pid");
-            writer.println("  done");
+            // Notify if possible
+            if (notificationURL != null) {
+                final URL url = new URL(notificationURL, format("eoj/%d", job.getId()));
+                writer.format(" wget \"%s\"%n", protect(url.toString(), UnixScriptProcessBuilder.QUOTED_SPECIAL));
+            }
+
+            // Kills remaining processes (has to be the last command!)
+            writer.println(" kill -- -$$");
+
             writer.format("}%n%n");
+
+            // --- END CLEANUP
 
 
             // Write the command
@@ -267,10 +290,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             if (command instanceof Commands) {
                 writer.println("(");
-                writeCommands(env, writer, (Commands)command);
+                writeCommands(env, writer, (Commands) command);
                 writer.print(") ");
             } else {
-                for (CommandComponent argument : ((Command)command).list()) {
+                for (CommandComponent argument : ((Command) command).list()) {
                     writer.print(' ');
                     if (argument instanceof Command.Pipe) {
                         writer.print(" | ");

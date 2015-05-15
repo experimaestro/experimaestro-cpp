@@ -19,8 +19,10 @@ package sf.net.experimaestro.manager.python;
  */
 
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.ScriptableObject;
-import org.python.core.*;
+import org.python.core.Py;
+import org.python.core.PyCode;
+import org.python.core.PyObject;
+import org.python.core.PyString;
 import org.python.util.PythonInterpreter;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -28,8 +30,6 @@ import org.xml.sax.SAXException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JavaScriptFunction;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
@@ -108,30 +108,18 @@ public class PythonContext implements AutoCloseable {
         scriptContext = staticContext.scriptContext();
     }
 
-    @Override
-    public void close() throws Exception {
-        scriptContext.close();
-    }
-
-    public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
-        final PyCode code = interpreter.compile(reader);
-        return interpreter.eval(code);
-    }
-
-    public Object evaluateString(LocalhostConnector connector, Path locator, String content, String string, int lineno, Object security) throws Exception {
-        final PyCode code = interpreter.compile(string);
-        return interpreter.eval(code);
-    }
-
-
     public static PyObject wrap(Object object) {
         // Simple case
+        if (object == null)
+            return Py.None;
+
         if (object instanceof PyObject)
             return (PyObject) object;
 
+
         // Simple types
         if (object instanceof String) {
-            return new PyString((String)object);
+            return new PyString((String) object);
         }
 
         // Exposed objects
@@ -141,5 +129,28 @@ public class PythonContext implements AutoCloseable {
         }
 
         throw new IllegalArgumentException(format("Cannot wrap class %s into python object", object.getClass()));
+    }
+
+    public static Object[] unwrap(PyObject[] args) {
+        Object[] unwrapped = new Object[args.length];
+        for (int i = 0; i < args.length; ++i) {
+            unwrapped[i] = args[i].__tojava__(Object.class);
+        }
+        return unwrapped;
+    }
+
+    @Override
+    public void close() throws Exception {
+        scriptContext.close();
+    }
+
+    public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
+        final PyCode code = interpreter.compile(reader, filename);
+        return interpreter.eval(code);
+    }
+
+    public Object evaluateString(LocalhostConnector connector, Path locator, String content, String name, int lineno, Object security) throws Exception {
+        final PyCode code = interpreter.compile(content, name);
+        return interpreter.eval(code);
     }
 }

@@ -18,11 +18,13 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.mutable.MutableInt;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Wrapper;
+import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
@@ -31,13 +33,13 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
-import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Function;
 
 import static java.lang.Math.max;
 import static java.lang.StrictMath.min;
@@ -47,14 +49,16 @@ import static java.lang.StrictMath.min;
  */
 public abstract class GenericFunction {
 
-    static private final com.google.common.base.Function IDENTITY = Functions.identity();
+    static private final Function IDENTITY = Function.identity();
+    static private final Function<Wrapper, Object> UNWRAPPER = x -> x.unwrap();
+    static private final Function<Object, String> TOSTRING = x -> x.toString();
 
     /**
      * Transform the arguments
      *
-     * @param cx The script context
+     * @param cx          The script context
      * @param lcx
-     *@param declaration
+     * @param declaration
      * @param args
      * @param offset      The offset within the target parameters    @return
      */
@@ -71,7 +75,7 @@ public abstract class GenericFunction {
         }
 
         if (annotation == null ? false : annotation.scope()) {
-            JavaScriptContext jcx = (JavaScriptContext)lcx;
+            JavaScriptContext jcx = (JavaScriptContext) lcx;
             methodArgs[0] = jcx.context();
             methodArgs[1] = jcx.scope();
         }
@@ -105,7 +109,7 @@ public abstract class GenericFunction {
     /**
      * Gives a score to a given declaration
      *
-     * @param cx The script context
+     * @param cx          The script context
      * @param declaration The underlying method or constructor
      * @param args        The arguments
      * @param converters  A list of converters that will be filled by this method
@@ -178,8 +182,8 @@ public abstract class GenericFunction {
         Declaration argmax = null;
         int max = Integer.MIN_VALUE;
 
-        com.google.common.base.Function argmaxConverters[] = new com.google.common.base.Function[args.length];
-        com.google.common.base.Function converters[] = new com.google.common.base.Function[args.length];
+        Function argmaxConverters[] = new Function[args.length];
+        Function converters[] = new Function[args.length];
         int argMaxOffset = 0;
 
         for (Declaration method : declarations()) {
@@ -188,7 +192,7 @@ public abstract class GenericFunction {
             if (score > max) {
                 max = score;
                 argmax = method;
-                com.google.common.base.Function tmp[] = argmaxConverters;
+                Function tmp[] = argmaxConverters;
                 argMaxOffset = offset.intValue();
                 argmaxConverters = converters;
                 converters = tmp;
@@ -211,12 +215,11 @@ public abstract class GenericFunction {
         try {
             Object[] transformedArgs = transform(lcx, cx, argmax, args, argmaxConverters, argMaxOffset);
             final Object result = argmax.invoke(transformedArgs);
-            if (result == null) return Undefined.instance;
 
             return result;
-        }  catch(InvocationTargetException e) {
+        } catch (InvocationTargetException e) {
             if (e.getCause() instanceof XPMRhinoException) {
-                throw (XPMRhinoException)e.getCause();
+                throw (XPMRhinoException) e.getCause();
             }
             throw new WrappedException(new XPMRhinoException(e.getCause()));
         } catch (Throwable e) {
@@ -237,7 +240,7 @@ public abstract class GenericFunction {
         }
 
         public abstract Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
-        
+
     }
 
     static public class ListConverter implements Function {
@@ -320,7 +323,7 @@ public abstract class GenericFunction {
                     switch (((Scriptable) o).getClassName()) {
                         case "String":
                         case "ConsString":
-                            return Functions.toStringFunction();
+                            return TOSTRING;
                         default:
                             score -= 10;
                     }
@@ -329,7 +332,7 @@ public abstract class GenericFunction {
                 } else {
                     score -= 10;
                 }
-                return Functions.toStringFunction();
+                return TOSTRING;
             }
 
             // Cast to integer
@@ -342,7 +345,7 @@ public abstract class GenericFunction {
             // Native object to JSON
             if (o instanceof NativeObject && Json.class.isAssignableFrom(type)) {
                 score -= 10;
-                JavaScriptContext jcx = (JavaScriptContext)lcx;
+                JavaScriptContext jcx = (JavaScriptContext) lcx;
                 return nativeObject -> JSUtils.toJSON(jcx.scope(), nativeObject);
             }
 
@@ -351,7 +354,7 @@ public abstract class GenericFunction {
             if (o instanceof Wrapper) {
                 score -= 1;
                 Function converter = converter(lcx, cx, ((Wrapper) o).unwrap(), type);
-                return converter != null ? new Unwrapper(converter) : null;
+                return converter != null ? UNWRAPPER.andThen(converter) : null;
             }
 
             score = Integer.MIN_VALUE;
@@ -363,18 +366,4 @@ public abstract class GenericFunction {
         }
 
     }
-
-    static private class Unwrapper implements com.google.common.base.Function {
-        private final com.google.common.base.Function converter;
-
-        public Unwrapper(com.google.common.base.Function converter) {
-            this.converter = converter;
-        }
-
-        @Override
-        public Object apply(Object input) {
-            return converter.apply(((Wrapper) input).unwrap());
-        }
-    }
-
 }

@@ -175,7 +175,7 @@ final public class Transaction implements AutoCloseable {
                 transaction.commit();
                 status = Status.COMMIT;
                 if (listeners != null) {
-                    listeners.forEach(f -> f.postCommit(this));
+                    listeners.forEach(f -> f.accept(this));
                 }
             }
         } catch (RollbackException e) {

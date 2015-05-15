@@ -26,6 +26,7 @@ import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 /**
@@ -62,11 +63,15 @@ public class JSTaskWrapper extends JSBaseObject {
 
     @Expose("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(xpm.newScriptContext().simulate(simulate)));
+        try(final ScriptContext scriptContext = xpm.getScriptContext().copy()) {
+            return new JSJson(task.run(scriptContext.simulate(simulate)));
+        }
     }
 
     @Expose("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
-        return new JSJson(task.run(xpm.newScriptContext().simulate(false)));
+        try(final ScriptContext scriptContext = xpm.getScriptContext().copy()) {
+            return new JSJson(task.run(scriptContext.simulate(false)));
+        }
     }
 }

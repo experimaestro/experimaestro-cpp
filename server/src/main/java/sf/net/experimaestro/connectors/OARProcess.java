@@ -104,7 +104,7 @@ class OARProcess extends XPMProcess {
     private Document oarstat(boolean full) {
         final Document document;
         try {
-            document = OARLauncher.exec(connector, String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
+            document = OARLauncher.exec(this.getConnector(), String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
         } catch (Exception e) {
             throw new XPMRuntimeException(e, "Cannot parse oarstat output");
         }

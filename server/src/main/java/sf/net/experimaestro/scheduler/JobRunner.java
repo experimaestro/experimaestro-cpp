@@ -68,4 +68,8 @@ public abstract class JobRunner {
     abstract Path outputFile(Job job) throws IOException;
 
     public abstract Stream<Dependency> dependencies();
+
+    public boolean isActiveWaiting() {
+        return true;
+    }
 }

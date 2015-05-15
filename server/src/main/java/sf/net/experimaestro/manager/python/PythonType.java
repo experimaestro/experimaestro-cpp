@@ -37,6 +37,11 @@ class PythonType extends PyType {
     }
 
     @Override
+    public String fastGetName() {
+        return description.getClassName();
+    }
+
+    @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
         final ConstructorFunction constructorFunction = new ConstructorFunction(description.getClassName(), description.getConstructors());
 

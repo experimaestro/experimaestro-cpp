@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.scheduler.Commands;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -54,11 +55,23 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     private Commands commands;
 
+    /**
+     * The notification URL if any
+     */
+    protected URL notificationURL;
+
     public XPMScriptProcessBuilder(SingleHostConnector connector, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
         this.connector = connector;
         this.scriptFile = scriptFile;
         this.path = connector.resolve(scriptFile);
         this.processBuilder = processBuilder == null ? connector.processBuilder() : processBuilder;
+    }
+
+    /**
+     * Sets the notification URL
+     */
+    public void notificationURL(URL url) {
+        this.notificationURL = url;
     }
 
     /**
@@ -77,4 +90,12 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     public abstract void exitCodeFile(Path exitCodeFile) throws IOException;
 
     public abstract void doneFile(Path doneFile) throws IOException;
+
+    public URL getNotificationURL() {
+        return notificationURL;
+    }
+
+    public void setNotificationURL(URL notificationURL) {
+        this.notificationURL = notificationURL;
+    }
 }

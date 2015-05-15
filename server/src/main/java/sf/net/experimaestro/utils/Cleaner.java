@@ -48,12 +48,16 @@ public class Cleaner implements AutoCloseable {
         }
     }
 
-    public synchronized void close() throws Exception {
+    public synchronized void close() {
         LOGGER.debug("Cleaner is cleaning %d elements", list.size());
         final Iterator<AutoCloseable> iterator = list.iterator();
         while (iterator.hasNext()) {
             final AutoCloseable value = iterator.next();
-            value.close();
+            try {
+                value.close();
+            } catch (Exception e) {
+                LOGGER.error(e, "Error while closing %s", value);
+            }
         }
         list.clear();
     }

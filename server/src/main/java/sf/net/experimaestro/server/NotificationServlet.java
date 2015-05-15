@@ -33,6 +33,7 @@ import java.io.IOException;
  */
 public class NotificationServlet extends XPMServlet {
     private static final String END_OF_JOB = "/eoj/";
+    private static final String PROGRESS = "/progress/";
 
     final Scheduler scheduler;
 
@@ -69,6 +70,10 @@ public class NotificationServlet extends XPMServlet {
 
             return;
         }
+
+        if (localPath.startsWith(PROGRESS)) {
+        }
+
 
         error404(request, resp);
     }

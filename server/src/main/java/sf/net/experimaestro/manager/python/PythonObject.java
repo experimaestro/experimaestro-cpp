@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.python;
  */
 
 import org.python.core.PyObject;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
+import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -47,7 +47,16 @@ class PythonObject extends PyObject {
             methodFunction.add(object, methods);
             return new PythonMethod(methodFunction);
         }
+        noAttributeError(name);
         return null;
+    }
+
+    @Override
+    public Object __tojava__(Class<?> c) {
+        if (c == Object.class) {
+            return object;
+        }
+        return super.__tojava__(c);
     }
 
     @Override

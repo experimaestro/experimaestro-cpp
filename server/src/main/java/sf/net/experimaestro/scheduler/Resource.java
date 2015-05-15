@@ -20,7 +20,9 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.*;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
@@ -52,7 +54,7 @@ import static java.lang.String.format;
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Table(name = "resources", indexes = @Index(columnList = "locator"))
 @Exposed
-public class Resource implements PostCommitListener {
+public class Resource {
     /**
      * Extension for the lock file
      */
@@ -105,14 +107,7 @@ public class Resource implements PostCommitListener {
     public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * The resource ID
-     */
-    @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
-    private Long resourceID;
-
+    static private SharedLongLocks resourceLocks = new SharedLongLocks();
     /**
      * Version for optimistic locks
      */
@@ -125,30 +120,17 @@ public class Resource implements PostCommitListener {
      */
     @Column(name = "locator", updatable = false)
     protected String locator;
-
     /**
-     * The connector
+     * Keeps the state of the resource before saving
      */
-    @JoinColumn(name = "connector", updatable = false)
-    @ManyToOne(cascade = CascadeType.PERSIST)
-    protected Connector connector;
-
+    protected transient ResourceState oldState;
+    transient boolean prepared = false;
     /**
-     * The outgoing dependencies (resources that depend on this)
+     * The resource ID
      */
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
-    @MapKey(name = "to")
-    private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
-
-    /**
-     * The ingoing dependencies (resources that we depend upon)
-     */
-    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
-    @MapKey(name = "from")
-    private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
-
-
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.TABLE)
+    private Long resourceID;
     /**
      * Comparator on the database ID
      */
@@ -158,22 +140,35 @@ public class Resource implements PostCommitListener {
             return Long.compare(o1.resourceID, o2.resourceID);
         }
     };
-
+    /**
+     * The connector
+     * <p>
+     * A null value is used for LocalhostConnector
+     */
+    @JoinColumn(name = "connector", updatable = false)
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    private Connector connector;
+    /**
+     * The outgoing dependencies (resources that depend on this)
+     */
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
+    @MapKey(name = "to")
+    private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
+    /**
+     * The ingoing dependencies (resources that we depend upon)
+     */
+    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
+    @MapKey(name = "from")
+    private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
     /**
      * The resource state
      */
     @Column(name = "state")
     private ResourceState state = ResourceState.ON_HOLD;
-
     /**
-     * Indicates that the resource is deleted
+     * Cached Path
      */
-    transient private boolean delete = false;
-
-    /**
-     * Keeps the state of the resource before saving
-     */
-    protected transient ResourceState oldState;
+    transient private Path path;
 
     /**
      * Called when deserializing from database
@@ -187,7 +182,7 @@ public class Resource implements PostCommitListener {
     }
 
     public Resource(Connector connector, String name) {
-        this.connector = connector;
+        this.connector = connector instanceof LocalhostConnector ? null : connector;
         this.locator = name;
     }
 
@@ -214,6 +209,18 @@ public class Resource implements PostCommitListener {
             return null;
 
         return result.get(0);
+    }
+
+    /**
+     * Lock a resource by ID
+     *
+     * @param transaction
+     * @param resourceId
+     * @param exclusive
+     * @param timeout     Timeout
+     */
+    public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
+        return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
     }
 
     @Override
@@ -338,9 +345,6 @@ public class Resource implements PostCommitListener {
         return locator;
     }
 
-    /** Cached Path */
-    transient private Path path;
-
     /**
      * Get a filesystem path
      */
@@ -350,7 +354,7 @@ public class Resource implements PostCommitListener {
         }
 
         try {
-            return path = connector.resolve(locator);
+            return path = getConnector().resolve(locator);
         } catch (IOException e) {
             throw new AssertionError("Unexpected conversion error", e);
         }
@@ -453,7 +457,6 @@ public class Resource implements PostCommitListener {
         }
     }
 
-
     /**
      * Store a resource
      *
@@ -517,15 +520,13 @@ public class Resource implements PostCommitListener {
             SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, ourselves);
             this.notify(t, em, message);
             notify(t, em, message);
-
         });
 
 
-        this.delete = true;
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
-        return extension.transform(connector.resolve(locator));
+        return extension.transform(getConnector().resolve(locator));
     }
 
     final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
@@ -564,7 +565,7 @@ public class Resource implements PostCommitListener {
     }
 
     public Connector getConnector() {
-        return connector;
+        return connector == null ? LocalhostConnector.getInstance() : null;
     }
 
     /**
@@ -576,34 +577,12 @@ public class Resource implements PostCommitListener {
         return getConnector().getMainConnector();
     }
 
-
-    static private SharedLongLocks resourceLocks = new SharedLongLocks();
-
     public EntityLock lock(Transaction t, boolean exclusive) {
         return t.lock(resourceLocks, this.getId(), exclusive, 0);
     }
 
     public EntityLock lock(Transaction t, boolean exclusive, long timeout) {
         return t.lock(resourceLocks, this.getId(), exclusive, timeout);
-    }
-
-    /**
-     * Lock a resource by ID
-     *
-     * @param transaction
-     * @param resourceId
-     * @param exclusive
-     * @param timeout     Timeout
-     */
-    public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
-        return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
-    }
-
-    /**
-     * Defines how printing should be done
-     */
-    static public class PrintConfig {
-        public String detailURL;
     }
 
     @PostLoad
@@ -625,24 +604,17 @@ public class Resource implements PostCommitListener {
      */
     @PostUpdate
     @PostPersist
-    protected void _post_update() {
-        Transaction.current().registerPostCommit(this);
+    public void _post_update() {
+        Transaction.current().registerPostCommit(this::saved);
     }
 
-
-    transient boolean prepared = false;
+    @PostRemove
+    public void postRemove() {
+        Transaction.current().registerPostCommit(this::removed);
+    }
 
     public void save(Transaction transaction) {
         final EntityManager em = transaction.em();
-        // Find the connector in the database
-        if (connector != null && !em.contains(connector)) {
-            // Add the connector
-            final Connector other = Connector.find(em, connector.getIdentifier());
-            if (other != null) {
-                connector = other;
-            }
-        }
-
 
         // Lock all the dependencies
         // This avoids to miss any notification
@@ -684,26 +656,29 @@ public class Resource implements PostCommitListener {
      * Called before adding this entity to the database
      */
     @PrePersist
-    protected void _pre_persist() {
+    protected void prePersist() {
         if (!prepared) {
             throw new AssertionError("The object has not been prepared");
         }
     }
 
-    @Override
-    public void postCommit(Transaction transaction) {
-        if (delete) {
-            LOGGER.debug("Resource %s removed", this, version);
-            Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
-            clean();
-        } else {
-            LOGGER.debug("Resource %s stored with version=%s", this, version);
-            if (oldState != state) {
+    public void removed(Transaction transaction) {
+        LOGGER.debug("Resource %s removed", this, version);
+        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
+        clean();
+    }
+
+    public void saved(Transaction transaction) {
+        LOGGER.debug("Resource %s stored with version=%s", this, version);
+        if (oldState != state) {
+            if (oldState == null) {
+                Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
+            } else {
                 Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
             }
-            stored();
-            cacheState();
         }
+        stored();
+        cacheState();
 
         // Move back to false
         prepared = false;
@@ -727,6 +702,13 @@ public class Resource implements PostCommitListener {
     @Expose
     public Dependency lock(String lockType) {
         return createDependency(lockType);
+    }
+
+    /**
+     * Defines how printing should be done
+     */
+    static public class PrintConfig {
+        public String detailURL;
     }
 
 }

@@ -28,5 +28,8 @@
         <class>sf.net.experimaestro.connectors.ConnectorOptions</class>
         <class>sf.net.experimaestro.connectors.SSHOptions</class>
         <class>sf.net.experimaestro.connectors.ConnectorOptions</class>
+
+        <class>sf.net.experimaestro.connectors.OARLauncher</class>
+        <class>sf.net.experimaestro.connectors.DirectLauncher</class>
     </classes>
 </scripting>

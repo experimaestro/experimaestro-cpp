@@ -102,10 +102,18 @@ public class Job extends Resource {
      * Number of unsatisfied jobs
      */
     int nbUnsatisfied = 0;
+
     /**
      * Number of holding jobs
      */
     int nbHolding = 0;
+
+    /**
+     * Progress
+     *
+     * The value is negative if not set
+     */
+    double progress = -1;
 
     /**
      * For serialization
@@ -749,5 +757,9 @@ public class Job extends Resource {
 
     public XPMProcess getProcess() {
         return process;
+    }
+
+    public boolean isActiveWaiting() {
+        return jobRunner.isActiveWaiting();
     }
 }

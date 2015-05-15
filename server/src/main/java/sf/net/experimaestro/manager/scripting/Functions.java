@@ -18,15 +18,41 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExitException;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.TokenResource;
+import sf.net.experimaestro.scheduler.Transaction;
 
 /**
  * General functions available to all scripting languages
  */
 @Exposed
 public class Functions {
+    @Expose()
+    @Help("Retrieve (or creates) a token resource with a given xpath")
+    static public TokenResource token_resource(
+            @Argument(name = "path", help = "The path of the resource") String path
+    ) throws ExperimaestroCannotOverwrite {
+        return Transaction.evaluate((em, t) -> {
+            final Resource resource = Resource.getByLocator(em, path);
+            final TokenResource tokenResource;
+            if (resource == null) {
+                tokenResource = new TokenResource(path, 0);
+                tokenResource.save(t);
+            } else {
+                if (!(resource instanceof TokenResource))
+                    throw new AssertionError(String.format("Resource %s exists and is not a token", path));
+                tokenResource = (TokenResource) resource;
+            }
+
+            return tokenResource;
+        });
+    }
+
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
     public void define_share(@Argument(name = "host", help = "The logical host")
@@ -49,5 +75,11 @@ public class Functions {
         if (message == null) throw new ExitException(code);
         if (objects == null) throw new ExitException(code, message);
         throw new ExitException(code, message, objects);
+    }
+
+    @Expose
+    @Help("Defines the default launcher")
+    public void set_default_launcher(Launcher launcher) {
+        ScriptContext.threadContext().setDefaultLauncher(launcher);
     }
 }

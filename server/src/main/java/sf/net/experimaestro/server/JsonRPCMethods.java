@@ -34,6 +34,7 @@ import org.json.simple.JSONValue;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
+import org.python.core.PyException;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
@@ -395,9 +396,15 @@ public class JsonRPCMethods extends HttpServlet {
             throw e;
         } catch (Throwable e) {
             Throwable wrapped = e;
+            PyException pye = e instanceof PyException ? (PyException)e : null;
             LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
-            while (wrapped.getCause() != null)
+
+            while (wrapped.getCause() != null) {
                 wrapped = wrapped.getCause();
+                if (wrapped instanceof PyException) {
+                    pye = (PyException) wrapped;
+                }
+            }
 
             LOGGER.printException(Level.INFO, wrapped);
 
@@ -418,15 +425,10 @@ public class JsonRPCMethods extends HttpServlet {
                 }
             }
 
-            if (wrapped instanceof NotImplementedException)
-                logger.error(format("Line where the exception was thrown: %s", wrapped.getStackTrace()[0]));
-
-            logger.error("[Stack trace]");
-            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
-            for (ScriptStackElement x : scriptStackTrace) {
-                logger.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
+            if (pye != null) {
+                logger.error("[Stack trace]");
+                logger.error(pye.traceback.dumpStack());
             }
-
 
             throw new RuntimeException(errString.toString());
 

@@ -93,7 +93,7 @@ public class CommandLineTask extends JobRunner {
      */
     public CommandLineTask(Commands commands, Map<String, String> environment, String workingDirectory) {
 
-        launcher = new DefaultLauncher();
+        launcher = new DirectLauncher();
 
         LOGGER.debug("Command is %s", commands);
 
@@ -232,5 +232,10 @@ public class CommandLineTask extends JobRunner {
     @Override
     public Stream<Dependency> dependencies() {
         return commands.dependencies();
+    }
+
+    @Override
+    public boolean isActiveWaiting() {
+        return launcher.getNotificationURL() == null;
     }
 }

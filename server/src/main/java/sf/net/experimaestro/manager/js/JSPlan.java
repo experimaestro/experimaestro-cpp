@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -209,14 +210,16 @@ public class JSPlan extends JSAbstractOperator implements Callable {
     }
 
     private Object run(Context context, Scriptable scope, boolean simulate) throws XPathExpressionException {
-        final Iterator<Json> iterator = plan.run(xpm().newScriptContext().simulate(simulate));
-        ArrayList<Object> values = new ArrayList<>();
+        try(final ScriptContext scriptContext = xpm().getScriptContext().copy()) {
+            final Iterator<Json> iterator = plan.run(scriptContext.simulate(simulate));
+            ArrayList<Object> values = new ArrayList<>();
 
-        while (iterator.hasNext()) {
-            values.add(new JSJson(iterator.next()));
+            while (iterator.hasNext()) {
+                values.add(new JSJson(iterator.next()));
+            }
+
+            return context.newArray(scope, values.toArray());
         }
-
-        return context.newArray(scope, values.toArray());
     }
 
 

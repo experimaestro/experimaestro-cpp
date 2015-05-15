@@ -22,6 +22,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 /**
@@ -38,7 +39,10 @@ public class JavaScriptFunction implements Function {
     public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
         XPMObject xpm = XPMObject.getThreadXPM();
-        return function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
+        final Object result = function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
+        if (result == null) return Undefined.instance;
+
+        return result;
     }
 
     @Override

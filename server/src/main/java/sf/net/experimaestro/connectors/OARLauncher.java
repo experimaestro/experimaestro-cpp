@@ -21,6 +21,8 @@ package sf.net.experimaestro.connectors;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -41,7 +43,8 @@ import java.nio.file.Path;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class OARLauncher implements Launcher {
+@Exposed
+public class OARLauncher extends Launcher {
     /**
      * Prefix for the PID of the job
      */
@@ -55,6 +58,7 @@ public class OARLauncher implements Launcher {
     /**
      * Construction from a connector
      */
+    @Expose
     public OARLauncher() {
         super();
     }
@@ -94,7 +98,9 @@ public class OARLauncher implements Launcher {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
-        return new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
+        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
+        unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
+        return unixScriptProcessBuilder;
     }
 
     /**

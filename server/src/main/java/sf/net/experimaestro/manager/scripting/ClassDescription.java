@@ -186,7 +186,7 @@ public class ClassDescription {
         }
 
         if (!aClass.getSimpleName().startsWith("JS")) {
-            throw new AssertionError(format("Class %s does not start with JS as it should", aClass.getName()));
+            throw new AssertionError(format("Class %s is not exposed (or does not start with JS [deprecated]) as it should", aClass.getName()));
         }
 
         return aClass.getSimpleName().substring(2);
