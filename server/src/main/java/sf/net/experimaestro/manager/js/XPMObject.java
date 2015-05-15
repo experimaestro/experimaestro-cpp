@@ -1018,6 +1018,27 @@ public class XPMObject {
             return "XPM";
         }
 
+        @Expose()
+        @Help("Retrieve (or creates) a token resource with a given xpath")
+        static public TokenResource token_resource(
+                @Argument(name = "path", help = "The path of the resource") String path
+        ) throws ExperimaestroCannotOverwrite {
+            return Transaction.evaluate((em, t) -> {
+                final Resource resource = Resource.getByLocator(em, path);
+                final TokenResource tokenResource;
+                if (resource == null) {
+                    tokenResource = new TokenResource(path, 0);
+                    tokenResource.save(t);
+                } else {
+                    if (!(resource instanceof TokenResource))
+                        throw new AssertionError(String.format("Resource %s exists and is not a token", path));
+                    tokenResource = (TokenResource) resource;
+                }
+
+                return tokenResource;
+            });
+        }
+
         @Expose("set_property")
         public void setProperty(String name, Object object) {
             final Object x = unwrap(object);

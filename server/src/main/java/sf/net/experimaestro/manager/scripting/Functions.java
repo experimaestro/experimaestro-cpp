@@ -32,26 +32,7 @@ import sf.net.experimaestro.scheduler.Transaction;
  */
 @Exposed
 public class Functions {
-    @Expose()
-    @Help("Retrieve (or creates) a token resource with a given xpath")
-    static public TokenResource token_resource(
-            @Argument(name = "path", help = "The path of the resource") String path
-    ) throws ExperimaestroCannotOverwrite {
-        return Transaction.evaluate((em, t) -> {
-            final Resource resource = Resource.getByLocator(em, path);
-            final TokenResource tokenResource;
-            if (resource == null) {
-                tokenResource = new TokenResource(path, 0);
-                tokenResource.save(t);
-            } else {
-                if (!(resource instanceof TokenResource))
-                    throw new AssertionError(String.format("Resource %s exists and is not a token", path));
-                tokenResource = (TokenResource) resource;
-            }
 
-            return tokenResource;
-        });
-    }
 
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")

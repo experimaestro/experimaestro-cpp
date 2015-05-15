@@ -33,7 +33,6 @@
         <!-- Connectors -->
         <class>sf.net.experimaestro.connectors.Connector</class>
         <class>sf.net.experimaestro.connectors.SingleHostConnector</class>
-        <class>sf.net.experimaestro.connectors.LocalhostConnector</class>
         <class>sf.net.experimaestro.connectors.XPMConnector</class>
         <class>sf.net.experimaestro.connectors.SSHConnector</class>
 
