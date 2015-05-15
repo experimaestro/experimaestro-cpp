@@ -12,6 +12,12 @@ dd { padding-bottom: .5em; }
     margin-bottom: 1em;
 }
 
+.progressbar {
+    width: 25%;
+    height: 3mm;
+    margin-top: 1mm;
+}
+
 #header .title {
     font-size: x-large;
 }

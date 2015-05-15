@@ -491,6 +491,7 @@ public class Job extends Resource {
 
             JSONObject events = new JSONObject();
             info.put("events", events);
+            info.put("progress", progress);
 
             events.put("start", longDateFormat.format(new Date(start)));
 
@@ -761,5 +762,12 @@ public class Job extends Resource {
 
     public boolean isActiveWaiting() {
         return jobRunner.isActiveWaiting();
+    }
+
+    public double getProgress() {
+        return progress;
+    }
+    public void setProgress(double progress) {
+        this.progress = progress;
     }
 }

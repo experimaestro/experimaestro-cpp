@@ -789,23 +789,26 @@ public class JsonRPCMethods extends HttpServlet {
             try {
                 HashMap<String, Object> map = new HashMap<>();
                 map.put("event", message.getType().toString());
+                final Resource resource = ((SimpleMessage) message).getResource();
                 if (message instanceof SimpleMessage) {
-                    map.put("resource", ((SimpleMessage) message).getResource().getId());
-                    Path locator = ((SimpleMessage) message).getResource().getPath();
+                    map.put("resource", resource.getId());
+                    Path locator = resource.getPath();
                     if (locator != null)
                         map.put("locator", locator.toString());
                 }
 
                 switch (message.getType()) {
                     case STATE_CHANGED:
-                        map.put("state", ((SimpleMessage) message).getResource().getState().toString());
+                        map.put("state", resource.getState().toString());
                         break;
 
+                    case PROGRESS:
+                        map.put("progress", ((Job)resource).getProgress());
                     case RESOURCE_REMOVED:
                         break;
 
                     case RESOURCE_ADDED:
-                        map.put("state", ((SimpleMessage) message).getResource().getState().toString());
+                        map.put("state", resource.getState().toString());
                         break;
                 }
 

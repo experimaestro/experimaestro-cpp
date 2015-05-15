@@ -37,6 +37,7 @@ abstract public class Message {
         STATE_CHANGED,
         END_OF_JOB,
         DEPENDENCY_CHANGED,
+        PROGRESS,
 
         RESOURCE_ADDED,
         RESOURCE_REMOVED;
