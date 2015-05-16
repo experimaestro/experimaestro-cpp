@@ -2,9 +2,12 @@ site_name: experimaestro
 site_description: experimaestro Computer science experiments manager and scheduler
 pages:
 - [index.md, Home]
-- [scheduler/index.md, Scheduler]
-- [scheduler/connectors.md, Scheduler]
-- [manager/index.md, Manager]
-- [manager/json.md, Manager]
-- [manager/tasks.md, Manager]
+- [scheduler/index.md, Scheduler, Home]
+- [scheduler/connectors.md, "Scheduler", Connectors]
+- [manager/index.md, Manager, Introduction]
+- [manager/json.md, Manager, JSON]
+- [manager/tasks.md, Manager, Tasks]
+- [manager/plans.md, Manager, Plans]
 theme: readthedocs
+markdown_extensions:
+    - xpm

@@ -8,12 +8,12 @@ JSON is used to describe resources. Special names are reserved by experimaestro 
 
 We will make use of an example of a message
 
-{% highlight js %}
+```js
 {
     alpha: 3,
     "{sf.net.experimaestro}type": "{sf.net.experimaestro}:integer",
 }
-{% endhighlight %}
+```
 
   This document describes the JSON format used by tasks to communicate. Here are the
   key facts:
