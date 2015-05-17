@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import bpiwowar.argparser.utils.ReadLineIterator;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
@@ -50,7 +51,7 @@ public class StatusLock extends Lock {
     String path;
 
     @OneToOne
-    SingleHostConnector connector;
+    private SingleHostConnector connector;
 
     /**
      * Number of writers
@@ -75,8 +76,9 @@ public class StatusLock extends Lock {
     protected StatusLock() {
     }
 
+
     public StatusLock(SingleHostConnector connector, String path, String pid, boolean writeAccess) throws LockException {
-        this.connector = connector;
+        this.setConnector(connector);
         this.path = path;
         this.pid = pid;
 
@@ -119,11 +121,11 @@ public class StatusLock extends Lock {
         // --- Lock the resource
         Path path = null;
         try {
-            path = connector.resolve(this.path);
+            path = getConnector().resolve(this.path);
         } catch (IOException e) {
             throw new LockException(e);
         }
-        try (Lock ignored = connector.createLockFile(LOCK_EXTENSION.transform(path), true)) {
+        try (Lock ignored = getConnector().createLockFile(LOCK_EXTENSION.transform(path), true)) {
             Path statusPath = STATUS_EXTENSION.transform(path);
 
             // --- Read the resource state
@@ -226,5 +228,13 @@ public class StatusLock extends Lock {
             }
 
         }
+    }
+
+    public SingleHostConnector getConnector() {
+        return connector == null ? LocalhostConnector.getInstance() : connector;
+    }
+
+    public void setConnector(SingleHostConnector connector) {
+        this.connector = connector instanceof LocalhostConnector ? null : connector;
     }
 }

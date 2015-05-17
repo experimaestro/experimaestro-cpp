@@ -452,6 +452,7 @@ final public class Scheduler {
                         for (Job job : list) {
                             job.lock(transaction, true);
                             em.refresh(job);
+                            this.setName(name + "/" + job);
 
                             LOGGER.debug("Looking at %s", job);
 
@@ -480,7 +481,6 @@ final public class Scheduler {
                                 continue;
                             }
 
-                            this.setName(name + "/" + job);
                             try {
                                 job.run(em, transaction);
 
