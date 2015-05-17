@@ -422,14 +422,15 @@ public class LatticeNodeTest {
 
             op.prepare();
             op.init();
-            final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext();
+            try(final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext()) {
 
-            final Iterator<Value> iterator = op.iterator(pc);
-            while (iterator.hasNext()) {
-                final String e = iterator.next().getNodes()[0].toString();
-                set.add(e);
+                final Iterator<Value> iterator = op.iterator(pc);
+                while (iterator.hasNext()) {
+                    final String e = iterator.next().getNodes()[0].toString();
+                    set.add(e);
+                }
+                return set;
             }
-            return set;
         }
 
         public MergeResult merge() {
