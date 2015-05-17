@@ -585,12 +585,19 @@ public class Job extends Resource {
 
         // Check the done file
         final Path doneFile = DONE_EXTENSION.transform(getPath());
-        if (Files.exists(doneFile) && getState() != ResourceState.DONE) {
-            changes = true;
-            if (this instanceof Job) {
-                this.endTimestamp = Files.getLastModifiedTime(doneFile).toMillis();
+        if (Files.exists(doneFile)) {
+            if (getState() != ResourceState.DONE) {
+                changes = true;
+                if (this instanceof Job) {
+                    this.endTimestamp = Files.getLastModifiedTime(doneFile).toMillis();
+                }
+                this.setState(ResourceState.DONE);
             }
-            this.setState(ResourceState.DONE);
+        } else {
+            if (getState() == ResourceState.DONE) {
+                changes = true;
+                this.setState(ResourceState.WAITING);
+            }
         }
 
         // Check dependencies if we are in waiting or ready
