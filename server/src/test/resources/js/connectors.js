@@ -63,7 +63,7 @@ function get_ssh_connector() {
     var sshOptions = SSHOptions();
     sshOptions.password("user");
     sshOptions.check_host(false);
-
+    sshOptions.set_use_ssh_agent(false);
     return new Connector("ssh://user@localhost" + ":" + port, sshOptions);
 }
 

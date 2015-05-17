@@ -97,6 +97,7 @@ public class SSHOptions extends ConnectorOptions {
         this.compression = compression;
     }
 
+    @Expose("set_use_ssh_agent")
     public void setUseSSHAgent(boolean useSSHAgent) {
         this.useSSHAgent = useSSHAgent;
     }
