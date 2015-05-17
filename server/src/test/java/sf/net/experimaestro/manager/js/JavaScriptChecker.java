@@ -20,7 +20,9 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
+import org.testng.TestException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -30,6 +32,7 @@ import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMEnvironment;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +52,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class JavaScriptChecker extends XPMEnvironment {
-
+    final static private Logger LOGGER = Logger.getLogger();
     private final XPMObject xpm;
     private Path file;
     private String content;
@@ -137,7 +140,22 @@ public class JavaScriptChecker extends XPMEnvironment {
         Scriptable newScope = context.newObject(scope);
         newScope.setPrototype(scope);
         newScope.setParentScope(null);
-        testFunction.function.call(context, newScope, null, new Object[]{});
+        try {
+            testFunction.function.call(context, newScope, null, new Object[]{});
+        } catch(Throwable e) {
+            LOGGER.error(e, "Error while running %s", testFunction.name);
+
+            Throwable wrapped = e;
+            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
+            while (wrapped.getCause() != null)
+                wrapped = wrapped.getCause();
+
+            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
+            for (ScriptStackElement x : scriptStackTrace) {
+                LOGGER.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
+            }
+            throw new TestException(format("JS error for %s", testFunction.name));
+        }
     }
 
 
