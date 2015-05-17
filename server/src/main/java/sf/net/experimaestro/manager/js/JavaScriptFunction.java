@@ -19,10 +19,8 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 /**
@@ -39,10 +37,16 @@ public class JavaScriptFunction implements Function {
     public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
         XPMObject xpm = XPMObject.getThreadXPM();
-        final Object result = function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
-        if (result == null) return Undefined.instance;
+        try {
+            final Object result = function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
+            if (result == null) return Undefined.instance;
+            return result;
+        } catch(RhinoException e) {
+            throw e;
+        } catch(Throwable e) {
+            throw new XPMRhinoException(e);
+        }
 
-        return result;
     }
 
     @Override
