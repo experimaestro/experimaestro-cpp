@@ -259,7 +259,7 @@ final public class Transaction implements AutoCloseable {
      * @param locks
      * @param id
      * @param exclusive
-     * @param timeout
+     * @param timeout A timeout in ms or a negative value for no timeout
      * @return
      */
     public EntityLock lock(SharedLongLocks locks, long id, boolean exclusive, long timeout) {

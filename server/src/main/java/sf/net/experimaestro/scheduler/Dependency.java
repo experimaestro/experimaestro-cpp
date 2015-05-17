@@ -42,12 +42,12 @@ abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Id
-    @ManyToOne()
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fromId")
     Resource from;
 
     @Id
-    @ManyToOne()
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "toId")
     Resource to;
 

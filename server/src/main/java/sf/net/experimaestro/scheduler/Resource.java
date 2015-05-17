@@ -157,9 +157,10 @@ public class Resource {
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
-    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY, mappedBy = "to")
+    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE, CascadeType.REFRESH}, fetch = FetchType.LAZY, mappedBy = "to")
     @MapKey(name = "from")
     private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
+
     /**
      * The resource state
      */
@@ -217,7 +218,7 @@ public class Resource {
      * @param transaction
      * @param resourceId
      * @param exclusive
-     * @param timeout     Timeout
+     * @param timeout     A timeout value (in ms) or a negative value (no timeout)
      */
     public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
         return transaction.lock(resourceLocks, resourceId, exclusive, timeout);

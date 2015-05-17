@@ -30,7 +30,6 @@ import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.nio.ch.Net;
 
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -97,7 +96,7 @@ final public class Scheduler {
     /**
      * A query that retrieves jobs that are ready, ordered by decreasing priority
      */
-    CriteriaQuery<Job> readyJobsQuery;
+    CriteriaQuery<Long> readyJobsQuery;
     /**
      * Number of running runners
      */
@@ -153,10 +152,11 @@ final public class Scheduler {
 
         // Create reused criteria queries
         CriteriaBuilder builder = entityManagerFactory.getCriteriaBuilder();
-        readyJobsQuery = builder.createQuery(Job.class);
+        readyJobsQuery = builder.createQuery(Long.TYPE);
         Root<Job> root = readyJobsQuery.from(Job.class);
         readyJobsQuery.orderBy(builder.desc(root.get("priority")));
         readyJobsQuery.where(root.get("state").in(ResourceState.READY));
+        readyJobsQuery.select(root.get(Resource_.resourceID));
 
         // Initialise the running resources so that they can retrieve their state
         EntityManager entityManager = entityManagerFactory.createEntityManager();
@@ -371,7 +371,7 @@ final public class Scheduler {
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
         Transaction.run(em -> {
             // Find the connector in DB
-            SingleHostConnector _connector = (SingleHostConnector)Connector.find(em, connector.getIdentifier());
+            SingleHostConnector _connector = (SingleHostConnector) Connector.find(em, connector.getIdentifier());
             if (_connector == null) {
                 em.persist(connector);
                 _connector = connector;
@@ -438,20 +438,22 @@ final public class Scheduler {
                         readyJobSemaphore.setValue(false);
                     }
 
+                    final List<Long> jobIds = Transaction.evaluate(em -> {
+                        TypedQuery<Long> query = em.createQuery(Scheduler.this.readyJobsQuery);
+                        return query.getResultList();
+                    });
 
                     // Try the next task
-                    try (Transaction transaction = Transaction.create()) {
-                        LOGGER.debug("Searching for ready jobs");
+                    LOGGER.debug("Searching for ready jobs");
 
-                        final EntityManager em = transaction.em();
-
-                        /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
-                        TypedQuery<Job> query = em.createQuery(Scheduler.this.readyJobsQuery);
-                        List<Job> list = query.getResultList();
-
-                        for (Job job : list) {
+                    /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
+                    for (long jobId : jobIds) {
+                        try (Transaction transaction = Transaction.create()) {
+                            final EntityManager em = transaction.em();
+                            Resource.lock(transaction, jobId, true, 0);
+                            Job job = em.find(Job.class, jobId);
                             job.lock(transaction, true);
-                            em.refresh(job);
+                            job = em.find(Job.class, job.getId());
                             this.setName(name + "/" + job);
 
                             LOGGER.debug("Looking at %s", job);
@@ -506,15 +508,16 @@ final public class Scheduler {
                             } finally {
                                 this.setName(name);
                             }
-                        }
 
-                    } catch (RollbackException e) {
-                        LOGGER.warn("Rollback exception");
-                    } catch (Exception e) {
-                        // FIXME: should do something smarter
-                        LOGGER.error(e, "Caught an exception");
-                    } finally {
+                        } catch (RollbackException e) {
+                            LOGGER.warn("Rollback exception");
+                        } catch (Exception e) {
+                            // FIXME: should do something smarter
+                            LOGGER.error(e, "Caught an exception");
+                        } finally {
+                        }
                     }
+
                 }
             } finally {
                 LOGGER.info("Shutting down job runner");
