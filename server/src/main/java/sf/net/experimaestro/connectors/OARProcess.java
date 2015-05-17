@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.scheduler.Job;
@@ -50,27 +51,22 @@ class OARProcess extends XPMProcess {
 
     @Override
     public OutputStream getOutputStream() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new NotImplementedException();
     }
 
     @Override
     public InputStream getInputStream() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new NotImplementedException();
     }
 
     @Override
     public InputStream getErrorStream() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public int waitFor() throws InterruptedException {
-        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new NotImplementedException();
     }
 
     @Override
     public void destroy() {
-        //To change body of implemented methods use File | Settings | File Templates.
+        throw new NotImplementedException();
     }
 
 

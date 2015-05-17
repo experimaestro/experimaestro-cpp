@@ -45,11 +45,13 @@ import java.nio.file.Path;
  */
 @Exposed
 public class OARLauncher extends Launcher {
+    static private final Logger LOGGER = Logger.getLogger();
+
     /**
      * Prefix for the PID of the job
      */
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
-    static private final Logger LOGGER = Logger.getLogger();
+
     /**
      * oarsub command
      */
