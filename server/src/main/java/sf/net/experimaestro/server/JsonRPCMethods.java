@@ -296,7 +296,7 @@ public class JsonRPCMethods extends HttpServlet {
     @RPCMethod(help = "Returns detailed information about a job (Json format)")
     public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException {
         return Transaction.evaluate(Functional.propagateFunction(em -> {
-            Resource resource = getResource(em, resourceId);
+            Resource resource = getResource(em, resourceId, null);
 
             if (resource == null)
                 throw new XPMRuntimeException("No resource with id [%s]", resourceId);
@@ -311,17 +311,22 @@ public class JsonRPCMethods extends HttpServlet {
 
     /**
      * Get a resource by ID or by locator
-     * @param em
-     * @param resourceId
+     * @param em The entity manager
+     * @param resourceId The resource ID or locator
+     * @param exclusive True if the lock should be exclusive, null if no lock should be taken
      * @return
      */
-    private Resource getResource(EntityManager em, String resourceId) {
+    private Resource getResource(EntityManager em, String resourceId, Boolean exclusive) {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
             resource = em.find(Resource.class, rid);
         } catch (NumberFormatException e) {
-            return Resource.getByLocator(em, resourceId);
+            resource = Resource.getByLocator(em, resourceId);
+        }
+
+        if (exclusive != null) {
+            resource.lock(Transaction.current(), exclusive);
         }
         return resource;
     }
@@ -566,7 +571,7 @@ public class JsonRPCMethods extends HttpServlet {
     ) throws Exception {
         return Transaction.evaluate(Functional.propagateFunction(em -> {
             int nbUpdated = 0;
-            Resource resource = getResource(em, id);
+            Resource resource = getResource(em, id, true);
             if (resource == null)
                 throw new XPMRuntimeException("Job not found [%s]", id);
 
@@ -648,7 +653,7 @@ public class JsonRPCMethods extends HttpServlet {
                     Pattern.compile(id) : null;
 
             if (id != null && !id.equals("") && idPattern == null) {
-                final Resource resource = getResource(em, id);
+                final Resource resource = getResource(em, id, true);
                 if (resource == null)
                     throw new XPMCommandException("Job not found [%s]", id);
 
@@ -763,7 +768,7 @@ public class JsonRPCMethods extends HttpServlet {
         final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
         for (String id : JobIds) {
             try (Transaction transaction = Transaction.create()) {
-                final Resource resource = getResource(transaction.em(), id);
+                final Resource resource = getResource(transaction.em(), id, true);
                 if (resource instanceof Job) {
                     ((Job) resource).generateFiles();
                 }
@@ -778,7 +783,7 @@ public class JsonRPCMethods extends HttpServlet {
         int n = 0;
         for (String id : JobIds) {
             try (Transaction transaction = Transaction.create()) {
-                final Resource resource = getResource(transaction.em(), id);
+                final Resource resource = getResource(transaction.em(), id, true);
                 if (resource instanceof Job) {
                     if (((Job) resource).stop()) {
                         n++;
@@ -879,7 +884,7 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    static public interface Arguments {
+    public interface Arguments {
         public abstract RPCArgument getArgument(int i);
 
         public abstract Class<?> getType(int i);

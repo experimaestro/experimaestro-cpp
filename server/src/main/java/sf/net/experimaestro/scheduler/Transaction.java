@@ -84,7 +84,7 @@ final public class Transaction implements AutoCloseable {
         LOGGER.debug("Transaction %s begins", System.identityHashCode(this));
     }
 
-    static Transaction current() {
+    static public Transaction current() {
         return currentTransaction.get();
     }
 
