@@ -483,9 +483,9 @@ def command_information(args):
     sys.stdout.write("\n")
 
 
-def command_invalidate(args):
+def command_restart(args):
     server = Configuration(args).getJsonServer()
-    print(server.invalidateJob(args.resourceId[0], args.recursive))
+    print(server.restart({ "id": args.resourceId[0], "recursive": args.recursive, "restart-done": args.restart_done}))
 
 
 def command_kill(args):
@@ -571,9 +571,10 @@ p_ls.add_argument("--color", action="store_true", default=False, help="Whether t
 
 subparsers.add_parser("list-methods", help="List Json RPC methods")
 
-p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
-p_invalidate.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
-p_invalidate.add_argument('resourceId', nargs=1, help='The resource URI')
+p_restart = subparsers.add_parser("restart", help="Restart a job")
+p_restart.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be restarted?")
+p_restart.add_argument('--restart-done', dest="restart_done", action="store_true", default=False, help="Should done jobs be restarted?")
+p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
@@ -582,7 +583,7 @@ p_rm = subparsers.add_parser("rm", help="Remove a resource")
 p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
 p_rm.add_argument('--states', dest="states", help="States")
 p_rm.add_argument('--group', dest="group")
-p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be invalidated?")
+p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be removed?")
 p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 p_kill = subparsers.add_parser("kill", help="Kill a job")
