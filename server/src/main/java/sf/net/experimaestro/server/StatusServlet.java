@@ -31,6 +31,7 @@ import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.persistence.LockModeType;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
@@ -96,7 +97,7 @@ public class StatusServlet extends XPMServlet {
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
                 Transaction.run(em -> {
-                    try (final CloseableIterator<Resource> resources = scheduler.resources(em, EnumSet.of(state))) {
+                    try (final CloseableIterator<Resource> resources = scheduler.resources(em, EnumSet.of(state), LockModeType.NONE)) {
                         while (resources.hasNext()) {
                             Resource resource = resources.next();
                             if (resource.getState() == state) {

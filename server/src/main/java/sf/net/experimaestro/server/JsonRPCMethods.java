@@ -37,13 +37,11 @@ import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
-import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.XPMContext;
 import sf.net.experimaestro.manager.python.PythonContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Functional;
@@ -52,6 +50,7 @@ import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
@@ -60,6 +59,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
@@ -712,17 +712,16 @@ public class JsonRPCMethods extends HttpServlet {
 
         return Transaction.evaluate((em, t) -> {
             int nbUpdated = 0;
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, states)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, states, LockModeType.NONE)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     resource.lock(t, true);
                     em.refresh(resource);
                     if (resource.updateStatus()) {
                         nbUpdated++;
-                        t.boundary();
                     } else {
-                        t.clearLocks();
                     }
+                    t.boundary();
                 }
             } catch (CloseException e) {
                 throw new RuntimeException(e);
@@ -766,7 +765,7 @@ public class JsonRPCMethods extends HttpServlet {
             } else {
                 // TODO order the tasks so that dependencies are removed first
                 HashSet<Resource> toRemove = new HashSet<>();
-                try (final CloseableIterator<Resource> resources = scheduler.resources(em, states)) {
+                try (final CloseableIterator<Resource> resources = scheduler.resources(em, states, LockModeType.NONE)) {
                     while (resources.hasNext()) {
                         Resource resource = resources.next();
                         if (idPattern != null) {
@@ -841,7 +840,6 @@ public class JsonRPCMethods extends HttpServlet {
      */
     @RPCMethod(help = "Stops a set of jobs under a given group.")
     public int stopJobs(
-            @RPCArgument(name = "group", help = "The group to consider") String group,
             @RPCArgument(name = "killRunning", help = "Whether to kill running tasks") boolean killRunning,
             @RPCArgument(name = "holdWaiting", help = "Whether to put on hold ready/waiting tasks") boolean holdWaiting,
             @RPCArgument(name = "recursive", help = "Recursive") boolean recursive) throws Exception {
@@ -849,15 +847,18 @@ public class JsonRPCMethods extends HttpServlet {
         final EnumSet<ResourceState> statesSet
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
 
-        return Transaction.evaluate(em -> {
+        return Transaction.evaluate((em, t) -> {
             int n = 0;
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, statesSet)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, statesSet, LockModeType.OPTIMISTIC)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
+                    resource.lock(t, true, 0);
+                    em.refresh(em);
                     if (resource instanceof Job) {
                         ((Job) resource).stop();
                         n++;
                     }
+                    t.boundary();
                 }
             } catch (CloseException e) {
                 throw new RuntimeException(e);
@@ -951,8 +952,8 @@ public class JsonRPCMethods extends HttpServlet {
         List<Map<String, String>> list = new ArrayList<>();
         boolean recursive = _recursive == null ? false : _recursive;
 
-        return Transaction.evaluate(em -> {
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, set)) {
+        return Transaction.evaluate((em, t) -> {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(em, set, LockModeType.NONE)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     Map<String, String> map = new HashMap<>();
