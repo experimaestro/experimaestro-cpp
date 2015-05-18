@@ -26,6 +26,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 
+import static java.lang.String.format;
+
 
 /**
  * A simple file lock for the resource
@@ -67,6 +69,9 @@ public class FileLock extends Lock {
         try {
             while (true) {
                 try {
+                    // FIXME HACK - true hack
+                    if (Files.exists(lockPath))
+                        throw new FileAlreadyExistsException(format("Lock file %s exists", lockFile));
                     Files.createFile(lockPath);
                     LOGGER.debug("Created lock file %s", lockFile);
                     break;
