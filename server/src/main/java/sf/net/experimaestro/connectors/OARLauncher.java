@@ -34,9 +34,14 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.FileSystemException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+
+import static java.lang.String.format;
 
 /**
  * A command line launcher with OAR
@@ -45,12 +50,15 @@ import java.nio.file.Path;
  */
 @Exposed
 public class OARLauncher extends Launcher {
-    static private final Logger LOGGER = Logger.getLogger();
 
     /**
      * Prefix for the PID of the job
      */
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
+
+    static private final Logger LOGGER = Logger.getLogger();
+
+    public static final String OAR_JOB_ID = "OAR_JOB_ID";
 
     /**
      * oarsub command
@@ -62,6 +70,7 @@ public class OARLauncher extends Launcher {
      */
     @Expose
     public OARLauncher() {
+
         super();
     }
 
@@ -69,6 +78,7 @@ public class OARLauncher extends Launcher {
      * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
     static Document exec(SingleHostConnector connector, String command) throws Exception {
+
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
@@ -82,6 +92,7 @@ public class OARLauncher extends Launcher {
      * Evaluate an XPath to a string
      */
     static String evaluateXPathToString(String expression, Document document) {
+
         String value;
         XPath xpath = XPathFactory.newInstance().newXPath();
         try {
@@ -95,61 +106,191 @@ public class OARLauncher extends Launcher {
 
     @Override
     public AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
+
         return new ProcessBuilder(connector);
     }
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
+
         final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
         return unixScriptProcessBuilder;
     }
 
     /**
+     * Short lived information
+     */
+    static private class ShortLivedInformation {
+        /**
+         * Hostname of the node
+         */
+        public String hostname;
+
+        /**
+         * The OAR job ID
+         */
+        String jobId;
+
+        /**
+         * End timestamp
+         */
+        long endTimestamp = 0;
+
+        /**
+         * Time (in seconds) of the short lived runner job (defaut: 1 hour)
+         */
+        long jobDuration = 60 * 60;
+
+        /**
+         * Time (in ms) that we need to run a short-lived process (default
+         */
+        long remainingTime = 10000;
+    }
+
+    /**
      * Process builder for OAR
      */
-    static public class ProcessBuilder extends AbstractProcessBuilder {
+    public class ProcessBuilder extends AbstractProcessBuilder {
+        public static final String XPM_HOSTNAME = "XPM_HOSTNAME";
+
+        /**
+         * Is this a short-lived process?
+         */
+        boolean shortLived;
+
+        String shortLivedJobDirectory = ".experimaestro/oar";
+
         // Command to start
         private String oarCommand = "oarsub";
 
         // The associated connector
         private SingleHostConnector connector;
 
+        private ShortLivedInformation information;
+
         public ProcessBuilder(SingleHostConnector connector) {
+
             this.connector = connector;
+        }
+
+        public ProcessBuilder(SingleHostConnector connector, boolean shortLived) {
+
+            this.connector = connector;
+            this.shortLived = shortLived;
         }
 
         @Override
         public XPMProcess start(boolean fake) throws LaunchException, IOException {
+
             if (fake) return null;
-            final String path = job.getLocator();
-            final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
-            String[] command = new String[]{oarCommand, "--stdout=oar.out", "--stderr=oar.err", id + ".run"};
+            if (shortLived || detach) {
+                // Check if the process is still alive
+                ensureShortLived();
 
-            LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
+                return null;
+            } else {
+                // Use a full
+                final String path = job.getLocator();
+                final String id = UnixScriptProcessBuilder.protect(path, "\"");
 
-            AbstractProcessBuilder processBuilder = connector.processBuilder();
-            processBuilder.command(command);
-            processBuilder.redirectOutput(Redirect.PIPE);
-            processBuilder.redirectError(Redirect.PIPE);
+                ArrayList<String> command = new ArrayList<>();
 
-            // START OAR and retrieves the process ID
-            final XPMProcess process = processBuilder.start(fake);
+                command.add(oarCommand);
+                addOutputOption("stdout", command, output);
+                addOutputOption("stderr", command, error);
+                command.add(format("%s.run", id));
 
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String s;
-            String pid = null;
-            while ((s = reader.readLine()) != null) {
-                if (s.startsWith(OARJOBID_PREFIX))
-                    pid = s.substring(OARJOBID_PREFIX.length());
+                LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
+
+                AbstractProcessBuilder processBuilder = connector.processBuilder();
+                processBuilder.command(command);
+                processBuilder.redirectOutput(Redirect.PIPE);
+                processBuilder.redirectError(Redirect.PIPE);
+
+                // START OAR and retrieves the process ID
+                final XPMProcess process = processBuilder.start(fake);
+
+                final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String s;
+                String pid = null;
+                while ((s = reader.readLine()) != null) {
+                    if (s.startsWith(OARJOBID_PREFIX))
+                        pid = s.substring(OARJOBID_PREFIX.length());
+                }
+
+                LOGGER.info("Started OAR job with PID %s", pid);
+
+                return new OARProcess(job, pid, connector);
+            }
+        }
+
+        protected void addOutputOption(String option, ArrayList<String> command, Redirect output) throws IOException {
+
+            switch (output.type()) {
+                case WRITE:
+                    command.add(format("--%s=%s", option, connector.resolve(output.file())));
+                case INHERIT:
+                    command.add(format("--%s=/dev/null", option));
+                default:
+                    throw new UnsupportedOperationException(format("Cannot handle %s", output));
+            }
+        }
+
+        /**
+         * Ensure the short lived process is started
+         */
+        private void ensureShortLived() throws IOException {
+            // Get the short lived job ending time
+
+            if (information == null) {
+                information = new ShortLivedInformation();
+                // Create the directory if necessary
+                final Path directory = connector.resolve(shortLivedJobDirectory);
+                final Path infopath = directory.resolve("information.env");
+                if (!Files.isDirectory(directory)) {
+                    Files.createDirectories(directory);
+                }
+
+                // Retrieve information if present
+                if (Files.exists(infopath)) {
+                    try (InputStream input = Files.newInputStream(infopath);
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+                        String line;
+                        while (((line = reader.readLine()) != null)) {
+                            String[] fields = line.split("=", 1);
+                            switch (fields[0]) {
+                                case XPM_HOSTNAME:
+                                    information.hostname = fields[1];
+                                    break;
+                                case OAR_JOB_ID:
+                                    information.jobId = fields[1];
+                                    break;
+
+                            }
+                        }
+                    }
+                }
             }
 
-            LOGGER.info("Started OAR job with PID %s", pid);
 
-            return new OARProcess(job, pid, connector);
+            long timestamp = System.currentTimeMillis();
+            if ((information.remainingTime + timestamp) > information.endTimestamp) {
+                // Launch a new OAR sub
+                String command = format("env; echo %s=$(hostname); sleep %d", XPM_HOSTNAME, information.jobDuration);
+
+                final Path directory = connector.resolve(shortLivedJobDirectory);
+                final Path infopath = directory.resolve("information.env");
+
+                final AbstractProcessBuilder builder = connector.processBuilder();
+                builder.command("oarsub", "--stdout=log.out", "--stderr=log.err",
+                        format("--directory=%s", connector.resolve(infopath)),
+                        command);
+
+            }
         }
+
+
     }
-
-
 }
