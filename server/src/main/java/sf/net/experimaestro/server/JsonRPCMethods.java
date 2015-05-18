@@ -21,6 +21,8 @@ package sf.net.experimaestro.server;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -46,6 +48,7 @@ import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.EntityManager;
@@ -963,6 +966,14 @@ public class JsonRPCMethods extends HttpServlet {
             }
             return list;
         });
+    }
+
+    /**
+     * Get information about experimaestro
+     */
+    @RPCMethod(help = "Get build information about experimaestro")
+    public Object buildInformation() {
+        return JSONValue.parse(new GsonBuilder().create().toJson(XPMInformation.get()));
     }
 
     /**

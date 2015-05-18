@@ -466,6 +466,10 @@ def command_ping(args):
         sys.exit(0)
     sys.exit(1)
 
+def command_build_information(args):
+    info = Configuration(args).getJsonServer().buildInformation({})
+    json.dump(info, sys.stdout)
+    sys.stdout.write("\n")
 
 def command_list_methods(args):
     server = Configuration(args).getJsonServer()
@@ -598,6 +602,8 @@ p_log_level.add_argument('id', nargs=1, help='The logger ID')
 p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
 
 subparsers.add_parser("ping", help="Ping the server")
+
+subparsers.add_parser("build-information", help="Returns experimaestro build information")
 
 # Parse arguments
 args = parser.parse_args()

@@ -27,6 +27,7 @@ import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -80,7 +81,10 @@ public class StatusServlet extends XPMServlet {
                     "<p><span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>\n" +
                     "</div>\n");
 
-            out.println("<div id='tab-main' class='tab'><ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li><li><a href='/status/experiments'>Experiments</a></li></ul>");
+            out.println("<div id='tab-main' class='tab'>");
+            out.println("<ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li><li><a href='/status/experiments'>Experiments</a></li>" +
+                    "<li><a href='#xpm-info'>XPM info</a></li>" +
+                    "</ul>");
             out.println("<div id=\"resources\" class=\"tab\"><ul>");
             for (ResourceState state : values) {
                 out.format("<li><a href=\"#state-%s\"><span>%s</span> (<span id=\"state-%s-count\">0</span>)</a></li>", state, state, state);
@@ -117,7 +121,19 @@ public class StatusServlet extends XPMServlet {
             out.println("<div id='resource-detail'><h2 id=\"resource-detail-title\"></h2>" +
                     "<div id=\"resource-detail-path\"></div>" +
                     "<div id=\"resource-detail-content\"></div></div>");
-            out.println("</div>"); // end of tab
+
+            // XPM information
+            out.println("<div id='xpm-info'>");
+            final XPMInformation xpmInformation = XPMInformation.get();
+            out.println("<h2>Experimaestro build information</h2><dl>");
+            out.format("<dt>%s</dt><dd>%s</dd>%n", "Branch", xpmInformation.branch);
+            out.format("<dt>%s</dt><dd>%s</dd>%n", "Commit hash", xpmInformation.commitID);
+            out.format("<dt>%s</dt><dd>%s</dd>%n", "Commit time", xpmInformation.commitTime);
+            out.format("<dt>%s</dt><dd>%b</dd>%n", "Dirty flag", xpmInformation.dirty);
+            out.format("<dt>%s</dt><dd>%s</dd>%n", "Origin", xpmInformation.remoteURL);
+            out.format("<dt>%s</dt><dd>%s</dd>%n", "Tags", xpmInformation.tags);
+            out.println("</dl></div>");
+            out.println("</div>");
 
             out.println("</body></html>");
             return;

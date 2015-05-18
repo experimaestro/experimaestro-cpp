@@ -6,3 +6,4 @@ project.properties
 *.iml
 *.pyc
 /target
+git.properties
