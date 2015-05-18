@@ -22,7 +22,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -40,7 +39,7 @@ import org.python.core.PyException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.XPMContext;
+import sf.net.experimaestro.manager.js.JavascriptContext;
 import sf.net.experimaestro.manager.python.PythonContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -462,7 +461,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try (XPMContext jsXPM = new XPMContext(environment, repositories, scheduler, loggerRepository, debugPort)) {
+        try (JavascriptContext jsXPM = new JavascriptContext(environment, repositories, scheduler, loggerRepository, debugPort)) {
             Object result = null;
             for (JSONArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;

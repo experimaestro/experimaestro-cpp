@@ -28,17 +28,14 @@ import org.mozilla.javascript.ScriptableObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-import sf.net.experimaestro.connectors.ConnectorOptions;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.SSHOptions;
-import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.plans.Constant;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.ScriptingLogger;
 import sf.net.experimaestro.manager.scripting.StaticContext;
-import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -64,11 +61,7 @@ import java.util.Map;
 /**
  * Global context when executing a javascript
  */
-public class XPMContext implements AutoCloseable {
-    static private Scriptable XPM_SCOPE;
-
-    static private final Logger LOGGER = Logger.getLogger();
-
+public class JavascriptContext implements AutoCloseable {
     /**
      * The global functions
      */
@@ -86,16 +79,56 @@ public class XPMContext implements AutoCloseable {
             new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir"),
     };
 
+    static private final Logger LOGGER = Logger.getLogger();
+
+    static private Scriptable XPM_SCOPE;
+
     private final RhinoDebugger debugger;
+
     private final Context context;
+
     private final Map<String, String> environment;
-    private final Repositories repositories;
-    private final StaticContext staticContext;
+
+    private final ScriptContext scriptContext;
+
+    private final Scriptable scope;
+
+    public JavascriptContext(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
+        StaticContext staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
+        // --- Debugging via JSDT
+        // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
+        ContextFactory factory = new ContextFactory();
+
+        if (debugPort != null) {
+            debugger = new RhinoDebugger("transport=socket,suspend=y,address=" + debugPort);
+            debugger.start();
+            factory.addListener(debugger);
+        } else {
+            debugger = null;
+        }
+        context = factory.enterContext();
+
+        this.environment = environment;
+
+
+        scriptContext = staticContext.scriptContext();
+
+        // Create scope
+        scope = Context.getCurrentContext().newObject(init());
+        scope.setPrototype(XPM_SCOPE);
+        scope.setParentScope(null);
+
+        // tasks object
+        addNewObject(context, scope, "tasks", "Tasks", new Object[]{});
+        ScriptableObject.defineProperty(scope, "logger", new ScriptingLogger("xpm"), 0);
+        ScriptableObject.defineProperty(scope, "xpm", new XPM(), 0);
+    }
 
     /**
      * Get the scope where all the main objects are defined
      */
     synchronized public static Scriptable init() throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+
         if (XPM_SCOPE == null) {
             ContextFactory factory = new ContextFactory();
             Context context = factory.enterContext();
@@ -130,7 +163,7 @@ public class XPMContext implements AutoCloseable {
             }
 
             String classname = null;
-            try (InputStream in = XPMContext.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
+            try (InputStream in = JavascriptContext.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
                 DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
                 DocumentBuilder builder = builderFactory.newDocumentBuilder();
                 Document document = builder.parse(in);
@@ -139,7 +172,7 @@ public class XPMContext implements AutoCloseable {
                 NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
                 for (int i = 0; i < classes.getLength(); ++i) {
                     classname = classes.item(i).getTextContent();
-                    JSBaseObject.defineClass(XPM_SCOPE, XPMContext.class.getClassLoader().loadClass(classname));
+                    JSBaseObject.defineClass(XPM_SCOPE, JavascriptContext.class.getClassLoader().loadClass(classname));
                 }
             } catch (IOException e) {
                 throw new XPMRuntimeException("Cannot find scripting file");
@@ -158,38 +191,20 @@ public class XPMContext implements AutoCloseable {
             addNewObject(context, XPM_SCOPE, "xp", "Namespace", new Object[]{"xp", Manager.EXPERIMAESTRO_NS});
 
             // Adds a Pipe object
-            XPMContext.addNewObject(context, XPM_SCOPE, "PIPE", "Pipe", new Object[]{});
+            JavascriptContext.addNewObject(context, XPM_SCOPE, "PIPE", "Pipe", new Object[]{});
 
-            context.exit();
+            Context.exit();
         }
         return XPM_SCOPE;
-    }
-
-    public XPMContext(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
-        this.repositories = repositories;
-        this.staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
-        // --- Debugging via JSDT
-        // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
-        ContextFactory factory = new ContextFactory();
-
-        if (debugPort != null) {
-            debugger = new RhinoDebugger("transport=socket,suspend=y,address=" + debugPort);
-            debugger.start();
-            factory.addListener(debugger);
-        } else {
-            debugger = null;
-        }
-        context = factory.enterContext();
-
-        this.environment = environment;
-
     }
 
     static void addNewObject(Context cx, Scriptable scope,
                              final String objectName, final String className,
                              final Object[] params) {
+
         ScriptableObject.defineProperty(scope, objectName, cx.newObject(scope, className, params), 0);
     }
+
 
     @Override
     public void close() throws Exception {
@@ -200,37 +215,32 @@ public class XPMContext implements AutoCloseable {
             } catch (Exception e) {
                 LOGGER.error(e);
             }
-        // Exit context
-        context.exit();
 
+        // Close script context
+
+        scriptContext.close();
+
+        // Exit context
+        Context.exit();
     }
 
     public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
-        try(ScriptContext scriptContext =  staticContext.scriptContext()) {
-            XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
-            XPMObject.threadXPM.set(xpmObject);
-            return context.evaluateReader(xpmObject.scope, reader, filename, lineno, security);
-        }
+
+        XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
+        XPMObject.threadXPM.set(xpmObject);
+        return context.evaluateReader(xpmObject.scope, reader, filename, lineno, security);
     }
 
     public Object evaluateString(LocalhostConnector connector, Path locator, String content, String filename, int lineno, Object security) throws Exception {
-        try(ScriptContext scriptContext =  staticContext.scriptContext()) {
-            XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
-            XPMObject.threadXPM.set(xpmObject);
-            return context.evaluateString(xpmObject.scope, content, filename, lineno, security);
-        }
+
+        XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
+        XPMObject.threadXPM.set(xpmObject);
+        return context.evaluateString(xpmObject.scope, content, filename, lineno, security);
     }
 
     private XPMObject getXPMObject(LocalhostConnector connector, Path locator, ScriptContext scriptContext)
             throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-            return new XPMObject(scriptContext, connector, locator, context, environment, newScope());
-    }
 
-    public static Scriptable newScope() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        Scriptable newScope = Context.getCurrentContext().newObject(init());
-        newScope.setPrototype(XPM_SCOPE);
-        newScope.setParentScope(null);
-
-        return newScope;
+        return new XPMObject(scriptContext, connector, locator, context, environment, scope);
     }
 }

@@ -25,6 +25,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import sf.net.experimaestro.manager.js.*;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.manager.scripting.Property;
 import sf.net.experimaestro.scheduler.AbstractCommand;
 import sf.net.experimaestro.scheduler.Command;
@@ -33,7 +34,6 @@ import sf.net.experimaestro.scheduler.StreamReference;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -97,15 +97,15 @@ public class JSCommand extends JSBaseObject implements Wrapper {
         if (object == null)
             throw new IllegalArgumentException(String.format("Null argument in command line"));
 
-        if (object instanceof JSPath)
-            object = ((JSPath) object).getPath();
+        if (object instanceof ScriptingPath)
+            object = ((ScriptingPath) object).getPath();
 
-        if (object instanceof Path) {
+        if (object instanceof java.nio.file.Path) {
             if (sb.length() > 0) {
                 command.add(sb.toString());
                 sb.delete(0, sb.length());
             }
-            command.add(new Command.Path((Path) object));
+            command.add(new Command.Path((java.nio.file.Path) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
                 argumentWalkThrough(scope, sb, command, JSUtils.unwrap(child));

@@ -33,6 +33,7 @@ import sf.net.experimaestro.manager.plans.*;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.Tasks;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.JSNamespaceContext;
@@ -121,7 +122,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         Object allObjects[] = new Object[objects.length + 1];
         System.arraycopy(objects, 0, allObjects, 1, objects.length);
         allObjects[0] = this;
-        return JSTasks.merge(cx, scope, outputType, allObjects);
+        return Tasks.merge(cx, scope, outputType, allObjects);
     }
 
     @Expose(scope = true)
@@ -132,7 +133,7 @@ public abstract class JSAbstractOperator extends JSBaseObject {
         NativeObject jsobject = new NativeObject();
         jsobject.put(key, jsobject, this);
         allObjects[0] = jsobject;
-        return JSTasks.merge(cx, scope, outputType, allObjects);
+        return Tasks.merge(cx, scope, outputType, allObjects);
     }
 
     @Expose("to_dot")

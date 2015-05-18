@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -20,7 +20,11 @@ package sf.net.experimaestro.manager.js;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.js.JSAbstractOperator;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JSCopy;
+import sf.net.experimaestro.manager.js.JSOperator;
+import sf.net.experimaestro.manager.js.JSTaskFactory;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
@@ -28,19 +32,19 @@ import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.MergeFunction;
-import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
 
 /**
+ * Access to the tasks
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
  */
-public class JSTasks extends JSBaseObject implements RefCallable {
+@Exposed
+public class Tasks {
     @Expose
-    public JSTasks() {
+    public Tasks() {
     }
 
     @Expose(scope = true)

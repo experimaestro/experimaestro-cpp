@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,42 +19,33 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.apache.log4j.Level;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.Argument;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Lazy;
 import sf.net.experimaestro.utils.log.Logger;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/11/12
  */
-public class JSLogger extends JSBaseObject {
+@Exposed
+public class ScriptingLogger implements Wrapper<Logger> {
     private Logger logger;
-    private XPMObject xpm;
 
     @Expose
-    public JSLogger(XPMObject xpm, String name) {
-        this.xpm = xpm;
-        logger = xpm.getScriptContext().getLogger(name);
+    public ScriptingLogger(String name) {
+        logger = ScriptContext.threadContext().getLogger(name);
     }
 
-    static private void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-        if (args.length < 1)
-            throw new XPMRuntimeException("There should be at least one argument when logging");
-
-        String format = Context.toString(args[0]);
-        Object[] objects = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            objects[i - 1] = JSUtils.unwrap(args[i]);
-
-        ((JSLogger) thisObj).logger.log(level, format, objects);
-    }
+//    private void log(Level level, Scriptable thisObj, Object[] args, Function funObj) {
+//        if (args.length < 1)
+//            throw new XPMRuntimeException("There should be at least one argument when logging");
+//
+//        String format = Context.toString(args[0]);
+//        Object[] objects = new Object[args.length - 1];
+//        for (int i = 1; i < args.length; i++)
+//            objects[i - 1] = JSUtils.unwrap(args[i]);
+//
+//        logger.log(level, format, objects);
+//    }
 
     @Expose("trace")
     public void trace(Object format, Object... objects) {
@@ -88,8 +79,8 @@ public class JSLogger extends JSBaseObject {
 
     @Expose("create")
     @Help(value = "Creates a new logger with the given name")
-    public Scriptable create(String subname) {
-        return xpm.newObject(JSLogger.class, xpm, logger.getName() + "." + subname);
+    public ScriptingLogger create(String subname) {
+        return new ScriptingLogger(logger.getName() + "." + subname);
     }
 
     @Expose("set_level")

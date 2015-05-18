@@ -71,7 +71,7 @@ public class JavaScriptChecker extends XPMEnvironment {
         repository = new Repository(new File("/").toPath());
         Map<String, String> environment = System.getenv();
 
-        scope = XPMContext.newScope();
+        scope = JavascriptContext.newScope();
 
         try(ScriptContext scriptContext = new StaticContext(prepare().getScheduler()).repository(repository).scriptContext()) {
             xpm = new XPMObject(scriptContext, LocalhostConnector.getInstance(), file, context, environment, scope);

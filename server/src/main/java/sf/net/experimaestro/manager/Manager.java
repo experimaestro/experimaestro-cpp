@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager;
 import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.utils.MessageDigestWriter;

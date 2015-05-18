@@ -26,12 +26,13 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ConstructorFunction;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
+import sf.net.experimaestro.manager.scripting.Tasks;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.file.Path;
 import java.util.ArrayList;
 
 import static java.lang.String.format;
@@ -283,8 +284,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 return Undefined.instance;
             }
 
-            if (obj instanceof Path)
-                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
+            if (obj instanceof java.nio.file.Path)
+                return new ScriptingPath((java.nio.file.Path) obj).setXPM(XPMObject.getXPM(scope));
             if (obj instanceof Node) {
                 return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
             }
@@ -302,8 +303,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof JSBaseObject)
                 return (JSBaseObject) obj;
 
-            if (obj instanceof JSTasks.TaskRef) {
-                return (Scriptable) ((JSTasks.TaskRef) obj).get(cx);
+            if (obj instanceof Tasks.TaskRef) {
+                return (Scriptable) ((Tasks.TaskRef) obj).get(cx);
             }
 
             if (obj instanceof Json) {
@@ -313,8 +314,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             if (obj instanceof Node)
                 return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
 
-            if (obj instanceof Path) {
-                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
+            if (obj instanceof java.nio.file.Path) {
+                return new ScriptingPath((java.nio.file.Path) obj).setXPM(XPMObject.getXPM(scope));
             }
 
             return super.wrapNewObject(cx, scope, obj);

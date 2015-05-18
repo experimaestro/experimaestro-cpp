@@ -33,6 +33,7 @@ import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XMLUtils;
@@ -159,16 +160,16 @@ public class JSNode extends JSBaseObject implements Json {
     }
 
     @Expose(scope = true)
-    public JSPath path(Context cx, Scriptable scope) throws FileSystemException {
+    public ScriptingPath path(Context cx, Scriptable scope) throws FileSystemException {
         XPMObject xpm = XPMObject.getXPMObject(scope);
-        return new JSPath(getAttribute(node, ValueType.XP_PATH));
+        return new ScriptingPath(getAttribute(node, ValueType.XP_PATH));
 
     }
 
     @Expose(scope = true)
-    public JSPath path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
+    public ScriptingPath path(Context cx, Scriptable scope, String xpath) throws XPathExpressionException, FileSystemException {
         NodeList nodeList = get_one_node(scope, xpath);
-        return new JSPath(getAttribute(nodeList.item(0), ValueType.XP_PATH));
+        return new ScriptingPath(getAttribute(nodeList.item(0), ValueType.XP_PATH));
     }
 
     @Expose(scope = true)

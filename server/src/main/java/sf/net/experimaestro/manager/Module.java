@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager;
  */
 
 import org.w3c.dom.Document;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -29,6 +30,7 @@ import java.util.TreeMap;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class Module implements Comparable<Module> {
     /**
      * Module unique identifier

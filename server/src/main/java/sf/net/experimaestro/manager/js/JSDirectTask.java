@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -32,7 +33,6 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
 
@@ -146,7 +146,7 @@ public class JSDirectTask extends JSAbstractTask {
         }
 
         @Expose(scope = true, optionalsAtStart = true, optional = 2)
-        public JSPath unique_directory(Context cx, Scriptable scope, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        public ScriptingPath unique_directory(Context cx, Scriptable scope, java.nio.file.Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
@@ -155,12 +155,12 @@ public class JSDirectTask extends JSAbstractTask {
         }
 
         @Expose(scope = true)
-        public JSPath unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        public ScriptingPath unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            Path basedir = resource.getPath().getParent();
+            java.nio.file.Path basedir = resource.getPath().getParent();
             return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
         }
 

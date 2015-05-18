@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -20,18 +20,25 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.Wrapper;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.Argument;
+import sf.net.experimaestro.manager.js.JSArguments;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JSJson;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
-import java.nio.CharBuffer;
-import java.nio.file.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -41,21 +48,22 @@ import java.util.regex.Pattern;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSPath extends JSBaseObject implements Wrapper {
+@Exposed
+public class ScriptingPath extends JSBaseObject implements Wrapper<Path> {
     public static final String JSCLASSNAME = "Path";
     final static Logger LOGGER = Logger.getLogger();
-    private Path path;
+    private java.nio.file.Path path;
 
-    public JSPath() {
+    public ScriptingPath() {
     }
 
     @Expose
-    public JSPath(Path path) {
+    public ScriptingPath(java.nio.file.Path path) {
         this.path = path;
     }
 
     @Expose
-    public JSPath(String path) throws FileSystemException {
+    public ScriptingPath(String path) throws FileSystemException {
         this.path = Paths.get(path);
     }
 
@@ -73,27 +81,27 @@ public class JSPath extends JSBaseObject implements Wrapper {
 
     @Help(value = "Get the parent file object")
     @Expose("get_parent")
-    public JSPath getParent() throws FileSystemException {
+    public ScriptingPath getParent() throws FileSystemException {
         return get_ancestor(1);
     }
 
     @Expose("resolve")
-    public JSPath resolve(String path) throws FileSystemException {
-        return new JSPath(this.path.resolve(path));
+    public ScriptingPath resolve(String path) throws FileSystemException {
+        return new ScriptingPath(this.path.resolve(path));
     }
 
     @Help(value = "Get the n<sup>th</sup> ancestor of this file object",
             arguments = @JSArguments(@Argument(type = "Integer", name = "levels")))
     @Expose("get_ancestor")
-    public JSPath get_ancestor(int level) throws FileSystemException {
+    public ScriptingPath get_ancestor(int level) throws FileSystemException {
         if (level < 0)
             throw new IllegalArgumentException("Level is negative (" + level + ")");
 
-        Path ancestor = this.path.normalize();
+        java.nio.file.Path ancestor = this.path.normalize();
         while (--level >= 0)
             ancestor = ancestor.getParent();
 
-        return new JSPath(ancestor);
+        return new ScriptingPath(ancestor);
     }
 
     @Expose("read_all")
@@ -113,16 +121,16 @@ public class JSPath extends JSBaseObject implements Wrapper {
     @Help(value = "Returns a file object corresponding to the path given in the arguments. " +
             "Each name given corresponds to a new path component starting from this file object.",
             arguments = @JSArguments({@Argument(type = "String", name = "name"), @Argument(name = "...")}))
-    public JSPath path(Object... args) throws FileSystemException {
-        Path current = path;
+    public ScriptingPath path(Object... args) throws FileSystemException {
+        java.nio.file.Path current = path;
         for (int i = 0; i < args.length; i++) {
             current = path(current, i, args[i]);
         }
 
-        return new JSPath(current);
+        return new ScriptingPath(current);
     }
 
-    private Path path(Path current, int i, Object arg) throws FileSystemException {
+    private java.nio.file.Path path(java.nio.file.Path current, int i, Object arg) throws FileSystemException {
         if (arg == null)
             throw new IllegalArgumentException(String.format("Undefined element (index %d) in path", i));
 
@@ -140,7 +148,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return current;
     }
 
-    private Path path(Path current, List array) throws FileSystemException {
+    private java.nio.file.Path path(java.nio.file.Path current, List array) throws FileSystemException {
         for (int i = 0; i < array.size(); i++) {
             Object value = array.get(i);
             current = path(current, i, value);
@@ -187,9 +195,9 @@ public class JSPath extends JSBaseObject implements Wrapper {
     public JSJson find_matching_files(@Argument(name = "regexp", type = "String", help = "The regular expression") String regexp) throws IOException {
         final Pattern pattern = Pattern.compile(regexp);
         final JsonArray array = new JsonArray();
-        DirectoryStream<Path> paths = Files.newDirectoryStream(path, f -> pattern.matcher(f.getFileName().toString()).matches());
+        DirectoryStream<java.nio.file.Path> paths = Files.newDirectoryStream(path, f -> pattern.matcher(f.getFileName().toString()).matches());
 
-        Iterator<Path> iterator = paths.iterator();
+        Iterator<java.nio.file.Path> iterator = paths.iterator();
         while (iterator.hasNext()) {
             array.add(new JsonPath(iterator.next()));
         }
@@ -197,7 +205,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
     }
 
     @Expose
-    public void copy_to(@Argument(name = "destination") JSPath destination) throws IOException {
+    public void copy_to(@Argument(name = "destination") ScriptingPath destination) throws IOException {
         Files.copy(path, destination.path);
     }
 
@@ -219,7 +227,7 @@ public class JSPath extends JSBaseObject implements Wrapper {
         return reader;
     }
 
-    public Path getPath() {
+    public java.nio.file.Path getPath() {
         return path;
     }
 

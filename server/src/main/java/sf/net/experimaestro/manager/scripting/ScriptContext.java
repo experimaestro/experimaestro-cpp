@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.commons.lang.mutable.MutableInt;
+import org.hibernate.sql.Update;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.DirectLauncher;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.manager.QName;
@@ -36,7 +38,6 @@ import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
-import sun.font.Script;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -47,34 +48,59 @@ import java.util.function.Consumer;
 
 /**
  * Context when running a script
- * <p/>
+ * <p>
  * This class hides away what is part of the static context and
  * what if part of the dynamic one
  */
 final public class ScriptContext implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
 
-    /** The thread local context */
+    /**
+     * The thread local context
+     */
     private final static ThreadLocal<ScriptContext> threadContext = new ThreadLocal<>();
 
-    /** Previous context */
-    private ScriptContext oldCurrent = null;
-
-    /** Default locks */
-    Updatable<Map<Resource, Object>> defaultLocks;
-
-    /** Priority */
-    Updatable<Integer> priority;
+    /**
+     * The script static context
+     */
+    final StaticContext staticContext;
 
     /**
-     * Counts the number of items output by an operator; null if not used
+     * Default locks
      */
-    private Map<Operator, MutableInt> counts;
+    Updatable<Map<Resource, Object>> defaultLocks;
+
+    /**
+     * Priority
+     */
+    Updatable<Integer> priority;
 
     /**
      * The working directory
      */
     Updatable<Path> workingDirectory;
+
+    /**
+     * List of listeners for new jobs
+     */
+    ArrayList<Consumer<Job>> newTaskListeners = new ArrayList<>();
+
+    /**
+     * The resource cleaner
+     * <p>
+     * Used to close objects at the end of the execution of a script
+     */
+    Cleaner cleaner;
+
+    /**
+     * Previous context
+     */
+    private ScriptContext oldCurrent = null;
+
+    /**
+     * Counts the number of items output by an operator; null if not used
+     */
+    private Map<Operator, MutableInt> counts;
 
     /**
      * Whether we should simulate
@@ -87,9 +113,9 @@ final public class ScriptContext implements AutoCloseable {
     private Updatable<Launcher> defaultLauncher;
 
     /**
-     * List of listeners for new jobs
+     * The default connector
      */
-    ArrayList<Consumer<Job>> newTaskListeners = new ArrayList<>();
+    private Updatable<Connector> connector;
 
     /**
      * Associated experiment
@@ -102,6 +128,11 @@ final public class ScriptContext implements AutoCloseable {
     private TaskReference task;
 
     /**
+     * The current script path
+     */
+    private Updatable<Path> currentScriptPath;
+
+    /**
      * Cached iterators
      */
     private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
@@ -112,19 +143,13 @@ final public class ScriptContext implements AutoCloseable {
     private IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap = new IdentityHashMap<>();
 
     /**
-     * The script static context
+     * Properties set by the script that will be returned
      */
-    final StaticContext staticContext;
-
-    /**
-     * The resource cleaner
-     * <p>
-     * Used to close objects at the end of the execution of a script
-     */
-    Cleaner cleaner;
+    Map<String, Object> properties;
 
 
     public ScriptContext(StaticContext staticContext) {
+
         if (threadContext.get() != null)
             throw new IllegalStateException("Cannot create a new script context if another one is active");
 
@@ -138,10 +163,14 @@ final public class ScriptContext implements AutoCloseable {
         workingDirectory = Updatable.create(null);
         defaultLauncher = Updatable.create(new DirectLauncher());
         threadContext.set(this);
+        connector = Updatable.create(null);
+        properties = new HashMap<>();
+        currentScriptPath = Updatable.create(null);
     }
 
 
-    private ScriptContext(ScriptContext other) {
+    private ScriptContext(ScriptContext other, boolean newRepository) {
+
         staticContext = other.staticContext;
         cleaner = other.cleaner;
         counts = other.counts;
@@ -152,64 +181,93 @@ final public class ScriptContext implements AutoCloseable {
         simulate = other.simulate.reference();
         workingDirectory = other.workingDirectory.reference();
         defaultLauncher = other.defaultLauncher.reference();
+        connector = other.connector.reference();
+        currentScriptPath = other.currentScriptPath.reference();
 
         counts = other.counts;
+
+        if (newRepository) {
+            properties = new HashMap<>();
+        } else {
+            properties = other.properties;
+        }
+    }
+
+
+    static public ScriptContext threadContext() {
+
+        return threadContext.get();
     }
 
     public ScriptContext counts(boolean flag) {
+
         if (flag) counts = new HashMap<>();
         else counts = null;
         return this;
     }
 
     public Map<Operator, MutableInt> counts() {
+
         return counts;
     }
 
     public boolean simulate() {
+
         return simulate.get();
     }
 
     public void setCachedIterable(Object key, CachedIterable<Value> cachedIterable) {
+
         cachedIterables.put(key, cachedIterable);
     }
 
     public CachedIterable<Value> getCachedIterable(Object key) {
+
         return cachedIterables.get(key);
     }
 
     public void setTaskOperatorMap(IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap) {
+
         this.taskOperatorMap = taskOperatorMap;
     }
 
-    /** Set the current task operator */
+    /**
+     * Set the current task operator
+     */
     public void setTaskOperator(TaskOperator taskOperator) {
+
         setTask(taskOperator == null ? null : taskOperatorMap.get(taskOperator));
     }
 
     public ScriptContext defaultLocks(Map<Resource, Object> defaultLocks) {
+
         this.defaultLocks.set(defaultLocks);
         return this;
     }
 
     public Map<Resource, Object> defaultLocks() {
+
         return defaultLocks.get();
     }
 
     public ScriptContext simulate(boolean simulate) {
+
         this.simulate.set(simulate);
         return this;
     }
 
     public Scheduler getScheduler() {
+
         return staticContext.scheduler;
     }
 
     public void setTask(TaskReference task) {
+
         this.task = task;
     }
 
     public TaskReference getTaskReference() {
+
         return task;
     }
 
@@ -222,79 +280,96 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public Logger getLogger(String loggerName) {
+
         return (Logger) staticContext.loggerRepository.getLogger(loggerName, Logger.factory());
     }
 
     /**
      * Prepares the task with the current task context
+     *
      * @param resource
      */
     public void prepare(Resource resource) {
         // -- Adds default locks
         for (Map.Entry<? extends Resource, ?> lock : defaultLocks.get().entrySet()) {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
-            ((Job)resource).addDependency(dependency);
+            ((Job) resource).addDependency(dependency);
         }
     }
 
-
-
     public ScriptContext addNewTaskListener(Consumer<Job> listener) {
+
         newTaskListeners.add(listener);
         return this;
     }
 
     public ScriptContext addDefaultLocks(Map<Resource, Object> map) {
+
         defaultLocks.modify().putAll(map);
         return this;
     }
 
     public ScriptContext copy() {
-        return new ScriptContext(this);
+        return new ScriptContext(this, false);
+    }
+
+    public ScriptContext copy(boolean newRepository) {
+        return new ScriptContext(this, newRepository);
     }
 
     public TaskFactory getFactory(QName qName) {
+
         return staticContext.repository.getFactory(qName);
     }
 
     public Repository getRepository() {
+
         return staticContext.repository;
     }
 
     public Map<Resource, Object> getDefaultLocks() {
+
         return defaultLocks.get();
     }
 
     public int getPriority() {
+
         return priority.get();
     }
 
     public void setPriority(int priority) {
+
         this.priority.set(priority);
     }
 
     public Path getWorkingDirectory() {
+
         return workingDirectory.get();
     }
 
     public void setWorkingDirectory(Path workingDirectory) {
+
         this.workingDirectory.set(workingDirectory);
     }
 
     public Long getExperimentId() {
+
         return experimentId.get();
     }
 
-    public Cleaner getCleaner() {
-        return cleaner;
+    public void setExperimentId(long experimentId) {
+
+        this.experimentId.set(experimentId);
     }
 
-    public void setExperimentId(long experimentId) {
-        this.experimentId.set(experimentId);
+    public Cleaner getCleaner() {
+
+        return cleaner;
     }
 
     @Override
     public void close() {
+
         if (threadContext.get() != this) {
             LOGGER.error("Current thread context is not ourselves");
         }
@@ -306,18 +381,29 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public void addDefaultLock(Resource resource, Object parameters) {
+
         defaultLocks.modify().put(resource, parameters);
     }
 
-    static public ScriptContext threadContext() {
-        return threadContext.get();
+    public Launcher getDefaultLauncher() {
+
+        return defaultLauncher.get();
     }
 
     public void setDefaultLauncher(Launcher defaultLauncher) {
+
         this.defaultLauncher.set(defaultLauncher);
     }
 
-    public Launcher getDefaultLauncher() {
-        return defaultLauncher.get();
+    public Connector getConnector() {
+        return connector.get();
+    }
+
+    public void setProperty(String key, Object value) {
+        properties.put(key, value);
+    }
+
+    public Path getCurrentScriptPath() {
+        return currentScriptPath.get();
     }
 }

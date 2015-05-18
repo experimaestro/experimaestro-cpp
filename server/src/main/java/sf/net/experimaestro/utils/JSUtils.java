@@ -29,12 +29,12 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.*;
 import sf.net.experimaestro.manager.json.*;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.lang.reflect.Array;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -278,11 +278,11 @@ public class JSUtils {
             return json;
         }
 
-        if (value instanceof Path)
-            return new JsonPath((Path) value);
+        if (value instanceof java.nio.file.Path)
+            return new JsonPath((java.nio.file.Path) value);
 
-        if (value instanceof JSPath)
-            return new JsonPath(((JSPath) value).getPath());
+        if (value instanceof ScriptingPath)
+            return new JsonPath(((ScriptingPath) value).getPath());
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);

@@ -18,20 +18,8 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Marks objects that have exposed methods
+ * A wrapper for java objects
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Exposed {
-    /** Name of the class
-     *
-     * @return The name of the class or an empty string if the class is the class name
-     */
-    String value() default "";
+public interface Wrapper<T> {
 }
