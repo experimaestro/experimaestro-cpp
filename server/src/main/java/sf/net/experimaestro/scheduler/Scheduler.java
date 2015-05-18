@@ -247,10 +247,10 @@ final public class Scheduler {
      * Returns resources filtered by group and state
      *
      * @param states The states of the resource
+     * @param lockMode The lock mode
      * @return A closeable iterator
      */
-    public CloseableIterator<Resource> resources(EntityManager em, EnumSet<ResourceState> states) {
-
+    public CloseableIterator<Resource> resources(EntityManager em, EnumSet<ResourceState> states, LockModeType lockMode) {
         CriteriaBuilder criteria = entityManagerFactory.getCriteriaBuilder();
         CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
         Root<Resource> root = cq.from(Resource.class);
