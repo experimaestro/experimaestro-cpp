@@ -23,12 +23,7 @@ import org.mozilla.javascript.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.ConstructorFunction;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptingPath;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
-import sf.net.experimaestro.manager.scripting.Tasks;
+import sf.net.experimaestro.manager.scripting.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -44,8 +39,6 @@ import static java.lang.String.format;
  * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
-    private XPMObject xpm;
-
     private ClassDescription classDescription;
     private Scriptable prototype;
     private Scriptable parentScope;
@@ -64,13 +57,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
      */
     public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
         return (T) cx.newObject(scope, ClassDescription.getClassName(aClass), args);
-    }
-
-    /**
-     * Get the XPM object (thread)
-     */
-    final static XPMObject xpm() {
-        return XPMObject.getThreadXPM();
     }
 
     /**
@@ -110,8 +96,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         if (function.isEmpty())
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        XPMObject xpm = XPMObject.getThreadXPM();
-        return function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, args);
+        return function.call(jcx, ScriptContext.threadContext(), thisObj, args);
     }
 
     @Override
@@ -253,11 +238,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return toString().getBytes();
     }
 
-    protected JSBaseObject setXPM(XPMObject xpm) {
-        this.xpm = xpm;
-        return this;
-    }
-
     /**
      * The Experimaestro wrap factory to handle special cases
      */
@@ -284,17 +264,10 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 return Undefined.instance;
             }
 
-            if (obj instanceof java.nio.file.Path)
-                return new ScriptingPath((java.nio.file.Path) obj).setXPM(XPMObject.getXPM(scope));
-            if (obj instanceof Node) {
-                return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
-            }
-            if (obj instanceof Json) {
-                return new JSJson((Json) obj).setXPM(XPMObject.getXPM(scope));
-            }
             if (obj.getClass().getAnnotation(Exposed.class) != null) {
                 return new WrappedJavaObject(cx, scope, obj);
             }
+
             return super.wrap(cx, scope, obj, staticType);
         }
 

@@ -48,10 +48,6 @@ public class JSDirectTask extends JSAbstractTask {
      * The wrapper for the javascript object
      */
     private JSTask jsObject;
-    /**
-     * The XPM object
-     */
-    private XPMObject xpm;
 
     public JSDirectTask() {
     }

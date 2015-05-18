@@ -18,13 +18,18 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.Graph;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
@@ -34,6 +39,7 @@ import java.util.Map.Entry;
 /**
  * The abstract TaskReference object
  */
+@Exposed
 public abstract class Task {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -123,7 +129,7 @@ public abstract class Task {
 
     /**
      * Run this task.
-     * <p/>
+     * <p>
      * Calls {@linkplain #doRun(ScriptContext)}
      *
      * @param taskContext
@@ -242,7 +248,7 @@ public abstract class Task {
 
     /**
      * Set a parameter from a text value.
-     * <p/>
+     * <p>
      * Wraps the value into a node whose name depends upon the input
      *
      * @param id
@@ -323,7 +329,7 @@ public abstract class Task {
 
     /**
      * Initialise the TaskReference from another one
-     * <p/>
+     * <p>
      * This method is called right after object creation in {@link #copy()}
      *
      * @param other The task to copy data from
@@ -338,6 +344,26 @@ public abstract class Task {
         // Deep copy
         for (Entry<String, Value> entry : other.values.entrySet()) {
             values.put(entry.getKey(), entry.getValue().copy());
+        }
+    }
+
+    @Expose(value = "set")
+    public void set(String id, Object value) throws NoSuchParameter {
+        DotName qid = DotName.parse(id);
+        setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
+    }
+
+    @Expose("run")
+    public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
+        try (final ScriptContext scriptContext = ScriptContext.threadContext().copy()) {
+            return run(scriptContext.simulate(simulate));
+        }
+    }
+
+    @Expose("run")
+    public Object run() throws ValueMismatchException, NoSuchParameter {
+        try (final ScriptContext scriptContext = ScriptContext.threadContext().copy()) {
+            return run(scriptContext.simulate(false));
         }
     }
 

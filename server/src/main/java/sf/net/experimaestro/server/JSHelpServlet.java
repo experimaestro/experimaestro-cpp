@@ -18,7 +18,7 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.js.JSDocumentation;
+import sf.net.experimaestro.manager.scripting.JSDocumentation;
 import sf.net.experimaestro.utils.Documentation;
 
 import javax.servlet.ServletException;

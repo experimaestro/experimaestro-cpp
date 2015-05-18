@@ -34,8 +34,8 @@ public class JSModule extends JSBaseObject {
     private static final String DEFAULT_OUTPUT_ENCODING = "UTF-8";
     private static final int DEFAULT_LINE_LENGTH = 72;
     private static final int DEFAULT_INDENT = 2;
-    private final XPMObject xpm;
     Module module;
+
     /**
      * Creates a new module from a JavaScript description
      *

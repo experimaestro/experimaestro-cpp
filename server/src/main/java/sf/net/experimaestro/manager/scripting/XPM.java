@@ -48,7 +48,6 @@ import sf.net.experimaestro.manager.XPMXPathFunctionResolver;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.js.JSConnector;
 import sf.net.experimaestro.manager.js.JSTaskFactory;
-import sf.net.experimaestro.manager.js.JSTaskWrapper;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -241,10 +240,6 @@ public class XPM {
         return object.toString();
     }
 
-    public static XPMObject getThreadXPM() {
-
-        return threadXPM.get();
-    }
 
     @Expose("set_property")
     public void setProperty(String name, Object object) {
@@ -359,8 +354,6 @@ public class XPM {
     }
 
 
-    *
-
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
     public Resource commandlineJob(@Argument(name = "jobId") Object path,
@@ -370,8 +363,6 @@ public class XPM {
         Commands commands = new Commands(command);
         return commandlineJob(path, commands, jsoptions);
     }
-
-    new
 
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
@@ -437,7 +428,6 @@ public class XPM {
         }
     }
 
-    *
 
     @Expose("publish")
     @Help("Publish the repository on the web server")
@@ -447,10 +437,6 @@ public class XPM {
         TasksServlet.updateRepository(context().getCurrentScriptPath().toString(), scriptContext.getRepository());
     }
 
-    options
-    *@return
-            *@throws Exception
-    */
 
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
@@ -569,7 +555,6 @@ public class XPM {
         }
     }
 
-    command line(s)
 
     public Resource commandlineJob(Object path, Commands commands, NativeObject options) throws Exception {
 

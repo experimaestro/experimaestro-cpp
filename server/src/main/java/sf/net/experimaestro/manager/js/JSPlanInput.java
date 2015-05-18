@@ -29,6 +29,7 @@ import sf.net.experimaestro.utils.JSUtils;
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 10/3/13
+ * @deprecated Use constant
  */
 @Deprecated
 public class JSPlanInput extends JSAbstractOperator {

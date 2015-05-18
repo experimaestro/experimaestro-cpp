@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
@@ -79,13 +80,13 @@ public class JSTaskFactory extends JSBaseObject implements Wrapper {
     }
 
     @Expose("create")
-    public JSTaskWrapper create() {
-        return new JSTaskWrapper(factory.create(), xpm());
+    public Task create() {
+        return factory.create();
     }
 
     @Expose("commands")
     public Commands commands(JsonObject json) {
-        return factory.commands(json, xpm()._simulate);
+        return factory.commands(json, ScriptContext.threadContext().simulate());
     }
 
     @Expose(value = "run", scope = true)

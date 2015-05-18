@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -22,10 +22,10 @@ import bpiwowar.argparser.utils.Introspection;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.Argument;
-import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.js.JSArguments;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JavascriptContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.Documentation;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
