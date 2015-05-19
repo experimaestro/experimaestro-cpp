@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.Iterator;
@@ -37,26 +38,28 @@ import java.util.Iterator;
 /**
  * JS function to transform inputs in a operators
  */
-public class JSTransform extends JSAbstractOperator implements Function {
-    protected final Context cx;
+public class JSTransform extends JSBaseObject implements Function {
+    protected final LanguageContext cx;
     protected final Scriptable scope;
     protected final Callable f;
 
     private final FunctionOperator operator;
 
-    @Expose
-    public JSTransform(Context cx, Scriptable scope, Callable f, JSAbstractOperator[] operators) {
+    @Expose(context = true)
+    public JSTransform(LanguageContext cx, Object f, Operator[] operators) {
         this.cx = cx;
-        this.scope = scope;
-        this.f = f;
+        JavaScriptContext jcx = (JavaScriptContext) cx;
+        this.scope = jcx.getScope();
+        this.f = (Callable) f;
 
         Operator inputOperator;
         if (operators.length == 1)
-            inputOperator = operators[0].getOperator();
+            inputOperator = operators[0];
         else {
             ProductReference pr = new ProductReference();
-            for (JSAbstractOperator operator : operators)
-                pr.addParent(operator.getOperator());
+            for (Operator operator : operators) {
+                pr.addParent(operator);
+            }
             inputOperator = pr;
         }
 

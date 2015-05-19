@@ -25,35 +25,18 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.ScriptingLogger;
-import sf.net.experimaestro.manager.scripting.StaticContext;
-import sf.net.experimaestro.manager.scripting.XPM;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Map;
@@ -61,24 +44,7 @@ import java.util.Map;
 /**
  * Global context when executing a javascript
  */
-public class JavascriptContext implements AutoCloseable {
-    /**
-     * The global functions
-     */
-    static final JSUtils.FunctionDefinition[] definitions = {
-            new JSUtils.FunctionDefinition(XPMObject.class, "qname", Object.class, String.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "include_repository"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "script_file"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "xpath", String.class, Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "path"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "value"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "file"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "format"),
-            new JSUtils.FunctionDefinition(XPMObject.class, "unwrap", Object.class),
-            new JSUtils.FunctionDefinition(XPMObject.class, "set_workdir"),
-    };
-
+public class JavaScriptRunner implements AutoCloseable {
     static private final Logger LOGGER = Logger.getLogger();
 
     static private Scriptable XPM_SCOPE;
@@ -93,7 +59,7 @@ public class JavascriptContext implements AutoCloseable {
 
     private final Scriptable scope;
 
-    public JavascriptContext(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
+    public JavaScriptRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
         StaticContext staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
         // --- Debugging via JSDT
         // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
@@ -142,9 +108,9 @@ public class JavascriptContext implements AutoCloseable {
             ArrayList<Class<?>> list = new ArrayList<>();
 
             try {
-                final String packageName = XPMObject.class.getPackage().getName();
+                final String packageName = XPM.class.getPackage().getName();
                 final String resourceName = packageName.replace('.', '/');
-                final Enumeration<URL> urls = XPMObject.class.getClassLoader().getResources(resourceName);
+                final Enumeration<URL> urls = XPM.class.getClassLoader().getResources(resourceName);
                 while (urls.hasMoreElements()) {
                     URL url = urls.nextElement();
                     Introspection.addClasses(
@@ -162,36 +128,15 @@ public class JavascriptContext implements AutoCloseable {
                 JSBaseObject.defineClass(XPM_SCOPE, aClass);
             }
 
-            String classname = null;
-            try (InputStream in = JavascriptContext.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
-                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = builderFactory.newDocumentBuilder();
-                Document document = builder.parse(in);
-                XPath xPath = XPathFactory.newInstance().newXPath();
-
-                NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
-                for (int i = 0; i < classes.getLength(); ++i) {
-                    classname = classes.item(i).getTextContent();
-                    JSBaseObject.defineClass(XPM_SCOPE, JavascriptContext.class.getClassLoader().loadClass(classname));
-                }
-            } catch (IOException e) {
-                throw new XPMRuntimeException("Cannot find scripting file");
-            } catch (ParserConfigurationException | SAXException | XPathExpressionException e) {
-                throw new XPMRuntimeException(e, "Error with XML processing");
-            } catch (ClassNotFoundException e) {
-                throw new XPMRuntimeException(e, "Could not find class %s", classname);
-            }
-
-
-            // Add global functions
-            for (JSUtils.FunctionDefinition definition : definitions)
-                JSUtils.addFunction(XPM_SCOPE, definition);
+            Scripting.forEachType(Functional.propagate(aClass -> {
+                JSBaseObject.defineClass(XPM_SCOPE, aClass);
+            }));
 
             // namespace
             addNewObject(context, XPM_SCOPE, "xp", "Namespace", new Object[]{"xp", Manager.EXPERIMAESTRO_NS});
 
             // Adds a Pipe object
-            JavascriptContext.addNewObject(context, XPM_SCOPE, "PIPE", "Pipe", new Object[]{});
+            JavaScriptRunner.addNewObject(context, XPM_SCOPE, "PIPE", "Pipe", new Object[]{});
 
             Context.exit();
         }
@@ -224,23 +169,12 @@ public class JavascriptContext implements AutoCloseable {
         Context.exit();
     }
 
-    public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
-
-        XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
-        XPMObject.threadXPM.set(xpmObject);
-        return context.evaluateReader(xpmObject.scope, reader, filename, lineno, security);
+    public Object evaluateReader(FileReader reader, String filename, int lineno, Object security) throws Exception {
+        return context.evaluateReader(scope, reader, filename, lineno, security);
     }
 
-    public Object evaluateString(LocalhostConnector connector, Path locator, String content, String filename, int lineno, Object security) throws Exception {
-
-        XPMObject xpmObject = getXPMObject(connector, locator, scriptContext);
-        XPMObject.threadXPM.set(xpmObject);
-        return context.evaluateString(xpmObject.scope, content, filename, lineno, security);
+    public Object evaluateString(String content, String filename, int lineno, Object security) throws Exception {
+        return context.evaluateString(scope, content, filename, lineno, security);
     }
 
-    private XPMObject getXPMObject(LocalhostConnector connector, Path locator, ScriptContext scriptContext)
-            throws IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-
-        return new XPMObject(scriptContext, connector, locator, context, environment, scope);
-    }
 }

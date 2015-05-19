@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.experimaestro.tasks.AbstractTask;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
@@ -37,13 +38,8 @@ import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_
 /**
  * A task factory defined by a javascript object
  */
-public class TaskFactoryJavascript extends TaskFactory {
+public class JavaScriptTaskFactory extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
-
-    /**
-     * Our XPM object
-     */
-    private final XPMObject xpm;
 
     /**
      * The server
@@ -72,13 +68,13 @@ public class TaskFactoryJavascript extends TaskFactory {
      * @param scope    The scope
      * @param jsObject The object
      */
-    public TaskFactoryJavascript(QName qname, Scriptable scope, NativeObject jsObject,
+    public JavaScriptTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                                  Repository repository) throws ValueMismatchException {
         super(repository, qname, JSUtils.get(scope,
                 "version", jsObject, "1.0"), null);
         this.jsScope = scope;
         this.jsObject = jsObject;
-        this.xpm = XPMObject.getXPMObject(scope);
+
         String2String prefixes = new JSNamespaceBinder(scope);
 
         // --- Look up the module
@@ -308,7 +304,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
 
     @Override
-    public JSAbstractTask create() {
+    public AbstractTask create() {
         // Get the "createSSHAgentIdentityRepository" constructor
         Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
