@@ -20,7 +20,14 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.utils.JSNamespaceContext;
+import sf.net.experimaestro.utils.JSUtils;
+
+import javax.xml.namespace.NamespaceContext;
+import java.nio.file.Path;
 
 /**
  * The JavaScript context when calling a function
@@ -30,8 +37,24 @@ public class JavaScriptContext extends LanguageContext {
     private Scriptable scope;
 
     public JavaScriptContext(Context context, Scriptable scope) {
+        super();
         this.context = context;
         this.scope = scope;
+    }
+
+    @Override
+    public Json toJSON(Object object) {
+        return JSUtils.toJSON(scope, object);
+    }
+
+    @Override
+    public NamespaceContext getNamespaceContext() {
+        return new JSNamespaceContext(scope);
+    }
+
+    @Override
+    public Path uniqueDirectory(Path basedir, String prefix, QName taskId, Object json) {
+        return null;
     }
 
     public Context context() {
@@ -41,4 +64,9 @@ public class JavaScriptContext extends LanguageContext {
     public Scriptable scope() {
         return scope;
     }
+
+    public Context getContext() {
+        return context;
+    }
+
 }

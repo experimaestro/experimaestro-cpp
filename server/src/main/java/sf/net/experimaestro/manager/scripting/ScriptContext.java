@@ -19,12 +19,13 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.commons.lang.mutable.MutableInt;
-import org.hibernate.sql.Update;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.DirectLauncher;
 import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.Operator;
@@ -39,6 +40,7 @@ import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -147,6 +149,17 @@ final public class ScriptContext implements AutoCloseable {
      */
     Map<String, Object> properties;
 
+    /**
+     * Environment
+     */
+    Updatable<Map<String, String>> environment;
+
+    /**
+     * Submitted jobs
+     *
+     * @param staticContext
+     */
+    Map<String, Resource> submittedJobs;
 
     public ScriptContext(StaticContext staticContext) {
 
@@ -164,8 +177,10 @@ final public class ScriptContext implements AutoCloseable {
         defaultLauncher = Updatable.create(new DirectLauncher());
         threadContext.set(this);
         connector = Updatable.create(null);
-        properties = new HashMap<>();
         currentScriptPath = Updatable.create(null);
+        environment = Updatable.create(new HashMap<>());
+        properties = new HashMap<>();
+        submittedJobs = new HashMap<>();
     }
 
 
@@ -183,8 +198,10 @@ final public class ScriptContext implements AutoCloseable {
         defaultLauncher = other.defaultLauncher.reference();
         connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
+        environment = other.environment.reference();
 
         counts = other.counts;
+        submittedJobs = other.submittedJobs;
 
         if (newRepository) {
             properties = new HashMap<>();
@@ -194,7 +211,7 @@ final public class ScriptContext implements AutoCloseable {
     }
 
 
-    static public ScriptContext threadContext() {
+    static public ScriptContext get() {
 
         return threadContext.get();
     }
@@ -405,5 +422,35 @@ final public class ScriptContext implements AutoCloseable {
 
     public Path getCurrentScriptPath() {
         return currentScriptPath.get();
+    }
+
+
+    public void register(Closeable closeable) {
+        cleaner.register(closeable);
+    }
+
+    public void unregister(AutoCloseable autoCloseable) {
+        cleaner.unregister(autoCloseable);
+    }
+
+
+    public Task getTask(QName qname) {
+        TaskFactory factory = getFactory(qname);
+        if (factory == null)
+            throw new XPMRuntimeException("Could not find a task with name [%s]", qname);
+        LOGGER.info("Creating a new JS task [%s]", factory.getId());
+        return factory.create();
+    }
+
+    public void setCurrentScriptPath(Path currentScriptPath) {
+        this.currentScriptPath.set(currentScriptPath);
+    }
+
+    public String setEnv(String key, String value) {
+        return environment.modify().put(key, value);
+    }
+
+    public String getEnv(String key) {
+        return environment.get().get(key);
     }
 }

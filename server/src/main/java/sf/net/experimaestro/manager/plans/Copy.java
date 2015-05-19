@@ -45,13 +45,13 @@ import java.util.Map;
 public class Copy extends Plan {
     private final Type outputType;
     private final Map<String, Input> inputs = new HashMap<>();
-    private final Plan plan;
 
 
     @Expose
-    public Copy(LanguageContext cx, String outputType, NativeObject plan) throws XPathExpressionException {
-        this.outputType = new Type(QName.parse(outputType, new JSNamespaceContext(scope)));
-        this.plan = new Plan(new AnonymousTaskFactory());
+    public Copy(LanguageContext cx, String outputType, Map plan) throws XPathExpressionException {
+        super(null);
+        this.setFactory(new AnonymousTaskFactory());
+        this.outputType = new Type(QName.parse(outputType, cx.getNamespaceContext()));
         PlanInputs mappings = Plan.getMappings(plan, cx);
 
         Type anyType = new Type(Manager.XP_ANY);
@@ -62,12 +62,11 @@ public class Copy extends Plan {
             inputs.put(name.toString(), new JsonInput(anyType));
         }
 
-        this.plan.add(mappings);
-
+        add(mappings);
     }
 
 
-    private class AnonymousTaskFactory extends TaskFactory {
+     private class AnonymousTaskFactory extends TaskFactory {
         public AnonymousTaskFactory() {
             super(new Repository(null), outputType.qname(), "1.0", "");
         }
@@ -99,7 +98,7 @@ public class Copy extends Plan {
         @Override
         public Json doRun(ScriptContext taskContext) {
             // We just copy the inputs as an output
-            JsonObject json = new JsonObject(map);
+            JsonObject json = new JsonObject();
             json.put(Manager.XP_TYPE.toString(), outputType.qname().toString());
 
             // Loop over non null inputs

@@ -22,7 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Marks properties within JSBaseObject javascript objects
+ * Marks properties within scripting objects
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Property {

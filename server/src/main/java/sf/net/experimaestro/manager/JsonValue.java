@@ -80,4 +80,5 @@ public class JsonValue extends Value {
     public boolean isSet() {
         return value != null;
     }
+
 }

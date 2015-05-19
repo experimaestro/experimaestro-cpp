@@ -22,13 +22,10 @@ import bpiwowar.argparser.utils.Introspection;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import sf.net.experimaestro.manager.js.JSArguments;
 import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JavascriptContext;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.utils.Documentation;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Output;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -36,8 +33,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
-
-import static java.lang.String.format;
 
 /**
  * Automated javascript documentation
@@ -87,67 +82,47 @@ public class JSDocumentation {
         final Documentation.DefinitionList pHelp = new Documentation.DefinitionList();
 
         // We have the arguments() in the JSHelp() object
-        if (jsHelp != null && jsHelp.arguments().length > 0) {
-            final Documentation.Container container = new Documentation.Container();
-            names = container;
+        // No JSHelp
+        final Documentation.Text text = new Documentation.Text();
+        names = text;
+        final Argument returnAnnotation = method.getAnnotation(Argument.class);
+        String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
-            for (JSArguments arguments : jsHelp.arguments()) {
-                final String s = Output.toString(", ", arguments.value(), o -> {
-                    if (o.help() != null) {
-                        pHelp.add(new Documentation.Text(o.name()), new Documentation.Text(o.help()));
-                    }
-                    return format("%s %s", o.type(), o.name());
-                });
-                String returnType = arguments.returnType();
-                if ("".equals(returnType))
-                    returnType = javascriptName(method.getReturnType());
-                container.add(new Documentation.Division(
-                        new Documentation.Text(format("%s%s %s(%s)\n", prefix, returnType, name, s))));
-                help.add(pHelp);
-            }
-        } else {
-            // No JSHelp
-            final Documentation.Text text = new Documentation.Text();
-            names = text;
-            final Argument returnAnnotation = method.getAnnotation(Argument.class);
-            String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
+        text.format("%s%s %s(", prefix, returnType, name);
 
-            text.format("%s%s %s(", prefix, returnType, name);
+        int startAt = 0;
+        if (jsfunction != null && jsfunction.context())
+            startAt = 1;
 
-            int startAt = 0;
-            if (jsfunction != null && jsfunction.scope())
-                startAt = 2;
+        Parameter[] parameters = method.getParameters();
+        boolean first = true;
+        for (int i = startAt; i < parameters.length; i++) {
+            String argName = parameters[i].getName();
+            String argType = null;
 
-            Parameter[] parameters = method.getParameters();
-            boolean first = true;
-            for (int i = startAt; i < parameters.length; i++) {
-                String argName = parameters[i].getName();
-                String argType = null;
-
-                for (Annotation a : parameters[i].getAnnotations()) {
-                    if (a instanceof Argument) {
-                        final Argument jsArg = (Argument) a;
-                        argName = jsArg.equals("") ? argName : jsArg.name();
-                        argType = jsArg.type();
-                        if (jsArg.help() != null)
-                            pHelp.add(new Documentation.Text(jsArg.name()), new Documentation.Text(jsArg.help()));
-                    }
+            for (Annotation a : parameters[i].getAnnotations()) {
+                if (a instanceof Argument) {
+                    final Argument jsArg = (Argument) a;
+                    argName = jsArg.equals("") ? argName : jsArg.name();
+                    argType = jsArg.type();
+                    if (jsArg.help() != null)
+                        pHelp.add(new Documentation.Text(jsArg.name()), new Documentation.Text(jsArg.help()));
                 }
-                if (!first)
-                    text.append(", ");
-                else
-                    first = false;
-
-                if (argType == null || "".equals(argType)) {
-                    Class<?> pClass = parameters[i].getType();
-                    argType = javascriptName(pClass);
-                }
-
-                if (argName.equals("")) argName = "arg_" + i;
-                text.format("%s %s", argType, argName);
             }
-            text.append(")");
+            if (!first)
+                text.append(", ");
+            else
+                first = false;
+
+            if (argType == null || "".equals(argType)) {
+                Class<?> pClass = parameters[i].getType();
+                argType = javascriptName(pClass);
+            }
+
+            if (argName.equals("")) argName = "arg_" + i;
+            text.format("%s %s", argType, argName);
         }
+        text.append(")");
 
         methods.add(names, help);
     }
@@ -188,15 +163,15 @@ public class JSDocumentation {
 
         final Documentation.DefinitionList functions = new Documentation.DefinitionList();
 
-        for (JSUtils.FunctionDefinition d : JavascriptContext.definitions) {
-            final Documentation.Text text = new Documentation.Text(d.getName());
-            try {
-                final Method method = d.getClazz().getDeclaredMethod("js_" + d.getName(), d.getArguments());
-                documentMethod(functions, method, d.getName());
-            } catch (NoSuchMethodException e) {
-                text.format("Method not found... %s in [%s] with %s", d.getName(), d.getClazz().toString(), Arrays.toString(d.getArguments()));
-            }
-        }
+//        for (JSUtils.FunctionDefinition d : JavaScriptRunner.definitions) {
+//            final Documentation.Text text = new Documentation.Text(d.getName());
+//            try {
+//                final Method method = d.getClazz().getDeclaredMethod("js_" + d.getName(), d.getArguments());
+//                documentMethod(functions, method, d.getName());
+//            } catch (NoSuchMethodException e) {
+//                text.format("Method not found... %s in [%s] with %s", d.getName(), d.getClazz().toString(), Arrays.toString(d.getArguments()));
+//            }
+//        }
 
         printer.append(functions);
 
@@ -204,9 +179,6 @@ public class JSDocumentation {
         // --- Objects
         printer.append(new Documentation.Title(1, new Documentation.Text("Objects")));
         ArrayList<Class<?>> list = new ArrayList<>();
-
-        Introspection.addImplementors(list, ScriptableObject.class, XPMObject.class.getPackage().getName(), -1);
-        Introspection.addImplementors(list, JSBaseObject.class, XPMObject.class.getPackage().getName(), -1);
 
         final Documentation.DefinitionList classes = new Documentation.DefinitionList();
 

@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 
 import com.google.common.collect.ImmutableList;
 import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
@@ -49,7 +48,7 @@ public class JSTransform extends JSBaseObject implements Function {
     public JSTransform(LanguageContext cx, Object f, Operator[] operators) {
         this.cx = cx;
         JavaScriptContext jcx = (JavaScriptContext) cx;
-        this.scope = jcx.getScope();
+        this.scope = jcx.scope();
         this.f = (Callable) f;
 
         Operator inputOperator;
@@ -74,19 +73,11 @@ public class JSTransform extends JSBaseObject implements Function {
     }
 
     public Iterator<Json> apply(Json[] parameters) {
-        Object[] args = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++)
-            args[i] = new JSJson(parameters[i]);
-        Json result = JSUtils.toJSON(scope, f.call(cx, scope, null, args));
+        Json result = JSUtils.toJSON(scope, f.call(null, scope, null, parameters));
 
         if (result instanceof JsonArray)
             return ((JsonArray) result).iterator();
 
         return ImmutableList.of(result).iterator();
-    }
-
-    @Override
-    Operator getOperator() {
-        return operator;
     }
 }

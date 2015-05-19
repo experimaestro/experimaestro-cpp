@@ -20,25 +20,23 @@ package sf.net.experimaestro.manager.scripting;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.manager.js.JSAbstractOperator;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JSCopy;
-import sf.net.experimaestro.manager.js.JSOperator;
-import sf.net.experimaestro.manager.js.JSTaskFactory;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
+import sf.net.experimaestro.manager.plans.Copy;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
+import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.MergeFunction;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.xpath.XPathExpressionException;
 
 /**
  * Access to the tasks
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
@@ -47,21 +45,21 @@ public class Tasks {
     public Tasks() {
     }
 
-    @Expose(scope = true)
-    static public JSAbstractOperator merge(Context cx, Scriptable scope, String outputType, Object... objects) {
+    @Expose(context = true)
+    static public Operator merge(LanguageContext cx, String outputType, Object... objects) {
         Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
         ProductReference pr = new ProductReference();
         for (Object object : objects) {
             if (object instanceof NativeObject) {
                 for (Object key : ((NativeObject) object).getIds()) {
                     Object o = ((NativeObject) object).get(key);
-                    if (!(o instanceof JSAbstractOperator))
+                    if (!(o instanceof Operator))
                         throw new XPMRhinoException("Cannot merge object of type " + o.getClass());
                     map.put(pr.getParents().size(), key.toString());
-                    pr.addParent(((JSAbstractOperator) o).getOperator());
+                    pr.addParent(((Operator) o));
                 }
-            } else if (object instanceof JSAbstractOperator) {
-                pr.addParent(((JSAbstractOperator) object).getOperator());
+            } else if (object instanceof Operator) {
+                pr.addParent(((Operator) object));
             } else {
                 throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
             }
@@ -71,69 +69,64 @@ public class Tasks {
             throw new XPMRhinoException("Merge should at least have one argument");
 
         if (pr.getParents().size() == 1 && map.isEmpty()) {
-            return new JSOperator(pr.getParents().get(0));
+            return pr.getParents().get(0);
         }
 
 
-        QName qname = QName.parse(outputType, new JSNamespaceContext(scope));
+        QName qname = QName.parse(outputType, cx.getNamespaceContext());
         FunctionOperator operator = new FunctionOperator(new MergeFunction(qname, map));
         operator.addParent(pr);
-        return new JSOperator(operator);
+        return operator;
     }
 
-    @Expose(value = "set", scope = true)
-    public JSTaskFactory set(Context cx, Scriptable scope, String qname, NativeObject definition) {
-        QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
+    @Expose(value = "set", context = true)
+    public TaskFactory set(LanguageContext cx, String qname, NativeObject definition) {
+        QName id = QName.parse(qname, cx.getNamespaceContext());
         return new TaskRef(id).set(cx, definition);
     }
 
-    @Expose(value = "get", scope = true)
-    public Object get(Context cx, Scriptable scope, String qname) {
-        QName id = QName.parse(qname, JSUtils.getNamespaceContext(scope));
+    @Expose(value = "get", context = true)
+    public Object get(LanguageContext cx, String qname) {
+        QName id = QName.parse(qname, cx.getNamespaceContext());
         return new TaskRef(id).get(cx);
     }
 
-    @Override
-    public String getClassName() {
-        return "Tasks";
-    }
+//
+//    public Object call(LanguageContext cx, Scriptable thisObj, Object[] args) {
+//        if (args.length != 1)
+//            throw new IllegalArgumentException("Expected only one argument");
+//
+//        QName id = QName.parse(JSUtils.toString(args[0]), cx.getNamespaceContext());
+//
+//        final Object o = new TaskRef(id).get(cx);
+//        if (o == null)
+//            throw new XPMRhinoException("Cannot find task %s", id);
+//        return o;
+//    }
 
-    @Override
-    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        if (args.length != 1)
-            throw new IllegalArgumentException("Expected only one argument");
+//    @Override
+//    public refCall(LanguageContext cx, Object[] args) {
+//        if (args.length != 1)
+//            throw new IllegalArgumentException("Expected only one argument");
+//
+//        QName id = QName.parse(JSUtils.toString(args[0]), cx.getNamespaceContext());
+//
+//        return new TaskRef(id);
+//    }
 
-        QName id = QName.parse(JSUtils.toString(args[0]), JSUtils.getNamespaceContext(scope));
-
-        final Object o = new TaskRef(id).get(cx);
-        if (o == null || o == NOT_FOUND)
-            throw new XPMRhinoException("Cannot find task %s", id);
-        return o;
-    }
-
-    @Override
-    public Ref refCall(Context cx, Scriptable scope, Object[] args) {
-        if (args.length != 1)
-            throw new IllegalArgumentException("Expected only one argument");
-
-        QName id = QName.parse(JSUtils.toString(args[0]), JSUtils.getNamespaceContext(scope));
-
-        return new TaskRef(id);
-    }
-
-    @Expose(scope = true)
-    public void add(Context cx, Scriptable scope, String qname, NativeObject taskDescription) {
-        QName id = QName.parse(JSUtils.toString(qname), JSUtils.getNamespaceContext(scope));
+    @Expose(context = true)
+    public void add(LanguageContext cx, String qname, NativeObject taskDescription) {
+        QName id = QName.parse(JSUtils.toString(qname), cx.getNamespaceContext());
         new TaskRef(id).set(cx, taskDescription);
     }
 
-    @Expose(scope = true)
+    @Expose(context = true)
     @Help(value = "Creates an anonymous task that will copy its input as output")
-    public JSCopy copy(Context cx, Scriptable scope, String qname, NativeObject plan) throws XPathExpressionException {
-        return new JSCopy(cx, scope, qname, plan);
+    public Copy copy(LanguageContext cx, String qname, NativeObject plan) throws XPathExpressionException {
+        return new Copy(cx, qname, plan);
     }
 
-    class TaskRef extends Ref {
+    class TaskRef extends ScriptingReference {
         private static final long serialVersionUID = 1L;
 
         private final QName id;
@@ -142,30 +135,23 @@ public class Tasks {
             this.id = id;
         }
 
-        @Override
-        public Object get(Context cx) {
-            XPMObject xpm = XPMObject.getThreadXPM();
-            final TaskFactory factory = xpm.getRepository().getFactory(id);
-            if (factory == null)
-                return NOT_FOUND;
-            final JSTaskFactory jsTaskFactory = new JSTaskFactory(factory);
-            jsTaskFactory.setXPM(xpm);
-            return jsTaskFactory;
+        public Object get(LanguageContext cx) {
+            final ScriptContext scriptContext = ScriptContext.get();
+            return scriptContext.getRepository().getFactory(id);
         }
 
-        @Override
-        public JSTaskFactory set(Context cx, Object _value) {
-            XPMObject xpm = XPMObject.getThreadXPM();
+        public TaskFactory set(LanguageContext cx, Object _value) {
             NativeObject value = (NativeObject) _value;
-            final JSTaskFactory factory;
+            final TaskFactory factory;
+            final ScriptContext scriptContext = ScriptContext.get();
             try {
-                factory = new JSTaskFactory(id, value.getParentScope(), value, xpm.getRepository());
+                factory = new JavaScriptTaskFactory(id, value.getParentScope(), value, scriptContext.getRepository());
             } catch (RhinoException e) {
                 throw e;
             } catch (ValueMismatchException | RuntimeException e) {
                 throw new XPMRhinoException(e);
             }
-            xpm.getRepository().addFactory(factory.factory);
+            scriptContext.getRepository().addFactory(factory);
             return factory;
         }
     }

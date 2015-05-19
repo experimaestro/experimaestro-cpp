@@ -24,15 +24,15 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ConstructorFunction;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
 
 /**
- * An object with exposed fields
+ * A wrapper for exposed java objects
  */
-@JSObjectDescription(name = "@WrappedJavaObject")
 public class JavaScriptObject extends JSBaseObject implements Wrapper {
     private final Object object;
 
-    public JavaScriptObject(Context cx, Scriptable scope, Object object) {
+    public JavaScriptObject(Object object) {
         super(object.getClass());
         this.object = object;
     }
@@ -64,10 +64,9 @@ public class JavaScriptObject extends JSBaseObject implements Wrapper {
             ClassDescription description = ClassDescription.analyzeClass((Class) javaClass);
             String className = ClassDescription.getClassName((Class) javaClass);
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
-            JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-            Object object = constructorFunction.call(jcx, /* FIXME */ null, null, args);
-
-            return new JavaScriptObject(cx, scope, object);
+            final JavaScriptContext jcx = new JavaScriptContext(cx, scope);
+            Object object = constructorFunction.call(jcx, null, args);
+            return new JavaScriptObject(object);
 
         }
 

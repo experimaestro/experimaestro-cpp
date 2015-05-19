@@ -18,8 +18,6 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.js.JSArguments;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -31,7 +29,4 @@ import java.lang.annotation.RetentionPolicy;
 public @interface Help {
     /* Basic description */
     String value();
-
-    /* List of arguments when using the variable style assignement */
-    JSArguments[] arguments() default {};
 }

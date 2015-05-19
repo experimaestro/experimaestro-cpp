@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.collect.AbstractIterator;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
@@ -31,6 +33,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
+@Exposed
 public class Union extends NAryOperator {
 
     @Override
@@ -38,6 +41,12 @@ public class Union extends NAryOperator {
         Union copy = new Union();
         return super.copy(deep, map, copy);
     }
+
+    @Expose
+    public void add(Operator operator) {
+        addParent(operator);
+    }
+
 
     @Override
     protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {

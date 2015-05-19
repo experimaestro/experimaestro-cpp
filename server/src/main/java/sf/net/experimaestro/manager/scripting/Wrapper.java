@@ -21,5 +21,17 @@ package sf.net.experimaestro.manager.scripting;
 /**
  * A wrapper for java objects
  */
-public interface Wrapper<T> {
+public abstract class Wrapper<T> {
+    T object;
+
+    protected Wrapper(T object) {
+        this.object = object;
+    }
+
+    /**
+     * Returns the wrapped value
+     */
+    T unwrap() {
+        return object;
+    }
 }

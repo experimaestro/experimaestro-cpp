@@ -19,27 +19,30 @@ package sf.net.experimaestro.manager.js;
  */
 
 import bpiwowar.argparser.utils.Introspection;
+import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Wrapper;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
+
+import static java.lang.String.format;
 
 /**
  * Global context when executing a javascript
@@ -53,13 +56,13 @@ public class JavaScriptRunner implements AutoCloseable {
 
     private final Context context;
 
-    private final Map<String, String> environment;
-
     private final ScriptContext scriptContext;
 
     private final Scriptable scope;
 
-    public JavaScriptRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
+    private static Map<Class, Constructor> WRAPPERS = new HashMap<>();
+
+    public JavaScriptRunner(Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
         StaticContext staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
         // --- Debugging via JSDT
         // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
@@ -73,9 +76,6 @@ public class JavaScriptRunner implements AutoCloseable {
             debugger = null;
         }
         context = factory.enterContext();
-
-        this.environment = environment;
-
 
         scriptContext = staticContext.scriptContext();
 
@@ -130,6 +130,11 @@ public class JavaScriptRunner implements AutoCloseable {
 
             Scripting.forEachType(Functional.propagate(aClass -> {
                 JSBaseObject.defineClass(XPM_SCOPE, aClass);
+                if (Wrapper.class.isAssignableFrom(aClass)) {
+                    final Class<?> wrappedClass = TypeToken.of(aClass).getSupertype(Wrapper.class).getComponentType().getRawType();
+                    final Constructor<?> constructor = aClass.getConstructor(wrappedClass);
+                    WRAPPERS.put(wrappedClass, constructor);
+                }
             }));
 
             // namespace
@@ -148,6 +153,46 @@ public class JavaScriptRunner implements AutoCloseable {
                              final Object[] params) {
 
         ScriptableObject.defineProperty(scope, objectName, cx.newObject(scope, className, params), 0);
+    }
+
+    /**
+     * Wraps a new object into a JavaScript object
+     * @param object The object to wrap
+     * @return The wrapped object
+     */
+    public static Object wrap(Object object) {
+        if (object == null) {
+            return Undefined.instance;
+        }
+
+        if (object instanceof Scriptable) {
+            return object;
+        }
+
+        // Wrapper case
+        final Constructor constructor = WRAPPERS.get(object.getClass());
+        if (constructor != null) {
+            try {
+                return new JavaScriptObject(constructor.newInstance(object));
+            } catch (Exception e) {
+               throw new UnsupportedOperationException("Could not wrapp object of class " + object.getClass(), e);
+            }
+        }
+
+        // Simple types
+        if (object instanceof String) {
+            return object;
+        }
+
+        // Exposed objects
+        final Exposed exposed = object.getClass().getAnnotation(Exposed.class);
+        if (exposed != null) {
+            return new JavaScriptObject(object);
+        }
+
+        throw new IllegalArgumentException(format("Cannot wrap class %s into python object", object.getClass()));
+
+
     }
 
 

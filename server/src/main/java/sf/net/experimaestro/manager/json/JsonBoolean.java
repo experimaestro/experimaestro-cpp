@@ -30,7 +30,7 @@ import java.io.Writer;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JsonBoolean implements Json {
+public class JsonBoolean extends Json {
     private final boolean value;
 
     public JsonBoolean(boolean value) {

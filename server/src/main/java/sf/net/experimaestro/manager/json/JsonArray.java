@@ -18,9 +18,11 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.base.Joiner;
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
@@ -28,27 +30,22 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 
 import static java.lang.String.format;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 1/4/13
  */
-public class JsonArray extends ArrayList<Json> implements Json {
-    public JsonArray(int initialCapacity) {
-        super(initialCapacity);
-    }
+public class JsonArray extends Json implements Iterable<Json> {
+    ArrayList<Json> array = new ArrayList<>();
+
 
     public JsonArray(Json... elements) {
-        addAll(Arrays.asList(elements));
+        array.addAll(Arrays.asList(elements));
     }
 
     public JsonArray() {
-    }
-
-    public JsonArray(Collection<? extends Json> c) {
-        super(c);
     }
 
     @Override
@@ -73,7 +70,7 @@ public class JsonArray extends ArrayList<Json> implements Json {
     @Override
     public void write(JsonWriter out) throws IOException {
         out.beginArray();
-        for (Json json : this) {
+        for (Json json : array) {
             json.write(out);
         }
         out.endArray();
@@ -81,10 +78,10 @@ public class JsonArray extends ArrayList<Json> implements Json {
 
     @Override
     public Json clone() {
-        JsonArray array = new JsonArray();
-        for (Json json : this)
-            array.add(json.clone());
-        return array;
+        JsonArray newArray = new JsonArray();
+        for (Json json : array)
+            newArray.add(json.clone());
+        return newArray;
     }
 
     @Override
@@ -119,5 +116,24 @@ public class JsonArray extends ArrayList<Json> implements Json {
             json.writeDescriptorString(out, options);
         }
         out.write(']');
+    }
+
+    @Expose
+    public String join(String separator) {
+        return Joiner.on(separator).join(this.array);
+    }
+
+    public void add(Json json) {
+        array.add(json);
+    }
+
+    @Expose(value = "length", property = true)
+    public int size() {
+        return array.size();
+    }
+
+    @Override
+    public Iterator<Json> iterator() {
+        return array.iterator();
     }
 }

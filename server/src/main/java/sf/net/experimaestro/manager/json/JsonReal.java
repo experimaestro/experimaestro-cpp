@@ -30,7 +30,7 @@ import java.io.Writer;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 2/4/13
  */
-public class JsonReal implements Json {
+public class JsonReal extends Json {
     double value;
 
     public JsonReal(double value) {

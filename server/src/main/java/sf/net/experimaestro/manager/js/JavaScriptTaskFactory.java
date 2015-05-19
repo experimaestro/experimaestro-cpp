@@ -18,13 +18,14 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.experimaestro.tasks.AbstractTask;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
@@ -42,7 +43,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-     * The server
+     * The underlying object
      */
     protected NativeObject jsObject;
 
@@ -61,6 +62,20 @@ public class JavaScriptTaskFactory extends TaskFactory {
      */
     private Type output;
 
+    static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
+        Object o = JSUtils.get(scope, key, jsObject, allowNull);
+        if (o == null)
+            return null;
+
+        if (o instanceof QName)
+            return (QName) o;
+        else if (o instanceof String) {
+            return QName.parse(o.toString(), new JSNamespaceContext(scope));
+        }
+
+        throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
+    }
+
 
     /**
      * Creates a new task information from a javascript object
@@ -78,10 +93,10 @@ public class JavaScriptTaskFactory extends TaskFactory {
         String2String prefixes = new JSNamespaceBinder(scope);
 
         // --- Look up the module
-        Module module = JSModule.getModule(repository,
-                JSUtils.get(jsScope, "module", jsObject, null));
-        if (module != null)
-            setModule(module);
+//        Module module = Module.getModule(repository,
+//                JSUtils.get(jsScope, "module", jsObject, null));
+//        if (module != null)
+//            setModule(module);
 
         // --- Get the task inputs
         inputs = new TreeMap<>();
@@ -90,7 +105,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
 
         // --- Get the task outputs
-        QName outQName = JSTaskFactory.getQName(scope, jsObject, "output", true);
+        QName outQName = getQName(scope, jsObject, "output", true);
         if (outQName != null) {
             output = new Type(outQName);
         }
@@ -239,8 +254,8 @@ public class JavaScriptTaskFactory extends TaskFactory {
             if (definition.has("copy", definition)) {
                 final Object copyTo = definition.get("copy", definition);
                 if (copyTo instanceof Boolean) {
-                    if ((Boolean)copyTo)
-                         input.setCopyTo(id);
+                    if ((Boolean) copyTo)
+                        input.setCopyTo(id);
                 } else {
                     input.setCopyTo(JSUtils.toString(copyTo));
                 }
@@ -304,7 +319,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
 
     @Override
-    public AbstractTask create() {
+    public Task create() {
         // Get the "createSSHAgentIdentityRepository" constructor
         Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
@@ -317,8 +332,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
                 throw new RuntimeException(
                         "Could not find the create or run converter.");
 
-            JSDirectTask jsDirectTask = new JSDirectTask(xpm, this, jsScope,
-                    jsObject, (Function) function, output);
+            JSDirectTask jsDirectTask = new JSDirectTask(this, jsScope, jsObject, (Function) function, output);
             jsDirectTask.init();
             return jsDirectTask;
         }

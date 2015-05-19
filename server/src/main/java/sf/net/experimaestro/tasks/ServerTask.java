@@ -38,7 +38,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JavascriptContext;
+import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.server.*;
 import sf.net.experimaestro.utils.log.Logger;
@@ -114,7 +114,7 @@ public class ServerTask extends AbstractTask {
         scheduler = new Scheduler(taskmanagerDirectory);
 
         // Early initialization to detect errors
-        JavascriptContext.init();
+        JavaScriptRunner.init();
 
         // Main repository
         final Repositories repositories = new Repositories(new File("/").toPath());

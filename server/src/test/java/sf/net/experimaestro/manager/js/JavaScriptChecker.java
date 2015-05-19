@@ -26,7 +26,6 @@ import org.testng.TestException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.StaticContext;
@@ -53,7 +52,6 @@ import static java.lang.String.format;
  */
 public class JavaScriptChecker extends XPMEnvironment {
     final static private Logger LOGGER = Logger.getLogger();
-    private final XPMObject xpm;
     private Path file;
     private String content;
     private Context context;
@@ -71,15 +69,10 @@ public class JavaScriptChecker extends XPMEnvironment {
         repository = new Repository(new File("/").toPath());
         Map<String, String> environment = System.getenv();
 
-        scope = JavascriptContext.newScope();
-
         try(ScriptContext scriptContext = new StaticContext(prepare().getScheduler()).repository(repository).scriptContext()) {
-            xpm = new XPMObject(scriptContext, LocalhostConnector.getInstance(), file, context, environment, scope);
-
             // Adds some special functions available for tests only
             JSUtils.addFunction(SSHServer.class, scope, "sshd_server", new Class[]{});
 
-            XPMObject.threadXPM.set(xpm);
             context.evaluateReader(scope, new StringReader(content),
                     file.toString(), 1, null);
         }
@@ -136,7 +129,6 @@ public class JavaScriptChecker extends XPMEnvironment {
             IOException, SecurityException, IllegalAccessException,
             InstantiationException, InvocationTargetException,
             NoSuchMethodException {
-        XPMObject.threadXPM.set(xpm);
         Scriptable newScope = context.newObject(scope);
         newScope.setPrototype(scope);
         newScope.setParentScope(null);

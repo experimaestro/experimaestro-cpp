@@ -20,23 +20,20 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.ClassDescription;
+import sf.net.experimaestro.manager.scripting.ConstructorFunction;
+import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
-import static java.lang.String.format;
-
 /**
  * Base class for all JS objects implementations
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
     private ClassDescription classDescription;
@@ -53,20 +50,13 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     }
 
     /**
-     * Create a new JS object
-     */
-    public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
-        return (T) cx.newObject(scope, ClassDescription.getClassName(aClass), args);
-    }
-
-    /**
      * Defines a new class.
      * <p/>
      * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
      * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
      *
-     * @param scope
-     * @param aClass
+     * @param scope The scope
+     * @param aClass The class
      * @throws IllegalAccessException
      * @throws java.lang.reflect.InvocationTargetException
      * @throws InstantiationException
@@ -85,7 +75,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             }
         } else {
             final String name = ClassDescription.getClassName(aClass);
-            scope.put(name, scope, new WrappedJavaObject.WrappedClass(aClass));
+            scope.put(name, scope, new JavaScriptObject.WrappedClass(aClass));
         }
     }
 
@@ -96,7 +86,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         if (function.isEmpty())
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        return function.call(jcx, ScriptContext.threadContext(), thisObj, args);
+        return function.call(jcx, thisObj, args);
     }
 
     @Override
@@ -260,38 +250,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
-            if (obj == null) {
-                return Undefined.instance;
-            }
-
-            if (obj.getClass().getAnnotation(Exposed.class) != null) {
-                return new WrappedJavaObject(cx, scope, obj);
-            }
-
-            return super.wrap(cx, scope, obj, staticType);
+            return JavaScriptRunner.wrap(obj);
         }
 
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
-            if (obj instanceof JSBaseObject)
-                return (JSBaseObject) obj;
-
-            if (obj instanceof Tasks.TaskRef) {
-                return (Scriptable) ((Tasks.TaskRef) obj).get(cx);
-            }
-
-            if (obj instanceof Json) {
-                return new JSJson((Json) obj).setXPM(XPMObject.getXPM(scope));
-            }
-
-            if (obj instanceof Node)
-                return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
-
-            if (obj instanceof java.nio.file.Path) {
-                return new ScriptingPath((java.nio.file.Path) obj).setXPM(XPMObject.getXPM(scope));
-            }
-
-            return super.wrapNewObject(cx, scope, obj);
+            return (Scriptable)JavaScriptRunner.wrap(obj);
         }
 
     }
@@ -318,9 +282,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             String className = ClassDescription.getClassName((Class) javaObject);
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
             JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-            XPMObject threadXPM = XPMObject.getThreadXPM();
-            Object object = constructorFunction.call(jcx,
-                    threadXPM != null ? threadXPM.getScriptContext() : null, null, args);
+            Object object = constructorFunction.call(jcx, null, args);
 
             return (Scriptable) object;
 

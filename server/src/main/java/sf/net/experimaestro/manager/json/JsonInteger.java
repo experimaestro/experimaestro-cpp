@@ -31,7 +31,7 @@ import java.io.Writer;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JsonInteger implements Json {
+public class JsonInteger extends Json {
     private long value;
 
     public JsonInteger() {

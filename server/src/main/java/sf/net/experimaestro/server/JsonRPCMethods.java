@@ -39,7 +39,7 @@ import org.python.core.PyException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JavascriptContext;
+import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.manager.python.PythonContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -58,7 +58,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
@@ -461,7 +460,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try (JavascriptContext jsXPM = new JavascriptContext(environment, repositories, scheduler, loggerRepository, debugPort)) {
+        try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, scheduler, loggerRepository, debugPort)) {
             Object result = null;
             for (JSONArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
@@ -471,9 +470,9 @@ public class JsonRPCMethods extends HttpServlet {
                 final LocalhostConnector connector = LocalhostConnector.getInstance();
                 Path locator = connector.resolve(filename);
                 if (isFile)
-                    result = jsXPM.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
+                    result = jsXPM.evaluateReader(new FileReader(filename), filename, 1, null);
                 else
-                    result = jsXPM.evaluateString(connector, locator, content, filename, 1, null);
+                    result = jsXPM.evaluateString(content, filename, 1, null);
 
             }
 

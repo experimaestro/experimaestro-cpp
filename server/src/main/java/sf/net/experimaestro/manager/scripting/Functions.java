@@ -18,27 +18,16 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Wrapper;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
-import sf.net.experimaestro.manager.js.*;
+import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -48,6 +37,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSUtils;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -57,12 +47,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
@@ -71,7 +61,7 @@ import static sf.net.experimaestro.utils.JSUtils.unwrap;
  */
 @Exposed
 public class Functions {
-
+    final static private Logger LOGGER = Logger.getLogger();
 
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
@@ -100,7 +90,7 @@ public class Functions {
     @Expose
     @Help("Defines the default launcher")
     public void set_default_launcher(Launcher launcher) {
-        ScriptContext.threadContext().setDefaultLauncher(launcher);
+        ScriptContext.get().setDefaultLauncher(launcher);
     }
 
     @Expose(value = "java_repository", optional = 1, optionalsAtStart = true)
@@ -108,12 +98,15 @@ public class Functions {
     public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
         if (connector == null)
             connector = LocalhostConnector.getInstance();
-        JavaTasksIntrospection.addToRepository(xpm.getRepository(), connector, paths);
+        JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
     }
 
-    @Expose(scope = true, value = "merge")
-    static public NativeObject merge(Context cx, Scriptable scope, Object... objects) {
+    @Expose(context = true, value = "merge")
+    static public NativeObject merge(LanguageContext cx, Object... objects) {
         NativeObject returned = new NativeObject();
+
+        Scriptable scope = null; // FIXME
+        Context jcx = null;
 
         for (Object object : objects) {
             object = JSUtils.unwrap(object);
@@ -124,7 +117,7 @@ public class Functions {
                     if (returned.has(key.toString(), returned))
                         throw new XPMRhinoException("Conflicting id in merge: %s", key);
                     returned.put(key.toString(), returned,
-                            JSBaseObject.XPMWrapFactory.INSTANCE.wrap(cx, scope, entry.getValue(), Object.class));
+                            JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
                 }
             } else if (object instanceof JsonObject) {
                 Json json = (Json) object;
@@ -132,7 +125,7 @@ public class Functions {
                     throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
                 JsonObject jsonObject = (JsonObject) json;
                 for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
-                    returned.put(entry.getKey(), returned, new JSJson(entry.getValue()));
+                    returned.put(entry.getKey(), returned, entry.getValue());
                 }
 
             } else throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
@@ -142,28 +135,28 @@ public class Functions {
     }
 
 
-    @Expose(scope = true)
-    public static String digest(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = JSUtils.toJSON(scope, jsons);
+    @Expose(context = true)
+    public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
+        Json json = cx.toJSON(jsons);
         return Manager.getDigest(json);
     }
 
-    @Expose(scope = true)
-    public static String descriptor(Context cx, Scriptable scope, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = JSUtils.toJSON(scope, jsons);
+    @Expose(context = true)
+    public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
+        Json json = cx.toJSON(jsons);
         return Manager.getDescriptor(json);
     }
 
-    @Expose(scope = true)
-    @Help(value = "Transform plans outputs with a function")
-    public static Scriptable transform(Context cx, Scriptable scope, Callable f, JSAbstractOperator... operators) throws FileSystemException {
-        return new JSTransform(cx, scope, f, operators);
-    }
+//    @Expose(context = true)
+//    @Help(value = "Transform plans outputs with a function")
+//    public static Scriptable transform(LanguageContext cx, Callable f, Operator... operators) throws FileSystemException {
+//        return new JSTransform(cx, scope, f, operators);
+//    }
 
-    @Expose
-    public static JSInput input(String name) {
-        return new JSInput(name);
-    }
+//    @Expose
+//    public static Input input(String name) {
+//        return new JSInput(name);
+//    }
 
     @Expose(value = "_")
     @JSDeprecated
@@ -240,8 +233,9 @@ public class Functions {
                 return (Resource) o;
             } else {
                 final String uri = o instanceof JsonString ? o.toString() : (String) o;
-                if (xpm.simulate()) {
-                    final Resource resource = xpm.submittedJobs.get(uri);
+                final ScriptContext scriptContext = ScriptContext.get();
+                if (scriptContext.simulate()) {
+                    final Resource resource = scriptContext.submittedJobs.get(uri);
                     if (resource == null) {
                         return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
                     }
@@ -258,57 +252,61 @@ public class Functions {
     @Expose()
     @Help("Set the experiment for all future commands")
     public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
-        if (!xpm.simulate()) {
+        if (!context().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
             try (Transaction t = Transaction.create()) {
                 t.em().persist(experiment);
-                xpm.getScriptContext().setExperimentId(experiment.getId());
+                context().setExperimentId(experiment.getId());
                 t.commit();
             }
         }
-        xpm.getScriptContext().setWorkingDirectory(workdir);
+        context().setWorkingDirectory(workdir);
+    }
+
+    private static ScriptContext context() {
+        return ScriptContext.get();
     }
 
     @Expose
     public void set_workdir(java.nio.file.Path workdir) throws FileSystemException {
-        xpm.getScriptContext().setWorkingDirectory(workdir);
+        context().setWorkingDirectory(workdir);
     }
 
     /**
      * Includes a repository
      *
-     * @param _connector
+     * @param connector
      * @param path
      * @param repositoryMode True if we include a repository
      * @return
      */
-    public XPMObject include(Object _connector, String path, boolean repositoryMode)
+    public Object include(LanguageContext cx, Connector connector, String path, boolean repositoryMode)
             throws Exception {
-        // Get the connector
-        if (_connector instanceof Wrapper)
-            _connector = ((Wrapper) _connector).unwrap();
-
-        Connector connector;
-        if (_connector instanceof JSConnector)
-            connector = ((JSConnector) _connector).getConnector();
-        else
-            connector = (Connector) _connector;
-
-        return include(connector.resolve(path), repositoryMode);
+        return include(cx, connector.resolve(path), repositoryMode);
     }
 
+
+    @Expose(context = true)
+    static public Map<String, Object> include_repository(LanguageContext cx, Path path) throws Exception {
+        try (ScriptContext sc = context().copy(true)) {
+            include(cx, path, true);
+            return sc.properties;
+        }
+    }
     /**
      * Includes a repository
      *
+     *
+     * @param cx The language context
      * @param path           The xpath, absolute or relative to the current evaluated script
      * @param repositoryMode If true, creates a new javascript scope that will be independant of this one
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    public XPMObject include(String path, boolean repositoryMode) throws Exception {
-        java.nio.file.Path scriptpath = currentScriptPath.getParent().resolve(path);
+    public Object include(LanguageContext cx, String path, boolean repositoryMode) throws Exception {
+        java.nio.file.Path scriptpath = context().getCurrentScriptPath().getParent().resolve(path);
         LOGGER.debug("Including repository file [%s]", scriptpath);
-        return include(scriptpath, repositoryMode);
+        return include(cx, scriptpath, repositoryMode);
     }
 
     /**
@@ -319,82 +317,18 @@ public class Functions {
      * @throws Exception if something goes wrong
      */
 
-    private XPMObject include(java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
-
-        java.nio.file.Path oldResourceLocator = currentScriptPath;
-        try (InputStream inputStream = Files.newInputStream(scriptPath)) {
-            Scriptable scriptScope = scope;
-            XPMObject xpmObject = this;
-            currentScriptPath = scriptPath;
-
-            if (repositoryMode) {
-                // Run the script in a new environment
-                scriptScope = JavascriptContext.newScope();
-                final TreeMap<String, String> newEnvironment = new TreeMap<>(environment);
-                xpmObject = clone(scriptPath, scriptScope, newEnvironment);
-                threadXPM.set(xpmObject);
-            }
-
+    private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
+        java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
+        try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
+            sc.setCurrentScriptPath(scriptPath);
+//            LanguageContext cx = cx.scope();
             // Avoid adding the protocol if this is a local file
             final String sourceName = scriptPath.toString();
 
-
-            Context.getCurrentContext().evaluateReader(scriptScope, new InputStreamReader(inputStream), sourceName, 1, null);
-
-            return xpmObject;
+            return Context.getCurrentContext().evaluateReader(null, new InputStreamReader(inputStream), sourceName, 1, null);
         } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptPath);
-        } finally {
-            threadXPM.set(this);
-            currentScriptPath = oldResourceLocator;
         }
-
-    }
-    /**
-     * Javascript constructor calling {@linkplain #include(String, boolean)}
-     */
-    @Expose
-    static public void include(Context cx, Scriptable thisObj, Object[] args,
-                                  Function funObj) throws Exception {
-
-        include(cx, thisObj, args, funObj, false);
-    }
-
-
-    /**
-     * Returns a JSPath that corresponds to the path. This can
-     * be used when building command lines containing path to resources
-     * or executables
-     *
-     * @return A {@JSPath}
-     */
-    @Help("Returns a Path corresponding to the path")
-    static public Object js_path(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException, URISyntaxException {
-        if (args.length != 1)
-            throw new IllegalArgumentException("path() needs one argument");
-
-        XPMObject xpm = getXPM(thisObj);
-
-        if (args[0] instanceof ScriptingPath)
-            return args[0];
-
-        final Object o = unwrap(args[0]);
-
-        if (o instanceof ScriptingPath)
-            return o;
-
-        if (o instanceof java.nio.file.Path)
-            return xpm.newObject(ScriptingPath.class, o);
-
-        if (o instanceof String) {
-            final java.nio.file.Path path = Paths.get(new URI(o.toString()));
-            if (!path.isAbsolute()) {
-                return xpm.newObject(ScriptingPath.class, xpm.currentScriptPath.getParent().resolve(path));
-            }
-            return path;
-        }
-
-        throw new XPMRuntimeException("Cannot convert type [%s] to a file xpath", o.getClass().toString());
     }
 
     @Expose
@@ -415,35 +349,6 @@ public class Functions {
     @Help("Returns the Path object corresponding to the current script")
     static public java.nio.file.Path script_file()
             throws FileSystemException {
-        return ScriptContext.threadContext().getCurrentScriptPath();
+        return ScriptContext.get().getCurrentScriptPath();
     }
-
-    @Help(value = "Returns a file relative to the current connector")
-    public static Scriptable js_file(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws FileSystemException {
-        XPMObject xpm = getXPM(thisObj);
-        if (args.length != 1)
-            throw new IllegalArgumentException("file() takes only one argument");
-        final String arg = JSUtils.toString(args[0]);
-        return xpm.context.newObject(xpm.scope, ScriptingPath.JSCLASSNAME,
-                new Object[]{xpm.currentScriptPath.getParent().resolve(arg)});
-    }
-    /**
-     * Recursive flattening of an array
-     *
-     * @param array The array to flatten
-     * @param list  A list of strings that will be filled
-     */
-    static public void flattenArray(NativeArray array, List<String> list) {
-        int length = (int) array.getLength();
-
-        for (int i = 0; i < length; i++) {
-            Object el = array.get(i, array);
-            if (el instanceof NativeArray) {
-                flattenArray((NativeArray) el, list);
-            } else
-                list.add(toString(el));
-        }
-
-    }
-
 }

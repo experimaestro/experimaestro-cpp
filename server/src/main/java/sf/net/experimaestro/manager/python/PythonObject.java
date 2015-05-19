@@ -19,7 +19,6 @@ package sf.net.experimaestro.manager.python;
  */
 
 import org.python.core.PyObject;
-import org.python.core.PyType;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
@@ -37,12 +36,6 @@ class PythonObject extends PyObject {
         PythonType pythonType;
         this.object = object;
         objtype = pythonType = new PythonType(object.getClass());
-        description = pythonType.description;
-    }
-
-    public PythonObject(Object object, PythonType pythonType) {
-        this.object = object;
-        objtype = pythonType;
         description = pythonType.description;
     }
 

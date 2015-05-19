@@ -45,6 +45,7 @@ public class JSCommand extends JSBaseObject implements Wrapper {
      * The underlying command
      */
     AbstractCommand command;
+
     @Property("out")
     StreamReference stream;
 
@@ -98,7 +99,7 @@ public class JSCommand extends JSBaseObject implements Wrapper {
             throw new IllegalArgumentException(String.format("Null argument in command line"));
 
         if (object instanceof ScriptingPath)
-            object = ((ScriptingPath) object).getPath();
+            object = ((ScriptingPath) object).getObject();
 
         if (object instanceof java.nio.file.Path) {
             if (sb.length() > 0) {

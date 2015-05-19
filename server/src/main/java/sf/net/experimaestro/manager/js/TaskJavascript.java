@@ -34,10 +34,13 @@ import static java.lang.String.format;
 /**
  * TaskReference as implemented by a javascript object
  *
+ * FIXME: is this really used?
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class TaskJavascript extends JSAbstractTask {
+public class TaskJavascript extends Task {
     final static private Logger LOGGER = Logger.getLogger();
+
+    private final Scriptable jsScope;
 
     /**
      * The TaskReference object
@@ -49,10 +52,6 @@ public class TaskJavascript extends JSAbstractTask {
      */
     private Function runFunction;
 
-    public TaskJavascript() {
-    }
-
-
     /**
      * Initialise a new task from a JavaScript object
      *
@@ -63,9 +62,10 @@ public class TaskJavascript extends JSAbstractTask {
      */
     public TaskJavascript(TaskFactory taskFactory, Context jsContext,
                           Scriptable jsScope, NativeObject jsObject) {
-        super(taskFactory, jsScope);
+        super();
 
         this.jsObject = jsObject;
+        this.jsScope = jsScope;
 
         // Get the run function
         runFunction = JSUtils.get(jsScope, "run", jsObject, null);
@@ -80,21 +80,26 @@ public class TaskJavascript extends JSAbstractTask {
         jsObject.put("inputs", jsObject, jsInputs);
     }
 
+    @Override
+    public Json doRun(ScriptContext taskContext) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
     /**
      * Run a task
      *
      * @param taskContext
      * @return
      */
-    public Json jsrun(ScriptContext taskContext) {
-        LOGGER.debug("[Running] task: %s", factory.getId());
-        Scriptable result = (Scriptable) runFunction.call(
-                Context.getCurrentContext(), jsScope, jsObject,
-                new Object[]{(Scriptable) jsObject.get("inputs", jsObject)});
-        LOGGER.debug("[/Running] task: %s", factory.getId());
-
-        return getDocument(jsScope, result);
-    }
+//    public Json jsrun(ScriptContext taskContext) {
+//        LOGGER.debug("[Running] task: %s", factory.getId());
+//        Scriptable result = (Scriptable) runFunction.call(
+//                Context.getCurrentContext(), jsScope, jsObject,
+//                new Object[]{(Scriptable) jsObject.get("inputs", jsObject)});
+//        LOGGER.debug("[/Running] task: %s", factory.getId());
+//
+//        return getDocument(jsScope, result);
+//    }
 
     @Override
     protected void init(Task _other) {

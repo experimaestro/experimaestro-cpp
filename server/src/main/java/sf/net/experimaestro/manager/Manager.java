@@ -23,6 +23,7 @@ import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.utils.MessageDigestWriter;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -68,6 +69,7 @@ public class Manager {
 
     /// Ignored value
     public static final QName XP_IGNORE = new QName(null, "$ignore");
+    public static final String XPM_SIGNATURE = ".xpm-signature";
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
@@ -155,7 +157,7 @@ public class Manager {
         Files.createDirectories(uniquePath);
 
         // Create the signature
-        Path signature = uniquePath.resolve(XPMObject.XPM_SIGNATURE);
+        Path signature = uniquePath.resolve(Manager.XPM_SIGNATURE);
         String descriptor = getDescriptor(json);
 
         if (!Files.exists(signature)) {

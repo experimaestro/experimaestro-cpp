@@ -19,25 +19,28 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.manager.scripting.ScriptingPath;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
 
-public class JSDirectTask extends JSAbstractTask {
+public class JSDirectTask extends Task {
     final static private Logger LOGGER = Logger.getLogger();
+
+    private final Scriptable jsScope;
 
     /**
      * The run function
@@ -49,28 +52,8 @@ public class JSDirectTask extends JSAbstractTask {
      */
     private JSTask jsObject;
 
-    public JSDirectTask() {
-    }
-
-    public JSDirectTask(XPMObject xpm, TaskFactory taskFactory, Scriptable jsScope,
-                        NativeObject jsFactory, Function runFunction, Type outputType) {
-        super(taskFactory, jsScope);
-        this.xpm = xpm;
-        this.jsObject = new JSTask(jsFactory);
-        this.runFunction = runFunction;
-    }
-
     @Override
-    protected void init(Task _other) {
-        JSDirectTask other = (JSDirectTask) _other;
-        super.init(other);
-        jsObject = other.jsObject;
-        runFunction = other.runFunction;
-        xpm = other.xpm;
-    }
-
-    @Override
-    public Json jsrun(ScriptContext taskContext) {
+    public Json doRun(ScriptContext taskContext) {
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
@@ -104,10 +87,8 @@ public class JSDirectTask extends JSAbstractTask {
                 jsoninput.put(entry.getKey(), input);
             }
 
-            xpm.setTaskContext(taskContext);
             final Object returned = runFunction.call(cx, jsScope, jsObject,
-                    new Object[]{new JSJson(jsoninput).setXPM(xpm), resultObject});
-            xpm.setTaskContext(null);
+                    new Object[]{jsoninput, resultObject});
             LOGGER.debug("Returned %s", returned);
             if (returned == Undefined.instance || returned == null)
                 throw new XPMRuntimeException(
@@ -130,6 +111,22 @@ public class JSDirectTask extends JSAbstractTask {
         return resultObject;
     }
 
+    public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
+                        NativeObject jsFactory, Function runFunction, Type outputType) {
+        super();
+        this.jsScope = jsScope;
+        this.jsObject = new JSTask(jsFactory);
+        this.runFunction = runFunction;
+    }
+
+    @Override
+    protected void init(Task _other) {
+        JSDirectTask other = (JSDirectTask) _other;
+        super.init(other);
+        jsObject = other.jsObject;
+        runFunction = other.runFunction;
+    }
+
     public class JSTask extends JSBaseObject {
         /**
          * The object?
@@ -141,29 +138,29 @@ public class JSDirectTask extends JSAbstractTask {
             this.jsFactory = jsFactory;
         }
 
-        @Expose(scope = true, optionalsAtStart = true, optional = 2)
-        public ScriptingPath unique_directory(Context cx, Scriptable scope, java.nio.file.Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        @Expose(context = true, optionalsAtStart = true, optional = 2)
+        public Path unique_directory(LanguageContext cx, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+            return cx.uniqueDirectory(basedir, prefix, taskId, json);
         }
 
-        @Expose(scope = true)
-        public ScriptingPath unique_directory(Context cx, Scriptable scope, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+        @Expose(context = true)
+        public Path unique_directory(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
             java.nio.file.Path basedir = resource.getPath().getParent();
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+            return cx.uniqueDirectory(basedir, prefix, taskId, json);
         }
 
 
         @Expose()
         @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
-        public JSJson group(String groupId, JsonObject p) {
+        public Json group(String groupId, JsonObject p) {
             JsonObject json = new JsonObject();
             for (Entry<String, Input> x : getFactory().getInputs().entrySet()) {
                 if (x.getValue().inGroup(groupId)) {
@@ -171,7 +168,7 @@ public class JSDirectTask extends JSAbstractTask {
                 }
             }
 
-            return (JSJson) new JSJson(json).setXPM(xpm);
+            return json;
         }
     }
 }

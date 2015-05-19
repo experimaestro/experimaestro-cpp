@@ -27,7 +27,7 @@ import java.io.Writer;
 /**
  * Created by bpiwowar on 10/9/14.
  */
-public class JsonNull implements Json {
+public class JsonNull extends Json {
     private static JsonNull singleton = new JsonNull();
 
     private JsonNull() {

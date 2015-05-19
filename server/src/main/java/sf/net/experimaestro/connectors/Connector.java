@@ -18,6 +18,8 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Exposed;
+
 import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -40,6 +42,7 @@ import java.nio.file.Path;
 @Table(name = "connector", uniqueConstraints = @UniqueConstraint(name = "identifier", columnNames = "identifier"))
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Exposed
 public abstract class Connector implements Comparable<Connector> {
     /**
      * Each connector has a unique integer ID

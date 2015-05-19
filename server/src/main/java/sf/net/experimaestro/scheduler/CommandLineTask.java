@@ -45,7 +45,7 @@ public class CommandLineTask extends JobRunner {
     /**
      * The environment
      */
-    public TreeMap<String, String> environment = null;
+    public Map<String, String> environment = null;
 
     /**
      * Working directory

@@ -33,14 +33,6 @@ public @interface Expose {
     String value() default "";
 
     /**
-     * Whether the constructor takes scope & context
-     * @deprecated The context should be used to build language agnostic functions
-     */
-    @Deprecated
-    boolean scope() default false;
-
-
-    /**
      * Marks a function that is used when the object is called
      */
     boolean call() default false;
@@ -61,4 +53,9 @@ public @interface Expose {
      */
     boolean context() default false;
 
+    /**
+     * Whether this corresponds to an object property
+     * @return
+     */
+    boolean property() default false;
 }

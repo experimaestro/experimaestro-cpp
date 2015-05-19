@@ -18,8 +18,28 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.json.Json;
+
+import javax.xml.namespace.NamespaceContext;
+import java.nio.file.Path;
+
 /**
  * Language specific context when executing a script
  */
-public class LanguageContext {
+abstract public class LanguageContext {
+    /**
+     * Returns a JSON object from an objct
+     */
+    abstract public Json toJSON(Object object);
+
+    /**
+     * Get the context
+     */
+    public abstract NamespaceContext getNamespaceContext();
+
+    /**
+     * Creates a unique directory
+     */
+    public abstract Path uniqueDirectory(Path basedir, String prefix, QName taskId, Object json);
 }

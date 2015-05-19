@@ -27,15 +27,18 @@ import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.js.*;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.namespace.NamespaceContext;
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -217,9 +220,6 @@ public class JSUtils {
         if (value instanceof Json)
             return (Json) value;
 
-        if (value instanceof JSJson)
-            return ((JSJson) value).getJson();
-
         if (value instanceof String)
             return new JsonString((String) value);
 
@@ -282,7 +282,7 @@ public class JSUtils {
             return new JsonPath((java.nio.file.Path) value);
 
         if (value instanceof ScriptingPath)
-            return new JsonPath(((ScriptingPath) value).getPath());
+            return new JsonPath(((ScriptingPath) value).getObject());
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
@@ -296,22 +296,17 @@ public class JSUtils {
 
     private static Iterable<? extends Map.Entry<Object, Object>> iterable(final NativeObject object) {
         final Object[] ids = object.getIds();
-        return new Iterable<Map.Entry<Object, Object>>() {
-            @Override
-            public Iterator<Map.Entry<Object, Object>> iterator() {
-                return new AbstractIterator<Map.Entry<Object, Object>>() {
-                    int i = 0;
+        return () -> new AbstractIterator<Map.Entry<Object, Object>>() {
+            int i = 0;
 
-                    @Override
-                    protected Map.Entry<Object, Object> computeNext() {
-                        if (i >= ids.length)
-                            return endOfData();
-                        final Object id = ids[i++];
-                        String key = id.toString();
-                        final Object value = object.get(id);
-                        return new AbstractMap.SimpleImmutableEntry<>(key, value);
-                    }
-                };
+            @Override
+            protected Map.Entry<Object, Object> computeNext() {
+                if (i >= ids.length)
+                    return endOfData();
+                final Object id = ids[i++];
+                String key = id.toString();
+                final Object value = object.get(id);
+                return new AbstractMap.SimpleImmutableEntry<>(key, value);
             }
         };
     }
@@ -475,100 +470,12 @@ public class JSUtils {
         if (object instanceof UniqueTag)
             throw new XPMRuntimeException("Undefined cannot be converted to XML", object.getClass());
 
-        if (object instanceof JSNode) {
-            Node node = ((JSNode) object).getNode();
-            if (document.has()) {
-                if (node instanceof Document)
-                    node = ((Document) node).getDocumentElement();
-                return document.get().adoptNode(node);
-            }
-            return node;
-        }
-
-        if (object instanceof JSNodeList) {
-            return ((JSNodeList) object).getList();
-        }
-
         if (object instanceof Scriptable) {
             ((Scriptable) object).getDefaultValue(String.class);
         }
 
         // By default, convert to string
         return document.get().createTextNode(object.toString());
-    }
-
-    /**
-     * Returns true if the object is XML
-     *
-     * @param input
-     * @return
-     */
-    public static boolean isXML(Object input) {
-        return input instanceof XMLObject;
-    }
-
-    /**
-     * Converts a JavaScript object into an XML document
-     *
-     * @param srcObject The javascript object to convert
-     * @param wrapName  If the object is not already a document and has more than one
-     *                  element child (or zero), use this to wrap the elements
-     * @return
-     */
-    public static Document toDocument(Scriptable scope, Object srcObject, QName wrapName) {
-        final Object object = toDOM(scope, srcObject);
-
-        if (object instanceof Document)
-            return (Document) object;
-
-        Document document = XMLUtils.newDocument();
-
-        // Add a new root element if needed
-        NodeList childNodes;
-
-        if (!(object instanceof Node)) {
-            childNodes = (NodeList) object;
-        } else {
-            final Node dom = (Node) object;
-            if (dom.getNodeType() == Node.ELEMENT_NODE) {
-                childNodes = new NodeList() {
-                    @Override
-                    public Node item(int index) {
-                        if (index == 0)
-                            return dom;
-                        throw new IndexOutOfBoundsException(Integer.toString(index) + " out of bounds");
-                    }
-
-                    @Override
-                    public int getLength() {
-                        return 1;
-                    }
-                };
-            } else
-                childNodes = dom.getChildNodes();
-        }
-
-        int elementCount = 0;
-        for (int i = 0; i < childNodes.getLength(); i++)
-            if (childNodes.item(i).getNodeType() == Node.ELEMENT_NODE)
-                elementCount++;
-
-        Node root = document;
-        if (elementCount != 1) {
-            root = document.createElementNS(wrapName.getNamespaceURI(),
-                    wrapName.getLocalPart());
-            document.appendChild(root);
-        }
-
-        // Copy back in the DOM
-        for (int i = 0; i < childNodes.getLength(); i++) {
-            Node node = childNodes.item(i);
-            node = node.cloneNode(true);
-            document.adoptNode(node);
-            root.appendChild(node);
-        }
-
-        return document;
     }
 
     /**
@@ -592,14 +499,6 @@ public class JSUtils {
         return Context.toString(unwrap(object));
     }
 
-    public static int getInteger(Object object) {
-        return (Integer) unwrap(object);
-    }
-
-    public static void addFunction(Scriptable scope, FunctionDefinition definition) throws NoSuchMethodException {
-        addFunction(definition.clazz, scope, definition.name, definition.arguments);
-    }
-
     /**
      * Convert a property into a boolean
      *
@@ -614,10 +513,6 @@ public class JSUtils {
         if (value instanceof Boolean)
             return (Boolean) value;
         return Boolean.parseBoolean(JSUtils.toString(value));
-    }
-
-    public static NamespaceContext getNamespaceContext(final Scriptable scope) {
-        return new JSNamespaceContext(scope);
     }
 
     static public class OptionalDocument {
@@ -643,36 +538,6 @@ public class JSUtils {
             if (node.getOwnerDocument() != get())
                 return get().adoptNode(node.cloneNode(true));
             return node;
-        }
-    }
-
-    /**
-     * Defines a JavaScript function by refering a class, a name and its parameters
-     */
-    static public class FunctionDefinition {
-        Class<?> clazz;
-        String name;
-        Class<?>[] arguments;
-
-        public FunctionDefinition(Class<?> clazz, String name, Class<?>... arguments) {
-            this.clazz = clazz;
-            this.name = name;
-            if (arguments == null || arguments.length == 0)
-                this.arguments = new Class[]{Context.class, Scriptable.class, Object[].class, Function.class};
-            else
-                this.arguments = arguments;
-        }
-
-        public Class<?> getClazz() {
-            return clazz;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Class<?>[] getArguments() {
-            return arguments;
         }
     }
 

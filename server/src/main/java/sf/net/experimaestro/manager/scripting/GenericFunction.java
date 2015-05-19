@@ -56,13 +56,12 @@ public abstract class GenericFunction {
     /**
      * Transform the arguments
      *
-     * @param cx          The script context
      * @param lcx
      * @param declaration
      * @param args
      * @param offset      The offset within the target parameters    @return
      */
-    static Object[] transform(LanguageContext lcx, ScriptContext cx, Declaration declaration, Object[]
+    static Object[] transform(LanguageContext lcx, Declaration declaration, Object[]
             args, Function[] converters, int offset) {
         final Executable executable = declaration.executable();
         final Class<?>[] types = executable.getParameterTypes();
@@ -70,19 +69,9 @@ public abstract class GenericFunction {
 
         // --- Add context and scope if needed
         Expose annotation = executable.getAnnotation(Expose.class);
-        if (annotation != null && (annotation.scope() && annotation.context())) {
-            throw new UnsupportedOperationException("Annotations scope and context cannot be used at the same time");
-        }
-
-        if (annotation == null ? false : annotation.scope()) {
-            JavaScriptContext jcx = (JavaScriptContext) lcx;
-            methodArgs[0] = jcx.context();
-            methodArgs[1] = jcx.scope();
-        }
 
         if (annotation == null ? false : annotation.context()) {
             methodArgs[0] = lcx;
-            methodArgs[1] = cx;
         }
 
         // --- Copy the non vararg parameters
@@ -109,14 +98,13 @@ public abstract class GenericFunction {
     /**
      * Gives a score to a given declaration
      *
-     * @param cx          The script context
      * @param declaration The underlying method or constructor
      * @param args        The arguments
      * @param converters  A list of converters that will be filled by this method
      * @param offset      The offset for the converters
      * @return A score (minimum integer if no conversion is possible)
      */
-    static int score(LanguageContext lcx, ScriptContext cx, Declaration declaration, Object[] args, Function[] converters, MutableInt offset) {
+    static int score(LanguageContext lcx, Declaration declaration, Object[] args, Function[] converters, MutableInt offset) {
 
         final Executable executable = declaration.executable();
         final Class<?>[] types = executable.getParameterTypes();
@@ -125,14 +113,13 @@ public abstract class GenericFunction {
         // Get the annotations
         Expose annotation = declaration.executable.getAnnotation(Expose.class);
         final boolean contextAnnotation = annotation == null ? false : annotation.context();
-        final boolean scopeAnnotation = annotation == null ? false : annotation.scope();
         int optional = annotation == null ? 0 : annotation.optional();
 
         // Start the scoring
         Converter converter = new Converter();
 
         // Offset in the types
-        offset.setValue(contextAnnotation || scopeAnnotation ? 2 : 0);
+        offset.setValue(contextAnnotation ? 1 : 0);
 
         // Number of "true" arguments (not scope, not vararg)
         final int nbArgs = types.length - offset.intValue() - (isVarArgs ? 1 : 0);
@@ -155,7 +142,7 @@ public abstract class GenericFunction {
         // Normal arguments
         for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
             final Object o = args[i];
-            converters[i] = converter.converter(lcx, cx, o, types[i + offset.intValue()]);
+            converters[i] = converter.converter(lcx, o, types[i + offset.intValue()]);
         }
 
         // Var args
@@ -164,7 +151,7 @@ public abstract class GenericFunction {
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final Object o = args[nbArgs + i];
-                converters[nbArgs + i] = converter.converter(lcx, cx, o, type);
+                converters[nbArgs + i] = converter.converter(lcx, o, type);
             }
         }
 
@@ -178,7 +165,7 @@ public abstract class GenericFunction {
 
     protected abstract <T extends Declaration> Iterable<T> declarations();
 
-    public Object call(LanguageContext lcx, ScriptContext cx, Object thisObj, Object[] args) {
+    public Object call(LanguageContext lcx, Object thisObj, Object[] args) {
         Declaration argmax = null;
         int max = Integer.MIN_VALUE;
 
@@ -188,7 +175,7 @@ public abstract class GenericFunction {
 
         for (Declaration method : declarations()) {
             MutableInt offset = new MutableInt(0);
-            int score = score(lcx, cx, method, args, converters, offset);
+            int score = score(lcx, method, args, converters, offset);
             if (score > max) {
                 max = score;
                 argmax = method;
@@ -213,7 +200,7 @@ public abstract class GenericFunction {
 
         // Call the constructor
         try {
-            Object[] transformedArgs = transform(lcx, cx, argmax, args, argmaxConverters, argMaxOffset);
+            Object[] transformedArgs = transform(lcx, argmax, args, argmaxConverters, argMaxOffset);
             final Object result = argmax.invoke(transformedArgs);
 
             return result;
@@ -276,7 +263,7 @@ public abstract class GenericFunction {
     static public class Converter {
         int score = Integer.MAX_VALUE;
 
-        Function converter(LanguageContext lcx, ScriptContext cx, Object o, Class<?> type) {
+        Function converter(LanguageContext lcx, Object o, Class<?> type) {
             if (o == null) {
                 score--;
                 return IDENTITY;
@@ -305,7 +292,7 @@ public abstract class GenericFunction {
                     final ListConverter listConverter = new ListConverter(innerType);
 
                     while (iterator.hasNext()) {
-                        listConverter.add(converter(lcx, cx, iterator.next(), innerType));
+                        listConverter.add(converter(lcx, iterator.next(), innerType));
                         if (score == Integer.MIN_VALUE) {
                             return null;
                         }
@@ -353,7 +340,7 @@ public abstract class GenericFunction {
             // Everything else failed... unwrap and try again
             if (o instanceof Wrapper) {
                 score -= 1;
-                Function converter = converter(lcx, cx, ((Wrapper) o).unwrap(), type);
+                Function converter = converter(lcx, ((Wrapper) o).unwrap(), type);
                 return converter != null ? UNWRAPPER.andThen(converter) : null;
             }
 

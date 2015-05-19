@@ -33,7 +33,7 @@ import static java.lang.String.format;
 /**
  * The default interface for JsonPath
  */
-public class JsonPath implements Json {
+public class JsonPath extends Json {
     Path path;
 
     private JsonPath() {

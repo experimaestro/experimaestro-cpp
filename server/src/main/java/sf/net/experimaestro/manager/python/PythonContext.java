@@ -27,13 +27,16 @@ import org.python.core.PyString;
 import org.python.core.PyType;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -51,7 +54,7 @@ public class PythonContext implements AutoCloseable {
 
     private static Map<String, PythonType> TYPES;
 
-    private static Map<Class<?>, PythonType> WRAPPERS;
+    private static Map<Class, Constructor> WRAPPERS;
 
     private final Map<String, String> environment;
 
@@ -101,18 +104,18 @@ public class PythonContext implements AutoCloseable {
      * Gather types, etc.
      */
     static private void init() {
-
         if (TYPES == null) {
             TYPES = new HashMap<>();
             WRAPPERS = new HashMap<>();
-            Scripting.forEachType(aClass -> {
+            Scripting.forEachType(Functional.propagate(aClass -> {
                 final PythonType type = new PythonType(aClass);
                 TYPES.put(type.getName(), type);
-                if (type instanceof Wrapper) {
+                if (Wrapper.class.isAssignableFrom(aClass)) {
                     final Class wrappedClass = TypeToken.of(aClass).getSupertype(Wrapper.class).getComponentType().getRawType();
-                    WRAPPERS.put(wrappedClass, type);
+                    final Constructor constructor = aClass.getConstructor(wrappedClass);
+                    WRAPPERS.put(wrappedClass, constructor);
                 }
-            });
+            }));
         }
     }
 
@@ -124,11 +127,18 @@ public class PythonContext implements AutoCloseable {
         if (object instanceof PyObject)
             return (PyObject) object;
 
-        final PythonType pyType = WRAPPERS.get(object.getClass());
-        if (pyType != null) {
-            new PythonObject(object, pyType);
-        }
 
+        final Class<?> objectClass = object.getClass();
+
+        // Wrapper case
+        final Constructor constructor = WRAPPERS.get(objectClass);
+        if (constructor != null) {
+            try {
+                return new PythonObject(constructor.newInstance(object));
+            } catch(Exception e) {
+                throw new XPMRuntimeException(e, "Could not construct wrapper %s", objectClass);
+            }
+        }
 
         // Simple types
         if (object instanceof String) {
@@ -136,12 +146,12 @@ public class PythonContext implements AutoCloseable {
         }
 
         // Exposed objects
-        final Exposed exposed = object.getClass().getAnnotation(Exposed.class);
+        final Exposed exposed = objectClass.getAnnotation(Exposed.class);
         if (exposed != null) {
             return new PythonObject(object);
         }
 
-        throw new IllegalArgumentException(format("Cannot wrap class %s into python object", object.getClass()));
+        throw new IllegalArgumentException(format("Cannot wrap class %s into python object", objectClass));
     }
 
     public static Object[] unwrap(PyObject[] args) {

@@ -31,7 +31,7 @@ import java.io.Writer;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JsonString implements Json {
+public class JsonString extends Json {
     String string;
 
     public JsonString() {

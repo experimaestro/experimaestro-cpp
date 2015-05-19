@@ -18,8 +18,6 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
@@ -355,14 +353,14 @@ public abstract class Task {
 
     @Expose("run")
     public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
-        try (final ScriptContext scriptContext = ScriptContext.threadContext().copy()) {
+        try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
             return run(scriptContext.simulate(simulate));
         }
     }
 
     @Expose("run")
     public Object run() throws ValueMismatchException, NoSuchParameter {
-        try (final ScriptContext scriptContext = ScriptContext.threadContext().copy()) {
+        try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
             return run(scriptContext.simulate(false));
         }
     }
