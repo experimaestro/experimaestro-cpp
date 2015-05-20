@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
@@ -39,6 +40,7 @@ import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_
 /**
  * A task factory defined by a javascript object
  */
+@Exposed
 public class JavaScriptTaskFactory extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
 

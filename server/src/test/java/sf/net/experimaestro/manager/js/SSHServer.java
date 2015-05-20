@@ -20,10 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import com.pastdev.jsch.IOUtils;
 import org.apache.sshd.SshServer;
-import org.apache.sshd.common.ForwardingFilter;
 import org.apache.sshd.common.NamedFactory;
-import org.apache.sshd.common.Session;
-import org.apache.sshd.common.SshdSocketAddress;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;
@@ -32,8 +29,9 @@ import org.apache.sshd.server.auth.UserAuthNone;
 import org.apache.sshd.server.command.ScpCommandFactory;
 import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -41,7 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,17 +47,20 @@ import java.util.List;
  * An embedded SSH server (used for testing)
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * x@date 15/8/12
+ *         x@date 15/8/12
  */
 public class SSHServer {
     static final private Logger LOGGER = Logger.getLogger();
+
     static TemporaryDirectory directory;
+
     /**
      * Our SSH server port
      */
     private static int socketPort = -1;
 
-    synchronized static public int js_sshd_server() throws IOException {
+    @Expose
+    synchronized static public int sshd_server() throws IOException {
         if (socketPort > 0)
             return socketPort;
 
@@ -83,11 +83,13 @@ public class SSHServer {
         list.add(new NamedFactory<Command>() {
             @Override
             public String getName() {
+
                 return "sftp";
             }
 
             @Override
             public Command create() {
+
                 return new SftpSubsystem();
             }
         });
@@ -141,6 +143,7 @@ public class SSHServer {
      * @throws java.io.IOException
      */
     public static int findFreeLocalPort() throws IOException {
+
         ServerSocket server = new ServerSocket(0);
         try {
             return server.getLocalPort();
@@ -156,9 +159,11 @@ public class SSHServer {
      * @param out
      */
     static private Thread copyStream(final InputStream inputStream, final OutputStream out) {
+
         final Thread thread = new Thread("Stream copy") {
             @Override
             public void run() {
+
                 try {
                     IOUtils.copy(inputStream, out);
                 } catch (IOException e) {
@@ -184,33 +189,41 @@ public class SSHServer {
     private static class TestCommandFactory extends ScpCommandFactory {
 
         public Command createCommand(final String command) {
+
             return new Command() {
                 public ExitCallback callback = null;
+
                 public OutputStream out = null;
+
                 public OutputStream err = null;
 
                 @Override
                 public void setInputStream(InputStream in) {
+
                 }
 
                 @Override
                 public void setOutputStream(OutputStream out) {
+
                     this.out = out;
                 }
 
                 @Override
                 public void setErrorStream(OutputStream err) {
+
                     this.err = err;
                 }
 
                 @Override
                 public void setExitCallback(ExitCallback callback) {
+
                     this.callback = callback;
 
                 }
 
                 @Override
                 public void start(Environment env) throws IOException {
+
                     final ProcessBuilder builder = new ProcessBuilder();
 
                     // Use sh for splitting
@@ -230,6 +243,7 @@ public class SSHServer {
                     new Thread() {
                         @Override
                         public void run() {
+
                             try {
                                 final int exitValue = process.waitFor();
                                 LOGGER.info("Process finished [%d]", exitValue);
@@ -250,6 +264,7 @@ public class SSHServer {
 
                 @Override
                 public void destroy() {
+
                 }
             };
         }

@@ -83,10 +83,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
         MethodFunction function = getMethodFunction(null);
-        if (function.isEmpty())
+        if (function.isEmpty()) {
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
+        }
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        return function.call(jcx, thisObj, args);
+        return JavaScriptRunner.wrap(function.call(jcx, thisObj, args));
     }
 
     @Override

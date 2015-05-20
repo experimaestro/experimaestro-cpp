@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents all the methods with the same name within the same object
@@ -41,7 +42,7 @@ public class MethodFunction extends GenericFunction {
     }
 
     @Override
-    protected String getName() {
+    public String getName() {
         return name;
     }
 
@@ -62,7 +63,7 @@ public class MethodFunction extends GenericFunction {
         });
     }
 
-    public void add(Object thisObj, ArrayList<Method> methods) {
+    public void add(Object thisObj, List<Method> methods) {
         groups.add(new Group(thisObj, methods));
     }
 
@@ -72,9 +73,9 @@ public class MethodFunction extends GenericFunction {
      */
     static class Group {
         final Object thisObject;
-        ArrayList<Method> methods = new ArrayList<>();
+        List<Method> methods = new ArrayList<>();
 
-        Group(Object thisObject, ArrayList<Method> methods) {
+        Group(Object thisObject, List<Method> methods) {
             this.thisObject = thisObject;
             this.methods = methods;
         }

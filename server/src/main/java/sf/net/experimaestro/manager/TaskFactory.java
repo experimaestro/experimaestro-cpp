@@ -24,6 +24,7 @@ import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Commands;
 
@@ -155,8 +156,11 @@ public abstract class TaskFactory {
 
     @Help("Creates a plan from this task")
     @Expose(value = "run", context = true)
-    public Object run(LanguageContext cx, NativeObject object) throws ExperimaestroCannotOverwrite {
-        return new Plan(this).run();
+    public Object run(LanguageContext cx, Map map) throws ExperimaestroCannotOverwrite {
+        final Plan plan = new Plan(this);
+        PlanInputs inputs= Plan.getMappings(map, cx);
+        plan.add(inputs);
+        return plan.run();
     }
 
     @Help("Creates a plan from this task")

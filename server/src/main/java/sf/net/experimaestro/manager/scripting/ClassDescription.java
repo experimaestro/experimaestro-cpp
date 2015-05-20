@@ -76,22 +76,11 @@ public class ClassDescription {
 
                 map = description.methods;
                 for (Method method : aClass.getDeclaredMethods()) {
-                    // Js function case
-                    final Expose function = method.getAnnotation(Expose.class);
-
-                    if (function != null) {
-                        addMethod(map, method, function.value(), function.call());
-                        continue;
-                    }
-
                     // Exposed case
                     final Expose expose = method.getAnnotation(Expose.class);
                     if (expose != null) {
-                        addMethod(map, method, expose.value(), false);
-                        continue;
+                        addMethod(map, method, expose.value(), expose.call());
                     }
-
-
                 }
 
                 // Adds all the ancestors methods

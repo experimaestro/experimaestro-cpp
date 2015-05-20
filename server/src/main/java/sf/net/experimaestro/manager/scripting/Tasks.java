@@ -85,7 +85,7 @@ public class Tasks {
         return new TaskRef(id).set(cx, definition);
     }
 
-    @Expose(value = "get", context = true)
+    @Expose(context = true, call = true)
     public Object get(LanguageContext cx, String qname) {
         QName id = QName.parse(qname, cx.getNamespaceContext());
         return new TaskRef(id).get(cx);
@@ -122,7 +122,7 @@ public class Tasks {
 
     @Expose(context = true)
     @Help(value = "Creates an anonymous task that will copy its input as output")
-    public Copy copy(LanguageContext cx, String qname, NativeObject plan) throws XPathExpressionException {
+    public Copy copy(LanguageContext cx, String qname, NativeObject plan){
         return new Copy(cx, qname, plan);
     }
 

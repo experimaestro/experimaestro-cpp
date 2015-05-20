@@ -87,7 +87,7 @@ public class Plan extends Operator {
      * @return
      * @throws XPathExpressionException
      */
-    public Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
+    public Operator getOperator(boolean simplify, boolean initialize){
         return prepare(simplify, initialize);
     }
 
@@ -126,7 +126,7 @@ public class Plan extends Operator {
      * @param scriptContext
      * @return An iterator over the generated XML values
      */
-    public Iterator<Json> run(ScriptContext scriptContext) throws XPathExpressionException {
+    public Iterator<Json> run(ScriptContext scriptContext){
         Operator operator = prepare(true, true);
 
         // Now run
@@ -142,7 +142,7 @@ public class Plan extends Operator {
 
     }
 
-    private Operator prepare(boolean simplify, boolean initialize) throws XPathExpressionException {
+    private Operator prepare(boolean simplify, boolean initialize){
         // Creates the TaskOperator
         Operator operator = prepare(new HashMap<>(), new OperatorMap());
         if (LOGGER.isTraceEnabled())
@@ -373,7 +373,7 @@ public class Plan extends Operator {
      * @param object
      */
     @Expose(context = true)
-    public Plan(LanguageContext cx, TaskFactory factory, Map object) throws XPathExpressionException {
+    public Plan(LanguageContext cx, TaskFactory factory, Map object){
         this(factory);
         add(getMappings(object, cx));
     }
@@ -386,12 +386,12 @@ public class Plan extends Operator {
      * @return
      * @throws XPathExpressionException
      */
-    static public PlanInputs getMappings(Map object, LanguageContext cx) throws XPathExpressionException {
+    static public PlanInputs getMappings(Map object, LanguageContext cx)  {
         PlanInputs inputs = new PlanInputs();
         return getMappings(inputs, DotName.EMPTY, object, cx);
     }
 
-    static private PlanInputs getMappings(PlanInputs inputs, DotName prefix, Map object, LanguageContext lcx) throws XPathExpressionException {
+    static private PlanInputs getMappings(PlanInputs inputs, DotName prefix, Map object, LanguageContext lcx){
         for (Object _id : object.keySet()) {
             final String name = JSUtils.toString(_id);
             DotName id = new DotName(prefix, DotName.parse(name));
@@ -428,7 +428,7 @@ public class Plan extends Operator {
      * @param lcx
      * @return The Json object
      */
-    static Operator getSimple(Object value, LanguageContext lcx) throws XPathExpressionException {
+    static Operator getSimple(Object value, LanguageContext lcx){
         value = JSUtils.unwrap(value);
 
         // --- Already an operator
@@ -486,17 +486,17 @@ public class Plan extends Operator {
     }
 
     @Expose(value = "run", context = true)
-    public List<Json> run(LanguageContext cx) throws XPathExpressionException {
+    public List<Json> run(LanguageContext cx){
         return run(cx, false);
     }
 
     @Expose(context = true)
-    public List<Json> simulate(LanguageContext cx) throws XPathExpressionException {
+    public List<Json> simulate(LanguageContext cx){
         return run(cx, true);
     }
 
 
-    private List<Json> run(LanguageContext cx, boolean simulate) throws XPathExpressionException {
+    private List<Json> run(LanguageContext cx, boolean simulate){
         try(final ScriptContext scriptContext = ScriptContext.get().copy()) {
             final Iterator<Json> iterator = run(scriptContext.simulate(simulate));
             ArrayList<Json> values = new ArrayList<>();
@@ -511,7 +511,7 @@ public class Plan extends Operator {
 
 
     @Expose(value = "add", context = true)
-    public void add(LanguageContext cx, Map object) throws XPathExpressionException {
+    public void add(LanguageContext cx, Map object){
         add(getMappings(object, cx));
     }
 

@@ -22,11 +22,19 @@ import bpiwowar.argparser.utils.Introspection;
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.manager.Manager;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.Scripting;
+import sf.net.experimaestro.manager.scripting.ScriptingLogger;
+import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.manager.scripting.Wrapper;
+import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
@@ -58,7 +66,7 @@ public class JavaScriptRunner implements AutoCloseable {
 
     private final ScriptContext scriptContext;
 
-    private final Scriptable scope;
+    final Scriptable scope;
 
     private static Map<Class, Constructor> WRAPPERS = new HashMap<>();
 
@@ -107,8 +115,9 @@ public class JavaScriptRunner implements AutoCloseable {
             // Define the new classes (scans the package for implementations of ScriptableObject)
             ArrayList<Class<?>> list = new ArrayList<>();
 
+            // Scan our classes
             try {
-                final String packageName = XPM.class.getPackage().getName();
+                final String packageName = JavaScriptRunner.class.getPackage().getName();
                 final String resourceName = packageName.replace('.', '/');
                 final Enumeration<URL> urls = XPM.class.getClassLoader().getResources(resourceName);
                 while (urls.hasMoreElements()) {
@@ -137,11 +146,12 @@ public class JavaScriptRunner implements AutoCloseable {
                 }
             }));
 
-            // namespace
-            addNewObject(context, XPM_SCOPE, "xp", "Namespace", new Object[]{"xp", Manager.EXPERIMAESTRO_NS});
+            Scripting.forEachConstant((name, value) -> {
+                ScriptableObject.defineProperty(XPM_SCOPE, name, value, 0);
+            });
 
-            // Adds a Pipe object
-            JavaScriptRunner.addNewObject(context, XPM_SCOPE, "PIPE", "Pipe", new Object[]{});
+            Scripting.forEachFunction(m -> ScriptableObject.defineProperty(XPM_SCOPE, m.getName(), new JavaScriptFunction(m), 0));
+
 
             Context.exit();
         }
@@ -161,7 +171,7 @@ public class JavaScriptRunner implements AutoCloseable {
      * @return The wrapped object
      */
     public static Object wrap(Object object) {
-        if (object == null) {
+        if (object == null || object instanceof Undefined) {
             return Undefined.instance;
         }
 
@@ -190,7 +200,7 @@ public class JavaScriptRunner implements AutoCloseable {
             return new JavaScriptObject(object);
         }
 
-        throw new IllegalArgumentException(format("Cannot wrap class %s into python object", object.getClass()));
+        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", object.getClass()));
 
 
     }

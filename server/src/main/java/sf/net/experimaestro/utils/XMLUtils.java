@@ -334,16 +334,6 @@ public class XMLUtils {
         return element;
     }
 
-    public static XPathExpression parseXPath(String path) throws XPathExpressionException {
-        return XPATH_FACTORY.newXPath().compile(path);
-    }
-
-    public static XPathExpression parseXPath(String expression, NamespaceContext nsContext) throws XPathExpressionException {
-        XPath xpath = XPATH_FACTORY.newXPath();
-        xpath.setNamespaceContext(nsContext);
-        return xpath.compile(expression);
-    }
-
     /**
      * Tranform a node list into a document fragment
      */

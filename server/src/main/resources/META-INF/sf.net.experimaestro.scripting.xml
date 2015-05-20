@@ -23,10 +23,12 @@
         <class>sf.net.experimaestro.scheduler.TokenResource</class>
         <class>sf.net.experimaestro.scheduler.Dependency</class>
         <class>sf.net.experimaestro.scheduler.Command</class>
+        <class>sf.net.experimaestro.scheduler.Command$Pipe</class>
 
         <!-- Manager -->
         <class>sf.net.experimaestro.manager.Module</class>
         <class>sf.net.experimaestro.manager.Task</class>
+        <class>sf.net.experimaestro.manager.Namespace</class>
 
         <!-- Plans -->
         <class>sf.net.experimaestro.manager.plans.Constant</class>
@@ -44,5 +46,7 @@
 
         <!-- Scripting -->
         <class>sf.net.experimaestro.manager.scripting.XPM</class>
+        <class>sf.net.experimaestro.manager.scripting.Tasks</class>
+
     </classes>
 </scripting>

@@ -48,7 +48,7 @@ import static java.lang.String.format;
 /**
  * Global context when executing a javascript
  */
-public class PythonContext implements AutoCloseable {
+public class PythonRunner implements AutoCloseable {
 
     static private final Logger LOGGER = Logger.getLogger();
 
@@ -65,9 +65,9 @@ public class PythonContext implements AutoCloseable {
     private final ScriptContext scriptContext;
 
 
-    public PythonContext(Map<String, String> environment, Repositories repositories, Scheduler scheduler,
-                         Hierarchy loggerRepository,
-                         BufferedWriter out, BufferedWriter err) throws Exception {
+    public PythonRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler,
+                        Hierarchy loggerRepository,
+                        BufferedWriter out, BufferedWriter err) throws Exception {
 
         init();
 
@@ -78,14 +78,7 @@ public class PythonContext implements AutoCloseable {
         interpreter.setOut(out);
         interpreter.setErr(err);
 
-        // Add common methods
-        Map<String, ArrayList<Method>> scriptingFunctionsMap = ClassDescription.analyzeClass(Functions.class).getMethods();
-        final Functions scriptingFunctions = new Functions();
-        for (Map.Entry<String, ArrayList<Method>> entry : scriptingFunctionsMap.entrySet()) {
-            MethodFunction function = new MethodFunction(entry.getKey());
-            function.add(scriptingFunctions, entry.getValue());
-            interpreter.set(entry.getKey(), new PythonMethod(function));
-        }
+        Scripting.forEachFunction(m -> interpreter.set(m.getName(), new PythonMethod(m)));
 
         // Add classes
         for (PyType type : TYPES.values()) {

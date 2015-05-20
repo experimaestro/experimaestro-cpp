@@ -28,6 +28,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.io.PrintStream;
@@ -39,8 +40,8 @@ import static java.lang.StrictMath.max;
  * Grouping by
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
  */
+@Exposed
 public class GroupBy extends UnaryOperator {
     private final QName wrapperQName;
     List<Operator> operators = new ArrayList<>();

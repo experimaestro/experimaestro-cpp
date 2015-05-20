@@ -24,11 +24,13 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ConstructorFunction;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
 
 /**
  * A wrapper for exposed java objects
  */
+@Exposed("JavaObject")
 public class JavaScriptObject extends JSBaseObject implements Wrapper {
     private final Object object;
 

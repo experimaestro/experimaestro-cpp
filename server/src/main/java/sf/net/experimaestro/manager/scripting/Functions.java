@@ -25,6 +25,7 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.JSBaseObject;
@@ -284,7 +285,18 @@ public class Functions {
             throws Exception {
         return include(cx, connector.resolve(path), repositoryMode);
     }
-
+    /**
+     * Returns a QName object
+     *
+     * @param ns        The namespace: can be the URI string, or a javascript
+     *                  Namespace object
+     * @param localName the localname
+     * @return a QName object
+     */
+    @Expose
+    static public Object qname(String ns, String localName) {
+        return new QName(ns, localName);
+    }
 
     @Expose(context = true)
     static public Map<String, Object> include_repository(LanguageContext cx, Path path) throws Exception {

@@ -22,6 +22,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.scheduler.Command;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -32,13 +34,27 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  *
  */
 public class Scripting {
+
+    public static MethodFunction[] FUNCTIONS = ClassDescription.analyzeClass(Functions.class).getMethods()
+            .entrySet().stream().map(e -> {
+                final MethodFunction methodFunction = new MethodFunction(e.getKey());
+                methodFunction.add(null, e.getValue());
+                return methodFunction;
+            }).toArray(n -> new MethodFunction[n]);
+
     public static void forEachType(Consumer<Class> f) {
+
         String classname = null;
         try (InputStream in = Scripting.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
             DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
@@ -59,6 +75,15 @@ public class Scripting {
         } catch (ClassNotFoundException e) {
             throw new XPMRuntimeException(e, "Could not find class %s", classname);
         }
+    }
 
+    public static void forEachFunction(Consumer<MethodFunction> f) {
+        Stream.of(FUNCTIONS).forEach(f);
+    }
+
+    public static void forEachConstant(BiConsumer<String, Object> f) {
+
+        f.accept("PIPE", Command.Pipe.getInstance());
+        f.accept("xp", Manager.EXPERIMAESTRO_NS_OBJECT);
     }
 }

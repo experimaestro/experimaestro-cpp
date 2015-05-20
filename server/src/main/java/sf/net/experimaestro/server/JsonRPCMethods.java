@@ -40,7 +40,7 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.JavaScriptRunner;
-import sf.net.experimaestro.manager.python.PythonContext;
+import sf.net.experimaestro.manager.python.PythonRunner;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Functional;
@@ -367,8 +367,8 @@ public class JsonRPCMethods extends HttpServlet {
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try (PythonContext pythonContext =
-                     new PythonContext(environment, repositories, scheduler, loggerRepository,
+        try (PythonRunner pythonContext =
+                     new PythonRunner(environment, repositories, scheduler, loggerRepository,
                              getRequestOutputStream(), getRequestErrorStream())
         ) {
             Object result = null;

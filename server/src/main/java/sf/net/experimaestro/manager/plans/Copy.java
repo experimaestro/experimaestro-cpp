@@ -48,7 +48,7 @@ public class Copy extends Plan {
 
 
     @Expose
-    public Copy(LanguageContext cx, String outputType, Map plan) throws XPathExpressionException {
+    public Copy(LanguageContext cx, String outputType, Map plan){
         super(null);
         this.setFactory(new AnonymousTaskFactory());
         this.outputType = new Type(QName.parse(outputType, cx.getNamespaceContext()));

@@ -724,7 +724,7 @@ public abstract class Operator {
 
     @Expose(context = true)
     @Help("Runs a JSON query against the input: each returned item is a new input")
-    public Operator select(LanguageContext cx, String query, Object f) throws XPathExpressionException {
+    public Operator select(LanguageContext cx, String query, Object f){
         JsonPathFunction function = new JsonPathFunction(query, (java.util.function.Function<Json, Object>) f);
         Operator operator = new FunctionOperator(function);
         operator.addParent(this);
@@ -734,7 +734,7 @@ public abstract class Operator {
 
     @Expose()
     @Help("Runs an JSON against the input: each returned item is a new input")
-    public Operator select(String query) throws XPathExpressionException {
+    public Operator select(String query){
         JsonPathFunction function = new JsonPathFunction(query, x -> x);
         Operator operator = new FunctionOperator(function);
         operator.addParent(this);
@@ -804,7 +804,7 @@ public abstract class Operator {
     }
 
     @Expose("to_dot")
-    public String toDot(boolean simplify) throws XPathExpressionException {
+    public String toDot(boolean simplify){
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
         Operator operator = prepare();
@@ -815,7 +815,7 @@ public abstract class Operator {
     }
 
     @Expose("to_dot")
-    public String toDOT(boolean simplify, boolean initialize) throws XPathExpressionException {
+    public String toDOT(boolean simplify, boolean initialize){
         Operator operator = getOperator(simplify, initialize);
 
 

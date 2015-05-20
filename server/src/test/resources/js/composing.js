@@ -27,15 +27,15 @@
 
 var abc = new Namespace("a.b.c");
 
-tasks("abc:task-1") = {
+tasks.add("abc:task-1", {
 	inputs: { x: { value: "xp:integer" } }
-};
+});
 
-tasks("abc:task-2") = {
+tasks.add("abc:task-2", {
 	inputs: { x: { value: "xp:integer"} }
-};
+});
 
-tasks("abc:task") = {
+tasks.add("abc:task", {
 	inputs: {
 	    t1: { task: "abc:task-1" },
         t2: { task: "abc:task-2", 
@@ -47,8 +47,7 @@ tasks("abc:task") = {
 		return $(inputs.t2);
 	}
 		
-};
-
+});
 
 
 // Run and check

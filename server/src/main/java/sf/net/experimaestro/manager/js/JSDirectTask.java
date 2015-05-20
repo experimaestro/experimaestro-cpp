@@ -18,9 +18,19 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.Input;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.Type;
+import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
@@ -42,6 +52,8 @@ public class JSDirectTask extends Task {
 
     private final Scriptable jsScope;
 
+    private final Type outputType;
+
     /**
      * The run function
      */
@@ -52,8 +64,19 @@ public class JSDirectTask extends Task {
      */
     private JSTask jsObject;
 
+    public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
+                        NativeObject jsFactory, Function runFunction, Type outputType) {
+
+        super(taskFactory);
+        this.jsScope = jsScope;
+        this.jsObject = new JSTask(jsFactory);
+        this.runFunction = runFunction;
+        this.outputType = outputType;
+    }
+
     @Override
     public Json doRun(ScriptContext taskContext) {
+
         LOGGER.debug("[Running] task: %s", factory.getId());
 
         final Context cx = Context.getCurrentContext();
@@ -90,10 +113,11 @@ public class JSDirectTask extends Task {
             final Object returned = runFunction.call(cx, jsScope, jsObject,
                     new Object[]{jsoninput, resultObject});
             LOGGER.debug("Returned %s", returned);
-            if (returned == Undefined.instance || returned == null)
+            if (returned == Undefined.instance || returned == null) {
                 throw new XPMRuntimeException(
                         "Undefined returned by the function run of task [%s]",
                         factory.getId());
+            }
             LOGGER.debug("[/Running] task: %s", factory.getId());
 
             return JSUtils.toJSON(jsScope, returned);
@@ -111,16 +135,14 @@ public class JSDirectTask extends Task {
         return resultObject;
     }
 
-    public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
-                        NativeObject jsFactory, Function runFunction, Type outputType) {
-        super();
-        this.jsScope = jsScope;
-        this.jsObject = new JSTask(jsFactory);
-        this.runFunction = runFunction;
+    @Override
+    public Type getOutput() {
+        return outputType;
     }
 
     @Override
     protected void init(Task _other) {
+
         JSDirectTask other = (JSDirectTask) _other;
         super.init(other);
         jsObject = other.jsObject;
@@ -135,11 +157,13 @@ public class JSDirectTask extends Task {
 
         @Expose
         public JSTask(NativeObject jsFactory) {
+
             this.jsFactory = jsFactory;
         }
 
         @Expose(context = true, optionalsAtStart = true, optional = 2)
         public Path unique_directory(LanguageContext cx, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
@@ -149,6 +173,7 @@ public class JSDirectTask extends Task {
 
         @Expose(context = true)
         public Path unique_file(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
@@ -159,6 +184,7 @@ public class JSDirectTask extends Task {
         @Expose()
         @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
         public Json group(String groupId, JsonObject p) {
+
             JsonObject json = new JsonObject();
             for (Entry<String, Input> x : getFactory().getInputs().entrySet()) {
                 if (x.getValue().inGroup(groupId)) {

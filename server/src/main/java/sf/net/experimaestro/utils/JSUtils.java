@@ -478,22 +478,6 @@ public class JSUtils {
         return document.get().createTextNode(object.toString());
     }
 
-    /**
-     * Add a new javascript function to the scope
-     *
-     * @param aClass    The class where the function should be searched
-     * @param scope     The scope where the function should be defined
-     * @param fname     The function name
-     * @param prototype The prototype or null. If null, uses the standard Context, Scriptablem Object[], Function prototype
-     *                  used by Rhino JS
-     * @throws NoSuchMethodException If
-     */
-    public static void addFunction(Class<?> aClass, Scriptable scope, final String fname,
-                                   Class<?>[] prototype) throws NoSuchMethodException {
-        final FunctionObject f = new FunctionObject(fname,
-                aClass.getMethod("js_" + fname, prototype), scope);
-        ScriptableObject.putProperty(scope, fname, f);
-    }
 
     public static String toString(Object object) {
         return Context.toString(unwrap(object));

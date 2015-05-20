@@ -126,34 +126,7 @@ public class XPM {
         return object.toString();
     }
 
-    /**
-     * Returns a QName object
-     *
-     * @param ns        The namespace: can be the URI string, or a javascript
-     *                  Namespace object
-     * @param localName the localname
-     * @return a QName object
-     */
-    static public Object js_qname(Object ns, String localName) {
-        // First unwrapToObject the object
-        if (ns instanceof Wrapper)
-            ns = ((Wrapper) ns).unwrap();
 
-        // If ns is a javascript Namespace object
-        if (ns instanceof ScriptableObject) {
-            ScriptableObject scriptableObject = (ScriptableObject) ns;
-            if (scriptableObject.getClassName().equals("Namespace")) {
-                Object object = scriptableObject.get("uri", null);
-                return new QName(object.toString(), localName);
-            }
-        }
-
-        // If ns is a string
-        if (ns instanceof String)
-            return new QName((String) ns, localName);
-
-        throw new XPMRuntimeException("Not implemented (%s)", ns.getClass());
-    }
 
     public static Object get(Scriptable scope, final String name) {
 

@@ -297,6 +297,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     /**
      * A pipe
      */
+    @Exposed
     static public class Pipe implements CommandComponent {
         static private Pipe PIPE = new Pipe();
 

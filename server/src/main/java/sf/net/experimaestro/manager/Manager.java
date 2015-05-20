@@ -24,7 +24,6 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.utils.MessageDigestWriter;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -51,6 +50,8 @@ import static java.lang.String.format;
 public class Manager {
 
     public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
+    public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
+
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
