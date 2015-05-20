@@ -75,7 +75,7 @@ public class Resource {
     /**
      * Extension for the file containing the return code
      */
-    public static final FileNameTransformer CODE_EXTENSION = new FileNameTransformer(".xpm.", ".code");
+    public static final FileNameTransformer CODE_EXTENSION = new FileNameTransformer("", ".code");
 
 
     // --- Values filled on demand
@@ -83,7 +83,7 @@ public class Resource {
     /**
      * Extension for the file containing the script status run
      */
-    public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer(".xpm.", ".run");
+    public static final FileNameTransformer RUN_EXTENSION = new FileNameTransformer("", ".xpm.run");
 
     /**
      * Extension for the standard output of a job
@@ -101,7 +101,7 @@ public class Resource {
     /**
      * Extension for the standard input of a job
      */
-    public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer(".xpm.input.", "");
+    public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer("", ".xpm.input.");
 
     public static final String JOB_TYPE = "1";
     public static final String TOKEN_RESOURCE_TYPE = "2";

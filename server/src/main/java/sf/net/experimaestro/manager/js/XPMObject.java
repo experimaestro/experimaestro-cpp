@@ -76,7 +76,9 @@ public class XPMObject {
     /**
      * The filename used to the store the signature in generated directory names
      */
-    public static final String XPM_SIGNATURE = ".xpm-signature";
+    public static final String OLD_XPM_SIGNATURE = ".xpm-signature";
+    public static final String XPM_SIGNATURE = "signature.xpm";
+
     public static final String COMMAND_LINE_JOB_HELP = "Schedule a command line job.<br>The options are <dl>" +
             "<dt>launcher</dt><dd></dd>" +
             "<dt>stdin</dt><dd></dd>" +
@@ -967,16 +969,17 @@ public class XPMObject {
      * @param prefix     The prefix for the directory
      * @param id         The task ID or any other QName
      * @param jsonValues the JSON object from which the hash is computed
+     * @param directory  True if the path should be a directory
      * @return A unique directory
      */
-    public JSPath uniqueDirectory(Scriptable scope, Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
+    public JSPath uniquePath(Scriptable scope, Path basedir, String prefix, QName id, Object jsonValues, boolean directory) throws IOException, NoSuchAlgorithmException {
         if (basedir == null) {
             if ((basedir = getScriptContext().getWorkingDirectory()) == null) {
                 throw new XPMRuntimeException("Working directory was not set before unique_directory() is called");
             }
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
-        return new JSPath(Manager.uniqueDirectory(basedir, prefix, id, json));
+        return new JSPath(Manager.uniquePath(basedir, prefix, id, json, directory));
     }
 
     public Connector getConnector() {
@@ -984,7 +987,7 @@ public class XPMObject {
     }
 
     public ScriptContext getScriptContext() {
-        return scriptContext;
+        return ScriptContext.threadContext();
     }
 
 
