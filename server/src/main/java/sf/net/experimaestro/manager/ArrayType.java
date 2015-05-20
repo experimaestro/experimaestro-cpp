@@ -38,9 +38,22 @@ public class ArrayType extends Type {
 
     @Override
     public void validate(Json element) throws ValueMismatchException {
-        if (element instanceof JsonArray)
-            return;
-        throw new XPMRuntimeException("Expected an array and got " + element.getClass());
+        // Check if this is an array
+        if (!(element instanceof JsonArray))
+            throw new XPMRuntimeException("Expected an array and got " + element.getClass());
+
+        // Check every element
+        JsonArray array = (JsonArray)element;
+        int i = 0;
+        for(Json json: array) {
+            try {
+                innerType.validate(json);
+                ++i;
+            } catch(ValueMismatchException e) {
+                e.addContext("While validating element %d of array of type %s", i, innerType);
+                throw e;
+            }
+        }
     }
 
 
