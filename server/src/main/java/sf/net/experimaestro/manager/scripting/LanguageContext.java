@@ -37,9 +37,5 @@ abstract public class LanguageContext {
      * Get the context
      */
     public abstract NamespaceContext getNamespaceContext();
-
-    /**
-     * Creates a unique directory
-     */
-    public abstract Path uniqueDirectory(Path basedir, String prefix, QName taskId, Object json);
 }
+

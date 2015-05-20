@@ -688,7 +688,7 @@ public class XPM {
      * @param jsonValues the JSON object from which the hash is computed
      * @return A unique directory
      */
-    public ScriptingPath uniqueDirectory(Scriptable scope, java.nio.file.Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
+    public Path uniqueDirectory(Scriptable scope, java.nio.file.Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
 
         if (basedir == null) {
             if ((basedir = ScriptContext.get().getWorkingDirectory()) == null) {
@@ -696,7 +696,7 @@ public class XPM {
             }
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
-        return new ScriptingPath(Manager.uniqueDirectory(basedir, prefix, id, json));
+        return Manager.uniquePath(basedir, prefix, id, json, true);
     }
 
 

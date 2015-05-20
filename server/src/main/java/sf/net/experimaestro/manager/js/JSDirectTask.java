@@ -144,7 +144,7 @@ public class JSDirectTask extends Task {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return cx.uniqueDirectory(basedir, prefix, taskId, json, true);
+            return Manager.uniquePath(basedir, prefix, taskId, cx.toJSON(json), true);
         }
 
         @Expose(context = true)
@@ -153,20 +153,8 @@ public class JSDirectTask extends Task {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return cx.uniqueDirectory(basedir, prefix, taskId, json, false);
+            return Manager.uniquePath(null, prefix, taskId, cx.toJSON(json), false);
         }
-
-        @Expose(context = true)
-        public Path unique_directory(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
-            QName taskId = JSDirectTask.this.getFactory().getId();
-            if (prefix == null) {
-                prefix = taskId.getLocalPart();
-            }
-            Path basedir = resource.getPath().getParent();
-            return JSDirectTask.this.xpm.uniquePath(scope, basedir, prefix, taskId, json, true);
-        }
-
-
 
         @Expose()
         @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")

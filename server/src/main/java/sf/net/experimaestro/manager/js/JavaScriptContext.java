@@ -52,11 +52,6 @@ public class JavaScriptContext extends LanguageContext {
         return new JSNamespaceContext(scope);
     }
 
-    @Override
-    public Path uniqueDirectory(Path basedir, String prefix, QName taskId, Object json) {
-        return null;
-    }
-
     public Context context() {
         return context;
     }

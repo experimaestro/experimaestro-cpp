@@ -70,7 +70,8 @@ public class Manager {
 
     /// Ignored value
     public static final QName XP_IGNORE = new QName(null, "$ignore");
-    public static final String XPM_SIGNATURE = ".xpm-signature";
+    public static final String XPM_SIGNATURE = "signature.xpm";
+    public static final String OLD_XPM_SIGNATURE = ".xpm-signature";
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
@@ -158,11 +159,11 @@ public class Manager {
         Files.createDirectories(directory ? uniquePath : uniquePath.getParent());
 
         // Create the signature
-        Path signature = directory ? uniquePath.resolve(XPMObject.XPM_SIGNATURE) : uniquePath;
+        Path signature = directory ? uniquePath.resolve(Manager.XPM_SIGNATURE) : uniquePath;
 
         if (directory) {
             // Move old signature to new location (no more hidden files !)
-            Path oldSignature = uniquePath.resolve(XPMObject.OLD_XPM_SIGNATURE);
+            Path oldSignature = uniquePath.resolve(Manager.OLD_XPM_SIGNATURE);
             if (Files.exists(oldSignature)) {
                 Files.move(oldSignature, signature);
             }
