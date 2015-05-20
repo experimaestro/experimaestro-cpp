@@ -151,7 +151,16 @@ public class JSDirectTask extends JSAbstractTask {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+            return JSDirectTask.this.xpm.uniquePath(scope, basedir, prefix, taskId, json, true);
+        }
+
+        @Expose(scope = true, optionalsAtStart = true, optional = 2)
+        public JSPath unique_file(Context cx, Scriptable scope, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            return JSDirectTask.this.xpm.uniquePath(scope, basedir, prefix, taskId, json, false);
         }
 
         @Expose(scope = true)
@@ -161,7 +170,7 @@ public class JSDirectTask extends JSAbstractTask {
                 prefix = taskId.getLocalPart();
             }
             Path basedir = resource.getPath().getParent();
-            return JSDirectTask.this.xpm.uniqueDirectory(scope, basedir, prefix, taskId, json);
+            return JSDirectTask.this.xpm.uniquePath(scope, basedir, prefix, taskId, json, true);
         }
 
 

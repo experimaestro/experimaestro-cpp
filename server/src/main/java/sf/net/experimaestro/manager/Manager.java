@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Element;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.manager.json.Json;
@@ -143,7 +144,7 @@ public class Manager {
 //        return document;
     }
 
-    static public Path uniqueDirectory(Path basedir, String prefix, QName id, Json jsonValues) throws IOException, NoSuchAlgorithmException {
+    static public Path uniquePath(Path basedir, String prefix, QName id, Json jsonValues, boolean directory) throws IOException, NoSuchAlgorithmException {
 
         JsonObject json = new JsonObject();
         json.put("task", id.toString());
@@ -153,10 +154,19 @@ public class Manager {
 
         Path uniquePath = basedir.resolve(format("%s/%s", prefix, digest));
 
-        Files.createDirectories(uniquePath);
+        Files.createDirectories(directory ? uniquePath : uniquePath.getParent());
 
         // Create the signature
-        Path signature = uniquePath.resolve(XPMObject.XPM_SIGNATURE);
+        Path signature = directory ? uniquePath.resolve(XPMObject.XPM_SIGNATURE) : uniquePath;
+
+        if (directory) {
+            // Move old signature to new location (no more hidden files !)
+            Path oldSignature = uniquePath.resolve(XPMObject.OLD_XPM_SIGNATURE);
+            if (Files.exists(oldSignature)) {
+                Files.move(oldSignature, signature);
+            }
+        }
+
         String descriptor = getDescriptor(json);
 
         if (!Files.exists(signature)) {
@@ -165,6 +175,10 @@ public class Manager {
                 writer.write(descriptor);
             }
         } else {
+            if (!Files.isRegularFile(signature)) {
+
+                throw new XPMRhinoException("Path %s exists and is not a file", signature);
+            }
             // Check that the signature is the same
             // @TODO more efficient comparison by avoiding to compute the whole signature
             char buffer[] = new char[1024];
