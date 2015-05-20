@@ -74,7 +74,7 @@ public class JavaTask extends Task {
                 dirPrefix = prefix + "." + dirPrefix;
             }
 
-            uniqueDir = Manager.uniqueDirectory(file, dirPrefix, factory.getId(), json);
+            uniqueDir = Manager.uniquePath(file, dirPrefix, factory.getId(), json, true);
             path = uniqueDir.resolve(factory.getId().getLocalPart());
         } catch (Throwable e) {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");

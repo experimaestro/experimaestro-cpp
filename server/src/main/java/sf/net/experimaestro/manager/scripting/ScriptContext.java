@@ -48,6 +48,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static java.lang.String.format;
+
 /**
  * Context when running a script
  * <p>
@@ -166,6 +168,8 @@ final public class ScriptContext implements AutoCloseable {
         if (threadContext.get() != null)
             throw new IllegalStateException("Cannot create a new script context if another one is active");
 
+        LOGGER.debug("Creating script context [%s] from static context", this);
+
         this.staticContext = staticContext;
         this.cleaner = new Cleaner();
 
@@ -183,8 +187,13 @@ final public class ScriptContext implements AutoCloseable {
         submittedJobs = new HashMap<>();
     }
 
+    @Override
+    public String toString() {
+        return format("ScriptContext@%X", System.identityHashCode(this));
+    }
 
     private ScriptContext(ScriptContext other, boolean newRepository) {
+        LOGGER.debug("Creating script context [%s] from context [%s]", this, other);
 
         staticContext = other.staticContext;
         cleaner = other.cleaner;
@@ -208,6 +217,10 @@ final public class ScriptContext implements AutoCloseable {
         } else {
             properties = other.properties;
         }
+
+        // Sets the current thread context
+        oldCurrent = threadContext.get();
+        threadContext.set(this);
     }
 
 
@@ -388,8 +401,10 @@ final public class ScriptContext implements AutoCloseable {
     public void close() {
 
         if (threadContext.get() != this) {
-            LOGGER.error("Current thread context is not ourselves");
+            LOGGER.error("Current thread context [%s] is not ourselves [%s]", threadContext.get(), this);
         }
+
+        LOGGER.debug("Closing script context [%s] - restoring [%s]", this, oldCurrent);
 
         threadContext.set(oldCurrent);
         if (oldCurrent == null) {

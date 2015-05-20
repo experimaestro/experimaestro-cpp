@@ -144,7 +144,16 @@ public class JSDirectTask extends Task {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return cx.uniqueDirectory(basedir, prefix, taskId, json);
+            return cx.uniqueDirectory(basedir, prefix, taskId, json, true);
+        }
+
+        @Expose(context = true)
+        public Path unique_file(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            QName taskId = JSDirectTask.this.getFactory().getId();
+            if (prefix == null) {
+                prefix = taskId.getLocalPart();
+            }
+            return cx.uniqueDirectory(basedir, prefix, taskId, json, false);
         }
 
         @Expose(context = true)
@@ -153,9 +162,10 @@ public class JSDirectTask extends Task {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            java.nio.file.Path basedir = resource.getPath().getParent();
-            return cx.uniqueDirectory(basedir, prefix, taskId, json);
+            Path basedir = resource.getPath().getParent();
+            return JSDirectTask.this.xpm.uniquePath(scope, basedir, prefix, taskId, json, true);
         }
+
 
 
         @Expose()
