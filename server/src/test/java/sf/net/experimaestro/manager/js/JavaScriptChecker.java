@@ -21,19 +21,13 @@ package sf.net.experimaestro.manager.js;
 import com.google.common.collect.ImmutableList;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.spi.LoggerRepository;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ScriptStackElement;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.*;
 import org.testng.TestException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMEnvironment;
@@ -47,7 +41,6 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -81,22 +74,19 @@ public class JavaScriptChecker extends XPMEnvironment {
         // Initialize XPM and load the file
         context = Context.enter();
         repository = new Repository(new File("/").toPath());
-        Map<String, String> environment = System.getenv();
 
         final Scheduler scheduler = prepare().getScheduler();
         Repositories repositories = new Repositories(null);
         repositories.add(repository, 0);
         final LoggerRepository loggerRepository = LOGGER.getLoggerRepository();
-
         jcx = new JavaScriptRunner(repositories, scheduler, (Hierarchy) loggerRepository, null);
         final MethodFunction method = new MethodFunction(SSHD_SERVER_FUNCTION);
         final Method sshd_server = SSHServer.class.getDeclaredMethod("sshd_server");
         method.add(null, ImmutableList.of(sshd_server));
         ScriptableObject.defineProperty(jcx.scope, SSHD_SERVER_FUNCTION, method, 0);
 
-        // Evaluate
-        jcx.evaluateString(content, file.toString(), 0, null);
-        scope = jcx.scope;
+        // Masks the context
+        ScriptContext.force(null);
     }
 
     static String getFileContent(Path file)
@@ -115,10 +105,20 @@ public class JavaScriptChecker extends XPMEnvironment {
         return format("JavaScript for [%s]", file);
     }
 
-    @AfterClass
+    @AfterClass()
     public void exit() throws Exception {
+        ScriptContext.force(jcx.scriptContext);
         jcx.close();
         Context.exit();
+    }
+
+    @BeforeMethod
+    public void beforeMethod() {
+        ScriptContext.force(jcx.scriptContext);
+    }
+    @AfterMethod
+    public void afterMethod() {
+        ScriptContext.force(null);
     }
 
     @DataProvider
@@ -139,8 +139,14 @@ public class JavaScriptChecker extends XPMEnvironment {
         return list.toArray(new Object[list.size()][]);
     }
 
+    @Test()
+    public void evaluate() throws Throwable {
 
-    @Test(dataProvider = "jsProvider")
+        jcx.evaluateString(content, file.toString(), 0, null);
+        scope = jcx.scope;
+    }
+
+    @Test(dataProvider = "jsProvider", dependsOnMethods = "evaluate")
     public void testScript(JSTestFunction testFunction) throws
             IOException, SecurityException, IllegalAccessException,
             InstantiationException, InvocationTargetException,

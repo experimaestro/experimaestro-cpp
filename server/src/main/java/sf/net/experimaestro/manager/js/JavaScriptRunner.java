@@ -22,19 +22,10 @@ import bpiwowar.argparser.utils.Introspection;
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Scripting;
-import sf.net.experimaestro.manager.scripting.ScriptingLogger;
-import sf.net.experimaestro.manager.scripting.StaticContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
@@ -62,9 +53,9 @@ public class JavaScriptRunner implements AutoCloseable {
 
     private final RhinoDebugger debugger;
 
-    private final Context context;
+    final private Context context;
 
-    private final ScriptContext scriptContext;
+    final ScriptContext scriptContext;
 
     final Scriptable scope;
 
@@ -167,6 +158,7 @@ public class JavaScriptRunner implements AutoCloseable {
 
     /**
      * Wraps a new object into a JavaScript object
+     *
      * @param object The object to wrap
      * @return The wrapped object
      */
@@ -185,7 +177,7 @@ public class JavaScriptRunner implements AutoCloseable {
             try {
                 return new JavaScriptObject(constructor.newInstance(object));
             } catch (Exception e) {
-               throw new UnsupportedOperationException("Could not wrapp object of class " + object.getClass(), e);
+                throw new UnsupportedOperationException("Could not wrapp object of class " + object.getClass(), e);
             }
         }
 

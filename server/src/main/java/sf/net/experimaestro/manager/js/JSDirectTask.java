@@ -18,19 +18,9 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;

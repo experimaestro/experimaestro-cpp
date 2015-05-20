@@ -468,4 +468,9 @@ final public class ScriptContext implements AutoCloseable {
     public String getEnv(String key) {
         return environment.get().get(key);
     }
+
+    // Only used for tests
+    public static void force(ScriptContext sc) {
+        threadContext.set(sc);
+    }
 }
