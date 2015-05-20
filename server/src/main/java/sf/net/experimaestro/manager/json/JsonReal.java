@@ -22,14 +22,15 @@ import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Writer;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 2/4/13
  */
+@Exposed
 public class JsonReal extends Json {
     double value;
 

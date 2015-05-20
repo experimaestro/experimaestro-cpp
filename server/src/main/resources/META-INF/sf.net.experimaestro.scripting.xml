@@ -40,6 +40,9 @@
         <class>sf.net.experimaestro.connectors.ConnectorOptions</class>
         <class>sf.net.experimaestro.connectors.SSHOptions</class>
         <class>sf.net.experimaestro.connectors.ConnectorOptions</class>
+        <class>sf.net.experimaestro.connectors.Connector</class>
+        <class>sf.net.experimaestro.connectors.SSHConnector</class>
+        <class>sf.net.experimaestro.connectors.LocalhostConnector</class>
 
         <class>sf.net.experimaestro.connectors.OARLauncher</class>
         <class>sf.net.experimaestro.connectors.DirectLauncher</class>
@@ -47,6 +50,9 @@
         <!-- Scripting -->
         <class>sf.net.experimaestro.manager.scripting.XPM</class>
         <class>sf.net.experimaestro.manager.scripting.Tasks</class>
+        <class>sf.net.experimaestro.manager.scripting.ScriptingPath</class>
+        <class>sf.net.experimaestro.manager.scripting.ScriptingLogger</class>
+        <class>sf.net.experimaestro.manager.scripting.ScriptingReference</class>
 
     </classes>
 </scripting>

@@ -37,9 +37,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -103,8 +101,8 @@ public class PythonRunner implements AutoCloseable {
             Scripting.forEachType(Functional.propagate(aClass -> {
                 final PythonType type = new PythonType(aClass);
                 TYPES.put(type.getName(), type);
-                if (Wrapper.class.isAssignableFrom(aClass)) {
-                    final Class wrappedClass = TypeToken.of(aClass).getSupertype(Wrapper.class).getComponentType().getRawType();
+                if (WrapperObject.class.isAssignableFrom(aClass)) {
+                    final Class wrappedClass = TypeToken.of(aClass).getSupertype(WrapperObject.class).getComponentType().getRawType();
                     final Constructor constructor = aClass.getConstructor(wrappedClass);
                     WRAPPERS.put(wrappedClass, constructor);
                 }

@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.json;
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -30,6 +31,7 @@ import java.io.Writer;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class JsonBoolean extends Json {
     private final boolean value;
 

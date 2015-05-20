@@ -74,8 +74,9 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
             }
         } else {
+            // Wraps the class
             final String name = ClassDescription.getClassName(aClass);
-            scope.put(name, scope, new JavaScriptObject.WrappedClass(aClass));
+            scope.put(name, scope, new JavaScriptClass(aClass));
         }
     }
 

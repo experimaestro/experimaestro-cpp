@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class ScriptingPath extends Wrapper<Path> {
+public class ScriptingPath extends WrapperObject<Path> {
     final static Logger LOGGER = Logger.getLogger();
 
     public ScriptingPath() {
@@ -192,11 +192,6 @@ public class ScriptingPath extends Wrapper<Path> {
     @Expose
     public void copy_to(@Argument(name = "destination") ScriptingPath destination) throws IOException {
         Files.copy(object, destination.object);
-    }
-
-    @Override
-    public Path unwrap() {
-        return object;
     }
 
     @Expose

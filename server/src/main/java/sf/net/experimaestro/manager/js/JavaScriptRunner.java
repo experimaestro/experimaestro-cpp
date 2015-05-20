@@ -25,17 +25,19 @@ import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.manager.scripting.Wrapper;
+import sf.net.experimaestro.manager.scripting.WrapperObject;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -117,7 +119,9 @@ public class JavaScriptRunner implements AutoCloseable {
                             aClass -> (ScriptableObject.class.isAssignableFrom(aClass)
                                     || JSConstructable.class.isAssignableFrom(aClass)
                                     || JSBaseObject.class.isAssignableFrom(aClass))
-                                    && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0), list, packageName, -1, url);
+                                    && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0)
+                                    && !JavaScriptObject.class.equals(aClass),
+                            list, packageName, -1, url);
                 }
             } catch (IOException e) {
                 LOGGER.error(e, "While trying to grab resources");
@@ -130,8 +134,9 @@ public class JavaScriptRunner implements AutoCloseable {
 
             Scripting.forEachType(Functional.propagate(aClass -> {
                 JSBaseObject.defineClass(XPM_SCOPE, aClass);
-                if (Wrapper.class.isAssignableFrom(aClass)) {
-                    final Class<?> wrappedClass = TypeToken.of(aClass).getSupertype(Wrapper.class).getComponentType().getRawType();
+                if (WrapperObject.class.isAssignableFrom(aClass)) {
+                    final Class<?> wrappedClass = (Class<?>) ((ParameterizedType)TypeToken.of(aClass)
+                            .getSupertype(WrapperObject.class).getType()).getActualTypeArguments()[0];
                     final Constructor<?> constructor = aClass.getConstructor(wrappedClass);
                     WRAPPERS.put(wrappedClass, constructor);
                 }
@@ -171,28 +176,31 @@ public class JavaScriptRunner implements AutoCloseable {
             return object;
         }
 
-        // Wrapper case
-        final Constructor constructor = WRAPPERS.get(object.getClass());
-        if (constructor != null) {
-            try {
-                return new JavaScriptObject(constructor.newInstance(object));
-            } catch (Exception e) {
-                throw new UnsupportedOperationException("Could not wrapp object of class " + object.getClass(), e);
-            }
-        }
-
         // Simple types
-        if (object instanceof String) {
+        if (object instanceof String || object instanceof Integer) {
             return object;
         }
 
         // Exposed objects
-        final Exposed exposed = object.getClass().getAnnotation(Exposed.class);
+        final Class<?> objectClass = object.getClass();
+        final Exposed exposed = objectClass.getAnnotation(Exposed.class);
         if (exposed != null) {
             return new JavaScriptObject(object);
         }
 
-        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", object.getClass()));
+        // Wrapper case -- go up in the hierarchy
+        for (Map.Entry<Class, Constructor> entry : WRAPPERS.entrySet()) {
+            if (entry.getKey().isAssignableFrom(objectClass)) {
+                try {
+                    return new JavaScriptObject(entry.getValue().newInstance(object));
+                } catch (Exception e) {
+                    throw new UnsupportedOperationException("Could not wrap object of class " + objectClass, e);
+                }
+            }
+        }
+
+
+        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
 
 
     }
@@ -216,7 +224,8 @@ public class JavaScriptRunner implements AutoCloseable {
         Context.exit();
     }
 
-    public Object evaluateReader(FileReader reader, String filename, int lineno, Object security) throws Exception {
+    public Object evaluateReader(Reader reader, String filename, int lineno, Object security) throws Exception {
+        ScriptContext.get().setCurrentScriptPath(Paths.get(filename));
         return context.evaluateReader(scope, reader, filename, lineno, security);
     }
 

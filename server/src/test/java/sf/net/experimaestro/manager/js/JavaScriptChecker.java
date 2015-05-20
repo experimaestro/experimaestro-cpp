@@ -34,6 +34,7 @@ import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -83,7 +84,7 @@ public class JavaScriptChecker extends XPMEnvironment {
         final MethodFunction method = new MethodFunction(SSHD_SERVER_FUNCTION);
         final Method sshd_server = SSHServer.class.getDeclaredMethod("sshd_server");
         method.add(null, ImmutableList.of(sshd_server));
-        ScriptableObject.defineProperty(jcx.scope, SSHD_SERVER_FUNCTION, method, 0);
+        ScriptableObject.putProperty(jcx.scope, SSHD_SERVER_FUNCTION, new JavaScriptFunction(method));
 
         // Masks the context
         ScriptContext.force(null);
@@ -142,8 +143,23 @@ public class JavaScriptChecker extends XPMEnvironment {
     @Test()
     public void evaluate() throws Throwable {
 
-        jcx.evaluateString(content, file.toString(), 0, null);
-        scope = jcx.scope;
+        try {
+            jcx.evaluateReader(Files.newBufferedReader(file), file.toString(), 1, null);
+            scope = jcx.scope;
+        } catch(Throwable e) {
+            LOGGER.error(e, "Error while running %s", file.toString());
+
+            Throwable wrapped = e;
+            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
+            while (wrapped.getCause() != null)
+                wrapped = wrapped.getCause();
+
+            final ScriptStackElement[] scriptStackTrace = JSUtils.getScriptStackTrace(wrapped);
+            for (ScriptStackElement x : scriptStackTrace) {
+                LOGGER.error(format("  at %s:%d (%s)", x.fileName, x.lineNumber, x.functionName));
+            }
+            throw new TestException(format("JS error for %s", file.toString()));
+        }
     }
 
     @Test(dataProvider = "jsProvider", dependsOnMethods = "evaluate")

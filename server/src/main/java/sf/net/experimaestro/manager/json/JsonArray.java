@@ -23,6 +23,7 @@ import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ import static java.lang.String.format;
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class JsonArray extends Json implements Iterable<Json> {
     ArrayList<Json> array = new ArrayList<>();
 

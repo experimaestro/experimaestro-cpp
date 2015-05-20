@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 
 import javax.persistence.*;
@@ -81,6 +82,7 @@ public abstract class Connector implements Comparable<Connector> {
     /**
      * Return a new connector from an URI
      */
+    @Expose(optional = 1)
     public static Connector create(String uriString, ConnectorOptions options) throws URISyntaxException {
         return create(new URI(uriString), options);
     }

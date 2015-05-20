@@ -21,5 +21,6 @@ package sf.net.experimaestro.manager.scripting;
 /**
  * Special object that can be assigned
  */
+@Exposed
 public class ScriptingReference {
 }

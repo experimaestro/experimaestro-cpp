@@ -23,16 +23,21 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.*;
+import sf.net.experimaestro.exceptions.ExitException;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.js.JSTransform;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -44,15 +49,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -63,6 +64,146 @@ import static sf.net.experimaestro.utils.JSUtils.unwrap;
 @Exposed
 public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
+
+    @Expose(context = true, value = "merge")
+    static public NativeObject merge(LanguageContext cx, Object... objects) {
+        NativeObject returned = new NativeObject();
+
+        Scriptable scope = null; // FIXME
+        Context jcx = null;
+
+        for (Object object : objects) {
+            object = JSUtils.unwrap(object);
+            if (object instanceof NativeObject) {
+                NativeObject nativeObject = (NativeObject) object;
+                for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
+                    Object key = entry.getKey();
+                    if (returned.has(key.toString(), returned))
+                        throw new XPMRhinoException("Conflicting id in merge: %s", key);
+                    returned.put(key.toString(), returned,
+                            JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
+                }
+            } else if (object instanceof JsonObject) {
+                Json json = (Json) object;
+                if (!(json instanceof JsonObject))
+                    throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
+                JsonObject jsonObject = (JsonObject) json;
+                for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
+                    returned.put(entry.getKey(), returned, entry.getValue());
+                }
+
+            } else throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
+
+        }
+        return returned;
+    }
+
+    @Expose(context = true)
+    public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
+        Json json = cx.toJSON(jsons);
+        return Manager.getDigest(json);
+    }
+
+    @Expose(context = true)
+    public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
+        Json json = cx.toJSON(jsons);
+        return Manager.getDescriptor(json);
+    }
+
+    @Expose(context = true)
+    @Help(value = "Transform plans outputs with a function")
+    public static Scriptable transform(LanguageContext cx, Callable f, Operator... operators) throws FileSystemException {
+        return new JSTransform(cx, f, operators);
+    }
+
+    @Expose(value = "_")
+    @JSDeprecated
+    public static Object _get_value(Object object) {
+        return get_value(object);
+    }
+
+    @Expose("$")
+    public static Object get_value(Object object) {
+        object = unwrap(object);
+        if (object instanceof Json)
+            return ((Json) object).get();
+
+        return object;
+    }
+
+    @Expose("assert")
+    public static void _assert(boolean condition, String format, Object... objects) {
+        if (!condition)
+            throw new EvaluatorException("assertion failed: " + String.format(format, objects));
+    }
+
+    private static ScriptContext context() {
+        return ScriptContext.get();
+    }
+
+    /**
+     * Returns a QName object
+     *
+     * @param ns        The namespace: can be the URI string, or a javascript
+     *                  Namespace object
+     * @param localName the localname
+     * @return a QName object
+     */
+    @Expose
+    static public Object qname(String ns, String localName) {
+        return new QName(ns, localName);
+    }
+
+    @Expose(context = true)
+    static public Map<String, Object> include_repository(LanguageContext cx, Path path) throws Exception {
+        try (ScriptContext sc = context().copy(true)) {
+            include(cx, path, true);
+            return sc.properties;
+        }
+    }
+
+    /**
+     * Central method called for any script inclusion
+     *
+     * @param scriptPath     The path to the script
+     * @param repositoryMode If true, runs in a separate environement
+     * @throws Exception if something goes wrong
+     */
+
+    private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
+        java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
+        try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
+            sc.setCurrentScriptPath(scriptPath);
+//            LanguageContext cx = cx.scope();
+            // Avoid adding the protocol if this is a local file
+            final String sourceName = scriptPath.toString();
+
+            return Context.getCurrentContext().evaluateReader(null, new InputStreamReader(inputStream), sourceName, 1, null);
+        } catch (FileNotFoundException e) {
+            throw new XPMRhinoException("File not found: %s", scriptPath);
+        }
+    }
+
+    @Expose
+    static public String format(
+            @Argument(name = "format", type = "String", help = "The string used to format") String format,
+            @Argument(name = "arguments...", type = "Object", help = "A list of objects")
+            Object[] args) {
+        if (args.length == 0)
+            return "";
+
+        Object fargs[] = new Object[args.length - 1];
+        for (int i = 1; i < args.length; i++)
+            fargs[i - 1] = unwrap(args[i]);
+        return String.format(format, fargs);
+    }
+
+    @Expose()
+    @Help("Returns the Path object corresponding to the current script")
+    static public java.nio.file.Path script_file()
+            throws FileSystemException {
+        return ScriptContext.get().getCurrentScriptPath();
+    }
 
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
@@ -100,84 +241,6 @@ public class Functions {
         if (connector == null)
             connector = LocalhostConnector.getInstance();
         JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
-    }
-
-    @Expose(context = true, value = "merge")
-    static public NativeObject merge(LanguageContext cx, Object... objects) {
-        NativeObject returned = new NativeObject();
-
-        Scriptable scope = null; // FIXME
-        Context jcx = null;
-
-        for (Object object : objects) {
-            object = JSUtils.unwrap(object);
-            if (object instanceof NativeObject) {
-                NativeObject nativeObject = (NativeObject) object;
-                for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
-                    Object key = entry.getKey();
-                    if (returned.has(key.toString(), returned))
-                        throw new XPMRhinoException("Conflicting id in merge: %s", key);
-                    returned.put(key.toString(), returned,
-                            JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
-                }
-            } else if (object instanceof JsonObject) {
-                Json json = (Json) object;
-                if (!(json instanceof JsonObject))
-                    throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
-                JsonObject jsonObject = (JsonObject) json;
-                for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
-                    returned.put(entry.getKey(), returned, entry.getValue());
-                }
-
-            } else throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
-
-        }
-        return returned;
-    }
-
-
-    @Expose(context = true)
-    public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = cx.toJSON(jsons);
-        return Manager.getDigest(json);
-    }
-
-    @Expose(context = true)
-    public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
-        Json json = cx.toJSON(jsons);
-        return Manager.getDescriptor(json);
-    }
-
-//    @Expose(context = true)
-//    @Help(value = "Transform plans outputs with a function")
-//    public static Scriptable transform(LanguageContext cx, Callable f, Operator... operators) throws FileSystemException {
-//        return new JSTransform(cx, scope, f, operators);
-//    }
-
-//    @Expose
-//    public static Input input(String name) {
-//        return new JSInput(name);
-//    }
-
-    @Expose(value = "_")
-    @JSDeprecated
-    public static Object _get_value(Object object) {
-        return get_value(object);
-    }
-
-    @Expose("$")
-    public static Object get_value(Object object) {
-        object = unwrap(object);
-        if (object instanceof Json)
-            return ((Json) object).get();
-
-        return object;
-    }
-
-    @Expose("assert")
-    public static void _assert(boolean condition, String format, Object... objects) {
-        if (!condition)
-            throw new EvaluatorException("assertion failed: " + String.format(format, objects));
     }
 
     @Expose()
@@ -264,10 +327,6 @@ public class Functions {
         context().setWorkingDirectory(workdir);
     }
 
-    private static ScriptContext context() {
-        return ScriptContext.get();
-    }
-
     @Expose
     public void set_workdir(java.nio.file.Path workdir) throws FileSystemException {
         context().setWorkingDirectory(workdir);
@@ -285,31 +344,17 @@ public class Functions {
             throws Exception {
         return include(cx, connector.resolve(path), repositoryMode);
     }
-    /**
-     * Returns a QName object
-     *
-     * @param ns        The namespace: can be the URI string, or a javascript
-     *                  Namespace object
-     * @param localName the localname
-     * @return a QName object
-     */
-    @Expose
-    static public Object qname(String ns, String localName) {
-        return new QName(ns, localName);
-    }
 
     @Expose(context = true)
-    static public Map<String, Object> include_repository(LanguageContext cx, Path path) throws Exception {
-        try (ScriptContext sc = context().copy(true)) {
-            include(cx, path, true);
-            return sc.properties;
-        }
+    public Object include(LanguageContext cx, String path)
+            throws Exception {
+        return include(cx, ScriptContext.get().getCurrentScriptPath().getParent().resolve(path), false);
     }
+
     /**
      * Includes a repository
      *
-     *
-     * @param cx The language context
+     * @param cx             The language context
      * @param path           The xpath, absolute or relative to the current evaluated script
      * @param repositoryMode If true, creates a new javascript scope that will be independant of this one
      * @throws IllegalAccessException
@@ -319,48 +364,5 @@ public class Functions {
         java.nio.file.Path scriptpath = context().getCurrentScriptPath().getParent().resolve(path);
         LOGGER.debug("Including repository file [%s]", scriptpath);
         return include(cx, scriptpath, repositoryMode);
-    }
-
-    /**
-     * Central method called for any script inclusion
-     *
-     * @param scriptPath     The path to the script
-     * @param repositoryMode If true, runs in a separate environement
-     * @throws Exception if something goes wrong
-     */
-
-    private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
-        java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
-        try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
-            sc.setCurrentScriptPath(scriptPath);
-//            LanguageContext cx = cx.scope();
-            // Avoid adding the protocol if this is a local file
-            final String sourceName = scriptPath.toString();
-
-            return Context.getCurrentContext().evaluateReader(null, new InputStreamReader(inputStream), sourceName, 1, null);
-        } catch (FileNotFoundException e) {
-            throw new XPMRhinoException("File not found: %s", scriptPath);
-        }
-    }
-
-    @Expose
-    static public String format(
-            @Argument(name = "format", type = "String", help = "The string used to format") String format,
-            @Argument(name = "arguments...", type = "Object", help = "A list of objects")
-            Object[] args) {
-        if (args.length == 0)
-            return "";
-
-        Object fargs[] = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            fargs[i - 1] = unwrap(args[i]);
-        return String.format(format, fargs);
-    }
-
-    @Expose()
-    @Help("Returns the Path object corresponding to the current script")
-    static public java.nio.file.Path script_file()
-            throws FileSystemException {
-        return ScriptContext.get().getCurrentScriptPath();
     }
 }

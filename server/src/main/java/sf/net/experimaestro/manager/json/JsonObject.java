@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
@@ -39,6 +40,7 @@ import java.util.TreeMap;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class JsonObject extends Json {
 
     TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */

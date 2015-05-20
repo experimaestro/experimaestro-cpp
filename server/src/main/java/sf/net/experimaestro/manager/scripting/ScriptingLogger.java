@@ -27,7 +27,11 @@ import sf.net.experimaestro.utils.log.Logger;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class ScriptingLogger extends Wrapper<Logger> {
+public class ScriptingLogger extends WrapperObject<Logger> {
+    public ScriptingLogger(Logger logger) {
+        super(logger);
+    }
+
     @Expose
     public ScriptingLogger(String name) {
         super(ScriptContext.get().getLogger(name));
@@ -87,9 +91,4 @@ public class ScriptingLogger extends Wrapper<Logger> {
         object.setLevel(Level.toLevel(level));
     }
 
-
-    @Override
-    public Logger unwrap() {
-        return null;
-    }
 }

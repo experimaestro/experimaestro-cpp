@@ -28,14 +28,14 @@ var tests = new Namespace("xpm.tests");
 
 
 // Add the task to the list of available factories
-tasks("tests:task") = {
+tasks.add("tests:task", {
     inputs: {
         x: { value: "xp:integer", default: 3 }      
     },
     run: function(p) {
         return p.x
     }
-};
+});
 
 // END SNIPPET: task
 function test_json_plan() {

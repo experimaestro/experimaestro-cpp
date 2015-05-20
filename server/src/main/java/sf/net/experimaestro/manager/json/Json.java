@@ -23,10 +23,7 @@ import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Command;
 
 import java.io.*;
@@ -36,6 +33,7 @@ import java.io.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 abstract public class Json {
     public Json() {
     }

@@ -1,6 +1,8 @@
+package sf.net.experimaestro.manager.scripting;
+
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,25 +18,21 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** Direct task */
+/**
+ * A wrapper for java objects
+ */
+public abstract class WrapperObject<T> implements Wrapper<T> {
+    T object;
 
-// START SNIPPET: task
-var abc = Namespace("a.b.c");
-tasks.add("abc:task", {
-    // One input of type xp:integer
-    inputs: { x: { value: "xp:integer" } }
-});
-// END SNIPPET: task
+    protected WrapperObject(T object) {
+        this.object = object;
+    }
 
-
-/** Run and check */
-
-// START SNIPPET: run
-var r = tasks("abc:task").run({x: 10})[0];
-// END SNIPPET: run
-
-function test_directtask() {
-	if (r == undefined || $(r) != 10)
-		throw new java.lang.String.format("Value [%s] is different from 10", r);
-}	
-	
+    /**
+     * Returns the wrapped value
+     */
+    @Override
+    public T unwrap() {
+        return object;
+    }
+}
