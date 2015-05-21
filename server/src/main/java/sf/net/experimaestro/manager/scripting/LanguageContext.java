@@ -37,5 +37,21 @@ abstract public class LanguageContext {
      * Get the context
      */
     public abstract NamespaceContext getNamespaceContext();
+
+    /**
+     * Create an exception for the specific language
+     * @param e The wrapped exception
+     * @param format The message
+     * @param objects The formatting objects
+     * @return A runtime exception
+     */
+    public abstract RuntimeException runtimeException(Exception e, String format, Object... objects);
+
+    /**
+     * Returns a QName from an object
+     * @param value
+     * @return
+     */
+    public abstract QName qname(String value);
 }
 

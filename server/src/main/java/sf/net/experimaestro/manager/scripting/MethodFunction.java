@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,6 +34,7 @@ import java.util.List;
 public class MethodFunction extends GenericFunction {
     final String name;
     final ArrayList<Group> groups = new ArrayList<>();
+
     public MethodFunction(String name) {
         this.name = name;
     }
@@ -92,9 +94,15 @@ public class MethodFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+        public Object invoke(LanguageContext cx, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
             boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
-            return method.invoke(isStatic ? null : baseObject, transformedArgs);
+            try {
+                return method.invoke(isStatic ? null : baseObject, transformedArgs);
+            } catch (InvocationTargetException | IllegalArgumentException e) {
+                throw cx.runtimeException(e, "Could not invoke method %s", method.getName());
+            } catch (XPMRhinoException e) {
+                throw e.addContext("While invoking method %s", method.getName());
+            }
         }
     }
 

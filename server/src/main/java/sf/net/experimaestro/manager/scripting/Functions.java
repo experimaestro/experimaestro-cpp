@@ -33,6 +33,7 @@ import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSTransform;
+import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -52,6 +53,7 @@ import java.io.InputStreamReader;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -162,6 +164,14 @@ public class Functions {
         }
     }
 
+    @Expose(context = true)
+    static public Map<String, Object> include_repository(LanguageContext cx, String path) throws Exception {
+        try (ScriptContext sc = context().copy(true)) {
+            include(cx, context().get().getCurrentScriptPath().getParent().resolve(path), true);
+            return sc.properties;
+        }
+    }
+
     /**
      * Central method called for any script inclusion
      *
@@ -174,11 +184,11 @@ public class Functions {
         java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
             sc.setCurrentScriptPath(scriptPath);
-//            LanguageContext cx = cx.scope();
+            Scriptable scope = ((JavaScriptContext)cx).scope();
             // Avoid adding the protocol if this is a local file
             final String sourceName = scriptPath.toString();
 
-            return Context.getCurrentContext().evaluateReader(null, new InputStreamReader(inputStream), sourceName, 1, null);
+            return Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
         } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         }
@@ -205,9 +215,17 @@ public class Functions {
         return ScriptContext.get().getCurrentScriptPath();
     }
 
+    @Expose()
+    @Help("Returns a path object from an URI")
+    static public java.nio.file.Path path(@Argument(name="uri") String uri)
+            throws FileSystemException {
+        return Paths.get(uri);
+    }
+
+
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
-    public void define_share(@Argument(name = "host", help = "The logical host")
+    static public void define_share(@Argument(name = "host", help = "The logical host")
                              String host,
                              @Argument(name = "share")
                              String share,
@@ -221,7 +239,7 @@ public class Functions {
     }
 
     @Expose(optional = 2)
-    public void exit(@Argument(name = "code", help = "The exit code") int code,
+    static public void exit(@Argument(name = "code", help = "The exit code") int code,
                      @Argument(name = "message", help = "Formatting template") String message,
                      @Argument(name = "objects", help = "Formatting arguments") Object... objects) {
         if (message == null) throw new ExitException(code);
@@ -231,13 +249,13 @@ public class Functions {
 
     @Expose
     @Help("Defines the default launcher")
-    public void set_default_launcher(Launcher launcher) {
+    static public void set_default_launcher(Launcher launcher) {
         ScriptContext.get().setDefaultLauncher(launcher);
     }
 
     @Expose(value = "java_repository", optional = 1, optionalsAtStart = true)
     @Help("Include a repository from introspection of a java project")
-    public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
+    static public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
         if (connector == null)
             connector = LocalhostConnector.getInstance();
         JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
@@ -246,15 +264,15 @@ public class Functions {
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    public NativeArray get_locks(String lockMode, JsonObject json) {
+    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         get_locks(lockMode, json, dependencies);
 
-        return new NativeArray(dependencies.toArray(new Dependency[dependencies.size()]));
+        return dependencies;
     }
 
-    private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
+    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {
@@ -276,7 +294,7 @@ public class Functions {
 
     @Expose(value = "$$")
     @Help("Get the resource associated with the json object")
-    public Resource get_resource(Json json) {
+    static public Resource get_resource(Json json) {
         Resource resource;
         if (json instanceof JsonObject) {
             resource = getResource((JsonObject) json);
@@ -290,7 +308,7 @@ public class Functions {
         throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
     }
 
-    private Resource getResource(JsonObject json) {
+    private static Resource getResource(JsonObject json) {
         if (json.containsKey(Manager.XP_RESOURCE.toString())) {
             final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
             if (o instanceof Resource) {
@@ -315,7 +333,7 @@ public class Functions {
 
     @Expose()
     @Help("Set the experiment for all future commands")
-    public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
+    static public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
         if (!context().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
             try (Transaction t = Transaction.create()) {
@@ -328,7 +346,7 @@ public class Functions {
     }
 
     @Expose
-    public void set_workdir(java.nio.file.Path workdir) throws FileSystemException {
+    static public void set_workdir(java.nio.file.Path workdir) throws FileSystemException {
         context().setWorkingDirectory(workdir);
     }
 
@@ -346,7 +364,7 @@ public class Functions {
     }
 
     @Expose(context = true)
-    public Object include(LanguageContext cx, String path)
+    static public Object include(LanguageContext cx, String path)
             throws Exception {
         return include(cx, ScriptContext.get().getCurrentScriptPath().getParent().resolve(path), false);
     }

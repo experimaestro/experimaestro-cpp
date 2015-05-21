@@ -64,20 +64,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
      */
     private Type output;
 
-    static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
-        Object o = JSUtils.get(scope, key, jsObject, allowNull);
-        if (o == null)
-            return null;
-
-        if (o instanceof QName)
-            return (QName) o;
-        else if (o instanceof String) {
-            return QName.parse(o.toString(), new JSNamespaceContext(scope));
-        }
-
-        throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
-    }
-
 
     /**
      * Creates a new task information from a javascript object
@@ -141,6 +127,20 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
         init();
 
+    }
+
+    static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
+        Object o = JSUtils.get(scope, key, jsObject, allowNull);
+        if (o == null)
+            return null;
+
+        if (o instanceof QName)
+            return (QName) o;
+        else if (o instanceof String) {
+            return QName.parse(o.toString(), new JSNamespaceContext(scope));
+        }
+
+        throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
     }
 
     static public Set<String> getFields(Scriptable object, String... keys) {

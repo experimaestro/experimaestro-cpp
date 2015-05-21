@@ -499,6 +499,10 @@ public class JSUtils {
         return Boolean.parseBoolean(JSUtils.toString(value));
     }
 
+    public static String getString(Scriptable scope, String name, NativeObject object) {
+        return toString(get(scope, name, object));
+    }
+
     static public class OptionalDocument {
         Document document;
 

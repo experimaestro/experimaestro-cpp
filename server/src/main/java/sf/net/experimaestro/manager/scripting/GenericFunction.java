@@ -23,7 +23,6 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Wrapper;
 import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
@@ -51,6 +50,7 @@ public abstract class GenericFunction {
 
     static private final Function IDENTITY = Function.identity();
     static private final Function<Wrapper, Object> UNWRAPPER = x -> x.unwrap();
+    static private final Function<org.mozilla.javascript.Wrapper, Object> JS_UNWRAPPER = x -> x.unwrap();
     static private final Function<Object, String> TOSTRING = x -> x.toString();
 
     /**
@@ -201,7 +201,7 @@ public abstract class GenericFunction {
         // Call the constructor
         try {
             Object[] transformedArgs = transform(lcx, argmax, args, argmaxConverters, argMaxOffset);
-            final Object result = argmax.invoke(transformedArgs);
+            final Object result = argmax.invoke(lcx, transformedArgs);
 
             return result;
         } catch (InvocationTargetException e) {
@@ -209,6 +209,8 @@ public abstract class GenericFunction {
                 throw (XPMRhinoException) e.getCause();
             }
             throw new WrappedException(new XPMRhinoException(e.getCause()));
+        } catch(RuntimeException e) {
+            throw e;
         } catch (Throwable e) {
             throw new WrappedException(new XPMRhinoException(e));
         }
@@ -226,7 +228,7 @@ public abstract class GenericFunction {
             return executable;
         }
 
-        public abstract Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
+        public abstract Object invoke(LanguageContext cx, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
 
     }
 
@@ -342,6 +344,12 @@ public abstract class GenericFunction {
                 score -= 1;
                 Function converter = converter(lcx, ((Wrapper) o).unwrap(), type);
                 return converter != null ? UNWRAPPER.andThen(converter) : null;
+            }
+
+            if (o instanceof org.mozilla.javascript.Wrapper) {
+                score -= 1;
+                Function converter = converter(lcx, ((Wrapper) o).unwrap(), type);
+                return converter != null ? JS_UNWRAPPER.andThen(converter) : null;
             }
 
             score = Integer.MIN_VALUE;

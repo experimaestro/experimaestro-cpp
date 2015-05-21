@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.js;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
@@ -50,6 +51,16 @@ public class JavaScriptContext extends LanguageContext {
     @Override
     public NamespaceContext getNamespaceContext() {
         return new JSNamespaceContext(scope);
+    }
+
+    @Override
+    public RuntimeException runtimeException(Exception e, String format, Object... objects) {
+        throw new XPMRhinoException(e, format, objects);
+    }
+
+    @Override
+    public QName qname(String value) {
+        return QName.parse(value, getNamespaceContext());
     }
 
     public Context context() {

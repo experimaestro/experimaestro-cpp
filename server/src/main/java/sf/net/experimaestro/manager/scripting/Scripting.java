@@ -18,12 +18,14 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -35,8 +37,7 @@ import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Map;
+import java.lang.reflect.Modifier;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -45,13 +46,29 @@ import java.util.stream.Stream;
  *
  */
 public class Scripting {
+    final static private Logger LOGGER = Logger.getLogger();
+    public static MethodFunction[] FUNCTIONS;
 
-    public static MethodFunction[] FUNCTIONS = ClassDescription.analyzeClass(Functions.class).getMethods()
+    static {
+        MutableInt errors = new MutableInt(0);
+        FUNCTIONS = ClassDescription.analyzeClass(Functions.class).getMethods()
             .entrySet().stream().map(e -> {
                 final MethodFunction methodFunction = new MethodFunction(e.getKey());
+                for (Method method : e.getValue()) {
+                    if ((method.getModifiers() & Modifier.STATIC) == 0) {
+                        LOGGER.error("Method %s is not static", method);
+                        errors.increment();
+                    }
+                }
                 methodFunction.add(null, e.getValue());
                 return methodFunction;
             }).toArray(n -> new MethodFunction[n]);
+
+
+        if (errors.intValue() > 0) {
+            throw new RuntimeException("Errors while initializing the list of scripting functions");
+        }
+    }
 
     public static void forEachType(Consumer<Class> f) {
 

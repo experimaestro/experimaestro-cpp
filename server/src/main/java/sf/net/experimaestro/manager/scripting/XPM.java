@@ -25,6 +25,9 @@ import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.experiments.TaskReference;
+import sf.net.experimaestro.manager.js.JavaScriptClass;
+import sf.net.experimaestro.manager.js.JavaScriptContext;
+import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
 import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -211,13 +214,12 @@ public class XPM {
      * @param object
      * @return
      */
-    @Expose("add_task_factory")
-    public Scriptable add_task_factory(NativeObject object) throws ValueMismatchException {
-        throw new UnsupportedOperationException("not implemented");
-//        TaskFactory factory = new TaskFactory(xpm.scope, object, xpm.getRepository());
-//        getRepository().addFactory(factory.factory);
-//        return xpm.context.newObject(xpm.scope, "TaskFactory",
-//                new Object[]{factory});
+    @Expose(value = "add_task_factory", context = true)
+    public JavaScriptTaskFactory add_task_factory(JavaScriptContext jcx, NativeObject object) throws ValueMismatchException {
+        ScriptContext scx = context();
+
+        final QName id = jcx.qname(JSUtils.getString(jcx.scope(), "id", object));
+        return new JavaScriptTaskFactory(id, jcx.scope(), object, scx.getRepository());
     }
 
     @Expose("get_task")
