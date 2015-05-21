@@ -105,7 +105,7 @@ public class Scripting {
 
     public static void forEachObject(BiConsumer<String, Object> f) {
         f.accept("logger", new ScriptingLogger("xpm"));
-        f.accept("tasks", new ScriptingLogger("Tasks"));
+        f.accept("tasks", new Tasks());
         f.accept("xpm", new XPM());
     }
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -22,10 +22,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 6/3/13
+ * Marks argument that should be preserved
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface JSObjectDescription {
-    String name() default "";
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface NoJavaization {
 }

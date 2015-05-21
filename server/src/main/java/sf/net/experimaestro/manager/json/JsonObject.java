@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.Output;
 
@@ -243,6 +244,7 @@ public class JsonObject extends Json {
         out.write('}');
     }
 
+    @Expose(property = true)
     public Json get(String name) {
         return map.get(name);
     }

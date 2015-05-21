@@ -18,7 +18,11 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
@@ -28,13 +32,29 @@ import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.namespace.NamespaceContext;
-import java.nio.file.Path;
 
 /**
  * The JavaScript context when calling a function
  */
 public class JavaScriptContext extends LanguageContext {
+    static com.google.common.base.Function<Object, Object> toJavaFunction;
+
+    static {
+        toJavaFunction = value -> {
+            if (value instanceof NativeObject) {
+                return Maps.transformValues((NativeObject) value, toJavaFunction);
+            }
+
+            if (value instanceof NativeArray) {
+                Lists.transform((NativeArray) value, toJavaFunction);
+            }
+
+            return value;
+        };
+    }
+
     private final Context context;
+
     private Scriptable scope;
 
     public JavaScriptContext(Context context, Scriptable scope) {
@@ -61,6 +81,11 @@ public class JavaScriptContext extends LanguageContext {
     @Override
     public QName qname(String value) {
         return QName.parse(value, getNamespaceContext());
+    }
+
+    @Override
+    public Object toJava(Object value) {
+        return toJavaFunction.apply(value);
     }
 
     public Context context() {

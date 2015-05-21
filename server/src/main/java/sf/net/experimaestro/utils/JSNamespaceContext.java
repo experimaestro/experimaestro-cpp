@@ -22,6 +22,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Namespace;
+import sf.net.experimaestro.manager.scripting.Wrapper;
 
 import javax.lang.model.element.Name;
 import javax.xml.namespace.NamespaceContext;
@@ -53,8 +54,12 @@ public class JSNamespaceContext implements NamespaceContext {
 
         if (o instanceof Scriptable) {
             Scriptable jsObject = (Scriptable) o;
-            if ("Namespace".equals(jsObject.getClassName()))
-                return jsObject.get("uri", jsObject).toString();
+            if (o instanceof Wrapper) {
+                o = ((Wrapper) o).unwrap();
+                if (o instanceof Namespace) {
+                    return ((Namespace) o).getURI();
+                }
+            }
         }
 
         if (o instanceof Namespace) {

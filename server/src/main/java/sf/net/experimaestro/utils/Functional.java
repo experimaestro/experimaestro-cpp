@@ -20,6 +20,7 @@ package sf.net.experimaestro.utils;
 
 import sf.net.experimaestro.exceptions.WrappedException;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -51,6 +52,23 @@ public class Functional {
                 callable.apply(t);
             } catch (Throwable e) {
                 // Just ignore
+            }
+        };
+    }
+
+    public interface ExceptionalBiConsumer<T, U> {
+        void apply(T t, U u) throws Exception;
+    }
+
+    /** Propagate exceptions by wrapping them into a runtime exception */
+    public static <T, U> BiConsumer<T, U> propagate(ExceptionalBiConsumer<T, U> callable) {
+        return (t, u) -> {
+            try {
+                callable.apply(t, u);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new WrappedException(e);
             }
         };
     }

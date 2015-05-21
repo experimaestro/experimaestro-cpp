@@ -481,6 +481,10 @@ public class Plan extends Operator {
             return new Constant(new Json[]{array});
         }
 
+        if (value instanceof Map) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
 
     }

@@ -20,13 +20,18 @@ package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.annotations.JsonAdapter;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.manager.js.JSParameterFile;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -37,8 +42,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import static java.lang.String.format;
 
 /**
  * A command line argument (or argument part)
@@ -153,6 +161,72 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             }
         });
     }
+
+    /**
+     * Transform an array of JS objects into a command line argument object
+     *
+     * @param jsargs The input array
+     * @return a valid {@linkplain sf.net.experimaestro.scheduler.Command} object
+     */
+    @Expose
+    public static Command getCommand(Object jsargs) {
+        final Command command = new Command();
+
+        if (jsargs instanceof List) {
+            NativeArray array = ((NativeArray) jsargs);
+
+            for (Object _object : array) {
+                final Command argument = new Command();
+                Object object = JSUtils.unwrap(_object);
+                StringBuilder sb = new StringBuilder();
+
+                if (object instanceof CommandComponent) {
+                    command.add(object);
+                } else {
+                    argumentWalkThrough(array, sb, argument, object);
+
+                    if (sb.length() > 0)
+                        argument.add(sb.toString());
+
+                    command.add(argument);
+                }
+
+            }
+
+        } else
+            throw new RuntimeException(format(
+                    "Cannot handle an array of type %s", jsargs.getClass()));
+        return command;
+    }
+
+    /**
+     * Recursive parsing of the command line
+     */
+    private static void argumentWalkThrough(Scriptable scope, StringBuilder sb, Command command, Object object) {
+
+        if (object == null)
+            throw new IllegalArgumentException(java.lang.String.format("Null argument in command line"));
+
+        if (object instanceof ScriptingPath)
+            object = ((ScriptingPath) object).getObject();
+
+        if (object instanceof java.nio.file.Path) {
+            if (sb.length() > 0) {
+                command.add(sb.toString());
+                sb.delete(0, sb.length());
+            }
+            command.add(new Command.Path((java.nio.file.Path) object));
+        } else if (object instanceof NativeArray) {
+            for (Object child : (NativeArray) object)
+                argumentWalkThrough(scope, sb, command, JSUtils.unwrap(child));
+        } else if (object instanceof JSParameterFile) {
+            final JSParameterFile pFile = (JSParameterFile) object;
+            command.add(new Command.ParameterFile(pFile.getKey(), pFile.getValue()));
+        } else {
+            sb.append(JSUtils.toString(object));
+        }
+    }
+
 
     public java.lang.String toString(CommandContext environment) throws IOException {
         StringBuilder sb = new StringBuilder();

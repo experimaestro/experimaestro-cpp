@@ -25,10 +25,8 @@ import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.js.JavaScriptClass;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
-import sf.net.experimaestro.manager.js.object.JSCommand;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonResource;
@@ -247,7 +245,7 @@ public class XPM {
                                    @Argument(type = "Array", name = "command") List<?> jsargs,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
 
-        Commands commands = new Commands(JSCommand.getCommand(jsargs));
+        Commands commands = new Commands(Command.getCommand(jsargs));
         return commandlineJob(path, commands, options);
     }
 
@@ -277,7 +275,7 @@ public class XPM {
         } else if (commands instanceof AbstractCommand) {
             _commands = new Commands((AbstractCommand) commands);
         } else if (commands instanceof NativeArray) {
-            _commands = new Commands(JSCommand.getCommand(commands));
+            _commands = new Commands(Command.getCommand(commands));
         } else {
             throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
         }
@@ -351,7 +349,7 @@ public class XPM {
     @Expose(context = true)
     public String evaluate(LanguageContext lc, List<Object> jsargs, Map options) throws Exception {
         ScriptContext sc = context();
-        Command command = JSCommand.getCommand(jsargs);
+        Command command = Command.getCommand(jsargs);
 
         // Get the connector
         final Connector commandConnector;

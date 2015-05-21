@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager.scripting;
 
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JSObjectDescription;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -51,7 +50,7 @@ public class ClassDescription {
 
     private Map<String, ArrayList<Method>> methods = new HashMap<>();
 
-    private Map<String, Field> fields = new HashMap<>();
+    private Map<String, PropertyAccess> fields = new HashMap<>();
 
     public ClassDescription(Class<?> theClass) {
         this.wrappedClass = theClass;
@@ -79,7 +78,12 @@ public class ClassDescription {
                     // Exposed case
                     final Expose expose = method.getAnnotation(Expose.class);
                     if (expose != null) {
-                        addMethod(map, method, expose.value(), expose.call());
+                        if (expose.property()) {
+                            // TODO
+                            description.fields.put(name, new PropertyAccess());
+                        } else {
+                            addMethod(map, method, expose.value(), expose.call());
+                        }
                     }
                 }
 
@@ -98,20 +102,13 @@ public class ClassDescription {
 
                 // Add constructors
                 for (Constructor<?> constructor : aClass.getConstructors()) {
-                    final Expose annotation = constructor.getAnnotation(Expose.class);
-                    if (annotation != null) {
-                        description.constructors.add(constructor);
-                        continue;
-                    }
-
-                    // Exposed case
                     final Expose expose = constructor.getAnnotation(Expose.class);
                     if (expose != null) {
                         description.constructors.add(constructor);
                         continue;
                     }
-
                 }
+
                 if (description.constructors.isEmpty() && JSBaseObject.class.isAssignableFrom(aClass)) {
                     try {
                         description.constructors.add(aClass.getConstructor());
@@ -126,7 +123,7 @@ public class ClassDescription {
                     Property annotation = field.getAnnotation(Property.class);
                     if (annotation != null) {
                         final String name = annotation.value().equals("") ? field.getName() : annotation.value();
-                        description.fields.put(name, field);
+                        description.fields.put(name, new PropertyAccess.FieldAccess(field));
                     }
                 }
 
@@ -165,10 +162,6 @@ public class ClassDescription {
      * Returns the class name
      */
     public static String getClassName(Class<?> aClass) {
-        JSObjectDescription annotation = aClass.getAnnotation(JSObjectDescription.class);
-        if (annotation != null && !"".equals(annotation.name()))
-            return annotation.name();
-
         Exposed exposed = aClass.getAnnotation(Exposed.class);
         if (exposed != null) {
             return aClass.getSimpleName();

@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
 import sf.net.experimaestro.manager.plans.Copy;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
@@ -31,8 +32,6 @@ import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.MergeFunction;
 import sf.net.experimaestro.utils.JSUtils;
-
-import javax.xml.xpath.XPathExpressionException;
 
 /**
  * Access to the tasks
@@ -115,7 +114,7 @@ public class Tasks {
 //    }
 
     @Expose(context = true)
-    public void add(LanguageContext cx, String qname, NativeObject taskDescription) {
+    public void add(LanguageContext cx, String qname, @NoJavaization NativeObject taskDescription) {
         QName id = QName.parse(JSUtils.toString(qname), cx.getNamespaceContext());
         new TaskRef(id).set(cx, taskDescription);
     }
@@ -140,12 +139,11 @@ public class Tasks {
             return scriptContext.getRepository().getFactory(id);
         }
 
-        public TaskFactory set(LanguageContext cx, Object _value) {
-            NativeObject value = (NativeObject) _value;
+        public TaskFactory set(LanguageContext cx, NativeObject value) {
             final TaskFactory factory;
             final ScriptContext scriptContext = ScriptContext.get();
             try {
-                factory = new JavaScriptTaskFactory(id, value.getParentScope(), value, scriptContext.getRepository());
+                factory = new JavaScriptTaskFactory(id, ((JavaScriptContext)cx).scope(), value, scriptContext.getRepository());
             } catch (RhinoException e) {
                 throw e;
             } catch (ValueMismatchException | RuntimeException e) {

@@ -53,5 +53,14 @@ abstract public class LanguageContext {
      * @return
      */
     public abstract QName qname(String value);
+
+    /**
+     * Wrap values so that they can be accessed as a java object.
+     *
+     * This is usefull for collections
+     * @param value The value to wrap
+     * @return The wrapped value
+     */
+    public abstract Object toJava(Object value);
 }
 

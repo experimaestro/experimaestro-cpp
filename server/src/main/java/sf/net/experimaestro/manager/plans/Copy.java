@@ -50,8 +50,8 @@ public class Copy extends Plan {
     @Expose
     public Copy(LanguageContext cx, String outputType, Map plan){
         super(null);
-        this.setFactory(new AnonymousTaskFactory());
         this.outputType = new Type(QName.parse(outputType, cx.getNamespaceContext()));
+        this.setFactory(new AnonymousTaskFactory());
         PlanInputs mappings = Plan.getMappings(plan, cx);
 
         Type anyType = new Type(Manager.XP_ANY);

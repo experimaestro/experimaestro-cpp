@@ -32,6 +32,7 @@ import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static java.lang.Math.max;
 import static java.lang.StrictMath.min;
@@ -59,7 +61,8 @@ public abstract class GenericFunction {
      * @param lcx
      * @param declaration
      * @param args
-     * @param offset      The offset within the target parameters    @return
+     * @param offset      The offset within the target parameters
+     * @return The transformed arguments
      */
     static Object[] transform(LanguageContext lcx, Declaration declaration, Object[]
             args, Function[] converters, int offset) {
@@ -109,6 +112,7 @@ public abstract class GenericFunction {
         final Executable executable = declaration.executable();
         final Class<?>[] types = executable.getParameterTypes();
         final boolean isVarArgs = executable.isVarArgs();
+        final Annotation[][] annotations = executable.getParameterAnnotations();
 
         // Get the annotations
         Expose annotation = declaration.executable.getAnnotation(Expose.class);
@@ -141,8 +145,20 @@ public abstract class GenericFunction {
 
         // Normal arguments
         for (int i = 0; i < args.length && i < nbArgs && converter.isOK(); i++) {
-            final Object o = args[i];
-            converters[i] = converter.converter(lcx, o, types[i + offset.intValue()]);
+            final int j = i + offset.intValue();
+
+            Object o = args[i];
+
+            // Unwrap if necessary
+            final boolean javaize = Stream.of(annotations[j]).noneMatch(c -> c instanceof NoJavaization);
+            if (javaize) {
+                o = lcx.toJava(o);
+            }
+
+            converters[i] = converter.converter(lcx, o, types[j]);
+            if (javaize) {
+                converters[i] = lcx::toJava;
+            }
         }
 
         // Var args
@@ -173,6 +189,12 @@ public abstract class GenericFunction {
         Function converters[] = new Function[args.length];
         int argMaxOffset = 0;
 
+        for(int i = 0; i < args.length; ++i) {
+            if (args[i] instanceof Wrapper) {
+                args[i] = ((Wrapper)args[i]).unwrap();
+            }
+        }
+
         for (Declaration method : declarations()) {
             MutableInt offset = new MutableInt(0);
             int score = score(lcx, method, args, converters, offset);
@@ -188,8 +210,9 @@ public abstract class GenericFunction {
 
         if (argmax == null) {
             String context = "";
-            if (thisObj instanceof JSBaseObject)
-                context = " in an object of class " + ClassDescription.getClassName(thisObj.getClass());
+            if (thisObj instanceof JSBaseObject) {
+                context = " in an object of class " + ((JSBaseObject) thisObj).getClassName();
+            }
 
             throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)%s",
                     getName(),
@@ -276,8 +299,6 @@ public abstract class GenericFunction {
             if (type.isAssignableFrom(o.getClass())) {
                 if (o.getClass() != type)
                     score--;
-                if (o instanceof Wrapper)
-                    return object -> ((Wrapper) object).unwrap();
                 return IDENTITY;
             }
 
@@ -336,20 +357,6 @@ public abstract class GenericFunction {
                 score -= 10;
                 JavaScriptContext jcx = (JavaScriptContext) lcx;
                 return nativeObject -> JSUtils.toJSON(jcx.scope(), nativeObject);
-            }
-
-
-            // Everything else failed... unwrap and try again
-            if (o instanceof Wrapper) {
-                score -= 1;
-                Function converter = converter(lcx, ((Wrapper) o).unwrap(), type);
-                return converter != null ? UNWRAPPER.andThen(converter) : null;
-            }
-
-            if (o instanceof org.mozilla.javascript.Wrapper) {
-                score -= 1;
-                Function converter = converter(lcx, ((Wrapper) o).unwrap(), type);
-                return converter != null ? JS_UNWRAPPER.andThen(converter) : null;
             }
 
             score = Integer.MIN_VALUE;

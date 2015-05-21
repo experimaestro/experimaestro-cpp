@@ -174,7 +174,6 @@ public class JSDirectTask extends Task {
         @Expose()
         @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
         public Json group(String groupId, JsonObject p) {
-
             JsonObject json = new JsonObject();
             for (Entry<String, Input> x : getFactory().getInputs().entrySet()) {
                 if (x.getValue().inGroup(groupId)) {

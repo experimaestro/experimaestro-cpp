@@ -180,6 +180,11 @@ public class JavaScriptRunner implements AutoCloseable {
             return object;
         }
 
+        if (object.getClass().isArray()) {
+            // FIXME
+            return new NativeArray((Object[]) object);
+        }
+
         // Exposed objects
         final Class<?> objectClass = object.getClass();
         final Exposed exposed = objectClass.getAnnotation(Exposed.class);
@@ -197,6 +202,7 @@ public class JavaScriptRunner implements AutoCloseable {
                 }
             }
         }
+
 
 
         throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
