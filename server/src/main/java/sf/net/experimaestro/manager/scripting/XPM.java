@@ -337,9 +337,8 @@ public class XPM {
     }
 
     @Expose(context = true)
-    public String evaluate(LanguageContext lc, ScriptContext sc, List<Object> command) throws Exception {
-
-        return evaluate(lc, sc, command, ImmutableMap.of());
+    public String evaluate(LanguageContext lc, List<Object> command) throws Exception {
+        return evaluate(lc, command, ImmutableMap.of());
     }
 
     /**
@@ -350,8 +349,8 @@ public class XPM {
      * @throws InterruptedException
      */
     @Expose(context = true)
-    public String evaluate(LanguageContext lc, ScriptContext sc, List<Object> jsargs, Map options) throws Exception {
-
+    public String evaluate(LanguageContext lc, List<Object> jsargs, Map options) throws Exception {
+        ScriptContext sc = context();
         Command command = JSCommand.getCommand(jsargs);
 
         // Get the connector

@@ -85,10 +85,9 @@ public class JavaScriptRunner implements AutoCloseable {
         scope.setPrototype(XPM_SCOPE);
         scope.setParentScope(null);
 
-        // tasks object
-        addNewObject(context, scope, "tasks", "Tasks", new Object[]{});
-        ScriptableObject.defineProperty(scope, "logger", new ScriptingLogger("xpm"), 0);
-        ScriptableObject.defineProperty(scope, "xpm", new XPM(), 0);
+        Scripting.forEachObject((name, value) -> {
+            ScriptableObject.defineProperty(scope, name, wrap(value), 0);
+        });
     }
 
     /**
@@ -143,7 +142,7 @@ public class JavaScriptRunner implements AutoCloseable {
             }));
 
             Scripting.forEachConstant((name, value) -> {
-                ScriptableObject.defineProperty(XPM_SCOPE, name, value, 0);
+                ScriptableObject.defineProperty(XPM_SCOPE, name, wrap(value), 0);
             });
 
             Scripting.forEachFunction(m -> ScriptableObject.defineProperty(XPM_SCOPE, m.getName(), new JavaScriptFunction(m), 0));

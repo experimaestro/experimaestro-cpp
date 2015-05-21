@@ -52,17 +52,17 @@ public class Scripting {
     static {
         MutableInt errors = new MutableInt(0);
         FUNCTIONS = ClassDescription.analyzeClass(Functions.class).getMethods()
-            .entrySet().stream().map(e -> {
-                final MethodFunction methodFunction = new MethodFunction(e.getKey());
-                for (Method method : e.getValue()) {
-                    if ((method.getModifiers() & Modifier.STATIC) == 0) {
-                        LOGGER.error("Method %s is not static", method);
-                        errors.increment();
+                .entrySet().stream().map(e -> {
+                    final MethodFunction methodFunction = new MethodFunction(e.getKey());
+                    for (Method method : e.getValue()) {
+                        if ((method.getModifiers() & Modifier.STATIC) == 0) {
+                            LOGGER.error("Method %s is not static", method);
+                            errors.increment();
+                        }
                     }
-                }
-                methodFunction.add(null, e.getValue());
-                return methodFunction;
-            }).toArray(n -> new MethodFunction[n]);
+                    methodFunction.add(null, e.getValue());
+                    return methodFunction;
+                }).toArray(n -> new MethodFunction[n]);
 
 
         if (errors.intValue() > 0) {
@@ -99,8 +99,13 @@ public class Scripting {
     }
 
     public static void forEachConstant(BiConsumer<String, Object> f) {
-
         f.accept("PIPE", Command.Pipe.getInstance());
         f.accept("xp", Manager.EXPERIMAESTRO_NS_OBJECT);
+    }
+
+    public static void forEachObject(BiConsumer<String, Object> f) {
+        f.accept("logger", new ScriptingLogger("xpm"));
+        f.accept("tasks", new ScriptingLogger("Tasks"));
+        f.accept("xpm", new XPM());
     }
 }

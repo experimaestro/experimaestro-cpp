@@ -55,7 +55,7 @@ public class JavaScriptContext extends LanguageContext {
 
     @Override
     public RuntimeException runtimeException(Exception e, String format, Object... objects) {
-        throw new XPMRhinoException(e, format, objects);
+        return new XPMRhinoException(e, format, objects);
     }
 
     @Override
