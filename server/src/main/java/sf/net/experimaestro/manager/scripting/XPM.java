@@ -149,8 +149,6 @@ public class XPM {
 
     @Expose("set_property")
     public void setProperty(String name, Object object) {
-
-        final Object x = unwrap(object);
         context().setProperty(name, object);
     }
 

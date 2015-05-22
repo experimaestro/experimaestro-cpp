@@ -45,6 +45,10 @@ public class JavaScriptContext extends LanguageContext {
 
     static {
         toJavaFunction = (jcx, value) -> {
+            if (value == null) {
+                return null;
+            }
+
             if (value instanceof NativeObject) {
                 final com.google.common.base.Function f = x -> toJavaFunction.apply(jcx, x);
                 return Maps.transformValues((NativeObject) value, f);

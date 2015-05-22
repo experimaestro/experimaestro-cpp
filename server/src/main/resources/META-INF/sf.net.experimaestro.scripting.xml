@@ -62,6 +62,7 @@
         <class>sf.net.experimaestro.manager.scripting.ScriptingPath</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingLogger</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingList</class>
+        <class>sf.net.experimaestro.manager.scripting.ScriptingMap</class>
         <!--<class>sf.net.experimaestro.manager.scripting.ScriptingReference</class>-->
 
         <!-- Json -->

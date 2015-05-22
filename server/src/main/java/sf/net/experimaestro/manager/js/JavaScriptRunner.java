@@ -210,10 +210,6 @@ public class JavaScriptRunner implements AutoCloseable {
             return new NativeJavaArray(scope, object);
         }
 
-        if (object instanceof Map) {
-            return new NativeJavaObject(scope, object, Map.class);
-        }
-
         if (object instanceof ScriptingReference) {
             ScriptingReference ref = (ScriptingReference) object;
             return new Ref() {
