@@ -232,10 +232,16 @@ public class Functions {
     }
 
     @Expose()
+    static public java.nio.file.Path path(@Argument(name = "uri") Path path) {
+        return path;
+    }
+
+    @Expose()
     @Help("Returns a path object from an URI")
     static public java.nio.file.Path path(@Argument(name = "uri") String uri)
             throws FileSystemException, URISyntaxException {
-        return Paths.get(new URI(uri));
+        final URI _uri = new URI(uri);
+        return _uri.getScheme() == null ? Paths.get(uri) : Paths.get(_uri);
     }
 
 
