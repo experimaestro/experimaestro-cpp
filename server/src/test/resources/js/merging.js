@@ -23,12 +23,12 @@
 var abc = new Namespace("a.b.c");
 
 // First task
-tasks("abc:sub-task") = {
+tasks.add("abc:sub-task", {
 	inputs: { x: { value: "xp:integer" } }
-};
+});
 
 // Third task
-tasks("abc:task") = {
+tasks.add("abc:task", {
 	/*
 	    Connects the value returned by t1 to the input of x for t2
 	*/
@@ -40,7 +40,7 @@ tasks("abc:task") = {
 		return inputs.subtask;
 	}
 		
-};
+});
 
 // Get the task
 var task = tasks("abc:task").create();
@@ -51,7 +51,7 @@ var r = task.run();
 // END SNIPPET: main
 
 function test_merging() {
-	if (r == undefined || _(r) != 10)
+	if (r == undefined || $(r) != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", _(r));
 }
 	

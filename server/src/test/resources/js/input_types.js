@@ -56,31 +56,26 @@ function assert_ok(plan) {
         logger.warn("Exception: %s", e);
         ok = false;
     }
-    if (!ok)
+    if (!ok) {
         throw "Wrong input type was detected but it should not have: " + plan.toSource();
+    }
 } 
 
 
 // ---- TESTS ----
  
 function test_integer() {
-    assert_ok({ x_integer: 1 });
-    assert_ok({ x_integer: { "$type": "xp:integer", "$value": 1 } });
-    
-    assert_error({ x_integer: 1.2 });        
+    assert_ok({x_integer: 1});
+}
+
+function test_wrapped_integer() {
+    assert_ok({x_integer: {"$type": "xp:integer", "$value": 1}});
+}
+
+function test_wrong_double() {
+    assert_error({ x_integer: 1.2 });
+}
+
+function test_wrong_string() {
     assert_error({ x_integer: "qwerty" });
 }
- 
-// function test_xml() {
-//     assert_ok({ x_xml: <a>1</a> });    
-//     
-//     assert_error({ x_xml: <a xmlns={test.uri}>1</a> });    
-//     assert_error({ x_xml: <b>1</b> });    
-// }
-// 
-// function test_ns_xml() {
-//     assert_ok({ x_ns_xml: <a xmlns={test.uri}>1</a> });    
-//     
-//     assert_error({ x_ns_xml: <a xmlns="other.ns">1</a> });    
-//     assert_error({ x_ns_xml: <b>1</b> });    
-// }

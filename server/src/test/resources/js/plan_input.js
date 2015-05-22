@@ -19,14 +19,14 @@
 include("check_array.inc.js");
 
 function test_simple() {
-    var input = new PlanInput([ 1, 2 ]);
+    var input = new Constant(1, 2);
 
-    tasks("test") = {
+    tasks.add("test", {
         inputs: { x: { value: "xp:integer" } },
         run: function(p) {
             return p.x;
         }
-    }
+    });
 
     var result = tasks("test").run({ x: input });
     check_array(result, [1, 2]);

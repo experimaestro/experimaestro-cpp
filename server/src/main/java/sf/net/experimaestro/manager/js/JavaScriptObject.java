@@ -18,18 +18,36 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.Argument;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import sf.net.experimaestro.manager.scripting.Wrapper;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 16/1/13
+ * A wrapper for exposed java objects
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface JSArguments {
-    Argument[] value();
+public class JavaScriptObject extends JSBaseObject implements Wrapper {
+    private final Object object;
 
-    String returnType() default "";
+    public JavaScriptObject(Object object) {
+        super(object.getClass());
+        this.object = object;
+    }
+
+    @Override
+    public Object unwrap() {
+        return object instanceof Wrapper ? ((Wrapper) object).unwrap() : object;
+    }
+
+    @Override
+    protected Object thisObject() {
+        return this.object;
+    }
+
+    @Override
+    public Object getDefaultValue(Class<?> hint) {
+        return getClassName();
+    }
+
+    @Override
+    public String toString() {
+        return unwrap().toString();
+    }
 }

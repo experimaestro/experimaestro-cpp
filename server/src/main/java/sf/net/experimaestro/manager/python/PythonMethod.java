@@ -33,7 +33,7 @@ class PythonMethod extends PyObject {
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
-        return PythonContext.wrap(methodFunction.call(null, null, null, PythonContext.unwrap(args)));
+        return PythonRunner.wrap(methodFunction.call(null, null, PythonRunner.unwrap(args)));
 
     }
 }

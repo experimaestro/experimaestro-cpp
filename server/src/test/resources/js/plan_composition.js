@@ -79,8 +79,9 @@ function test_simple() {
     });
 
     // Optimize and run
-    // Should be an array of XML values 3, 6, 5, 10
+    // Should be an array of values 3, 6, 5, 10
     var result = plan2();
+    logger.info("Result is %s", result);
     check_array(result, [3, 5, 6, 10]);
 }
 
@@ -211,6 +212,7 @@ function test_add() {
     plan.add({ x: [4, 5], y: 2});
     
     var result = plan();
+    logger.info("Array is %s", result);
     check_array(result, [4, 5, 6, 7]);
 }
 

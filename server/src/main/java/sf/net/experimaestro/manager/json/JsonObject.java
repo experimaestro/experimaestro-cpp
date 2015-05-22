@@ -20,53 +20,65 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Array;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
+
+import static java.lang.String.format;
 
 /**
  * A JSON object (associates a key to a json value)
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JsonObject
-        extends TreeMap<String, Json> /* Warning: we depend on the map being sorted (for hash string) */
-        implements Json {
+@Exposed
+public class JsonObject extends Json {
+
+    TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
 
     public static final String XP_TYPE_STRING = Manager.XP_TYPE.toString();
     public static final String XP_VALUE_STRING = Manager.XP_VALUE.toString();
 
-    public JsonObject() {
+    public JsonObject() {}
+
+    public JsonObject(TreeMap<String, Json> map) {
+        this.map.putAll(map);
     }
 
-    public JsonObject(Map<? extends String, ? extends Json> m) {
-        super(m);
-    }
 
     @Override
     public String toString() {
-        return String.format("{%s}", Output.toString(", ", this.entrySet(),
-                entry -> String.format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
+        return format("{%s}", Output.toString(", ", map.entrySet(),
+                entry -> format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
     }
 
     @Override
     public Json clone() {
-        return new JsonObject(this);
+        return new JsonObject(map);
     }
 
     @Override
     public boolean isSimple() {
-        if (!containsKey(Manager.XP_VALUE.toString())) {
+        if (!map.containsKey(Manager.XP_VALUE.toString())) {
             return false;
         }
 
@@ -77,7 +89,7 @@ public class JsonObject
     public Object get() {
         QName parsedType = type();
 
-        Json value = this.get(Manager.XP_VALUE.toString());
+        Json value = map.get(Manager.XP_VALUE.toString());
         if (value == null)
             throw new IllegalArgumentException("No value in the Json object");
 
@@ -120,12 +132,15 @@ public class JsonObject
     }
 
     public void put(String key, String string) {
-        put(key, new JsonString(string));
+        map.put(key, new JsonString(string));
+    }
+    public void put(String key, Json json) {
+        map.put(key, json);
     }
 
     @Override
     public QName type() {
-        Json type = get(Manager.XP_TYPE.toString());
+        Json type = map.get(Manager.XP_TYPE.toString());
         if (type == null)
             return Manager.XP_OBJECT;
 
@@ -139,7 +154,7 @@ public class JsonObject
     public void write(Writer out) throws IOException {
         out.write('{');
         boolean first = true;
-        for (Map.Entry<String, Json> entry : this.entrySet()) {
+        for (Map.Entry<String, Json> entry : map.entrySet()) {
             if (first)
                 first = false;
             else
@@ -158,7 +173,7 @@ public class JsonObject
     @Override
     public void write(JsonWriter out) throws IOException {
         out.beginObject();
-        for (Map.Entry<String, Json> entry : this.entrySet()) {
+        for (Map.Entry<String, Json> entry : map.entrySet()) {
             out.name(entry.getKey());
             entry.getValue().write(out);
         }
@@ -171,8 +186,8 @@ public class JsonObject
             return true;
         }
 
-        if (this.containsKey(Manager.XP_IGNORE.toString())) {
-            Json value = this.get(Manager.XP_IGNORE.toString());
+        if (map.containsKey(Manager.XP_IGNORE.toString())) {
+            Json value = map.get(Manager.XP_IGNORE.toString());
             if (value instanceof JsonBoolean) {
                 if (((JsonBoolean) value).getBoolean()) {
                     return true;
@@ -191,14 +206,14 @@ public class JsonObject
         }
 
         if (isSimple() && options.simplifyValues) {
-            get(Manager.XP_VALUE.toString()).writeDescriptorString(out, options);
+            map.get(Manager.XP_VALUE.toString()).writeDescriptorString(out, options);
             return;
         }
 
         Set<String> ignored_keys = new HashSet<>();
         ignored_keys.add(Manager.XP_IGNORE.toString());
-        if (this.containsKey(Manager.XP_IGNORE.toString())) {
-            Json value = this.get(Manager.XP_IGNORE.toString());
+        if (map.containsKey(Manager.XP_IGNORE.toString())) {
+            Json value = map.get(Manager.XP_IGNORE.toString());
             if (value instanceof JsonString) {
                 ignored_keys.add(((JsonString) value).string);
             } else if (value instanceof JsonArray) {
@@ -213,7 +228,7 @@ public class JsonObject
 
         out.write('{');
         boolean first = true;
-        for (Map.Entry<String, Json> entry : this.entrySet()) {
+        for (Map.Entry<String, Json> entry : map.entrySet()) {
             Json value = entry.getValue();
             String key = entry.getKey();
             // A key is ignored if either:
@@ -238,4 +253,41 @@ public class JsonObject
         out.write('}');
     }
 
+    @Expose(mode = ExposeMode.FIELDS)
+    public Json getField(String name) {
+        return JsonObject.this.get(name);
+    }
+
+    public Json get(String name) {
+        return map.get(name);
+    }
+
+    public Iterable<? extends Json> values() {
+        return map.values();
+    }
+
+    public boolean containsKey(String key) {
+        return map.containsKey(key);
+    }
+
+    public Iterable<? extends Map.Entry<String, Json>> entrySet() {
+        return map.entrySet();
+    }
+
+    public static JsonObject toJSON(LanguageContext lcx, Map<?, ?> map) {
+        JsonObject json = new JsonObject();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            QName qname = lcx.qname(entry.getKey());
+            Object pValue = entry.getValue();
+
+            if (qname.equals(Manager.XP_TYPE)) {
+                pValue = lcx.qname(entry.getValue());
+            }
+
+            String key = qname.toString();
+            final Json key_value = Json.toJSON(lcx, pValue);
+            json.put(key, key_value);
+        }
+        return json;
+    }
 }

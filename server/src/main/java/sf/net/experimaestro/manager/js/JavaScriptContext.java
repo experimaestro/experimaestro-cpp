@@ -18,20 +18,113 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
+import com.google.common.base.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.mozilla.javascript.*;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Wrapper;
+import sf.net.experimaestro.utils.JSNamespaceContext;
+import sf.net.experimaestro.utils.JSUtils;
+
+import javax.xml.namespace.NamespaceContext;
+import java.util.function.BiFunction;
 
 /**
  * The JavaScript context when calling a function
  */
 public class JavaScriptContext extends LanguageContext {
+    static BiFunction<JavaScriptContext, Object, Object> toJavaFunction;
+
+    static {
+        toJavaFunction = (jcx, value) -> {
+            if (value instanceof NativeObject) {
+                final com.google.common.base.Function f = x -> toJavaFunction.apply(jcx, x);
+                return Maps.transformValues((NativeObject) value, f);
+            }
+
+            if (value instanceof NativeArray) {
+                final com.google.common.base.Function f = x -> toJavaFunction.apply(jcx, x);
+                return Lists.transform((NativeArray) value,  f);
+            }
+
+            if (value instanceof ConsString) {
+                return value.toString();
+            }
+
+            if (value instanceof ScriptingReference) {
+                value = ((ScriptingReference) value).get(jcx);
+            }
+
+            if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
+                return ((sf.net.experimaestro.manager.scripting.Wrapper)value).unwrap();
+            }
+
+            if (value instanceof Ref) {
+                value = ((Ref)value).get(jcx.context);
+            }
+
+            if (value == Undefined.instance) {
+                return null;
+            }
+
+            if (value.getClass().isArray()) {
+                Object[] array = (Object[]) value;
+                Object[] newArray = new Object[array.length];
+                for(int i = 0; i < newArray.length; ++i) {
+                    newArray[i] = toJavaFunction.apply(jcx, array[i]);
+                }
+                return newArray;
+            }
+
+            return value;
+        };
+    }
+
     private final Context context;
+
     private Scriptable scope;
 
     public JavaScriptContext(Context context, Scriptable scope) {
+        super();
         this.context = context;
         this.scope = scope;
+    }
+
+    @Override
+    public Json toJSON(Object object) {
+        return Json.toJSON(this, object);
+    }
+
+    @Override
+    public NamespaceContext getNamespaceContext() {
+        return new JSNamespaceContext(scope);
+    }
+
+    @Override
+    public RuntimeException runtimeException(Exception e, String format, Object... objects) {
+        return new XPMRhinoException(e, format, objects);
+    }
+
+    @Override
+    public QName qname(Object value) {
+        if (value instanceof Wrapper) {
+            value = ((Wrapper) value).unwrap();
+        }
+
+        if (value instanceof QName) {
+            return (QName) value;
+        }
+
+        return QName.parse(value.toString(), getNamespaceContext());
+    }
+
+    @Override
+    public Object toJava(Object value) {
+        return toJavaFunction.apply(this, value);
     }
 
     public Context context() {
@@ -41,4 +134,9 @@ public class JavaScriptContext extends LanguageContext {
     public Scriptable scope() {
         return scope;
     }
+
+    public Context getContext() {
+        return context;
+    }
+
 }

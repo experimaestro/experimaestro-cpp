@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,13 +19,8 @@ package sf.net.experimaestro.manager.js;
  */
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 2/4/13
+ * Created by bpiwowar on 21/05/15.
  */
-public class JSInput {
-    private final String name;
-
-    public JSInput(String name) {
-        this.name = name;
-    }
+public interface Wrapper<T> extends org.mozilla.javascript.Wrapper {
+    T unwrap();
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,23 +18,11 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.scripting.Expose;
-
 /**
- * Wrapper for operators
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * Special object that can be assigned
  */
-public class JSOperator extends JSAbstractOperator {
-    private final Operator operator;
-
-    @Expose
-    public JSOperator(Operator operator) {
-        this.operator = operator;
-    }
-
-    @Override
-    Operator getOperator() {
-        return operator;
-    }
+@Exposed
+public interface ScriptingReference<T> {
+    T get(LanguageContext cx);
+    void set(LanguageContext cx, T value);
 }

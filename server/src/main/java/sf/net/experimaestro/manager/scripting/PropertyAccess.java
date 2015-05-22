@@ -1,0 +1,72 @@
+package sf.net.experimaestro.manager.scripting;
+
+/*
+ * This file is part of experimaestro.
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.utils.Functional;
+
+import java.lang.reflect.Field;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
+/**
+ * Access to a property
+ */
+public class PropertyAccess {
+    Function<Object, Object> getter;
+
+    BiConsumer<Object, Object> setter;
+
+    public PropertyAccess(Function<Object, Object> getter, BiConsumer<Object, Object> setter) {
+        this.getter = getter;
+        this.setter = setter;
+    }
+
+    public PropertyAccess() {
+
+    }
+
+    public ScriptingReference get(final Object object) {
+        return new ScriptingReference() {
+            @Override
+            public Object get(LanguageContext cx) {
+                return getter.apply(object);
+            }
+
+            @Override
+            public void set(LanguageContext cx, Object value) {
+                setter.accept(object, value);
+            }
+        };
+    }
+
+    public void set(Object object, Object value) {
+        setter.accept(object, value);
+    }
+
+    static public class FieldAccess extends PropertyAccess {
+        public FieldAccess(Field field) {
+            super(
+                    Functional.propagateFunction(x -> field.get(x)),
+                    Functional.propagate((o, v) -> field.set(o, v))
+            );
+        }
+    }
+}

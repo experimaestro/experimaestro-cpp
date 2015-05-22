@@ -135,7 +135,7 @@ public class LatticeNodeTest {
     }
 
     @Test(description = "Simple merge c0 -> {op0, op1} -> op")
-    public void SimpleOperatorTest() throws XPathExpressionException {
+    public void SimpleOperatorTest(){
         Builder builder = new Builder();
 
         final Constant c0 = new Constant(json("A"), json("B"));
@@ -152,7 +152,7 @@ public class LatticeNodeTest {
     }
 
     @Test(description = "Test that the output of a plan is OK")
-    public void FlatOperatorSimpleTest() throws XPathExpressionException {
+    public void FlatOperatorSimpleTest(){
         Builder builder = new Builder();
         OperatorMap opMap = builder.opMap;
         Lattice lattice = builder.lattice;
@@ -415,7 +415,7 @@ public class LatticeNodeTest {
         }
 
 
-        public HashSet<String> run(MergeResult result) throws XPathExpressionException {
+        public HashSet<String> run(MergeResult result){
             HashSet<String> set = new HashSet<>();
             final FakeOperator op = new FakeOperator("result");
             op.addParent(result.operator);

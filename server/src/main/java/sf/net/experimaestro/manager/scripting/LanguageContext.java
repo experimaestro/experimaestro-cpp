@@ -18,8 +18,49 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.json.Json;
+
+import javax.xml.namespace.NamespaceContext;
+import java.nio.file.Path;
+
 /**
  * Language specific context when executing a script
  */
-public class LanguageContext {
+abstract public class LanguageContext {
+    /**
+     * Returns a JSON object from an objct
+     */
+    abstract public Json toJSON(Object object);
+
+    /**
+     * Get the context
+     */
+    public abstract NamespaceContext getNamespaceContext();
+
+    /**
+     * Create an exception for the specific language
+     * @param e The wrapped exception
+     * @param format The message
+     * @param objects The formatting objects
+     * @return A runtime exception
+     */
+    public abstract RuntimeException runtimeException(Exception e, String format, Object... objects);
+
+    /**
+     * Returns a QName from an object
+     * @param value
+     * @return
+     */
+    public abstract QName qname(Object value);
+
+    /**
+     * Wrap values so that they can be accessed as a java object.
+     *
+     * This is usefull for collections
+     * @param value The value to wrap
+     * @return The wrapped value
+     */
+    public abstract Object toJava(Object value);
 }
+

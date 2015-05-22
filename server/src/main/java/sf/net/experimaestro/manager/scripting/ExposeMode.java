@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,14 +18,19 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 6/3/13
+ * How to expose a method
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface JSObjectDescription {
-    String name() default "";
+public enum ExposeMode {
+    /** Standard method with a name */
+    METHOD,
+    /** Use a direct call */
+    CALL,
+    /** Property access */
+    PROPERTY,
+
+    /** Index access */
+    INDEX,
+    /** Field access */
+    FIELDS
 }

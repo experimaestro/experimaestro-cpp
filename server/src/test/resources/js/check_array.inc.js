@@ -21,16 +21,18 @@
 var logger = xpm.logger("xpm.tests");
 
 function check_array(results, expected) {
-	if (results.length != expected.length)
-		throw new java.lang.String.format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
-    
+	if (results.length != expected.length) {
+		throw format("The arrays differ in length (got %.0f, expected %.0f)", results.length, expected.length);
+    }
+
     // Sort the results
-    logger.info("Results: %s", results.toSource());
+    logger.info("Results: %s", results);
     results.sort(function(x,y) { return $(x) - $(y); });
+    logger.info("Sorted results: %s", results);
     for (var i = 0; i < expected.length; i++) {
         if (expected[i] != Number($(results[i]))) {
             logger.error("Expected %s and got %s at %s", expected[i].toSource(), $(results[i]), i);
-			throw 1;
+			throw format("Test error");
 	    }
     }
 }

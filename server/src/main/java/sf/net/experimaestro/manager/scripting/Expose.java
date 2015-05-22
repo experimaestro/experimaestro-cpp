@@ -32,18 +32,6 @@ public @interface Expose {
     /** The name of the function (by default, the name of the ) */
     String value() default "";
 
-    /**
-     * Whether the constructor takes scope & context
-     * @deprecated The context should be used to build language agnostic functions
-     */
-    @Deprecated
-    boolean scope() default false;
-
-
-    /**
-     * Marks a function that is used when the object is called
-     */
-    boolean call() default false;
 
     /**
      * Number of arguments that are optional.
@@ -61,4 +49,9 @@ public @interface Expose {
      */
     boolean context() default false;
 
+    /**
+     * How is this method used (ignored for constructors)
+     * @return The mode (default: a method)
+     */
+    ExposeMode mode() default ExposeMode.METHOD;
 }

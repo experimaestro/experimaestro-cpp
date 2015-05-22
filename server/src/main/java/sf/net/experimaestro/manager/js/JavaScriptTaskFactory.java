@@ -21,9 +21,12 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
@@ -37,16 +40,12 @@ import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_
 /**
  * A task factory defined by a javascript object
  */
-public class TaskFactoryJavascript extends TaskFactory {
+@Exposed
+public class JavaScriptTaskFactory extends TaskFactory {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-     * Our XPM object
-     */
-    private final XPMObject xpm;
-
-    /**
-     * The server
+     * The underlying object
      */
     protected NativeObject jsObject;
 
@@ -72,20 +71,20 @@ public class TaskFactoryJavascript extends TaskFactory {
      * @param scope    The scope
      * @param jsObject The object
      */
-    public TaskFactoryJavascript(QName qname, Scriptable scope, NativeObject jsObject,
+    public JavaScriptTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
                                  Repository repository) throws ValueMismatchException {
         super(repository, qname, JSUtils.get(scope,
                 "version", jsObject, "1.0"), null);
         this.jsScope = scope;
         this.jsObject = jsObject;
-        this.xpm = XPMObject.getXPMObject(scope);
+
         String2String prefixes = new JSNamespaceBinder(scope);
 
         // --- Look up the module
-        Module module = JSModule.getModule(repository,
-                JSUtils.get(jsScope, "module", jsObject, null));
-        if (module != null)
-            setModule(module);
+//        Module module = Module.getModule(repository,
+//                JSUtils.get(jsScope, "module", jsObject, null));
+//        if (module != null)
+//            setModule(module);
 
         // --- Get the task inputs
         inputs = new TreeMap<>();
@@ -94,7 +93,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
 
         // --- Get the task outputs
-        QName outQName = JSTaskFactory.getQName(scope, jsObject, "output", true);
+        QName outQName = getQName(scope, jsObject, "output", true);
         if (outQName != null) {
             output = new Type(outQName);
         }
@@ -128,6 +127,20 @@ public class TaskFactoryJavascript extends TaskFactory {
 
         init();
 
+    }
+
+    static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
+        Object o = JSUtils.get(scope, key, jsObject, allowNull);
+        if (o == null)
+            return null;
+
+        if (o instanceof QName)
+            return (QName) o;
+        else if (o instanceof String) {
+            return QName.parse(o.toString(), new JSNamespaceContext(scope));
+        }
+
+        throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
     }
 
     static public Set<String> getFields(Scriptable object, String... keys) {
@@ -243,8 +256,8 @@ public class TaskFactoryJavascript extends TaskFactory {
             if (definition.has("copy", definition)) {
                 final Object copyTo = definition.get("copy", definition);
                 if (copyTo instanceof Boolean) {
-                    if ((Boolean)copyTo)
-                         input.setCopyTo(id);
+                    if ((Boolean) copyTo)
+                        input.setCopyTo(id);
                 } else {
                     input.setCopyTo(JSUtils.toString(copyTo));
                 }
@@ -308,7 +321,7 @@ public class TaskFactoryJavascript extends TaskFactory {
 
 
     @Override
-    public JSAbstractTask create() {
+    public Task create() {
         // Get the "createSSHAgentIdentityRepository" constructor
         Object function = JSUtils.get(jsScope, "create", jsObject, null);
 
@@ -321,8 +334,7 @@ public class TaskFactoryJavascript extends TaskFactory {
                 throw new RuntimeException(
                         "Could not find the create or run converter.");
 
-            JSDirectTask jsDirectTask = new JSDirectTask(xpm, this, jsScope,
-                    jsObject, (Function) function, output);
+            JSDirectTask jsDirectTask = new JSDirectTask(this, jsScope, jsObject, (Function) function, output);
             jsDirectTask.init();
             return jsDirectTask;
         }

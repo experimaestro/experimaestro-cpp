@@ -20,10 +20,10 @@
 
 // START SNIPPET: task
 var abc = Namespace("a.b.c");
-tasks("abc:task") = {
+tasks.add("abc:task", {
     // One input of type xp:integer
     inputs: { x: { value: "xp:integer" } }
-};
+});
 // END SNIPPET: task
 
 
@@ -34,7 +34,7 @@ var r = tasks("abc:task").run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {
-	if (r == undefined || _(r) != 10)
+	if (r == undefined || $(r) != 10)
 		throw new java.lang.String.format("Value [%s] is different from 10", r);
 }	
 	

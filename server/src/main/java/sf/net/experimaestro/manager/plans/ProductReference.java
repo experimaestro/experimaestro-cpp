@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.*;
@@ -32,6 +33,7 @@ import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 12/3/13
  */
+@Exposed
 public class ProductReference extends NAryOperator {
 
     @Override

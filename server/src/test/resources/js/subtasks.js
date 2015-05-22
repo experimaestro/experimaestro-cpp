@@ -39,6 +39,7 @@ var task_2 = {
 	inputs: { t1: { task: "abc:task-1" } },
 	
 	run: function(inputs) {
+		logger.info("inputs=%s, inputs.t1=%s", inputs, inputs.t1);
 		return inputs.t1;
 	}
 		
@@ -53,7 +54,8 @@ task.set("t1.p", 10);
 var r = task.run();
 
 // END SNIPPET: main
-if (r == undefined || _(r) != 10)
-	throw new java.lang.String.format("Value [%s] is different from 10", r);
-	
+logger.info("r=%s", r);
+if (r == undefined || $(r) != 10) {
+	throw java.lang.String.format("Value [%s] is different from 10", r);
+}
 	

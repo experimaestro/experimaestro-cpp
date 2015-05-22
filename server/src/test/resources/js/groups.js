@@ -11,10 +11,10 @@ tasks.add("groups", {
    run: function(p) {
        x = this.group("2", p);
        if (x.a === undefined) {
-           throw "a should be defined";
+           throw "Test error: a should be defined";
        }
        if (x.b !== undefined) {
-           throw "b should not be defined";
+           throw "Test error: b should not be defined";
        }
        return {};
    }

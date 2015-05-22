@@ -34,6 +34,6 @@ public interface Function {
      * @param input
      * @return
      */
-    abstract Iterator<? extends Json> apply(Json[] input);
+    Iterator<? extends Json> apply(Json[] input);
 
 }

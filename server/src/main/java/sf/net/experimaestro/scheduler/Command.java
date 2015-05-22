@@ -20,13 +20,17 @@ package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.annotations.JsonAdapter;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import org.mozilla.javascript.NativeArray;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.js.JSParameterFile;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.json.JsonWriterOptions;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.ScriptingPath;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -37,6 +41,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -63,6 +68,63 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         list = new ArrayList<>(c);
     }
 
+    /**
+     * Transform an array of JS objects into a command line argument object
+     *
+     * @param array The input array
+     * @return a valid {@linkplain sf.net.experimaestro.scheduler.Command} object
+     */
+    @Expose
+    public static Command getCommand(List array) {
+        final Command command = new Command();
+
+        for (Object object : array) {
+            final Command argument = new Command();
+            StringBuilder sb = new StringBuilder();
+
+            if (object instanceof CommandComponent) {
+                command.add(object);
+            } else {
+                argumentWalkThrough(sb, argument, object);
+
+                if (sb.length() > 0)
+                    argument.add(sb.toString());
+
+                command.add(argument);
+            }
+
+        }
+
+        return command;
+    }
+
+    /**
+     * Recursive parsing of the command line
+     */
+    private static void argumentWalkThrough(StringBuilder sb, Command command, Object object) {
+        if (object == null)
+            throw new IllegalArgumentException(java.lang.String.format("Null argument in command line"));
+
+        if (object instanceof ScriptingPath)
+            object = ((ScriptingPath) object).getObject();
+
+        if (object instanceof java.nio.file.Path) {
+            if (sb.length() > 0) {
+                command.add(sb.toString());
+                sb.delete(0, sb.length());
+            }
+            command.add(new Command.Path((java.nio.file.Path) object));
+        } else if (object instanceof NativeArray) {
+            for (Object child : (NativeArray) object)
+                argumentWalkThrough(sb, command, JSUtils.unwrap(child));
+        } else if (object instanceof JSParameterFile) {
+            final JSParameterFile pFile = (JSParameterFile) object;
+            command.add(new Command.ParameterFile(pFile.getKey(), pFile.getValue()));
+        } else {
+            sb.append(JSUtils.toString(object));
+        }
+    }
+
     @Override
     public void prepare(CommandContext environment) {
         list.forEach(Functional.propagate(c -> c.prepare(environment)));
@@ -80,7 +142,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public Stream<Dependency> dependencies() {
-        return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> ((SubCommand)c).dependencies());
+        return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> ((SubCommand) c).dependencies());
     }
 
     public void forEachDependency(Consumer<Dependency> consumer) {
@@ -93,7 +155,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-        for(CommandComponent component: list) {
+        for (CommandComponent component : list) {
             component.forEachCommand(consumer);
         }
     }
@@ -115,7 +177,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         sb.append("]");
         return sb.toString();
     }
-
 
     public int size() {
         return list.size();
@@ -147,7 +208,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             } else if (t instanceof java.nio.file.Path) {
                 list.add(new Path((java.nio.file.Path) t));
             } else if (t instanceof JsonPath) {
-                list.add(new Path( ((JsonPath)t).get()));
+                list.add(new Path(((JsonPath) t).get()));
             } else {
                 list.add(new String(t.toString()));
             }
@@ -175,12 +236,12 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
          */
         AbstractCommand command;
 
-        protected CommandOutput() {}
+        protected CommandOutput() {
+        }
 
         public CommandOutput(AbstractCommand command) {
             this.command = command;
         }
-
 
 
         @Override
@@ -230,7 +291,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         }
     }
 
-    public static class Path implements CommandComponent, Serializable  {
+    public static class Path implements CommandComponent, Serializable {
         @JsonAdapter(JsonPathConverter.class)
         private java.nio.file.Path file;
 
@@ -253,7 +314,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     }
 
     @Exposed
-    public static class ParameterFile implements CommandComponent, Serializable  {
+    public static class ParameterFile implements CommandComponent, Serializable {
         java.lang.String key;
         byte[] content;
 
@@ -297,6 +358,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     /**
      * A pipe
      */
+    @Exposed
     static public class Pipe implements CommandComponent {
         static private Pipe PIPE = new Pipe();
 

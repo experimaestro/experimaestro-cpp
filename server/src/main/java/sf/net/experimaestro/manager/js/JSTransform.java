@@ -26,43 +26,34 @@ import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
+import sf.net.experimaestro.manager.plans.NAryOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
+import sf.net.experimaestro.manager.plans.UnaryOperator;
 import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * JS function to transform inputs in a operators
  */
-public class JSTransform extends JSAbstractOperator implements Function {
-    protected final Context cx;
+@Exposed
+public class JSTransform implements Function {
     protected final Scriptable scope;
     protected final Callable f;
+    private final Context cx;
 
-    private final FunctionOperator operator;
-
-    @Expose
-    public JSTransform(Context cx, Scriptable scope, Callable f, JSAbstractOperator[] operators) {
-        this.cx = cx;
-        this.scope = scope;
-        this.f = f;
-
-        Operator inputOperator;
-        if (operators.length == 1)
-            inputOperator = operators[0].getOperator();
-        else {
-            ProductReference pr = new ProductReference();
-            for (JSAbstractOperator operator : operators)
-                pr.addParent(operator.getOperator());
-            inputOperator = pr;
-        }
-
-        operator = new FunctionOperator(this);
-        operator.addParent(inputOperator);
-
+    @Expose(context = true)
+    public JSTransform(JavaScriptContext jcx, Object f, Operator[] operators) {
+        this.cx = jcx.context();
+        this.scope = jcx.scope();
+        this.f = (Callable) f;
     }
 
     @Override
@@ -71,19 +62,12 @@ public class JSTransform extends JSAbstractOperator implements Function {
     }
 
     public Iterator<Json> apply(Json[] parameters) {
-        Object[] args = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++)
-            args[i] = new JSJson(parameters[i]);
-        Json result = JSUtils.toJSON(scope, f.call(cx, scope, null, args));
+        final Object call = f.call(cx, scope, null, parameters);
+        Json result = JSUtils.toJSON(scope, call);
 
         if (result instanceof JsonArray)
             return ((JsonArray) result).iterator();
 
         return ImmutableList.of(result).iterator();
-    }
-
-    @Override
-    Operator getOperator() {
-        return operator;
     }
 }

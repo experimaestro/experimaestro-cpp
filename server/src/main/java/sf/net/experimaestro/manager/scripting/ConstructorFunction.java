@@ -37,7 +37,7 @@ public class ConstructorFunction extends GenericFunction {
     }
 
     @Override
-    protected String getName() {
+    protected String getKey() {
         return "new " + className;
     }
 
@@ -55,8 +55,18 @@ public class ConstructorFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
-            return constructor.newInstance(transformedArgs);
+        public String toString() {
+            return constructor.toString();
+        }
+
+        @Override
+        public Object invoke(LanguageContext cx, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+            try {
+                return constructor.newInstance(transformedArgs);
+            } catch (InvocationTargetException | IllegalArgumentException e) {
+                throw cx.runtimeException(e, "Could not construct object with %s", constructor);
+            }
+
         }
 
     }

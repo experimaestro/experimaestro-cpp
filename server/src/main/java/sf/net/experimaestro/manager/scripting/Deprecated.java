@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -22,12 +22,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Marks a constructor that can be called through the Callable interface
- * of {@linkplain JSBaseObject}
- *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 13/3/13
+ * Marks a javascript function or constructor which is deprecated
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JSCall {
+public @interface Deprecated {
 }

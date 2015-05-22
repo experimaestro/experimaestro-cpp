@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -37,6 +38,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class QName implements Comparable<QName> {
     final static private Logger LOGGER = Logger.getLogger();
 

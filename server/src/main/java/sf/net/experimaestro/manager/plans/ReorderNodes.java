@@ -22,6 +22,7 @@ import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import org.apache.commons.lang.ArrayUtils;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Arrays;
@@ -32,6 +33,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 12/3/13
  */
+@Exposed
 public class ReorderNodes extends UnaryOperator {
     int mapping[];
 

@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Entity;
@@ -38,6 +39,7 @@ import java.util.Map;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class LocalhostConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();

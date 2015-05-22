@@ -22,6 +22,7 @@ import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -31,7 +32,8 @@ import java.io.Writer;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JsonInteger implements Json {
+@Exposed
+public class JsonInteger extends Json {
     private long value;
 
     public JsonInteger() {

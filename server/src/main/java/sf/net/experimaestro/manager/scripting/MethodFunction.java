@@ -19,21 +19,29 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents all the methods with the same name within the same object
  */
 public class MethodFunction extends GenericFunction {
-    final String name;
+    final static private Logger LOGGER = Logger.getLogger();
+
+    final Object key;
     final ArrayList<Group> groups = new ArrayList<>();
-    public MethodFunction(String name) {
-        this.name = name;
+
+    public MethodFunction(Object key) {
+        this.key = key;
     }
 
     public boolean isEmpty() {
@@ -41,8 +49,8 @@ public class MethodFunction extends GenericFunction {
     }
 
     @Override
-    protected String getName() {
-        return name;
+    public String getKey() {
+        return key.toString();
     }
 
     @Override
@@ -62,7 +70,7 @@ public class MethodFunction extends GenericFunction {
         });
     }
 
-    public void add(Object thisObj, ArrayList<Method> methods) {
+    public void add(Object thisObj, List<Method> methods) {
         groups.add(new Group(thisObj, methods));
     }
 
@@ -72,9 +80,9 @@ public class MethodFunction extends GenericFunction {
      */
     static class Group {
         final Object thisObject;
-        ArrayList<Method> methods = new ArrayList<>();
+        List<Method> methods = new ArrayList<>();
 
-        Group(Object thisObject, ArrayList<Method> methods) {
+        Group(Object thisObject, List<Method> methods) {
             this.thisObject = thisObject;
             this.methods = methods;
         }
@@ -91,9 +99,23 @@ public class MethodFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+        public String toString() {
+            final StringWriter stringWriter = new StringWriter();
+            Documentation.methodDeclaration(method).text(new PrintWriter(stringWriter));
+            return stringWriter.toString();
+        }
+
+        @Override
+        public Object invoke(LanguageContext cx, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
             boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
-            return method.invoke(isStatic ? null : baseObject, transformedArgs);
+            try {
+                return method.invoke(isStatic ? null : baseObject, transformedArgs);
+            } catch (InvocationTargetException | IllegalArgumentException e) {
+                LOGGER.debug(e,  "Error [%s] while invoking method %s", e, method);
+                throw cx.runtimeException(e, "Error [%s] while invoking method %s", e, method);
+            } catch (XPMRhinoException e) {
+                throw e.addContext("While invoking method %s", method);
+            }
         }
     }
 

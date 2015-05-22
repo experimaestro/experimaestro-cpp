@@ -27,7 +27,6 @@ import sf.net.experimaestro.manager.DotName;
  * Inputs for a plan
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/3/13
  */
 public class PlanInputs {
     Multimap<DotName, Operator> map = ArrayListMultimap.create();

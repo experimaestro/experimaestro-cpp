@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -23,10 +23,13 @@ import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.utils.JSNamespaceContext;
@@ -37,18 +40,19 @@ import java.util.Map;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/4/13
  */
-public class JSCopy extends JSPlan {
+@Exposed
+public class Copy extends Plan {
     private final Type outputType;
     private final Map<String, Input> inputs = new HashMap<>();
 
 
     @Expose
-    public JSCopy(Context cx, Scriptable scope, String outputType, NativeObject plan) throws XPathExpressionException {
-        this.outputType = new Type(QName.parse(outputType, new JSNamespaceContext(scope)));
-        this.plan = new Plan(new AnonymousTaskFactory());
-        PlanInputs mappings = JSPlan.getMappings(plan, scope);
+    public Copy(LanguageContext cx, String outputType, Map plan){
+        super(null);
+        this.outputType = new Type(QName.parse(outputType, cx.getNamespaceContext()));
+        this.setFactory(new AnonymousTaskFactory());
+        PlanInputs mappings = Plan.getMappings(plan, cx);
 
         Type anyType = new Type(Manager.XP_ANY);
 
@@ -58,12 +62,11 @@ public class JSCopy extends JSPlan {
             inputs.put(name.toString(), new JsonInput(anyType));
         }
 
-        this.plan.add(mappings);
-
+        add(mappings);
     }
 
 
-    private class AnonymousTaskFactory extends TaskFactory {
+     private class AnonymousTaskFactory extends TaskFactory {
         public AnonymousTaskFactory() {
             super(new Repository(null), outputType.qname(), "1.0", "");
         }

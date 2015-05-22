@@ -20,31 +20,19 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
-import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.ConstructorFunction;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
+import sf.net.experimaestro.manager.scripting.*;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.file.Path;
 import java.util.ArrayList;
-
-import static java.lang.String.format;
 
 /**
  * Base class for all JS objects implementations
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 27/11/12
  */
 abstract public class JSBaseObject implements Scriptable, JSConstructable, Callable {
-    private XPMObject xpm;
-
     private ClassDescription classDescription;
     private Scriptable prototype;
     private Scriptable parentScope;
@@ -59,27 +47,13 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     }
 
     /**
-     * Create a new JS object
-     */
-    public static <T> T newObject(Context cx, Scriptable scope, Class<T> aClass, Object... args) {
-        return (T) cx.newObject(scope, ClassDescription.getClassName(aClass), args);
-    }
-
-    /**
-     * Get the XPM object (thread)
-     */
-    final static XPMObject xpm() {
-        return XPMObject.getThreadXPM();
-    }
-
-    /**
      * Defines a new class.
      * <p/>
      * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
      * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
      *
-     * @param scope
-     * @param aClass
+     * @param scope The scope
+     * @param aClass The class
      * @throws IllegalAccessException
      * @throws java.lang.reflect.InvocationTargetException
      * @throws InstantiationException
@@ -97,20 +71,21 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 ScriptableObject.defineClass(scope, (Class<? extends Scriptable>) aClass);
             }
         } else {
+            // Wraps the class
             final String name = ClassDescription.getClassName(aClass);
-            scope.put(name, scope, new WrappedJavaObject.WrappedClass(aClass));
+            scope.put(name, scope, new JavaScriptClass(aClass));
         }
     }
 
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        MethodFunction function = getMethodFunction(null);
-        if (function.isEmpty())
+        MethodFunction function = getMethodFunction(ExposeMode.CALL);
+        if (function.isEmpty()) {
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
+        }
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        XPMObject xpm = XPMObject.getThreadXPM();
-        return function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, args);
+        return JavaScriptRunner.wrap(jcx, function.call(jcx, thisObj, args));
     }
 
     @Override
@@ -127,21 +102,27 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         }
 
         // Search for a property
-        final Field field = classDescription.getFields().get(name);
-        if (field != null) {
-            try {
-                return field.get(this);
-            } catch (IllegalAccessException e) {
-                throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
-            }
+        final PropertyAccess propertyAccess = classDescription.getFields().get(name);
+        if (propertyAccess != null) {
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, propertyAccess.get(thisObject()).get(jcx));
         }
+
+        // Search for property accessor
+        function = getMethodFunction(ExposeMode.FIELDS);
+        if (function != null) {
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            final Object result = function.call(jcx, thisObject(), name);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
+        }
+
         return NOT_FOUND;
     }
 
-    private MethodFunction getMethodFunction(String name) {
-        MethodFunction function = new MethodFunction(name);
+    private MethodFunction getMethodFunction(Object key) {
+        MethodFunction function = new MethodFunction(key);
 
-        ArrayList<Method> methods = this.classDescription.getMethods().get(name);
+        ArrayList<Method> methods = this.classDescription.getMethods().get(key);
         if (methods != null && !methods.isEmpty())
             function.add(thisObject(), methods);
 
@@ -149,13 +130,15 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
             if (prototype instanceof JSBaseObject) {
                 JSBaseObject jsPrototype = (JSBaseObject) prototype;
-                methods = jsPrototype.classDescription.getMethods().get(name);
+                methods = jsPrototype.classDescription.getMethods().get(key);
                 if (methods != null && !methods.isEmpty())
                     function.add(jsPrototype, methods);
             }
         }
         return function;
     }
+
+
 
     /**
      * Returns the underlying object
@@ -168,6 +151,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object get(int index, Scriptable start) {
+        MethodFunction function = getMethodFunction(ExposeMode.INDEX);
+        if (function != null) {
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            final Object result = function.call(jcx, thisObject(), index);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
+        }
         return NOT_FOUND;
     }
 
@@ -183,15 +172,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        final Field field = classDescription.getFields().get(name);
+        final PropertyAccess field = classDescription.getFields().get(name);
         if (field != null) {
             if (classDescription.getFields().containsKey(name)) {
-                try {
-                    field.set(this, value);
-                    return;
-                } catch (IllegalAccessException e) {
-                    throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
-                }
+                field.set(this, value);
+                return;
             }
         }
 
@@ -252,11 +237,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return toString().getBytes();
     }
 
-    protected JSBaseObject setXPM(XPMObject xpm) {
-        this.xpm = xpm;
-        return this;
-    }
-
     /**
      * The Experimaestro wrap factory to handle special cases
      */
@@ -279,58 +259,14 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
-            if (obj == null) {
-                return Undefined.instance;
-            }
-
-            if (obj instanceof Path)
-                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
-            if (obj instanceof Node) {
-                return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
-            }
-            if (obj instanceof Json) {
-                return new JSJson((Json) obj).setXPM(XPMObject.getXPM(scope));
-            }
-            if (obj.getClass().getAnnotation(Exposed.class) != null) {
-                return new WrappedJavaObject(cx, scope, obj);
-            }
-            return super.wrap(cx, scope, obj, staticType);
+            return JavaScriptRunner.wrap(cx, scope, obj);
         }
 
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
-            if (obj instanceof JSBaseObject)
-                return (JSBaseObject) obj;
-
-            if (obj instanceof JSTasks.TaskRef) {
-                return (Scriptable) ((JSTasks.TaskRef) obj).get(cx);
-            }
-
-            if (obj instanceof Json) {
-                return new JSJson((Json) obj).setXPM(XPMObject.getXPM(scope));
-            }
-
-            if (obj instanceof Node)
-                return new JSNode((Node) obj).setXPM(XPMObject.getXPM(scope));
-
-            if (obj instanceof Path) {
-                return new JSPath((Path) obj).setXPM(XPMObject.getXPM(scope));
-            }
-
-            return super.wrapNewObject(cx, scope, obj);
+            return (Scriptable)JavaScriptRunner.wrap(cx, scope, obj);
         }
 
-    }
-
-    static private class MyNativeJavaObject extends NativeJavaObject {
-        private MyNativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
-            super(scope, javaObject, staticType, isAdapter);
-        }
-
-        @Override
-        public String getClassName() {
-            return ClassDescription.getClassName(this.staticType);
-        }
     }
 
     private static class MyNativeJavaClass extends NativeJavaClass {
@@ -344,9 +280,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             String className = ClassDescription.getClassName((Class) javaObject);
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
             JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-            XPMObject threadXPM = XPMObject.getThreadXPM();
-            Object object = constructorFunction.call(jcx,
-                    threadXPM != null ? threadXPM.getScriptContext() : null, null, args);
+            Object object = constructorFunction.call(jcx, null, args);
 
             return (Scriptable) object;
 

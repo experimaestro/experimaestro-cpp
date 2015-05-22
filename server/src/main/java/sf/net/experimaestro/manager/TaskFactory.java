@@ -18,7 +18,15 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.plans.Plan;
+import sf.net.experimaestro.manager.plans.PlanInputs;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.Commands;
 
 import java.util.Map;
@@ -31,6 +39,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski
  */
+@Exposed
 public abstract class TaskFactory {
     /**
      * The identifier of this experiment
@@ -102,6 +111,7 @@ public abstract class TaskFactory {
     /**
      * Creates a new experiment
      */
+    @Expose("create")
     public abstract Task create();
 
     /**
@@ -137,5 +147,40 @@ public abstract class TaskFactory {
 
     public Commands commands(JsonObject json, boolean simulate) {
         throw new IllegalAccessError(format("This task factory [%s] cannot generate a command", this.getClass()));
+    }
+
+    @Expose(context = true, value = "commands")
+    public Commands commands(LanguageContext cx, JsonObject json) {
+        return commands(json, ScriptContext.get().simulate());
+    }
+
+    @Help("Creates a plan from this task")
+    @Expose(value = "run", context = true)
+    public Object run(LanguageContext cx, Map map) throws ExperimaestroCannotOverwrite {
+        final Plan plan = new Plan(this);
+        PlanInputs inputs= Plan.getMappings(map, cx);
+        plan.add(inputs);
+        return plan.run();
+    }
+
+    @Help("Creates a plan from this task")
+    @Expose(value = "plan", context = true)
+    public Plan plan() {
+        return new Plan(this);
+    }
+
+    @Help("Creates a plan from this task")
+    @Expose(value = "plan", context = true)
+    public Object plan(LanguageContext cx, Map map) {
+        final Plan plan = new Plan(this);
+        PlanInputs inputs= Plan.getMappings(map, cx);
+        plan.add(inputs);
+        return plan;
+    }
+
+    @Expose(value = "simulate", context = true)
+    public Object simulate(LanguageContext cx, Map parameters) throws Exception {
+        final Plan plan = new Plan(cx, this, parameters);
+        return plan.simulate();
     }
 }

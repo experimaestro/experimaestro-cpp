@@ -32,7 +32,7 @@ import static java.lang.String.format;
 /**
  * Json wrapper over resources
  */
-public class JsonResource implements Json {
+public class JsonResource extends Json {
     Resource resource;
 
     public JsonResource(Resource resource) {

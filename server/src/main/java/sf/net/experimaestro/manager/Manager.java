@@ -22,7 +22,6 @@ import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Element;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.js.XPMObject;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.utils.MessageDigestWriter;
@@ -51,6 +50,8 @@ import static java.lang.String.format;
 public class Manager {
 
     public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
+    public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
+
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
@@ -70,6 +71,8 @@ public class Manager {
 
     /// Ignored value
     public static final QName XP_IGNORE = new QName(null, "$ignore");
+    public static final String XPM_SIGNATURE = "signature.xpm";
+    public static final String OLD_XPM_SIGNATURE = ".xpm-signature";
 
     static {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
@@ -157,11 +160,11 @@ public class Manager {
         Files.createDirectories(directory ? uniquePath : uniquePath.getParent());
 
         // Create the signature
-        Path signature = directory ? uniquePath.resolve(XPMObject.XPM_SIGNATURE) : uniquePath;
+        Path signature = directory ? uniquePath.resolve(Manager.XPM_SIGNATURE) : uniquePath;
 
         if (directory) {
             // Move old signature to new location (no more hidden files !)
-            Path oldSignature = uniquePath.resolve(XPMObject.OLD_XPM_SIGNATURE);
+            Path oldSignature = uniquePath.resolve(Manager.OLD_XPM_SIGNATURE);
             if (Files.exists(oldSignature)) {
                 Files.move(oldSignature, signature);
             }

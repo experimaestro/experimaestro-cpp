@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.json;
 
 /*
  * This file is part of experimaestro.
@@ -18,30 +18,18 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.Union;
-import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ScriptingReference;
+import sf.net.experimaestro.manager.scripting.Wrapper;
+
+import static java.lang.String.format;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 11/3/13
+ * A reference to a JSON object
  */
-public class JSUnion extends JSAbstractOperator {
-    Union union = new Union();
-
-    @Expose
-    public JSUnion(JSAbstractOperator... operators) {
-        for (JSAbstractOperator operator : operators)
-            union.addParent(operator.getOperator());
-    }
-
-    @Expose
-    public void add(JSAbstractOperator operator) {
-        union.addParent(operator.getOperator());
-    }
-
+abstract public class JsonScriptingReference implements ScriptingReference, Wrapper {
     @Override
-    Operator getOperator() {
-        return union;
+    public String toString() {
+        return format("json(%s)", unwrap());
     }
+
 }

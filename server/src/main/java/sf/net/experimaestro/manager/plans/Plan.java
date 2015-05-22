@@ -19,20 +19,45 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.base.Function;
-import com.google.common.collect.*;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
+import org.mozilla.javascript.ConsString;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonNull;
+import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ExposeMode;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A fake operator corresponding to a task factory. This is replaced by
@@ -40,6 +65,7 @@ import java.util.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class Plan extends Operator {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -62,6 +88,9 @@ public class Plan extends Operator {
         this.factory = factory;
     }
 
+    public void setFactory(TaskFactory factory) {
+        this.factory = factory;
+    }
 
     /**
      * Get the operator corresponding to this plan
@@ -71,7 +100,7 @@ public class Plan extends Operator {
      * @return
      * @throws XPathExpressionException
      */
-    public Operator getOperator(boolean simplify, boolean initialize) throws XPathExpressionException {
+    public Operator getOperator(boolean simplify, boolean initialize){
         return prepare(simplify, initialize);
     }
 
@@ -110,7 +139,7 @@ public class Plan extends Operator {
      * @param scriptContext
      * @return An iterator over the generated XML values
      */
-    public Iterator<Json> run(ScriptContext scriptContext) throws XPathExpressionException {
+    public Iterator<Json> run(ScriptContext scriptContext){
         Operator operator = prepare(true, true);
 
         // Now run
@@ -126,7 +155,7 @@ public class Plan extends Operator {
 
     }
 
-    private Operator prepare(boolean simplify, boolean initialize) throws XPathExpressionException {
+    private Operator prepare(boolean simplify, boolean initialize){
         // Creates the TaskOperator
         Operator operator = prepare(new HashMap<>(), new OperatorMap());
         if (LOGGER.isTraceEnabled())
@@ -275,6 +304,10 @@ public class Plan extends Operator {
 
     }
 
+    /**
+     * Add plan inputs for this plan
+     * @param inputs The inputs to add
+     */
     public void add(PlanInputs inputs) {
         inputsList.add(inputs.map);
     }
@@ -343,6 +376,168 @@ public class Plan extends Operator {
         }
 
 
+    }
+
+
+    /**
+     * Build a operators from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
+     *
+     * @param factory
+     * @param object
+     */
+    @Expose(context = true)
+    public Plan(LanguageContext cx, TaskFactory factory, Map object){
+        this(factory);
+        add(getMappings(object, cx));
+    }
+
+    /**
+     * Get the mappings out of a native object
+     *
+     * @param object
+     * @param cx
+     * @return
+     * @throws XPathExpressionException
+     */
+    static public PlanInputs getMappings(Map object, LanguageContext cx)  {
+        PlanInputs inputs = new PlanInputs();
+        return getMappings(inputs, DotName.EMPTY, object, cx);
+    }
+
+    static private PlanInputs getMappings(PlanInputs inputs, DotName prefix, Map object, LanguageContext lcx){
+        for (Object _id : object.keySet()) {
+            final String name = JSUtils.toString(_id);
+            DotName id = new DotName(prefix, DotName.parse(name));
+
+            final Object value = JSUtils.unwrap(object.get(name));
+
+            try {
+                if (value instanceof List) {
+                    final List array = (List) value;
+                    if (array.isEmpty()) {
+                        inputs.set(id, new Constant());
+                    } else {
+                        for (int i = 0; i < array.size(); i++) {
+                            final Object e = array.get(i);
+                            inputs.set(id, getSimple(e, lcx));
+                        }
+                    }
+                } else {
+                    inputs.set(id, getSimple(value, lcx));
+                }
+
+            } catch (XPMRhinoException | XPMRuntimeException e) {
+                e.addContext("While setting %s", id);
+                throw e;
+            }
+        }
+        return inputs;
+    }
+
+
+    /**
+     * Returns a mapping for the given value
+     *
+     * @param value The value
+     * @param lcx
+     * @return The Json object
+     */
+    static Operator getSimple(Object value, LanguageContext lcx){
+        value = JSUtils.unwrap(value);
+
+        // --- Already an operator
+        if (value instanceof Operator) {
+            return (Operator) value;
+        }
+
+        // --- Constants
+
+        if (value instanceof Integer) {
+            return new Constant(ValueType.wrap((Integer) value));
+        }
+
+        if (value instanceof Double) {
+            // Because rhino returns doubles for any number
+            if ((((Double) value).longValue()) == (Double) value)
+                return new Constant(ValueType.wrap(((Double) value).longValue()));
+            return new Constant(ValueType.wrap((Double) value));
+        }
+
+        if (value instanceof Boolean) {
+            return new Constant(ValueType.wrap((Boolean) value));
+        }
+
+        if (value instanceof String) {
+            return new Constant(new JsonString((String) value));
+        }
+
+        if (value instanceof ConsString) {
+            return new Constant(new JsonString(value.toString()));
+        }
+
+        if (value instanceof Json)
+            return new Constant((Json) value);
+
+        if (value instanceof NativeObject) {
+            return new Constant(lcx.toJSON(value));
+        }
+
+        // --- Plans & transformations
+
+        // Case of a native array: we wrap its values
+        if (value instanceof List) {
+            List list = (List)value;
+            JsonArray array = new JsonArray();
+            for (int i = 0; i < list.size(); i++) {
+                final Object e = list.get(i);
+                array.add(ValueType.wrap(e));
+            }
+
+            return new Constant(new Json[]{array});
+        }
+
+        if (value instanceof Map) {
+            return new Constant(lcx.toJSON(value));
+        }
+
+        throw new XPMRhinoException("Cannot handle type " + value.getClass());
+
+    }
+
+    @Expose(value = "run", context = true)
+    public List<Json> run(LanguageContext cx){
+        return run(cx, false);
+    }
+
+    @Expose(mode = ExposeMode.CALL, context = true)
+    public List<Json> _run(LanguageContext cx){
+        return run(cx, false);
+    }
+
+    @Expose(context = true)
+    public List<Json> simulate(LanguageContext cx){
+        return run(cx, true);
+    }
+
+
+    private List<Json> run(LanguageContext cx, boolean simulate){
+        try(final ScriptContext scriptContext = ScriptContext.get().copy()) {
+            final Iterator<Json> iterator = run(scriptContext.simulate(simulate));
+            ArrayList<Json> values = new ArrayList<>();
+
+            while (iterator.hasNext()) {
+                values.add(iterator.next());
+            }
+
+            return values;
+        }
+    }
+
+
+
+    @Expose(value = "add", context = true)
+    public void add(LanguageContext cx, Map object){
+        add(getMappings(object, cx));
     }
 
 }

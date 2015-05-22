@@ -47,4 +47,9 @@ public class IdentityHashSet<T> extends AbstractSet<T> {
     public int size() {
         return map.size();
     }
+
+    @Override
+    public boolean isEmpty() {
+        return map.isEmpty();
+    }
 }

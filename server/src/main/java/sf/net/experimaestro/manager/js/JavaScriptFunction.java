@@ -36,11 +36,9 @@ public class JavaScriptFunction implements Function {
     @Override
     public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
-        XPMObject xpm = XPMObject.getThreadXPM();
         try {
-            final Object result = function.call(jcx, xpm != null ? xpm.getScriptContext() : null, thisObj, objects);
-            if (result == null) return Undefined.instance;
-            return result;
+            final Object result = function.call(jcx, thisObj, objects);
+            return JavaScriptRunner.wrap(jcx, result);
         } catch(RhinoException e) {
             throw e;
         } catch(Throwable e) {

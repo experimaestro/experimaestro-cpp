@@ -31,8 +31,8 @@ import sf.net.experimaestro.utils.JSUtils;
 import java.util.Arrays;
 
 /**
+ * FIXME: check what this class do
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 2/4/13
  */
 public class JSConnection extends Connection {
     private final Scriptable scope;
@@ -57,7 +57,7 @@ public class JSConnection extends Connection {
 
         Object[] args = new Object[]{names.length};
         for (int i = 0; i < args.length; i++) {
-            args[i] = new JSJson(task.getValue(new DotName(names[i])).get());
+            args[i] = task.getValue(new DotName(names[i])).get();
         }
 
         Object result = function.call(context, scope, null, args);

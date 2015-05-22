@@ -29,4 +29,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Exposed {
+    /** Name of the class
+     *
+     * @return The name of the class or an empty string if the class is the class name
+     */
+    String value() default "";
 }

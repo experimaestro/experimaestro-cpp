@@ -18,14 +18,12 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.functions.Function;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import java.util.Iterator;
 
@@ -37,12 +35,11 @@ public class JsonPathFunction implements Function {
     private final String[] path;
     private final String query;
 
-    public JsonPathFunction(String query, Scriptable scope) {
+    public JsonPathFunction(String query, java.util.function.Function<Json, Object> scope) {
         this.query = query;
         this.path = query.split("\\.");
-        JSNamespaceContext namespaceContext = new JSNamespaceContext(scope);
         for (int i = 0; i < path.length; i++) {
-            path[i] = path[i].equals("*") ? "*" : QName.parse(path[i], namespaceContext).toString();
+            path[i] = path[i].equals("*") ? "*" : QName.parse(path[i]).toString();
         }
     }
 

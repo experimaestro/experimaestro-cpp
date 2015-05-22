@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,21 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 /**
- * Marks a javascript function or constructor which is deprecated
+ * A wrapper for java objects
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface JSDeprecated {
+public abstract class WrapperObject<T> implements Wrapper<T> {
+    T object;
+
+    protected WrapperObject(T object) {
+        this.object = object;
+    }
+
+    /**
+     * Returns the wrapped value
+     */
+    @Override
+    public T unwrap() {
+        return object;
+    }
 }

@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.mutable.MutableInt;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.io.PrintStream;
@@ -38,6 +39,7 @@ import java.util.*;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 21/2/13
  */
+@Exposed
 public class OrderBy extends UnaryOperator {
     /**
      * The order over streams (might be shared by different order-by before a join

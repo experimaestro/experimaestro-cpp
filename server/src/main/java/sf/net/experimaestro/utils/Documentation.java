@@ -26,7 +26,6 @@ import java.util.Arrays;
  * Helper class when writing documentation
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 16/1/13
  */
 public class Documentation {
     static public abstract class Printer {
@@ -53,6 +52,8 @@ public class Documentation {
 
     static public abstract class Content {
         abstract public void html(PrintWriter out);
+
+        abstract public void text(PrintWriter out);
     }
 
     static public class Container extends Content {
@@ -65,6 +66,13 @@ public class Documentation {
         public void html(PrintWriter out) {
             for (Content c : contents)
                 c.html(out);
+        }
+
+        @Override
+        public void text(PrintWriter out) {
+            for (Content c : contents) {
+                c.text(out);
+            }
         }
 
         public void add(Content content) {
@@ -150,6 +158,11 @@ public class Documentation {
             out.print(text);
         }
 
+        @Override
+        public void text(PrintWriter out) {
+            out.print(text);
+        }
+
         public void append(String s) {
             text.append(s);
         }
@@ -181,6 +194,19 @@ public class Documentation {
                 }
             }
             out.print("</dl>");
+        }
+
+        @Override
+        public void text(PrintWriter out) {
+            if (!items.isEmpty()) {
+                for (Pair<Content, Content> pair : items) {
+                    out.print("[");
+                    pair.getFirst().html(out);
+                    out.print("] ");
+                    pair.getSecond().html(out);
+                    out.println();
+                }
+            }
         }
     }
 }

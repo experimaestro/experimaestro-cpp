@@ -23,6 +23,8 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
 import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.IdentityHashSet;
+import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -34,6 +36,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 public class Commands extends AbstractCommand implements Iterable<AbstractCommand> {
+    final static private Logger LOGGER = Logger.getLogger();
     /**
      * The list of commands status be executed
      * <p/>
@@ -114,8 +117,11 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
             fillEdges(graph, forward_edges, backwards_edges, command);
         }
         final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
-        if (!graph.isEmpty())
-            throw new IllegalArgumentException("Command has a loop");
+        if (graph.iterator().hasNext()) {
+            final String s = Output.toString(", ", graph);
+            LOGGER.error("Loop in command: %s", s);
+            throw new IllegalArgumentException("Command has a loop [%s]");
+        }
 
         return ordered_objects;
     }
