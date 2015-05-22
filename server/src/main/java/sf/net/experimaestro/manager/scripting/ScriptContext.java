@@ -183,7 +183,7 @@ final public class ScriptContext implements AutoCloseable {
         threadContext.set(this);
         connector = Updatable.create(LocalhostConnector.getInstance());
         currentScriptPath = Updatable.create(null);
-        environment = Updatable.create(new HashMap<>());
+        environment = Updatable.create(new HashMap<>(), x -> new HashMap<>(x));
         properties = new HashMap<>();
         submittedJobs = new HashMap<>();
     }

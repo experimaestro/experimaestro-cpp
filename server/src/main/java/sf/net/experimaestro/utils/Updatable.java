@@ -85,5 +85,8 @@ final public class Updatable<T> {
     public static <T> Updatable<T> create(T value) {
         return new Updatable<>(value);
     }
+    public static <T> Updatable<T> create(T value, Function<T, T> copier) {
+        return new Updatable<>(value, copier);
+    }
 
 }
