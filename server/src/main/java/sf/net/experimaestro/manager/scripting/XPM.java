@@ -198,10 +198,31 @@ public class XPM {
      */
     @Expose("add_module")
     public Module addModule(QName qname) {
-
         final ScriptContext scriptContext = context();
         Module module = new Module(qname);
         LOGGER.debug("Adding module [%s]", module.getId());
+        scriptContext.getRepository().addModule(module);
+        return module;
+    }
+
+    @Expose(value = "add_module", context = true)
+    public Module addModule(LanguageContext cx, Map description) {
+        final ScriptContext scriptContext = context();
+        Module module = new Module(cx.qname(description.get("id")));
+        module.setName(description.get("name").toString());
+//        module.setDocumentation(description.get("description").toString());
+
+        // Set the parent
+        final Object parentString = description.get("parent");
+        if (parentString != null) {
+            QName parent = cx.qname(parentString);
+            final Module parentModule = scriptContext.getRepository().getModules().get(parent);
+            if (parentModule != null) {
+                module.setParent(parentModule);
+            }
+        }
+
+        // Add the module
         scriptContext.getRepository().addModule(module);
         return module;
     }

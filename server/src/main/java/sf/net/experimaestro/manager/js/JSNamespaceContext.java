@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -20,19 +20,17 @@ package sf.net.experimaestro.utils;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.manager.Namespace;
 import sf.net.experimaestro.manager.scripting.Wrapper;
+import sf.net.experimaestro.utils.JSUtils;
 
-import javax.lang.model.element.Name;
 import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;
 
 /**
- * A namespace context built from the current scope
- *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 6/3/13
+ * @date 7/2/13
  */
 public class JSNamespaceContext implements NamespaceContext {
     private final Scriptable scope;
@@ -43,31 +41,25 @@ public class JSNamespaceContext implements NamespaceContext {
 
     @Override
     public String getNamespaceURI(String prefix) {
-
-        // Try the javascript scope
-        Object o = JSUtils.unwrap(JSUtils.get(scope, prefix));
-        if (o == null) {
-            // Look at default namespaces
-
+        if (scope == null)
             return null;
+
+        Scriptable currentScope = scope;
+        Object object = Scriptable.NOT_FOUND;
+        while (currentScope != null && object == Scriptable.NOT_FOUND) {
+            object = ScriptableObject.getProperty(currentScope, prefix);
+            currentScope = currentScope.getParentScope();
         }
 
-        if (o instanceof Scriptable) {
-            Scriptable jsObject = (Scriptable) o;
-            if (o instanceof Wrapper) {
-                o = ((Wrapper) o).unwrap();
-                if (o instanceof Namespace) {
-                    return ((Namespace) o).getURI();
-                }
-            }
+        if (object == Scriptable.NOT_FOUND)
+            return null;
+        if (object instanceof Wrapper) {
+            object = ((Wrapper) object).unwrap();
         }
-
-        if (o instanceof Namespace) {
-            return ((Namespace)o).getURI();
+        if (object instanceof Namespace) {
+            return ((Namespace) object).getURI();
         }
-
-        throw new XPMRuntimeException("%s is bound to a non namespace object (%s)", prefix, o.getClass());
-    }
+        return JSUtils.toString(object);    }
 
     @Override
     public String getPrefix(String namespaceURI) {
@@ -78,4 +70,5 @@ public class JSNamespaceContext implements NamespaceContext {
     public Iterator getPrefixes(String namespaceURI) {
         throw new NotImplementedException();
     }
+
 }

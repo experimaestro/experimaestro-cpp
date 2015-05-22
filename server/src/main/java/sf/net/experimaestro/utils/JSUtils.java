@@ -29,7 +29,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JSNamespaceBinder;
+import sf.net.experimaestro.manager.js.JSNamespaceContext;
 import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Resource;
@@ -422,7 +422,7 @@ public class JSUtils {
                         list.add(document.cloneAndAdopt(node));
                     }
                 } else if (jsQName.charAt(0) == '@') {
-                    final QName qname = QName.parse(jsQName.substring(1), null, new JSNamespaceBinder(scope));
+                    final QName qname = QName.parse(jsQName.substring(1), new JSNamespaceContext(scope));
                     Attr attribute = document.get().createAttributeNS(qname.getNamespaceURI(), qname.getLocalPart());
                     StringBuilder sb = new StringBuilder();
                     for (Node node : XMLUtils.iterable(toDOM(scope, json.get(jsQName, json), document))) {
@@ -432,7 +432,7 @@ public class JSUtils {
                     attribute.setTextContent(sb.toString());
                     list.add(attribute);
                 } else {
-                    final QName qname = QName.parse(jsQName, null, new JSNamespaceBinder(scope));
+                    final QName qname = QName.parse(jsQName, new JSNamespaceContext(scope));
                     Element element = qname.hasNamespace() ?
                             document.get().createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
                             : document.get().createElement(qname.getLocalPart());

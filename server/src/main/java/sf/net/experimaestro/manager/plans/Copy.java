@@ -18,23 +18,16 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.plans.Plan;
-import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.util.HashMap;
 import java.util.Map;
 

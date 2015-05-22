@@ -22,11 +22,11 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -40,8 +40,6 @@ import static java.lang.String.format;
  */
 @Exposed
 public class QName implements Comparable<QName> {
-    final static private Logger LOGGER = Logger.getLogger();
-
     /**
      * Matches the following qualified name formats
      * <ul>
@@ -51,6 +49,8 @@ public class QName implements Comparable<QName> {
      * </ul>
      */
     final static Pattern QNAME_PATTERN;
+    final static private Logger LOGGER = Logger.getLogger();
+
     static {
         try {
             // (?:\\{\\[\\p{L}:-\\.\\d]+\\)}|(\\p{L}):)?(\\w+)
@@ -62,6 +62,7 @@ public class QName implements Comparable<QName> {
             throw e;
         }
     }
+
     /**
      * The URI
      */
@@ -109,7 +110,7 @@ public class QName implements Comparable<QName> {
      * @return
      */
     public static QName parse(String qname, Element context,
-                              String2String prefixes) {
+                              Function<String, String> prefixes) {
         Matcher matcher = QNAME_PATTERN.matcher(qname);
         if (!matcher.matches())
             throw new IllegalArgumentException(String.format("Type [%s] is not a valid type: expected name, {uri}name, " +
@@ -121,7 +122,7 @@ public class QName implements Comparable<QName> {
         if (prefix != null) {
             url = context != null ? context.lookupNamespaceURI(prefix) : null;
             if (url == null && prefixes != null)
-                url = prefixes.get(prefix);
+                url = prefixes.apply(prefix);
             if (url == null)
                 throw new XPMRuntimeException(
                         "Type [%s] is not a valid type: namespace prefix [%s] not bound",
@@ -134,7 +135,7 @@ public class QName implements Comparable<QName> {
     }
 
     public static QName parse(String qname) {
-        return parse(qname, null, (String2String) null);
+        return parse(qname, null, (Function) null);
     }
 
     public static QName parse(final String name, final NamespaceContext namespaceContext) {

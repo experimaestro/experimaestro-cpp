@@ -20,28 +20,20 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 import static java.lang.String.format;
 

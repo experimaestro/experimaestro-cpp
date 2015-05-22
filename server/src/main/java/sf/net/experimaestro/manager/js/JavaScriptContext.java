@@ -33,7 +33,6 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptingReference;
 import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;
