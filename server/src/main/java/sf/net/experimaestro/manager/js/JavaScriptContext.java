@@ -18,17 +18,22 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.base.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.ConsString;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Ref;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptingReference;
 import sf.net.experimaestro.manager.scripting.Wrapper;
 import sf.net.experimaestro.utils.JSNamespaceContext;
-import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;

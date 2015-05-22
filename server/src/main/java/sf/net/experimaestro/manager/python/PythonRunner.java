@@ -37,6 +37,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.ParameterizedType;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,6 +76,7 @@ public class PythonRunner implements AutoCloseable {
         interpreter = new PythonInterpreter();
         interpreter.setOut(out);
         interpreter.setErr(err);
+        scriptContext = staticContext.scriptContext();
 
         Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(m)));
 
@@ -88,7 +90,6 @@ public class PythonRunner implements AutoCloseable {
         interpreter.set("logger", wrap(new ScriptingLogger("xpm")));
         interpreter.set("xpm", wrap(new XPM()));
 
-        scriptContext = staticContext.scriptContext();
     }
 
     /**
@@ -102,7 +103,8 @@ public class PythonRunner implements AutoCloseable {
                 final PythonType type = new PythonType(aClass);
                 TYPES.put(type.getName(), type);
                 if (WrapperObject.class.isAssignableFrom(aClass)) {
-                    final Class wrappedClass = TypeToken.of(aClass).getSupertype(WrapperObject.class).getComponentType().getRawType();
+                    final Class<?> wrappedClass = (Class<?>) ((ParameterizedType) TypeToken.of(aClass)
+                            .getSupertype(WrapperObject.class).getType()).getActualTypeArguments()[0];
                     final Constructor constructor = aClass.getConstructor(wrappedClass);
                     WRAPPERS.put(wrappedClass, constructor);
                 }
