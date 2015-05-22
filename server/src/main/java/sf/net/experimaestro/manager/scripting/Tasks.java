@@ -33,6 +33,8 @@ import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.manager.plans.functions.MergeFunction;
 import sf.net.experimaestro.utils.JSUtils;
 
+import java.util.Map;
+
 /**
  * Access to the tasks
  *
@@ -49,12 +51,12 @@ public class Tasks {
         Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
         ProductReference pr = new ProductReference();
         for (Object object : objects) {
-            if (object instanceof NativeObject) {
-                for (Object key : ((NativeObject) object).getIds()) {
-                    Object o = ((NativeObject) object).get(key);
+            if (object instanceof Map) {
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>)object).entrySet()) {
+                    Object o = entry.getValue();
                     if (!(o instanceof Operator))
                         throw new XPMRhinoException("Cannot merge object of type " + o.getClass());
-                    map.put(pr.getParents().size(), key.toString());
+                    map.put(pr.getParents().size(), entry.getKey().toString());
                     pr.addParent(((Operator) o));
                 }
             } else if (object instanceof Operator) {
@@ -87,7 +89,7 @@ public class Tasks {
 
     @Expose(context = true, mode = ExposeMode.CALL)
     public Object get(LanguageContext cx, String qname) {
-        QName id = QName.parse(qname, cx.getNamespaceContext());
+        QName id = cx.qname(qname);
         return new TaskRef(id).get(cx);
     }
 
@@ -114,6 +116,12 @@ public class Tasks {
 //        return new TaskRef(id);
 //    }
 
+    @Expose(mode = ExposeMode.CALL, context = true)
+    public TaskFactory call(LanguageContext cx, String qname) {
+        QName id = cx.qname(qname);
+        return ScriptContext.get().getRepository().getFactory(id);
+    }
+
     @Expose(context = true)
     public void add(LanguageContext cx, String qname, @NoJavaization NativeObject taskDescription) {
         QName id = QName.parse(JSUtils.toString(qname), cx.getNamespaceContext());
@@ -122,7 +130,7 @@ public class Tasks {
 
     @Expose(context = true)
     @Help(value = "Creates an anonymous task that will copy its input as output")
-    public Copy copy(LanguageContext cx, String qname, NativeObject plan){
+    public Copy copy(LanguageContext cx, String qname, Map plan){
         return new Copy(cx, qname, plan);
     }
 

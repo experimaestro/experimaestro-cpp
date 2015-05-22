@@ -19,12 +19,16 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.base.Function;
-import com.google.common.collect.*;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.*;
-import org.mozilla.javascript.Node;
-import org.w3c.dom.*;
+import org.mozilla.javascript.ConsString;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
@@ -36,6 +40,7 @@ import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonNull;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ExposeMode;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
@@ -44,7 +49,15 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A fake operator corresponding to a task factory. This is replaced by
@@ -399,18 +412,19 @@ public class Plan extends Operator {
             final Object value = JSUtils.unwrap(object.get(name));
 
             try {
-                if (value instanceof NativeArray) {
-                    final NativeArray array = (NativeArray) value;
-                    if (array.getLength() == 0) {
+                if (value instanceof List) {
+                    final List array = (List) value;
+                    if (array.isEmpty()) {
                         inputs.set(id, new Constant());
                     } else {
-                        for (int i = 0; i < array.getLength(); i++) {
+                        for (int i = 0; i < array.size(); i++) {
                             final Object e = array.get(i);
                             inputs.set(id, getSimple(e, lcx));
                         }
                     }
-                } else
+                } else {
                     inputs.set(id, getSimple(value, lcx));
+                }
 
             } catch (XPMRhinoException | XPMRuntimeException e) {
                 e.addContext("While setting %s", id);
@@ -464,17 +478,18 @@ public class Plan extends Operator {
         if (value instanceof Json)
             return new Constant((Json) value);
 
-        if (value instanceof NativeObject)
+        if (value instanceof NativeObject) {
             return new Constant(lcx.toJSON(value));
+        }
 
         // --- Plans & transformations
 
         // Case of a native array: we wrap its values
-        if (value instanceof NativeArray) {
-            NativeArray narray = (NativeArray) value;
+        if (value instanceof List) {
+            List list = (List)value;
             JsonArray array = new JsonArray();
-            for (int i = 0; i < narray.getLength(); i++) {
-                final Object e = narray.get(i);
+            for (int i = 0; i < list.size(); i++) {
+                final Object e = list.get(i);
                 array.add(ValueType.wrap(e));
             }
 
@@ -482,7 +497,7 @@ public class Plan extends Operator {
         }
 
         if (value instanceof Map) {
-            throw new UnsupportedOperationException("not implemented");
+            return new Constant(lcx.toJSON(value));
         }
 
         throw new XPMRhinoException("Cannot handle type " + value.getClass());
@@ -491,6 +506,11 @@ public class Plan extends Operator {
 
     @Expose(value = "run", context = true)
     public List<Json> run(LanguageContext cx){
+        return run(cx, false);
+    }
+
+    @Expose(mode = ExposeMode.CALL, context = true)
+    public List<Json> _run(LanguageContext cx){
         return run(cx, false);
     }
 
@@ -512,6 +532,7 @@ public class Plan extends Operator {
             return values;
         }
     }
+
 
 
     @Expose(value = "add", context = true)

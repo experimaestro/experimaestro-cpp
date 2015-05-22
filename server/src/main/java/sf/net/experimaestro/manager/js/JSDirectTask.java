@@ -25,6 +25,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
@@ -37,6 +38,7 @@ import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map.Entry;
 
+@Exposed
 public class JSDirectTask extends Task {
     final static private Logger LOGGER = Logger.getLogger();
 

@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 /**
@@ -39,7 +38,7 @@ public class JavaScriptFunction implements Function {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
         try {
             final Object result = function.call(jcx, thisObj, objects);
-            return JavaScriptRunner.wrap(result);
+            return JavaScriptRunner.wrap(jcx, result);
         } catch(RhinoException e) {
             throw e;
         } catch(Throwable e) {

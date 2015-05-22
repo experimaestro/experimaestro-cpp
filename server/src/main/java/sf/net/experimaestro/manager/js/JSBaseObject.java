@@ -80,12 +80,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        MethodFunction function = getMethodFunction(null);
+        MethodFunction function = getMethodFunction(ExposeMode.CALL);
         if (function.isEmpty()) {
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         }
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        return JavaScriptRunner.wrap(function.call(jcx, thisObj, args));
+        return JavaScriptRunner.wrap(jcx, function.call(jcx, thisObj, args));
     }
 
     @Override
@@ -104,14 +104,16 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         // Search for a property
         final PropertyAccess propertyAccess = classDescription.getFields().get(name);
         if (propertyAccess != null) {
-            return propertyAccess.get(thisObject());
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, propertyAccess.get(thisObject()).get(jcx));
         }
 
         // Search for property accessor
         function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null) {
-            final Object result = function.call(new JavaScriptContext(Context.getCurrentContext(), start), thisObject());
-            return result;
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            final Object result = function.call(jcx, thisObject(), name);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
         }
 
         return NOT_FOUND;
@@ -136,6 +138,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return function;
     }
 
+
+
     /**
      * Returns the underlying object
      *
@@ -147,6 +151,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object get(int index, Scriptable start) {
+        MethodFunction function = getMethodFunction(ExposeMode.INDEX);
+        if (function != null) {
+            final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
+            final Object result = function.call(jcx, thisObject(), index);
+            return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
+        }
         return NOT_FOUND;
     }
 
@@ -249,12 +259,12 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         @Override
         public Object wrap(Context cx, Scriptable scope, Object obj, Class<?> staticType) {
-            return JavaScriptRunner.wrap(obj);
+            return JavaScriptRunner.wrap(cx, scope, obj);
         }
 
         @Override
         public Scriptable wrapNewObject(Context cx, Scriptable scope, Object obj) {
-            return (Scriptable)JavaScriptRunner.wrap(obj);
+            return (Scriptable)JavaScriptRunner.wrap(cx, scope, obj);
         }
 
     }

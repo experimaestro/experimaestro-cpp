@@ -21,50 +21,39 @@ package sf.net.experimaestro.manager.js;
 
 import com.google.common.collect.ImmutableList;
 import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
+import sf.net.experimaestro.manager.plans.NAryOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
+import sf.net.experimaestro.manager.plans.UnaryOperator;
 import sf.net.experimaestro.manager.plans.functions.Function;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * JS function to transform inputs in a operators
  */
-public class JSTransform extends JSBaseObject implements Function {
-    protected final LanguageContext cx;
+@Exposed
+public class JSTransform implements Function {
     protected final Scriptable scope;
     protected final Callable f;
-
-    private final FunctionOperator operator;
+    private final Context cx;
 
     @Expose(context = true)
-    public JSTransform(LanguageContext cx, Object f, Operator[] operators) {
-        this.cx = cx;
-        JavaScriptContext jcx = (JavaScriptContext) cx;
+    public JSTransform(JavaScriptContext jcx, Object f, Operator[] operators) {
+        this.cx = jcx.context();
         this.scope = jcx.scope();
         this.f = (Callable) f;
-
-        Operator inputOperator;
-        if (operators.length == 1)
-            inputOperator = operators[0];
-        else {
-            ProductReference pr = new ProductReference();
-            for (Operator operator : operators) {
-                pr.addParent(operator);
-            }
-            inputOperator = pr;
-        }
-
-        operator = new FunctionOperator(this);
-        operator.addParent(inputOperator);
-
     }
 
     @Override
@@ -73,7 +62,8 @@ public class JSTransform extends JSBaseObject implements Function {
     }
 
     public Iterator<Json> apply(Json[] parameters) {
-        Json result = JSUtils.toJSON(scope, f.call(null, scope, null, parameters));
+        final Object call = f.call(cx, scope, null, parameters);
+        Json result = JSUtils.toJSON(scope, call);
 
         if (result instanceof JsonArray)
             return ((JsonArray) result).iterator();

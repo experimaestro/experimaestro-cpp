@@ -27,6 +27,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
@@ -38,6 +39,7 @@ import java.util.TreeMap;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@Exposed
 public class TaskOperator extends UnaryOperator {
     /**
      * The associated plan

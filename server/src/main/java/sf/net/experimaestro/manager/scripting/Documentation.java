@@ -18,30 +18,39 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.Introspection;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JavaScriptRunner;
-import sf.net.experimaestro.utils.Documentation;
-import sf.net.experimaestro.utils.JSUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * Automated javascript documentation
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 16/1/13
  */
-public class JSDocumentation {
-    static void documentMethod(Documentation.DefinitionList methods, Method method, String name) {
+public class Documentation {
+    static void documentMethod(sf.net.experimaestro.utils.Documentation.DefinitionList methods, Method method) {
+        final sf.net.experimaestro.utils.Documentation.Text text = methodDeclaration(method);
+
+        // Get the help
+        sf.net.experimaestro.utils.Documentation.Container help = new sf.net.experimaestro.utils.Documentation.Container();
+        final Help jsHelp = method.getAnnotation(Help.class);
+
+        if (jsHelp != null)
+            help.add(new sf.net.experimaestro.utils.Documentation.Text(jsHelp.value()));
+
+        methods.add(text, help);
+    }
+
+    public static sf.net.experimaestro.utils.Documentation.Text methodDeclaration(Method method) {
+        String name = null;
+
         Expose xpmjsfunction = method.getAnnotation(Expose.class);
         if (xpmjsfunction != null) {
             if (!xpmjsfunction.value().equals(""))
@@ -57,34 +66,20 @@ public class JSDocumentation {
 
 
         if (name == null) {
-            final org.mozilla.javascript.annotations.JSFunction annotation = method.getAnnotation(org.mozilla.javascript.annotations.JSFunction.class);
-            if (annotation != null)
-                name = annotation.value();
-        }
-
-
-        if (name == null) {
             name = method.getName();
         }
 
         String prefix = "";
-        if (method.getAnnotation(JSDeprecated.class) != null) {
+        if (method.getAnnotation(Deprecated.class) != null) {
             prefix = "[deprecated]";
         }
 
-        Documentation.Container help = new Documentation.Container();
-        final Help jsHelp = method.getAnnotation(Help.class);
 
-        if (jsHelp != null)
-            help.add(new Documentation.Text(jsHelp.value()));
-
-        Documentation.Content names = null;
-        final Documentation.DefinitionList pHelp = new Documentation.DefinitionList();
+        final sf.net.experimaestro.utils.Documentation.DefinitionList pHelp = new sf.net.experimaestro.utils.Documentation.DefinitionList();
 
         // We have the arguments() in the JSHelp() object
         // No JSHelp
-        final Documentation.Text text = new Documentation.Text();
-        names = text;
+        final sf.net.experimaestro.utils.Documentation.Text text = new sf.net.experimaestro.utils.Documentation.Text();
         final Argument returnAnnotation = method.getAnnotation(Argument.class);
         String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
@@ -106,7 +101,7 @@ public class JSDocumentation {
                     argName = jsArg.equals("") ? argName : jsArg.name();
                     argType = jsArg.type();
                     if (jsArg.help() != null)
-                        pHelp.add(new Documentation.Text(jsArg.name()), new Documentation.Text(jsArg.help()));
+                        pHelp.add(new sf.net.experimaestro.utils.Documentation.Text(jsArg.name()), new sf.net.experimaestro.utils.Documentation.Text(jsArg.help()));
                 }
             }
             if (!first)
@@ -123,8 +118,7 @@ public class JSDocumentation {
             text.format("%s %s", argType, argName);
         }
         text.append(")");
-
-        methods.add(names, help);
+        return text;
     }
 
     private static String javascriptName(Class<?> aClass) {
@@ -155,13 +149,13 @@ public class JSDocumentation {
      *
      * @param printer
      */
-    static public void printJSHelp(Documentation.Printer printer) {
+    static public void printJSHelp(sf.net.experimaestro.utils.Documentation.Printer printer) {
 
         // --- Document functions
 
-        printer.append(new Documentation.Title(1, new Documentation.Text("Functions")));
+        printer.append(new sf.net.experimaestro.utils.Documentation.Title(1, new sf.net.experimaestro.utils.Documentation.Text("Functions")));
 
-        final Documentation.DefinitionList functions = new Documentation.DefinitionList();
+        final sf.net.experimaestro.utils.Documentation.DefinitionList functions = new sf.net.experimaestro.utils.Documentation.DefinitionList();
 
 //        for (JSUtils.FunctionDefinition d : JavaScriptRunner.definitions) {
 //            final Documentation.Text text = new Documentation.Text(d.getName());
@@ -177,13 +171,13 @@ public class JSDocumentation {
 
 
         // --- Objects
-        printer.append(new Documentation.Title(1, new Documentation.Text("Objects")));
+        printer.append(new sf.net.experimaestro.utils.Documentation.Title(1, new sf.net.experimaestro.utils.Documentation.Text("Objects")));
         ArrayList<Class<?>> list = new ArrayList<>();
 
-        final Documentation.DefinitionList classes = new Documentation.DefinitionList();
+        final sf.net.experimaestro.utils.Documentation.DefinitionList classes = new sf.net.experimaestro.utils.Documentation.DefinitionList();
 
         for (Class<?> clazz : list) {
-            final Documentation.DefinitionList methods = new Documentation.DefinitionList();
+            final sf.net.experimaestro.utils.Documentation.DefinitionList methods = new sf.net.experimaestro.utils.Documentation.DefinitionList();
 
             for (Method method : clazz.getDeclaredMethods()) {
                 String name = null;
@@ -192,7 +186,7 @@ public class JSDocumentation {
                 if (JSBaseObject.class.isAssignableFrom(clazz)) {
                     Expose annotation = method.getAnnotation(Expose.class);
                     if (annotation != null)
-                        documentMethod(methods, method, name);
+                        documentMethod(methods, method);
                     continue;
                 }
 
@@ -210,9 +204,9 @@ public class JSDocumentation {
                     name = method.getName();
                 }
 
-                documentMethod(methods, method, name);
+                documentMethod(methods, method);
             }
-            classes.add(new Documentation.Text(ClassDescription.getClassName(clazz)), methods);
+            classes.add(new sf.net.experimaestro.utils.Documentation.Text(ClassDescription.getClassName(clazz)), methods);
 
         }
 

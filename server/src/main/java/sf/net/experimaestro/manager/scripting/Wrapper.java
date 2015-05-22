@@ -21,6 +21,6 @@ package sf.net.experimaestro.manager.scripting;
 /**
  * Created by bpiwowar on 21/05/15.
  */
-public interface Wrapper<T> {
+public interface Wrapper<T> extends org.mozilla.javascript.Wrapper {
     T unwrap();
 }

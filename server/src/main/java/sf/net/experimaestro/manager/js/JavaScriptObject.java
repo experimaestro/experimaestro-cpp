@@ -46,4 +46,8 @@ public class JavaScriptObject extends JSBaseObject implements Wrapper {
         return getClassName();
     }
 
+    @Override
+    public String toString() {
+        return unwrap().toString();
+    }
 }

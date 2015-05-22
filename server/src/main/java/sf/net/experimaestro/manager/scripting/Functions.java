@@ -38,7 +38,9 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
+import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -50,6 +52,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,12 +118,27 @@ public class Functions {
 
     @Expose(context = true)
     @Help(value = "Transform plans outputs with a function")
-    public static Scriptable transform(LanguageContext cx, Callable f, Operator... operators) throws FileSystemException {
-        return new JSTransform(cx, f, operators);
+    public static Operator transform(JavaScriptContext cx, @NoJavaization Callable f, Operator... operators) throws FileSystemException {
+        final JSTransform transform = new JSTransform(cx, f, operators);
+        FunctionOperator transformOperator = new FunctionOperator(transform);
+
+        Operator inputOperator;
+        if (operators.length == 1)
+            inputOperator = operators[0];
+        else {
+            ProductReference pr = new ProductReference();
+            for (Operator operator : operators) {
+                pr.addParent(operator);
+            }
+            inputOperator = pr;
+        }
+        transformOperator.addParent(inputOperator);
+
+        return transformOperator;
     }
 
     @Expose(value = "_")
-    @JSDeprecated
+    @Deprecated
     public static Object _get_value(Object object) {
         return get_value(object);
     }
@@ -135,8 +154,9 @@ public class Functions {
 
     @Expose("assert")
     public static void _assert(boolean condition, String format, Object... objects) {
-        if (!condition)
+        if (!condition) {
             throw new EvaluatorException("assertion failed: " + String.format(format, objects));
+        }
     }
 
     private static ScriptContext context() {
@@ -218,8 +238,8 @@ public class Functions {
     @Expose()
     @Help("Returns a path object from an URI")
     static public java.nio.file.Path path(@Argument(name="uri") String uri)
-            throws FileSystemException {
-        return Paths.get(uri);
+            throws FileSystemException, URISyntaxException {
+        return Paths.get(new URI(uri));
     }
 
 

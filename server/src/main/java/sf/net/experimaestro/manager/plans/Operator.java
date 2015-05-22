@@ -26,10 +26,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
@@ -39,18 +37,30 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.js.JsonPathFunction;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.Tasks;
 import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Base class for all operators

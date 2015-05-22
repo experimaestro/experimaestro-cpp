@@ -28,6 +28,9 @@ public enum ExposeMode {
     CALL,
     /** Property access */
     PROPERTY,
+
+    /** Index access */
+    INDEX,
     /** Field access */
     FIELDS
 }

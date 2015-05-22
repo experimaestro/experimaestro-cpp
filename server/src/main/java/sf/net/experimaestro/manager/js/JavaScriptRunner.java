@@ -22,10 +22,25 @@ import bpiwowar.argparser.utils.Introspection;
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeJavaArray;
+import org.mozilla.javascript.NativeJavaObject;
+import org.mozilla.javascript.Ref;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.PropertyAccess;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.Scripting;
+import sf.net.experimaestro.manager.scripting.ScriptingReference;
+import sf.net.experimaestro.manager.scripting.StaticContext;
+import sf.net.experimaestro.manager.scripting.Wrapper;
 import sf.net.experimaestro.manager.scripting.WrapperObject;
+import sf.net.experimaestro.manager.scripting.XPM;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
@@ -41,6 +56,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -53,15 +69,15 @@ public class JavaScriptRunner implements AutoCloseable {
 
     static private Scriptable XPM_SCOPE;
 
-    private final RhinoDebugger debugger;
-
-    final private Context context;
+    private static Map<Class, Constructor> WRAPPERS = new HashMap<>();
 
     final ScriptContext scriptContext;
 
     final Scriptable scope;
 
-    private static Map<Class, Constructor> WRAPPERS = new HashMap<>();
+    private final RhinoDebugger debugger;
+
+    final private Context context;
 
     public JavaScriptRunner(Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
         StaticContext staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
@@ -78,6 +94,7 @@ public class JavaScriptRunner implements AutoCloseable {
         }
         context = factory.enterContext();
 
+        context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
         scriptContext = staticContext.scriptContext();
 
         // Create scope
@@ -86,7 +103,7 @@ public class JavaScriptRunner implements AutoCloseable {
         scope.setParentScope(null);
 
         Scripting.forEachObject((name, value) -> {
-            ScriptableObject.defineProperty(scope, name, wrap(value), 0);
+            ScriptableObject.defineProperty(scope, name, wrap(context, scope, value), 0);
         });
     }
 
@@ -134,7 +151,7 @@ public class JavaScriptRunner implements AutoCloseable {
             Scripting.forEachType(Functional.propagate(aClass -> {
                 JSBaseObject.defineClass(XPM_SCOPE, aClass);
                 if (WrapperObject.class.isAssignableFrom(aClass)) {
-                    final Class<?> wrappedClass = (Class<?>) ((ParameterizedType)TypeToken.of(aClass)
+                    final Class<?> wrappedClass = (Class<?>) ((ParameterizedType) TypeToken.of(aClass)
                             .getSupertype(WrapperObject.class).getType()).getActualTypeArguments()[0];
                     final Constructor<?> constructor = aClass.getConstructor(wrappedClass);
                     WRAPPERS.put(wrappedClass, constructor);
@@ -142,7 +159,7 @@ public class JavaScriptRunner implements AutoCloseable {
             }));
 
             Scripting.forEachConstant((name, value) -> {
-                ScriptableObject.defineProperty(XPM_SCOPE, name, wrap(value), 0);
+                ScriptableObject.defineProperty(XPM_SCOPE, name, wrap(context, XPM_SCOPE, value), 0);
             });
 
             Scripting.forEachFunction(m -> ScriptableObject.defineProperty(XPM_SCOPE, m.getKey(), new JavaScriptFunction(m), 0));
@@ -163,12 +180,21 @@ public class JavaScriptRunner implements AutoCloseable {
     /**
      * Wraps a new object into a JavaScript object
      *
+     * @param jcx
      * @param object The object to wrap
      * @return The wrapped object
      */
-    public static Object wrap(Object object) {
+    public static Object wrap(JavaScriptContext jcx, Object object) {
+        return wrap(jcx.context(), jcx.scope(), object);
+    }
+
+    static Object wrap(Context context, Scriptable scope, Object object) {
         if (object == null || object instanceof Undefined) {
             return Undefined.instance;
+        }
+
+        if (object instanceof Wrapper) {
+            object = ((Wrapper) object).unwrap();
         }
 
         if (object instanceof Scriptable) {
@@ -176,13 +202,32 @@ public class JavaScriptRunner implements AutoCloseable {
         }
 
         // Simple types
-        if (object instanceof String || object instanceof Integer) {
+        if (object instanceof String || object instanceof Integer || object instanceof Long || object instanceof Double || object instanceof Float) {
             return object;
         }
 
         if (object.getClass().isArray()) {
-            // FIXME
-            return new NativeArray((Object[]) object);
+            return new NativeJavaArray(scope, object);
+        }
+
+        if (object instanceof Map) {
+            return new NativeJavaObject(scope, object, Map.class);
+        }
+
+        if (object instanceof ScriptingReference) {
+            ScriptingReference ref = (ScriptingReference) object;
+            return new Ref() {
+                @Override
+                public Object get(Context context) {
+                    return ref.get(new JavaScriptContext(context, scope));
+                }
+
+                @Override
+                public Object set(Context context, Object o) {
+                    ref.set(new JavaScriptContext(context, scope), o);
+                    return get(context);
+                }
+            };
         }
 
         // Exposed objects
@@ -204,12 +249,10 @@ public class JavaScriptRunner implements AutoCloseable {
         }
 
 
-
-        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
-
-
+        return new NativeJavaObject(scope, object, Object.class);
+//
+//        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
     }
-
 
     @Override
     public void close() throws Exception {

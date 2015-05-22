@@ -25,5 +25,5 @@ import java.lang.annotation.RetentionPolicy;
  * Marks a javascript function or constructor which is deprecated
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JSDeprecated {
+public @interface Deprecated {
 }

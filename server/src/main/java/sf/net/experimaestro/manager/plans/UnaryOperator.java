@@ -18,6 +18,8 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.Exposed;
+
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 20/2/13
  */
+@Exposed
 abstract public class UnaryOperator extends Operator {
     /**
      * The input operator

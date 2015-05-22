@@ -52,7 +52,7 @@ abstract public class LanguageContext {
      * @param value
      * @return
      */
-    public abstract QName qname(String value);
+    public abstract QName qname(Object value);
 
     /**
      * Wrap values so that they can be accessed as a java object.

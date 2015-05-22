@@ -20,6 +20,7 @@ package sf.net.experimaestro.utils;
 
 import com.google.common.collect.AbstractIterator;
 import org.mozilla.javascript.*;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.*;
@@ -30,7 +31,7 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSNamespaceBinder;
 import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.scripting.ScriptingPath;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -207,6 +208,10 @@ public class JSUtils {
      * @return
      */
     public static Json toJSON(Scriptable scope, Object value) {
+        if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
+            value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();
+        }
+
         if (value instanceof Json)
             return (Json) value;
 

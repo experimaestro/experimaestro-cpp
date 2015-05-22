@@ -213,11 +213,13 @@ public class XPM {
      * @return
      */
     @Expose(value = "add_task_factory", context = true)
-    public JavaScriptTaskFactory add_task_factory(JavaScriptContext jcx, NativeObject object) throws ValueMismatchException {
+    public JavaScriptTaskFactory add_task_factory(JavaScriptContext jcx, @NoJavaization NativeObject object) throws ValueMismatchException {
         ScriptContext scx = context();
 
-        final QName id = jcx.qname(JSUtils.getString(jcx.scope(), "id", object));
-        return new JavaScriptTaskFactory(id, jcx.scope(), object, scx.getRepository());
+        final QName id = jcx.qname(JSUtils.get(jcx.scope(), "id", object));
+        final JavaScriptTaskFactory factory = new JavaScriptTaskFactory(id, jcx.scope(), object, scx.getRepository());
+        scx.getRepository().addFactory(factory);
+        return factory;
     }
 
     @Expose("get_task")

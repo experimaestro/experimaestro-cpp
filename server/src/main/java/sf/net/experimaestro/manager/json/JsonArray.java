@@ -139,4 +139,10 @@ public class JsonArray extends Json implements Iterable<Json> {
     public Iterator<Json> iterator() {
         return array.iterator();
     }
+
+    @Expose(mode = ExposeMode.INDEX)
+    public Json get(int index) {
+        return array.get(index);
+    }
+
 }

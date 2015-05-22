@@ -170,7 +170,7 @@ public abstract class TaskFactory {
     }
 
     @Help("Creates a plan from this task")
-    @Expose(value = "run", context = true)
+    @Expose(value = "plan", context = true)
     public Object plan(LanguageContext cx, Map map) {
         final Plan plan = new Plan(this);
         PlanInputs inputs= Plan.getMappings(map, cx);

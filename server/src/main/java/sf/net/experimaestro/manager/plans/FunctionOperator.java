@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.functions.Function;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
@@ -32,11 +33,16 @@ import java.util.Map;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  * @date 22/2/13
  */
+@Exposed
 public class FunctionOperator extends UnaryOperator {
     Function function;
 
     public FunctionOperator(Function function) {
         this.function = function;
+    }
+
+    protected FunctionOperator() {
+
     }
 
     @Override

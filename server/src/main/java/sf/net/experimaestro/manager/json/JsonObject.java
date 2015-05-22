@@ -20,20 +20,30 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Array;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
+
+import static java.lang.String.format;
 
 /**
  * A JSON object (associates a key to a json value)
@@ -57,8 +67,8 @@ public class JsonObject extends Json {
 
     @Override
     public String toString() {
-        return String.format("{%s}", Output.toString(", ", map.entrySet(),
-                entry -> String.format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
+        return format("{%s}", Output.toString(", ", map.entrySet(),
+                entry -> format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
     }
 
     @Override
@@ -244,18 +254,8 @@ public class JsonObject extends Json {
     }
 
     @Expose(mode = ExposeMode.FIELDS)
-    public ScriptingReference getField(String name) {
-        return new ScriptingReference() {
-            @Override
-            public Object get(LanguageContext cx) {
-                return JsonObject.this.get(name);
-            }
-
-            @Override
-            public void set(LanguageContext cx, Object value) {
-                JsonObject.this.put(name, (Json)value);
-            }
-        };
+    public Json getField(String name) {
+        return JsonObject.this.get(name);
     }
 
     public Json get(String name) {
@@ -272,5 +272,22 @@ public class JsonObject extends Json {
 
     public Iterable<? extends Map.Entry<String, Json>> entrySet() {
         return map.entrySet();
+    }
+
+    public static JsonObject toJSON(LanguageContext lcx, Map<?, ?> map) {
+        JsonObject json = new JsonObject();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            QName qname = lcx.qname(entry.getKey());
+            Object pValue = entry.getValue();
+
+            if (qname.equals(Manager.XP_TYPE)) {
+                pValue = lcx.qname(entry.getValue());
+            }
+
+            String key = qname.toString();
+            final Json key_value = Json.toJSON(lcx, pValue);
+            json.put(key, key_value);
+        }
+        return json;
     }
 }

@@ -55,6 +55,11 @@ public class ConstructorFunction extends GenericFunction {
         }
 
         @Override
+        public String toString() {
+            return constructor.toString();
+        }
+
+        @Override
         public Object invoke(LanguageContext cx, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
             try {
                 return constructor.newInstance(transformedArgs);

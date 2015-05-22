@@ -22,6 +22,7 @@ import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.DirectLauncher;
 import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
@@ -180,7 +181,7 @@ final public class ScriptContext implements AutoCloseable {
         workingDirectory = Updatable.create(null);
         defaultLauncher = Updatable.create(new DirectLauncher());
         threadContext.set(this);
-        connector = Updatable.create(null);
+        connector = Updatable.create(LocalhostConnector.getInstance());
         currentScriptPath = Updatable.create(null);
         environment = Updatable.create(new HashMap<>());
         properties = new HashMap<>();
@@ -451,8 +452,9 @@ final public class ScriptContext implements AutoCloseable {
 
     public Task getTask(QName qname) {
         TaskFactory factory = getFactory(qname);
-        if (factory == null)
+        if (factory == null) {
             throw new XPMRuntimeException("Could not find a task with name [%s]", qname);
+        }
         LOGGER.info("Creating a new JS task [%s]", factory.getId());
         return factory.create();
     }

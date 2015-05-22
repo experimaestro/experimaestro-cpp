@@ -1,6 +1,8 @@
+package sf.net.experimaestro.manager.json;
+
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,26 +18,18 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.scripting.ScriptingReference;
+import sf.net.experimaestro.manager.scripting.Wrapper;
+
+import static java.lang.String.format;
 
 /**
- * Test of XPath functions
- * (c) B. Piwowarski <benjamin@bpiwowar.net>
+ * A reference to a JSON object
  */
+abstract public class JsonScriptingReference implements ScriptingReference, Wrapper {
+    @Override
+    public String toString() {
+        return format("json(%s)", unwrap());
+    }
 
-var format = java.lang.String.format;
-function assert_equals(expected, got, msg) {
-    if (expected != got)
-        throw format("%s: expected [%s] but got [%s]", msg, expected, got);
 }
-
-// --- Test the xp:parentPath function
-
-function test_parentPath() {
-  assert_equals("/a/b", xpath("xp:parentPath('/a/b/c.txt')", <a/>), "XPath function xp:parentPath");
-}
-
-function test_parentPath2() {
-  assert_equals("/a/b", xpath("xp:parentPath(path)", <a><path>/a/b/c</path></a>), "XPath function xp:parentPath");
-}
-
-
