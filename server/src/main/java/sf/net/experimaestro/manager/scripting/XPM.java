@@ -274,8 +274,8 @@ public class XPM {
             _commands = (Commands) commands;
         } else if (commands instanceof AbstractCommand) {
             _commands = new Commands((AbstractCommand) commands);
-        } else if (commands instanceof NativeArray) {
-            _commands = new Commands(Command.getCommand(commands));
+        } else if (commands instanceof List) {
+            _commands = new Commands(Command.getCommand((List)commands));
         } else {
             throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
         }

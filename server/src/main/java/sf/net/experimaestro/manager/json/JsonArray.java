@@ -23,6 +23,7 @@ import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ExposeMode;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.Output;
 
@@ -129,7 +130,7 @@ public class JsonArray extends Json implements Iterable<Json> {
         array.add(json);
     }
 
-    @Expose(value = "length", property = true)
+    @Expose(value = "length", mode = ExposeMode.PROPERTY)
     public int size() {
         return array.size();
     }

@@ -24,8 +24,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
@@ -244,7 +243,21 @@ public class JsonObject extends Json {
         out.write('}');
     }
 
-    @Expose(property = true)
+    @Expose(mode = ExposeMode.FIELDS)
+    public ScriptingReference getField(String name) {
+        return new ScriptingReference() {
+            @Override
+            public Object get(LanguageContext cx) {
+                return JsonObject.this.get(name);
+            }
+
+            @Override
+            public void set(LanguageContext cx, Object value) {
+                JsonObject.this.put(name, (Json)value);
+            }
+        };
+    }
+
     public Json get(String name) {
         return map.get(name);
     }

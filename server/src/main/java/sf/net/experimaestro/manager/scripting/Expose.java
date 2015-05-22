@@ -32,10 +32,6 @@ public @interface Expose {
     /** The name of the function (by default, the name of the ) */
     String value() default "";
 
-    /**
-     * Marks a function that is used when the object is called
-     */
-    boolean call() default false;
 
     /**
      * Number of arguments that are optional.
@@ -54,8 +50,8 @@ public @interface Expose {
     boolean context() default false;
 
     /**
-     * Whether this corresponds to an object property
-     * @return
+     * How is this method used (ignored for constructors)
+     * @return The mode (default: a method)
      */
-    boolean property() default false;
+    ExposeMode mode() default ExposeMode.METHOD;
 }

@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 
+import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.utils.Functional;
 
 import java.lang.reflect.Field;
@@ -36,6 +37,28 @@ public class PropertyAccess {
     public PropertyAccess(Function<Object, Object> getter, BiConsumer<Object, Object> setter) {
         this.getter = getter;
         this.setter = setter;
+    }
+
+    public PropertyAccess() {
+
+    }
+
+    public ScriptingReference get(final Object object) {
+        return new ScriptingReference() {
+            @Override
+            public Object get(LanguageContext cx) {
+                return getter.apply(object);
+            }
+
+            @Override
+            public void set(LanguageContext cx, Object value) {
+                setter.accept(object, value);
+            }
+        };
+    }
+
+    public void set(Object object, Object value) {
+        setter.accept(object, value);
     }
 
     static public class FieldAccess extends PropertyAccess {

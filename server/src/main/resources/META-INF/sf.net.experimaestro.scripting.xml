@@ -52,7 +52,7 @@
         <class>sf.net.experimaestro.manager.scripting.Tasks</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingPath</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingLogger</class>
-        <class>sf.net.experimaestro.manager.scripting.ScriptingReference</class>
+        <!--<class>sf.net.experimaestro.manager.scripting.ScriptingReference</class>-->
 
     </classes>
 </scripting>

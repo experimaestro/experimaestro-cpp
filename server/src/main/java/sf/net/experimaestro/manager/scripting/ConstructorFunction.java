@@ -37,7 +37,7 @@ public class ConstructorFunction extends GenericFunction {
     }
 
     @Override
-    protected String getName() {
+    protected String getKey() {
         return "new " + className;
     }
 

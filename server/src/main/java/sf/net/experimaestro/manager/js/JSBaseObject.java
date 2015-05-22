@@ -21,11 +21,8 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.ConstructorFunction;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
+import sf.net.experimaestro.manager.scripting.*;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -105,21 +102,25 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         }
 
         // Search for a property
-        final Field field = classDescription.getFields().get(name);
-        if (field != null) {
-            try {
-                return field.get(this);
-            } catch (IllegalAccessException e) {
-                throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
-            }
+        final PropertyAccess propertyAccess = classDescription.getFields().get(name);
+        if (propertyAccess != null) {
+            return propertyAccess.get(thisObject());
         }
+
+        // Search for property accessor
+        function = getMethodFunction(ExposeMode.FIELDS);
+        if (function != null) {
+            final Object result = function.call(new JavaScriptContext(Context.getCurrentContext(), start), thisObject());
+            return result;
+        }
+
         return NOT_FOUND;
     }
 
-    private MethodFunction getMethodFunction(String name) {
-        MethodFunction function = new MethodFunction(name);
+    private MethodFunction getMethodFunction(Object key) {
+        MethodFunction function = new MethodFunction(key);
 
-        ArrayList<Method> methods = this.classDescription.getMethods().get(name);
+        ArrayList<Method> methods = this.classDescription.getMethods().get(key);
         if (methods != null && !methods.isEmpty())
             function.add(thisObject(), methods);
 
@@ -127,7 +128,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
             if (prototype instanceof JSBaseObject) {
                 JSBaseObject jsPrototype = (JSBaseObject) prototype;
-                methods = jsPrototype.classDescription.getMethods().get(name);
+                methods = jsPrototype.classDescription.getMethods().get(key);
                 if (methods != null && !methods.isEmpty())
                     function.add(jsPrototype, methods);
             }
@@ -161,15 +162,11 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public void put(String name, Scriptable start, Object value) {
-        final Field field = classDescription.getFields().get(name);
+        final PropertyAccess field = classDescription.getFields().get(name);
         if (field != null) {
             if (classDescription.getFields().containsKey(name)) {
-                try {
-                    field.set(this, value);
-                    return;
-                } catch (IllegalAccessException e) {
-                    throw new XPMRhinoException("Illegal access to field [%s]", field.toString());
-                }
+                field.set(this, value);
+                return;
             }
         }
 
@@ -260,17 +257,6 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             return (Scriptable)JavaScriptRunner.wrap(obj);
         }
 
-    }
-
-    static private class MyNativeJavaObject extends NativeJavaObject {
-        private MyNativeJavaObject(Scriptable scope, Object javaObject, Class<?> staticType, boolean isAdapter) {
-            super(scope, javaObject, staticType, isAdapter);
-        }
-
-        @Override
-        public String getClassName() {
-            return ClassDescription.getClassName(this.staticType);
-        }
     }
 
     private static class MyNativeJavaClass extends NativeJavaClass {

@@ -32,11 +32,11 @@ import java.util.List;
  * Represents all the methods with the same name within the same object
  */
 public class MethodFunction extends GenericFunction {
-    final String name;
+    final Object key;
     final ArrayList<Group> groups = new ArrayList<>();
 
-    public MethodFunction(String name) {
-        this.name = name;
+    public MethodFunction(Object key) {
+        this.key = key;
     }
 
     public boolean isEmpty() {
@@ -44,8 +44,8 @@ public class MethodFunction extends GenericFunction {
     }
 
     @Override
-    public String getName() {
-        return name;
+    public String getKey() {
+        return key.toString();
     }
 
     @Override

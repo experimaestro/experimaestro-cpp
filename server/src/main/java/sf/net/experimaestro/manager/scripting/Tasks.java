@@ -79,12 +79,13 @@ public class Tasks {
     }
 
     @Expose(value = "set", context = true)
-    public TaskFactory set(LanguageContext cx, String qname, NativeObject definition) {
+    public void set(LanguageContext cx, String qname, NativeObject definition) {
         QName id = QName.parse(qname, cx.getNamespaceContext());
-        return new TaskRef(id).set(cx, definition);
+        final TaskRef taskRef = new TaskRef(id);
+        taskRef.set(cx, definition);
     }
 
-    @Expose(context = true, call = true)
+    @Expose(context = true, mode = ExposeMode.CALL)
     public Object get(LanguageContext cx, String qname) {
         QName id = QName.parse(qname, cx.getNamespaceContext());
         return new TaskRef(id).get(cx);
@@ -125,7 +126,7 @@ public class Tasks {
         return new Copy(cx, qname, plan);
     }
 
-    class TaskRef extends ScriptingReference {
+    class TaskRef implements ScriptingReference<Object> {
         private static final long serialVersionUID = 1L;
 
         private final QName id;
@@ -134,23 +135,24 @@ public class Tasks {
             this.id = id;
         }
 
-        public Object get(LanguageContext cx) {
+        @Override
+        public TaskFactory get(LanguageContext cx) {
             final ScriptContext scriptContext = ScriptContext.get();
             return scriptContext.getRepository().getFactory(id);
         }
 
-        public TaskFactory set(LanguageContext cx, NativeObject value) {
+        @Override
+        public void set(LanguageContext cx, Object value) {
             final TaskFactory factory;
             final ScriptContext scriptContext = ScriptContext.get();
             try {
-                factory = new JavaScriptTaskFactory(id, ((JavaScriptContext)cx).scope(), value, scriptContext.getRepository());
+                factory = new JavaScriptTaskFactory(id, ((JavaScriptContext)cx).scope(), (NativeObject) value, scriptContext.getRepository());
             } catch (RhinoException e) {
                 throw e;
             } catch (ValueMismatchException | RuntimeException e) {
                 throw new XPMRhinoException(e);
             }
             scriptContext.getRepository().addFactory(factory);
-            return factory;
         }
     }
 }

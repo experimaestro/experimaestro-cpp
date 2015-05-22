@@ -76,7 +76,7 @@ public class PythonRunner implements AutoCloseable {
         interpreter.setOut(out);
         interpreter.setErr(err);
 
-        Scripting.forEachFunction(m -> interpreter.set(m.getName(), new PythonMethod(m)));
+        Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(m)));
 
         // Add classes
         for (PyType type : TYPES.values()) {

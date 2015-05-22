@@ -33,7 +33,7 @@ public class JavaScriptObject extends JSBaseObject implements Wrapper {
 
     @Override
     public Object unwrap() {
-        return object;
+        return object instanceof Wrapper ? ((Wrapper) object).unwrap() : object;
     }
 
     @Override

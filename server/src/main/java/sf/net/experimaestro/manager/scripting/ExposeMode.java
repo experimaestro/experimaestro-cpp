@@ -19,10 +19,15 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 /**
- * Special object that can be assigned
+ * How to expose a method
  */
-@Exposed
-public interface ScriptingReference<T> {
-    T get(LanguageContext cx);
-    void set(LanguageContext cx, T value);
+public enum ExposeMode {
+    /** Standard method with a name */
+    METHOD,
+    /** Use a direct call */
+    CALL,
+    /** Property access */
+    PROPERTY,
+    /** Field access */
+    FIELDS
 }

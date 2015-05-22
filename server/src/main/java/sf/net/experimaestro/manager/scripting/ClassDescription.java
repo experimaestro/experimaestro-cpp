@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.scripting;
 
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
+import sf.net.experimaestro.utils.Functional;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -48,7 +49,10 @@ public class ClassDescription {
 
     private ArrayList<Constructor<?>> constructors = new ArrayList<>();
 
-    private Map<String, ArrayList<Method>> methods = new HashMap<>();
+    /**
+     * Maps a string or ExposeMode enum value to a list of methods
+     */
+    private Map<Object, ArrayList<Method>> methods = new HashMap<>();
 
     private Map<String, PropertyAccess> fields = new HashMap<>();
 
@@ -66,7 +70,7 @@ public class ClassDescription {
      */
     public static ClassDescription analyzeClass(Class<?> aClass) {
         ClassDescription description = CLASS_DESCRIPTION.get(aClass);
-        Map<String, ArrayList<Method>> map;
+        Map<Object, ArrayList<Method>> map;
         synchronized (CLASS_DESCRIPTION) {
             if (description == null) {
                 description = new ClassDescription(aClass);
@@ -75,14 +79,44 @@ public class ClassDescription {
 
                 map = description.methods;
                 for (Method method : aClass.getDeclaredMethods()) {
+                    // Add fields
+                    for (Field field : aClass.getFields()) {
+                        Property annotation = field.getAnnotation(Property.class);
+                        if (annotation != null) {
+                            final String name = annotation.value().equals("") ? field.getName() : annotation.value();
+                            description.fields.put(name, new PropertyAccess.FieldAccess(field));
+                        }
+                    }
+
                     // Exposed case
                     final Expose expose = method.getAnnotation(Expose.class);
                     if (expose != null) {
-                        if (expose.property()) {
-                            // TODO
-                            description.fields.put(name, new PropertyAccess());
-                        } else {
-                            addMethod(map, method, expose.value(), expose.call());
+                        switch (expose.mode()) {
+                            case PROPERTY:
+                                // Property
+                                String name = expose.value();
+                                if (name.isEmpty()) {
+                                    throw new XPMRuntimeException("Name cannot be empty for a property [%s]", method);
+                                }
+                                PropertyAccess propertyAccess = description.fields.get(name);
+                                if (propertyAccess == null) {
+                                    description.fields.put(name, propertyAccess = new PropertyAccess());
+                                }
+                                final int nbArguments = method.getParameters().length;
+                                if (nbArguments == 0) {
+                                    // Getter
+                                    propertyAccess.getter = Functional.propagateFunction(x -> method.invoke(x));
+                                } else if (nbArguments == 1) {
+                                    // Setter
+                                    propertyAccess.setter = Functional.propagate((x, v) -> method.invoke(x, v));
+                                } else {
+                                    throw new XPMRuntimeException("Cannot determine if [%s] is a getter or setter", method);
+                                }
+                                break;
+
+                            default:
+                                addMethod(map, method, expose.value(), expose.mode());
+                                break;
                         }
                     }
                 }
@@ -90,8 +124,8 @@ public class ClassDescription {
                 // Adds all the ancestors methods
                 Class<?> superclass = aClass.getSuperclass();
                 if (JSBaseObject.class.isAssignableFrom(superclass) || superclass.getAnnotation(Exposed.class) != null) {
-                    Map<String, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
-                    for (Map.Entry<String, ArrayList<Method>> entry : superclassMethods.entrySet()) {
+                    Map<Object, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
+                    for (Map.Entry<Object, ArrayList<Method>> entry : superclassMethods.entrySet()) {
                         ArrayList<Method> previous = map.get(entry.getKey());
                         if (previous != null)
                             previous.addAll(entry.getValue());
@@ -117,18 +151,8 @@ public class ClassDescription {
                     }
                 }
 
-
-                // Add fields
-                for (Field field : aClass.getFields()) {
-                    Property annotation = field.getAnnotation(Property.class);
-                    if (annotation != null) {
-                        final String name = annotation.value().equals("") ? field.getName() : annotation.value();
-                        description.fields.put(name, new PropertyAccess.FieldAccess(field));
-                    }
-                }
-
-            }
-        }
+            } // description == null
+        } // synchronized
         return description;
     }
 
@@ -136,24 +160,33 @@ public class ClassDescription {
      * @param map    The list of methods
      * @param method The method
      * @param name   The name of the method (or empty if using the method name)
-     * @param call   Whether this method is used when the object is "called"
+     * @param mode   Whether this method is used when the object is "called"
      */
-    private static void addMethod(Map<String, ArrayList<Method>> map, Method method, String name, boolean call) {
+    private static void addMethod(Map<Object, ArrayList<Method>> map, Method method, String name, ExposeMode mode) {
         if ((method.getModifiers() & Modifier.PUBLIC) == 0)
             throw new AssertionError("The method " + method + " is not public");
-        if (call) {
-            if (!name.equals("")) {
-                throw new AssertionError("Method " + method + " should not defined a name since" +
-                        "it is will be called directly.");
-            }
-            name = null;
-        } else if ("".equals(name)) {
-            name = method.getName();
+
+        Object key = name;
+        switch (mode) {
+            case CALL:
+                if (!name.equals("")) {
+                    throw new AssertionError("Method " + method + " should not defined a name since" +
+                            "it is will be called directly.");
+                }
+                key = mode;
+
+                break;
+            default:
+                if (name.isEmpty()) {
+                    key = method.getName();
+                }
+
         }
 
-        ArrayList<Method> methods = map.get(name);
+        // Add the method
+        ArrayList<Method> methods = map.get(key);
         if (methods == null) {
-            map.put(name, methods = new ArrayList<>());
+            map.put(key, methods = new ArrayList<>());
         }
         methods.add(method);
     }
@@ -177,14 +210,14 @@ public class ClassDescription {
     /**
      * The class methods
      */
-    public Map<String, ArrayList<Method>> getMethods() {
+    public Map<Object, ArrayList<Method>> getMethods() {
         return methods;
     }
 
     /**
      * Properties
      */
-    public Map<String, Field> getFields() {
+    public Map<String, PropertyAccess> getFields() {
         return fields;
     }
 

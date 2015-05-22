@@ -20,14 +20,11 @@ package sf.net.experimaestro.manager.js;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
 
@@ -46,7 +43,15 @@ public class JavaScriptContext extends LanguageContext {
             }
 
             if (value instanceof NativeArray) {
-                Lists.transform((NativeArray) value, toJavaFunction);
+                return Lists.transform((NativeArray) value, toJavaFunction);
+            }
+
+            if (value instanceof ConsString) {
+                return value.toString();
+            }
+
+            if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
+                return ((sf.net.experimaestro.manager.scripting.Wrapper)value).unwrap();
             }
 
             return value;

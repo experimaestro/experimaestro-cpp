@@ -177,11 +177,11 @@ public abstract class GenericFunction {
     /**
      * Get the name of the method or constructor
      */
-    protected abstract String getName();
+    protected abstract Object getKey();
 
     protected abstract <T extends Declaration> Iterable<T> declarations();
 
-    public Object call(LanguageContext lcx, Object thisObj, Object[] args) {
+    public Object call(LanguageContext lcx, Object thisObj, Object... args) {
         Declaration argmax = null;
         int max = Integer.MIN_VALUE;
 
@@ -215,7 +215,7 @@ public abstract class GenericFunction {
             }
 
             throw ScriptRuntime.typeError(String.format("Could not find a matching method for %s(%s)%s",
-                    getName(),
+                    getKey(),
                     Output.toString(", ", args, o -> o.getClass().toString()),
                     context
             ));
@@ -329,15 +329,7 @@ public abstract class GenericFunction {
             // Case of string: anything can be converted, but with different
             // scores
             if (type == String.class) {
-                if (o instanceof Scriptable) {
-                    switch (((Scriptable) o).getClassName()) {
-                        case "String":
-                        case "ConsString":
-                            return TOSTRING;
-                        default:
-                            score -= 10;
-                    }
-                } else if (o instanceof CharSequence) {
+                if (o instanceof CharSequence) {
                     score--;
                 } else {
                     score -= 10;
