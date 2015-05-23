@@ -541,17 +541,18 @@ public class XPM {
                 if (options.containsKey("lock")) {
                     List locks = (List) options.get("lock");
                     for (int i = locks.size(); --i >= 0; ) {
-                        Object lock_i = JSUtils.unwrap(locks.get(i));
+                        Object lock_i = locks.get(i);
                         Dependency dependency = null;
 
                         if (lock_i instanceof Dependency) {
                             dependency = (Dependency) lock_i;
-                        } else if (lock_i instanceof NativeArray) {
-                            NativeArray array = (NativeArray) lock_i;
-                            if (array.getLength() != 2)
+                        } else if (lock_i instanceof List) {
+                            List array = (List) lock_i;
+                            if (array.size() != 2) {
                                 throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+                            }
 
-                            final Object depObject = JSUtils.unwrap(array.get(0, array));
+                            final Object depObject = array.get(0);
                             Resource resource = null;
                             if (depObject instanceof Resource) {
                                 resource = (Resource) depObject;
@@ -567,7 +568,7 @@ public class XPM {
                                     }
                             }
 
-                            final Object lockType = array.get(1, array);
+                            final Object lockType = array.get(1);
                             LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
 
                             if (!simulate()) {
