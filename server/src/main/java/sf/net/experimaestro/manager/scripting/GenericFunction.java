@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import bpiwowar.argparser.utils.AnnotationMap;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.ScriptRuntime;
@@ -35,13 +36,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
@@ -168,12 +165,34 @@ public abstract class GenericFunction {
 
         // Var args
         if (isVarArgs) {
-            Class<?> type = ClassUtils.primitiveToWrapper(types[types.length - 1].getComponentType());
+            final Argument argument = getAnnotation(Argument.class, annotations[types.length - 1]);
+            Class<?>[] argTypes;
+            if (argument != null && argument.types().length > 0) {
+                argTypes = argument.types();
+            } else {
+                argTypes = new Class<?>[] { types[types.length - 1].getComponentType() };
+            }
+            for(int i = 0; i < argTypes.length; ++i) {
+                argTypes[i] = ClassUtils.primitiveToWrapper(argTypes[i]);
+            }
+
             int nbVarArgs = args.length - nbArgs;
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final int j = nbArgs + i;
                 final Object o = lcx.toJava(args[(j)]);
-                converters[j] = converter.converter(lcx, o, type);
+                int bestScore = 0;
+
+                // Find the best among the k
+                for(int k = 0; k < argTypes.length; ++k) {
+                    Function f = converter.converter(lcx, o, argTypes[k]);
+                    if (k == 0 || converter.score > bestScore) {
+                        converters[j] = f;
+                        bestScore = converter.score;
+                    } else {
+                        converter.score = bestScore;
+                    }
+                }
+
                 if (converters[j] != null) {
                     converters[j] = converters[j].compose(lcx::toJava);
                 }
@@ -181,6 +200,15 @@ public abstract class GenericFunction {
         }
 
         return converter.score;
+    }
+
+    private static <T extends Annotation> T getAnnotation(Class<T> annotationClass, Annotation[] annnotations) {
+        final Optional<Annotation> first = Arrays.stream(annnotations)
+                .filter(x -> annotationClass.isAssignableFrom(x.getClass())).findFirst();
+        if (first.isPresent()) {
+            return (T) first.get();
+        }
+        return null;
     }
 
     /**

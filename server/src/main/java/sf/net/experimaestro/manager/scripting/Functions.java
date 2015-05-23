@@ -72,7 +72,9 @@ public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Expose(context = true, value = "merge")
-    static public NativeObject merge(LanguageContext cx, Object... objects) {
+    static public NativeObject merge(LanguageContext cx,
+                                     @Argument(name = "objects", types = {Map.class, Json.class})
+                                     Object... objects) {
         NativeObject returned = new NativeObject();
 
         Scriptable scope = null; // FIXME
@@ -80,16 +82,16 @@ public class Functions {
 
         for (Object object : objects) {
             object = JSUtils.unwrap(object);
-            if (object instanceof NativeObject) {
-                NativeObject nativeObject = (NativeObject) object;
-                for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
+            if (object instanceof Map) {
+                Map<?, ?> map = (Map) object;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
                     Object key = entry.getKey();
                     if (returned.has(key.toString(), returned))
                         throw new XPMRhinoException("Conflicting id in merge: %s", key);
                     returned.put(key.toString(), returned,
                             JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
                 }
-            } else if (object instanceof JsonObject) {
+            } else if (object instanceof Json) {
                 Json json = (Json) object;
                 if (!(json instanceof JsonObject))
                     throw new XPMRhinoException("Cannot merge object of type " + object.getClass());

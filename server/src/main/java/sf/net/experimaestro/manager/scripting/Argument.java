@@ -31,4 +31,11 @@ public @interface Argument {
     String type() default "";
 
     String help() default "";
+
+    /**
+     * When using a generic type (e.g. Object), this field
+     * can be used to specify which types can be used
+     * @return An empty array (use the given type)
+     */
+    Class<?>[] types() default {};
 }
