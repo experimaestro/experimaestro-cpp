@@ -202,7 +202,9 @@ public class JavaScriptRunner implements AutoCloseable {
         }
 
         // Simple types
-        if (object instanceof String || object instanceof Integer || object instanceof Long || object instanceof Double || object instanceof Float) {
+        if (object instanceof String || object instanceof Integer
+                || object instanceof Long || object instanceof Double || object instanceof Float
+                || object instanceof Boolean) {
             return object;
         }
 
@@ -245,9 +247,8 @@ public class JavaScriptRunner implements AutoCloseable {
         }
 
 
-        return new NativeJavaObject(scope, object, Object.class);
-//
-//        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
+//        return new NativeJavaObject(scope, object, Object.class);
+        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
     }
 
     @Override

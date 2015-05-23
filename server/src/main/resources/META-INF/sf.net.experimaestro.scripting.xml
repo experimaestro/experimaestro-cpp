@@ -24,6 +24,7 @@
         <class>sf.net.experimaestro.scheduler.Dependency</class>
         <class>sf.net.experimaestro.scheduler.Command</class>
         <class>sf.net.experimaestro.scheduler.Command$Pipe</class>
+        <class>sf.net.experimaestro.scheduler.Job</class>
 
         <!-- Manager -->
         <class>sf.net.experimaestro.manager.Module</class>
@@ -68,11 +69,15 @@
 
         <!-- Json -->
         <class>sf.net.experimaestro.manager.json.Json</class>
-        <class>sf.net.experimaestro.manager.json.JsonObject</class>
-        <class>sf.net.experimaestro.manager.json.JsonString</class>
-        <class>sf.net.experimaestro.manager.json.JsonBoolean</class>
-        <class>sf.net.experimaestro.manager.json.JsonReal</class>
+
         <class>sf.net.experimaestro.manager.json.JsonArray</class>
+        <class>sf.net.experimaestro.manager.json.JsonBoolean</class>
+        <class>sf.net.experimaestro.manager.json.JsonString</class>
+        <class>sf.net.experimaestro.manager.json.JsonNull</class>
+        <class>sf.net.experimaestro.manager.json.JsonObject</class>
+        <class>sf.net.experimaestro.manager.json.JsonPath</class>
+        <class>sf.net.experimaestro.manager.json.JsonReal</class>
+        <class>sf.net.experimaestro.manager.json.JsonResource</class>
 
     </classes>
 </scripting>

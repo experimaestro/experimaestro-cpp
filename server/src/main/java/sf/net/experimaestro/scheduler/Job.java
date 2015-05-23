@@ -27,6 +27,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
@@ -52,6 +53,7 @@ import java.util.Date;
  */
 @Entity
 @DiscriminatorValue(Resource.JOB_TYPE)
+@Exposed
 public class Job extends Resource {
 
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
