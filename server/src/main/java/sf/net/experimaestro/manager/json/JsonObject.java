@@ -45,7 +45,7 @@ import static java.lang.String.format;
 @Exposed
 public class JsonObject extends Json {
     /** True if the object is sealed */
-    private boolean sealed;
+    private boolean sealed = false;
 
     private TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
 
@@ -126,6 +126,8 @@ public class JsonObject extends Json {
         }
         map.put(key, new JsonString(string));
     }
+
+    @Expose(mode = ExposeMode.FIELDS)
     public void put(String key, Json json) {
         if (sealed) {
             throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
