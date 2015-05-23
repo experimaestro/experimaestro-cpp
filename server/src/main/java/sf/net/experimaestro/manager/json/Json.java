@@ -30,6 +30,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -222,6 +223,14 @@ abstract public class Json {
             JsonArray json = new JsonArray();
             for (int i = 0; i < length; i++)
                 json.add(toJSON(lcx, Array.get(value, i)));
+            return json;
+        }
+
+        if (value instanceof List) {
+            final List list = (List)value;
+            JsonArray json = new JsonArray();
+            for (Object element: list)
+                json.add(toJSON(lcx, element));
             return json;
         }
 
