@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 
 import static java.lang.String.format;
@@ -41,6 +40,8 @@ import static java.lang.String.format;
  */
 @Exposed
 public class JsonArray extends Json implements Iterable<Json> {
+    private boolean sealed = false;
+
     ArrayList<Json> array = new ArrayList<>();
 
 
@@ -80,12 +81,23 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
-    public Json clone() {
+    public Json copy() {
         JsonArray newArray = new JsonArray();
-        for (Json json : array)
-            newArray.add(json.clone());
+        for (Json json : array) {
+            newArray.add(json.copy());
+        }
         return newArray;
     }
+
+    @Override
+    public Json seal() {
+        if (!sealed) {
+            sealed = true;
+            this.array.forEach(x -> x.seal());
+        }
+        return this;
+    }
+
 
     @Override
     public boolean isSimple() {
@@ -127,6 +139,9 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     public void add(Json json) {
+        if (sealed) {
+            throw new UnsupportedOperationException("JSON array cannot be modified (it is sealed)");
+        }
         array.add(json);
     }
 

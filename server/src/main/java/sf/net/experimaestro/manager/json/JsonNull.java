@@ -37,12 +37,6 @@ public class JsonNull extends Json {
         return singleton;
     }
 
-
-    @Override
-    public Json clone() {
-        return this;
-    }
-
     @Override
     public boolean isSimple() {
         return true;

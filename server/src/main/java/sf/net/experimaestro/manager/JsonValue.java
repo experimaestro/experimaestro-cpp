@@ -45,7 +45,7 @@ public class JsonValue extends Value {
         // If there is no value, takes the default
         if (value == null && input.defaultValue != null) {
             LOGGER.debug("Setting default value [%s]", input.defaultValue);
-            value = input.defaultValue.clone();
+            value = input.defaultValue.seal();
         }
     }
 
@@ -73,7 +73,7 @@ public class JsonValue extends Value {
         JsonValue other = (JsonValue) _other;
         super.init(other);
         if (other.value != null)
-            value = other.value.clone();
+            value = other.value.seal();
     }
 
     @Override

@@ -44,8 +44,10 @@ import static java.lang.String.format;
  */
 @Exposed
 public class JsonObject extends Json {
+    /** True if the object is sealed */
+    private boolean sealed;
 
-    TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
+    private TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
 
     public static final String XP_TYPE_STRING = Manager.XP_TYPE.toString();
     public static final String XP_VALUE_STRING = Manager.XP_VALUE.toString();
@@ -61,11 +63,6 @@ public class JsonObject extends Json {
     public String toString() {
         return format("{%s}", Output.toString(", ", map.entrySet(),
                 entry -> format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
-    }
-
-    @Override
-    public Json clone() {
-        return new JsonObject(map);
     }
 
     @Override
@@ -124,9 +121,15 @@ public class JsonObject extends Json {
     }
 
     public void put(String key, String string) {
+        if (sealed) {
+            throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
+        }
         map.put(key, new JsonString(string));
     }
     public void put(String key, Json json) {
+        if (sealed) {
+            throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
+        }
         map.put(key, json);
     }
 
@@ -170,6 +173,22 @@ public class JsonObject extends Json {
             entry.getValue().write(out);
         }
         out.endObject();
+    }
+
+    @Override
+    public Json copy() {
+        final JsonObject copy = new JsonObject();
+        this.map.forEach((x, y) -> copy.put(x, y.copy()));
+        return copy;
+    }
+
+    @Override
+    public Json seal() {
+        if (!sealed) {
+            sealed = true;
+            this.map.values().forEach(x -> x.seal());
+        }
+        return this;
     }
 
     @Override

@@ -33,15 +33,10 @@ import static java.lang.String.format;
  * Json wrapper over resources
  */
 public class JsonResource extends Json {
-    Resource resource;
+    private Resource resource;
 
     public JsonResource(Resource resource) {
         this.resource = resource;
-    }
-
-    @Override
-    public JsonResource clone() {
-        return new JsonResource(resource);
     }
 
     @Override

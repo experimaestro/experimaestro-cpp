@@ -40,11 +40,6 @@ public class JsonBoolean extends Json {
     }
 
     @Override
-    public Json clone() {
-        return new JsonBoolean(value);
-    }
-
-    @Override
     public boolean isSimple() {
         return true;
     }

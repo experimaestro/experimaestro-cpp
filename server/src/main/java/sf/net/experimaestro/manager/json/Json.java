@@ -20,13 +20,9 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.stream.JsonWriter;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Resource;
@@ -38,6 +34,8 @@ import java.util.Map;
 
 /**
  * Base class for all JSON objects
+ *
+ * Objects can be sealed to avoid unnecessary copies
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -157,9 +155,29 @@ abstract public class Json {
         return new Command.ParameterFile(id, bytes.toByteArray());
     }
 
-    @Override
-    abstract public Json clone();
+    /**
+     * Perform a copy of the JSON object so that it can be modified.
+     *
+     * This method has to be overwritten by classes that are not immutable,
+     * since by default it returns the object itself.
+     *
+     * @return A new JSON object
+     */
+    public Json copy() { return this; }
 
+    /** Seal the object
+     *
+     * This method has to be overwritten by classes that are not immutable
+     * since this method does nothing by default.
+     */
+    public Json seal() { return this; }
+
+    /**
+     * Convert an object to a  JSON
+     * @param lcx
+     * @param value
+     * @return
+     */
     public static Json toJSON(LanguageContext lcx, Object value) {
         if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
             value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();

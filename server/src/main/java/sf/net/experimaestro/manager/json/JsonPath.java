@@ -34,18 +34,13 @@ import static java.lang.String.format;
  * The default interface for JsonPath
  */
 public class JsonPath extends Json {
-    Path path;
+    private Path path;
 
     private JsonPath() {
     }
 
     public JsonPath(Path path) {
         this.path = path;
-    }
-
-    @Override
-    public Json clone() {
-        return new JsonPath(path);
     }
 
     @Override

@@ -28,19 +28,16 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
+ * An immutable real value
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
 public class JsonReal extends Json {
-    double value;
+    /** The wrapped value */
+    private double value;
 
     public JsonReal(double value) {
         this.value = value;
-    }
-
-    @Override
-    public Json clone() {
-        return new JsonReal(value);
     }
 
     @Override

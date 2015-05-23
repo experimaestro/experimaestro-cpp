@@ -44,11 +44,6 @@ public class JsonInteger extends Json {
     }
 
     @Override
-    public Json clone() {
-        return new JsonInteger(value);
-    }
-
-    @Override
     public boolean isSimple() {
         return true;
     }

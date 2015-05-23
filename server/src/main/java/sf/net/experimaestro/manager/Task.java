@@ -233,7 +233,7 @@ public abstract class Task {
      */
     public final void setParameter(DotName id, Json value) throws NoSuchParameter {
         try {
-            getValue(id).set(value.clone());
+            getValue(id).set(value.seal());
         } catch (XPMRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());
             throw e;

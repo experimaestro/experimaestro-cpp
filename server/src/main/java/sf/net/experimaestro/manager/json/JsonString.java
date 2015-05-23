@@ -44,11 +44,6 @@ public class JsonString extends Json {
     }
 
     @Override
-    public Json clone() {
-        return new JsonString(string);
-    }
-
-    @Override
     public boolean isSimple() {
         return false;
     }
