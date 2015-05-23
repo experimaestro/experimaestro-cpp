@@ -310,8 +310,11 @@ final public class ScriptContext implements AutoCloseable {
 
     }
 
-    public Logger getLogger(String loggerName) {
+    public Logger getMainLogger() {
+        return staticContext.getMainLogger();
+    }
 
+    public Logger getLogger(String loggerName) {
         return (Logger) staticContext.loggerRepository.getLogger(loggerName, Logger.factory());
     }
 
