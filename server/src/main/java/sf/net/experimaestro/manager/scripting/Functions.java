@@ -214,16 +214,11 @@ public class Functions {
 
     @Expose
     static public String format(
-            @Argument(name = "format", type = "String", help = "The string used to format") String format,
+            @Argument(name = "format", type = "String", help = "The string used to format")
+            String format,
             @Argument(name = "arguments...", type = "Object", help = "A list of objects")
-            Object[] args) {
-        if (args.length == 0)
-            return "";
-
-        Object fargs[] = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            fargs[i - 1] = unwrap(args[i]);
-        return String.format(format, fargs);
+            Object... args) {
+        return String.format(format, args);
     }
 
     @Expose()

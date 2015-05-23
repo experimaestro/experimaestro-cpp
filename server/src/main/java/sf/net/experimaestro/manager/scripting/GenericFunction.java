@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -33,6 +34,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -425,7 +427,9 @@ public abstract class GenericFunction {
             if (Json.class.isAssignableFrom(type)) {
                 if (o instanceof Map
                         || o instanceof List || o instanceof Double || o instanceof Float
-                        || o instanceof Integer || o instanceof Long) {
+                        || o instanceof Integer || o instanceof Long
+                        || o instanceof Path || o instanceof Boolean
+                        || o instanceof Resource) {
                     score -= 10;
                     return x -> Json.toJSON(lcx, x);
                 }

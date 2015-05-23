@@ -24,6 +24,8 @@
         <class>sf.net.experimaestro.scheduler.Dependency</class>
         <class>sf.net.experimaestro.scheduler.Command</class>
         <class>sf.net.experimaestro.scheduler.Command$Pipe</class>
+        <class>sf.net.experimaestro.scheduler.Command$CommandOutput</class>
+        <class>sf.net.experimaestro.scheduler.Command$SubCommand</class>
         <class>sf.net.experimaestro.scheduler.Job</class>
 
         <class>sf.net.experimaestro.scheduler.Dependency</class>
