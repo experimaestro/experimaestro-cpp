@@ -151,23 +151,33 @@ public class JSDirectTask extends Task {
 
         @Expose(context = true, optionalsAtStart = true, optional = 2)
         public Path unique_directory(LanguageContext cx, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            return uniquePath(cx, basedir, prefix, json, true);
+        }
 
-            QName taskId = JSDirectTask.this.getFactory().getId();
-            if (prefix == null) {
-                prefix = taskId.getLocalPart();
-            }
-            return Manager.uniquePath(basedir, prefix, taskId, cx.toJSON(json), true);
+        @Expose(context = true)
+        public Path unique_directory(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            return uniquePath(cx, resource.file().getParent(), prefix, json, true);
+        }
+
+        @Expose(context = true, optionalsAtStart = true, optional = 2)
+        public Path unique_file(LanguageContext cx, Path basedir, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            return uniquePath(cx, basedir, prefix, json, false);
         }
 
         @Expose(context = true)
         public Path unique_file(LanguageContext cx, Resource resource, String prefix, Object json) throws IOException, NoSuchAlgorithmException {
+            return uniquePath(cx, resource.file().getParent(), prefix, json, false);
+        }
 
+
+        private Path uniquePath(LanguageContext cx, Path basedir, String prefix, Object json, boolean directory) throws IOException, NoSuchAlgorithmException {
             QName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return Manager.uniquePath(null, prefix, taskId, cx.toJSON(json), false);
+            return Manager.uniquePath(basedir, prefix, taskId, cx.toJSON(json), directory);
         }
+
 
         @Expose()
         @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
