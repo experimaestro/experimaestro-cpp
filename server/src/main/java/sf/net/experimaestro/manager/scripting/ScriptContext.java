@@ -38,6 +38,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Cleaner;
+import sf.net.experimaestro.utils.Mutable;
 import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -83,7 +84,7 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * The working directory
      */
-    Updatable<Path> workingDirectory;
+    Mutable<Path> workingDirectory;
 
     /**
      * List of listeners for new jobs
@@ -178,7 +179,7 @@ final public class ScriptContext implements AutoCloseable {
         experimentId = Updatable.create(null);
         priority = Updatable.create(0);
         simulate = Updatable.create(false);
-        workingDirectory = Updatable.create(null);
+        workingDirectory = new Mutable<>();
         defaultLauncher = Updatable.create(new DirectLauncher());
         threadContext.set(this);
         connector = Updatable.create(LocalhostConnector.getInstance());
@@ -204,19 +205,22 @@ final public class ScriptContext implements AutoCloseable {
         experimentId = other.experimentId.reference();
         priority = other.priority.reference();
         simulate = other.simulate.reference();
-        workingDirectory = other.workingDirectory.reference();
         defaultLauncher = other.defaultLauncher.reference();
         connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
         environment = other.environment.reference();
 
+        // Copy global values
         counts = other.counts;
         submittedJobs = other.submittedJobs;
 
+        // Initialise shared values
         if (newRepository) {
             properties = new HashMap<>();
+            workingDirectory = new Mutable<>();
         } else {
             properties = other.properties;
+            workingDirectory = other.workingDirectory;
         }
 
         // Sets the current thread context
@@ -271,7 +275,6 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public ScriptContext defaultLocks(Map<Resource, Object> defaultLocks) {
-
         this.defaultLocks.set(defaultLocks);
         return this;
     }
@@ -377,13 +380,12 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public Path getWorkingDirectory() {
-
-        return workingDirectory.get();
+        return workingDirectory.getValue();
     }
 
     public void setWorkingDirectory(Path workingDirectory) {
-
-        this.workingDirectory.set(workingDirectory);
+        LOGGER.debug("[%s] Setting working directory to %s", this, workingDirectory);
+        this.workingDirectory.setValue(workingDirectory);
     }
 
     public Long getExperimentId() {
