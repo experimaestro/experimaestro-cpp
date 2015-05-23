@@ -36,6 +36,9 @@ import java.util.Map;
 @Exposed
 public class Union extends NAryOperator {
 
+    @Expose
+    public Union() {}
+
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
         Union copy = new Union();
