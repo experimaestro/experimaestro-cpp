@@ -1,6 +1,8 @@
+package sf.net.experimaestro.manager.scripting;
+
 /*
  * This file is part of experimaestro.
- * Copyright (c) 2012 B. Piwowarski <benjamin@bpiwowar.net>
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
  *
  * experimaestro is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +18,27 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-include("utils.inc.js");
+import static java.lang.String.format;
 
-// START SNIPPET: main
-var abc = new Namespace("a.b.c");
+/**
+ * Script location
+ */
+public class ScriptLocation {
+    String path;
+    int line;
 
-tasks.add("abc:default", {
-	inputs: {
-        a: { value: "xp:integer", default: 10 },
-	}
-});
+    public ScriptLocation(String path, int line) {
+        this.path = path;
+        this.line = line;
+    }
 
-// END SNIPPET: main
+    public ScriptLocation() {
+        this.path = "unknown";
+        this.line = 0;
+    }
 
-function test_default() {
-    var r = tasks("abc:default").run({});
-	assert_equals($(r[0]), 10);
+    @Override
+    public String toString() {
+        return format("%s:%s", path, line);
+    }
 }

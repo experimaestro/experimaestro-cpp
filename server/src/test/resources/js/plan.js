@@ -51,7 +51,7 @@ function check(results, expected) {
     });
     logger.info("Sorted: %s", results.toSource());
     for(var i = 0; i < expected.length; i++) {
-        if (expected[i] != _(results[i])) {
+        if (expected[i] != $(results[i])) {
             logger.info("Expected %s and got %s at %s", expected[i], _(results[i]), i);
             throw 1;
         }

@@ -257,7 +257,9 @@ public abstract class GenericFunction {
             Object[] transformedArgs = transform(lcx, argmax, args, argmaxConverters, argMaxOffset);
             // Show deprecated methods
             if (argmax.executable.getAnnotation(Deprecated.class) != null) {
-                ScriptContext.get().getMainLogger().warn("Method %s is deprecated", argmax);
+                final Logger logger = ScriptContext.get().getMainLogger();
+                logger.warn("In %s", lcx.getScriptLocation());
+                logger.warn("Method %s is deprecated", argmax);
             }
             final Object result = argmax.invoke(lcx, transformedArgs);
 
