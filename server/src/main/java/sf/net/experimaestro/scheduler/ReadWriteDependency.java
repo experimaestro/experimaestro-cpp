@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.DiscriminatorValue;
@@ -32,6 +33,7 @@ import javax.persistence.Entity;
  */
 @Entity
 @DiscriminatorValue("RW")
+@Exposed
 public class ReadWriteDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 

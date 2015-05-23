@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.MessageDigestWriter;
 import sf.net.experimaestro.utils.XMLUtils;
 
@@ -155,6 +156,9 @@ public class Manager {
 
         String digest = getDigest(json);
 
+        if (basedir == null) {
+            basedir = ScriptContext.get().getWorkingDirectory();
+        }
         Path uniquePath = basedir.resolve(format("%s/%s", prefix, digest));
 
         Files.createDirectories(directory ? uniquePath : uniquePath.getParent());

@@ -26,6 +26,10 @@
         <class>sf.net.experimaestro.scheduler.Command$Pipe</class>
         <class>sf.net.experimaestro.scheduler.Job</class>
 
+        <class>sf.net.experimaestro.scheduler.Dependency</class>
+        <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
+
+
         <!-- Manager -->
         <class>sf.net.experimaestro.manager.Module</class>
         <class>sf.net.experimaestro.manager.Task</class>

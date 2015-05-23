@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.argparser.utils.AnnotationMap;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.ScriptRuntime;
@@ -26,8 +25,6 @@ import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonReal;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -38,7 +35,6 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
@@ -153,11 +149,12 @@ public abstract class GenericFunction {
 
             // Unwrap if necessary
             final boolean javaize = Stream.of(annotations[j]).noneMatch(c -> c instanceof NoJavaization);
+            final boolean nullable = Stream.of(annotations[j]).noneMatch(c -> c instanceof NotNull);
             if (javaize) {
                 o = lcx.toJava(o);
             }
 
-            converters[i] = converter.converter(lcx, o, types[j]);
+            converters[i] = converter.converter(lcx, o, types[j], nullable);
             if (javaize && converters[i] != null) {
                 converters[i] = converters[i].compose(lcx::toJava);
             }
@@ -166,6 +163,8 @@ public abstract class GenericFunction {
         // Var args
         if (isVarArgs) {
             final Argument argument = getAnnotation(Argument.class, annotations[types.length - 1]);
+            final boolean nullable = Stream.of(annotations[types.length - 1]).noneMatch(c -> c instanceof NotNull);
+
             Class<?>[] argTypes;
             if (argument != null && argument.types().length > 0) {
                 argTypes = argument.types();
@@ -177,14 +176,18 @@ public abstract class GenericFunction {
             }
 
             int nbVarArgs = args.length - nbArgs;
+
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final int j = nbArgs + i;
                 final Object o = lcx.toJava(args[(j)]);
+
                 int bestScore = 0;
+                int oldScore = converter.score;
 
                 // Find the best among the k
                 for(int k = 0; k < argTypes.length; ++k) {
-                    Function f = converter.converter(lcx, o, argTypes[k]);
+                    converter.score = oldScore;
+                    Function f = converter.converter(lcx, o, argTypes[k], nullable);
                     if (k == 0 || converter.score > bestScore) {
                         converters[j] = f;
                         bestScore = converter.score;
@@ -275,7 +278,7 @@ public abstract class GenericFunction {
             logger.error(message);
             logger.error("Candidates are:");
             for(ScoredDeclaration scoredDeclaration: scoredDeclarations) {
-                logger.error("%s", scoredDeclaration.method);
+                logger.error("[%d] %s", scoredDeclaration.score, scoredDeclaration.method);
             }
             throw ScriptRuntime.typeError(message);
         }
@@ -356,11 +359,13 @@ public abstract class GenericFunction {
 
         int score = Integer.MAX_VALUE;
 
-        Function converter(LanguageContext lcx, Object o, Class<?> type) {
+        Function converter(LanguageContext lcx, Object o, Class<?> type, boolean nullable) {
             if (o == null) {
+                if (!nullable) {
+                    return nonMatching();
+                }
                 if (type.isPrimitive()) {
-                    score = score > 0 ? 0 : score - NON_MATCHING_COST;
-                    return null;
+                    return nonMatching();
                 }
                 score--;
                 return IDENTITY;
@@ -387,7 +392,7 @@ public abstract class GenericFunction {
                     final ListConverter listConverter = new ListConverter(innerType);
 
                     while (iterator.hasNext()) {
-                        listConverter.add(converter(lcx, iterator.next(), innerType));
+                        listConverter.add(converter(lcx, iterator.next(), innerType, true));
                         if (score == Integer.MIN_VALUE) {
                             return null;
                         }
@@ -426,6 +431,10 @@ public abstract class GenericFunction {
                 }
             }
 
+            return nonMatching();
+        }
+
+        private Function nonMatching() {
             score = score > 0 ? 0 : score - NON_MATCHING_COST;
             return null;
         }
