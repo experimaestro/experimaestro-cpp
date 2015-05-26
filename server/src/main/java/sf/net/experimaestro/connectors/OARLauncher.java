@@ -37,8 +37,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.FileSystemException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 
 import static java.lang.String.format;
@@ -186,7 +190,7 @@ public class OARLauncher extends Launcher {
 
             if (fake) return null;
 
-            if (shortLived || detach) {
+            if (shortLived || !detach) {
                 // Check if the process is still alive
                 ensureShortLived();
 
@@ -284,16 +288,29 @@ public class OARLauncher extends Launcher {
                 String command = format("env; echo %s=$(hostname); sleep %d", XPM_HOSTNAME, information.jobDuration);
 
                 final Path directory = connector.resolve(shortLivedJobDirectory);
-                Files.createDirectories(directory);
-
                 final Path infopath = directory.resolve("information.env");
 
                 final AbstractProcessBuilder builder = connector.processBuilder();
-                builder.command("oarsub", "--stdout=log.out", "--stderr=log.err",
-                        format("--directory=%s", connector.resolve(infopath)),
+                builder.command("oarsub", "--stdout=information.env", "--stderr=log.err",
+                        format("--directory=%s", connector.resolve(directory)),
                         command);
                 builder.detach(false);
-                builder.start();
+
+                // Delete information file if it exists
+                Files.deleteIfExists(infopath);
+                final XPMProcess start = builder.start();
+
+                // Wait that the job is launched
+                final WatchService watchService = directory.getFileSystem().newWatchService();
+                try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
+                    directory.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+                    while (!Files.exists(infopath)) {
+                        LOGGER.debug("Waiting for information file %s", infopath);
+                        watcher.take();
+                    }
+                } catch (NoSuchFileException | InterruptedException f) {
+                    throw new RuntimeException(f);
+                }
 
             }
         }

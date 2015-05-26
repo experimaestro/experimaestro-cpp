@@ -427,11 +427,11 @@
             <version>0.1.5</version>
         </dependency>
 
-        <dependency>
-            <groupId>net.java.dev.jna</groupId>
-            <artifactId>jna</artifactId>
-            <version>${jna.version}</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>net.java.dev.jna</groupId>-->
+            <!--<artifactId>jna</artifactId>-->
+            <!--<version>${jna.version}</version>-->
+        <!--</dependency>-->
 
         <!-- XPath & XQuery handling -->
         <dependency>

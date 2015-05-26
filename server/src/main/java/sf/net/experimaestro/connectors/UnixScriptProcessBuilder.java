@@ -46,7 +46,7 @@ import static sf.net.experimaestro.scheduler.Command.SubCommand;
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     private String shPath = "/bin/bash";
 
-    public static final String SHELL_SPECIAL = " \"'<>\n";
+    public static final String SHELL_SPECIAL = " \\;\"'<>\n$()";
     public static final String QUOTED_SPECIAL = "\"$";
     /**
      * Lock files to delete

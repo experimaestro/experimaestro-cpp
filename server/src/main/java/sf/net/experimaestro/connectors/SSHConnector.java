@@ -30,6 +30,7 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.sshfs.SshFileSystem;
 import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -54,6 +55,9 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 @Exposed
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
+
+    /** Base path to resolve paths */
+    private String basePath = "/";
 
     /** Temporary path on host */
     public String temporaryPath = "/tmp";
@@ -102,6 +106,7 @@ public class SSHConnector extends SingleHostConnector {
 
     public SSHConnector(URI uri, ConnectorOptions options) {
         this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
+        this.basePath = uri.getPath();
     }
 
     /**
@@ -147,7 +152,7 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         try {
-            URI uri = new URI( "ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + "/" );
+            URI uri = new URI( "ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName()  + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);
@@ -170,7 +175,13 @@ public class SSHConnector extends SingleHostConnector {
     @Override
     protected boolean contains(FileSystem fileSystem) throws FileSystemException {
         try {
-            return doGetFileSystem().equals(this.filesystem);
+            if (!(fileSystem instanceof UnixSshFileSystem)) return false;
+            final UnixSshFileSystem ours = (UnixSshFileSystem) doGetFileSystem();
+
+            final URI ourUri = ours.getUri();
+            final URI theirUri = ((UnixSshFileSystem) fileSystem).getUri();
+
+            return ourUri.equals(theirUri);
         } catch (IOException e) {
             return false;
         }
@@ -260,7 +271,8 @@ public class SSHConnector extends SingleHostConnector {
             try {
                 channel = newExecChannel();
                 StringBuilder commandBuilder = new StringBuilder();
-                commandBuilder.append(CommandLineTask.getCommandLine(command()));
+                final String commandLine = CommandLineTask.getCommandLine(command());
+                commandBuilder.append(commandLine);
 
                 // Set default
                 channel.setOutputStream(System.out, true);

@@ -370,7 +370,8 @@ public class XPM {
         }
 
         // Run the process and captures the output
-        AbstractProcessBuilder builder = commandConnector.getMainConnector().processBuilder();
+
+        AbstractProcessBuilder builder = launcher.processBuilder(commandConnector.getMainConnector());
 
         try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector.getMainConnector())) {
             // Transform the list
