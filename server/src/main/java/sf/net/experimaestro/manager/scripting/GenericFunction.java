@@ -25,8 +25,6 @@ import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonReal;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -53,8 +51,11 @@ import static java.lang.StrictMath.min;
 public abstract class GenericFunction {
 
     static private final Function IDENTITY = Function.identity();
+
     static private final Function<Wrapper, Object> UNWRAPPER = x -> x.unwrap();
+
     static private final Function<org.mozilla.javascript.Wrapper, Object> JS_UNWRAPPER = x -> x.unwrap();
+
     static private final Function<Object, String> TOSTRING = x -> x.toString();
 
     /**
@@ -90,11 +91,13 @@ public abstract class GenericFunction {
         if (executable.isVarArgs()) {
             final Class<?> varargType = types[types.length - 1].getComponentType();
             int nbVarargs = args.length - length;
-            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
-            for (int i = 0; i < nbVarargs; i++) {
-                array[i] = converters[i + length].apply(args[i + length]);
+            if (nbVarargs > 0) {
+                final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
+                for (int i = 0; i < nbVarargs; i++) {
+                    array[i] = converters[i + length].apply(args[i + length]);
+                }
+                methodArgs[methodArgs.length - 1] = array;
             }
-            methodArgs[methodArgs.length - 1] = array;
         }
 
         return methodArgs;
@@ -198,9 +201,9 @@ public abstract class GenericFunction {
         Function converters[] = new Function[args.length];
         int argMaxOffset = 0;
 
-        for(int i = 0; i < args.length; ++i) {
+        for (int i = 0; i < args.length; ++i) {
             if (args[i] instanceof Wrapper) {
-                args[i] = ((Wrapper)args[i]).unwrap();
+                args[i] = ((Wrapper) args[i]).unwrap();
             }
         }
 
@@ -231,7 +234,7 @@ public abstract class GenericFunction {
             int i = 0;
             for (Declaration declaration : declarations()) {
                 MutableInt offset = new MutableInt(0);
-                scoredDeclarations[i++] = new ScoredDeclaration(declaration,score(lcx, declaration, args, converters, offset, true));
+                scoredDeclarations[i++] = new ScoredDeclaration(declaration, score(lcx, declaration, args, converters, offset, true));
             }
 
             Arrays.sort(scoredDeclarations, (a, b) -> Integer.compare(a.score, b.score));
@@ -246,7 +249,7 @@ public abstract class GenericFunction {
 
             logger.error(message);
             logger.error("Candidates are:");
-            for(ScoredDeclaration scoredDeclaration: scoredDeclarations) {
+            for (ScoredDeclaration scoredDeclaration : scoredDeclarations) {
                 logger.error("%s", scoredDeclaration.method);
             }
             throw ScriptRuntime.typeError(message);
@@ -266,7 +269,7 @@ public abstract class GenericFunction {
                 throw (XPMRhinoException) e.getCause();
             }
             throw new WrappedException(new XPMRhinoException(e.getCause()));
-        } catch(RuntimeException e) {
+        } catch (RuntimeException e) {
             throw e;
         } catch (Throwable e) {
             throw new WrappedException(new XPMRhinoException(e));
@@ -291,6 +294,7 @@ public abstract class GenericFunction {
 
     static public class ListConverter implements Function {
         private final Class<?> arrayClass;
+
         ArrayList<Function> functions = new ArrayList<>();
 
         public ListConverter(Class<?> arrayClass) {
