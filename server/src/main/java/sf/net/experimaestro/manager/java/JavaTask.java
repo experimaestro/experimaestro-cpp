@@ -65,8 +65,9 @@ public class JavaTask extends Task {
         Path path;
         try {
             final Path file = taskContext.getWorkingDirectory();
-            if (file == null)
+            if (file == null) {
                 throw new XPMRuntimeException("Working directory is not set");
+            }
 
             String dirPrefix = factory.getId().getLocalPart();
             final String prefix = javaFactory.prefixes.get(factory.getId().getNamespaceURI());

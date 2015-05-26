@@ -62,5 +62,7 @@ abstract public class LanguageContext {
      * @return The wrapped value
      */
     public abstract Object toJava(Object value);
+
+    abstract public ScriptLocation getScriptLocation();
 }
 

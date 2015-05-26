@@ -230,6 +230,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     /**
      * Used when the argument should be replaced by a pipe
      */
+    @Exposed
     public static class CommandOutput implements CommandComponent, Serializable {
         /**
          * The output
@@ -373,6 +374,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     /**
      * A sub-command whose output / input can be globally set
      */
+    @Exposed
     static public class SubCommand implements CommandComponent {
         /**
          * The commands

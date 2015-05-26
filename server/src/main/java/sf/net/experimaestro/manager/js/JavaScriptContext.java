@@ -20,20 +20,14 @@ package sf.net.experimaestro.manager.js;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.mozilla.javascript.ConsString;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Ref;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.ScriptLocation;
 import sf.net.experimaestro.manager.scripting.ScriptingReference;
 import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;
@@ -46,6 +40,10 @@ public class JavaScriptContext extends LanguageContext {
 
     static {
         toJavaFunction = (jcx, value) -> {
+            if (value == null) {
+                return null;
+            }
+
             if (value instanceof NativeObject) {
                 final com.google.common.base.Function f = x -> toJavaFunction.apply(jcx, x);
                 return Maps.transformValues((NativeObject) value, f);
@@ -130,6 +128,16 @@ public class JavaScriptContext extends LanguageContext {
     @Override
     public Object toJava(Object value) {
         return toJavaFunction.apply(this, value);
+    }
+
+    @Override
+    public ScriptLocation getScriptLocation() {
+        final XPMRhinoException rhinoException = new XPMRhinoException();
+        final ScriptStackElement[] scriptStack = rhinoException.getScriptStack();
+        if (scriptStack.length == 0) {
+            return new ScriptLocation();
+        }
+        return new ScriptLocation(scriptStack[0].fileName, scriptStack[0].lineNumber);
     }
 
     public Context context() {

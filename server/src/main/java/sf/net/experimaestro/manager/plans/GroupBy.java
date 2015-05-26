@@ -142,11 +142,11 @@ public class GroupBy extends UnaryOperator {
             }
 
             private void add(JsonArray array, Value value) {
-                Json node = value.nodes[0];
+                Json json = value.nodes[0];
                 assert value.nodes.length == 1;
 
-                node = node.clone();
-                array.add(node);
+                json = json.seal();
+                array.add(json);
             }
         };
     }

@@ -27,6 +27,7 @@ import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
@@ -40,6 +41,7 @@ import java.util.Map;
 /**
  * TaskReference factory created from java reflection
  */
+@Exposed
 public class JavaTaskFactory extends TaskFactory {
     public static final String JVM_OPTIONS = "$jvm";
     final JavaTasksIntrospection javaTasksIntrospection;

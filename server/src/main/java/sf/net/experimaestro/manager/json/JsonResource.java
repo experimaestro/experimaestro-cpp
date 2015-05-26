@@ -22,6 +22,7 @@ import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Resource;
 
 import java.io.IOException;
@@ -32,16 +33,12 @@ import static java.lang.String.format;
 /**
  * Json wrapper over resources
  */
+@Exposed
 public class JsonResource extends Json {
-    Resource resource;
+    private Resource resource;
 
     public JsonResource(Resource resource) {
         this.resource = resource;
-    }
-
-    @Override
-    public JsonResource clone() {
-        return new JsonResource(resource);
     }
 
     @Override

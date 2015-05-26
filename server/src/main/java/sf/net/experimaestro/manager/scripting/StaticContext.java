@@ -44,14 +44,16 @@ public class StaticContext {
      */
     Repository repository;
 
+    /**
+     * Main logger
+     */
+    final Logger mainLogger;
+
 
     public StaticContext(Scheduler scheduler, LoggerRepository loggerRepository) {
         this.scheduler = scheduler;
         this.loggerRepository = loggerRepository;
-    }
-
-    public StaticContext(Scheduler scheduler) {
-        this(scheduler, LOGGER.getLoggerRepository());
+        this.mainLogger = (Logger)loggerRepository.getLogger("xpm", Logger.factory());
     }
 
     public ScriptContext scriptContext() {
@@ -61,5 +63,9 @@ public class StaticContext {
     public StaticContext repository(Repository repository) {
         this.repository = repository;
         return this;
+    }
+
+    public Logger getMainLogger() {
+        return mainLogger;
     }
 }

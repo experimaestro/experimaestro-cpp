@@ -26,9 +26,9 @@ function check_array(results, expected) {
     }
 
     // Sort the results
-    logger.info("Results: %s", results);
+    logger.debug("Results: %s", results);
     results.sort(function(x,y) { return $(x) - $(y); });
-    logger.info("Sorted results: %s", results);
+    logger.info("Sorted results: %s [expected %s]", results, expected);
     for (var i = 0; i < expected.length; i++) {
         if (expected[i] != Number($(results[i]))) {
             logger.error("Expected %s and got %s at %s", expected[i].toSource(), $(results[i]), i);

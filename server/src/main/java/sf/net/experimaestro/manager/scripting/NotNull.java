@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,9 +18,12 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
- * Function from string to string
+ * Marks arguments that should not be null
  */
-public interface String2String {
-    String get(String id);
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NotNull {
 }

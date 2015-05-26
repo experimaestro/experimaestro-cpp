@@ -23,6 +23,7 @@ import org.json.simple.JSONValue;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -33,19 +34,15 @@ import static java.lang.String.format;
 /**
  * The default interface for JsonPath
  */
+@Exposed
 public class JsonPath extends Json {
-    Path path;
+    private Path path;
 
     private JsonPath() {
     }
 
     public JsonPath(Path path) {
         this.path = path;
-    }
-
-    @Override
-    public Json clone() {
-        return new JsonPath(path);
     }
 
     @Override

@@ -20,28 +20,20 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 import static java.lang.String.format;
 
@@ -52,8 +44,10 @@ import static java.lang.String.format;
  */
 @Exposed
 public class JsonObject extends Json {
+    /** True if the object is sealed */
+    private boolean sealed = false;
 
-    TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
+    private TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
 
     public static final String XP_TYPE_STRING = Manager.XP_TYPE.toString();
     public static final String XP_VALUE_STRING = Manager.XP_VALUE.toString();
@@ -69,11 +63,6 @@ public class JsonObject extends Json {
     public String toString() {
         return format("{%s}", Output.toString(", ", map.entrySet(),
                 entry -> format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
-    }
-
-    @Override
-    public Json clone() {
-        return new JsonObject(map);
     }
 
     @Override
@@ -132,9 +121,17 @@ public class JsonObject extends Json {
     }
 
     public void put(String key, String string) {
+        if (sealed) {
+            throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
+        }
         map.put(key, new JsonString(string));
     }
+
+    @Expose(mode = ExposeMode.FIELDS)
     public void put(String key, Json json) {
+        if (sealed) {
+            throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
+        }
         map.put(key, json);
     }
 
@@ -178,6 +175,22 @@ public class JsonObject extends Json {
             entry.getValue().write(out);
         }
         out.endObject();
+    }
+
+    @Override
+    public Json copy() {
+        final JsonObject copy = new JsonObject();
+        this.map.forEach((x, y) -> copy.put(x, y.copy()));
+        return copy;
+    }
+
+    @Override
+    public Json seal() {
+        if (!sealed) {
+            sealed = true;
+            this.map.values().forEach(x -> x.seal());
+        }
+        return this;
     }
 
     @Override

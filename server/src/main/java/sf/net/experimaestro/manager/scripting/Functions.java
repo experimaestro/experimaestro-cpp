@@ -72,7 +72,9 @@ public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Expose(context = true, value = "merge")
-    static public NativeObject merge(LanguageContext cx, Object... objects) {
+    static public NativeObject merge(LanguageContext cx,
+                                     @Argument(name = "objects", types = {Map.class, Json.class})
+                                     Object... objects) {
         NativeObject returned = new NativeObject();
 
         Scriptable scope = null; // FIXME
@@ -80,16 +82,16 @@ public class Functions {
 
         for (Object object : objects) {
             object = JSUtils.unwrap(object);
-            if (object instanceof NativeObject) {
-                NativeObject nativeObject = (NativeObject) object;
-                for (Map.Entry<Object, Object> entry : nativeObject.entrySet()) {
+            if (object instanceof Map) {
+                Map<?, ?> map = (Map) object;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
                     Object key = entry.getKey();
                     if (returned.has(key.toString(), returned))
                         throw new XPMRhinoException("Conflicting id in merge: %s", key);
                     returned.put(key.toString(), returned,
                             JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
                 }
-            } else if (object instanceof JsonObject) {
+            } else if (object instanceof Json) {
                 Json json = (Json) object;
                 if (!(json instanceof JsonObject))
                     throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
@@ -178,18 +180,13 @@ public class Functions {
 
     @Expose(context = true)
     static public Map<String, Object> include_repository(LanguageContext cx, Path path) throws Exception {
-        try (ScriptContext sc = context().copy(true)) {
-            include(cx, path, true);
-            return sc.properties;
-        }
+        return (Map<String, Object>) include(cx, path, true);
     }
 
     @Expose(context = true)
     static public Map<String, Object> include_repository(LanguageContext cx, String path) throws Exception {
-        try (ScriptContext sc = context().copy(true)) {
-            include(cx, context().get().getCurrentScriptPath().getParent().resolve(path), true);
-            return sc.properties;
-        }
+        final Path scriptPath = context().get().getCurrentScriptPath().getParent().resolve(path);
+        return (Map<String, Object>) include(cx, scriptPath, true);
     }
 
     /**
@@ -204,11 +201,12 @@ public class Functions {
         java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
             sc.setCurrentScriptPath(scriptPath);
-            Scriptable scope = ((JavaScriptContext)cx).scope();
+            Scriptable scope = ((JavaScriptContext) cx).scope();
             // Avoid adding the protocol if this is a local file
             final String sourceName = scriptPath.toString();
 
-            return Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
+            final Object result = Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
+            return repositoryMode ? sc.properties : result;
         } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         }
@@ -216,16 +214,11 @@ public class Functions {
 
     @Expose
     static public String format(
-            @Argument(name = "format", type = "String", help = "The string used to format") String format,
+            @Argument(name = "format", type = "String", help = "The string used to format")
+            String format,
             @Argument(name = "arguments...", type = "Object", help = "A list of objects")
-            Object[] args) {
-        if (args.length == 0)
-            return "";
-
-        Object fargs[] = new Object[args.length - 1];
-        for (int i = 1; i < args.length; i++)
-            fargs[i - 1] = unwrap(args[i]);
-        return String.format(format, fargs);
+            Object... args) {
+        return String.format(format, args);
     }
 
     @Expose()
@@ -236,32 +229,38 @@ public class Functions {
     }
 
     @Expose()
+    static public java.nio.file.Path path(@Argument(name = "uri") Path path) {
+        return path;
+    }
+
+    @Expose()
     @Help("Returns a path object from an URI")
-    static public java.nio.file.Path path(@Argument(name="uri") String uri)
+    static public java.nio.file.Path path(@Argument(name = "uri") String uri)
             throws FileSystemException, URISyntaxException {
-        return Paths.get(new URI(uri));
+        final URI _uri = new URI(uri);
+        return _uri.getScheme() == null ? Paths.get(uri) : Paths.get(_uri);
     }
 
 
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
     static public void define_share(@Argument(name = "host", help = "The logical host")
-                             String host,
-                             @Argument(name = "share")
-                             String share,
-                             @Argument(name = "connector")
-                             SingleHostConnector connector,
-                             @Argument(name = "path")
-                             String path,
-                             @Argument(name = "priority")
-                             Integer priority) {
+                                    String host,
+                                    @Argument(name = "share")
+                                    String share,
+                                    @Argument(name = "connector")
+                                    SingleHostConnector connector,
+                                    @Argument(name = "path")
+                                    String path,
+                                    @Argument(name = "priority")
+                                    Integer priority) {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 
     @Expose(optional = 2)
     static public void exit(@Argument(name = "code", help = "The exit code") int code,
-                     @Argument(name = "message", help = "Formatting template") String message,
-                     @Argument(name = "objects", help = "Formatting arguments") Object... objects) {
+                            @Argument(name = "message", help = "Formatting template") String message,
+                            @Argument(name = "objects", help = "Formatting arguments") Object... objects) {
         if (message == null) throw new ExitException(code);
         if (objects == null) throw new ExitException(code, message);
         throw new ExitException(code, message, objects);
@@ -370,6 +369,12 @@ public class Functions {
         context().setWorkingDirectory(workdir);
     }
 
+    @Expose(context = true)
+    static public Object include(LanguageContext cx, String path)
+            throws Exception {
+        return include(cx, ScriptContext.get().getCurrentScriptPath().getParent().resolve(path), false);
+    }
+
     /**
      * Includes a repository
      *
@@ -381,12 +386,6 @@ public class Functions {
     public Object include(LanguageContext cx, Connector connector, String path, boolean repositoryMode)
             throws Exception {
         return include(cx, connector.resolve(path), repositoryMode);
-    }
-
-    @Expose(context = true)
-    static public Object include(LanguageContext cx, String path)
-            throws Exception {
-        return include(cx, ScriptContext.get().getCurrentScriptPath().getParent().resolve(path), false);
     }
 
     /**

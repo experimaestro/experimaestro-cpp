@@ -31,5 +31,5 @@ tasks.add("abc:default", {
 
 function test_default() {
     var r = tasks("abc:default").run({});
-	assert_equals(_(r[0]), 10);
+	assert_equals($(r[0]), 10);
 }

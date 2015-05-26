@@ -18,13 +18,10 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.NativeFunction;
-import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 
 /**
  * A JavaScript wrapper for {@linkplain Path}
@@ -32,32 +29,16 @@ import java.util.List;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class ScriptingList extends WrapperObject<List> {
+public class ScriptingMap extends WrapperObject<Map> {
     final static Logger LOGGER = Logger.getLogger();
 
-    public ScriptingList(List object) {
+    public ScriptingMap(Map object) {
         super(object);
     }
 
-    @Expose(mode = ExposeMode.PROPERTY, value = "length")
-    int length() {
-        return object.size();
+    @Expose
+    public Object get(String value) {
+        return object.get(value);
     }
 
-    @Expose(mode = ExposeMode.INDEX)
-    public Object get(int index) {
-        return object.get(index);
-    }
-
-
-    @Expose(context = true)
-    public void sort(JavaScriptContext jcx, NativeFunction f) {
-        LOGGER.debug("Sorting list");
-        Collections.sort(object, (a, b) -> {
-            final double result = (Double)f.call(jcx.context(), jcx.scope(), null, new Object[]{a, b});
-            if (result > 0) return 1;
-            if (result < 0) return -1;
-            return 0;
-        });
-    }
 }

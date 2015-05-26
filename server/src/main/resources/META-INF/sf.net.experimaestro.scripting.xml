@@ -24,15 +24,23 @@
         <class>sf.net.experimaestro.scheduler.Dependency</class>
         <class>sf.net.experimaestro.scheduler.Command</class>
         <class>sf.net.experimaestro.scheduler.Command$Pipe</class>
+        <class>sf.net.experimaestro.scheduler.Command$CommandOutput</class>
+        <class>sf.net.experimaestro.scheduler.Command$SubCommand</class>
+        <class>sf.net.experimaestro.scheduler.Job</class>
+
+        <class>sf.net.experimaestro.scheduler.Dependency</class>
+        <class>sf.net.experimaestro.scheduler.ReadWriteDependency</class>
+
 
         <!-- Manager -->
         <class>sf.net.experimaestro.manager.Module</class>
         <class>sf.net.experimaestro.manager.Task</class>
         <class>sf.net.experimaestro.manager.Namespace</class>
+        <class>sf.net.experimaestro.manager.java.JavaTaskFactory</class>
+
 
         <!-- Plans -->
         <class>sf.net.experimaestro.manager.plans.Operator</class>
-
         <class>sf.net.experimaestro.manager.plans.Constant</class>
         <class>sf.net.experimaestro.manager.plans.FunctionOperator</class>
         <class>sf.net.experimaestro.manager.plans.GroupBy</class>
@@ -62,15 +70,20 @@
         <class>sf.net.experimaestro.manager.scripting.ScriptingPath</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingLogger</class>
         <class>sf.net.experimaestro.manager.scripting.ScriptingList</class>
+        <class>sf.net.experimaestro.manager.scripting.ScriptingMap</class>
         <!--<class>sf.net.experimaestro.manager.scripting.ScriptingReference</class>-->
 
         <!-- Json -->
         <class>sf.net.experimaestro.manager.json.Json</class>
-        <class>sf.net.experimaestro.manager.json.JsonObject</class>
-        <class>sf.net.experimaestro.manager.json.JsonString</class>
-        <class>sf.net.experimaestro.manager.json.JsonBoolean</class>
-        <class>sf.net.experimaestro.manager.json.JsonReal</class>
+
         <class>sf.net.experimaestro.manager.json.JsonArray</class>
+        <class>sf.net.experimaestro.manager.json.JsonBoolean</class>
+        <class>sf.net.experimaestro.manager.json.JsonString</class>
+        <class>sf.net.experimaestro.manager.json.JsonNull</class>
+        <class>sf.net.experimaestro.manager.json.JsonObject</class>
+        <class>sf.net.experimaestro.manager.json.JsonPath</class>
+        <class>sf.net.experimaestro.manager.json.JsonReal</class>
+        <class>sf.net.experimaestro.manager.json.JsonResource</class>
 
     </classes>
 </scripting>

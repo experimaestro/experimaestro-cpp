@@ -18,24 +18,27 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import static java.lang.String.format;
 
 /**
- * Help for an argument of a method
+ * Script location
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Argument {
-    String name() default "";
+public class ScriptLocation {
+    String path;
+    int line;
 
-    String type() default "";
+    public ScriptLocation(String path, int line) {
+        this.path = path;
+        this.line = line;
+    }
 
-    String help() default "";
+    public ScriptLocation() {
+        this.path = "unknown";
+        this.line = 0;
+    }
 
-    /**
-     * When using a generic type (e.g. Object), this field
-     * can be used to specify which types can be used
-     * @return An empty array (use the given type)
-     */
-    Class<?>[] types() default {};
+    @Override
+    public String toString() {
+        return format("%s:%s", path, line);
+    }
 }

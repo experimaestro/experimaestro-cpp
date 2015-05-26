@@ -20,18 +20,18 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
+import org.mozilla.javascript.Function;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.JSNamespaceContext;
 import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.String2String;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.util.*;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -78,7 +78,8 @@ public class JavaScriptTaskFactory extends TaskFactory {
         this.jsScope = scope;
         this.jsObject = jsObject;
 
-        String2String prefixes = new JSNamespaceBinder(scope);
+        final JSNamespaceContext jsNamespaceContext = new JSNamespaceContext(scope);
+        java.util.function.Function<String, String> prefixes = x -> jsNamespaceContext.getNamespaceURI(x);
 
         // --- Look up the module
 //        Module module = Module.getModule(repository,
@@ -172,7 +173,8 @@ public class JavaScriptTaskFactory extends TaskFactory {
      * @param jsInput The JS input object
      */
     private void setJSInputs(final Scriptable scope, final NativeObject jsInput) throws ValueMismatchException {
-        String2String prefixes = new JSNamespaceBinder(scope);
+        final JSNamespaceContext jsNamespaceContext = new JSNamespaceContext(scope);
+        java.util.function.Function<String, String> prefixes = x -> jsNamespaceContext.getNamespaceURI(x);
 
         final Object[] ids = jsInput.getIds();
         for (Object _id : ids) {

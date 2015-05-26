@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -18,24 +18,25 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 /**
- * Help for an argument of a method
+ * Holds an object
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Argument {
-    String name() default "";
+public class Mutable<T> {
+    private T value;
 
-    String type() default "";
+    public Mutable(T value) {
+        this.value = value;
+    }
 
-    String help() default "";
+    public Mutable() {
+        this.value = null;
+    }
 
-    /**
-     * When using a generic type (e.g. Object), this field
-     * can be used to specify which types can be used
-     * @return An empty array (use the given type)
-     */
-    Class<?>[] types() default {};
+    public T getValue() {
+        return value;
+    }
+
+    public void setValue(T value) {
+        this.value = value;
+    }
 }

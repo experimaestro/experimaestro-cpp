@@ -149,8 +149,6 @@ public class XPM {
 
     @Expose("set_property")
     public void setProperty(String name, Object object) {
-
-        final Object x = unwrap(object);
         context().setProperty(name, object);
     }
 
@@ -198,10 +196,31 @@ public class XPM {
      */
     @Expose("add_module")
     public Module addModule(QName qname) {
-
         final ScriptContext scriptContext = context();
         Module module = new Module(qname);
         LOGGER.debug("Adding module [%s]", module.getId());
+        scriptContext.getRepository().addModule(module);
+        return module;
+    }
+
+    @Expose(value = "add_module", context = true)
+    public Module addModule(LanguageContext cx, Map description) {
+        final ScriptContext scriptContext = context();
+        Module module = new Module(cx.qname(description.get("id")));
+        module.setName(description.get("name").toString());
+//        module.setDocumentation(description.get("description").toString());
+
+        // Set the parent
+        final Object parentString = description.get("parent");
+        if (parentString != null) {
+            QName parent = cx.qname(parentString);
+            final Module parentModule = scriptContext.getRepository().getModules().get(parent);
+            if (parentModule != null) {
+                module.setParent(parentModule);
+            }
+        }
+
+        // Add the module
         scriptContext.getRepository().addModule(module);
         return module;
     }
@@ -523,17 +542,18 @@ public class XPM {
                 if (options.containsKey("lock")) {
                     List locks = (List) options.get("lock");
                     for (int i = locks.size(); --i >= 0; ) {
-                        Object lock_i = JSUtils.unwrap(locks.get(i));
+                        Object lock_i = locks.get(i);
                         Dependency dependency = null;
 
                         if (lock_i instanceof Dependency) {
                             dependency = (Dependency) lock_i;
-                        } else if (lock_i instanceof NativeArray) {
-                            NativeArray array = (NativeArray) lock_i;
-                            if (array.getLength() != 2)
+                        } else if (lock_i instanceof List) {
+                            List array = (List) lock_i;
+                            if (array.size() != 2) {
                                 throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+                            }
 
-                            final Object depObject = JSUtils.unwrap(array.get(0, array));
+                            final Object depObject = array.get(0);
                             Resource resource = null;
                             if (depObject instanceof Resource) {
                                 resource = (Resource) depObject;
@@ -549,7 +569,7 @@ public class XPM {
                                     }
                             }
 
-                            final Object lockType = array.get(1, array);
+                            final Object lockType = array.get(1);
                             LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
 
                             if (!simulate()) {

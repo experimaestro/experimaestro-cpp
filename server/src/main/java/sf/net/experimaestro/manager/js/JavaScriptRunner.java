@@ -201,17 +201,18 @@ public class JavaScriptRunner implements AutoCloseable {
             return object;
         }
 
+        // Converts integers to doubles (JS has only one numeric type)
+        if (object instanceof Number) {
+            return ((Number)object).doubleValue();
+        }
+
         // Simple types
-        if (object instanceof String || object instanceof Integer || object instanceof Long || object instanceof Double || object instanceof Float) {
+        if (object instanceof String || object instanceof Boolean) {
             return object;
         }
 
         if (object.getClass().isArray()) {
             return new NativeJavaArray(scope, object);
-        }
-
-        if (object instanceof Map) {
-            return new NativeJavaObject(scope, object, Map.class);
         }
 
         if (object instanceof ScriptingReference) {
@@ -249,9 +250,8 @@ public class JavaScriptRunner implements AutoCloseable {
         }
 
 
-        return new NativeJavaObject(scope, object, Object.class);
-//
-//        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
+//        return new NativeJavaObject(scope, object, Object.class);
+        throw new IllegalArgumentException(format("Cannot wrap class %s into javascript object", objectClass));
     }
 
     @Override

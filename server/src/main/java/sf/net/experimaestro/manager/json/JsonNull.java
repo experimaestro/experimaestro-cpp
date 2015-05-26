@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -27,6 +28,7 @@ import java.io.Writer;
 /**
  * Created by bpiwowar on 10/9/14.
  */
+@Exposed
 public class JsonNull extends Json {
     private static JsonNull singleton = new JsonNull();
 
@@ -35,12 +37,6 @@ public class JsonNull extends Json {
 
     public static JsonNull getSingleton() {
         return singleton;
-    }
-
-
-    @Override
-    public Json clone() {
-        return this;
     }
 
     @Override
