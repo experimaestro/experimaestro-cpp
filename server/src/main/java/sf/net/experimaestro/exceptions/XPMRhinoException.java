@@ -19,6 +19,7 @@ package sf.net.experimaestro.exceptions;
  */
 
 import org.mozilla.javascript.EvaluatorException;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +28,8 @@ import static java.lang.String.format;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/3/13
  */
+@Exposed
 public class XPMRhinoException extends EvaluatorException implements ContextualException<XPMRhinoException> {
     private static final long serialVersionUID = 1L;
     ArrayList<String> context = new ArrayList<>();

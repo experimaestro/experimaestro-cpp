@@ -22,13 +22,14 @@ var script_path = script_file().get_parent();
 var repository_path = script_path.path("connectors.inc.js");
 
 function assert_true(r) {
-    if (!r)
-        throw new java.lang.String.format("Test did not return true");
+    if (!r) {
+        throw java.lang.String.format("Test did not return true");
+    }
 }
 
 // Check the answer
 function check(r) {
-    var v = _(r);
+    var v = $(r);
     var expected = "experimaestro rocks";
     if (v != expected) {
         throw new java.lang.String.format("Value [%s] is different from [%s]", v, expected);
