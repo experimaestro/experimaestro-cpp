@@ -201,10 +201,13 @@ public class JavaScriptRunner implements AutoCloseable {
             return object;
         }
 
+        // Converts integers to doubles (JS has only one numeric type)
+        if (object instanceof Number) {
+            return ((Number)object).doubleValue();
+        }
+
         // Simple types
-        if (object instanceof String || object instanceof Integer
-                || object instanceof Long || object instanceof Double || object instanceof Float
-                || object instanceof Boolean) {
+        if (object instanceof String || object instanceof Boolean) {
             return object;
         }
 

@@ -52,7 +52,7 @@ public class ScriptingList extends WrapperObject<List> {
 
     @Expose(context = true)
     public void sort(JavaScriptContext jcx, NativeFunction f) {
-        LOGGER.info("Sorting list");
+        LOGGER.debug("Sorting list");
         Collections.sort(object, (a, b) -> {
             final double result = (Double)f.call(jcx.context(), jcx.scope(), null, new Object[]{a, b});
             if (result > 0) return 1;
