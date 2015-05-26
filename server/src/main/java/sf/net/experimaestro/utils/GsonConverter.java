@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -32,18 +32,15 @@ import sf.net.experimaestro.utils.gson.JsonAdapter;
 import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.AttributeConverter;
 import java.io.*;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.file.Path;
 
 /**
  * Converts a command into a JSON string
  */
-public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
+public class GsonConverter<T>  {
     final static private Logger LOGGER = Logger.getLogger();
 
     private final Type type;
@@ -61,7 +58,6 @@ public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
     }
 
-    @Override
     public byte[] convertToDatabaseColumn(T object) {
         Gson gson = builder.create();
         final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -76,7 +72,6 @@ public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
         return buffer.toByteArray();
     }
 
-    @Override
     public T convertToEntityAttribute(byte[] json) {
         Gson gson = builder.create();
         final ByteArrayInputStream buffer = new ByteArrayInputStream(json);

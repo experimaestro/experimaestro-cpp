@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,13 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.SSHOptions;
-
-import javax.persistence.AttributeConverter;
-
 /**
- * SSH options converter
+ * Simple interface for objects that can be idenfitied by an integer value
  */
-public class SSHOptionsConverter extends GsonConverter<SSHOptions> implements AttributeConverter<SSHOptions, byte[]> {
-    public SSHOptionsConverter() {
-        super(SSHOptions.class);
-    }
+public interface Identifiable {
+    /** Returns the ID (or null if not set) */
+    Long getId();
+
+    /** Sets the ID */
+    void setId(long id);
 }

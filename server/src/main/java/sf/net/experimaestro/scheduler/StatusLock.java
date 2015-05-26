@@ -23,6 +23,7 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -43,14 +44,13 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
  * A lock managed by a file that records the reader and writers
  * of a resource
  */
-@Entity
+@Exposed
 public class StatusLock extends Lock {
     final static private Logger LOGGER = Logger.getLogger();
 
     @SuppressWarnings("JpaAttributeTypeInspection")
     String path;
 
-    @OneToOne
     private SingleHostConnector connector;
 
     /**

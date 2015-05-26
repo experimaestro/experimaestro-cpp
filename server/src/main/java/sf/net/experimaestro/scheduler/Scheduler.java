@@ -22,23 +22,20 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.util.*;
+import java.sql.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Timer;
 import java.util.concurrent.*;
 
 import static java.lang.String.format;
@@ -49,6 +46,10 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 final public class Scheduler {
+    /**
+     * Time added when rescheduling
+     */
+    static final long RESCHEDULING_DELTA_TIME = 250;
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * Thread local instance (there should be only one scheduler per thread)
@@ -58,21 +59,22 @@ final public class Scheduler {
      * Simple asynchronous executor service (used for asynchronous notification)
      */
     final ExecutorService executorService;
-
     /**
      * Whether we should look at the list of ready jobs or not
      */
     final MutableBoolean readyJobSemaphore = new MutableBoolean(false);
-
     /**
      * Scheduler
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
     /**
-     * The entity manager factory
+     * Database connection
      */
-    EntityManagerFactory entityManagerFactory;
+    private final Connection connection;
+    /**
+     * Messenger
+     */
+    private final MessengerThread messengerThread;
     /**
      * Listeners
      */
@@ -81,88 +83,53 @@ final public class Scheduler {
      * True when the application is stopping
      */
     boolean stopping = false;
-
     /**
      * The job runner (just one)
      */
     JobRunner runner;
-
+    /**
+     * Queue for messages
+     */
+    Heap<MessagePackage> messages = new Heap<>();
     /**
      * Asynchronous notification
      */
     private Notifier notifier;
-
-
-    /**
-     * A query that retrieves jobs that are ready, ordered by decreasing priority
-     */
-    CriteriaQuery<Long> readyJobsQuery;
     /**
      * Number of running runners
      */
     private ThreadCount runningThreadsCounter = new ThreadCount();
     private Timer resourceCheckTimer;
-
     /**
-     * Messenger
+     * Resources
      */
-    private final MessengerThread messengerThread;
+    private Resources resources;
+    /**
+     * The queue for notifications
+     */
+    private LongOpenHashSet changedResources = new LongOpenHashSet();
 
     /**
      * Initialise the task manager
      *
      * @param baseDirectory The directory where the XPM database will be stored
      */
-    public Scheduler(File baseDirectory) throws IOException {
+    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException {
         if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
 
         INSTANCE = this;
 
-        // Initialise the database
-        LOGGER.info("Initialising database in directory %s", baseDirectory);
-        HashMap<String, Object> properties = new HashMap<>();
-        properties.put("hibernate.connection.url", format("jdbc:hsqldb:file:%s/xpm;shutdown=true;hsqldb.tx=mvcc", baseDirectory));
-        properties.put("hibernate.connection.username", "");
-        properties.put("hibernate.connection.password", "");
-
-        /* From HSQLDB http://hsqldb.org/doc/guide/sessions-chapt.html#snc_tx_mvcc
-
-        In MVCC mode
-        - locks are at the row level
-        - no shared (i.e. read) locks
-        - in TRANSACTION_READ_COMMITTED mode: if a session wants to read/write a row that was written by another one => wait
-        - in TRANSACTION_REPEATABLE_READ: if a session wants to write the same row than another one => exception
-        */
-        properties.put("hibernate.connection.isolation", String.valueOf(Connection.TRANSACTION_READ_COMMITTED));
-
-        ArrayList<Class<?>> loadedClasses = new ArrayList<>();
-        ServiceLoader<PersistentClassesAdder> services = ServiceLoader.load(PersistentClassesAdder.class);
-        for (PersistentClassesAdder service : services) {
-            service.add(loadedClasses);
-        }
-
-        properties.put(org.hibernate.jpa.AvailableSettings.LOADED_CLASSES, loadedClasses);
-
-        entityManagerFactory = Persistence.createEntityManagerFactory("net.bpiwowar.experimaestro", properties);
+        // Initialise the database - we do not use any isolation
+        Class.forName("org.hsqldb.jdbcDriver");
+        connection = DriverManager.getConnection(format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory));
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
-        // Create reused criteria queries
-        CriteriaBuilder builder = entityManagerFactory.getCriteriaBuilder();
-        readyJobsQuery = builder.createQuery(Long.TYPE);
-        Root<Job> root = readyJobsQuery.from(Job.class);
-        readyJobsQuery.orderBy(builder.desc(root.get("priority")));
-        readyJobsQuery.where(root.get("state").in(ResourceState.READY));
-        readyJobsQuery.select(root.get(Resource_.resourceID));
-
-        // Initialise the running resources so that they can retrieve their state
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-
-        TypedQuery<Resource> query = entityManager.createQuery("from resources r where r.state = :state", Resource.class);
-        query.setParameter("state", ResourceState.RUNNING);
+        // Loop over resources in state RUNNING
         for (Resource resource : query.getResultList()) {
             LOGGER.info("Job %s is running: starting a watcher", resource);
             Job job = (Job) resource;
@@ -212,6 +179,10 @@ final public class Scheduler {
         return INSTANCE;
     }
 
+    // ----
+    // ---- TaskReference related methods
+    // ----
+
     public static void notifyRunners() {
         final MutableBoolean semaphore = get().readyJobSemaphore;
         synchronized (semaphore) {
@@ -220,8 +191,45 @@ final public class Scheduler {
         }
     }
 
-    public static EntityManager manager() {
-        return get().entityManagerFactory.createEntityManager();
+    /**
+     * Defines a share
+     *
+     * @param host      The host name for the share
+     * @param name      The name of the share on the hosts
+     * @param connector The single host connector where this
+     * @param path      The path on the connector
+     */
+    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
+        // Find the connector in DB
+        SingleHostConnector _connector = (SingleHostConnector) Connector.find(connector.getIdentifier());
+        if (_connector == null) {
+            em.persist(connector);
+            _connector = connector;
+        }
+
+        NetworkShare networkShare = NetworkShare.find(host, name);
+
+        if (networkShare == null) {
+            networkShare = new NetworkShare(host, name);
+            final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
+
+            networkShare.add(access);
+            em.persist(networkShare);
+            em.persist(access);
+        } else {
+            for (NetworkShareAccess access : networkShare.getAccess()) {
+                if (access.is(_connector)) {
+                    // Found it - just update
+                    access.setPath(path);
+                    access.setPriority(priority);
+                    return;
+                }
+            }
+
+            final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, _connector, path, priority);
+            em.persist(networkShareAccess);
+
+        }
     }
 
     /**
@@ -247,21 +255,11 @@ final public class Scheduler {
      * Returns resources filtered by group and state
      *
      * @param states The states of the resource
-     * @param lockMode The lock mode
      * @return A closeable iterator
      */
-    public CloseableIterator<Resource> resources(EntityManager em, EnumSet<ResourceState> states, LockModeType lockMode) {
-        CriteriaBuilder criteria = entityManagerFactory.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = criteria.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("state").in(states));
-        TypedQuery<Resource> query = em.createQuery(cq);
-        return CloseableIterator.of(query.getResultList().iterator());
+    public CloseableIterator<Resource> resources(EnumSet<ResourceState> states) {
+        return resources.get(states);
     }
-
-    // ----
-    // ---- TaskReference related methods
-    // ----
 
     /**
      * Add a listener for the changes in the resource states
@@ -298,11 +296,12 @@ final public class Scheduler {
      * Shutdown the scheduler
      */
     synchronized public void close() {
-        if (entityManagerFactory == null && stopping) {
+        if (connection == null && stopping) {
             return;
         }
 
         LOGGER.info("Stopping the scheduler");
+
 
         stopping = true;
 
@@ -329,78 +328,62 @@ final public class Scheduler {
             executorService.shutdown();
         }
 
+
+        LOGGER.info("Closing database");
+        Statement st = null;
+        try {
+            st = connection.createStatement();
+            st.execute("SHUTDOWN");
+            connection.close();    // if there are no other open connection
+        } catch (SQLException e) {
+            LOGGER.error(e, "Error while shuting down the database");
+        }
+
         INSTANCE = null;
 
-        LOGGER.info("Closing entity manager factory");
-        entityManagerFactory.close();
-        entityManagerFactory = null;
         LOGGER.info("Scheduler stopped");
     }
 
-    /**
-     * Iterator on resources
-     */
-    public CloseableIterable<Resource> resources() {
-        final List<Resource> resultList = Transaction.evaluate(em -> {
-            TypedQuery<Resource> query = em.createQuery("from resources", Resource.class);
-            query.setFlushMode(FlushModeType.AUTO);
-            return query.getResultList();
-        });
+    public Resources resources() {
+        return resources;
+    }
 
-        return new CloseableIterable<Resource>() {
-            @Override
-            public void close() throws CloseException {
-
-            }
-
-            @Override
-            public Iterator<Resource> iterator() {
-                return resultList.iterator();
-            }
-        };
+    public void sendMessage(Resource destination, Message message) {
+        synchronized (messages) {
+            // Add the message (with a timestamp one ms before the time, to avoid locks)
+            messages.add(new MessagePackage(message, destination, System.currentTimeMillis() - 1));
+            // Notify
+            messages.notify();
+        }
     }
 
     /**
-     * Defines a share
-     *
-     * @param host      The host name for the share
-     * @param name      The name of the share on the hosts
-     * @param connector The single host connector where this
-     * @param path      The path on the connector
+     * Adds a changed resource to the queue
      */
-    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
-        Transaction.run(em -> {
-            // Find the connector in DB
-            SingleHostConnector _connector = (SingleHostConnector) Connector.find(em, connector.getIdentifier());
-            if (_connector == null) {
-                em.persist(connector);
-                _connector = connector;
-            }
+    void addChangedResource(Resource resource) {
+        synchronized (changedResources) {
+            changedResources.add(resource.getId());
 
-            NetworkShare networkShare = NetworkShare.find(em, host, name);
+            // Notify
+            changedResources.notify();
+        }
+    }
 
-            if (networkShare == null) {
-                networkShare = new NetworkShare(host, name);
-                final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
+    final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
+        public Message message;
+        public long destination;
+        public long timestamp;
 
-                networkShare.add(access);
-                em.persist(networkShare);
-                em.persist(access);
-            } else {
-                for (NetworkShareAccess access : networkShare.getAccess()) {
-                    if (access.is(_connector)) {
-                        // Found it - just update
-                        access.setPath(path);
-                        access.setPriority(priority);
-                        return;
-                    }
-                }
+        public MessagePackage(Message message, Resource destination, long timestamp) {
+            this.message = message;
+            this.destination = destination.getId();
+            this.timestamp = timestamp;
+        }
 
-                final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, _connector, path, priority);
-                em.persist(networkShareAccess);
-
-            }
-        });
+        @Override
+        public int compareTo(MessagePackage o) {
+            return Long.compare(this.timestamp, o.timestamp);
+        }
     }
 
     /**
@@ -438,83 +421,80 @@ final public class Scheduler {
                         readyJobSemaphore.setValue(false);
                     }
 
-                    final List<Long> jobIds = Transaction.evaluate(em -> {
-                        TypedQuery<Long> query = em.createQuery(Scheduler.this.readyJobsQuery);
-                        return query.getResultList();
-                    });
-
-                    // Try the next task
-                    LOGGER.debug("Searching for ready jobs");
+                    try (final CallableStatement st = connection.prepareCall("SELECT id FROM Resource WHERE type=? AND status=?")) {
+                        // Try the next task
+                        LOGGER.debug("Searching for ready jobs");
 
                     /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
-                    for (long jobId : jobIds) {
-                        try (Transaction transaction = Transaction.create()) {
-                            final EntityManager em = transaction.em();
-                            Resource.lock(transaction, jobId, true, 0);
-                            Job job = em.find(Job.class, jobId);
-                            job.lock(transaction, true);
-                            job = em.find(Job.class, job.getId());
-                            this.setName(name + "/" + job);
+                        for (long jobId : jobIds) {
+                            try (Transaction transaction = Transaction.create()) {
+                                final EntityManager em = transaction.em();
+                                Resource.lock(transaction, jobId, true, 0);
+                                Job job = em.find(Job.class, jobId);
+                                job.lock(transaction, true);
+                                job = em.find(Job.class, job.getId());
+                                this.setName(name + "/" + job);
 
-                            LOGGER.debug("Looking at %s", job);
+                                LOGGER.debug("Looking at %s", job);
 
-                            if (job.getState() != ResourceState.READY) {
-                                LOGGER.debug("Job state is not READY anymore", job);
-                                transaction.clearLocks();
-                                continue;
-                            }
+                                if (job.getState() != ResourceState.READY) {
+                                    LOGGER.debug("Job state is not READY anymore", job);
+                                    transaction.clearLocks();
+                                    continue;
+                                }
 
-                            // Checks the tokens
-                            boolean tokensAvailable = true;
-                            for (Dependency dependency : job.getDependencies()) {
-                                if (dependency instanceof TokenDependency) {
-                                    TokenDependency tokenDependency = (TokenDependency) dependency;
-                                    if (!tokenDependency.canLock()) {
-                                        LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
-                                        tokensAvailable = false;
-                                        break;
+                                // Checks the tokens
+                                boolean tokensAvailable = true;
+                                for (Dependency dependency : job.getDependencies()) {
+                                    if (dependency instanceof TokenDependency) {
+                                        TokenDependency tokenDependency = (TokenDependency) dependency;
+                                        if (!tokenDependency.canLock()) {
+                                            LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
+                                            tokensAvailable = false;
+                                            break;
+                                        }
+                                        LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
                                     }
-                                    LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
                                 }
-                            }
-                            if (!tokensAvailable) {
-                                // Remove locks
-                                transaction.clearLocks();
-                                continue;
-                            }
+                                if (!tokensAvailable) {
+                                    // Remove locks
+                                    transaction.clearLocks();
+                                    continue;
+                                }
 
-                            try {
-                                job.run(em, transaction);
+                                try {
+                                    job.run(transaction);
 
-                                LOGGER.info("Job %s has started", job);
-                            } catch (LockException e) {
-                                // We could not lock the resources: update the job state
-                                LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                job.setState(ResourceState.WAITING);
-                                job.updateStatus();
-                                transaction.boundary();
-                                LOGGER.info("Finished launching %s", job);
+                                    LOGGER.info("Job %s has started", job);
+                                } catch (LockException e) {
+                                    // We could not lock the resources: update the job state
+                                    LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                                    job.setState(ResourceState.WAITING);
+                                    job.updateStatus();
+                                    transaction.boundary();
+                                    LOGGER.info("Finished launching %s", job);
+                                } catch (RollbackException e) {
+                                    LOGGER.error(e, "Rollback exception");
+                                    synchronized (readyJobSemaphore) {
+                                        readyJobSemaphore.setValue(true);
+                                    }
+
+                                    break;
+                                } catch (Throwable t) {
+                                    LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                    job.setState(ResourceState.ERROR);
+                                    transaction.boundary();
+                                } finally {
+                                    this.setName(name);
+                                }
+
                             } catch (RollbackException e) {
-                                LOGGER.error(e, "Rollback exception");
-                                synchronized (readyJobSemaphore) {
-                                    readyJobSemaphore.setValue(true);
-                                }
-
-                                break;
-                            } catch (Throwable t) {
-                                LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                                job.setState(ResourceState.ERROR);
-                                transaction.boundary();
+                                LOGGER.warn("Rollback exception");
+                            } catch (Exception e) {
+                                // FIXME: should do something smarter
+                                LOGGER.error(e, "Caught an exception");
                             } finally {
-                                this.setName(name);
                             }
-
-                        } catch (RollbackException e) {
-                            LOGGER.warn("Rollback exception");
-                        } catch (Exception e) {
-                            // FIXME: should do something smarter
-                            LOGGER.error(e, "Caught an exception");
-                        } finally {
                         }
                     }
 
@@ -525,42 +505,6 @@ final public class Scheduler {
             }
         }
     }
-
-    final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
-        public Message message;
-        public long destination;
-        public long timestamp;
-
-        public MessagePackage(Message message, Resource destination, long timestamp) {
-            this.message = message;
-            this.destination = destination.getId();
-            this.timestamp = timestamp;
-        }
-
-        @Override
-        public int compareTo(MessagePackage o) {
-            return Long.compare(this.timestamp, o.timestamp);
-        }
-    }
-
-    /**
-     * Queue for messages
-     */
-    Heap<MessagePackage> messages = new Heap<>();
-
-    public void sendMessage(Resource destination, Message message) {
-        synchronized (messages) {
-            // Add the message (with a timestamp one ms before the time, to avoid locks)
-            messages.add(new MessagePackage(message, destination, System.currentTimeMillis() - 1));
-            // Notify
-            messages.notify();
-        }
-    }
-
-    /**
-     * Time added when rescheduling
-     */
-    static final long RESCHEDULING_DELTA_TIME = 250;
 
     /**
      * The message thread
@@ -612,7 +556,7 @@ final public class Scheduler {
                             Resource.lock(t, messagePackage.destination, true, 0);
                             em.refresh(destination);
                             LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
-                            destination.notify(t, em, messagePackage.message);
+                            destination.notify(t, messagePackage.message);
                         });
                     } catch (Throwable e) {
                         LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
@@ -632,24 +576,6 @@ final public class Scheduler {
         }
 
 
-    }
-
-
-    /**
-     * The queue for notifications
-     */
-    private LongOpenHashSet changedResources = new LongOpenHashSet();
-
-    /**
-     * Adds a changed resource to the queue
-     */
-    void addChangedResource(Resource resource) {
-        synchronized (changedResources) {
-            changedResources.add(resource.getId());
-
-            // Notify
-            changedResources.notify();
-        }
     }
 
     /**
@@ -717,7 +643,7 @@ final public class Scheduler {
                                         }
 
                                         // Queue this change in dependency state
-                                        depResource.notify(t, em, new DependencyChangedMessage(dep, beforeState, dep.status));
+                                        depResource.notify(t, new DependencyChangedMessage(dep, beforeState, dep.status));
 
                                     } else {
                                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);

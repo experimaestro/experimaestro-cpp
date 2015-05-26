@@ -23,16 +23,13 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
 
 /**
  * One can write, many can read
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@DiscriminatorValue("RW")
+@TypeIdentifier("READ-WRITE")
 @Exposed
 public class ReadWriteDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();

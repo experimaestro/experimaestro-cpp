@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -18,17 +18,30 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.scheduler.JobRunner;
-
-import javax.persistence.AttributeConverter;
-
 /**
- * A converter for JobRunner
+ * Database exception
  */
-public class JobRunnerConverter extends GsonConverter<JobRunner> implements AttributeConverter<JobRunner, byte[]> {
-    public final static JobRunnerConverter INSTANCE = new JobRunnerConverter();
+public class DatabaseException extends ExperimaestroException {
+    public DatabaseException() {
+    }
 
-    public JobRunnerConverter() {
-        super(JobRunner.class);
+    public DatabaseException(String message, Throwable t) {
+        super(message, t);
+    }
+
+    public DatabaseException(Throwable t, String format, Object... values) {
+        super(t, format, values);
+    }
+
+    public DatabaseException(String message) {
+        super(message);
+    }
+
+    public DatabaseException(String format, Object... values) {
+        super(format, values);
+    }
+
+    public DatabaseException(Throwable t) {
+        super(t);
     }
 }

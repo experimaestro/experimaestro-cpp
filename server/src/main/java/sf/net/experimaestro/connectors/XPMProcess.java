@@ -25,7 +25,6 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
 import java.io.*;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -45,10 +44,6 @@ import java.util.concurrent.TimeUnit;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@Table(name = "process")
-@DiscriminatorColumn(name = "type")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
 
@@ -57,14 +52,11 @@ public abstract class XPMProcess {
      */
     protected transient ScheduledFuture<?> checker = null;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
     /**
      * The job to notify when finished with this
      */
-    @OneToOne(fetch= FetchType.LAZY, optional = false, mappedBy = "process")
     protected Job job;
 
     /**
@@ -72,13 +64,14 @@ public abstract class XPMProcess {
      */
     String pid;
 
-    @ManyToOne()
+    /**
+     * The connector for this job
+     */
     private SingleHostConnector connector;
 
     /**
      * The associated locks to release when the process has ended
      */
-    @OneToMany(cascade = CascadeType.ALL)
     private List<Lock> locks = null;
 
     /**

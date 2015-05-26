@@ -18,9 +18,6 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.hibernate.sql.Update;
-
-import java.util.HashMap;
 import java.util.function.Function;
 
 /**

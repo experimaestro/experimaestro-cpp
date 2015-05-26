@@ -19,8 +19,7 @@ package sf.net.experimaestro.locks;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
-
-import javax.persistence.*;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 /**
  * A lock that can be removed.
@@ -30,13 +29,8 @@ import javax.persistence.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Table(name = "locks")
-@Entity(name = "locks")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "type")
+@Exposed
 public abstract class Lock implements AutoCloseable {
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @Override

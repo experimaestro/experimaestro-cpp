@@ -21,7 +21,6 @@ package sf.net.experimaestro.manager.experiments;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
 
-import javax.persistence.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,26 +28,21 @@ import java.util.Collection;
 /**
  * An experiment
  */
-@Entity
 @Exposed
-@Table(name = "experiments", uniqueConstraints = {@UniqueConstraint(columnNames = {"identifier", "timestamp"})})
 public class Experiment {
     /**
      * Experiment unique identifier
      */
-    @Id
     long id;
 
     /**
      * Tasks
      */
-    @ManyToMany(fetch = FetchType.LAZY)
     Collection<TaskReference> tasks = new ArrayList<>();
 
     /**
      * Working directory
      */
-    @SuppressWarnings("JpaAttributeTypeInspection")
     Path workingDirectory;
 
     /**

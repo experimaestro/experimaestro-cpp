@@ -35,10 +35,7 @@ import java.io.IOException;
  * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 23/11/12
  */
-@Entity
-@DiscriminatorValue(Resource.TOKEN_RESOURCE_TYPE)
 @Exposed
 public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
@@ -61,11 +58,6 @@ public class TokenResource extends Resource {
     protected TokenResource() {
     }
 
-    @PostLoad
-    protected void postLoad() {
-        super.postLoad();
-        wasBlocking = isBlocking();
-    }
 
     /**
      * Creates a new token resource

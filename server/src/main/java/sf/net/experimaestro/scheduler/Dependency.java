@@ -23,7 +23,6 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
 import java.io.Serializable;
 
 import static java.lang.String.format;
@@ -33,22 +32,12 @@ import static java.lang.String.format;
  * This class stores the previous state
  * (satisfied or not) in order status updateFromStatusFile the number of blocking resources
  */
-@Entity(name = "dependencies")
-@Table(name = "dependencies")
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
-@IdClass(DependencyPK.class)
 @Exposed
 abstract public class Dependency implements Serializable {
     final static private Logger LOGGER = Logger.getLogger();
 
-    @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fromId")
     Resource from;
 
-    @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "toId")
     Resource to;
 
     /**
@@ -59,12 +48,7 @@ abstract public class Dependency implements Serializable {
     /**
      * The lock (or null if no lock taken)
      */
-    @OneToOne(cascade = CascadeType.ALL, optional = true)
     private Lock lock;
-
-    @Version()
-    @Column(name="version")
-    private long version;
 
     protected Dependency() {
     }
@@ -113,7 +97,7 @@ abstract public class Dependency implements Serializable {
 
     @Override
     public String toString() {
-        return format("Dep[%s-%s/v%d]; %s; %b", from, to, version, status, hasLock());
+        return format("Dep[%s-%s]; %s; %b", from, to, status, hasLock());
     }
 
     /**
@@ -166,7 +150,7 @@ abstract public class Dependency implements Serializable {
         return true;
     }
 
-    final public Lock lock(EntityManager em, String pid) throws LockException {
+    final public Lock lock(String pid) throws LockException {
         LOGGER.debug("Locking dependency %s", this);
         try {
             lock = _lock(pid);
@@ -177,16 +161,12 @@ abstract public class Dependency implements Serializable {
         }
     }
 
-    final public void unlock(EntityManager em) {
+    final public void unlock() {
         LOGGER.debug("Unlocking dependency %s", this);
         assert lock != null : format("Lock of dependency %s is null", this);
         lock.close();
         lock = null;
         status = DependencyStatus.UNACTIVE;
-    }
-
-    public long getVersion() {
-        return version;
     }
 
     public void replaceBy(Dependency dependency) {

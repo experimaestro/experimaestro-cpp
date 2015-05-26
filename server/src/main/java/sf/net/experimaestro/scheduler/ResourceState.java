@@ -18,6 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
+
 import java.util.EnumSet;
 
 /**
@@ -113,5 +115,9 @@ public enum ResourceState {
 
     public boolean isFinished() {
         return FINISHED_STATE.contains(this);
+    }
+
+    public static ResourceState fromValue(long status) {
+        throw new NotImplementedException();
     }
 }

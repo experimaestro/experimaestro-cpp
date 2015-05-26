@@ -31,10 +31,8 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
-import sf.net.experimaestro.utils.jpa.JobRunnerConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
@@ -44,6 +42,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.stream.Stream;
 
 /**
  * A job is a resource that can be run - that starts and ends (which
@@ -51,54 +50,42 @@ import java.util.Date;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@DiscriminatorValue(Resource.JOB_TYPE)
 @Exposed
-public class Job extends Resource {
+abstract public class Job extends Resource {
 
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The priority of the job (the higher, the more urgent)z
      */
     int priority;
+
     /**
      * When was the job submitted (in case the priority is not enough)
      */
     long timestamp = System.currentTimeMillis();
+
     /**
      * Requirements (ignored for the moment)
      */
     transient ComputationalRequirements requirements;
+
     /**
      * When did the job start (0 if not started)
      */
     long startTimestamp;
+
     /**
      * When did the job stop (0 when it did not stop yet)
      */
     long endTimestamp;
+
     /**
      * Our job monitor (null when there is no attached process)
      */
-    @Basic(fetch = FetchType.LAZY)
-    @OneToOne(optional = true, cascade = CascadeType.ALL, orphanRemoval = true)
     XPMProcess process;
-
-    /**
-     * The process
-     */
-    // FIXME: varchar does not seem right here!
-    @Column(name = "jobRunner", columnDefinition = "BLOB")
-    @Lob
-    @Basic(fetch = FetchType.LAZY)
-    byte[] jobRunnerString;
-
-    /**
-     * The unserialized job runner
-     */
-    transient private JobRunner jobRunner;
 
     /**
      * Number of unsatisfied jobs
@@ -200,7 +187,7 @@ public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks, boolean fake) throws Throwable {
-        process = getJobRunner().start(locks, fake);
+        process = start(locks, fake);
         return process;
     }
 
@@ -214,7 +201,7 @@ public class Job extends Resource {
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run(EntityManager em, Transaction transaction) throws Exception {
+    synchronized final public void run(Transaction transaction) throws Exception {
         // Those locks are transfered to the process
         ArrayList<Lock> locks = new ArrayList<>();
         // Those locks are used only in case of problem to unlock everything
@@ -260,10 +247,8 @@ public class Job extends Resource {
                     try {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
                         dependency.from.lock(transaction, true); // Ensures the dependency does not change
-                        em.refresh(dependency);
-                        em.refresh(dependency.from);
 
-                        final Lock lock = dependency.lock(em, pid);
+                        final Lock lock = dependency.lock(pid);
                         depLocks.add(lock);
                         LOGGER.debug("Running preparation - locked dependency [%s]", dependency);
                     } catch (LockException e) {
@@ -271,14 +256,7 @@ public class Job extends Resource {
                         Resource resource = dependency.getFrom();
                         e.addContext("While locking status run %s", resource);
                         throw e;
-                    } catch (PersistenceException e) {
-                        LOGGER.debug(e, "Persistence exception [%s] while locking dependency [%s]", e, dependency);
-                        final LockException lockException = new LockException(e);
-                        Resource resource = dependency.getFrom();
-                        lockException.addContext("While locking status run %s", resource);
-                        throw lockException;
                     }
-
                 }
 
                 // And run!
@@ -309,9 +287,6 @@ public class Job extends Resource {
             }
         } catch (LockException e) {
             LOGGER.warn("Could not lock job %s or one of its dependencies", this);
-            throw e;
-        } catch (RollbackException e) {
-            LOGGER.info("Could not commit - rolling back", this);
             throw e;
         } catch (RuntimeException e) {
             LOGGER.error(e, "Caught exception for %s", this);
@@ -346,13 +321,11 @@ public class Job extends Resource {
     /**
      * Called when a resource state has changed. After an update, the entity will be
      * saved to the database and further cascading operations make take place.
-     *
-     * @param t       The current transaction
-     * @param em      The current entity manager
+     *  @param t       The current transaction
      * @param message The message
      */
     @Override
-    public void notify(Transaction t, EntityManager em, Message message) {
+    public void notify(Transaction t, Message message) {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
@@ -362,7 +335,7 @@ public class Job extends Resource {
 
             case END_OF_JOB:
                 // First, register our changes
-                endOfJobMessage((EndOfJobMessage) message, em, t);
+                endOfJobMessage((EndOfJobMessage) message, t);
                 t.boundary();
                 break;
 
@@ -380,7 +353,7 @@ public class Job extends Resource {
                 break;
 
             default:
-                super.notify(t, em, message);
+                super.notify(t, message);
         }
     }
 
@@ -422,12 +395,10 @@ public class Job extends Resource {
 
     /**
      * Called when the job has ended
-     *
-     * @param eoj The message
-     * @param em  The entity manager
+     *  @param eoj The message
      * @param t   The transaction
      */
-    private void endOfJobMessage(EndOfJobMessage eoj, EntityManager em, Transaction t) {
+    private void endOfJobMessage(EndOfJobMessage eoj, Transaction t) {
         this.endTimestamp = eoj.timestamp;
 
         // Lock all the required dependencies and refresh
@@ -441,9 +412,7 @@ public class Job extends Resource {
             for (Dependency dependency : requiredResources) {
                 try {
                     dependency.from.lock(t, true);
-                    em.refresh(dependency.from);
-                    em.refresh(dependency);
-                    dependency.unlock(em);
+                    dependency.unlock();
 
                 } catch (Throwable e) {
                     LOGGER.error(e, "Error while unlocking dependency %s", dependency);
@@ -714,27 +683,6 @@ public class Job extends Resource {
         this.startTimestamp = job.startTimestamp;
         this.endTimestamp = job.endTimestamp;
         this.priority = job.priority;
-
-        // Dependencies of job runner have been taken care of
-        // no need to add them
-        this.jobRunnerString = job.jobRunnerString;
-        this.jobRunner = job.getJobRunner();
-    }
-
-
-    public void setJobRunner(JobRunner jobRunner) {
-        if (this.jobRunnerString != null) {
-            throw new AssertionError("Job runner has already been set");
-        }
-
-        // Sets the job runner and its string version
-        this.jobRunner = jobRunner;
-        this.jobRunnerString = JobRunnerConverter.INSTANCE.convertToDatabaseColumn(jobRunner);
-
-        this.getJobRunner().job = this;
-
-        // Adds all dependencies from the job runner
-        jobRunner.dependencies().forEach(this::addIngoingDependency);
     }
 
     @Override
@@ -748,31 +696,14 @@ public class Job extends Resource {
 
     }
 
-    @Override
-    public Path outputFile() throws IOException {
-        return getJobRunner().outputFile(this);
-    }
-
-    @PostLoad
-    protected void postLoad() {
-        super.postLoad();
-    }
-
-    public JobRunner getJobRunner() {
-        if (jobRunnerString != null && jobRunner == null) {
-            jobRunner = JobRunnerConverter.INSTANCE.convertToEntityAttribute(jobRunnerString);
-            jobRunner.job = this;
-        }
-        return jobRunner;
-    }
-
     public XPMProcess getProcess() {
         return process;
     }
 
     public boolean isActiveWaiting() {
-        return jobRunner.isActiveWaiting();
+        return true;
     }
+
 
     public double getProgress() {
         return progress;
@@ -780,4 +711,30 @@ public class Job extends Resource {
     public void setProgress(double progress) {
         this.progress = progress;
     }
+
+    /**
+     * This is where the real job gets done
+     *
+     *
+     * @param locks The locks that were taken
+     * @param fake Use this to prepare everything without starting the process
+     * @return The process corresponding status the job (or null if fake is true)
+     * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
+     *                   return the process (unless fake is true)
+     */
+    public abstract XPMProcess start(ArrayList<Lock> locks, boolean fake) throws Exception;
+
+    /**
+     * Start a process
+     * @param locks The locks that were taken
+     * @return The process corresponding status the job
+     * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
+     *                   return the process
+     */
+    public XPMProcess start(ArrayList<Lock> locks) throws Exception {
+        return start(locks, false);
+    }
+
+    public abstract Stream<Dependency> dependencies();
+
 }

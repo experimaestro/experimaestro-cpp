@@ -60,7 +60,7 @@ public class NotificationServlet extends XPMServlet {
                 resp.setStatus(HttpServletResponse.SC_ACCEPTED);
 
                 Transaction.run(Functional.propagate(em -> {
-                    final Job job = getJob(request, resp, em, resourceId);
+                    final Job job = getJob(request, resp, resourceId);
                     if (job == null) return;
                     final XPMProcess process = job.getProcess();
                     if (process != null) {
@@ -81,7 +81,7 @@ public class NotificationServlet extends XPMServlet {
                 double progress = Double.parseDouble(parts[3]);
 
                 Transaction.run(Functional.propagate(em -> {
-                    final Job job = getJob(request, resp, em, resourceId);
+                    final Job job = getJob(request, resp, resourceId);
                     if (job.getState() == ResourceState.RUNNING) {
                         job.setProgress(progress);
                         Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
@@ -92,7 +92,7 @@ public class NotificationServlet extends XPMServlet {
         return;
     }
 
-    private Job getJob(HttpServletRequest request, HttpServletResponse resp, EntityManager em, long resourceId) throws IOException {
+    private Job getJob(HttpServletRequest request, HttpServletResponse resp, long resourceId) throws IOException {
         final Job job = em.find(Job.class, resourceId);
         if (job == null) {
             error404(request, resp);

@@ -30,19 +30,12 @@ import static java.lang.String.format;
 /**
  * An access to a network share
  */
-@Entity
 public class NetworkShareAccess implements Serializable {
     /**
      * The host that allows us to access the data
      */
-    @Id
-    @ManyToOne
-    @JoinColumn(name = "connector")
     SingleHostConnector connector;
 
-    @Id
-    @ManyToOne
-    @JoinColumn(name = "share")
     NetworkShare share;
 
     /**

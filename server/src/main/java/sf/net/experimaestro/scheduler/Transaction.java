@@ -21,9 +21,6 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
-import javax.persistence.RollbackException;
 import java.util.HashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -35,10 +32,7 @@ import java.util.function.Function;
  */
 final public class Transaction implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
-    /**
-     * The underlying transaction
-     */
-    private final EntityTransaction transaction;
+    static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
     /**
      * Old transaction
@@ -51,9 +45,9 @@ final public class Transaction implements AutoCloseable {
     Status status;
 
     /**
-     * The attached entity manager
+     * Methods to evaluate after commit
      */
-    private EntityManager entityManager;
+    IdentityHashSet<PostCommitListener> listeners = null;
 
     /**
      * Do we own the entity manager ?
@@ -61,16 +55,9 @@ final public class Transaction implements AutoCloseable {
     private boolean ownEntityManager;
 
     /**
-     * Methods to evaluate after commit
-     */
-    IdentityHashSet<PostCommitListener> listeners = null;
-
-    /**
      * List of locks on entities
      */
     private HashMap<Object, EntityLock> locks = new HashMap<>();
-
-    static private ThreadLocal<Transaction> currentTransaction = new ThreadLocal<>();
 
     public Transaction(EntityManager entityManager, boolean ownEntityManager) {
         this.entityManager = entityManager;
@@ -223,43 +210,13 @@ final public class Transaction implements AutoCloseable {
         locks.clear();
     }
 
-    static public class SharedLongReference {
-        SharedLongLocks locks;
-        long id;
-
-        public SharedLongReference(SharedLongLocks locks, long id) {
-            this.locks = locks;
-            this.id = id;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || !(o instanceof SharedLongReference))
-                return false;
-
-            SharedLongReference that = (SharedLongReference) o;
-
-            if (id != that.id) return false;
-            return locks.equals(that.locks);
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = locks.hashCode();
-            result = 31 * result + (int) (id ^ (id >>> 32));
-            return result;
-        }
-    }
-
     /**
      * Locks an entity (should implements hash code and equals)
      *
      * @param locks
      * @param id
      * @param exclusive
-     * @param timeout A timeout in ms or a negative value for no timeout
+     * @param timeout   A timeout in ms or a negative value for no timeout
      * @return
      */
     public EntityLock lock(SharedLongLocks locks, long id, boolean exclusive, long timeout) {
@@ -288,6 +245,36 @@ final public class Transaction implements AutoCloseable {
         BEGIN,
         COMMIT,
         ROLLBACK
+    }
+
+    static public class SharedLongReference {
+        SharedLongLocks locks;
+        long id;
+
+        public SharedLongReference(SharedLongLocks locks, long id) {
+            this.locks = locks;
+            this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || !(o instanceof SharedLongReference))
+                return false;
+
+            SharedLongReference that = (SharedLongReference) o;
+
+            if (id != that.id) return false;
+            return locks.equals(that.locks);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = locks.hashCode();
+            result = 31 * result + (int) (id ^ (id >>> 32));
+            return result;
+        }
     }
 
 }

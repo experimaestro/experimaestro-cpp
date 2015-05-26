@@ -1,0 +1,188 @@
+package sf.net.experimaestro.scheduler;
+
+/*
+ * This file is part of experimaestro.
+ * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
+ *
+ * experimaestro is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * experimaestro is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import com.google.common.collect.AbstractIterator;
+import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.exceptions.DatabaseException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.Functional;
+
+import java.sql.*;
+import java.util.Iterator;
+import java.util.WeakHashMap;
+
+/**
+ * A set of objects stored in database
+ */
+public abstract class DatabaseObjects<T extends Identifiable> {
+    /**
+     * The underlying SQL connection
+     */
+    protected final Connection connection;
+
+    /**
+     * Keeps a cache of resources
+     */
+    private WeakHashMap<Long, ? extends T> map = new WeakHashMap<>();
+
+
+    public DatabaseObjects(Connection connection) {
+        this.connection = connection;
+    }
+
+    /**
+     * @param typeString
+     * @return
+     */
+    public static long getTypeValue(String typeString) {
+        if (typeString.length() > 64 / 5) {
+            throw new XPMRuntimeException("Type %s cannot be converted to value (too long - limit 12 chars)", typeString);
+        }
+        // A-Z, space, -, =,
+        int shift = 24;
+        long value = 0;
+        for (int i = 0; i < typeString.length(); ++i) {
+            final char c = typeString.charAt(i);
+            final int v;
+            if (c >= 'A' && c <= 'Z') {
+                v = Character.getNumericValue(c) - Character.getNumericValue('A') + 6;
+            } else {
+                switch (c) {
+                    case ' ':
+                        v = 0;
+                        break;
+                    case '-':
+                        v = 1;
+                        break;
+                    case ':':
+                        v = 2;
+                        break;
+                    case '.':
+                        v = 3;
+                        break;
+                    case '@':
+                        v = 4;
+                        break;
+                    case '_':
+                        v = 5;
+                        break;
+                    default:
+                        throw new XPMRuntimeException("Type %s cannot be converted to value", typeString);
+                }
+            }
+            value += (long) (v << shift);
+        }
+
+        return value;
+    }
+
+    T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
+        try (PreparedStatement st = connection.prepareCall(query)) {
+            // Sets the variables
+            p.apply(st);
+
+            // Execute and get the object
+            if (st.execute()) {
+                try (ResultSet result = st.getResultSet()) {
+                    if (result.next()) {
+                        // Get from cache
+                        long id = result.getLong(1);
+                        T object = getFromCache(id);
+                        if (object != null) {
+                            return object;
+                        }
+
+                        // Construct
+                        return create(result);
+                    }
+                }
+            }
+
+            // No result
+            return null;
+        } catch (Throwable e) {
+            throw new DatabaseException(e);
+        }
+    }
+
+    CloseableIterable<T> find(final String query, final Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
+        try {
+            final CallableStatement st = connection.prepareCall(query);
+            p.apply(st);
+
+            ResultSet result = st.executeQuery(query);
+
+            return new CloseableIterable<T>() {
+
+
+                @Override
+                public void close() throws CloseException {
+                    try {
+                        st.close();
+                        result.close();
+                    } catch (SQLException e) {
+                        throw new CloseException(e);
+                    }
+                }
+
+                @Override
+                public Iterator<T> iterator() {
+                    return new AbstractIterator<Resource>() {
+                        @Override
+                        protected T computeNext() {
+                            try {
+                                if (!result.next()) {
+                                    return endOfData();
+                                }
+
+                                return create(result);
+                            } catch (SQLException | DatabaseException e) {
+                                throw new XPMRuntimeException(e, "Error while fetching resource from DB");
+                            }
+                        }
+                    };
+                }
+            };
+        } catch (Exception e) {
+            throw new DatabaseException(e);
+        }
+    }
+
+    /**
+     * Create a new object from a result
+     *
+     * @param result The result
+     * @return The new object
+     */
+    abstract protected T create(ResultSet result) throws DatabaseException;
+
+    /**
+     * Get an object from cache
+     *
+     * @param id The ID of the object
+     * @return The object or null if none exists
+     */
+    synchronized protected T getFromCache(long id) {
+        return map.get(id);
+    }
+
+
+}

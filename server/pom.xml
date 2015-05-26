@@ -33,7 +33,6 @@
 
         <jna.version>4.1.0</jna.version>
         <jetty.version>9.2.3.v20140905</jetty.version>
-        <hibernate.version>4.3.8.Final</hibernate.version>
     </properties>
 
 
@@ -501,26 +500,11 @@
 
         <!-- Database -->
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-jpamodelgen</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb</artifactId>
             <version>2.3.2</version>
         </dependency>
+
     </dependencies>
 
 

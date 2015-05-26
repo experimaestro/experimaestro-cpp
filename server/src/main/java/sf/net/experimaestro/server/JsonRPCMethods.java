@@ -343,7 +343,7 @@ public class JsonRPCMethods extends HttpServlet {
             long rid = Long.parseLong(resourceId);
             resource = em.find(Resource.class, rid);
         } catch (NumberFormatException e) {
-            resource = Resource.getByLocator(em, resourceId);
+            resource = Resource.getByLocator(resourceId);
         }
 
         if (exclusive != null) {
@@ -726,7 +726,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         return Transaction.evaluate((em, t) -> {
             int nbUpdated = 0;
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, states, LockModeType.NONE)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     resource.lock(t, true);
@@ -782,7 +782,7 @@ public class JsonRPCMethods extends HttpServlet {
             } else {
                 // TODO order the tasks so that dependencies are removed first
                 HashSet<Resource> toRemove = new HashSet<>();
-                try (final CloseableIterator<Resource> resources = scheduler.resources(em, states, LockModeType.NONE)) {
+                try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
                     while (resources.hasNext()) {
                         Resource resource = resources.next();
                         if (idPattern != null) {
@@ -866,7 +866,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         return Transaction.evaluate((em, t) -> {
             int n = 0;
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, statesSet, LockModeType.OPTIMISTIC)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(statesSet)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     resource.lock(t, true, 0);
@@ -927,7 +927,7 @@ public class JsonRPCMethods extends HttpServlet {
         ResourceState rsrcState;
         Resource resource;
         try (Transaction transaction = Transaction.create()) {
-            resource = Resource.getByLocator(transaction.em(), name);
+            resource = Resource.getByLocator(name);
 
             if (resource == null)
                 throw new XPMRuntimeException("Job not found [%s]", name);
@@ -970,7 +970,7 @@ public class JsonRPCMethods extends HttpServlet {
         boolean recursive = _recursive == null ? false : _recursive;
 
         return Transaction.evaluate((em, t) -> {
-            try (final CloseableIterator<Resource> resources = scheduler.resources(em, set, LockModeType.NONE)) {
+            try (final CloseableIterator<Resource> resources = scheduler.resources(set)) {
                 while (resources.hasNext()) {
                     Resource resource = resources.next();
                     Map<String, String> map = new HashMap<>();

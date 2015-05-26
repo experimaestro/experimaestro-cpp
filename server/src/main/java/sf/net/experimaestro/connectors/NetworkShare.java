@@ -32,20 +32,11 @@ import java.util.List;
 /**
  * Defines relationships between single host connectors and network shares
  */
-@Entity
-@Table(
-        name = "shares",
-        uniqueConstraints = @UniqueConstraint(name = "shares", columnNames = {"host", "name"})
-)
-public class NetworkShare {
-    @Id
-    @GeneratedValue
+final public class NetworkShare {
+    /** Internal ID */
     private long key;
 
-    @Version
-    private long version;
-
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "share")
+    /** The possible accesses to this network share */
     private Collection<NetworkShareAccess> access;
 
     /**
@@ -78,12 +69,11 @@ public class NetworkShare {
     /**
      * Find a connector given its string ID
      *
-     * @param em   The entity manager
      * @param host The host name
      * @param name The share name
      * @return The connector in database or null if none exist
      */
-    public static NetworkShare find(EntityManager em, String host, String name) {
+    public static NetworkShare find(String host, String name) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
 
         final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
@@ -102,12 +92,11 @@ public class NetworkShare {
     /**
      * Find a network share for
      *
-     * @param em        The entity manager
      * @param connector The single host connector
      * @param path      The network share path <code>share://host/root/path</code> path
      * @return
      */
-    public static NetworkShareAccess find(EntityManager em, SingleHostConnector connector, XPMPath path) {
+    public static NetworkShareAccess find(SingleHostConnector connector, XPMPath path) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
 
         final CriteriaQuery<NetworkShareAccess> q = cb.createQuery(NetworkShareAccess.class);

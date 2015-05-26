@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * The process corresponding status a waiting job
  */
-@Entity
 class WaitingJobProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -48,6 +47,10 @@ class WaitingJobProcess extends XPMProcess {
      * The action
      */
     Action action;
+
+    /**
+     * The timestamp
+     */
     private long timestamp;
 
     public WaitingJobProcess() {
@@ -143,8 +146,6 @@ class WaitingJobProcess extends XPMProcess {
             waitingThread.interrupt();
         }
     }
-
-
 
     /**
      * An action of our job

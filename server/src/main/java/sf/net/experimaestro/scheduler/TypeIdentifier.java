@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,20 +18,16 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.QName;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
-
-@Converter(autoApply = true)
-public class QNameConverter implements AttributeConverter<QName, String> {
-    @Override
-    public String convertToDatabaseColumn(QName attribute) {
-        return attribute.toString();
-    }
-
-    @Override
-    public QName convertToEntityAttribute(String dbData) {
-        return QName.parse(dbData);
-    }
+/**
+ * Gives an identifier to a given class
+ */
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface TypeIdentifier {
+    String value();
 }

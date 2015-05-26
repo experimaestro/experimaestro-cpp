@@ -203,7 +203,7 @@ public class JavaTaskFactory extends TaskFactory {
                         if (o instanceof Resource) {
                             resource = (Resource) o;
                         } else {
-                            resource = Resource.getByLocator(em, o.toString());
+                            resource = Resource.getByLocator(o.toString());
                             if (resource == null) {
                                 throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
                                         o.toString(), getId());

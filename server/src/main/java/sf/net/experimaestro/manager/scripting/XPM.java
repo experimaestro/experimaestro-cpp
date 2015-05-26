@@ -113,7 +113,7 @@ public class XPM {
     ) throws ExperimaestroCannotOverwrite {
 
         return Transaction.evaluate((em, t) -> {
-            final Resource resource = Resource.getByLocator(em, path);
+            final Resource resource = Resource.getByLocator(path);
             final TokenResource tokenResource;
             if (resource == null) {
                 tokenResource = new TokenResource(path, 0);
@@ -507,7 +507,7 @@ public class XPM {
                     return job;
                 }
 
-                return Resource.getByLocator(em, connector.resolve((java.nio.file.Path) path));
+                return Resource.getByLocator(connector.resolve((java.nio.file.Path) path));
             }
 
 
@@ -584,7 +584,7 @@ public class XPM {
                                 resource = (Resource) depObject;
                             } else {
                                 final String rsrcPath = Context.toString(depObject);
-                                resource = Resource.getByLocator(em, rsrcPath);
+                                resource = Resource.getByLocator(rsrcPath);
                                 if (resource == null)
                                     if (simulate()) {
                                         if (!scriptContext.submittedJobs.containsKey(rsrcPath))
@@ -638,7 +638,7 @@ public class XPM {
                     em.persist(reference);
                 }
 
-                final Resource old = Resource.getByLocator(transaction.em(), job.getLocator());
+                final Resource old = Resource.getByLocator(job.getLocator());
 
                 // Replace old if necessary
                 if (old != null) {

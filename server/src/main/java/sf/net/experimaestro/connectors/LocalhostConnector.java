@@ -25,7 +25,6 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -49,15 +48,14 @@ public class LocalhostConnector extends SingleHostConnector {
         super("file://");
     }
 
-    @Override
-    public Path resolve(String path) {
-        return new File(path).toPath();
-    }
-
     public static LocalhostConnector getInstance() {
         return singleton;
     }
 
+    @Override
+    public Path resolve(String path) {
+        return new File(path).toPath();
+    }
 
     @Override
     public AbstractProcessBuilder processBuilder() {

@@ -338,11 +338,11 @@ public class Functions {
                 if (scriptContext.simulate()) {
                     final Resource resource = scriptContext.submittedJobs.get(uri);
                     if (resource == null) {
-                        return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
+                        return Transaction.evaluate(em -> Resource.getByLocator(uri));
                     }
                     return resource;
                 } else {
-                    return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
+                    return Transaction.evaluate(em -> Resource.getByLocator(uri));
                 }
             }
 

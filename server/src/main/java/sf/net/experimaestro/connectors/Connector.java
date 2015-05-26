@@ -20,15 +20,12 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.Connectors;
+import sf.net.experimaestro.scheduler.Identifiable;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -40,17 +37,11 @@ import java.nio.file.Paths;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@Table(name = "connector", uniqueConstraints = @UniqueConstraint(name = "identifier", columnNames = "identifier"))
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Exposed
-public abstract class Connector implements Comparable<Connector> {
+public abstract class Connector implements Comparable<Connector>,Identifiable {
     /**
      * Each connector has a unique integer ID
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     /**
@@ -155,38 +146,24 @@ public abstract class Connector implements Comparable<Connector> {
         return identifier.compareTo(other.identifier);
     }
 
-    public ConnectorDelegator delegate() {
-        return new ConnectorDelegator(this);
-    }
-
     public abstract Path resolve(String path) throws IOException;
 
     public String resolve(Path path) throws IOException {
         return getMainConnector().resolve(path);
     }
 
-    public long getKey() {
+    @Override
+    public Long getId() {
         return id;
     }
 
     /**
      * Find a connector given its string ID
-     * @param em The entity manager
      * @param identifier The string identifier
      * @return The connector in database or null if none exist
      */
-    public static Connector find(EntityManager em, String identifier) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaQuery<Connector> q = cb.createQuery(Connector.class);
-
-        final Root<Connector> shares = q.from(Connector.class);
-        q.select(shares).where(shares.get(Connector_.identifier).in(identifier));
-
-        try {
-            return em.createQuery(q).getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+    public static Connector find(String identifier) {
+        return Connectors.find(identifier);
     }
 
 }

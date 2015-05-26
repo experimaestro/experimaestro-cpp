@@ -21,18 +21,12 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
-
 /**
  * This lock calls {@linkplain TokenResource#unlock()} when
  * released.
  */
-@Entity
-@DiscriminatorValue("token")
+@TypeIdentifier("token")
 class TokenLock extends Lock {
-    @ManyToOne
     private TokenResource resource;
 
     protected TokenLock() {

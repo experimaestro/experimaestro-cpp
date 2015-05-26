@@ -30,7 +30,7 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.persistence.Convert;
@@ -54,8 +54,8 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
 @Exposed
+@TypeIdentifier("SSH")
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
 

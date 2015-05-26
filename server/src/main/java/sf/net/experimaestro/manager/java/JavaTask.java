@@ -88,7 +88,7 @@ public class JavaTask extends Task {
         final Logger taskLogger = taskContext.getLogger("JavaTask");
 
         try (Transaction transaction = Transaction.create()) {
-            final Resource old = Resource.getByLocator(transaction.em(), _path);
+            final Resource old = Resource.getByLocator(_path);
             if (old != null && !old.canBeReplaced()) {
 
                 taskLogger.log(old.getState() == ResourceState.DONE ?

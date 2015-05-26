@@ -34,7 +34,6 @@ import static java.lang.String.format;
 /**
  * Wrapper for a local thread
  */
-@Entity
 class LocalProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 

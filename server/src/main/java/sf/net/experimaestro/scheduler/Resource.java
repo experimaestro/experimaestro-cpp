@@ -30,14 +30,11 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -48,13 +45,9 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@SuppressWarnings("JpaAttributeTypeInspection")
-@Entity(name = "resources")
-@DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@Table(name = "resources", indexes = @Index(columnList = "locator"))
 @Exposed
-public class Resource {
+@TypeIdentifier("RESOURCE")
+public class Resource implements Identifiable {
     /**
      * Extension for the lock file
      */
@@ -108,29 +101,23 @@ public class Resource {
 
     final static private Logger LOGGER = Logger.getLogger();
     static private SharedLongLocks resourceLocks = new SharedLongLocks();
-    /**
-     * Version for optimistic locks
-     */
-    @Version
-    @Column(name = "version")
-    protected long version;
 
     /**
      * The path with the connector
      */
-    @Column(name = "locator", updatable = false)
     protected String locator;
+
     /**
      * Keeps the state of the resource before saving
      */
     protected transient ResourceState oldState;
     transient boolean prepared = false;
+
     /**
      * The resource ID
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
     private Long resourceID;
+
     /**
      * Comparator on the database ID
      */
@@ -140,32 +127,29 @@ public class Resource {
             return Long.compare(o1.resourceID, o2.resourceID);
         }
     };
+
     /**
      * The connector
      * <p>
      * A null value is used for LocalhostConnector
      */
-    @JoinColumn(name = "connector", updatable = false)
-    @ManyToOne(cascade = CascadeType.PERSIST)
     private Connector connector;
+
     /**
      * The outgoing dependencies (resources that depend on this)
      */
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
-    @MapKey(name = "to")
     private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
+
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
-    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE, CascadeType.REFRESH}, fetch = FetchType.LAZY, mappedBy = "to")
-    @MapKey(name = "from")
     private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
 
     /**
      * The resource state
      */
-    @Column(name = "state")
     private ResourceState state = ResourceState.ON_HOLD;
+
     /**
      * Cached Path
      */
@@ -190,26 +174,11 @@ public class Resource {
     /**
      * Get a resource by locator
      *
-     * @param em   The current entity manager
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
-    public static Resource getByLocator(EntityManager em, String path) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("locator").in(cb.parameter(String.class, "locator")));
-
-
-        TypedQuery<Resource> query = em.createQuery(cq);
-        query.setParameter("locator", path);
-        List<Resource> result = query.getResultList();
-        assert result.size() <= 1;
-
-        if (result.isEmpty())
-            return null;
-
-        return result.get(0);
+    public static Resource getByLocator(String path) throws SQLException {
+        return Scheduler.get().resources().getByLocator(path);
     }
 
     /**
@@ -258,8 +227,13 @@ public class Resource {
     /**
      * Get the ID
      */
+    @Override
     public Long getId() {
         return resourceID;
+    }
+
+    public void setId(long id) {
+        this.resourceID = id;
     }
 
     /**
@@ -304,12 +278,10 @@ public class Resource {
 
     /**
      * Notifies the resource that something happened
-     *
-     * @param t
-     * @param em
+     *  @param t
      * @param message The message
      */
-    public void notify(Transaction t, EntityManager em, Message message) {
+    public void notify(Transaction t, Message message) {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 break;
@@ -514,8 +486,8 @@ public class Resource {
             Resource ourselves = em.find(Resource.class, getId());
             em.remove(ourselves);
             SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, ourselves);
-            this.notify(t, em, message);
-            notify(t, em, message);
+            this.notify(t, message);
+            notify(t, message);
         });
 
 
@@ -585,7 +557,7 @@ public class Resource {
     protected void postLoad() {
         cacheState();
         prepared = true;
-        LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);
+        LOGGER.debug("Loaded %s (state %s)", this, state);
     }
 
     /**

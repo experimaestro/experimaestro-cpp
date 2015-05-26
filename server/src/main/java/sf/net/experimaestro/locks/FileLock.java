@@ -34,7 +34,6 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
 public class FileLock extends Lock {
 
     final static private Logger LOGGER = Logger.getLogger();

@@ -87,7 +87,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
         XPMPath _path = (XPMPath) path;
 
         return Transaction.evaluate(em -> {
-            NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
+            NetworkShare share = NetworkShare.find(_path.getHostName(), _path.getShareName());
             NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
             Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
             for (NetworkShareAccess access : accesses) {

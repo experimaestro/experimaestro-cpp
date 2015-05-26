@@ -21,10 +21,7 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.Transaction;
 
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.Entity;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
@@ -32,18 +29,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.utils.Functional.propagate;
-import static sf.net.experimaestro.utils.Functional.propagateFunction;
 
 /**
  * A connector that corresponds to a single host.
- * <p/>
+ * <p>
  * Descendant of this class of connector provide access to a file system and to a process launcher.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@DiscriminatorColumn(name = "type")
 abstract public class SingleHostConnector extends Connector {
     /**
      * Underlying filesystem
@@ -100,23 +93,18 @@ abstract public class SingleHostConnector extends Connector {
 
     /**
      * Resolve a Path to a local path
-     * <p/>
+     * <p>
      * Throws an exception when the file name cannot be resolved, i.e. when
      * the file object is not
      */
     public String resolve(Path file) throws IOException {
         if (file instanceof XPMPath) {
-            String resolve = Transaction.evaluate(propagateFunction(em -> {
-                XPMPath xpmPath = (XPMPath) file;
-                NetworkShareAccess access = NetworkShare.find(em, this, xpmPath);
-                if (access != null) {
-                    return access.resolve(xpmPath);
-                }
-                return null;
-            }));
-            if (resolve != null) {
-                return resolve;
+            XPMPath xpmPath = (XPMPath) file;
+            NetworkShareAccess access = NetworkShare.find(this, xpmPath);
+            if (access != null) {
+                return access.resolve(xpmPath);
             }
+            return null;
         }
 
         if (!contains(file.getFileSystem())) {
@@ -160,6 +148,7 @@ abstract public class SingleHostConnector extends Connector {
 
     /**
      * Creates a script builder
+     *
      * @param scriptFile The path to the script file to createSSHAgentIdentityRepository
      * @return A builder
      * @throws FileSystemException if an exception occurs while accessing the script file

@@ -97,7 +97,7 @@ public class StatusServlet extends XPMServlet {
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
                 Transaction.run(em -> {
-                    try (final CloseableIterator<Resource> resources = scheduler.resources(em, EnumSet.of(state), LockModeType.NONE)) {
+                    try (final CloseableIterator<Resource> resources = scheduler.resources(EnumSet.of(state))) {
                         while (resources.hasNext()) {
                             Resource resource = resources.next();
                             if (resource.getState() == state) {
