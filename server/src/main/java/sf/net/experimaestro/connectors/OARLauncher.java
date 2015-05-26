@@ -58,7 +58,11 @@ public class OARLauncher extends Launcher {
 
     static private final Logger LOGGER = Logger.getLogger();
 
+    /** The environment variable name corresponding to the job ID */
     public static final String OAR_JOB_ID = "OAR_JOB_ID";
+
+    /** The hostname of the OAR node (necessary to reconnnect) */
+    public static final String XPM_HOSTNAME = "XPM_HOSTNAME";
 
     /**
      * oarsub command
@@ -152,7 +156,6 @@ public class OARLauncher extends Launcher {
      * Process builder for OAR
      */
     public class ProcessBuilder extends AbstractProcessBuilder {
-        public static final String XPM_HOSTNAME = "XPM_HOSTNAME";
 
         /**
          * Is this a short-lived process?
@@ -170,12 +173,10 @@ public class OARLauncher extends Launcher {
         private ShortLivedInformation information;
 
         public ProcessBuilder(SingleHostConnector connector) {
-
             this.connector = connector;
         }
 
         public ProcessBuilder(SingleHostConnector connector, boolean shortLived) {
-
             this.connector = connector;
             this.shortLived = shortLived;
         }
@@ -241,9 +242,9 @@ public class OARLauncher extends Launcher {
         /**
          * Ensure the short lived process is started
          */
-        private void ensureShortLived() throws IOException {
-            // Get the short lived job ending time
+        private void ensureShortLived() throws IOException, LaunchException {
 
+            // Get the short lived job ending time
             if (information == null) {
                 information = new ShortLivedInformation();
                 // Create the directory if necessary
@@ -275,18 +276,24 @@ public class OARLauncher extends Launcher {
             }
 
 
+            // Starts the job if necessary
             long timestamp = System.currentTimeMillis();
             if ((information.remainingTime + timestamp) > information.endTimestamp) {
                 // Launch a new OAR sub
+                // The job outputs the environment and sleeps...
                 String command = format("env; echo %s=$(hostname); sleep %d", XPM_HOSTNAME, information.jobDuration);
 
                 final Path directory = connector.resolve(shortLivedJobDirectory);
+                Files.createDirectories(directory);
+
                 final Path infopath = directory.resolve("information.env");
 
                 final AbstractProcessBuilder builder = connector.processBuilder();
                 builder.command("oarsub", "--stdout=log.out", "--stderr=log.err",
                         format("--directory=%s", connector.resolve(infopath)),
                         command);
+                builder.detach(false);
+                builder.start();
 
             }
         }
