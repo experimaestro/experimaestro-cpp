@@ -422,10 +422,7 @@ public class XPM {
 
                 @Override
                 public void run() {
-
-                    errorStream.lines().forEach(line -> {
-                        logger.info(line);
-                    });
+                    errorStream.lines().forEach(line -> logger.info(line));
                 }
             }.start();
 

@@ -279,6 +279,10 @@ public class SSHConnector extends SingleHostConnector {
                 channel.setErrStream(System.err, true);
                 channel.setInputStream(null);
 
+                // Set the environment
+                for(Map.Entry<String, String> x: environment().entrySet()) {
+                    channel.setEnv(x.getKey(), x.getValue());
+                }
 
                 setStream(commandBuilder, output, new StreamSetter() {
                     @Override

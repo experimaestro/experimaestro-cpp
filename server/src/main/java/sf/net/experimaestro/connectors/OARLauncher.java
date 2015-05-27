@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableMap;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -32,10 +33,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -43,7 +41,9 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -72,13 +72,13 @@ public class OARLauncher extends Launcher {
      * oarsub command
      */
     private String oarCommand = "oarsub";
+    private String oarshCommand = "oarsh";
 
     /**
      * Construction from a connector
      */
     @Expose
     public OARLauncher() {
-
         super();
     }
 
@@ -194,7 +194,12 @@ public class OARLauncher extends Launcher {
                 // Check if the process is still alive
                 ensureShortLived();
 
-                return null;
+                final AbstractProcessBuilder builder = connector.processBuilder();
+                builder.environment(ImmutableMap.of(OAR_JOB_ID, ""));
+                builder.command(oarshCommand, "");
+                builder.detach(false);
+                final XPMProcess process = builder.start();
+                return process;
             } else {
                 // Use a full
                 final String path = job.getLocator();
@@ -245,9 +250,19 @@ public class OARLauncher extends Launcher {
 
         /**
          * Ensure the short lived process is started
+         *
+         * The following steps are followed:
+         * <ol>
+         *     <li>Read the information file if present. If enough time remains, exits.</li>
+         *     <li>Kill the previous OAR job</li>
+         *     <li>Creates a lock file</li>
+         *     <li>Launch the OAR sleeping job</li>
+         *     <li>Waits that it is launched</li>
+         * </ol>
+         *
          */
+        // TODO: Should open an SSH session (for this, we need to get the environment variable set by oarsh)
         private void ensureShortLived() throws IOException, LaunchException {
-
             // Get the short lived job ending time
             if (information == null) {
                 information = new ShortLivedInformation();
@@ -258,60 +273,112 @@ public class OARLauncher extends Launcher {
                     Files.createDirectories(directory);
                 }
 
-                // Retrieve information if present
-                if (Files.exists(infopath)) {
-                    try (InputStream input = Files.newInputStream(infopath);
-                         BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
-                        String line;
-                        while (((line = reader.readLine()) != null)) {
-                            String[] fields = line.split("=", 1);
-                            switch (fields[0]) {
-                                case XPM_HOSTNAME:
-                                    information.hostname = fields[1];
-                                    break;
-                                case OAR_JOB_ID:
-                                    information.jobId = fields[1];
-                                    break;
-
-                            }
-                        }
-                    }
-                }
+                readInformation(infopath);
             }
 
 
             // Starts the job if necessary
             long timestamp = System.currentTimeMillis();
             if ((information.remainingTime + timestamp) > information.endTimestamp) {
-                // Launch a new OAR sub
-                // The job outputs the environment and sleeps...
-                String command = format("env; echo %s=$(hostname); sleep %d", XPM_HOSTNAME, information.jobDuration);
-
                 final Path directory = connector.resolve(shortLivedJobDirectory);
                 final Path infopath = directory.resolve("information.env");
+                final Path commandpath = directory.resolve("command.sh");
+                final Path lockPath = directory.resolve("information.lock");
 
-                final AbstractProcessBuilder builder = connector.processBuilder();
-                builder.command("oarsub", "--stdout=information.env", "--stderr=log.err",
-                        format("--directory=%s", connector.resolve(directory)),
-                        command);
-                builder.detach(false);
+                // Kill old job
+                if (information.jobId != null) {
+                    LOGGER.info("Killing old job [%s]", information.jobId);
+                    final AbstractProcessBuilder builder = connector.processBuilder();
+                    builder.command("oardel", information.jobId);
+                    builder.detach(false);
+                    final XPMProcess process = builder.start();
+                    try {
+                        process.waitFor();
+                    } catch (InterruptedException e) {
+                        LOGGER.error(e, "Waiting interrupted");
+                    }
+                }
 
-                // Delete information file if it exists
-                Files.deleteIfExists(infopath);
-                final XPMProcess start = builder.start();
-
+                // Wait for lockfile to be removed
+                LOGGER.info("Waiting for old lock file to be removed");
                 // Wait that the job is launched
-                final WatchService watchService = directory.getFileSystem().newWatchService();
-                try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
-                    directory.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
-                    while (!Files.exists(infopath)) {
+                try (WatchService watcher = directory.getFileSystem().newWatchService()) {
+                    directory.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
+                    while (Files.exists(lockPath)) {
                         LOGGER.debug("Waiting for information file %s", infopath);
-                        watcher.take();
+                        watcher.poll(1, TimeUnit.SECONDS);
                     }
                 } catch (NoSuchFileException | InterruptedException f) {
                     throw new RuntimeException(f);
                 }
+                Files.createFile(lockPath);
 
+                // Writes file
+                try(BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
+                    writer.write(format("cleanup() {\n rm \"%s\"\n}\n",
+                            UnixScriptProcessBuilder.protect(connector.resolve(lockPath), UnixScriptProcessBuilder.QUOTED_SPECIAL)));
+                    writer.write("trap cleanup EXIT SIGINT SIGTERM\n");
+                    writer.write("env\n");
+                    writer.write(format("echo %s=$(hostname)%n", XPM_HOSTNAME));
+                    writer.write(format("sleep %d%n", information.jobDuration));
+                }
+                Files.setPosixFilePermissions(commandpath, PosixFilePermissions.fromString("rwxr-x---"));
+
+
+                // Launch a new OAR sub
+                // The job outputs the environment and sleeps...
+
+                final AbstractProcessBuilder builder = connector.processBuilder();
+                builder.command(oarCommand, "--stdout=information.env", "--stderr=log.err",
+                        format("--directory=%s", connector.resolve(directory)),
+                        connector.resolve(commandpath));
+                builder.detach(false);
+                final XPMProcess process = builder.start();
+                try {
+                    process.waitFor();
+                } catch (InterruptedException e) {
+                    LOGGER.error(e, "Waiting interrupted");
+                }
+
+                // Wait that the job is launched
+                try (WatchService watcher = directory.getFileSystem().newWatchService()) {
+                    directory.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+                    while (!Files.exists(infopath)) {
+                        LOGGER.debug("Waiting for information file %s", infopath);
+                        watcher.poll(1, TimeUnit.SECONDS);
+                    }
+                    readInformation(infopath);
+                } catch (NoSuchFileException | InterruptedException f) {
+                    throw new RuntimeException(f);
+                }
+
+            }
+        }
+
+        /**
+         * Read information about the OAR sleeping job
+         * @param infopath The path to the file containing the information
+         * @throws IOException If an error occurs while reading the file
+         */
+        private void readInformation(Path infopath) throws IOException {
+            // Retrieve information if present
+            if (Files.exists(infopath)) {
+                try (InputStream input = Files.newInputStream(infopath);
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+                    String line;
+                    while (((line = reader.readLine()) != null)) {
+                        String[] fields = line.split("=", 2);
+                        switch (fields[0]) {
+                            case XPM_HOSTNAME:
+                                information.hostname = fields[1];
+                                break;
+                            case OAR_JOB_ID:
+                                information.jobId = fields[1];
+                                break;
+
+                        }
+                    }
+                }
             }
         }
 
