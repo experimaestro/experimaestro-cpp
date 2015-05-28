@@ -82,7 +82,8 @@ public class XPMPath implements Path {
 
     @Override
     public Path getFileName() {
-        throw new NotImplementedException();
+        // Returns the last bit
+        return Paths.get(parts[parts.length - 1]);
     }
 
     @Override
@@ -139,7 +140,21 @@ public class XPMPath implements Path {
 
     @Override
     public Path resolve(String other) {
-        throw new NotImplementedException();
+        if (other.isEmpty()) return this;
+
+        final String[] names = other.split("/");
+
+        // Absolute path
+        if (names[0].isEmpty()) {
+            new XPMPath(host, share, names);
+        }
+
+        // Relative path
+        String [] otherParts = new String[this.parts.length + names.length];
+        System.arraycopy(this.parts, 0, otherParts, 0, this.parts.length);
+        System.arraycopy(names, 0, otherParts, this.parts.length, names.length);
+
+        return new XPMPath(host, share, otherParts);
     }
 
     @Override
@@ -207,7 +222,7 @@ public class XPMPath implements Path {
 
     @Override
     public String toString() {
-        return format("shares://%s/%s", host, share, Output.toString(XPMFileSystem.PATH_SEPARATOR, parts));
+        return format("shares://%s/%s/%s", host, share, Output.toString(XPMFileSystem.PATH_SEPARATOR, parts));
     }
 
     public String getLocalPath() {

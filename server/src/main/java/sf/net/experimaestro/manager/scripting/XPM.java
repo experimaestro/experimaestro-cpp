@@ -18,12 +18,35 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Level;
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.*;
-import sf.net.experimaestro.manager.*;
+import org.mozilla.javascript.ConsString;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeJavaObject;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
+import sf.net.experimaestro.connectors.AbstractCommandBuilder;
+import sf.net.experimaestro.connectors.AbstractProcessBuilder;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.ValueMismatchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRhinoIllegalArgumentException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.manager.AlternativeType;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Module;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
@@ -45,7 +68,10 @@ import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -126,7 +152,6 @@ public class XPM {
 
         return object.toString();
     }
-
 
 
     public static Object get(Scriptable scope, final String name) {
@@ -296,7 +321,7 @@ public class XPM {
         } else if (commands instanceof AbstractCommand) {
             _commands = new Commands((AbstractCommand) commands);
         } else if (commands instanceof List) {
-            _commands = new Commands(Command.getCommand((List)commands));
+            _commands = new Commands(Command.getCommand((List) commands));
         } else {
             throw new XPMRhinoIllegalArgumentException("2nd argument of command_line_job must be a command");
         }
@@ -415,14 +440,16 @@ public class XPM {
 
             XPMProcess p = builder.start();
 
+            final Logger logger = sc.getMainLogger();
             new Thread("stderr") {
-                final Logger logger = sc.getLogger("xpm");
 
                 BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
                 @Override
                 public void run() {
-                    errorStream.lines().forEach(line -> logger.info(line));
+                    errorStream.lines().forEach(line -> {
+                        logger.info(line);
+                    });
                 }
             }.start();
 
@@ -438,6 +465,7 @@ public class XPM {
 
             int error = p.waitFor();
             if (error != 0) {
+                logger.warn("Output was: %s", sb.toString());
                 throw new XPMRhinoException("Command returned an error code %d", error);
             }
             return sb.toString();
@@ -468,7 +496,7 @@ public class XPM {
 
             // Resolve the path for the given connector
             if (!(path instanceof java.nio.file.Path)) {
-                path = connector.getMainConnector().resolve(path.toString());
+                path = Connector.create(path.toString());
             }
 
             job = new Job(connector, (java.nio.file.Path) path);

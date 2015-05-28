@@ -724,6 +724,9 @@ public class JsonRPCMethods extends HttpServlet {
             } catch (CloseException e) {
                 throw new RuntimeException(e);
             }
+            // Just in case
+            Scheduler.notifyRunners();
+
             return nbUpdated;
         });
 

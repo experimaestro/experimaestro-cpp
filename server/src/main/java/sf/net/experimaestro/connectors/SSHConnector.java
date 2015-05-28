@@ -30,7 +30,6 @@ import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.sshfs.SshFileSystem;
 import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -40,7 +39,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -56,17 +59,21 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
 
-    /** Base path to resolve paths */
-    private String basePath = "/";
-
-    /** Temporary path on host */
-    public String temporaryPath = "/tmp";
-
     /**
      * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
      */
     static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<>();
+
+    /**
+     * Temporary path on host
+     */
+    public String temporaryPath = "/tmp";
+
+    /**
+     * Base path to resolve paths
+     */
+    private String basePath = "/";
 
     /**
      * Connection options
@@ -79,7 +86,9 @@ public class SSHConnector extends SingleHostConnector {
      */
     transient private SSHSession _session;
 
-    /** The file system */
+    /**
+     * The file system
+     */
     transient private UnixSshFileSystem filesystem;
 
     /**
@@ -152,18 +161,18 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         try {
-            URI uri = new URI( "ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName()  + basePath);
+            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);
-            } catch(FileSystemNotFoundException e) {
+            } catch (FileSystemNotFoundException e) {
                 // just ignore
             }
 
             final DefaultSessionFactory sessionFactory = options.getSessionFactory();
 
             Map<String, Object> environment = new HashMap<>();
-            environment.put( "defaultSessionFactory", sessionFactory );
+            environment.put("defaultSessionFactory", sessionFactory);
 
             filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
             return filesystem;
@@ -280,8 +289,10 @@ public class SSHConnector extends SingleHostConnector {
                 channel.setInputStream(null);
 
                 // Set the environment
-                for(Map.Entry<String, String> x: environment().entrySet()) {
-                    channel.setEnv(x.getKey(), x.getValue());
+                if (environment() != null) {
+                    for (Map.Entry<String, String> x : environment().entrySet()) {
+                        channel.setEnv(x.getKey(), x.getValue());
+                    }
                 }
 
                 setStream(commandBuilder, output, new StreamSetter() {

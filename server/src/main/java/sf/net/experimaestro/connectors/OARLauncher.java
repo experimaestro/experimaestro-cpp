@@ -33,9 +33,12 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.FileSystemException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -56,23 +59,34 @@ import static java.lang.String.format;
 public class OARLauncher extends Launcher {
 
     /**
+     * The environment variable name corresponding to the job ID
+     */
+    public static final String OAR_JOB_ID = "OAR_JOB_ID";
+
+    /**
+     * The hostname of the OAR node (necessary to reconnnect)
+     */
+    public static final String XPM_HOSTNAME = "XPM_HOSTNAME";
+
+    public static final String XPM_STARTTIME = "XPM_STARTTIME";
+
+    public static final String XPM_SLEEPTIME = "XPM_SLEEPTIME";
+
+    /**
      * Prefix for the PID of the job
      */
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     static private final Logger LOGGER = Logger.getLogger();
 
-    /** The environment variable name corresponding to the job ID */
-    public static final String OAR_JOB_ID = "OAR_JOB_ID";
-
-    /** The hostname of the OAR node (necessary to reconnnect) */
-    public static final String XPM_HOSTNAME = "XPM_HOSTNAME";
-
     /**
      * oarsub command
      */
     private String oarCommand = "oarsub";
+
     private String oarshCommand = "oarsh";
+
+    private String unixtimestampCommand = "date +%s";
 
     /**
      * Construction from a connector
@@ -151,9 +165,9 @@ public class OARLauncher extends Launcher {
         long jobDuration = 60 * 60;
 
         /**
-         * Time (in ms) that we need to run a short-lived process (default
+         * Time (in s) that we need to run a short-lived process (default 100s)
          */
-        long remainingTime = 10000;
+        long remainingTime = 100;
     }
 
     /**
@@ -195,9 +209,22 @@ public class OARLauncher extends Launcher {
                 ensureShortLived();
 
                 final AbstractProcessBuilder builder = connector.processBuilder();
-                builder.environment(ImmutableMap.of(OAR_JOB_ID, ""));
-                builder.command(oarshCommand, "");
+
+                builder.environment(ImmutableMap.of(OAR_JOB_ID, information.jobId));
+
+                ArrayList<String> command = new ArrayList<>();
+                command.add(OAR_JOB_ID + "=" + information.jobId);
+                command.add(oarshCommand);
+                command.add(information.hostname);
+                this.command().stream().forEach(command::add);
+                builder.command(command);
+
                 builder.detach(false);
+
+                if (input != null) builder.redirectInput(input);
+                if (error != null) builder.redirectError(error);
+                if (output != null) builder.redirectOutput(output);
+
                 final XPMProcess process = builder.start();
                 return process;
             } else {
@@ -250,16 +277,15 @@ public class OARLauncher extends Launcher {
 
         /**
          * Ensure the short lived process is started
-         *
+         * <p>
          * The following steps are followed:
          * <ol>
-         *     <li>Read the information file if present. If enough time remains, exits.</li>
-         *     <li>Kill the previous OAR job</li>
-         *     <li>Creates a lock file</li>
-         *     <li>Launch the OAR sleeping job</li>
-         *     <li>Waits that it is launched</li>
+         * <li>Read the information file if present. If enough time remains, exits.</li>
+         * <li>Kill the previous OAR job</li>
+         * <li>Creates a lock file</li>
+         * <li>Launch the OAR sleeping job</li>
+         * <li>Waits that it is launched</li>
          * </ol>
-         *
          */
         // TODO: Should open an SSH session (for this, we need to get the environment variable set by oarsh)
         private void ensureShortLived() throws IOException, LaunchException {
@@ -278,7 +304,7 @@ public class OARLauncher extends Launcher {
 
 
             // Starts the job if necessary
-            long timestamp = System.currentTimeMillis();
+            long timestamp = System.currentTimeMillis() / 1000;
             if ((information.remainingTime + timestamp) > information.endTimestamp) {
                 final Path directory = connector.resolve(shortLivedJobDirectory);
                 final Path infopath = directory.resolve("information.env");
@@ -314,12 +340,14 @@ public class OARLauncher extends Launcher {
                 Files.createFile(lockPath);
 
                 // Writes file
-                try(BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
-                    writer.write(format("cleanup() {\n rm \"%s\"\n}\n",
+                try (BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
+                    writer.write(format("cleanup() {\n echo Removing lock file\nrm \"%s\"\n}\n",
                             UnixScriptProcessBuilder.protect(connector.resolve(lockPath), UnixScriptProcessBuilder.QUOTED_SPECIAL)));
-                    writer.write("trap cleanup EXIT SIGINT SIGTERM\n");
+                    writer.write("trap cleanup 0\n");
                     writer.write("env\n");
                     writer.write(format("echo %s=$(hostname)%n", XPM_HOSTNAME));
+                    writer.write(format("echo %s=%s%n", XPM_SLEEPTIME, information.jobDuration));
+                    writer.write(format("echo %s=$(%s)%n", XPM_STARTTIME, unixtimestampCommand));
                     writer.write(format("sleep %d%n", information.jobDuration));
                 }
                 Files.setPosixFilePermissions(commandpath, PosixFilePermissions.fromString("rwxr-x---"));
@@ -357,6 +385,7 @@ public class OARLauncher extends Launcher {
 
         /**
          * Read information about the OAR sleeping job
+         *
          * @param infopath The path to the file containing the information
          * @throws IOException If an error occurs while reading the file
          */
@@ -375,10 +404,14 @@ public class OARLauncher extends Launcher {
                             case OAR_JOB_ID:
                                 information.jobId = fields[1];
                                 break;
-
+                            case XPM_SLEEPTIME:
+                                information.jobDuration = Long.parseLong(fields[1]);
+                            case XPM_STARTTIME:
+                                information.endTimestamp = Long.parseLong(fields[1]);
                         }
                     }
                 }
+                information.endTimestamp += information.jobDuration;
             }
         }
 

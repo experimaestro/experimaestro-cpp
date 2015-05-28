@@ -353,12 +353,7 @@ public class Resource {
         if (path != null) {
             return path;
         }
-
-        try {
-            return path = getConnector().resolve(locator);
-        } catch (IOException e) {
-            throw new AssertionError("Unexpected conversion error", e);
-        }
+        return path = Connector.create(this.locator);
     }
 
     /**
@@ -566,7 +561,7 @@ public class Resource {
     }
 
     public Connector getConnector() {
-        return connector == null ? LocalhostConnector.getInstance() : null;
+        return connector == null ? LocalhostConnector.getInstance() : connector;
     }
 
     /**
@@ -616,6 +611,14 @@ public class Resource {
 
     public void save(Transaction transaction) {
         final EntityManager em = transaction.em();
+
+        // Look up connector in DB, and replace if needed
+        if (connector != null) {
+            final Connector _connector = Connector.find(em, this.connector.getIdentifier());
+            if (_connector != null) {
+                connector = _connector;
+            }
+        }
 
         // Lock all the dependencies
         // This avoids to miss any notification

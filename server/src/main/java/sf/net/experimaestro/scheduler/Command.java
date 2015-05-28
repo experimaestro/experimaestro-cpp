@@ -64,6 +64,10 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         list = new ArrayList<>();
     }
 
+    public Command(CommandComponent... c) {
+        list = new ArrayList<>(Arrays.asList(c));
+    }
+
     public Command(Collection<? extends CommandComponent> c) {
         list = new ArrayList<>(c);
     }
@@ -317,6 +321,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     @Exposed
     public static class ParameterFile implements CommandComponent, Serializable {
         java.lang.String key;
+
         byte[] content;
 
         private ParameterFile() {
@@ -428,6 +433,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     static public class JsonParameterFile implements CommandComponent {
         private java.lang.String key;
+
         private Json json;
 
         private JsonParameterFile() {
