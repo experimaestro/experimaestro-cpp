@@ -24,6 +24,7 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -99,7 +100,7 @@ public class OARLauncher extends Launcher {
     /**
      * Helper method that executes a command that produces XML, and returns a DOM document from it
      */
-    static Document exec(SingleHostConnector connector, String command) throws Exception {
+    static Document exec(SingleHostConnector connector, String... command) throws Exception {
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
@@ -229,15 +230,15 @@ public class OARLauncher extends Launcher {
                 return process;
             } else {
                 // Use a full
-                final String path = job.getLocator();
-                final String id = UnixScriptProcessBuilder.protect(path, "\"");
+                final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getPath()));
+                final String runpath = UnixScriptProcessBuilder.protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
 
                 ArrayList<String> command = new ArrayList<>();
 
                 command.add(oarCommand);
                 addOutputOption("stdout", command, output);
                 addOutputOption("stderr", command, error);
-                command.add(format("%s.run", id));
+                command.add(runpath);
 
                 LOGGER.info("Running OAR with [%s]", Output.toString(" ", command));
 
@@ -256,6 +257,17 @@ public class OARLauncher extends Launcher {
                     if (s.startsWith(OARJOBID_PREFIX))
                         pid = s.substring(OARJOBID_PREFIX.length());
                 }
+                LOGGER.info("Got PID %s", pid);
+
+                final int code;
+                try {
+                    code = process.waitFor();
+                    if (code != 0) {
+                        throw new LaunchException("Error while launching oar job [%d]", code);
+                    }
+                } catch (InterruptedException e) {
+                    throw new LaunchException(e, "Error while launching oar job");
+                }
 
                 LOGGER.info("Started OAR job with PID %s", pid);
 
@@ -268,8 +280,10 @@ public class OARLauncher extends Launcher {
             switch (output.type()) {
                 case WRITE:
                     command.add(format("--%s=%s", option, connector.resolve(output.file())));
+                    break;
                 case INHERIT:
                     command.add(format("--%s=/dev/null", option));
+                    break;
                 default:
                     throw new UnsupportedOperationException(format("Cannot handle %s", output));
             }

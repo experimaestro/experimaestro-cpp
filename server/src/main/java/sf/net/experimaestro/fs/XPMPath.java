@@ -231,13 +231,14 @@ public class XPMPath implements Path {
 
     /**
      * Returns the contextualized path
-     * @param path The base path
+     * @param path The base path (has to be absolute)
      * @return The full path
      */
     public String getLocalStringPath(String path) {
+        assert path.charAt(0) == '/';
         String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
 
-        return XPMFileSystem.PATH_SEPARATOR + Output.toString(XPMFileSystem.PATH_SEPARATOR,
+        return Output.toString(XPMFileSystem.PATH_SEPARATOR,
                 Iterables.concat(Arrays.asList(parts), Arrays.asList(this.parts)));
     }
 }
