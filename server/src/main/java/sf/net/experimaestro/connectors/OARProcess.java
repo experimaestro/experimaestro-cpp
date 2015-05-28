@@ -44,7 +44,7 @@ class OARProcess extends XPMProcess {
     }
 
     public OARProcess(Job job, String pid, SingleHostConnector connector) {
-        super(connector, String.format("oar:%s", connector.getHostName(), pid), job);
+        super(connector, pid, job);
         startWaitProcess();
     }
 
@@ -73,7 +73,7 @@ class OARProcess extends XPMProcess {
     @Override
     public boolean isRunning() {
         final Document document = oarstat(false);
-        String state = OARLauncher.evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
+        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
         LOGGER.debug("State of OAR process %s is %s", pid, state);
         return "running".equalsIgnoreCase(state);
     }
@@ -81,11 +81,11 @@ class OARProcess extends XPMProcess {
     @Override
     public int exitValue() {
         final Document document = oarstat(true);
-        String state = OARLauncher.evaluateXPathToString("//item[@identifier = \"state\"]/text()", document);
+        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
         if ("running".equalsIgnoreCase(state))
             throw new IllegalThreadStateException("Job is running - cannot access its exit value");
 
-        String code = OARLauncher.evaluateXPathToString("//item[@identifier = \"exit_code\"]/text()", document);
+        String code = OARLauncher.evaluateXPathToString("//item[@key = \"exit_code\"]/text()", document);
 
         LOGGER.debug("Exit code of OAR process %s is %s", pid, code);
 
@@ -98,13 +98,14 @@ class OARProcess extends XPMProcess {
      * Runs oarstat and returns the XML document
      */
     private Document oarstat(boolean full) {
-        final Document document;
         try {
-            document = OARLauncher.exec(this.getConnector(), String.format("oarstat --xml --job %s %s", full ? "--full" : "", pid));
+            if (full) {
+                return OARLauncher.exec(getConnector(), "oarstat", "--xml",  "--full", "--job", pid);
+            }
+            return OARLauncher.exec(getConnector(), "oarstat", "--xml", "--job", pid);
         } catch (Exception e) {
             throw new XPMRuntimeException(e, "Cannot parse oarstat output");
         }
-        return document;
     }
 
 }

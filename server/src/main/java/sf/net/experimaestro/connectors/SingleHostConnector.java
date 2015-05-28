@@ -123,7 +123,7 @@ abstract public class SingleHostConnector extends Connector {
             throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
         }
 
-        return file.toString();
+        return file.toAbsolutePath().toString();
     }
 
     /**

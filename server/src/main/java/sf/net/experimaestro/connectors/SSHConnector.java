@@ -39,7 +39,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,14 +59,21 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
 
-    /** Temporary path on host */
-    public String temporaryPath = "/tmp";
-
     /**
      * Static map to sessions
      * This is necessary since the SSHConnector object can be serialized (within a resource)
      */
     static private HashMap<SSHConnector, SSHSession> sessions = new HashMap<>();
+
+    /**
+     * Temporary path on host
+     */
+    public String temporaryPath = "/tmp";
+
+    /**
+     * Base path to resolve paths
+     */
+    private String basePath = "/";
 
     /**
      * Connection options
@@ -75,7 +86,9 @@ public class SSHConnector extends SingleHostConnector {
      */
     transient private SSHSession _session;
 
-    /** The file system */
+    /**
+     * The file system
+     */
     transient private UnixSshFileSystem filesystem;
 
     /**
@@ -102,6 +115,7 @@ public class SSHConnector extends SingleHostConnector {
 
     public SSHConnector(URI uri, ConnectorOptions options) {
         this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
+        this.basePath = uri.getPath();
     }
 
     /**
@@ -147,18 +161,18 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         try {
-            URI uri = new URI( "ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + "/" );
+            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);
-            } catch(FileSystemNotFoundException e) {
+            } catch (FileSystemNotFoundException e) {
                 // just ignore
             }
 
             final DefaultSessionFactory sessionFactory = options.getSessionFactory();
 
             Map<String, Object> environment = new HashMap<>();
-            environment.put( "defaultSessionFactory", sessionFactory );
+            environment.put("defaultSessionFactory", sessionFactory);
 
             filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
             return filesystem;
@@ -170,7 +184,13 @@ public class SSHConnector extends SingleHostConnector {
     @Override
     protected boolean contains(FileSystem fileSystem) throws FileSystemException {
         try {
-            return doGetFileSystem().equals(this.filesystem);
+            if (!(fileSystem instanceof UnixSshFileSystem)) return false;
+            final UnixSshFileSystem ours = (UnixSshFileSystem) doGetFileSystem();
+
+            final URI ourUri = ours.getUri();
+            final URI theirUri = ((UnixSshFileSystem) fileSystem).getUri();
+
+            return ourUri.equals(theirUri);
         } catch (IOException e) {
             return false;
         }
@@ -260,13 +280,20 @@ public class SSHConnector extends SingleHostConnector {
             try {
                 channel = newExecChannel();
                 StringBuilder commandBuilder = new StringBuilder();
-                commandBuilder.append(CommandLineTask.getCommandLine(command()));
+                final String commandLine = CommandLineTask.getCommandLine(command());
+                commandBuilder.append(commandLine);
 
                 // Set default
                 channel.setOutputStream(System.out, true);
                 channel.setErrStream(System.err, true);
                 channel.setInputStream(null);
 
+                // Set the environment
+                if (environment() != null) {
+                    for (Map.Entry<String, String> x : environment().entrySet()) {
+                        channel.setEnv(x.getKey(), x.getValue());
+                    }
+                }
 
                 setStream(commandBuilder, output, new StreamSetter() {
                     @Override

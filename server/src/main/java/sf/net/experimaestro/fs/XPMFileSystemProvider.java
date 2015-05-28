@@ -72,7 +72,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
         final Path hostPathObject = resolvePath((XPMPath) path);
 
 
-        SeekableByteChannel channel = Files.newByteChannel(hostPathObject, StandardOpenOption.READ);
+        SeekableByteChannel channel = Files.newByteChannel(hostPathObject, options, attrs);
         if (channel == null) {
             throw new IOException(format("Could not find a valid mount point for %s", path));
         }
@@ -119,27 +119,27 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public void delete(Path path) throws IOException {
-        throw new NotImplementedException();
+        Files.delete(resolvePath(path));
     }
 
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
-        throw new NotImplementedException();
+        Files.copy(resolvePath(source), resolvePath(target), options);
     }
 
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
-        throw new NotImplementedException();
+        Files.move(resolvePath(source), resolvePath(target), options);
     }
 
     @Override
     public boolean isSameFile(Path path, Path path2) throws IOException {
-        return false;
+        return Files.isSameFile(resolvePath(path), resolvePath(path2));
     }
 
     @Override
     public boolean isHidden(Path path) throws IOException {
-        throw new NotImplementedException();
+        return Files.isHidden(resolvePath(path));
     }
 
     @Override
@@ -160,16 +160,16 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
-        throw new NotImplementedException();
+        return Files.readAttributes(resolvePath(path), type, options);
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new NotImplementedException();
+        return Files.readAttributes(resolvePath(path), attributes, options);
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        throw new NotImplementedException();
+        Files.setAttribute(resolvePath(path), attribute, value, options);
     }
 }

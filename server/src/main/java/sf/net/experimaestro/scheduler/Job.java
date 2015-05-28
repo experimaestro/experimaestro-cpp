@@ -236,7 +236,7 @@ public class Job extends Resource {
                 try {
                     locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(getPath()), false));
                 } catch (LockException | IOException e) {
-                    LOGGER.info("Could not lock job [%s]: %s", this, e);
+                    LOGGER.info(e, "Could not lock job [%s]: %s", this, e);
                     throw e;
                 }
 
@@ -595,7 +595,8 @@ public class Job extends Resource {
         boolean changes = super.doUpdateStatus();
 
         // Check the done file
-        final Path doneFile = DONE_EXTENSION.transform(getPath());
+        final Path path = getPath();
+        final Path doneFile = DONE_EXTENSION.transform(path);
         if (Files.exists(doneFile)) {
             if (getState() != ResourceState.DONE) {
                 changes = true;

@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
