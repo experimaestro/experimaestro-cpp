@@ -22,6 +22,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.GsonBuilder;
+import com.sun.tools.javah.Util;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
@@ -254,19 +255,34 @@ public class JsonRPCMethods extends HttpServlet {
             }
             Object result = argmax.method.invoke(this, args);
             mos.endMessage(requestID, result);
-        } catch (ExitException e) {
-            try {
-                mos.error(requestID, e.getCode(), e.getMessage());
-            } catch (IOException e2) {
-                LOGGER.error(e2, "Could not send the return code");
-            }
         } catch (InvocationTargetException e) {
-            LOGGER.info("Error while handling JSON request [%s]", e);
             try {
                 Throwable t = e;
                 while (t.getCause() != null) {
                     t = t.getCause();
                 }
+
+                // Handles an exit exception
+                if (t instanceof ExitException) {
+                    ExitException exitException = (ExitException) t;
+                    if (exitException.getCode() != 0) {
+                        try {
+                            mos.error(requestID, exitException.getCode(), exitException.getMessage());
+                            return;
+                        } catch (IOException e2) {
+                            LOGGER.error(e2, "Could not send the return code");
+                        }
+                    } else {
+                        try {
+                            mos.endMessage(requestID, null);
+                            return;
+                        } catch (IOException e1) {
+                            LOGGER.error(e1, "Could not send the return code");
+                        }
+                    }
+                }
+
+                LOGGER.info(e, "Error while handling JSON request [%s]", e.toString());
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
                 LOGGER.error(e2, "Could not send the return code");
@@ -484,16 +500,16 @@ public class JsonRPCMethods extends HttpServlet {
             return result != null && result != Scriptable.NOT_FOUND &&
                     result != Undefined.instance ? result.toString() : "";
 
-        } catch (ExitException e) {
-            if (e.getCode() == 0) {
-                return null;
-            }
-            throw e;
         } catch (Throwable e) {
             Throwable wrapped = e;
             LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
-            while (wrapped.getCause() != null)
+            while (wrapped.getCause() != null) {
                 wrapped = wrapped.getCause();
+            }
+
+            if (wrapped instanceof ExitException) {
+                throw (ExitException)wrapped;
+            }
 
             LOGGER.printException(Level.INFO, wrapped);
 
