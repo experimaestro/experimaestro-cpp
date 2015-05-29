@@ -19,17 +19,14 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.AbstractIterator;
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Functional;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Iterator;
 import java.util.WeakHashMap;
 
@@ -60,10 +57,9 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         this.idFieldName = "id";
     }
 
-    public DatabaseObjects(Connection connection, String tableName, String idFieldName) {
-        this.connection = connection;
-        this.tableName = tableName;
-        this.idFieldName = idFieldName;
+
+    public static long getTypeValue(Class<?> aClass) {
+        return getTypeValue(aClass.getAnnotation(TypeIdentifier.class).value());
     }
 
     /**
@@ -207,11 +203,11 @@ public abstract class DatabaseObjects<T extends Identifiable> {
     final public void delete(T object) throws DatabaseException {
         synchronized (map) {
             try {
-                try(final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
+                try (final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
                     st.setLong(1, object.getId());
                     st.execute();
                 }
-            } catch(SQLException e) {
+            } catch (SQLException e) {
                 throw new DatabaseException(e);
             }
 
@@ -221,4 +217,28 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             remove.setId(null);
         }
     }
+
+    protected void save(T object, String query, Functional.ExceptionalConsumer<PreparedStatement> f)
+            throws DatabaseException {
+        try (PreparedStatement st = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            // Get the key
+            int affectedRows = st.executeUpdate();
+            if (affectedRows == 0) {
+                throw new DatabaseException("Creating object failed, no rows inserted.");
+            }
+            try (ResultSet generatedKeys = st.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    object.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new DatabaseException("Creating object failed, no ID obtained.");
+                }
+            }
+
+
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
+    }
+
+
 }

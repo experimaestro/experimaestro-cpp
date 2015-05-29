@@ -144,13 +144,6 @@ public class XPM {
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
 
-    @Help(value = "Unwrap an annotated XML value into a native JS object")
-    public static Object js_unwrap(Object object) {
-
-        return object.toString();
-    }
-
-
     public static Object get(Scriptable scope, final String name) {
 
         Object object = scope.get(name, scope);
@@ -479,7 +472,7 @@ public class XPM {
         final Logger rootLogger = scriptContext.getLogger("xpm");
 
 
-        Job job = null;
+        CommandLineTask job = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
         // of String
         LOGGER.debug("Adding command line job");
@@ -494,8 +487,8 @@ public class XPM {
             path = Connector.create(path.toString());
         }
 
-        job = new Job(connector, (java.nio.file.Path) path);
-        CommandLineTask task = new CommandLineTask(commands);
+        job = new CommandLineTask(connector, (java.nio.file.Path) path);
+        job.setCommands(commands);
         if (scriptContext.submittedJobs.containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
             if (simulate()) {
@@ -507,12 +500,12 @@ public class XPM {
 
 
         // --- Environment
-        task.environment = scriptContext.environment.get();
+        job.environment = scriptContext.environment.get();
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         // --- Set defaults
         if (scriptContext.getDefaultLauncher() != null) {
-            task.setLauncher(scriptContext.getDefaultLauncher());
+            job.setLauncher(scriptContext.getDefaultLauncher());
         }
 
 
@@ -530,7 +523,7 @@ public class XPM {
             if (options.containsKey("launcher")) {
                 final Object launcher = options.get("launcher");
                 if (launcher != null)
-                    task.setLauncher((Launcher) launcher);
+                    job.setLauncher((Launcher) launcher);
 
             }
 
@@ -538,9 +531,9 @@ public class XPM {
             if (options.containsKey("stdin")) {
                 final Object stdin = options.get("stdin");
                 if (stdin instanceof String) {
-                    task.setInput((String) stdin);
+                    job.setInput((String) stdin);
                 } else if (stdin instanceof java.nio.file.Path) {
-                    task.setInput((java.nio.file.Path) stdin);
+                    job.setInput((java.nio.file.Path) stdin);
                 } else
                     throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
             }
@@ -548,13 +541,13 @@ public class XPM {
             // --- Redirect standard output
             if (options.containsKey("stdout")) {
                 java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stdout"));
-                task.setOutput(fileObject);
+                job.setOutput(fileObject);
             }
 
             // --- Redirect standard error
             if (options.containsKey("stderr")) {
                 java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stderr"));
-                task.setError(fileObject);
+                job.setError(fileObject);
             }
 
 
@@ -614,8 +607,8 @@ public class XPM {
         job.setState(ResourceState.WAITING);
         if (simulate()) {
             PrintWriter pw = new LoggerPrintWriter(rootLogger, Level.INFO);
-            pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-            pw.format("Command: %s%n", task.getCommands().toString());
+            pw.format("[SIMULATE] Starting job: %s%n", job.toString());
+            pw.format("Command: %s%n", job.getCommands().toString());
             pw.format("Locator: %s", path.toString());
             pw.flush();
         } else {
@@ -629,7 +622,6 @@ public class XPM {
             if (scriptContext.getExperiment() != null) {
                 TaskReference reference = scriptContext.getTaskReference();
                 reference.add(job);
-                em.persist(reference);
             }
 
             final Resource old = Resource.getByLocator(job.getLocator());
@@ -643,7 +635,7 @@ public class XPM {
                 } else {
                     rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
                     old.replaceBy(job);
-                    job = (Job) old;
+                    job = (CommandLineTask) old;
                 }
             }
 

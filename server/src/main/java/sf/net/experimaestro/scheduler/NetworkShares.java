@@ -22,10 +22,7 @@ import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.DatabaseException;
 
 import java.lang.reflect.InvocationTargetException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * Access to connectors
@@ -59,6 +56,13 @@ public class NetworkShares extends DatabaseObjects<NetworkShare> {
         return findUnique(FINDBYNAME_QUERY, st -> {
             st.setString(1, host);
             st.setString(2, name);
+        });
+    }
+
+    public void save(NetworkShare share) throws DatabaseException {
+        save(share, "INSERT INTO NetworkShares(hostname, name) VALUES(?, ?)", st -> {
+            st.setString(1, share.getHost());
+            st.setString(2, share.getName());
         });
     }
 }

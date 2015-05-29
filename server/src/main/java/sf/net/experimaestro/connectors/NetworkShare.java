@@ -23,6 +23,8 @@ import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -59,7 +61,11 @@ final public class NetworkShare implements Identifiable {
         return access;
     }
 
-    public void add(NetworkShareAccess networkShareAccess) {
+    public void add(NetworkShareAccess networkShareAccess) throws DatabaseException {
+        // Save access
+        networkShareAccess.save(this);
+
+        // Add to ourselves
         access.add(networkShareAccess);
     }
 
@@ -104,5 +110,17 @@ final public class NetworkShare implements Identifiable {
     @Override
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public void save() throws DatabaseException {
+        Scheduler.get().networkShares().save(this);
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public String getName() {
+        return name;
     }
 }

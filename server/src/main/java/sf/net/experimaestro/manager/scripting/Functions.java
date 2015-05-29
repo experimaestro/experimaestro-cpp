@@ -253,7 +253,7 @@ public class Functions {
                                     @Argument(name = "path")
                                     String path,
                                     @Argument(name = "priority")
-                                    Integer priority) {
+                                    Integer priority) throws DatabaseException {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 

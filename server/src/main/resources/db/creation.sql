@@ -64,6 +64,8 @@ CREATE TABLE NetworkShares (
 CREATE TABLE NetworkShareAccess (
   share     BIGINT NOT NULL,
   connector BIGINT NOT NULL,
+  path VARCHAR(4096) NOT NULL,
+  priority INT NOT NULL DEFAULT 0,
 
   FOREIGN KEY (share) REFERENCES NetworkShares
     ON DELETE CASCADE,

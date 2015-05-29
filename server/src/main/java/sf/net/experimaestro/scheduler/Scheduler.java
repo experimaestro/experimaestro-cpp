@@ -21,7 +21,6 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
@@ -37,20 +36,12 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Timer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static java.lang.String.format;
 
@@ -167,7 +158,7 @@ final public class Scheduler {
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
         // Loop over resources in state RUNNING
-        try(final CloseableIterator<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+        try (final CloseableIterator<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
             while (resources.hasNext()) {
                 Resource resource = resources.next();
                 Job job = (Job) resource;
@@ -233,24 +224,19 @@ final public class Scheduler {
      * @param path      The path on the connector
      */
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws DatabaseException {
-        // Find the connector in DB
-        SingleHostConnector _connector = (SingleHostConnector) Connector.find(connector.getIdentifier());
-        if (_connector == null) {
-            _connector = connector;
-        }
+        // Save the connector in DB if necessary
+        connector.persist();
 
         NetworkShare networkShare = NetworkShare.find(host, name);
 
         if (networkShare == null) {
             networkShare = new NetworkShare(host, name);
-            final NetworkShareAccess access = new NetworkShareAccess(networkShare, _connector, path, priority);
-
+            networkShare.save();
+            final NetworkShareAccess access = new NetworkShareAccess(connector, path, priority);
             networkShare.add(access);
-            em.persist(networkShare);
-            em.persist(access);
         } else {
             for (NetworkShareAccess access : networkShare.getAccess()) {
-                if (access.is(_connector)) {
+                if (access.is(connector)) {
                     // Found it - just update
                     access.setPath(path);
                     access.setPriority(priority);
@@ -258,8 +244,9 @@ final public class Scheduler {
                 }
             }
 
-            final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, _connector, path, priority);
-            em.persist(networkShareAccess);
+            // Add
+            final NetworkShareAccess networkShareAccess = new NetworkShareAccess(connector, path, priority);
+            networkShare.add(networkShareAccess);
         }
     }
 
@@ -408,8 +395,12 @@ final public class Scheduler {
         return connection;
     }
 
-    public Connector connectors() {
+    public Connectors connectors() {
         return connectors;
+    }
+
+    public NetworkShares networkShares() {
+        return networkShares;
     }
 
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
@@ -467,80 +458,69 @@ final public class Scheduler {
                     }
 
                     try (final CallableStatement st = connection.prepareCall("SELECT id FROM Resource WHERE type=? AND status=?")) {
-                        // Try the next task
                         LOGGER.debug("Searching for ready jobs");
+                        st.setString(2, ResourceState.READY.toString());
+                        st.execute();
 
-                    /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
-                        for (long jobId : jobIds) {
-                            try (Transaction transaction = Transaction.create()) {
-                                final EntityManager em = transaction.em();
-                                Resource.lock(transaction, jobId, true, 0);
-                                Job job = em.find(Job.class, jobId);
-                                job.lock(transaction, true);
-                                job = em.find(Job.class, job.getId());
-                                this.setName(name + "/" + job);
+                        try (final ResultSet resultSet = st.getResultSet()) {
+                            // Try the next task
 
-                                LOGGER.debug("Looking at %s", job);
-
-                                if (job.getState() != ResourceState.READY) {
-                                    LOGGER.debug("Job state is not READY anymore", job);
-                                    transaction.clearLocks();
-                                    continue;
-                                }
-
-                                // Checks the tokens
-                                boolean tokensAvailable = true;
-                                for (Dependency dependency : job.getDependencies()) {
-                                    if (dependency instanceof TokenDependency) {
-                                        TokenDependency tokenDependency = (TokenDependency) dependency;
-                                        if (!tokenDependency.canLock()) {
-                                            LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
-                                            tokensAvailable = false;
-                                            break;
-                                        }
-                                        LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
-                                    }
-                                }
-                                if (!tokensAvailable) {
-                                    // Remove locks
-                                    transaction.clearLocks();
-                                    continue;
-                                }
-
+                        /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
+                            while (resultSet.next()) {
                                 try {
-                                    job.run();
+                                    Job job = (Job) resources.getById(resultSet.getLong(1));
+                                    this.setName(name + "/" + job);
 
-                                    LOGGER.info("Job %s has started", job);
-                                } catch (LockException e) {
-                                    // We could not lock the resources: update the job state
-                                    LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                    job.setState(ResourceState.WAITING);
-                                    job.updateStatus();
-                                    transaction.boundary();
-                                    LOGGER.info("Finished launching %s", job);
-                                } catch (RollbackException e) {
-                                    LOGGER.error(e, "Rollback exception");
-                                    synchronized (readyJobSemaphore) {
-                                        readyJobSemaphore.setValue(true);
+                                    LOGGER.debug("Looking at %s", job);
+
+                                    if (job.getState() != ResourceState.READY) {
+                                        LOGGER.debug("Job state is not READY anymore", job);
+                                        continue;
                                     }
 
-                                    break;
-                                } catch (Throwable t) {
-                                    LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                                    job.setState(ResourceState.ERROR);
-                                    transaction.boundary();
-                                } finally {
-                                    this.setName(name);
-                                }
+                                    // Checks the tokens
+                                    boolean tokensAvailable = true;
+                                    for (Dependency dependency : job.getDependencies()) {
+                                        if (dependency instanceof TokenDependency) {
+                                            TokenDependency tokenDependency = (TokenDependency) dependency;
+                                            if (!tokenDependency.canLock()) {
+                                                LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
+                                                tokensAvailable = false;
+                                                break;
+                                            }
+                                            LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
+                                        }
+                                    }
+                                    if (!tokensAvailable) {
+                                        continue;
+                                    }
 
-                            } catch (RollbackException e) {
-                                LOGGER.warn("Rollback exception");
-                            } catch (Exception e) {
-                                // FIXME: should do something smarter
-                                LOGGER.error(e, "Caught an exception");
-                            } finally {
+                                    try {
+                                        job.run();
+
+                                        LOGGER.info("Job %s has started", job);
+                                    } catch (LockException e) {
+                                        // We could not lock the resources: update the job state
+                                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                                        job.setState(ResourceState.WAITING);
+                                        job.updateStatus();
+                                        LOGGER.info("Finished launching %s", job);
+                                    } catch (Throwable t) {
+                                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                        job.setState(ResourceState.ERROR);
+                                    } finally {
+                                        this.setName(name);
+                                    }
+
+                                } catch (Exception e) {
+                                    // FIXME: should do something smarter
+                                    LOGGER.error(e, "Caught an exception");
+                                } finally {
+                                }
                             }
                         }
+                    } catch (SQLException e) {
+                        LOGGER.error(e, "SQL exception while retrieving ready jobs");
                     }
 
                 }
@@ -595,14 +575,10 @@ final public class Scheduler {
 
                     // Notify all the dependencies
                     try {
-                        Transaction.run((em, t) -> {
-                            // Retrieve the resource that changed - and lock it
-                            Resource destination = em.find(Resource.class, messagePackage.destination);
-                            Resource.lock(t, messagePackage.destination, true, 0);
-                            em.refresh(destination);
-                            LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
-                            destination.notify(messagePackage.message);
-                        });
+                        // Retrieve the resource that changed - and lock it
+                        Resource destination = resources.getById(messagePackage.destination);
+                        LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
+                        destination.notify(messagePackage.message);
                     } catch (Throwable e) {
                         LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
                         synchronized (messages) {
@@ -657,54 +633,49 @@ final public class Scheduler {
 
                     LOGGER.debug("Notifying dependencies from R%d", resourceId);
                     // Notify all the dependencies
-                    Transaction.run((em, t) -> {
 
-                        // Retrieve the resource that changed - and lock it
-                        Resource fromResource;
-                        try {
-                            fromResource = resources.getById(resourceId);
-                        } catch (DatabaseException e) {
-                            LOGGER.error("Could not retrieve resource with ID %d", resourceId);
-                            throw new RuntimeException(e);
-                        }
+                    // Retrieve the resource that changed - and lock it
+                    Resource fromResource;
+                    try {
+                        fromResource = resources.getById(resourceId);
+                    } catch (DatabaseException e) {
+                        LOGGER.error("Could not retrieve resource with ID %d", resourceId);
+                        throw new RuntimeException(e);
+                    }
 
-                        fromResource.lock(t, false);
 
-                        Collection<Dependency> dependencies = fromResource.getOutgoingDependencies();
-                        LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
+                    Collection<Dependency> dependencies = fromResource.getOutgoingDependencies();
+                    LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
 
-                        for (Dependency dep : dependencies) {
-                            if (dep.status == DependencyStatus.UNACTIVE) {
-                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
+                    for (Dependency dep : dependencies) {
+                        if (dep.status == DependencyStatus.UNACTIVE) {
+                            LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
 
-                            } else
-                                try {
-                                    // when the dependency status is null, the dependency is not active anymore
-                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
-                                    // Preserves the previous state
-                                    DependencyStatus beforeState = dep.status;
+                        } else
+                            try {
+                                // when the dependency status is null, the dependency is not active anymore
+                                LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
+                                // Preserves the previous state
+                                DependencyStatus beforeState = dep.status;
 
-                                    if (dep.update()) {
-                                        final Resource depResource = dep.getTo();
-                                        depResource.lock(t, true);
+                                if (dep.update()) {
+                                    final Resource depResource = dep.getTo();
 
-                                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                            continue;
-                                        }
-
-                                        // Queue this change in dependency state
-                                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-
-                                    } else {
-                                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+                                    if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                                        LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                                        continue;
                                     }
-                                } catch (RuntimeException e) {
-                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
-                                }
-                        }
-                    });
 
+                                    // Queue this change in dependency state
+                                    depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+
+                                } else {
+                                    LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+                                }
+                            } catch (RuntimeException e) {
+                                LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
+                            }
+                    }
                 } catch (Exception e) {
                     LOGGER.error("Caught exception in notifier", e);
                 }

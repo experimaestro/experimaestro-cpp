@@ -28,11 +28,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Commands;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceState;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -114,16 +110,11 @@ public class JavaTask extends Task {
                     pw.format("Path: %s", path);
                     pw.flush();
                 } else {
-                    job.setJobRunner(task);
-
                     if (old != null) {
                         // Lock and refresh the resource to be overwritten
-                        old.lock(transaction, true);
-                        transaction.em().refresh(old);
-
                         try {
                             old.replaceBy(job);
-                            job = (Job) old;
+                            job = (CommandLineTask) old;
                             taskLogger.info(String.format("Overwriting resource [%s]", job));
                         } catch (ExperimaestroCannotOverwrite e) {
                             taskLogger.warn("Cannot override resource [%s]", old);
@@ -131,7 +122,7 @@ public class JavaTask extends Task {
                         }
                     }
 
-                    job.save(transaction);
+                    job.save();
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 

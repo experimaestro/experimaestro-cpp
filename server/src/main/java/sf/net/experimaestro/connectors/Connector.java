@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Connectors;
@@ -168,8 +169,11 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
      * @param identifier The string identifier
      * @return The connector in database or null if none exist
      */
-    public static Connector find(String identifier) {
+    public static Connector find(String identifier) throws DatabaseException {
         return Scheduler.get().connectors().find(identifier);
     }
 
+    public void persist() throws DatabaseException {
+        Scheduler.get().connectors().save(this);
+    }
 }

@@ -18,15 +18,16 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.hsqldb.Database;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SSHConnector;
 import sf.net.experimaestro.exceptions.DatabaseException;
+import sf.net.experimaestro.utils.Functional;
 
+import javax.xml.crypto.Data;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 import static java.lang.String.format;
 
@@ -70,4 +71,13 @@ public class Connectors extends DatabaseObjects<Connector> {
             throw new DatabaseException(e, "Error retrieving database object");
         }
     }
+
+    public void save(Connector connector) throws DatabaseException {
+        save(connector, "INSERT INTO Connectors(type, uri, value) VALUES(?, ?, ?)", st -> {
+            st.setLong(1, getTypeValue(connector.getClass()));
+            st.setString(2, connector.getIdentifier());
+            st.setNull(3, Types.BLOB);
+        });
+    }
+
 }

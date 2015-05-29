@@ -18,10 +18,14 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.fs.XPMPath;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -47,8 +51,7 @@ public class NetworkShareAccess implements Serializable {
      */
     int priority;
 
-    public NetworkShareAccess(NetworkShare networkShare, SingleHostConnector connector, String path, int priority) {
-        share = networkShare;
+    public NetworkShareAccess(SingleHostConnector connector, String path, int priority) {
         this.connector = connector;
         this.path = path;
         this.priority = priority;
@@ -57,16 +60,12 @@ public class NetworkShareAccess implements Serializable {
     public NetworkShareAccess() {
     }
 
+    public void setShare(NetworkShare share) {
+        this.share = share;
+    }
+
     public boolean is(SingleHostConnector connector) {
         return connector.equals(this.connector);
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
     }
 
     @Override
@@ -92,6 +91,20 @@ public class NetworkShareAccess implements Serializable {
         return priority;
     }
 
+    public void setPriority(int priority) throws DatabaseException {
+        this.priority = priority;
+        if (share != null) {
+            try (PreparedStatement st = Scheduler.get().getConnection()
+                    .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
+                st.setString(1, path);
+                st.setLong(2, share.getId());
+                st.setLong(3, connector.getId());
+            } catch (SQLException e) {
+                throw new DatabaseException(e);
+            }
+        }
+    }
+
     public SingleHostConnector getConnector() {
         return connector;
     }
@@ -100,10 +113,44 @@ public class NetworkShareAccess implements Serializable {
         return path;
     }
 
+    public void setPath(String path) throws DatabaseException {
+        if (share != null) {
+            try (PreparedStatement st = Scheduler.get().getConnection()
+                    .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
+                st.setString(1, path);
+                st.setLong(2, share.getId());
+                st.setLong(3, connector.getId());
+            } catch (SQLException e) {
+                throw new DatabaseException(e);
+            }
+        }
+        this.path = path;
+    }
+
     public String resolve(XPMPath path) throws IOException {
         if (!path.getHostName().equals(share.host) || !path.getShareName().equals(share.name)) {
             throw new IllegalArgumentException(format("Cannot resolve %s for share %s", path, share));
         }
         return path.getLocalStringPath(this.path);
+    }
+
+    /**
+     * Save and set a share
+     * @param share The shared network volume
+     * @throws DatabaseException If something goes wrong
+     */
+    public void save(NetworkShare share) throws DatabaseException {
+        // Add to database
+        try (PreparedStatement st = Scheduler.get().getConnection()
+                .prepareStatement("INSERT INTO NetworkShareAccess(share, connector, path) VALUES(?,?,?)")) {
+            st.setLong(1, share.getId());
+            st.setLong(2, connector.getId());
+            st.setString(3, getPath());
+            st.execute();
+
+            this.share = share;
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
     }
 }

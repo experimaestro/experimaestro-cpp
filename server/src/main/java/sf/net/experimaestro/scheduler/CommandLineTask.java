@@ -94,6 +94,10 @@ public class CommandLineTask extends Job {
 
     }
 
+    public CommandLineTask(Connector connector, Path path) throws IOException {
+        super(connector, path);
+    }
+
     /**
      * Get a full command line from an array of arguments
      */
