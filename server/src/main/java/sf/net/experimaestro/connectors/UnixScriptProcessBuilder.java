@@ -21,7 +21,11 @@ package sf.net.experimaestro.connectors;
 
 import com.google.common.collect.Iterables;
 import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.AbstractCommand;
+import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.CommandComponent;
+import sf.net.experimaestro.scheduler.CommandContext;
+import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.utils.Functional;
 
 import java.io.IOException;
@@ -44,15 +48,21 @@ import static sf.net.experimaestro.scheduler.Command.SubCommand;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
-    private String shPath = "/bin/bash";
-
     public static final String SHELL_SPECIAL = " \\;\"'<>\n$()";
+
     public static final String QUOTED_SPECIAL = "\"$";
+
     /**
      * Lock files to delete
      */
     ArrayList<String> lockFiles = new ArrayList<>();
 
+    /**
+     * Commands to be executed to notify the end of the job
+     */
+    Commands endOfJobCommands;
+
+    private String shPath = "/bin/bash";
 
     /**
      * File where the exit code is written
@@ -65,9 +75,14 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     private String donePath;
 
     /**
-     * Commands to be executed to notify the end of the job
+     * If cleanup should be performed on script exit
      */
-    Commands endOfJobCommands;
+    private boolean doCleanup = true;
+
+    /**
+     * Pre-process commands
+     */
+    private Commands preprocessCommands = null;
 
     /**
      * Commands
@@ -83,13 +98,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws IOException {
         super(connector, scriptFile, processBuilder);
-    }
-
-    /**
-     * Sets end of job commands
-     */
-    public void endOfJobCommands(Commands commands) {
-        this.endOfJobCommands = commands;
     }
 
     /**
@@ -110,6 +118,13 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             sb.append(c);
         }
         return sb.toString();
+    }
+
+    /**
+     * Sets end of job commands
+     */
+    public void endOfJobCommands(Commands commands) {
+        this.endOfJobCommands = commands;
     }
 
     @Override
@@ -144,33 +159,36 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             if (notificationURL != null) {
                 final URL url = new URL(notificationURL, format("%d", job.getId()));
                 writer.format("export XPM_NOTIFICATION_URL=\"%s\"%n", protect(url.toString(), QUOTED_SPECIAL));
+                // Notification program is ourselves
+                writer.format("export XPM_NOTIFICATION=\"%s\"", protect(env.resolve(runFile), QUOTED_SPECIAL));
+
+                writer.format("if \"$1\" == \"progress\"; then%n");
+                writer.format(" wget --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/progress/$2\"");
+                writer.format("fi%n");
             }
 
             if (directory() != null) {
                 writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
             }
 
-
-            if (!lockFiles.isEmpty()) {
-                writer.format("%n# Checks that the locks are set%n");
-                for (String lockFile : lockFiles) {
-                    writer.format("test -f %s || exit 017%n", lockFile);
-                }
+            // Write some commands
+            if (preprocessCommands != null) {
+                writeCommands(env, writer, preprocessCommands);
             }
-
-            writer.format("%n%n# Set traps to cleanup (remove locks and temporary files, kill remaining processes) when exiting%n%n");
-            writer.format("trap cleanup EXIT SIGINT SIGTERM%n");
 
             // --- CLEANUP
 
             writer.format("cleanup() {%n");
-
+            // Write something
+            writer.format(" echo Cleaning up 1>&2%n");
             // Remove traps
-            writer.format("trap - EXIT SIGINT SIGTERM%n");
+            writer.format(" trap - 0%n");
+            // Kills remaining processes
+            writer.println(" test ! -z \"$PID\" && kill -9 $PID");
 
             // Remove locks
             for (String file : lockFiles) {
-                writer.format("  rm -f %s;%n", file);
+                writer.format(" rm -f %s;%n", file);
             }
 
             // Remove temporary files
@@ -184,17 +202,25 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Notify if possible
             if (notificationURL != null) {
-                final URL url = new URL(notificationURL, format("%d/eoj", job.getId()));
-                writer.format(" wget \"%s\"%n", protect(url.toString(), UnixScriptProcessBuilder.QUOTED_SPECIAL));
+                writer.format(" wget --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/eoj\"%n");
             }
-
-            // Kills remaining processes (has to be the last command!)
-            writer.println(" kill -- -$$");
 
             writer.format("}%n%n");
 
             // --- END CLEANUP
 
+
+            if (!lockFiles.isEmpty()) {
+                writer.format("%n# Checks that the locks are set%n");
+                for (String lockFile : lockFiles) {
+                    writer.format("test -f %s || exit 017%n", lockFile);
+                }
+            }
+
+            if (doCleanup) {
+                writer.format("%n%n# Set trap to cleanup when exiting%n");
+                writer.format("trap cleanup 0%n");
+            }
 
             // Write the command
             final StringWriter sw = new StringWriter();
@@ -229,8 +255,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writeRedirection(writer, output, 1);
             writeRedirection(writer, error, 2);
 
+            // Retrieve PID
+            writer.println(" & ");
+            writer.println("PID=$!");
+            writer.println("wait $PID");
 
-            writer.println();
             writer.print(exitScript);
 
             if (exitCodePath != null)
@@ -295,6 +324,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.print(") ");
             } else {
                 for (CommandComponent argument : ((Command) command).list()) {
+                    if (argument instanceof Command.Unprotected) {
+                        writer.print(argument.toString(env));
+                    }
+
                     writer.print(' ');
                     if (argument instanceof Command.Pipe) {
                         writer.print(" | ");
@@ -356,5 +389,13 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     public void doneFile(Path doneFile) throws IOException {
         donePath = connector.resolve(doneFile);
+    }
+
+    public void setDoCleanup(boolean doCleanup) {
+        this.doCleanup = doCleanup;
+    }
+
+    public void preprocessCommands(Commands commands) {
+        this.preprocessCommands = commands;
     }
 }

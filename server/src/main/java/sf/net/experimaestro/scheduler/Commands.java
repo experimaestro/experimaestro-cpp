@@ -181,4 +181,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         }
     }
 
+    public void addUnprotected(String command) {
+        add(new Command(new Command.Unprotected(command)));
+    }
 }

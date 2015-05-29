@@ -20,12 +20,20 @@ package sf.net.experimaestro.fs;
 
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.Output;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.*;
+import java.net.URISyntaxException;
+import java.nio.file.FileSystem;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -36,7 +44,9 @@ import static java.lang.String.format;
  */
 public class XPMPath implements Path {
     private final String host;
+
     private final String share;
+
     private final String[] parts;
 
     public XPMPath(String host, String path) {
@@ -150,7 +160,7 @@ public class XPMPath implements Path {
         }
 
         // Relative path
-        String [] otherParts = new String[this.parts.length + names.length];
+        String[] otherParts = new String[this.parts.length + names.length];
         System.arraycopy(this.parts, 0, otherParts, 0, this.parts.length);
         System.arraycopy(names, 0, otherParts, this.parts.length, names.length);
 
@@ -174,7 +184,12 @@ public class XPMPath implements Path {
 
     @Override
     public URI toUri() {
-        throw new NotImplementedException();
+        try {
+            final String path = XPMFileSystem.PATH_SEPARATOR + share + XPMFileSystem.PATH_SEPARATOR + Output.toString(XPMFileSystem.PATH_SEPARATOR, parts);
+            return new URI(XPMFileSystemProvider.SCHEME, host, path, "");
+        } catch (URISyntaxException e) {
+            throw new XPMRuntimeException(e, "Could not build an URI");
+        }
     }
 
     @Override
@@ -231,6 +246,7 @@ public class XPMPath implements Path {
 
     /**
      * Returns the contextualized path
+     *
      * @param path The base path (has to be absolute)
      * @return The full path
      */

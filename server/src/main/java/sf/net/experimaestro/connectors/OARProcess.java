@@ -69,30 +69,30 @@ class OARProcess extends XPMProcess {
         throw new NotImplementedException();
     }
 
-
-    @Override
-    public boolean isRunning() {
-        final Document document = oarstat(false);
-        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
-        LOGGER.debug("State of OAR process %s is %s", pid, state);
-        return "running".equalsIgnoreCase(state);
-    }
-
-    @Override
-    public int exitValue() {
-        final Document document = oarstat(true);
-        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
-        if ("running".equalsIgnoreCase(state))
-            throw new IllegalThreadStateException("Job is running - cannot access its exit value");
-
-        String code = OARLauncher.evaluateXPathToString("//item[@key = \"exit_code\"]/text()", document);
-
-        LOGGER.debug("Exit code of OAR process %s is %s", pid, code);
-
-        if ("".equals(code))
-            return -1;
-        return Integer.parseInt(code);
-    }
+//
+//    @Override
+//    public boolean isRunning() {
+//        final Document document = oarstat(false);
+//        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
+//        LOGGER.debug("State of OAR process %s is %s", pid, state);
+//        return "running".equalsIgnoreCase(state);
+//    }
+//
+//    @Override
+//    public int exitValue() {
+//        final Document document = oarstat(true);
+//        String state = OARLauncher.evaluateXPathToString("//item[@key = \"state\"]/text()", document);
+//        if ("running".equalsIgnoreCase(state))
+//            throw new IllegalThreadStateException("Job is running - cannot access its exit value");
+//
+//        String code = OARLauncher.evaluateXPathToString("//item[@key = \"exit_code\"]/text()", document);
+//
+//        LOGGER.debug("Exit code of OAR process %s is %s", pid, code);
+//
+//        if ("".equals(code))
+//            return -1;
+//        return Integer.parseInt(code);
+//    }
 
     /**
      * Runs oarstat and returns the XML document

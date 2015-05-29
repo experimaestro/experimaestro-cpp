@@ -34,7 +34,6 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,12 +43,16 @@ import static java.lang.String.format;
  * The XPM file system provider
  */
 public class XPMFileSystemProvider extends FileSystemProvider {
+
     final static private Logger LOGGER = Logger.getLogger();
+
+    public static final String SCHEME = "shares";
+
     public static FileSystemProvider instance = new XPMFileSystemProvider();
 
     @Override
     public String getScheme() {
-        return "shares";
+        return SCHEME;
     }
 
     @Override

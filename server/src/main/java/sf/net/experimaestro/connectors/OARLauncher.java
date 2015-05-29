@@ -24,6 +24,8 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
@@ -90,6 +92,11 @@ public class OARLauncher extends Launcher {
     private String unixtimestampCommand = "date +%s";
 
     /**
+     *
+     */
+    private boolean useNotify = false;
+
+    /**
      * Construction from a connector
      */
     @Expose
@@ -135,9 +142,19 @@ public class OARLauncher extends Launcher {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
-
         final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
+
+        if (useNotify) {
+            unixScriptProcessBuilder.setDoCleanup(false);
+            Commands commands = new Commands();
+            commands.addUnprotected("case \"$3\" in");
+            commands.addUnprotected("END) ERROR) cleanup;;");
+            commands.addUnprotected("*) exit;;");
+            commands.addUnprotected("esac");
+            unixScriptProcessBuilder.preprocessCommands(commands);
+        }
+
         return unixScriptProcessBuilder;
     }
 
@@ -182,9 +199,6 @@ public class OARLauncher extends Launcher {
         boolean shortLived;
 
         String shortLivedJobDirectory = ".experimaestro/oar";
-
-        // Command to start
-        private String oarCommand = "oarsub";
 
         // The associated connector
         private SingleHostConnector connector;
@@ -236,6 +250,9 @@ public class OARLauncher extends Launcher {
                 ArrayList<String> command = new ArrayList<>();
 
                 command.add(oarCommand);
+                if (useNotify) {
+                    command.add(format("--exec:%s", path));
+                }
                 addOutputOption("stdout", command, output);
                 addOutputOption("stderr", command, error);
                 command.add(runpath);
@@ -430,5 +447,10 @@ public class OARLauncher extends Launcher {
         }
 
 
+    }
+
+    @Expose("use_notify")
+    public void setUseNotify(boolean useNotify) {
+        this.useNotify = useNotify;
     }
 }

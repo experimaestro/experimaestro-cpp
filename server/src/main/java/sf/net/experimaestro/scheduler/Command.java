@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.gson.annotations.JsonAdapter;
 import org.mozilla.javascript.NativeArray;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -66,6 +67,9 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     public Command(CommandComponent... c) {
         list = new ArrayList<>(Arrays.asList(c));
+    }
+    public Command(java.lang.String... c) {
+        list = new ArrayList<>(Lists.transform(Arrays.asList(c), s -> new String(s)));
     }
 
     public Command(Collection<? extends CommandComponent> c) {
@@ -466,6 +470,15 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             }
 
             return environment.resolve(file);
+        }
+    }
+
+    static public class Unprotected extends String {
+        public Unprotected() {
+        }
+
+        public Unprotected(java.lang.String string) {
+            super(string);
         }
     }
 }
