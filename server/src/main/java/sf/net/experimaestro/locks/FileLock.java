@@ -21,7 +21,6 @@ package sf.net.experimaestro.locks;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;

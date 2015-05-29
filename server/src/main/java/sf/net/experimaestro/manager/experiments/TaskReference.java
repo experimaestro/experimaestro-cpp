@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.scheduler.Resource;
 
@@ -81,5 +82,12 @@ public class TaskReference {
      */
     public void add(Resource resource) {
         resources.add(resource);
+    }
+
+    /**
+     * Save in database
+     */
+    public void persists() {
+        throw new NotImplementedException();
     }
 }

@@ -27,8 +27,6 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
-import javax.persistence.OneToOne;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;

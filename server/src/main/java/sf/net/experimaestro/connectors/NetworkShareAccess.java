@@ -20,10 +20,8 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.fs.XPMPath;
 
-import javax.persistence.*;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Path;
 
 import static java.lang.String.format;
 

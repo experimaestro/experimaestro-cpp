@@ -21,7 +21,13 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
-import sf.net.experimaestro.connectors.*;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.NetworkShare;
+import sf.net.experimaestro.connectors.NetworkShareAccess;
+import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterator;
@@ -31,12 +37,20 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.*;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Timer;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -50,71 +64,94 @@ final public class Scheduler {
      * Time added when rescheduling
      */
     static final long RESCHEDULING_DELTA_TIME = 250;
+
     final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * Thread local instance (there should be only one scheduler per thread)
      */
     private static Scheduler INSTANCE;
+
     /**
      * Simple asynchronous executor service (used for asynchronous notification)
      */
     final ExecutorService executorService;
+
     /**
      * Whether we should look at the list of ready jobs or not
      */
     final MutableBoolean readyJobSemaphore = new MutableBoolean(false);
+
     /**
      * Scheduler
      */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     /**
      * Database connection
      */
     private final Connection connection;
+
     /**
      * Messenger
      */
     private final MessengerThread messengerThread;
+
     /**
      * Listeners
      */
     HashSet<Listener> listeners = new HashSet<>();
+
     /**
      * True when the application is stopping
      */
     boolean stopping = false;
+
     /**
      * The job runner (just one)
      */
     JobRunner runner;
+
     /**
      * Queue for messages
      */
     Heap<MessagePackage> messages = new Heap<>();
+
     /**
      * Asynchronous notification
      */
     private Notifier notifier;
+
     /**
      * Number of running runners
      */
     private ThreadCount runningThreadsCounter = new ThreadCount();
+
     private Timer resourceCheckTimer;
+
     /**
      * Resources
      */
     private Resources resources;
+
     /**
      * The queue for notifications
      */
     private LongOpenHashSet changedResources = new LongOpenHashSet();
 
     /**
+     * The network shares
+     */
+    private NetworkShares networkShares;
+
+    private Connectors connectors;
+
+    /**
      * Initialise the task manager
      *
      * @param baseDirectory The directory where the XPM database will be stored
      */
-    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException {
+    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException, CloseException {
         if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
@@ -130,22 +167,18 @@ final public class Scheduler {
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
         // Loop over resources in state RUNNING
-        for (Resource resource : query.getResultList()) {
-            LOGGER.info("Job %s is running: starting a watcher", resource);
-            Job job = (Job) resource;
-            if (job.process != null) {
-                job.process.init(job);
-            } else {
-                Transaction.run(em -> {
-                    // Set the job state to ERROR (and update the state in case it was finished)
-                    // The job should take care of setting a new process if the job is still running
-                    Job _job = em.find(Job.class, job.getId());
-                    _job.setState(ResourceState.ERROR);
-                    _job.updateStatus();
-                    LOGGER.error("No process attached to a running job. New status is: %s", _job.getState());
-                });
+        try(final CloseableIterator<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+            while (resources.hasNext()) {
+                Resource resource = resources.next();
+                Job job = (Job) resource;
+                if (job.process != null) {
+                    job.process.init(job);
+                } else {
+                    job.setState(ResourceState.ERROR);
+                    LOGGER.error("No process attached to a running job. New status is: %s", job.getState());
+                }
+                job.updateStatus();
             }
-            resource.updateStatus();
         }
 
         // Start the thread that notify dependencies
@@ -199,11 +232,10 @@ final public class Scheduler {
      * @param connector The single host connector where this
      * @param path      The path on the connector
      */
-    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) {
+    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws DatabaseException {
         // Find the connector in DB
         SingleHostConnector _connector = (SingleHostConnector) Connector.find(connector.getIdentifier());
         if (_connector == null) {
-            em.persist(connector);
             _connector = connector;
         }
 
@@ -228,7 +260,6 @@ final public class Scheduler {
 
             final NetworkShareAccess networkShareAccess = new NetworkShareAccess(networkShare, _connector, path, priority);
             em.persist(networkShareAccess);
-
         }
     }
 
@@ -369,9 +400,23 @@ final public class Scheduler {
         }
     }
 
+    public NetworkShares shares() {
+        return networkShares;
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
+    public Connector connectors() {
+        return connectors;
+    }
+
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
         public Message message;
+
         public long destination;
+
         public long timestamp;
 
         public MessagePackage(Message message, Resource destination, long timestamp) {
@@ -463,7 +508,7 @@ final public class Scheduler {
                                 }
 
                                 try {
-                                    job.run(transaction);
+                                    job.run();
 
                                     LOGGER.info("Job %s has started", job);
                                 } catch (LockException e) {
@@ -556,7 +601,7 @@ final public class Scheduler {
                             Resource.lock(t, messagePackage.destination, true, 0);
                             em.refresh(destination);
                             LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
-                            destination.notify(t, messagePackage.message);
+                            destination.notify(messagePackage.message);
                         });
                     } catch (Throwable e) {
                         LOGGER.warn("Error [%s] while notifying %s - Rescheduling", e.toString(), messagePackage.destination);
@@ -615,7 +660,14 @@ final public class Scheduler {
                     Transaction.run((em, t) -> {
 
                         // Retrieve the resource that changed - and lock it
-                        Resource fromResource = em.find(Resource.class, resourceId);
+                        Resource fromResource;
+                        try {
+                            fromResource = resources.getById(resourceId);
+                        } catch (DatabaseException e) {
+                            LOGGER.error("Could not retrieve resource with ID %d", resourceId);
+                            throw new RuntimeException(e);
+                        }
+
                         fromResource.lock(t, false);
 
                         Collection<Dependency> dependencies = fromResource.getOutgoingDependencies();
@@ -635,7 +687,6 @@ final public class Scheduler {
                                     if (dep.update()) {
                                         final Resource depResource = dep.getTo();
                                         depResource.lock(t, true);
-                                        em.refresh(depResource);
 
                                         if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
                                             LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
@@ -643,7 +694,7 @@ final public class Scheduler {
                                         }
 
                                         // Queue this change in dependency state
-                                        depResource.notify(t, new DependencyChangedMessage(dep, beforeState, dep.status));
+                                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
 
                                     } else {
                                         LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);

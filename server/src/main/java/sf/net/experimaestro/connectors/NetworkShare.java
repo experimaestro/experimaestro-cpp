@@ -18,23 +18,20 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.fs.XPMPath;
+import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.Scheduler;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * Defines relationships between single host connectors and network shares
  */
-final public class NetworkShare {
+final public class NetworkShare implements Identifiable {
     /** Internal ID */
-    private long key;
+    private long id;
 
     /** The possible accesses to this network share */
     private Collection<NetworkShareAccess> access;
@@ -73,20 +70,8 @@ final public class NetworkShare {
      * @param name The share name
      * @return The connector in database or null if none exist
      */
-    public static NetworkShare find(String host, String name) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-
-        final CriteriaQuery<NetworkShare> q = cb.createQuery(NetworkShare.class);
-        final Root<NetworkShare> shares = q.from(NetworkShare.class);
-        q.select(shares)
-                .where(shares.get(NetworkShare_.host).in(host))
-                .where(shares.get(NetworkShare_.name).in(name));
-
-        final List<NetworkShare> resultList = em.createQuery(q).getResultList();
-        assert (resultList.size() <= 1);
-        if (resultList.isEmpty())
-            return null;
-        return resultList.get(0);
+    public static NetworkShare find(String host, String name) throws DatabaseException {
+        return Scheduler.get().shares().find(host, name);
     }
 
     /**
@@ -96,25 +81,28 @@ final public class NetworkShare {
      * @param path      The network share path <code>share://host/root/path</code> path
      * @return
      */
-    public static NetworkShareAccess find(SingleHostConnector connector, XPMPath path) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-
-        final CriteriaQuery<NetworkShareAccess> q = cb.createQuery(NetworkShareAccess.class);
-        final Root<NetworkShareAccess> accesses = q.from(NetworkShareAccess.class);
-
-        // Select those with our connector
-        q.where(cb.equal(accesses.get(NetworkShareAccess_.connector), connector));
-
-        // Join with network share
-        Join<NetworkShareAccess, NetworkShare> share = accesses.join(NetworkShareAccess_.share);
-        share.on(cb.equal(share.get(NetworkShare_.host), path.getHostName()),
-                cb.equal(share.get(NetworkShare_.name), path.getShareName()));
-
-        final TypedQuery<NetworkShareAccess> query = em.createQuery(q);
-        final List<NetworkShareAccess> resultList = query.getResultList();
-        assert (resultList.size() <= 1);
-        if (resultList.isEmpty())
+    public static NetworkShareAccess find(SingleHostConnector connector, XPMPath path) throws DatabaseException {
+        final NetworkShare networkShare = find(path.getHostName(), path.getShareName());
+        if (networkShare == null) {
             return null;
-        return resultList.get(0);
+        }
+
+        for (NetworkShareAccess networkShareAccess : networkShare.getAccess()) {
+            if (networkShareAccess.getConnector().getId() == connector.getId()) {
+                return networkShareAccess;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(Long id) {
+        this.id = id;
     }
 }

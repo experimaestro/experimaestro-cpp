@@ -201,7 +201,7 @@ abstract public class Job extends Resource {
       *
       * @see java.lang.Runnable#run()
       */
-    synchronized final public void run(Transaction transaction) throws Exception {
+    synchronized final public void run() throws Exception {
         // Those locks are transfered to the process
         ArrayList<Lock> locks = new ArrayList<>();
         // Those locks are used only in case of problem to unlock everything
@@ -246,8 +246,6 @@ abstract public class Job extends Resource {
                 for (Dependency dependency : getDependencies()) {
                     try {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
-                        dependency.from.lock(transaction, true); // Ensures the dependency does not change
-
                         final Lock lock = dependency.lock(pid);
                         depLocks.add(lock);
                         LOGGER.debug("Running preparation - locked dependency [%s]", dependency);
@@ -267,13 +265,11 @@ abstract public class Job extends Resource {
                 startTimestamp = System.currentTimeMillis();
 
                 // Commits all the changes so far
-                transaction.boundary(true);
 
                 // Now, starts the job
                 process = startJob(locks, false);
                 process.adopt(locks);
                 locks = null;
-                transaction.boundary();
 
                 // Store the current state
                 LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
@@ -321,11 +317,10 @@ abstract public class Job extends Resource {
     /**
      * Called when a resource state has changed. After an update, the entity will be
      * saved to the database and further cascading operations make take place.
-     *  @param t       The current transaction
      * @param message The message
      */
     @Override
-    public void notify(Transaction t, Message message) {
+    public void notify(Message message) {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
@@ -335,8 +330,7 @@ abstract public class Job extends Resource {
 
             case END_OF_JOB:
                 // First, register our changes
-                endOfJobMessage((EndOfJobMessage) message, t);
-                t.boundary();
+                endOfJobMessage((EndOfJobMessage) message);
                 break;
 
             case DEPENDENCY_CHANGED:
@@ -345,7 +339,6 @@ abstract public class Job extends Resource {
 
                 // Notify job
                 dependencyChanged(depMessage);
-                t.boundary();
 
                 LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]",
                         depMessage.toString(), getState(), oldState, this);
@@ -353,7 +346,7 @@ abstract public class Job extends Resource {
                 break;
 
             default:
-                super.notify(t, message);
+                super.notify(message);
         }
     }
 
@@ -396,9 +389,8 @@ abstract public class Job extends Resource {
     /**
      * Called when the job has ended
      *  @param eoj The message
-     * @param t   The transaction
      */
-    private void endOfJobMessage(EndOfJobMessage eoj, Transaction t) {
+    private void endOfJobMessage(EndOfJobMessage eoj) {
         this.endTimestamp = eoj.timestamp;
 
         // Lock all the required dependencies and refresh
@@ -411,7 +403,6 @@ abstract public class Job extends Resource {
             final Collection<Dependency> requiredResources = getDependencies();
             for (Dependency dependency : requiredResources) {
                 try {
-                    dependency.from.lock(t, true);
                     dependency.unlock();
 
                 } catch (Throwable e) {
@@ -686,9 +677,8 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    public void stored() {
-        super.stored();
-
+    public void save() {
+        super.save();
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");
             Scheduler.notifyRunners();

@@ -89,33 +89,9 @@ public class CommandLineTask extends Job {
     protected CommandLineTask() {
     }
 
-    /**
-     * Constructs the commands line
-     *
-     * @param commands The commands with arguments
-     */
-    public CommandLineTask(Commands commands, Map<String, String> environment, String workingDirectory) {
+    public CommandLineTask(Connector connector, String path) {
+        super(connector, path);
 
-        launcher = new DirectLauncher();
-
-        LOGGER.debug("Command is %s", commands);
-
-        // Copy the environment
-        if (environment != null)
-            this.environment = new TreeMap<>(environment);
-        this.workingDirectory = workingDirectory;
-
-        // Construct commands
-        this.commands = commands;
-    }
-
-    /**
-     * New command line task
-     *
-     * @param commands The commands status run
-     */
-    public CommandLineTask(Commands commands) {
-        this(commands, null, null);
     }
 
     /**
@@ -240,5 +216,9 @@ public class CommandLineTask extends Job {
     @Override
     public boolean isActiveWaiting() {
         return launcher.getNotificationURL() == null;
+    }
+
+    public void setCommands(Commands commands) {
+        this.commands = commands;
     }
 }

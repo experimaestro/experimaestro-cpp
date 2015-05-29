@@ -25,6 +25,8 @@ public interface Identifiable {
     /** Returns the ID (or null if not set) */
     Long getId();
 
-    /** Sets the ID */
-    void setId(long id);
+    /** Sets the ID
+     * @param id The new ID (or null when removing)
+     */
+    void setId(Long id);
 }

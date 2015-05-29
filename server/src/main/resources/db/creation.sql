@@ -14,6 +14,14 @@ CREATE INDEX status_index ON resources (status);
 CREATE UNIQUE INDEX status_path ON resources (path);
 CREATE INDEX status_priority ON resources (priority);
 
+-- Token resource
+CREATE TABLE Resources (
+  id BIGINT NOT NULL PRIMARY KEY,
+  limit INT NOT NULL,
+  used INT NOT NULL,
+  FOREIGN KEY (id) REFERENCES Resources ON DELETE CASCADE
+);
+
 -- Dependencies between resources
 
 CREATE TABLE Dependencies (
@@ -26,6 +34,14 @@ CREATE TABLE Dependencies (
     ON DELETE RESTRICT,
   FOREIGN KEY (toId) REFERENCES Resources
     ON DELETE CASCADE
+);
+
+-- Process
+
+CREATE TABLE Processes (
+  resource BIGINT NOT NULL,
+  value BLOB NOT NULL,
+  FOREIGN KEY (resource) REFERENCES Resources ON DELETE RESTRICT
 );
 
 -- Connectors

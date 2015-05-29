@@ -19,10 +19,6 @@ package sf.net.experimaestro.sshfs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.connectors.NetworkShareAccess;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -33,7 +29,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 

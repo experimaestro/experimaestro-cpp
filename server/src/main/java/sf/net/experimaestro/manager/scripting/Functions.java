@@ -23,6 +23,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExitException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
@@ -44,7 +45,6 @@ import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -283,7 +283,7 @@ public class Functions {
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) {
+    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws DatabaseException {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         get_locks(lockMode, json, dependencies);
@@ -291,7 +291,7 @@ public class Functions {
         return dependencies;
     }
 
-    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
+    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) throws DatabaseException {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {
@@ -313,7 +313,7 @@ public class Functions {
 
     @Expose(value = "$$")
     @Help("Get the resource associated with the json object")
-    static public Resource get_resource(Json json) {
+    static public Resource get_resource(Json json) throws DatabaseException {
         Resource resource;
         if (json instanceof JsonObject) {
             resource = getResource((JsonObject) json);
@@ -327,7 +327,7 @@ public class Functions {
         throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
     }
 
-    private static Resource getResource(JsonObject json) {
+    private static Resource getResource(JsonObject json) throws DatabaseException {
         if (json.containsKey(Manager.XP_RESOURCE.toString())) {
             final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
             if (o instanceof Resource) {
@@ -338,11 +338,11 @@ public class Functions {
                 if (scriptContext.simulate()) {
                     final Resource resource = scriptContext.submittedJobs.get(uri);
                     if (resource == null) {
-                        return Transaction.evaluate(em -> Resource.getByLocator(uri));
+                        return Resource.getByLocator(uri);
                     }
                     return resource;
                 } else {
-                    return Transaction.evaluate(em -> Resource.getByLocator(uri));
+                    return Resource.getByLocator(uri);
                 }
             }
 
@@ -355,11 +355,7 @@ public class Functions {
     static public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
         if (!context().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
-            try (Transaction t = Transaction.create()) {
-                t.em().persist(experiment);
-                context().setExperimentId(experiment.getId());
-                t.commit();
-            }
+            experiment.save();
         }
         context().setWorkingDirectory(workdir);
     }

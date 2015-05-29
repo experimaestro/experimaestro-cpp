@@ -23,7 +23,6 @@ import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

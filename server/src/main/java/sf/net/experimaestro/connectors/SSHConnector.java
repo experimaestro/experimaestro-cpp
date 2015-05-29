@@ -33,8 +33,6 @@ import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Convert;
-import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -78,7 +76,6 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Connection options
      */
-    @Convert(converter = SSHOptionsConverter.class)
     private SSHOptions options = new SSHOptions();
 
     /**

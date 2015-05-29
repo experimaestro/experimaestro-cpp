@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Scheduler;
 
@@ -89,5 +90,9 @@ public class Experiment {
 
     public long getTimestamp() {
         return timestamp;
+    }
+
+    public void save() {
+        throw new NotImplementedException();
     }
 }

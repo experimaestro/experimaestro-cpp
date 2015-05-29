@@ -28,7 +28,11 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Commands;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -87,7 +91,7 @@ public class JavaTask extends Task {
 
         final Logger taskLogger = taskContext.getLogger("JavaTask");
 
-        try (Transaction transaction = Transaction.create()) {
+        try {
             final Resource old = Resource.getByLocator(_path);
             if (old != null && !old.canBeReplaced()) {
 
@@ -97,16 +101,16 @@ public class JavaTask extends Task {
                 // --- Build the command
                 Commands commands = javaFactory.commands(json, taskContext.simulate());
 
-                CommandLineTask task = new CommandLineTask(commands);
-
                 // --- Build the command
 
-                Job job = new Job(javaFactory.connector, _path);
+                CommandLineTask job = new CommandLineTask(javaFactory.connector, _path);
+                job.setCommands(commands);
+
                 taskContext.prepare(job);
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
-                    pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-                    pw.format("Command: %s%n", task.getCommands().toString());
+                    pw.format("[SIMULATE] Starting job: %s%n", job.toString());
+                    pw.format("Command: %s%n", job.getCommands().toString());
                     pw.format("Path: %s", path);
                     pw.flush();
                 } else {
@@ -129,15 +133,18 @@ public class JavaTask extends Task {
 
                     job.save(transaction);
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
-                    transaction.commit();
                 }
 
                 taskContext.startedJob(job);
             }
-        } catch(XPMRuntimeException e) {
+        } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);
             throw e;
-        } catch(RuntimeException e) {
+        } catch (RuntimeException e) {
+            final XPMRuntimeException e2 = new XPMRuntimeException(e);
+            e2.addContext("while storing task %s", path);
+            throw e2;
+        } catch (Throwable e) {
             final XPMRuntimeException e2 = new XPMRuntimeException(e);
             e2.addContext("while storing task %s", path);
             throw e2;

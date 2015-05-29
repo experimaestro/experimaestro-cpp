@@ -23,6 +23,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
@@ -34,7 +35,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.sql.SQLException;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -100,7 +100,6 @@ public class Resource implements Identifiable {
     public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
-    static private SharedLongLocks resourceLocks = new SharedLongLocks();
 
     /**
      * The path with the connector
@@ -177,20 +176,8 @@ public class Resource implements Identifiable {
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
-    public static Resource getByLocator(String path) throws SQLException {
+    public static Resource getByLocator(String path) throws DatabaseException {
         return Scheduler.get().resources().getByLocator(path);
-    }
-
-    /**
-     * Lock a resource by ID
-     *
-     * @param transaction
-     * @param resourceId
-     * @param exclusive
-     * @param timeout     A timeout value (in ms) or a negative value (no timeout)
-     */
-    public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
-        return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
     }
 
     @Override
@@ -221,7 +208,7 @@ public class Resource implements Identifiable {
      * Returns a detailed description
      */
     public String toDetailedString() {
-        return toString() + "@" + version;
+        return toString();
     }
 
     /**
@@ -232,7 +219,7 @@ public class Resource implements Identifiable {
         return resourceID;
     }
 
-    public void setId(long id) {
+    public void setId(Long id) {
         this.resourceID = id;
     }
 
@@ -278,10 +265,9 @@ public class Resource implements Identifiable {
 
     /**
      * Notifies the resource that something happened
-     *  @param t
      * @param message The message
      */
-    public void notify(Transaction t, Message message) {
+    public void notify(Message message) {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 break;
@@ -416,16 +402,6 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Called when the resource was persisted/updated and committed
-     */
-    public void stored() {
-        // We switched from a stopped state to a non stopped state : notify dependents
-        if (oldState != null && oldState.isUnactive() ^ state.isUnactive()) {
-            Scheduler.get().addChangedResource(this);
-        }
-    }
-
-    /**
      * Store a resource
      *
      * @param resource
@@ -464,9 +440,10 @@ public class Resource implements Identifiable {
      *
      * @param recursive Delete dependent resources
      */
-    public synchronized void delete(boolean recursive) {
-        if (getState() == ResourceState.RUNNING)
+    public synchronized void delete(boolean recursive) throws DatabaseException {
+        if (getState() == ResourceState.RUNNING) {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
+        }
 
         Collection<Dependency> dependencies = getOutgoingDependencies();
         if (!dependencies.isEmpty()) {
@@ -482,15 +459,8 @@ public class Resource implements Identifiable {
         }
 
         // Remove
-        Transaction.run((em, t) -> {
-            Resource ourselves = em.find(Resource.class, getId());
-            em.remove(ourselves);
-            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, ourselves);
-            this.notify(t, message);
-            notify(t, message);
-        });
-
-
+        Scheduler.get().resources().delete(this);
+        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
@@ -545,21 +515,6 @@ public class Resource implements Identifiable {
         return getConnector().getMainConnector();
     }
 
-    public EntityLock lock(Transaction t, boolean exclusive) {
-        return t.lock(resourceLocks, this.getId(), exclusive, 0);
-    }
-
-    public EntityLock lock(Transaction t, boolean exclusive, long timeout) {
-        return t.lock(resourceLocks, this.getId(), exclusive, timeout);
-    }
-
-    @PostLoad
-    protected void postLoad() {
-        cacheState();
-        prepared = true;
-        LOGGER.debug("Loaded %s (state %s)", this, state);
-    }
-
     /**
      * Cache the current state to allow notification when resource is stored in database
      */
@@ -568,84 +523,13 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Called after an INSERT or UPDATE
+     * Save the entity in DB
      */
-    @PostUpdate
-    @PostPersist
-    public void _post_update() {
-        Transaction.current().registerPostCommit(this::saved);
-    }
-
-    @PostRemove
-    public void postRemove() {
-        Transaction.current().registerPostCommit(this::removed);
-    }
-
-    public void save(Transaction transaction) {
-        final EntityManager em = transaction.em();
-
-        // Look up connector in DB, and replace if needed
-        if (connector != null) {
-            final Connector _connector = Connector.find(em, this.connector.getIdentifier());
-            if (_connector != null) {
-                connector = _connector;
-            }
-        }
-
-        // Lock all the dependencies
-        // This avoids to miss any notification
-        List<EntityLock> locks = new ArrayList<>();
-        lockDependencies:
-        while (true) {
-            // We loop until we get all the locks - using a timeout just in case
-            for (Dependency dependency : getDependencies()) {
-                final EntityLock lock = dependency.from.lock(transaction, false, 100);
-                if (lock == null) {
-                    for (EntityLock _lock : locks) {
-                        _lock.close();
-                    }
-                    continue lockDependencies;
-                }
-
-                locks.add(lock);
-            }
-
-            break;
-        }
-
-        for (Dependency dependency : getDependencies()) {
-            if (!em.contains(dependency.from)) {
-                dependency.from = em.find(Resource.class, dependency.from.getId());
-            } else {
-                em.refresh(dependency.from);
-            }
-        }
-
-        prepared = true;
-        em.persist(this);
-
+    public void save() {
         // Update the status
         updateStatus();
-    }
 
-    /**
-     * Called before adding this entity to the database
-     */
-    @PrePersist
-    protected void prePersist() {
-        if (!prepared) {
-            throw new AssertionError("The object has not been prepared");
-        }
-    }
-
-    public void removed(Transaction transaction) {
-        LOGGER.debug("Resource %s removed", this, version);
-        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
-        clean();
-    }
-
-    public void saved(Transaction transaction) {
-        LOGGER.debug("Resource %s stored with version=%s", this, version);
+        LOGGER.debug("Resource %s stored with version=%s", this);
         if (oldState != state) {
             if (oldState == null) {
                 Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
@@ -653,12 +537,12 @@ public class Resource implements Identifiable {
                 Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
             }
         }
-        stored();
         cacheState();
 
         // Move back to false
         prepared = false;
     }
+
 
     @Expose("output")
     public Path output() throws IOException {
@@ -678,6 +562,10 @@ public class Resource implements Identifiable {
     @Expose
     public Dependency lock(String lockType) {
         return createDependency(lockType);
+    }
+
+    public static Resource getById(long resourceId) throws DatabaseException {
+        return Scheduler.get().resources().getById(resourceId);
     }
 
     /**

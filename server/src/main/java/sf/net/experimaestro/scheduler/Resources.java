@@ -18,10 +18,7 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.AbstractIterator;
-import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.DatabaseException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 
@@ -30,9 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.EnumSet;
-import java.util.Iterator;
 
 /**
  * Access to all resources
@@ -92,5 +87,14 @@ public class Resources extends DatabaseObjects<Resource> {
 
     public CloseableIterator<Resource> get(EnumSet<ResourceState> states) {
         return null;
+    }
+
+    public Resource getById(long resourceId) throws DatabaseException {
+        final Resource r = getFromCache(resourceId);
+        if (r != null) {
+            return r;
+        }
+
+        return findUnique(SELECT_BEGIN + " WHERE id=?", st -> st.setLong(1, resourceId));
     }
 }

@@ -22,6 +22,7 @@ import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Connectors;
 import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.IOException;
 import java.net.URI;
@@ -157,13 +158,18 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
         return id;
     }
 
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     /**
      * Find a connector given its string ID
      * @param identifier The string identifier
      * @return The connector in database or null if none exist
      */
     public static Connector find(String identifier) {
-        return Connectors.find(identifier);
+        return Scheduler.get().connectors().find(identifier);
     }
 
 }

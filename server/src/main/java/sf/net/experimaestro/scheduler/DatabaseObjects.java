@@ -25,9 +25,15 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Functional;
 
-import java.sql.*;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.WeakHashMap;
+
+import static java.lang.String.format;
 
 /**
  * A set of objects stored in database
@@ -38,6 +44,10 @@ public abstract class DatabaseObjects<T extends Identifiable> {
      */
     protected final Connection connection;
 
+    private final String tableName;
+
+    private final String idFieldName;
+
     /**
      * Keeps a cache of resources
      */
@@ -46,6 +56,14 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
     public DatabaseObjects(Connection connection) {
         this.connection = connection;
+        this.tableName = this.getClass().getSimpleName();
+        this.idFieldName = "id";
+    }
+
+    public DatabaseObjects(Connection connection, String tableName, String idFieldName) {
+        this.connection = connection;
+        this.tableName = tableName;
+        this.idFieldName = idFieldName;
     }
 
     /**
@@ -94,7 +112,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         return value;
     }
 
-    T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
+    protected T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
         try (PreparedStatement st = connection.prepareCall(query)) {
             // Sets the variables
             p.apply(st);
@@ -131,8 +149,6 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             ResultSet result = st.executeQuery(query);
 
             return new CloseableIterable<T>() {
-
-
                 @Override
                 public void close() throws CloseException {
                     try {
@@ -145,7 +161,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
                 @Override
                 public Iterator<T> iterator() {
-                    return new AbstractIterator<Resource>() {
+                    return new AbstractIterator<T>() {
                         @Override
                         protected T computeNext() {
                             try {
@@ -153,7 +169,8 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                                     return endOfData();
                                 }
 
-                                return create(result);
+                                final T t = create(result);
+                                return t;
                             } catch (SQLException | DatabaseException e) {
                                 throw new XPMRuntimeException(e, "Error while fetching resource from DB");
                             }
@@ -180,9 +197,28 @@ public abstract class DatabaseObjects<T extends Identifiable> {
      * @param id The ID of the object
      * @return The object or null if none exists
      */
-    synchronized protected T getFromCache(long id) {
-        return map.get(id);
+    protected T getFromCache(long id) {
+        synchronized (map) {
+            return map.get(id);
+        }
     }
 
 
+    final public void delete(T object) throws DatabaseException {
+        synchronized (map) {
+            try {
+                try(final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
+                    st.setLong(1, object.getId());
+                    st.execute();
+                }
+            } catch(SQLException e) {
+                throw new DatabaseException(e);
+            }
+
+            final T remove = map.remove(object.getId());
+            assert remove != null : "Object was not in cache !";
+
+            remove.setId(null);
+        }
+    }
 }

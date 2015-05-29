@@ -22,8 +22,6 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -31,10 +29,9 @@ import java.io.StringWriter;
 /**
  * Serialization of Json
  */
-@Converter
-public class JsonConverter implements AttributeConverter<Json, String> {
+public class JsonConverter {
     final static private Logger LOGGER = Logger.getLogger();
-    @Override
+
     public String convertToDatabaseColumn(Json json) {
         try {
             StringWriter writer = new StringWriter();
@@ -46,7 +43,6 @@ public class JsonConverter implements AttributeConverter<Json, String> {
         }
     }
 
-    @Override
     public Json convertToEntityAttribute(String dbData) {
         final JsonReader jsonReader = new JsonReader(new StringReader(dbData));
 
@@ -59,7 +55,7 @@ public class JsonConverter implements AttributeConverter<Json, String> {
         } catch (IOException e) {
             LOGGER.error(e, "Error while reading JSON string [%s]", dbData);
             throw new RuntimeException(e);
-        } catch(RuntimeException e) {
+        } catch (RuntimeException e) {
             LOGGER.error(e, "Error while reading JSON string [%s]", dbData);
             throw e;
         }
