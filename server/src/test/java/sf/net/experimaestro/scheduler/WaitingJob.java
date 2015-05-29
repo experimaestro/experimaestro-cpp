@@ -24,9 +24,6 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import java.io.File;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
@@ -162,12 +159,12 @@ public class WaitingJob extends Job {
 
         WaitingJob.Status status = status();
         assert status.readyTimestamp > 0;
-        if (status.currentIndex >= ((WaitingJob)job).actions.size()) {
+        if (status.currentIndex >= actions.size()) {
             throw new AssertionError("No next action");
         }
 
-        final WaitingJobProcess.Action action = ((WaitingJob)job).actions.get(status.currentIndex);
-        return new WaitingJobProcess(job.getMainConnector(), job, action);
+        final WaitingJobProcess.Action action = actions.get(status.currentIndex);
+        return new WaitingJobProcess(getMainConnector(), this, action);
     }
 
     @Override

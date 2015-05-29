@@ -20,9 +20,9 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -72,7 +72,7 @@ class WaitingJobProcess extends XPMProcess {
     }
 
     @Override
-    public void dispose() {
+    public void dispose() throws LockException {
         super.dispose();
     }
 

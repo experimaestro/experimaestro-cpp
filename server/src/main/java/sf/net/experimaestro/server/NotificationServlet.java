@@ -59,13 +59,23 @@ public class NotificationServlet extends XPMServlet {
         final String command = parts[2];
         long resourceId = Long.parseLong(jobIdString);
 
+        final Job job;
+        try {
+            job = getJob(request, resp, resourceId);
+        } catch (DatabaseException e) {
+            error404(request, resp);
+            return;
+        }
+        if (job == null) {
+            error404(request, resp);
+            return;
+        }
+
         switch (command) {
             case END_OF_JOB: {
                 resp.setContentType("application/json");
                 resp.setStatus(HttpServletResponse.SC_ACCEPTED);
 
-                final Job job = getJob(request, resp, resourceId);
-                if (job == null) return;
                 final XPMProcess process = job.getProcess();
                 if (process != null) {
                     try {
@@ -83,7 +93,6 @@ public class NotificationServlet extends XPMServlet {
 
                 double progress = Double.parseDouble(parts[3]);
 
-                final Job job = getJob(request, resp, resourceId);
                 if (job.getState() == ResourceState.RUNNING) {
                     job.setProgress(progress);
                     Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));

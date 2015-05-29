@@ -23,6 +23,8 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.sql.SQLException;
+
 import static java.lang.String.format;
 
 /**
@@ -78,7 +80,11 @@ public class TokenDependency extends Dependency {
             throw new LockException("All the tokens are already taken");
         }
 
-        token.increaseUsedTokens();
+        try {
+            token.increaseUsedTokens();
+        } catch (SQLException e) {
+            throw new LockException(e);
+        }
         LOGGER.debug("Taking one token (%s/%s) [token %s for %s]",
                 token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
         return new TokenLock(token);

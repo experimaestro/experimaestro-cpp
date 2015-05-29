@@ -21,6 +21,8 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 
+import java.sql.SQLException;
+
 /**
  * This lock calls {@linkplain TokenResource#unlock()} when
  * released.
@@ -38,9 +40,13 @@ class TokenLock extends Lock {
 
 
     @Override
-    public void close() {
+    public void close() throws LockException {
         if (resource != null) {
-            resource.unlock();
+            try {
+                resource.unlock();
+            } catch (SQLException e) {
+                throw new LockException(e);
+            }
             resource = null;
         }
     }

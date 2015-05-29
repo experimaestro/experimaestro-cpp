@@ -24,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.RandomSampler;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -110,15 +111,13 @@ public class SchedulerTest extends XPMEnvironment {
      * @param readyness true if a job must finish before the next is ready
      * @param reorder   true if jobs can be run in any order, but one at a time
      */
-    static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) {
+    static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) throws DatabaseException {
         int errors = 0;
         Job[] jobs = new Job[runners.length];
 
-        Transaction.run(em -> {
-            for (int i = 0; i < runners.length; i++) {
-                jobs[i] = em.find(Job.class, runners[i].getId());
-            }
-        });
+        for (int i = 0; i < runners.length; i++) {
+            jobs[i] = (Job) Resource.getById(runners[i].getId());
+        }
 
         if (reorder) {
             Arrays.sort(jobs, (o1, o2) -> Long.compare(o1.getStartTimestamp(), o2.getStartTimestamp()));
@@ -146,7 +145,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other status start")
     public void test_simple_dependency() throws
-            IOException, InterruptedException, ExperimaestroCannotOverwrite {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite, DatabaseException {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -155,13 +154,11 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
             final int finalI = i;
-            Transaction.run((em, t) -> {
-                jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, 0, 0));
-                if (finalI > 0) {
-                    jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
-                }
-                jobs[finalI].save(t);
-            });
+            jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, 0, 0));
+            if (finalI > 0) {
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+            }
+            jobs[finalI].save();
         }
 
         LOGGER.info("Waiting for operations status finish");
@@ -177,7 +174,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other status start, the first fails")
     public void test_failed_dependency() throws
-            IOException, InterruptedException, ExperimaestroCannotOverwrite {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite, DatabaseException {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -186,13 +183,12 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob[] jobs = new WaitingJob[2];
         for (int i = 0; i < jobs.length; i++) {
             final int finalI = i;
-            Transaction.run((em, t) -> {
-                jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, finalI == 0 ? 1 : 0, 0));
-                if (finalI > 0) {
-                    jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
-                }
-                jobs[finalI].save(t);
-            });
+
+            jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, finalI == 0 ? 1 : 0, 0));
+            if (finalI > 0) {
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+            }
+            jobs[finalI].save();
         }
 
 
@@ -206,7 +202,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
-    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException {
+    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException, DatabaseException {
         Random random = new Random();
         long seed = p.seed == null ? random.nextLong() : p.seed;
         LOGGER.info("Seed is %d", seed);
@@ -259,12 +255,9 @@ public class SchedulerTest extends XPMEnvironment {
         // --- Generate token resource
         final TokenResource token;
         if (p.token > 0) {
-            token = Transaction.evaluate((em, t) -> {
-                final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
-                final TokenResource _token = new TokenResource(path, p.token);
-                _token.save(t);
-                return _token;
-            });
+            final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
+            token = new TokenResource(path, p.token);
+            token.save();
         } else {
             token = null;
         }
@@ -275,28 +268,26 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             final int j = i;
 
-            Transaction.run((em, t) -> {
-                int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
-                jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
+            int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
+            jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
 
-                totalTime.add(jobs[j].totalTime() + JOB_PROCESSING_TIME);
+            totalTime.add(jobs[j].totalTime() + JOB_PROCESSING_TIME);
 
-                ArrayList<String> deps = new ArrayList<>();
-                for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
-                    assert j == link.to;
-                    jobs[j].addDependency(jobs[link.from].createDependency(null));
-                    if (states[link.from].isBlocking())
-                        states[j] = ResourceState.ON_HOLD;
-                    deps.add(jobs[link.from].toString());
-                }
+            ArrayList<String> deps = new ArrayList<>();
+            for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
+                assert j == link.to;
+                jobs[j].addDependency(jobs[link.from].createDependency(null));
+                if (states[link.from].isBlocking())
+                    states[j] = ResourceState.ON_HOLD;
+                deps.add(jobs[link.from].toString());
+            }
 
-                if (token != null) {
-                    jobs[j].addDependency(em.find(TokenResource.class, token.getId()).createDependency(null));
-                }
+            if (token != null) {
+                jobs[j].addDependency(token.createDependency(null));
+            }
 
-                jobs[j].save(t);
-                LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
-            });
+            jobs[j].save();
+            LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
         }
 
 
@@ -340,13 +331,11 @@ public class SchedulerTest extends XPMEnvironment {
             LOGGER.info("Waiting status finish - %d active jobs > %d [%d]", count, limit, loop);
             for (int i = 0; i < jobs.length; i++) {
                 final long id = jobs[i].getId();
-                Transaction.run(em -> {
-                    Job job = em.find(Job.class, id);
-                    Assert.assertNotNull(job, format("Job %d cannot be retrieved", id));
-                    if (job.getState().isActive()) {
-                        LOGGER.warn("Job [%s] still active [%s]", job, job.getState());
-                    }
-                });
+                Job job = jobs[i];
+                Assert.assertNotNull(job, format("Job %d cannot be retrieved", id));
+                if (job.getState().isActive()) {
+                    LOGGER.warn("Job [%s] still active [%s]", job, job.getState());
+                }
             }
         }
 
@@ -370,39 +359,34 @@ public class SchedulerTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
 
         final int lockA = IntLocks.newLockID();
-        WaitingJob jobA = Transaction.evaluate((em, t) -> {
-            WaitingJob job = new WaitingJob(counter, jobDirectory, "jobA",
-                    new Action(250, 0, 0).removeLock(lockA));
-            job.save(t);
-            return job;
-        });
+        WaitingJob jobA = new WaitingJob(counter, jobDirectory, "jobA",
+                new Action(250, 0, 0).removeLock(lockA));
+        jobA.save();
 
-        WaitingJob jobB = Transaction.evaluate((em, t) -> {
-            WaitingJob job = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
-            job.addDependency(jobA.createDependency(null));
+        WaitingJob jobB = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
+        jobB.addDependency(jobA.createDependency(null));
 
-            // Wait that A ends
-            IntLocks.waitLockID(lockA);
-            job.save(t);
+        // Wait that A ends
+        IntLocks.waitLockID(lockA);
+        jobB.save();
+
+        LOGGER.info("FINISHED LAUNCHING B");
 
 
-            LOGGER.info("FINISHED LAUNCHING B");
-            return job;
-        });
-
-
-        waitToFinish(0, counter, new WaitingJob[]{jobA, jobB}, 1500, 5);
+        waitToFinish(0, counter, new WaitingJob[]{
+                jobA, jobB
+        }, 1500, 5);
 
     }
 
     @Test(description = "Test of the token resource - one job at a time")
-    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException {
+    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException, DatabaseException {
 
         File jobDirectory = mkTestDir();
 
         ThreadCount counter = new ThreadCount();
         TokenResource token = new TokenResource("scheduler_test/test_token_resource", 1);
-        Transaction.run((em, t) -> token.save(t));
+        token.save();
 
         // Sets 5 jobs
         WaitingJob[] jobs = new WaitingJob[5];
@@ -412,10 +396,9 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
             final WaitingJob job = jobs[i];
-            Transaction.run((em, t) -> {
-                job.addDependency(token.createDependency(null));
-                job.save(t);
-            });
+            job.addDependency(token.createDependency(null));
+            job.save();
+
         }
 
 
@@ -445,13 +428,11 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             final int finalI = i;
-            Transaction.run((em, t) -> {
-                if (finalI > 0) {
-                    jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
-                }
-                WaitingJob job = jobs[finalI];
-                job.save(t);
-            });
+            if (finalI > 0) {
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+            }
+            WaitingJob job = jobs[finalI];
+            job.save();
         }
 
         // Wait
@@ -475,20 +456,20 @@ public class SchedulerTest extends XPMEnvironment {
      * @param states The state
      * @param jobs   The jobs
      */
-    private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) {
-        return Transaction.evaluate(em -> {
-            int errors = 0;
-            for (int i = 0; i < jobs.length; i++) {
-                Job job = em.find(Job.class, jobs[i].getId());
-                if (!states.contains(job.getState())) {
-                    LOGGER.warn("The job (%s) is not in one of the states %s but [%s]", jobs[i], states, job.getState());
-                    errors++;
-                } else
-                    LOGGER.debug("The job (%s) is in one of the states %s [%s]", jobs[i], states, job.getState());
-            }
+    private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) throws DatabaseException {
 
-            return errors;
-        });
+        int errors = 0;
+        for (int i = 0; i < jobs.length; i++) {
+            Job job = (Job) Resource.getById(jobs[i].getId());
+            if (!states.contains(job.getState())) {
+                LOGGER.warn("The job (%s) is not in one of the states %s but [%s]", jobs[i], states, job.getState());
+                errors++;
+            } else
+                LOGGER.debug("The job (%s) is in one of the states %s [%s]", jobs[i], states, job.getState());
+        }
+
+        return errors;
+
     }
 
 

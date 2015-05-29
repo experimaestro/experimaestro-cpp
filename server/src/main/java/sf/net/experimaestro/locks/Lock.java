@@ -34,7 +34,7 @@ public abstract class Lock implements AutoCloseable {
     private Long id;
 
     @Override
-    abstract public void close() throws RuntimeException;
+    abstract public void close() throws LockException;
 
     /**
      * Change ownership

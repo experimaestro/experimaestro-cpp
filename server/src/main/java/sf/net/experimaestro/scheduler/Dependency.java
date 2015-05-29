@@ -161,7 +161,7 @@ abstract public class Dependency implements Serializable {
         }
     }
 
-    final public void unlock() {
+    final public void unlock() throws LockException {
         LOGGER.debug("Unlocking dependency %s", this);
         assert lock != null : format("Lock of dependency %s is null", this);
         lock.close();

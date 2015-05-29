@@ -28,6 +28,7 @@ import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.tasks.ServerTask;
 import sf.net.experimaestro.utils.XPMEnvironment;
 
@@ -45,14 +46,6 @@ public class JsonRPCTest extends XPMEnvironment {
     private static ServerTask server;
     private static JSONRPC2Session rpcSession;
 
-    public static class BasicAuthenticator implements ConnectionConfigurator {
-        public void configure(HttpURLConnection connection) {
-            // add custom HTTP header
-            final String authString = Base64.encode(format("%s:%s", testUser, testPassword).getBytes()).trim();
-            connection.addRequestProperty("Authorization", "Basic " + authString);
-        }
-    }
-
     @BeforeSuite
     public static void setup() throws Throwable {
         server = prepare();
@@ -62,15 +55,12 @@ public class JsonRPCTest extends XPMEnvironment {
     }
 
     @Test
-    void removeResource() throws IOException, JSONRPC2SessionException {
+    void removeResource() throws IOException, JSONRPC2SessionException, DatabaseException {
         File jobDirectory = mkTestDir();
 
         XPMEnvironment.getDirectory();
         final Resource resource = new Resource(LocalhostConnector.getInstance(), jobDirectory.toPath().resolve("resource-1"));
-        Transaction.run((em, t) -> {
-            resource.save(t);
-
-        });
+        resource.save();
 
 
         // Now, RPC call to delete
@@ -79,9 +69,15 @@ public class JsonRPCTest extends XPMEnvironment {
         rpcSession.send(request);
 
         // Check that the resource was removed
-        Transaction.run(em -> {
-            final Resource _resource = em.find(Resource.class, resource.getId());
-            Assert.assertNull("Resource has not been deleted", _resource);
-        });
+        final Resource _resource = Resource.getById(resource.getId());
+        Assert.assertNull("Resource has not been deleted", _resource);
+    }
+
+    public static class BasicAuthenticator implements ConnectionConfigurator {
+        public void configure(HttpURLConnection connection) {
+            // add custom HTTP header
+            final String authString = Base64.encode(format("%s:%s", testUser, testPassword).getBytes()).trim();
+            connection.addRequestProperty("Authorization", "Basic " + authString);
+        }
     }
 }

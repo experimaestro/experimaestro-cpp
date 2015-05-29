@@ -26,8 +26,6 @@ import sf.net.experimaestro.utils.TemporaryDirectory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Test for command line task
@@ -48,9 +46,9 @@ public class CommandLineTaskTest {
     @Test(enabled = false)
     public void test() throws Exception {
         String workingDirectory = new String(directory.toString());
-        Map<String, String> environment = new HashMap<>();
         Commands commands = new Commands();
-        final CommandLineTask commandLineTask = new CommandLineTask(commands, environment, workingDirectory);
+        final CommandLineTask commandLineTask = new CommandLineTask();
+        commandLineTask.setCommands(commands);
 
         ArrayList<Lock> locks = new ArrayList<>();
         commandLineTask.start(locks);

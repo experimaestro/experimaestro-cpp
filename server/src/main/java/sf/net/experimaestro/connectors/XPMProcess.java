@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -178,7 +179,7 @@ public abstract class XPMProcess {
     /**
      * Dispose of this job monitor
      */
-    public void dispose() {
+    public void dispose() throws LockException {
         close();
         if (locks != null) {
             LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
