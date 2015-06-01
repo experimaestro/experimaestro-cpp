@@ -30,14 +30,14 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface Path {
     /**
-     * Relative path from the output directory. By default, set to the field name.
+     * Relative path from the output directory. By default, get to the field name.
      * @return A string with "/" separated components or empty
      */
     String value() default "";
 
     /**
-     * Specify which JSON value should be set according to this path. By default,
-     * set to the field name.
+     * Specify which JSON value should be get according to this path. By default,
+     * get to the field name.
      * @return A valid json name or empty
      */
     String copy() default "";

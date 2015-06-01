@@ -23,6 +23,8 @@ import com.google.gson.FieldAttributes;
 import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import sf.net.experimaestro.tasks.Path;
@@ -36,6 +38,92 @@ import java.lang.reflect.Field;
  * Runs an XPM task
  */
 public class Runner {
+
+    static public abstract class JsonPointer {
+        abstract JsonElement get();
+
+        public abstract void set(JsonElement element);
+    }
+
+
+    static public class JsonObjectPointer extends JsonPointer {
+        final String key;
+
+        JsonObject object;
+
+        protected JsonObjectPointer(JsonPointer pointer, String key) {
+            final JsonElement jsonElement = pointer.get();
+            if (jsonElement != null) {
+                if (jsonElement instanceof JsonObject) {
+                    object = (JsonObject) jsonElement;
+                } else {
+                    throw new IllegalArgumentException("Json element is not an object");
+                }
+            } else {
+                pointer.set(object = new JsonObject());
+            }
+            this.key = key;
+        }
+
+        @Override
+        public JsonElement get() {
+            return object.get(key);
+        }
+
+        @Override
+        public void set(JsonElement element) {
+            object.add(key, element);
+        }
+
+
+    }
+
+    static public class JsonArrayPointer extends JsonPointer {
+        private final JsonArray array;
+
+        protected JsonArrayPointer(JsonPointer pointer) {
+            final JsonElement jsonElement = pointer.get();
+            if (jsonElement != null) {
+                if (jsonElement instanceof JsonArray) {
+                    array = (JsonArray) jsonElement;
+                } else {
+                    throw new IllegalArgumentException("Json element is not an array");
+                }
+            } else {
+                pointer.set(array = new JsonArray());
+            }
+        }
+
+        @Override
+        public JsonElement get() {
+            return null;
+        }
+
+        @Override
+        public void set(JsonElement element) {
+            array.add(element);
+        }
+    }
+
+    static public class JsonSelfPointer extends JsonPointer {
+        private JsonObject self;
+
+        protected JsonSelfPointer(JsonObject self) {
+            this.self = self;
+        }
+
+        @Override
+        public JsonObject get() {
+            return self;
+        }
+
+        @Override
+        public void set(JsonElement element) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+
     /**
      * Main method
      *
@@ -45,9 +133,12 @@ public class Runner {
 
         // --- Process arguments
 
-        if (args.length != 3) {
-            System.err.format("XPM Runner requires three arguments (got %d): class to run, working directory and json parameters%n",
-                    args.length);
+        if (args.length < 3) {
+            System.err.format("XPM runner requires three or more arguments:%n");
+            System.err.format(" 1. The class to run%n");
+            System.err.format(" 2. The working directory%n");
+            System.err.format(" 3. A JSON file%n");
+            System.err.format(" 4+. JSON arguments%n");
             System.exit(1);
         }
 
@@ -75,22 +166,44 @@ public class Runner {
         // Get json
         final JsonParser jsonParser = new JsonParser();
         JsonObject json = null;
-        try {
-            json = jsonParser.parse(new FileReader(jsonInput)).getAsJsonObject();
-        } catch (FileNotFoundException e) {
-            System.err.format("Error while reading JSON file %s: %s%n", jsonInput, e.toString());
-            e.printStackTrace(System.err);
-            System.exit(4);
-
+        if (!(".".equals(jsonInput))) {
+            try {
+                json = jsonParser.parse(new FileReader(jsonInput)).getAsJsonObject();
+            } catch (FileNotFoundException e) {
+                System.err.format("Error while reading JSON file %s: %s%n", jsonInput, e.toString());
+                e.printStackTrace(System.err);
+                System.exit(4);
+            }
+        } else {
+            json = new JsonObject();
         }
 
+        // Read the remaining arguments
+        // --qualified-name JSON value
+        // e.g
+        for (int i = 3; i < args.length; i += 2) {
+            String[] fields = args[i].split("\\.");
+            JsonPointer pointer = new JsonSelfPointer(json);
+
+            for (int j = 0; j < fields.length; j++) {
+                String field = fields[j].replace("\\.", ".");
+                if (field.equals("[]")) {
+                    pointer = new JsonArrayPointer(pointer);
+                } else {
+                    pointer = new JsonObjectPointer(pointer, field);
+                }
+            }
+
+            JsonElement value = jsonParser.parse(args[i + 1]);
+            pointer.set(value);
+        }
 
         // --- Run
         try {
             XPMTypeAdapterFactory factory = new XPMTypeAdapterFactory();
             TaskDescription taskDescription = aClass.getAnnotation(TaskDescription.class);
             if (taskDescription != null) {
-                for(Class<?> registryClass: taskDescription.registry()) {
+                for (Class<?> registryClass : taskDescription.registry()) {
                     factory.addClass(registryClass);
                 }
             }
@@ -106,7 +219,7 @@ public class Runner {
             task.workingDirectory = workdir;
 
             // Set the @Path annotated fields
-            for(Field field: task.getClass().getDeclaredFields()) {
+            for (Field field : task.getClass().getDeclaredFields()) {
                 Path path = field.getAnnotation(Path.class);
                 if (path != null) {
                     String name = getString(path.value(), field.getName());

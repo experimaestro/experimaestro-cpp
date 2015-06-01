@@ -54,7 +54,7 @@ public class Introspection {
 	 *            the package where classes are searched
 	 * @param levels
 	 *            number of levels to be explored (-1 for infinity)
-	 * @return an array of objects of the given class
+	 * @return an object of objects of the given class
 	 */
 	static public Class<?>[] getImplementors(final Class<?> which,
 			final String packageName, final int levels) {
