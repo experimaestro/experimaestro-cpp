@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.util.EnumSet;
+import java.util.HashMap;
 
 /**
  * The resource state
@@ -57,6 +58,13 @@ public enum ResourceState {
      * Completed (for a job) or generated (for a data resource)
      */
     DONE;
+
+    static private final HashMap<Long, ResourceState> REGISTRY = new HashMap<>();
+    static {
+        for(ResourceState state: ResourceState.values()) {
+            REGISTRY.put(state.value, state);
+        }
+    }
 
     /**
      * States in which a resource can replaced
@@ -123,7 +131,7 @@ public enum ResourceState {
     }
 
     public static ResourceState fromValue(long status) {
-        throw new NotImplementedException();
+        return REGISTRY.get(status);
     }
 
     ResourceState() {

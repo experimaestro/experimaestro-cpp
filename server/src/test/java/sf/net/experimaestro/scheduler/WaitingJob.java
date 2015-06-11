@@ -41,6 +41,10 @@ import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
 public class WaitingJob extends Job {
     final static private Logger LOGGER = Logger.getLogger();
 
+    static {
+        Resources.REGISTRY.add(WaitingJob.class);
+    }
+
     /**
      * The statuses of the different jobs
      */
@@ -56,7 +60,8 @@ public class WaitingJob extends Job {
     /* id for debugging */
     private String debugId;
 
-    protected WaitingJob() {
+    public WaitingJob(Long id, String path) {
+        super(id, path);
     }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {
@@ -83,43 +88,53 @@ public class WaitingJob extends Job {
     @Override
     public void save() throws DatabaseException {
         super.save();
+        LOGGER.debug("Stored %s with state %s", this, getState());
+    }
 
-        final ResourceState state = getState();
+    @Override
+    public boolean setState(ResourceState state) {
+        ResourceState oldState = this.getState();
 
-        LOGGER.debug("Stored %s with state %s", this, state);
-
-//        if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
-//            status().counter.del();
-//            final int count = status().counter.getCount();
-//            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-//                    this, oldState, state, count + 1, count);
-//        } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
-//            status().counter.add();
-//            final int count = status().counter.getCount();
-//            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-//                    this, oldState, state, count - 1, count);
-//        }
-
-        // If we reached a final state
-        if (state.isFinished()) {
-            final int lockID = actions.get(status().currentIndex).removeLockID;
-            if (lockID > 0) {
-                IntLocks.removeLock(lockID);
+        final Status status = status();
+        if (status != null) {
+            if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
+                status.counter.del();
+                final int count = status.counter.getCount();
+                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+                        this, oldState, state, count + 1, count);
+            } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
+                status.counter.add();
+                final int count = status.counter.getCount();
+                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+                        this, oldState, state, count - 1, count);
             }
+
+            // If we reached a final state
+            if (state.isFinished()) {
+                final int lockID = actions.get(status.currentIndex).removeLockID;
+                if (lockID > 0) {
+                    IntLocks.removeLock(lockID);
+                }
+            }
+
         }
 
         switch (state) {
             case READY:
-                status().readyTimestamp = System.currentTimeMillis();
+                status.readyTimestamp = System.currentTimeMillis();
                 break;
             case DONE:
             case ERROR:
             case ON_HOLD:
                 break;
         }
+
+
+        return super.setState(state);
     }
 
     Status status() {
+        if (statuses.isEmpty()) return null;
         return statuses.get(statusIndex);
     }
 

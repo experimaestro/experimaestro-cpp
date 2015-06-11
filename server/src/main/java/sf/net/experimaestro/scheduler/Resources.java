@@ -18,18 +18,15 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.CloseableIterator;
-import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.EnumSet;
 import java.util.Iterator;
 
@@ -37,12 +34,14 @@ import java.util.Iterator;
  * Access to all resources
  */
 public class Resources extends DatabaseObjects<Resource> {
+    final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The default query
      */
     public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
 
-    static private ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{})
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{ Long.class, String.class })
             .add(Resource.class, CommandLineTask.class, TokenResource.class);
 
     /**
@@ -127,6 +126,7 @@ public class Resources extends DatabaseObjects<Resource> {
         sb.append(")");
 
         final String query = sb.toString();
+        LOGGER.debug("Searching for resources in states %s: %s", states, query);
         return find(query, st -> {});
     }
 
@@ -143,7 +143,9 @@ public class Resources extends DatabaseObjects<Resource> {
         if (resource.getId() != null) {
             throw new DatabaseException("Resource already in database");
         }
-
+        LOGGER.debug("Saving resource [%s] of type %s [%d], status %s [%s]",
+                resource.getLocator(), resource.getClass(), getTypeValue(resource.getClass()),
+                resource.getState(), resource.getState().value());
         save(resource, "INSERT INTO Resources(type, path, status) VALUES(?, ?, ?)", st -> {
             st.setLong(1, getTypeValue(resource.getClass()));
             st.setString(2, resource.getLocator());

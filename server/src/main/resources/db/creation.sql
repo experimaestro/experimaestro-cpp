@@ -5,7 +5,7 @@
 CREATE TABLE Resources (
   id IDENTITY,
   path     VARCHAR(4096),
-  status   SMALLINT,
+  status   INT,
   type     BIGINT,
   priority INT
 );

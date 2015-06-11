@@ -58,6 +58,9 @@ public class TokenResource extends Resource {
     public TokenResource() {
     }
 
+    public TokenResource(Long id, String locator) {
+        super(id, locator);
+    }
 
     /**
      * Creates a new token resource
@@ -66,7 +69,7 @@ public class TokenResource extends Resource {
      * @param limit The maximum number of tokens
      */
     public TokenResource(String path, int limit) {
-        super(null, path);
+        super((Long)null, path);
         this.limit = limit;
         this.usedTokens = 0;
         this.wasBlocking = isBlocking();

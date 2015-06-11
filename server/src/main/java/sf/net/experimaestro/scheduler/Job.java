@@ -127,6 +127,10 @@ abstract public class Job extends Resource {
         setState(ResourceState.WAITING);
     }
 
+    public Job(Long id, String path) {
+        super(id, path);
+    }
+
     private boolean isDone() {
         try {
             return Files.exists(DONE_EXTENSION.transform(getPath()));

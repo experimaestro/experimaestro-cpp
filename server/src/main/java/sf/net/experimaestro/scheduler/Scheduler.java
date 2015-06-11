@@ -154,6 +154,7 @@ final public class Scheduler {
         Class.forName("org.hsqldb.jdbcDriver");
         connection = DriverManager.getConnection(format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory));
         connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+        connection.setAutoCommit(true);
 
         // Read the property file
         final File file = new File(baseDirectory, "xpm.ini");

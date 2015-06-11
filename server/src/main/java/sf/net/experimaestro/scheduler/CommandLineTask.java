@@ -85,8 +85,8 @@ public class CommandLineTask extends Job {
      */
     private String jobErrorPath;
 
-    // For JPA
-    public CommandLineTask() {
+    public CommandLineTask(Long id, String locator) {
+        super(id, locator);
     }
 
     public CommandLineTask(Connector connector, String path) {
@@ -96,6 +96,10 @@ public class CommandLineTask extends Job {
 
     public CommandLineTask(Connector connector, Path path) throws IOException {
         super(connector, path);
+    }
+
+    public CommandLineTask() {
+
     }
 
     /**

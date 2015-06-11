@@ -19,12 +19,12 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.AbstractIterator;
-import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.sql.*;
 import java.util.Iterator;
@@ -36,6 +36,8 @@ import static java.lang.String.format;
  * A set of objects stored in database
  */
 public abstract class DatabaseObjects<T extends Identifiable> {
+    final static private Logger LOGGER = Logger.getLogger();
+
     /**
      * The underlying SQL connection
      */
@@ -48,7 +50,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
     /**
      * Keeps a cache of resources
      */
-    private WeakHashMap<Long, ? extends T> map = new WeakHashMap<>();
+    private WeakHashMap<Long, T> map = new WeakHashMap<>();
 
 
     public DatabaseObjects(Connection connection) {
@@ -128,7 +130,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                         }
 
                         // Construct
-                        return create(result);
+                        return getOrCreate(result);
                     }
                 }
             }
@@ -144,6 +146,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         try {
             final CallableStatement st = connection.prepareCall(query);
             p.apply(st);
+            LOGGER.debug("Executing query: %s", st);
 
             final ResultSet result = st.executeQuery();
 
@@ -167,9 +170,9 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                                 if (!result.next()) {
                                     return endOfData();
                                 }
+                                return getOrCreate(result);
 
-                                final T t = create(result);
-                                return t;
+
                             } catch (SQLException | DatabaseException e) {
                                 throw new XPMRuntimeException(e, "Error while fetching resource from DB");
                             }
@@ -180,6 +183,22 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         } catch (Exception e) {
             throw new DatabaseException(e);
         }
+    }
+
+    private T getOrCreate(ResultSet result) throws SQLException, DatabaseException {
+        // Get from cache
+        long id = result.getLong(1);
+        T object = getFromCache(id);
+        if (object != null) {
+            return object;
+        }
+
+        // Create and cache
+        final T t = create(result);
+        synchronized (map) {
+            map.put(t.getId(), t);
+        }
+        return t;
     }
 
     /**
@@ -238,7 +257,17 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                 }
             }
 
+            try(final PreparedStatement statement = connection.prepareStatement("SELECT path, status FROM Resources")) {
+                final ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) {
+                    LOGGER.info("Row: %s in state %d", resultSet.getString(1), resultSet.getLong(2));
+                }
+            }
 
+
+            synchronized (map) {
+                map.put(object.getId(), object);
+            }
         } catch (Exception e) {
             throw new DatabaseException(e);
         }

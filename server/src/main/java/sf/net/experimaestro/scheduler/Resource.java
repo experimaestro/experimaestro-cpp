@@ -164,6 +164,11 @@ public class Resource implements Identifiable {
         this.locator = name;
     }
 
+    public Resource(Long id, String locator) {
+        this.resourceID = id;
+        this.locator = locator;
+    }
+
     /**
      * Get a resource by locator
      *
