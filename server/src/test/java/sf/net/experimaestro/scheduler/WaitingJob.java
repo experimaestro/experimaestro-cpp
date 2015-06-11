@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
@@ -80,24 +81,24 @@ public class WaitingJob extends Job {
     }
 
     @Override
-    public void save() {
+    public void save() throws DatabaseException {
         super.save();
 
         final ResourceState state = getState();
 
         LOGGER.debug("Stored %s with state %s", this, state);
 
-        if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
-            status().counter.del();
-            final int count = status().counter.getCount();
-            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-                    this, oldState, state, count + 1, count);
-        } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
-            status().counter.add();
-            final int count = status().counter.getCount();
-            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-                    this, oldState, state, count - 1, count);
-        }
+//        if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
+//            status().counter.del();
+//            final int count = status().counter.getCount();
+//            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+//                    this, oldState, state, count + 1, count);
+//        } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
+//            status().counter.add();
+//            final int count = status().counter.getCount();
+//            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+//                    this, oldState, state, count - 1, count);
+//        }
 
         // If we reached a final state
         if (state.isFinished()) {

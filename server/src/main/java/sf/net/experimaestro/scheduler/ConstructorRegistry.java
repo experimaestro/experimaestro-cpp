@@ -42,7 +42,11 @@ public class ConstructorRegistry<T> {
     ConstructorRegistry<T> add(Class<? extends T>... classes) {
         for (Class<? extends T> aClass : classes) {
             try {
-                map.put(DatabaseObjects.getTypeValue(aClass.getAnnotation(TypeIdentifier.class).value()),
+                final TypeIdentifier annotation = aClass.getAnnotation(TypeIdentifier.class);
+                if (annotation == null) {
+                    throw new RuntimeException("Class " + aClass + " has no TypeIdentifier annotation");
+                }
+                map.put(DatabaseObjects.getTypeValue(annotation.value()),
                         aClass.getConstructor(parameterTypes));
             } catch (NoSuchMethodException e) {
                 throw new XPMRuntimeException(e, "Cannot add class %s to registry", aClass);

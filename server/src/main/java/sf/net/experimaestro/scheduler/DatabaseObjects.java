@@ -70,6 +70,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         if (typeString.length() > 64 / 5) {
             throw new XPMRuntimeException("Type %s cannot be converted to value (too long - limit 12 chars)", typeString);
         }
+
         // A-Z, space, -, =,
         int shift = 24;
         long value = 0;
@@ -78,6 +79,8 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             final int v;
             if (c >= 'A' && c <= 'Z') {
                 v = Character.getNumericValue(c) - Character.getNumericValue('A') + 6;
+            } else if (c >= 'a' && c <= 'z') {
+                v = Character.getNumericValue(c) - Character.getNumericValue('a') + 6;
             } else {
                 switch (c) {
                     case ' ':
@@ -142,7 +145,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             final CallableStatement st = connection.prepareCall(query);
             p.apply(st);
 
-            ResultSet result = st.executeQuery(query);
+            final ResultSet result = st.executeQuery();
 
             return new CloseableIterable<T>() {
                 @Override
@@ -222,6 +225,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             throws DatabaseException {
         try (PreparedStatement st = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             // Get the key
+            f.apply(st);
             int affectedRows = st.executeUpdate();
             if (affectedRows == 0) {
                 throw new DatabaseException("Creating object failed, no rows inserted.");
@@ -235,7 +239,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             }
 
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new DatabaseException(e);
         }
     }

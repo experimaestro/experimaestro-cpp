@@ -15,11 +15,12 @@ CREATE UNIQUE INDEX status_path ON resources (path);
 CREATE INDEX status_priority ON resources (priority);
 
 -- Token resource
-CREATE TABLE Resources (
-  id BIGINT NOT NULL PRIMARY KEY,
-  limit INT NOT NULL,
-  used INT NOT NULL,
-  FOREIGN KEY (id) REFERENCES Resources ON DELETE CASCADE
+CREATE TABLE TokenResources (
+  id    BIGINT NOT NULL PRIMARY KEY,
+  limit INT    NOT NULL,
+  used  INT    NOT NULL,
+  FOREIGN KEY (id) REFERENCES Resources
+    ON DELETE CASCADE
 );
 
 -- Dependencies between resources
@@ -40,8 +41,9 @@ CREATE TABLE Dependencies (
 
 CREATE TABLE Processes (
   resource BIGINT NOT NULL,
-  value BLOB NOT NULL,
-  FOREIGN KEY (resource) REFERENCES Resources ON DELETE RESTRICT
+  value    BLOB   NOT NULL,
+  FOREIGN KEY (resource) REFERENCES Resources
+    ON DELETE RESTRICT
 );
 
 -- Connectors
@@ -62,10 +64,10 @@ CREATE TABLE NetworkShares (
 );
 
 CREATE TABLE NetworkShareAccess (
-  share     BIGINT NOT NULL,
-  connector BIGINT NOT NULL,
-  path VARCHAR(4096) NOT NULL,
-  priority INT NOT NULL DEFAULT 0,
+  share     BIGINT        NOT NULL,
+  connector BIGINT        NOT NULL,
+  path      VARCHAR(4096) NOT NULL,
+  priority  INT DEFAULT 0 NOT NULL,
 
   FOREIGN KEY (share) REFERENCES NetworkShares
     ON DELETE CASCADE,
@@ -78,8 +80,8 @@ CREATE TABLE NetworkShareAccess (
 
 CREATE TABLE Experiments (
   id IDENTITY,
-  name      VARCHAR(256) NOT NULL,
-  timestamp TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+  name      VARCHAR(256)                        NOT NULL,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE UNIQUE INDEX experiment_name ON Experiments (name, timestamp);

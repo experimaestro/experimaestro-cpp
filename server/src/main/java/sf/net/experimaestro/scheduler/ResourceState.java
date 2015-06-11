@@ -83,6 +83,11 @@ public enum ResourceState {
     final static EnumSet<ResourceState> FINISHED_STATE
             = EnumSet.of(DONE, ERROR, ON_HOLD);
 
+    /**
+     * Database value
+     */
+    private final long value;
+
 
     /**
      * Returns true if the resource is not done and
@@ -119,5 +124,12 @@ public enum ResourceState {
 
     public static ResourceState fromValue(long status) {
         throw new NotImplementedException();
+    }
+
+    ResourceState() {
+        value = DatabaseObjects.getTypeValue(toString());
+    }
+    public long value() {
+        return value;
     }
 }

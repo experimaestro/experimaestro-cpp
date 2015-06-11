@@ -52,6 +52,10 @@ abstract public class SingleHostConnector extends Connector {
     protected SingleHostConnector() {
     }
 
+    public SingleHostConnector(long id) {
+        super(id);
+    }
+
     @Override
     public SingleHostConnector getConnector(ComputationalRequirements requirements) {
         // By default, returns ourselves - TODO: check the requirements

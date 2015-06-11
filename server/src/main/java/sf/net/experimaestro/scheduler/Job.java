@@ -25,6 +25,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
@@ -338,6 +339,7 @@ abstract public class Job extends Resource {
                 final DependencyChangedMessage depMessage = (DependencyChangedMessage) message;
 
                 // Notify job
+                ResourceState oldState = getState();
                 dependencyChanged(depMessage);
 
                 LOGGER.debug("After notification [%s], state is %s [from %s] for [%s]",
@@ -534,9 +536,6 @@ abstract public class Job extends Resource {
      * @param dependency The dependency
      */
     public void addDependency(Dependency dependency) {
-        if (prepared) {
-            throw new AssertionError("Adding dependency on a saved resource");
-        }
         // We do not add it to the source dependency since
         // this will be done latter
         // TODO: check if this is not done latter... remove ?
@@ -677,7 +676,7 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    public void save() {
+    public void save() throws DatabaseException {
         super.save();
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");

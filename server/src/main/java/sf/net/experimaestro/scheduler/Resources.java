@@ -18,16 +18,20 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.Output;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 /**
  * Access to all resources
@@ -85,8 +89,45 @@ public class Resources extends DatabaseObjects<Resource> {
         return find(SELECT_BEGIN, st -> {});
     }
 
-    public CloseableIterator<Resource> get(EnumSet<ResourceState> states) {
-        return null;
+    static public class Placeholders implements Iterable<String> {
+        int count;
+
+        public Placeholders(int count) {
+            this.count = count;
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return new Iterator<String>() {
+                int i = 0;
+                @Override
+                public boolean hasNext() {
+                    return i < count;
+                }
+
+                @Override
+                public String next() {
+                    ++i;
+                    return "?";
+                }
+            };
+        }
+    }
+
+    public CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws DatabaseException {
+        StringBuilder sb = new StringBuilder();
+        sb.append(SELECT_BEGIN);
+        sb.append(" WHERE status in (");
+        boolean first = true;
+        for (ResourceState state : states) {
+            if (first) { first = false; }
+            else { sb.append(','); }
+            sb.append(getTypeValue(state.toString()));
+        }
+        sb.append(")");
+
+        final String query = sb.toString();
+        return find(query, st -> {});
     }
 
     public Resource getById(long resourceId) throws DatabaseException {
@@ -97,4 +138,17 @@ public class Resources extends DatabaseObjects<Resource> {
 
         return findUnique(SELECT_BEGIN + " WHERE id=?", st -> st.setLong(1, resourceId));
     }
+
+    public void save(Resource resource) throws DatabaseException {
+        if (resource.getId() != null) {
+            throw new DatabaseException("Resource already in database");
+        }
+
+        save(resource, "INSERT INTO Resources(type, path, status) VALUES(?, ?, ?)", st -> {
+            st.setLong(1, getTypeValue(resource.getClass()));
+            st.setString(2, resource.getLocator());
+            st.setLong(3, resource.getState().value());
+        });
+    }
+
 }

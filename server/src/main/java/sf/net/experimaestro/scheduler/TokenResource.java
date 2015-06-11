@@ -36,6 +36,7 @@ import java.sql.SQLException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
+@TypeIdentifier("TOKEN")
 public class TokenResource extends Resource {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -54,7 +55,7 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-    protected TokenResource() {
+    public TokenResource() {
     }
 
 

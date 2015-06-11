@@ -26,6 +26,7 @@ import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
@@ -91,7 +92,9 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Used for serialization
      */
-    protected SSHConnector() {
+    public SSHConnector(Long id, String uri, String value) {
+        this(URI.create(uri), null);
+        setId(id);
     }
 
     public SSHConnector(String username, String hostname) {

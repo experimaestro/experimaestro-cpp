@@ -86,7 +86,7 @@ public class CommandLineTask extends Job {
     private String jobErrorPath;
 
     // For JPA
-    protected CommandLineTask() {
+    public CommandLineTask() {
     }
 
     public CommandLineTask(Connector connector, String path) {

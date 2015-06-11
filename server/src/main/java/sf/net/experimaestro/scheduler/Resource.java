@@ -107,12 +107,6 @@ public class Resource implements Identifiable {
     protected String locator;
 
     /**
-     * Keeps the state of the resource before saving
-     */
-    protected transient ResourceState oldState;
-    transient boolean prepared = false;
-
-    /**
      * The resource ID
      */
     private Long resourceID;
@@ -157,7 +151,7 @@ public class Resource implements Identifiable {
     /**
      * Called when deserializing from database
      */
-    protected Resource() {
+    public Resource() {
         LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
     }
 
@@ -265,6 +259,7 @@ public class Resource implements Identifiable {
 
     /**
      * Notifies the resource that something happened
+     *
      * @param message The message
      */
     public void notify(Message message) {
@@ -516,31 +511,17 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Cache the current state to allow notification when resource is stored in database
-     */
-    protected void cacheState() {
-        oldState = state;
-    }
-
-    /**
      * Save the entity in DB
      */
-    public void save() {
+    public void save() throws DatabaseException {
         // Update the status
         updateStatus();
 
-        LOGGER.debug("Resource %s stored with version=%s", this);
-        if (oldState != state) {
-            if (oldState == null) {
-                Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
-            } else {
-                Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
-            }
-        }
-        cacheState();
+        // Save in DB
+        Scheduler.get().resources().save(this);
 
-        // Move back to false
-        prepared = false;
+        LOGGER.debug("Resource %s stored", this);
+        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
     }
 
 

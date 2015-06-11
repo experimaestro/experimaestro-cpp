@@ -354,7 +354,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(description = "The required dependency ends before the new job is committed")
-    public void test_required_job_ends() throws IOException {
+    public void test_required_job_ends() throws IOException, DatabaseException {
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
 

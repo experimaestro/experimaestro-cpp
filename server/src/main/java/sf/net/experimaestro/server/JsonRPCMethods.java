@@ -53,6 +53,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleMessage;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMInformation;
@@ -735,9 +736,8 @@ public class JsonRPCMethods extends HttpServlet {
         EnumSet<ResourceState> states = getStates(statesNames);
 
         int nbUpdated = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
+        try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
+            for(Resource resource: resources) {
                 if (resource.updateStatus()) {
                     nbUpdated++;
                 } else {
@@ -786,9 +786,8 @@ public class JsonRPCMethods extends HttpServlet {
         } else {
             // TODO order the tasks so that dependencies are removed first
             HashSet<Resource> toRemove = new HashSet<>();
-            try (final CloseableIterator<Resource> resources = scheduler.resources(states)) {
-                while (resources.hasNext()) {
-                    Resource resource = resources.next();
+            try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
+                for(Resource resource: resources) {
                     if (idPattern != null) {
                         if (!idPattern.matcher(resource.getIdentifier()).matches())
                             continue;
@@ -868,9 +867,8 @@ public class JsonRPCMethods extends HttpServlet {
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
 
         int n = 0;
-        try (final CloseableIterator<Resource> resources = scheduler.resources(statesSet)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
+        try (final CloseableIterable<Resource> resources = scheduler.resources(statesSet)) {
+            for(Resource resource: resources) {
                 if (resource instanceof Job) {
                     ((Job) resource).stop();
                     n++;
@@ -966,9 +964,8 @@ public class JsonRPCMethods extends HttpServlet {
         List<Map<String, String>> list = new ArrayList<>();
         boolean recursive = _recursive == null ? false : _recursive;
 
-        try (final CloseableIterator<Resource> resources = scheduler.resources(set)) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
+        try (final CloseableIterable<Resource> resources = scheduler.resources(set)) {
+            for(Resource resource: resources) {
                 Map<String, String> map = new HashMap<>();
                 map.put("type", resource.getClass().getCanonicalName());
                 map.put("state", resource.getState().toString());

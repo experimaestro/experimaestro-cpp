@@ -24,7 +24,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
@@ -90,9 +90,8 @@ public class StatusServlet extends XPMServlet {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
-                try (final CloseableIterator<Resource> resources = scheduler.resources(EnumSet.of(state))) {
-                    while (resources.hasNext()) {
-                        Resource resource = resources.next();
+                try (final CloseableIterable<Resource> resources = scheduler.resources(EnumSet.of(state))) {
+                    for(Resource resource: resources) {
                         if (resource.getState() == state) {
                             out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
                             try {
@@ -106,6 +105,8 @@ public class StatusServlet extends XPMServlet {
                     }
                 } catch (CloseException e) {
                     LOGGER.warn("Error while closing the iterator");
+                } catch (DatabaseException e) {
+                    LOGGER.warn("Error while ");
                 }
                 out.println("</ul></div>");
             }

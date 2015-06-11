@@ -58,6 +58,10 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
     protected Connector() {
     }
 
+    public Connector(long id) {
+        this.id = id;
+    }
+
     static public Path create(String path) {
         try {
             if (path.startsWith("/")) {

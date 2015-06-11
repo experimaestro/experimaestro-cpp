@@ -29,18 +29,17 @@ import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.sql.*;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Timer;
+import java.io.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static java.lang.String.format;
@@ -137,12 +136,14 @@ final public class Scheduler {
 
     private Connectors connectors;
 
+    final static int DBVERSION = 1;
+
     /**
      * Initialise the task manager
      *
      * @param baseDirectory The directory where the XPM database will be stored
      */
-    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException, CloseException {
+    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException, CloseException, DatabaseException {
         if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
@@ -154,13 +155,55 @@ final public class Scheduler {
         connection = DriverManager.getConnection(format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory));
         connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 
+        // Read the property file
+        final File file = new File(baseDirectory, "xpm.ini");
+        Properties properties = new Properties();
+        if (file.exists()) {
+            try (final FileInputStream inStream = new FileInputStream(file)) {
+                properties.load(inStream);
+            }
+        }
+        int version = Integer.parseInt(properties.getProperty("db.version", "0"));
+
+        if (version != DBVERSION) {
+            final ScriptRunner scriptRunner = new ScriptRunner(connection, true, true);
+
+            if (version == 0) {
+                try (final InputStream stream = Scheduler.class.getResourceAsStream("/db/creation.sql");
+                     final Reader reader = new InputStreamReader(stream)) {
+                    scriptRunner.runScript(reader);
+                    version = DBVERSION;
+                    properties.setProperty("db.version", Integer.toString(version));
+                    try (FileOutputStream out = new FileOutputStream(file)) {
+                        properties.store(out, "");
+                    }
+                }
+            } else {
+                while (version < DBVERSION) {
+                    try (final InputStream stream = Scheduler.class.getResourceAsStream(format("/db/update-%4d.sql", version));
+                         final Reader reader = new InputStreamReader(stream)) {
+                        scriptRunner.runScript(reader);
+                        version++;
+                        properties.setProperty("db.version", Integer.toString(version));
+                        try (FileOutputStream out = new FileOutputStream(file)) {
+                            properties.store(out, "");
+                        }
+                    }
+                }
+
+            }
+        }
+
+        resources = new Resources(connection);
+        networkShares = new NetworkShares(connection);
+        connectors = new Connectors(connection);
+
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
         // Loop over resources in state RUNNING
-        try (final CloseableIterator<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
-            while (resources.hasNext()) {
-                Resource resource = resources.next();
+        try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+            for (Resource resource : resources) {
                 Job job = (Job) resource;
                 if (job.process != null) {
                     job.process.init(job);
@@ -275,8 +318,8 @@ final public class Scheduler {
      * @param states The states of the resource
      * @return A closeable iterator
      */
-    public CloseableIterator<Resource> resources(EnumSet<ResourceState> states) {
-        return resources.get(states);
+    public CloseableIterable<Resource> resources(EnumSet<ResourceState> states) throws DatabaseException {
+        return resources.find(states);
     }
 
     /**
@@ -333,9 +376,17 @@ final public class Scheduler {
 
         // Stop the threads
         LOGGER.info("Stopping runner and scheduler");
-        runner.interrupt();
-        notifier.interrupt();
-        messengerThread.interrupt();
+        if (runner != null) {
+            runner.interrupt();
+        }
+
+        if (notifier != null) {
+            notifier.interrupt();
+        }
+
+        if (messengerThread != null) {
+            messengerThread.interrupt();
+        }
 
         // Wait for all threads to complete
         runningThreadsCounter.resume();
@@ -457,72 +508,66 @@ final public class Scheduler {
                         readyJobSemaphore.setValue(false);
                     }
 
-                    try (final CallableStatement st = connection.prepareCall("SELECT id FROM Resource WHERE type=? AND status=?")) {
-                        LOGGER.debug("Searching for ready jobs");
-                        st.setString(2, ResourceState.READY.toString());
-                        st.execute();
-
-                        try (final ResultSet resultSet = st.getResultSet()) {
-                            // Try the next task
-
+                    LOGGER.debug("Searching for ready jobs");
+                    try (final CloseableIterable<Resource> resources = Scheduler.this.resources.find(EnumSet.of(ResourceState.READY))) {
                         /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
-                            while (resultSet.next()) {
-                                try {
-                                    Job job = (Job) resources.getById(resultSet.getLong(1));
-                                    this.setName(name + "/" + job);
+                        for (Resource resource : resources) {
+                            try {
+                                Job job = (Job) resource;
+                                this.setName(name + "/" + job);
 
-                                    LOGGER.debug("Looking at %s", job);
+                                LOGGER.debug("Looking at %s", job);
 
-                                    if (job.getState() != ResourceState.READY) {
-                                        LOGGER.debug("Job state is not READY anymore", job);
-                                        continue;
-                                    }
-
-                                    // Checks the tokens
-                                    boolean tokensAvailable = true;
-                                    for (Dependency dependency : job.getDependencies()) {
-                                        if (dependency instanceof TokenDependency) {
-                                            TokenDependency tokenDependency = (TokenDependency) dependency;
-                                            if (!tokenDependency.canLock()) {
-                                                LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
-                                                tokensAvailable = false;
-                                                break;
-                                            }
-                                            LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
-                                        }
-                                    }
-                                    if (!tokensAvailable) {
-                                        continue;
-                                    }
-
-                                    try {
-                                        job.run();
-
-                                        LOGGER.info("Job %s has started", job);
-                                    } catch (LockException e) {
-                                        // We could not lock the resources: update the job state
-                                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                        job.setState(ResourceState.WAITING);
-                                        job.updateStatus();
-                                        LOGGER.info("Finished launching %s", job);
-                                    } catch (Throwable t) {
-                                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                                        job.setState(ResourceState.ERROR);
-                                    } finally {
-                                        this.setName(name);
-                                    }
-
-                                } catch (Exception e) {
-                                    // FIXME: should do something smarter
-                                    LOGGER.error(e, "Caught an exception");
-                                } finally {
+                                if (job.getState() != ResourceState.READY) {
+                                    LOGGER.debug("Job state is not READY anymore", job);
+                                    continue;
                                 }
+
+                                // Checks the tokens
+                                boolean tokensAvailable = true;
+                                for (Dependency dependency : job.getDependencies()) {
+                                    if (dependency instanceof TokenDependency) {
+                                        TokenDependency tokenDependency = (TokenDependency) dependency;
+                                        if (!tokenDependency.canLock()) {
+                                            LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
+                                            tokensAvailable = false;
+                                            break;
+                                        }
+                                        LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
+                                    }
+                                }
+                                if (!tokensAvailable) {
+                                    continue;
+                                }
+
+                                try {
+                                    job.run();
+
+                                    LOGGER.info("Job %s has started", job);
+                                } catch (LockException e) {
+                                    // We could not lock the resources: update the job state
+                                    LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                                    job.setState(ResourceState.WAITING);
+                                    job.updateStatus();
+                                    LOGGER.info("Finished launching %s", job);
+                                } catch (Throwable t) {
+                                    LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                    job.setState(ResourceState.ERROR);
+                                } finally {
+                                    this.setName(name);
+                                }
+
+                            } catch (Exception e) {
+                                // FIXME: should do something smarter
+                                LOGGER.error(e, "Caught an exception");
+                            } finally {
                             }
                         }
-                    } catch (SQLException e) {
+                    } catch (CloseException e) {
                         LOGGER.error(e, "SQL exception while retrieving ready jobs");
+                    } catch (DatabaseException e) {
+                        e.printStackTrace();
                     }
-
                 }
             } finally {
                 LOGGER.info("Shutting down job runner");
