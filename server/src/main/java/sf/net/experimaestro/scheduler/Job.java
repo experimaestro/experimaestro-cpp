@@ -27,6 +27,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -119,12 +120,20 @@ abstract public class Job extends Resource {
      */
     public Job(Connector connector, Path path) throws IOException {
         super(connector, path);
-        setState(ResourceState.WAITING);
+        try {
+            setState(ResourceState.WAITING);
+        } catch (DatabaseException e) {
+            throw new XPMRuntimeException(e, "Should not happen - object not in DB");
+        }
     }
 
     public Job(Connector connector, String path) {
         super(connector, path);
-        setState(ResourceState.WAITING);
+        try {
+            setState(ResourceState.WAITING);
+        } catch (DatabaseException e) {
+            throw new XPMRuntimeException(e, "Should not happen - object not in DB");
+        }
     }
 
     public Job(Long id, String path) {
@@ -325,7 +334,7 @@ abstract public class Job extends Resource {
      * @param message The message
      */
     @Override
-    public void notify(Message message) {
+    public void notify(Message message) throws DatabaseException {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
@@ -363,7 +372,7 @@ abstract public class Job extends Resource {
      *
      * @param message The message
      */
-    private void dependencyChanged(DependencyChangedMessage message) {
+    private void dependencyChanged(DependencyChangedMessage message) throws DatabaseException {
         LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
@@ -396,7 +405,7 @@ abstract public class Job extends Resource {
      * Called when the job has ended
      *  @param eoj The message
      */
-    private void endOfJobMessage(EndOfJobMessage eoj) {
+    private void endOfJobMessage(EndOfJobMessage eoj) throws DatabaseException {
         this.endTimestamp = eoj.timestamp;
 
         // Lock all the required dependencies and refresh
@@ -540,15 +549,11 @@ abstract public class Job extends Resource {
      * @param dependency The dependency
      */
     public void addDependency(Dependency dependency) {
-        // We do not add it to the source dependency since
-        // this will be done latter
-        // TODO: check if this is not done latter... remove ?
         addIngoingDependency(dependency);
         dependency.update();
         if (!dependency.status.isOK()) {
             nbUnsatisfied++;
         }
-
     }
 
 
@@ -614,7 +619,7 @@ abstract public class Job extends Resource {
     /**
      * Stop the job
      */
-    public boolean stop() {
+    public boolean stop() throws DatabaseException {
         // Process is running
         if (process != null) {
             try {

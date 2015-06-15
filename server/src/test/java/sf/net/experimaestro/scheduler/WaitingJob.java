@@ -21,7 +21,9 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.DatabaseException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.ExceptionUtils;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -82,7 +84,7 @@ public class WaitingJob extends Job {
         status.currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        setState(WAITING);
+        ExceptionUtils.shouldNotThrow(() -> setState(WAITING));
     }
 
     @Override
@@ -92,7 +94,7 @@ public class WaitingJob extends Job {
     }
 
     @Override
-    public boolean setState(ResourceState state) {
+    public boolean setState(ResourceState state) throws DatabaseException {
         ResourceState oldState = this.getState();
 
         final Status status = status();

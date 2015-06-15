@@ -35,6 +35,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -228,7 +230,7 @@ public class Resource implements Identifiable {
      * Calls {@linkplain #doUpdateStatus()}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus() {
+    final public boolean updateStatus() throws DatabaseException {
         try {
             boolean b = doUpdateStatus();
             return b;
@@ -267,7 +269,7 @@ public class Resource implements Identifiable {
      *
      * @param message The message
      */
-    public void notify(Message message) {
+    public void notify(Message message) throws DatabaseException {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 break;
@@ -338,16 +340,27 @@ public class Resource implements Identifiable {
      * @param state
      * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
      */
-    public boolean setState(ResourceState state) {
+    public boolean setState(ResourceState state) throws DatabaseException {
         if (this.state == state)
             return false;
+
+        // Update in DB
+        if (inDatabase()) {
+            try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET state=? WHERE id=?")) {
+                st.setLong(1, state.value());
+                st.setLong(2, getId());
+            } catch (SQLException e) {
+                throw new DatabaseException(e);
+            }
+        }
         this.state = state;
 
-        // FIXME: Should be done when the operation is committed
-//        if (this.isStored()) {
-//            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
-//        }
+        Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
         return true;
+    }
+
+    private boolean inDatabase() {
+        return resourceID != null;
     }
 
     /**
@@ -398,6 +411,7 @@ public class Resource implements Identifiable {
 
     protected Dependency addIngoingDependency(Dependency dependency) {
         dependency.to = this;
+        dependency.getFrom().outgoingDependencies.put(dependency.getTo(), dependency);
         return this.ingoingDependencies.put(dependency.getFrom(), dependency);
     }
 
@@ -408,7 +422,7 @@ public class Resource implements Identifiable {
      * @return The old resource, or null if there was nothing
      * @throws ExperimaestroCannotOverwrite If the old resource could not be overriden
      */
-    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite {
+    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite, DatabaseException {
         // Get the group
         final boolean newResource = !resource.isStored();
         if (newResource) {

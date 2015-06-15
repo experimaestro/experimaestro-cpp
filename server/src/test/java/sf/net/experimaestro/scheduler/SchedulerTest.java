@@ -331,10 +331,8 @@ public class SchedulerTest extends XPMEnvironment {
             LOGGER.info("Waiting status finish - %d active jobs > %d [%d]", count, limit, loop);
             for (int i = 0; i < jobs.length; i++) {
                 final long id = jobs[i].getId();
-                Job job = jobs[i];
-                Assert.assertNotNull(job, format("Job %d cannot be retrieved", id));
-                if (job.getState().isActive()) {
-                    LOGGER.warn("Job [%s] still active [%s]", job, job.getState());
+                if (jobs[i].getState().isActive()) {
+                    LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
                 }
             }
         }
