@@ -161,7 +161,6 @@ public class SchedulerTest extends XPMEnvironment {
             jobs[finalI].save();
         }
 
-        LOGGER.info("Waiting for operations status finish");
 
         int errors = 0;
         waitToFinish(0, counter, jobs, 2500, 5);
@@ -322,11 +321,15 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
     private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, long timeout, int tries) {
+        LOGGER.info("Waiting for operations status finish");
         int loop = 0;
         while (counter.getCount() > limit && loop++ < tries) {
             counter.resume(limit, timeout, true);
             int count = counter.getCount();
-            if (count <= limit) break;
+            if (count <= limit) {
+                LOGGER.info("OK - counter is below the limit");
+                break;
+            }
 
             LOGGER.info("Waiting status finish - %d active jobs > %d [%d]", count, limit, loop);
             for (int i = 0; i < jobs.length; i++) {

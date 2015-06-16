@@ -19,6 +19,7 @@ package sf.net.experimaestro.utils;
  */
 
 import sf.net.experimaestro.exceptions.WrappedException;
+import sf.net.experimaestro.exceptions.XPMAssertionError;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -99,6 +100,40 @@ public class Functional {
             } catch (Throwable e) {
                 // Just ignore
                 return defaultValue;
+            }
+        };
+    }
+
+    public interface ExceptionalRunnable {
+        void apply() throws Throwable;
+    }
+
+    public static <T,R> Function<T, R> shouldNotThrow(ExceptionalFunction<T,R> f) {
+        return u -> {
+            try {
+                return f.apply(u);
+            } catch (Throwable throwable) {
+                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+            }
+        };
+    }
+
+    public static <T> Consumer<T> shouldNotThrow(ExceptionalConsumer<T> f) {
+        return u -> {
+            try {
+                f.apply(u);
+            } catch (Throwable throwable) {
+                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+            }
+        };
+    }
+
+    public static Runnable shouldNotThrow(ExceptionalRunnable p) {
+        return () -> {
+            try {
+                p.apply();
+            } catch (Throwable throwable) {
+                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
             }
         };
     }

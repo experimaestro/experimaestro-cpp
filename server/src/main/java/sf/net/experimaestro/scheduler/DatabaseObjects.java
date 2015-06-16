@@ -144,6 +144,20 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
     CloseableIterable<T> find(final String query, final Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
         try {
+            {
+                final CallableStatement st = connection.prepareCall(query);
+                p.apply(st);
+                LOGGER.debug("Executing query: %s", st);
+
+                final ResultSet result = st.executeQuery();
+                int i = 0;
+                while (result.next()) {
+                    ++i;
+                    final T t = getOrCreate(result);
+                    LOGGER.debug("Result %d: %s", i, t);
+                }
+            }
+
             final CallableStatement st = connection.prepareCall(query);
             p.apply(st);
             LOGGER.debug("Executing query: %s", st);

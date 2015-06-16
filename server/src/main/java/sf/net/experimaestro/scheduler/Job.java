@@ -345,6 +345,7 @@ abstract public class Job extends Resource {
             case END_OF_JOB:
                 // First, register our changes
                 endOfJobMessage((EndOfJobMessage) message);
+                Scheduler.get().addChangedResource(this);
                 break;
 
             case DEPENDENCY_CHANGED:

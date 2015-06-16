@@ -520,7 +520,7 @@ final public class Scheduler {
                                 LOGGER.debug("Looking at %s", job);
 
                                 if (job.getState() != ResourceState.READY) {
-                                    LOGGER.debug("Job state is not READY anymore", job);
+                                    LOGGER.debug("Job %s state is not in state READY anymore but [%s]", job, job.getState());
                                     continue;
                                 }
 

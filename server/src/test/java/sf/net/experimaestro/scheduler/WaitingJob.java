@@ -21,9 +21,8 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.DatabaseException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.ExceptionUtils;
+import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -32,9 +31,11 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
+import static sf.net.experimaestro.utils.Functional.shouldNotThrow;
 
 /**
  * Extends Job status collect some information for testing purposes
@@ -78,14 +79,19 @@ public class WaitingJob extends Job {
 
         status.counter = counter;
         this.debugId = debugId;
+        // We have to go
         counter.add(actions.length);
 
         this.actions = new ArrayList<>(Arrays.asList(actions));
         status.currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        ExceptionUtils.shouldNotThrow(() -> setState(WAITING));
+        shouldNotThrow(() -> setState(WAITING));
+
     }
+
+
+
 
     @Override
     public void save() throws DatabaseException {
@@ -104,12 +110,13 @@ public class WaitingJob extends Job {
                 final int count = status.counter.getCount();
                 LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
                         this, oldState, state, count + 1, count);
-            } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
-                status.counter.add();
-                final int count = status.counter.getCount();
-                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-                        this, oldState, state, count - 1, count);
             }
+//            else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
+//                status.counter.add();
+//                final int count = status.counter.getCount();
+//                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+//                        this, oldState, state, count - 1, count);
+//            }
 
             // If we reached a final state
             if (state.isFinished()) {

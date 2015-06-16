@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -18,13 +18,27 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.function.Function;
+public class XPMAssertionError extends XPMRuntimeException {
+    public XPMAssertionError() {
+    }
 
-/**
- * Created by bpiwowar on 14/06/15.
- */
-public class ExceptionUtils {
-    public static <T,R> R shouldNotThrow(Functional.Exce<T,R> f) {
-        return f.apply(f);
+    public XPMAssertionError(String message, Throwable t) {
+        super(message, t);
+    }
+
+    public XPMAssertionError(Throwable t, String format, Object... values) {
+        super(t, format, values);
+    }
+
+    public XPMAssertionError(String message) {
+        super(message);
+    }
+
+    public XPMAssertionError(String format, Object... values) {
+        super(format, values);
+    }
+
+    public XPMAssertionError(Throwable t) {
+        super(t);
     }
 }

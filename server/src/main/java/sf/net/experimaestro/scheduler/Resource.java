@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import org.hsqldb.Database;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -346,16 +347,30 @@ public class Resource implements Identifiable {
 
         // Update in DB
         if (inDatabase()) {
-            try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET state=? WHERE id=?")) {
+            try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET status=? WHERE id=?")) {
                 st.setLong(1, state.value());
                 st.setLong(2, getId());
+                st.execute();
+                final int count = st.getUpdateCount();
+
+                if (count != 1) {
+                    throw new DatabaseException("Updating resource resulted in %d updated rows", count);
+                }
             } catch (SQLException e) {
                 throw new DatabaseException(e);
             }
+            LOGGER.debug("Stored new state [%s] of job %s in database", state, this);
         }
         this.state = state;
 
+        if (inDatabase() && state == ResourceState.READY) {
+            LOGGER.debug("Notifying runners");
+            Scheduler.notifyRunners();
+        }
+
         Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+
+
         return true;
     }
 
