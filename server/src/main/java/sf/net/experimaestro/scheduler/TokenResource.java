@@ -57,9 +57,6 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-    public TokenResource() {
-    }
-
     public TokenResource(Long id, String locator) {
         super(id, locator);
     }

@@ -79,14 +79,14 @@ public class WaitingJob extends Job {
 
         status.counter = counter;
         this.debugId = debugId;
-        // We have to go
+
         counter.add(actions.length);
 
         this.actions = new ArrayList<>(Arrays.asList(actions));
         status.currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        shouldNotThrow(() -> setState(WAITING));
+        shouldNotThrow(() -> super.setState(WAITING));
 
     }
 
@@ -102,6 +102,7 @@ public class WaitingJob extends Job {
     @Override
     public boolean setState(ResourceState state) throws DatabaseException {
         ResourceState oldState = this.getState();
+        final boolean b = super.setState(state);
 
         final Status status = status();
         if (status != null) {
@@ -111,12 +112,12 @@ public class WaitingJob extends Job {
                 LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
                         this, oldState, state, count + 1, count);
             }
-//            else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
-//                status.counter.add();
-//                final int count = status.counter.getCount();
-//                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-//                        this, oldState, state, count - 1, count);
-//            }
+            else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
+                status.counter.add();
+                final int count = status.counter.getCount();
+                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+                        this, oldState, state, count - 1, count);
+            }
 
             // If we reached a final state
             if (state.isFinished()) {
@@ -139,7 +140,7 @@ public class WaitingJob extends Job {
         }
 
 
-        return super.setState(state);
+        return b;
     }
 
     Status status() {

@@ -106,11 +106,6 @@ abstract public class Job extends Resource {
      */
     double progress = -1;
 
-    /**
-     * For serialization
-     */
-    protected Job() {
-    }
 
     /**
      * Initialisation of a task
@@ -120,20 +115,10 @@ abstract public class Job extends Resource {
      */
     public Job(Connector connector, Path path) throws IOException {
         super(connector, path);
-        try {
-            setState(ResourceState.WAITING);
-        } catch (DatabaseException e) {
-            throw new XPMRuntimeException(e, "Should not happen - object not in DB");
-        }
     }
 
     public Job(Connector connector, String path) {
         super(connector, path);
-        try {
-            setState(ResourceState.WAITING);
-        } catch (DatabaseException e) {
-            throw new XPMRuntimeException(e, "Should not happen - object not in DB");
-        }
     }
 
     public Job(Long id, String path) {

@@ -400,11 +400,12 @@ final public class Scheduler {
 
 
         LOGGER.info("Closing database");
-        Statement st = null;
         try {
-            st = connection.createStatement();
-            st.execute("SHUTDOWN");
-            connection.close();    // if there are no other open connection
+            if (!connection.isClosed()) {
+                Statement st = connection.createStatement();
+                st.execute("SHUTDOWN");
+                connection.close();    // if there are no other open connection
+            }
         } catch (SQLException e) {
             LOGGER.error(e, "Error while shuting down the database");
         }

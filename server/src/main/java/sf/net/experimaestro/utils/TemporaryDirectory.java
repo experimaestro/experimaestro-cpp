@@ -66,7 +66,7 @@ public class TemporaryDirectory implements AutoCloseable {
         deleteThread = new Thread() {
             @Override
             public void run() {
-                logger.debug("Deleting temporary directory " + directory);
+                logger.info("Deleting temporary directory " + directory);
                 if (directory.exists()) {
                     FileSystem.recursiveDelete(directory);
                 }
@@ -91,7 +91,11 @@ public class TemporaryDirectory implements AutoCloseable {
     public void close() {
         if (deleteThread != null) {
             deleteThread.run();
-            setAutomaticDelete(false);
+            try {
+                setAutomaticDelete(false);
+            } catch(IllegalStateException e) {
+                // Nothing to do - shutdown is in progress
+            }
         }
     }
 

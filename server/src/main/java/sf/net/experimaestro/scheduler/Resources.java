@@ -25,8 +25,10 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.EnumSet;
 import java.util.Iterator;
 
@@ -34,6 +36,7 @@ import java.util.Iterator;
  * Access to all resources
  */
 public class Resources extends DatabaseObjects<Resource> {
+
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -41,7 +44,9 @@ public class Resources extends DatabaseObjects<Resource> {
      */
     public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
 
-    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{ Long.class, String.class })
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, status) VALUES(?,?,?)";
+
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.class, String.class})
             .add(Resource.class, CommandLineTask.class, TokenResource.class);
 
     /**
@@ -85,7 +90,8 @@ public class Resources extends DatabaseObjects<Resource> {
      * Iterator on resources
      */
     public CloseableIterable<Resource> resources() throws DatabaseException {
-        return find(SELECT_BEGIN, st -> {});
+        return find(SELECT_BEGIN, st -> {
+        });
     }
 
     static public class Placeholders implements Iterable<String> {
@@ -99,6 +105,7 @@ public class Resources extends DatabaseObjects<Resource> {
         public Iterator<String> iterator() {
             return new Iterator<String>() {
                 int i = 0;
+
                 @Override
                 public boolean hasNext() {
                     return i < count;
@@ -119,15 +126,19 @@ public class Resources extends DatabaseObjects<Resource> {
         sb.append(" WHERE status in (");
         boolean first = true;
         for (ResourceState state : states) {
-            if (first) { first = false; }
-            else { sb.append(','); }
+            if (first) {
+                first = false;
+            } else {
+                sb.append(',');
+            }
             sb.append(getTypeValue(state.toString()));
         }
         sb.append(")");
 
         final String query = sb.toString();
         LOGGER.debug("Searching for resources in states %s: %s", states, query);
-        return find(query, st -> {});
+        return find(query, st -> {
+        });
     }
 
     public Resource getById(long resourceId) throws DatabaseException {
@@ -143,6 +154,8 @@ public class Resources extends DatabaseObjects<Resource> {
         if (resource.getId() != null) {
             throw new DatabaseException("Resource already in database");
         }
+
+        // Save resource
         LOGGER.debug("Saving resource [%s] of type %s [%d], status %s [%s]",
                 resource.getLocator(), resource.getClass(), getTypeValue(resource.getClass()),
                 resource.getState(), resource.getState().value());
@@ -151,6 +164,19 @@ public class Resources extends DatabaseObjects<Resource> {
             st.setString(2, resource.getLocator());
             st.setLong(3, resource.getState().value());
         });
-    }
 
+
+        // Save dependencies
+        try (PreparedStatement st = connection.prepareStatement(INSERT_DEPENDENCY)) {
+            st.setLong(2, resource.getId());
+            for (Dependency dependency : resource.getIngoingDependencies().values()) {
+                st.setLong(1, dependency.getFrom().getId());
+                st.setLong(3, dependency.status.getId());
+                st.execute();
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException(e);
+        }
+
+    }
 }

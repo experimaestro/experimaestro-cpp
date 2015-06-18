@@ -31,6 +31,7 @@ import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -285,7 +286,11 @@ public class SchedulerTest extends XPMEnvironment {
                 jobs[j].addDependency(token.createDependency(null));
             }
 
-            jobs[j].save();
+            try {
+                jobs[j].save();
+            } catch(DatabaseException e) {
+                LOGGER.error("Error while saving job %d: path=%s", j, jobs[j].getPath());
+            }
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
         }
 
@@ -321,19 +326,18 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
     private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, long timeout, int tries) {
-        LOGGER.info("Waiting for operations status finish");
+        LOGGER.info("Waiting for operations status finish [limit=%d, tries=%d]", limit, tries);
         int loop = 0;
         while (counter.getCount() > limit && loop++ < tries) {
             counter.resume(limit, timeout, true);
             int count = counter.getCount();
             if (count <= limit) {
-                LOGGER.info("OK - counter is below the limit");
+                LOGGER.info("OK - counter %d is below the limit %d", count, limit);
                 break;
             }
 
             LOGGER.info("Waiting status finish - %d active jobs > %d [%d]", count, limit, loop);
             for (int i = 0; i < jobs.length; i++) {
-                final long id = jobs[i].getId();
                 if (jobs[i].getState().isActive()) {
                     LOGGER.warn("Job [%s] still active [%s]", jobs[i], jobs[i].getState());
                 }

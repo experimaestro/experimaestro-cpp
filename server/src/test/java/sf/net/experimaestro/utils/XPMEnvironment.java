@@ -40,7 +40,9 @@ public class XPMEnvironment {
     static final private Integer token = 0;
 
     private static ServerTask server;
+
     public static String testUser = "test";
+
     public static String testPassword;
 
     private static TemporaryDirectory directory;
@@ -78,12 +80,14 @@ public class XPMEnvironment {
         synchronized (token) {
             if (server == null) {
                 LOGGER.info("Opening scheduler [%s]", Thread.currentThread());
-                final File mainDirectory = getDirectory().getFile();
+                final TemporaryDirectory tmpDirectory = getDirectory();
+                final File mainDirectory = tmpDirectory.getFile();
 
                 final File dbFile = new File(mainDirectory, "db");
                 dbFile.mkdir();
 
                 server = new ServerTask();
+
 
                 HierarchicalINIConfiguration serverConfiguration = new HierarchicalINIConfiguration();
                 serverConfiguration.setProperty("server.database", dbFile.getAbsolutePath());
@@ -105,12 +109,14 @@ public class XPMEnvironment {
                     LOGGER.info("Stopping server");
                     try {
                         server.close();
+                        tmpDirectory.close();
                     } catch (Exception e) {
                         LOGGER.error(e, "Could not close the server");
                     }
                     LOGGER.info("Scheduler server");
                 }));
 
+                tmpDirectory.setAutomaticDelete(false);
 
             }
         }

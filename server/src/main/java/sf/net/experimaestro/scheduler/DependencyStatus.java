@@ -76,4 +76,8 @@ public enum DependencyStatus {
     public boolean isBlocking() {
         return this == HOLD || this == ERROR;
     }
+
+    public int getId() {
+        return id;
+    }
 }

@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 
@@ -47,7 +48,7 @@ public class CommandLineTaskTest {
     public void test() throws Exception {
         String workingDirectory = new String(directory.toString());
         Commands commands = new Commands();
-        final CommandLineTask commandLineTask = new CommandLineTask();
+        final CommandLineTask commandLineTask = new CommandLineTask(LocalhostConnector.getInstance(), "/");
         commandLineTask.setCommands(commands);
 
         ArrayList<Lock> locks = new ArrayList<>();

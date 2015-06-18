@@ -271,13 +271,6 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                 }
             }
 
-            try(final PreparedStatement statement = connection.prepareStatement("SELECT path, status FROM Resources")) {
-                final ResultSet resultSet = statement.executeQuery();
-                while (resultSet.next()) {
-                    LOGGER.info("Row: %s in state %d", resultSet.getString(1), resultSet.getLong(2));
-                }
-            }
-
 
             synchronized (map) {
                 map.put(object.getId(), object);

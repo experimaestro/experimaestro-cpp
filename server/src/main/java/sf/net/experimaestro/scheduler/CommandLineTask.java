@@ -98,9 +98,6 @@ public class CommandLineTask extends Job {
         super(connector, path);
     }
 
-    public CommandLineTask() {
-
-    }
 
     /**
      * Get a full command line from an array of arguments

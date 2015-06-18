@@ -46,6 +46,8 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.File;
 import java.net.URL;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * The server displays information about the tasks and responds to XML RPC tasks
@@ -70,6 +72,8 @@ public class ServerTask extends AbstractTask {
 
     /** The port the web server was started */
     private int port;
+
+    private Server webServer;
 
     public void setConfiguration(HierarchicalINIConfiguration configuration) {
         this.configuration = configuration;
@@ -119,7 +123,7 @@ public class ServerTask extends AbstractTask {
         // Main repository
         final Repositories repositories = new Repositories(new File("/").toPath());
 
-        Server webServer = new Server();
+        webServer = new Server();
 
         // TCP-IP socket
         ServerConnector connector = new ServerConnector(webServer);
@@ -271,5 +275,38 @@ public class ServerTask extends AbstractTask {
 
     public int getPort() {
         return port;
+    }
+
+    @Override
+    public void close() throws Exception {
+        super.close();
+
+        scheduler.close();
+
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                boolean stopped = false;
+                try {
+                    webServer.stop();
+                    stopped = true;
+                } catch (Exception e) {
+                    LOGGER.error(e, "Could not stop properly jetty");
+                }
+                if (!stopped)
+                    synchronized (this) {
+                        try {
+                            wait(10000);
+                        } catch (InterruptedException e) {
+                            LOGGER.error(e);
+                        }
+                        System.exit(1);
+
+                    }
+            }
+        }, 2000);
+
     }
 }

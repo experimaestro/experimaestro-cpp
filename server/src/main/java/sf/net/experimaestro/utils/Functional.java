@@ -33,7 +33,9 @@ public class Functional {
         void apply(T t) throws Exception;
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <V> Consumer<V> propagate(ExceptionalConsumer<V> callable) {
         return t -> {
             try {
@@ -46,7 +48,9 @@ public class Functional {
         };
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <V> Consumer<V> ignore(ExceptionalConsumer<V> callable) {
         return t -> {
             try {
@@ -61,7 +65,9 @@ public class Functional {
         void apply(T t, U u) throws Exception;
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <T, U> BiConsumer<T, U> propagate(ExceptionalBiConsumer<T, U> callable) {
         return (t, u) -> {
             try {
@@ -78,7 +84,9 @@ public class Functional {
         T apply(R r) throws Throwable;
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <R, T> Function<R, T> propagateFunction(ExceptionalFunction<R, T> function) {
         return r -> {
             try {
@@ -92,7 +100,9 @@ public class Functional {
     }
 
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <R, T> Function<R, T> ignoreFunction(ExceptionalFunction<R, T> callable, T defaultValue) {
         return r -> {
             try {
@@ -108,33 +118,12 @@ public class Functional {
         void apply() throws Throwable;
     }
 
-    public static <T,R> Function<T, R> shouldNotThrow(ExceptionalFunction<T,R> f) {
-        return u -> {
-            try {
-                return f.apply(u);
-            } catch (Throwable throwable) {
-                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
-            }
-        };
-    }
 
-    public static <T> Consumer<T> shouldNotThrow(ExceptionalConsumer<T> f) {
-        return u -> {
-            try {
-                f.apply(u);
-            } catch (Throwable throwable) {
-                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
-            }
-        };
-    }
-
-    public static Runnable shouldNotThrow(ExceptionalRunnable p) {
-        return () -> {
-            try {
-                p.apply();
-            } catch (Throwable throwable) {
-                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
-            }
-        };
+    public static void shouldNotThrow(ExceptionalRunnable p) {
+        try {
+            p.apply();
+        } catch (Throwable throwable) {
+            throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+        }
     }
 }

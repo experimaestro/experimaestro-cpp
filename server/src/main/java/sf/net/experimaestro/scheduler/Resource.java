@@ -99,8 +99,6 @@ public class Resource implements Identifiable {
      */
     public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer("", ".xpm.input.");
 
-    public static final String JOB_TYPE = "1";
-    public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -115,16 +113,6 @@ public class Resource implements Identifiable {
     private Long resourceID;
 
     /**
-     * Comparator on the database ID
-     */
-    static public final Comparator<Resource> ID_COMPARATOR = new Comparator<Resource>() {
-        @Override
-        public int compare(Resource o1, Resource o2) {
-            return Long.compare(o1.resourceID, o2.resourceID);
-        }
-    };
-
-    /**
      * The connector
      * <p>
      * A null value is used for LocalhostConnector
@@ -134,12 +122,12 @@ public class Resource implements Identifiable {
     /**
      * The outgoing dependencies (resources that depend on this)
      */
-    private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
+    private Map<Resource, Dependency> outgoingDependencies;
 
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
-    private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
+    private Map<Resource, Dependency> ingoingDependencies;
 
     /**
      * The resource state
@@ -151,13 +139,6 @@ public class Resource implements Identifiable {
      */
     transient private Path path;
 
-    /**
-     * Called when deserializing from database
-     */
-    public Resource() {
-        LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
-    }
-
     public Resource(Connector connector, Path path) throws IOException {
         this(connector, path.toString());
     }
@@ -165,9 +146,13 @@ public class Resource implements Identifiable {
     public Resource(Connector connector, String name) {
         this.connector = connector instanceof LocalhostConnector ? null : connector;
         this.locator = name;
+        outgoingDependencies = new HashMap<>();
+        ingoingDependencies = new HashMap<>();
     }
 
+    /** Construct from DB */
     public Resource(Long id, String locator) {
+        this(LocalhostConnector.getInstance(), locator);
         this.resourceID = id;
         this.locator = locator;
     }
@@ -581,6 +566,10 @@ public class Resource implements Identifiable {
 
     public static Resource getById(long resourceId) throws DatabaseException {
         return Scheduler.get().resources().getById(resourceId);
+    }
+
+    public Map<Resource, Dependency> getIngoingDependencies() {
+        return ingoingDependencies;
     }
 
     /**
