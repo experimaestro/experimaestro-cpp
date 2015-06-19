@@ -534,12 +534,23 @@ abstract public class Job extends Resource {
      *
      * @param dependency The dependency
      */
-    public void addDependency(Dependency dependency) {
-        addIngoingDependency(dependency);
+    synchronized public void addDependency(Dependency dependency) {
         dependency.update();
-        if (!dependency.status.isOK()) {
-            nbUnsatisfied++;
+        switch (dependency.accept()) {
+            case OK_LOCK:
+            case OK:
+            case UNACTIVE:
+                break;
+
+            case ERROR:
+            case HOLD:
+                ++nbHolding;
+
+            case WAIT:
+                ++nbUnsatisfied;
         }
+
+        addIngoingDependency(dependency);
     }
 
 

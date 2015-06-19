@@ -129,7 +129,7 @@ public class SchedulerTest extends XPMEnvironment {
             final long nextTimestamp = readyness ? ((WaitingJob) jobs[i + 1]).status().readyTimestamp : jobs[i + 1].getStartTimestamp();
             final long endTimestamp = jobs[i].getEndTimestamp();
 
-            if (endTimestamp >= nextTimestamp) {
+            if (endTimestamp > nextTimestamp) {
                 LOGGER.warn("The runners (%s/%x, end=%d) and (%s/%x, start=%d) did not start one after the other",
                         jobs[i], System.identityHashCode(jobs[i]), endTimestamp,
                         jobs[i + 1], System.identityHashCode(jobs[i + 1]), nextTimestamp);
@@ -360,7 +360,7 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
 
-    @Test(description = "The required dependency ends before the new job is committed")
+    @Test(description = "The required dependency ends before the new job is saved")
     public void test_required_job_ends() throws IOException, DatabaseException {
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();

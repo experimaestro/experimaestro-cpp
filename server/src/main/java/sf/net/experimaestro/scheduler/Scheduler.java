@@ -647,7 +647,7 @@ final public class Scheduler {
     }
 
     /**
-     * The notifier thread
+     * The notifier thread for resources that changed of state
      */
     private class Notifier extends Thread {
         public Notifier() {
@@ -703,21 +703,23 @@ final public class Scheduler {
                                 // when the dependency status is null, the dependency is not active anymore
                                 LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
                                 // Preserves the previous state
-                                DependencyStatus beforeState = dep.status;
+                                synchronized (dep.getTo()) {
+                                    DependencyStatus beforeState = dep.status;
 
-                                if (dep.update()) {
-                                    final Resource depResource = dep.getTo();
+                                    if (dep.update()) {
+                                        final Resource depResource = dep.getTo();
 
-                                    if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                        LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                        continue;
+                                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                                            continue;
+                                        }
+
+                                        // Queue this change in dependency state
+                                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+
+                                    } else {
+                                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                                     }
-
-                                    // Queue this change in dependency state
-                                    depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-
-                                } else {
-                                    LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                                 }
                             } catch (RuntimeException e) {
                                 LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);

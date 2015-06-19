@@ -216,7 +216,7 @@ public class Resource implements Identifiable {
      * Calls {@linkplain #doUpdateStatus()}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus() throws DatabaseException {
+    synchronized final public boolean updateStatus() throws DatabaseException {
         try {
             boolean b = doUpdateStatus();
             return b;
@@ -326,7 +326,7 @@ public class Resource implements Identifiable {
      * @param state
      * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
      */
-    public boolean setState(ResourceState state) throws DatabaseException {
+    synchronized public boolean setState(ResourceState state) throws DatabaseException {
         if (this.state == state)
             return false;
 
@@ -353,6 +353,7 @@ public class Resource implements Identifiable {
                 LOGGER.debug("Notifying runners");
                 Scheduler.notifyRunners();
             }
+            LOGGER.debug("Notifying dependencies of %s [new state %s]", this, state);
             Scheduler.get().addChangedResource(this);
         }
 
@@ -414,7 +415,10 @@ public class Resource implements Identifiable {
     synchronized protected Dependency addIngoingDependency(Dependency dependency) {
         dependency.to = this;
         dependency.from.addOutgoingDependency(dependency);
-        return this.ingoingDependencies.put(dependency.getFrom(), dependency);
+
+        final Dependency put = this.ingoingDependencies.put(dependency.getFrom(), dependency);
+        assert put == null;
+        return put;
     }
 
     synchronized protected void addOutgoingDependency(Dependency dependency) {

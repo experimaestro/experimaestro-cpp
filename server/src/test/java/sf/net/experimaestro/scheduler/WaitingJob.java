@@ -103,9 +103,20 @@ public class WaitingJob extends Job {
     @Override
     public boolean setState(ResourceState state) throws DatabaseException {
         ResourceState oldState = this.getState();
+        final Status status = status();
+
+        switch (state) {
+            case READY:
+                status.readyTimestamp = System.currentTimeMillis();
+                break;
+            case DONE:
+            case ERROR:
+            case ON_HOLD:
+                break;
+        }
+
         final boolean b = super.setState(state);
 
-        final Status status = status();
         if (status != null) {
             // Decrease the counter when the state is DONE or ERROR
             if (state.isUnactive() && !oldState.isUnactive()) {
@@ -131,15 +142,6 @@ public class WaitingJob extends Job {
 
         }
 
-        switch (state) {
-            case READY:
-                status.readyTimestamp = System.currentTimeMillis();
-                break;
-            case DONE:
-            case ERROR:
-            case ON_HOLD:
-                break;
-        }
 
 
         return b;
