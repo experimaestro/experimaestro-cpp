@@ -348,13 +348,15 @@ public class Resource implements Identifiable {
         }
         this.state = state;
 
-        if (inDatabase() && state == ResourceState.READY) {
-            LOGGER.debug("Notifying runners");
-            Scheduler.notifyRunners();
+        if (inDatabase()) {
+            if (state == ResourceState.READY) {
+                LOGGER.debug("Notifying runners");
+                Scheduler.notifyRunners();
+            }
+            Scheduler.get().addChangedResource(this);
         }
 
         Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
-
 
         return true;
     }
@@ -409,10 +411,15 @@ public class Resource implements Identifiable {
     public void clean() {
     }
 
-    protected Dependency addIngoingDependency(Dependency dependency) {
+    synchronized protected Dependency addIngoingDependency(Dependency dependency) {
         dependency.to = this;
-        dependency.getFrom().outgoingDependencies.put(dependency.getTo(), dependency);
+        dependency.from.addOutgoingDependency(dependency);
         return this.ingoingDependencies.put(dependency.getFrom(), dependency);
+    }
+
+    synchronized protected void addOutgoingDependency(Dependency dependency) {
+        LOGGER.debug("Adding dependency from %s to %s [outgoing]", this, dependency.getTo());
+        outgoingDependencies.put(dependency.getTo(), dependency);
     }
 
     /**

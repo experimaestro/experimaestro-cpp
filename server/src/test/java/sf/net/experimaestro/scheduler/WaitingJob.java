@@ -31,6 +31,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -106,13 +107,14 @@ public class WaitingJob extends Job {
 
         final Status status = status();
         if (status != null) {
-            if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
+            // Decrease the counter when the state is DONE or ERROR
+            if (state.isUnactive() && !oldState.isUnactive()) {
                 status.counter.del();
                 final int count = status.counter.getCount();
                 LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
                         this, oldState, state, count + 1, count);
             }
-            else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
+            else if (!state.isUnactive() && oldState.isUnactive()) {
                 status.counter.add();
                 final int count = status.counter.getCount();
                 LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",

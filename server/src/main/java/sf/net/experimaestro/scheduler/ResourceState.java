@@ -89,7 +89,7 @@ public enum ResourceState {
      * States in which the job has finished (whatever the outcome)
      */
     final static EnumSet<ResourceState> FINISHED_STATE
-            = EnumSet.of(DONE, ERROR, ON_HOLD);
+            = EnumSet.of(DONE, ERROR);
 
     /**
      * Database value

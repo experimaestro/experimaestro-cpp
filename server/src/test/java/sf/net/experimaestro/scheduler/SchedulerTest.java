@@ -100,6 +100,7 @@ public class SchedulerTest extends XPMEnvironment {
         Iterator<ComplexDependenciesParameters> it = p.iterator();
         for (int i = 0; i < p.size(); i++) {
             objects[i] = new Object[]{it.next()};
+            LOGGER.info("Adding complex dependencies task: %s", objects[i]);
         }
 
         return objects;
@@ -209,7 +210,8 @@ public class SchedulerTest extends XPMEnvironment {
         random.setSeed(seed);
 
         // Prepares directory and counter
-        File jobDirectory = mkTestDir();
+        File jobDirectory = new File(mkTestDir(), p.name);
+        jobDirectory.mkdir();
         ThreadCount counter = new ThreadCount();
 
         // Our set of jobs
@@ -289,7 +291,7 @@ public class SchedulerTest extends XPMEnvironment {
             try {
                 jobs[j].save();
             } catch(DatabaseException e) {
-                LOGGER.error("Error while saving job %d: path=%s", j, jobs[j].getPath());
+                LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
             }
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
         }
@@ -430,6 +432,7 @@ public class SchedulerTest extends XPMEnvironment {
         ThreadCount counter = new ThreadCount();
         File jobDirectory = mkTestDir();
 
+        // We create 3 jobs - and make the first fail
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             final int finalI = i;
