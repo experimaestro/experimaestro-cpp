@@ -61,15 +61,16 @@ public class JsonRPCTest extends XPMEnvironment {
         XPMEnvironment.getDirectory();
         final Resource resource = new Resource(LocalhostConnector.getInstance(), jobDirectory.toPath().resolve("resource-1"));
         resource.save();
+        final long id = resource.getId();
 
 
         // Now, RPC call to delete
         JSONRPC2Request request = new JSONRPC2Request("remove", 0);
-        request.setNamedParams(ImmutableMap.of("id", resource.getId().toString()));
+        request.setNamedParams(ImmutableMap.of("id", Long.toString(id)));
         rpcSession.send(request);
 
         // Check that the resource was removed
-        final Resource _resource = Resource.getById(resource.getId());
+        final Resource _resource = Resource.getById(id);
         Assert.assertNull("Resource has not been deleted", _resource);
     }
 
