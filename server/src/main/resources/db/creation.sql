@@ -52,7 +52,7 @@ CREATE TABLE Connectors (
   id IDENTITY,
   type  BIGINT        NOT NULL,
   uri   VARCHAR(4096) NOT NULL,
-  value BLOB          NOT NULL
+  value BLOB
 );
 
 -- Shares

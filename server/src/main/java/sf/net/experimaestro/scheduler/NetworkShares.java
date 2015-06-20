@@ -30,7 +30,7 @@ import java.sql.*;
 public class NetworkShares extends DatabaseObjects<NetworkShare> {
     public static final String SELECT_QUERY = "SELECT id, hostname, name FROM NetworkShares";
 
-    public static final String FINDBYNAME_QUERY = SELECT_QUERY + " WHERE host=? and name=?";
+    public static final String FINDBYNAME_QUERY = SELECT_QUERY + " WHERE hostname=? and name=?";
 
     public NetworkShares(Connection connection) {
         super(connection);

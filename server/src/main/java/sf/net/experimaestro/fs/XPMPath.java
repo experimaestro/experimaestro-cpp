@@ -254,7 +254,7 @@ public class XPMPath implements Path {
         assert path.charAt(0) == '/';
         String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
 
-        return Output.toString(XPMFileSystem.PATH_SEPARATOR,
+        return XPMFileSystem.PATH_SEPARATOR + Output.toString(XPMFileSystem.PATH_SEPARATOR,
                 Iterables.concat(Arrays.asList(parts), Arrays.asList(this.parts)));
     }
 }
