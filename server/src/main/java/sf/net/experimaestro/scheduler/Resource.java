@@ -18,6 +18,10 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang.NotImplementedException;
 import org.hsqldb.Database;
 import org.json.simple.JSONObject;
@@ -26,15 +30,24 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.locks.FileLock;
+import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
+import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -55,6 +68,11 @@ public class Resource implements Identifiable {
      * Extension for the lock file
      */
     public static final FileNameTransformer LOCK_EXTENSION = new FileNameTransformer("", ".lock");
+
+    /**
+     * Extension for the JSON file that contains further information about the task
+     */
+    public static final FileNameTransformer JSON_EXTENSION = new FileNameTransformer("", ".xpm");
 
     // --- Resource description
 
@@ -110,6 +128,7 @@ public class Resource implements Identifiable {
     /**
      * The resource ID
      */
+    @GsonSerialization(serialize = false)
     private Long resourceID;
 
     /**
@@ -117,22 +136,22 @@ public class Resource implements Identifiable {
      * <p>
      * A null value is used for LocalhostConnector
      */
-    private Connector connector;
+    transient private Connector connector;
 
     /**
      * The outgoing dependencies (resources that depend on this)
      */
-    private Map<Resource, Dependency> outgoingDependencies;
+    transient private Map<Resource, Dependency> outgoingDependencies;
 
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
-    private Map<Resource, Dependency> ingoingDependencies;
+    transient private Map<Resource, Dependency> ingoingDependencies;
 
     /**
      * The resource state
      */
-    private ResourceState state = ResourceState.ON_HOLD;
+    transient private ResourceState state = ResourceState.ON_HOLD;
 
     /**
      * Cached Path
@@ -552,6 +571,25 @@ public class Resource implements Identifiable {
 
         LOGGER.debug("Resource %s stored", this);
         Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
+    }
+
+    /**
+     * Save everything which is not saved in DB on disk
+     * @param writer The writer
+     */
+    protected void saveJson(JsonWriter writer) {
+        final Gson gson = GsonConverter.builder.create();
+        gson.toJson(this, this.getClass(), writer);
+    }
+
+    /**
+     * Reads from Gson
+     * @param reader
+     */
+    protected void fromJson(JsonReader reader) {
+        final Gson gson = GsonConverter.builder.create();
+        // TODO: Not implemented
+        throw new UnsupportedOperationException("Not implemented");
     }
 
 

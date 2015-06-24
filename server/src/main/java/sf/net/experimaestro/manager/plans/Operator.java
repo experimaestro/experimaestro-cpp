@@ -41,6 +41,7 @@ import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.NotNull;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Tasks;
 import sf.net.experimaestro.utils.CachedIterable;
@@ -755,7 +756,7 @@ public abstract class Operator {
     }
 
     @Expose
-    public Operator group_by(Operator... operators) {
+    public Operator group_by(@NotNull Operator... operators) {
         return group_by(Manager.XP_ARRAY, operators);
     }
 

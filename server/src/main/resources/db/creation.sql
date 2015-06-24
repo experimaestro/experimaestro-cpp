@@ -7,7 +7,8 @@ CREATE TABLE Resources (
   path     VARCHAR(4096),
   status   BIGINT,
   type     BIGINT,
-  priority INT
+  priority INT DEFAULT 0 NOT NULL,
+  data     BLOB not null
 );
 
 CREATE INDEX status_index ON resources (status);

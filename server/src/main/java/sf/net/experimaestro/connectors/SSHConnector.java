@@ -116,6 +116,9 @@ public class SSHConnector extends SingleHostConnector {
     public SSHConnector(URI uri, ConnectorOptions options) {
         this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
         this.basePath = uri.getPath();
+        if (this.basePath.isEmpty()) {
+            basePath = "/";
+        }
     }
 
     /**
@@ -161,7 +164,7 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         try {
-            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + basePath);
+            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);

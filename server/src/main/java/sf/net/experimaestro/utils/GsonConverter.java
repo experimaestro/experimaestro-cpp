@@ -56,6 +56,7 @@ public class GsonConverter<T>  {
         builder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
         builder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
         builder.registerTypeAdapterFactory(new AbstractObjectFactory());
+        builder.setExclusionStrategies(new GsonExclusionStrategy());
     }
 
     public byte[] convertToDatabaseColumn(T object) {
@@ -113,6 +114,7 @@ public class GsonConverter<T>  {
                 final Class<?> aClass = value.getClass();
                 assert !aClass.isArray();
                 out.value(aClass.getName());
+                LOGGER.info("Serializing %s", value.getClass());
                 gson.toJson(value, value.getClass(), out);
                 out.endArray();
             }

@@ -118,6 +118,16 @@ public class Functional {
         void apply() throws Throwable;
     }
 
+    public static Runnable runnable(ExceptionalRunnable p) {
+        return () -> {
+            try {
+                p.apply();
+            } catch (Throwable throwable) {
+                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+            }
+        };
+    }
+
 
     public static void shouldNotThrow(ExceptionalRunnable p) {
         try {

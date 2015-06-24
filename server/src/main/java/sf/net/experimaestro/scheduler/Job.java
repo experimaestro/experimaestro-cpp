@@ -69,42 +69,42 @@ abstract public class Job extends Resource {
      */
     long timestamp = System.currentTimeMillis();
 
-    /**
-     * Requirements (ignored for the moment)
-     */
-    transient ComputationalRequirements requirements;
+//    /**
+//     * Requirements (ignored for the moment)
+//     */
+//    transient ComputationalRequirements requirements;
 
     /**
      * When did the job start (0 if not started)
      */
-    long startTimestamp;
+    transient long startTimestamp;
 
     /**
      * When did the job stop (0 when it did not stop yet)
      */
-    long endTimestamp;
+    transient long endTimestamp;
 
     /**
      * Our job monitor (null when there is no attached process)
      */
-    XPMProcess process;
+    transient XPMProcess process;
 
     /**
      * Number of unsatisfied jobs
      */
-    int nbUnsatisfied = 0;
+    transient int nbUnsatisfied = 0;
 
     /**
      * Number of holding jobs
      */
-    int nbHolding = 0;
+    transient int nbHolding = 0;
 
     /**
      * Progress
      *
      * The value is negative if not set
      */
-    double progress = -1;
+    transient double progress = -1;
 
 
     /**
