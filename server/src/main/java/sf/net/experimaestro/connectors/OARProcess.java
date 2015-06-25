@@ -32,7 +32,7 @@ import java.io.OutputStream;
  * An OAR process
  */
 @TypeIdentifier("oar")
-class OARProcess extends XPMProcess {
+public class OARProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**

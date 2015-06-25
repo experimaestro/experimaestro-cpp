@@ -560,11 +560,7 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
-        try(final JsonSerializationInputStream jsonInputStream = new JsonSerializationInputStream(out -> {
-            try (JsonWriter writer = new JsonWriter(out)) {
-                saveJson(writer);
-            }
-        })) {
+        try(final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
             resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), jsonInputStream);
         } catch (IOException e) {
             throw new SQLException(e);
@@ -610,16 +606,6 @@ public class Resource implements Identifiable {
 
         LOGGER.debug("Resource %s saved/updated", this);
         Scheduler.get().notify(new SimpleMessage(!update ? Message.Type.RESOURCE_ADDED : Message.Type.STATE_CHANGED, this));
-    }
-
-    /**
-     * Save everything which is not saved in DB on disk
-     *
-     * @param writer The writer
-     */
-    protected void saveJson(JsonWriter writer) {
-        final Gson gson = GsonConverter.builder.create();
-        gson.toJson(this, this.getClass(), writer);
     }
 
     /**

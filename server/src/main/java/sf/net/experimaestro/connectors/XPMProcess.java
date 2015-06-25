@@ -20,16 +20,26 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -52,8 +62,6 @@ public abstract class XPMProcess {
      * The checker
      */
     protected transient ScheduledFuture<?> checker = null;
-
-    private long id;
 
     /**
      * The job to notify when finished with this
@@ -134,10 +142,10 @@ public abstract class XPMProcess {
 
     /**
      * Initialization of the job monitor (when restoring from database)
-     * <p/>
+     * <p>
      * The method also sets up a status checker at regular intervals.
      */
-    public void init(Job job)  {
+    public void init(Job job) {
         // TODO: use connector & job dependent times for checking
         checker = Scheduler.get().schedule(this, 15, TimeUnit.SECONDS);
     }
@@ -328,5 +336,33 @@ public abstract class XPMProcess {
      */
     protected SingleHostConnector getConnector() {
         return connector == null ? LocalhostConnector.getInstance() : connector;
+    }
+
+    final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data");
+
+    /**
+     * Save the process
+     */
+    public void save() throws SQLException {
+        // Save the process
+        final Connection connection = Scheduler.get().getConnection();
+        SQL_INSERT.execute(connection, false, job.getId(),
+                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this));
+
+        // Save the locks
+        try (PreparedStatement st = connection.prepareStatement("INSERT INTO ProcessLocks(resource, lock) VALUES(?,?)")) {
+            // Insert into DB
+            st.setLong(1, job.getId());
+
+            for (Lock lock : locks) {
+                // Save lock
+                lock.save();
+
+                // Save relationship
+                st.setLong(2, lock.getId());
+                st.execute();
+
+            }
+        }
     }
 }

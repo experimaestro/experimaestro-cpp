@@ -20,6 +20,7 @@ package sf.net.experimaestro.locks;
 
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.Identifiable;
 
 /**
  * A lock that can be removed.
@@ -30,7 +31,7 @@ import sf.net.experimaestro.manager.scripting.Exposed;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public abstract class Lock implements AutoCloseable {
+public abstract class Lock implements AutoCloseable, Identifiable {
     private Long id;
 
     @Override
@@ -42,5 +43,19 @@ public abstract class Lock implements AutoCloseable {
      * @param pid The new owner PID
      */
     public abstract void changeOwnership(String pid) throws LockException;
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void save() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }
 

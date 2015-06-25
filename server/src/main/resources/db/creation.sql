@@ -76,12 +76,36 @@ CREATE TABLE Dependencies (
     ON DELETE CASCADE
 );
 
+--- A lock
+
+CREATE TABLE Lock (
+  id IDENTITY,
+  type BIGINT NOT NULL
+);
+
+
 -- Process
 
 CREATE TABLE Processes (
-  resource BIGINT NOT NULL,
-  value    BLOB   NOT NULL,
+  resource  BIGINT NOT NULL,
+  type      BIGINT NOT NULL,
+  connector BIGINT,
+  pid       VARCHAR(255),
+  data      BLOB   NOT NULL,
   FOREIGN KEY (resource) REFERENCES Resources
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE,
+  FOREIGN KEY (connector) REFERENCES Connectors
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+);
+
+CREATE TABLE ProcessLocks (
+  resource BIGINT NOT NULL,
+  lock     BIGINT NOT NULL,
+  FOREIGN KEY (resource) REFERENCES Resources
+    ON DELETE RESTRICT,
+  FOREIGN KEY (lock) REFERENCES Locks
     ON DELETE RESTRICT
 );
 

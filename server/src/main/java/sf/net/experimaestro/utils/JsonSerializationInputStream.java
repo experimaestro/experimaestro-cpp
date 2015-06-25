@@ -18,6 +18,8 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -36,6 +38,15 @@ public class JsonSerializationInputStream extends InputStream {
     private final PipedOutputStream outputStream;
     final static private Logger LOGGER = Logger.getLogger();
 
+
+    static public JsonSerializationInputStream of(Object object) {
+        return new JsonSerializationInputStream(out -> {
+            try (JsonWriter writer = new JsonWriter(out)) {
+                final Gson gson = GsonConverter.builder.create();
+                gson.toJson(object, object.getClass(), writer);
+            }
+        });
+    }
     public JsonSerializationInputStream(ExceptionalConsumer<Writer> f) {
         outputStream = new PipedOutputStream();
         try {

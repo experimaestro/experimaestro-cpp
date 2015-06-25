@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -33,7 +34,8 @@ import static java.lang.String.format;
 /**
  * Wrapper for a local thread
  */
-class LocalProcess extends XPMProcess {
+@TypeIdentifier("local")
+public class LocalProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**

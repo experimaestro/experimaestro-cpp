@@ -46,7 +46,6 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
 public class StatusLock extends Lock {
     final static private Logger LOGGER = Logger.getLogger();
 
-    @SuppressWarnings("JpaAttributeTypeInspection")
     String path;
 
     private SingleHostConnector connector;

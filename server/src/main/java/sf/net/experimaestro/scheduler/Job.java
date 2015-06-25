@@ -268,6 +268,7 @@ abstract public class Job extends Resource {
 
                 // Now, starts the job
                 process = startJob(locks, false);
+                process.save();
                 process.adopt(locks);
                 locks = null;
 
