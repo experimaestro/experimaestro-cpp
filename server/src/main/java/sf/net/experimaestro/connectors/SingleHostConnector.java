@@ -18,7 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.locks.Lock;
@@ -28,6 +27,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -108,7 +108,7 @@ abstract public class SingleHostConnector extends Connector {
             NetworkShareAccess access = null;
             try {
                 access = NetworkShare.find(this, xpmPath);
-            } catch (DatabaseException e) {
+            } catch (SQLException e) {
                 throw new IOException("Cannot find the share", e);
             }
             if (access != null) {

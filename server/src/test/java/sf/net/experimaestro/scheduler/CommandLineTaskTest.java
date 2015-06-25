@@ -18,40 +18,43 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.testng.Assert;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.TemporaryDirectory;
+import sf.net.experimaestro.utils.XPMEnvironment;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.io.File;
 
 /**
  * Test for command line task
  */
-public class CommandLineTaskTest {
-    TemporaryDirectory directory;
+public class CommandLineTaskTest extends XPMEnvironment {
 
-    @BeforeClass
-    public void init() throws IOException {
-        directory = new TemporaryDirectory("xpm", "test");
+    @BeforeSuite
+    public static void setup() throws Throwable {
+        prepare();
     }
 
-    @AfterClass
-    public void close() {
-        directory.close();
-    }
+    @Test(enabled = true)
+    public void testSave() throws Exception {
+        final File testDir = mkTestDir();
 
-    @Test(enabled = false)
-    public void test() throws Exception {
-        String workingDirectory = new String(directory.toString());
         Commands commands = new Commands();
-        final CommandLineTask commandLineTask = new CommandLineTask(LocalhostConnector.getInstance(), "/");
+        commands.addUnprotected("hello world");
+        final String locator = new File(testDir, "commandlinetask").toString();
+        final CommandLineTask commandLineTask = new CommandLineTask(LocalhostConnector.getInstance(), locator);
         commandLineTask.setCommands(commands);
+        commandLineTask.setState(ResourceState.ON_HOLD);
 
-        ArrayList<Lock> locks = new ArrayList<>();
-        commandLineTask.start(locks);
+        commandLineTask.save();
+        final Long id = commandLineTask.getId();
+
+
+        Scheduler.get().resources().forget(id);
+        final CommandLineTask retrieved = (CommandLineTask) Scheduler.get().resources().getById(id);
+
+        Assert.assertTrue(retrieved.getCommands().equals(commands));
     }
+
 }

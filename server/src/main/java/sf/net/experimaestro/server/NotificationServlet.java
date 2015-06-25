@@ -19,7 +19,6 @@ package sf.net.experimaestro.server;
  */
 
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Message;
 import sf.net.experimaestro.scheduler.Resource;
@@ -31,6 +30,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.SQLException;
 
 /**
  * Handles notification
@@ -62,7 +62,7 @@ public class NotificationServlet extends XPMServlet {
         final Job job;
         try {
             job = getJob(request, resp, resourceId);
-        } catch (DatabaseException e) {
+        } catch (SQLException e) {
             error404(request, resp);
             return;
         }
@@ -103,7 +103,7 @@ public class NotificationServlet extends XPMServlet {
         return;
     }
 
-    private Job getJob(HttpServletRequest request, HttpServletResponse resp, long resourceId) throws IOException, DatabaseException {
+    private Job getJob(HttpServletRequest request, HttpServletResponse resp, long resourceId) throws IOException, SQLException {
         final Job job = (Job) Resource.getById(resourceId);
         if (job == null) {
             error404(request, resp);

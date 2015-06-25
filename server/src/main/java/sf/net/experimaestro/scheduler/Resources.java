@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -68,12 +67,12 @@ public class Resources extends DatabaseObjects<Resource> {
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
-    public Resource getByLocator(String path) throws DatabaseException {
+    public Resource getByLocator(String path) throws SQLException {
         return findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
 
     @Override
-    protected Resource create(ResultSet result) throws DatabaseException {
+    protected Resource create(ResultSet result) throws SQLException {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);
@@ -87,15 +86,15 @@ public class Resources extends DatabaseObjects<Resource> {
             resource.setState(ResourceState.fromValue(status));
 
             return resource;
-        } catch (SQLException | InstantiationException | InvocationTargetException | IllegalAccessException e) {
-            throw new DatabaseException(e, "Error retrieving database object");
+        } catch (InstantiationException | InvocationTargetException | IllegalAccessException e) {
+            throw new SQLException("Error retrieving database object", e);
         }
     }
 
     /**
      * Iterator on resources
      */
-    public CloseableIterable<Resource> resources() throws DatabaseException {
+    public CloseableIterable<Resource> resources() throws SQLException {
         return find(SELECT_BEGIN, st -> {
         });
     }
@@ -126,7 +125,7 @@ public class Resources extends DatabaseObjects<Resource> {
         }
     }
 
-    public CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws DatabaseException {
+    public CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {
         StringBuilder sb = new StringBuilder();
         sb.append(SELECT_BEGIN);
         sb.append(" WHERE status in (");
@@ -147,7 +146,7 @@ public class Resources extends DatabaseObjects<Resource> {
         });
     }
 
-    public Resource getById(long resourceId) throws DatabaseException {
+    public Resource getById(long resourceId) throws SQLException {
         final Resource r = getFromCache(resourceId);
         if (r != null) {
             return r;
@@ -156,9 +155,9 @@ public class Resources extends DatabaseObjects<Resource> {
         return findUnique(SELECT_BEGIN + " WHERE id=?", st -> st.setLong(1, resourceId));
     }
 
-    public void save(Resource resource) throws DatabaseException {
+    public void save(Resource resource) throws SQLException {
         if (resource.getId() != null) {
-            throw new DatabaseException("Resource already in database");
+            throw new SQLException("Resource already in database");
         }
 
         // Save resource
@@ -182,7 +181,7 @@ public class Resources extends DatabaseObjects<Resource> {
                 st.setBlob(4, is);
             });
         } catch (IOException e) {
-            throw new DatabaseException(e);
+            throw new SQLException(e);
         }
 
         // Save dependencies
@@ -193,8 +192,6 @@ public class Resources extends DatabaseObjects<Resource> {
                 st.setLong(3, dependency.status.getId());
                 st.execute();
             }
-        } catch (SQLException e) {
-            throw new DatabaseException(e);
         }
 
     }

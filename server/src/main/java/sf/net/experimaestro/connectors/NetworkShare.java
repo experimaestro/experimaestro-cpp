@@ -18,12 +18,10 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,7 +59,7 @@ final public class NetworkShare implements Identifiable {
         return access;
     }
 
-    public void add(NetworkShareAccess networkShareAccess) throws DatabaseException {
+    public void add(NetworkShareAccess networkShareAccess) throws SQLException {
         // Save access
         networkShareAccess.save(this);
 
@@ -76,7 +74,7 @@ final public class NetworkShare implements Identifiable {
      * @param name The share name
      * @return The connector in database or null if none exist
      */
-    public static NetworkShare find(String host, String name) throws DatabaseException {
+    public static NetworkShare find(String host, String name) throws SQLException {
         return Scheduler.get().shares().find(host, name);
     }
 
@@ -87,7 +85,7 @@ final public class NetworkShare implements Identifiable {
      * @param path      The network share path <code>share://host/root/path</code> path
      * @return
      */
-    public static NetworkShareAccess find(SingleHostConnector connector, XPMPath path) throws DatabaseException {
+    public static NetworkShareAccess find(SingleHostConnector connector, XPMPath path) throws SQLException {
         final NetworkShare networkShare = find(path.getHostName(), path.getShareName());
         if (networkShare == null) {
             return null;
@@ -112,7 +110,7 @@ final public class NetworkShare implements Identifiable {
         this.id = id;
     }
 
-    public void save() throws DatabaseException {
+    public void save() throws SQLException {
         Scheduler.get().networkShares().save(this);
     }
 

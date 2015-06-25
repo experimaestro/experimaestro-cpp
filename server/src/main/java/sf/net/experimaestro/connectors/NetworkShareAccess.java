@@ -18,7 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.scheduler.Scheduler;
 
@@ -91,7 +90,7 @@ public class NetworkShareAccess implements Serializable {
         return priority;
     }
 
-    public void setPriority(int priority) throws DatabaseException {
+    public void setPriority(int priority) throws SQLException {
         this.priority = priority;
         if (share != null) {
             try (PreparedStatement st = Scheduler.get().getConnection()
@@ -99,8 +98,6 @@ public class NetworkShareAccess implements Serializable {
                 st.setString(1, path);
                 st.setLong(2, share.getId());
                 st.setLong(3, connector.getId());
-            } catch (SQLException e) {
-                throw new DatabaseException(e);
             }
         }
     }
@@ -113,15 +110,13 @@ public class NetworkShareAccess implements Serializable {
         return path;
     }
 
-    public void setPath(String path) throws DatabaseException {
+    public void setPath(String path) throws SQLException {
         if (share != null) {
             try (PreparedStatement st = Scheduler.get().getConnection()
                     .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
                 st.setString(1, path);
                 st.setLong(2, share.getId());
                 st.setLong(3, connector.getId());
-            } catch (SQLException e) {
-                throw new DatabaseException(e);
             }
         }
         this.path = path;
@@ -137,9 +132,9 @@ public class NetworkShareAccess implements Serializable {
     /**
      * Save and set a share
      * @param share The shared network volume
-     * @throws DatabaseException If something goes wrong
+     * @throws SQLException If something goes wrong
      */
-    public void save(NetworkShare share) throws DatabaseException {
+    public void save(NetworkShare share) throws SQLException {
         // Add to database
         try (PreparedStatement st = Scheduler.get().getConnection()
                 .prepareStatement("INSERT INTO NetworkShareAccess(share, connector, path) VALUES(?,?,?)")) {
@@ -149,8 +144,6 @@ public class NetworkShareAccess implements Serializable {
             st.execute();
 
             this.share = share;
-        } catch (SQLException e) {
-            throw new DatabaseException(e);
         }
     }
 }

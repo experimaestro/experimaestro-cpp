@@ -1,14 +1,26 @@
 -- Main tables
 
--- Resources
+-- Connectors
 
+CREATE TABLE Connectors (
+  id IDENTITY,
+  type  BIGINT        NOT NULL,
+  uri   VARCHAR(4096) NOT NULL,
+  value BLOB
+);
+
+
+-- Resources
 CREATE TABLE Resources (
   id IDENTITY,
   path     VARCHAR(4096),
+  connector BIGINT,
   status   BIGINT,
   type     BIGINT,
   priority INT DEFAULT 0 NOT NULL,
-  data     BLOB not null
+  data     BLOB NOT NULL,
+
+  FOREIGN KEY (connector) REFERENCES Connectors ON DELETE RESTRICT
 );
 
 CREATE INDEX status_index ON resources (status);
@@ -47,14 +59,6 @@ CREATE TABLE Processes (
     ON DELETE RESTRICT
 );
 
--- Connectors
-
-CREATE TABLE Connectors (
-  id IDENTITY,
-  type  BIGINT        NOT NULL,
-  uri   VARCHAR(4096) NOT NULL,
-  value BLOB
-);
 
 -- Shares
 

@@ -26,7 +26,6 @@ import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
@@ -37,6 +36,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
@@ -143,7 +143,7 @@ final public class Scheduler {
      *
      * @param baseDirectory The directory where the XPM database will be stored
      */
-    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException, CloseException, DatabaseException {
+    public Scheduler(File baseDirectory) throws IOException, ClassNotFoundException, SQLException, CloseException {
         if (INSTANCE != null) {
             throw new XPMRuntimeException("Only one scheduler instance should be created");
         }
@@ -267,7 +267,7 @@ final public class Scheduler {
      * @param connector The single host connector where this
      * @param path      The path on the connector
      */
-    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws DatabaseException {
+    public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws SQLException {
         // Save the connector in DB if necessary
         connector.persist();
 
@@ -319,7 +319,7 @@ final public class Scheduler {
      * @param states The states of the resource
      * @return A closeable iterator
      */
-    public CloseableIterable<Resource> resources(EnumSet<ResourceState> states) throws DatabaseException {
+    public CloseableIterable<Resource> resources(EnumSet<ResourceState> states) throws SQLException {
         return resources.find(states);
     }
 
@@ -456,6 +456,11 @@ final public class Scheduler {
         return networkShares;
     }
 
+
+    public static PreparedStatement prepareStatement(String sql) throws SQLException {
+        return get().getConnection().prepareStatement(sql);
+    }
+
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
         public Message message;
 
@@ -567,8 +572,8 @@ final public class Scheduler {
                         }
                     } catch (CloseException e) {
                         LOGGER.error(e, "SQL exception while retrieving ready jobs");
-                    } catch (DatabaseException e) {
-                        e.printStackTrace();
+                    } catch (SQLException e) {
+                        LOGGER.error(e, "SQL error while retrieving ready jobs");
                     }
                 }
             } finally {
@@ -685,7 +690,7 @@ final public class Scheduler {
                     Resource fromResource;
                     try {
                         fromResource = resources.getById(resourceId);
-                    } catch (DatabaseException e) {
+                    } catch (SQLException e) {
                         LOGGER.error("Could not retrieve resource with ID %d", resourceId);
                         throw new RuntimeException(e);
                     }

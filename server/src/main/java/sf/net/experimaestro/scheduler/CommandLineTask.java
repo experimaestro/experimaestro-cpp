@@ -202,8 +202,11 @@ public class CommandLineTask extends Job {
     }
 
     public Commands getCommands() {
+        this.loadData();
         return commands;
     }
+
+
 
     @Override
     public Path outputFile() throws IOException {

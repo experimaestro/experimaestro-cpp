@@ -23,7 +23,6 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExitException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
@@ -59,6 +58,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -253,7 +253,7 @@ public class Functions {
                                     @Argument(name = "path")
                                     String path,
                                     @Argument(name = "priority")
-                                    Integer priority) throws DatabaseException {
+                                    Integer priority) throws SQLException {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 
@@ -283,7 +283,7 @@ public class Functions {
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws DatabaseException {
+    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         get_locks(lockMode, json, dependencies);
@@ -291,7 +291,7 @@ public class Functions {
         return dependencies;
     }
 
-    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) throws DatabaseException {
+    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) throws SQLException {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {
@@ -313,7 +313,7 @@ public class Functions {
 
     @Expose(value = "$$")
     @Help("Get the resource associated with the json object")
-    static public Resource get_resource(Json json) throws DatabaseException {
+    static public Resource get_resource(Json json) throws SQLException {
         Resource resource;
         if (json instanceof JsonObject) {
             resource = getResource((JsonObject) json);
@@ -327,7 +327,7 @@ public class Functions {
         throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
     }
 
-    private static Resource getResource(JsonObject json) throws DatabaseException {
+    private static Resource getResource(JsonObject json) throws SQLException {
         if (json.containsKey(Manager.XP_RESOURCE.toString())) {
             final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
             if (o instanceof Resource) {

@@ -19,21 +19,16 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang.NotImplementedException;
-import org.hsqldb.Database;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.locks.FileLock;
-import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -41,19 +36,23 @@ import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.nio.file.FileSystemException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -68,11 +67,6 @@ public class Resource implements Identifiable {
      * Extension for the lock file
      */
     public static final FileNameTransformer LOCK_EXTENSION = new FileNameTransformer("", ".lock");
-
-    /**
-     * Extension for the JSON file that contains further information about the task
-     */
-    public static final FileNameTransformer JSON_EXTENSION = new FileNameTransformer("", ".xpm");
 
     // --- Resource description
 
@@ -158,6 +152,11 @@ public class Resource implements Identifiable {
      */
     transient private Path path;
 
+    /**
+     * Flag that says whether the data has been loaded
+     */
+    transient private boolean dataLoaded;
+
     public Resource(Connector connector, Path path) throws IOException {
         this(connector, path.toString());
     }
@@ -167,13 +166,17 @@ public class Resource implements Identifiable {
         this.locator = name;
         outgoingDependencies = new HashMap<>();
         ingoingDependencies = new HashMap<>();
+        dataLoaded = true;
     }
 
-    /** Construct from DB */
+    /**
+     * Construct from DB
+     */
     public Resource(Long id, String locator) {
         this(LocalhostConnector.getInstance(), locator);
         this.resourceID = id;
         this.locator = locator;
+        dataLoaded = false;
     }
 
     /**
@@ -182,7 +185,7 @@ public class Resource implements Identifiable {
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
-    public static Resource getByLocator(String path) throws DatabaseException {
+    public static Resource getByLocator(String path) throws SQLException {
         return Scheduler.get().resources().getByLocator(path);
     }
 
@@ -235,7 +238,7 @@ public class Resource implements Identifiable {
      * Calls {@linkplain #doUpdateStatus()}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    synchronized final public boolean updateStatus() throws DatabaseException {
+    synchronized final public boolean updateStatus() throws SQLException {
         try {
             boolean b = doUpdateStatus();
             return b;
@@ -274,7 +277,7 @@ public class Resource implements Identifiable {
      *
      * @param message The message
      */
-    public void notify(Message message) throws DatabaseException {
+    public void notify(Message message) throws SQLException {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 break;
@@ -345,7 +348,7 @@ public class Resource implements Identifiable {
      * @param state
      * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
      */
-    synchronized public boolean setState(ResourceState state) throws DatabaseException {
+    synchronized public boolean setState(ResourceState state) throws SQLException {
         if (this.state == state)
             return false;
 
@@ -358,10 +361,10 @@ public class Resource implements Identifiable {
                 final int count = st.getUpdateCount();
 
                 if (count != 1) {
-                    throw new DatabaseException("Updating resource resulted in %d updated rows", count);
+                    throw new SQLException(format("Updating resource resulted in %d updated rows", count));
                 }
             } catch (SQLException e) {
-                throw new DatabaseException(e);
+                throw new SQLException(e);
             }
             LOGGER.debug("Stored new state [%s] of job %s in database", state, this);
         }
@@ -452,7 +455,7 @@ public class Resource implements Identifiable {
      * @return The old resource, or null if there was nothing
      * @throws ExperimaestroCannotOverwrite If the old resource could not be overriden
      */
-    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite, DatabaseException {
+    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         // Get the group
         final boolean newResource = !resource.isStored();
         if (newResource) {
@@ -484,7 +487,7 @@ public class Resource implements Identifiable {
      *
      * @param recursive Delete dependent resources
      */
-    public synchronized void delete(boolean recursive) throws DatabaseException {
+    public synchronized void delete(boolean recursive) throws SQLException {
         if (getState() == ResourceState.RUNNING) {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
         }
@@ -562,7 +565,7 @@ public class Resource implements Identifiable {
     /**
      * Save the entity in DB
      */
-    public void save() throws DatabaseException {
+    public void save() throws SQLException {
         // Update the status
         updateStatus();
 
@@ -575,6 +578,7 @@ public class Resource implements Identifiable {
 
     /**
      * Save everything which is not saved in DB on disk
+     *
      * @param writer The writer
      */
     protected void saveJson(JsonWriter writer) {
@@ -583,15 +587,35 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Reads from Gson
-     * @param reader
+     * Load data from database
      */
-    protected void fromJson(JsonReader reader) {
-        final Gson gson = GsonConverter.builder.create();
-        // TODO: Not implemented
-        throw new UnsupportedOperationException("Not implemented");
-    }
+    public void loadData() {
+        if (dataLoaded) {
+            return;
+        }
 
+        final Gson gson = GsonConverter.builder.create();
+        try (PreparedStatement st = prepareStatement("SELECT data FROM Resources WHERE id=?")) {
+            st.setLong(1, getId());
+            st.execute();
+            final ResultSet resultSet = st.getResultSet();
+            resultSet.next();
+            try (InputStream is = resultSet.getBinaryStream(1);
+                 Reader reader = new InputStreamReader(is);
+                 JsonReader jsonReader = new JsonReader(reader)
+            ) {
+                final ReflectiveTypeAdapterFactory.Adapter<Resource> adapter
+                        = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(this.getClass());
+                adapter.read(jsonReader, this);
+            } catch (IOException e) {
+                throw new XPMRuntimeException(e, "Error while deserializing resource %s JSON", this);
+            }
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
+        }
+
+        dataLoaded = true;
+    }
 
     @Expose("output")
     public Path output() throws IOException {
@@ -613,13 +637,14 @@ public class Resource implements Identifiable {
         return createDependency(lockType);
     }
 
-    public static Resource getById(long resourceId) throws DatabaseException {
+    public static Resource getById(long resourceId) throws SQLException {
         return Scheduler.get().resources().getById(resourceId);
     }
 
     public Map<Resource, Dependency> getIngoingDependencies() {
         return ingoingDependencies;
     }
+
 
     /**
      * Defines how printing should be done

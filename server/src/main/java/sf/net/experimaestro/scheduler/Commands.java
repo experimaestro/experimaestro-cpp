@@ -184,4 +184,22 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     public void addUnprotected(String command) {
         add(new Command(new Command.Unprotected(command)));
     }
+
+    public AbstractCommand get(int i) {
+        return commands.get(i);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Commands that = (Commands) o;
+        return Objects.equals(commands, that.commands) &&
+                Objects.equals(dependencies, that.dependencies);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(commands, dependencies);
+    }
 }

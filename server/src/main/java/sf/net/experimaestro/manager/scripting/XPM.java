@@ -35,7 +35,6 @@ import sf.net.experimaestro.connectors.AbstractProcessBuilder;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
@@ -68,6 +67,7 @@ import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -110,7 +110,7 @@ public class XPM {
     @Help("Retrieve (or creates) a token resource with a given xpath")
     static public TokenResource token_resource(
             @Argument(name = "path", help = "The path of the resource") String path
-    ) throws ExperimaestroCannotOverwrite, DatabaseException {
+    ) throws ExperimaestroCannotOverwrite, SQLException {
         final Resource resource = Resource.getByLocator(path);
         final TokenResource tokenResource;
         if (resource == null) {

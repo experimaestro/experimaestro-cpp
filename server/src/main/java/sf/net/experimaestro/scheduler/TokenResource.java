@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
@@ -74,7 +73,7 @@ public class TokenResource extends Resource {
         this.wasBlocking = isBlocking();
         try {
             setState(ResourceState.DONE);
-        } catch (DatabaseException e) {
+        } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Should not happen - object not in DB");
         }
     }

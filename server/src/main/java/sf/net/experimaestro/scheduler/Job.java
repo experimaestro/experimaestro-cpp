@@ -22,12 +22,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.ComputationalRequirements;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -40,6 +37,7 @@ import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -319,7 +317,7 @@ abstract public class Job extends Resource {
      * @param message The message
      */
     @Override
-    public void notify(Message message) throws DatabaseException {
+    public void notify(Message message) throws SQLException {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
         switch (message.getType()) {
@@ -358,7 +356,7 @@ abstract public class Job extends Resource {
      *
      * @param message The message
      */
-    private void dependencyChanged(DependencyChangedMessage message) throws DatabaseException {
+    private void dependencyChanged(DependencyChangedMessage message) throws SQLException {
         LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
@@ -391,7 +389,7 @@ abstract public class Job extends Resource {
      * Called when the job has ended
      *  @param eoj The message
      */
-    private void endOfJobMessage(EndOfJobMessage eoj) throws DatabaseException {
+    private void endOfJobMessage(EndOfJobMessage eoj) throws SQLException {
         this.endTimestamp = eoj.timestamp;
 
         // Lock all the required dependencies and refresh
@@ -616,7 +614,7 @@ abstract public class Job extends Resource {
     /**
      * Stop the job
      */
-    public boolean stop() throws DatabaseException {
+    public boolean stop() throws SQLException {
         // Process is running
         if (process != null) {
             try {
@@ -682,7 +680,7 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    public void save() throws DatabaseException {
+    public void save() throws SQLException {
         super.save();
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");

@@ -19,7 +19,6 @@ package sf.net.experimaestro.server;
  */
 
 import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
@@ -34,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 
@@ -105,8 +105,8 @@ public class StatusServlet extends XPMServlet {
                     }
                 } catch (CloseException e) {
                     LOGGER.warn("Error while closing the iterator");
-                } catch (DatabaseException e) {
-                    LOGGER.warn("Error while ");
+                } catch (SQLException e) {
+                    LOGGER.warn("Error while retrieving resources");
                 }
                 out.println("</ul></div>");
             }
@@ -157,7 +157,7 @@ public class StatusServlet extends XPMServlet {
             Resource resource;
             try {
                 resource = scheduler.resources().getById(resourceId);
-            } catch (DatabaseException e) {
+            } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
             header(out, String.format("Details of resource %s", resource.getLocator()));

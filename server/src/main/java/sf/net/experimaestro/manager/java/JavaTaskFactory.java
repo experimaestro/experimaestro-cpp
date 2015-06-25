@@ -22,7 +22,6 @@ import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Input;
 import sf.net.experimaestro.manager.JsonInput;
@@ -45,6 +44,7 @@ import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -222,7 +222,7 @@ public class JavaTaskFactory extends TaskFactory {
                     } else {
                         try {
                             resource = Resource.getByLocator(o.toString());
-                        } catch (DatabaseException e) {
+                        } catch (SQLException e) {
                             throw new XPMRuntimeException(e, "Error while searching the resource %s the task %s depends upon",
                                     o.toString(), getId());
                         }

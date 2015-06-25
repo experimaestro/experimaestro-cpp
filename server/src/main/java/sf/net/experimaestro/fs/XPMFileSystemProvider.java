@@ -22,7 +22,6 @@ import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -34,6 +33,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -88,7 +88,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
         NetworkShare share = null;
         try {
             share = NetworkShare.find(_path.getHostName(), _path.getShareName());
-        } catch (DatabaseException e) {
+        } catch (SQLException e) {
             throw new XPMRuntimeException("Could not find shares://%s/%s", _path.getHostName(), _path.getShareName());
         }
         NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);

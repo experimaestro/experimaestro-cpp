@@ -39,7 +39,6 @@ import org.python.core.PyException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ContextualException;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExitException;
 import sf.net.experimaestro.exceptions.XPMCommandException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -54,7 +53,6 @@ import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.log.Logger;
@@ -71,6 +69,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -334,7 +333,7 @@ public class JsonRPCMethods extends HttpServlet {
      * Information about a job
      */
     @RPCMethod(help = "Returns detailed information about a job (Json format)")
-    public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException, DatabaseException {
+    public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException, SQLException {
         Resource resource = getResource(resourceId);
 
         if (resource == null)
@@ -353,7 +352,7 @@ public class JsonRPCMethods extends HttpServlet {
      * @param resourceId The resource ID or locator
      * @return
      */
-    private Resource getResource(String resourceId) throws DatabaseException {
+    private Resource getResource(String resourceId) throws SQLException {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);

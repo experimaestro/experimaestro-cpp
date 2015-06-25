@@ -19,10 +19,10 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.exceptions.DatabaseException;
 
-import java.lang.reflect.InvocationTargetException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * Access to connectors
@@ -37,29 +37,24 @@ public class NetworkShares extends DatabaseObjects<NetworkShare> {
     }
 
     @Override
-    protected NetworkShare create(ResultSet result) throws DatabaseException {
-        try {
-            long id = result.getLong(1);
-            String hostname = result.getString(2);
-            String name = result.getString(3);
+    protected NetworkShare create(ResultSet result) throws SQLException {
+        long id = result.getLong(1);
+        String hostname = result.getString(2);
+        String name = result.getString(3);
 
-            final NetworkShare networkShare = new NetworkShare(hostname, name);
-            networkShare.setId(id);
-            return networkShare;
-
-        } catch (SQLException e) {
-            throw new DatabaseException(e, "Error retrieving database object");
-        }
+        final NetworkShare networkShare = new NetworkShare(hostname, name);
+        networkShare.setId(id);
+        return networkShare;
     }
 
-    public NetworkShare find(String host, String name) throws DatabaseException {
+    public NetworkShare find(String host, String name) throws SQLException {
         return findUnique(FINDBYNAME_QUERY, st -> {
             st.setString(1, host);
             st.setString(2, name);
         });
     }
 
-    public void save(NetworkShare share) throws DatabaseException {
+    public void save(NetworkShare share) throws SQLException {
         save(share, "INSERT INTO NetworkShares(hostname, name) VALUES(?, ?)", st -> {
             st.setString(1, share.getHost());
             st.setString(2, share.getName());

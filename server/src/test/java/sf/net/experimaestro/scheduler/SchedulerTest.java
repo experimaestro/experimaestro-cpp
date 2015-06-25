@@ -24,16 +24,15 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.RandomSampler;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 
 import static java.lang.Math.*;
@@ -113,7 +112,7 @@ public class SchedulerTest extends XPMEnvironment {
      * @param readyness true if a job must finish before the next is ready
      * @param reorder   true if jobs can be run in any order, but one at a time
      */
-    static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) throws DatabaseException {
+    static private int checkSequence(boolean reorder, boolean readyness, WaitingJob... runners) throws SQLException {
         int errors = 0;
         Job[] jobs = new Job[runners.length];
 
@@ -147,7 +146,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other status start")
     public void test_simple_dependency() throws
-            IOException, InterruptedException, ExperimaestroCannotOverwrite, DatabaseException {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite, SQLException {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -175,7 +174,7 @@ public class SchedulerTest extends XPMEnvironment {
 
     @Test(description = "Run two jobs - one depend on the other status start, the first fails")
     public void test_failed_dependency() throws
-            IOException, InterruptedException, ExperimaestroCannotOverwrite, DatabaseException {
+            IOException, InterruptedException, ExperimaestroCannotOverwrite, SQLException {
 
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
@@ -203,7 +202,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
-    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException, DatabaseException {
+    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException, SQLException {
         Random random = new Random();
         long seed = p.seed == null ? random.nextLong() : p.seed;
         LOGGER.info("Seed is %d", seed);
@@ -290,7 +289,7 @@ public class SchedulerTest extends XPMEnvironment {
 
             try {
                 jobs[j].save();
-            } catch(DatabaseException e) {
+            } catch(SQLException e) {
                 LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
             }
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
@@ -361,7 +360,7 @@ public class SchedulerTest extends XPMEnvironment {
 
 
     @Test(description = "The required dependency ends before the new job is saved")
-    public void test_required_job_ends() throws IOException, DatabaseException {
+    public void test_required_job_ends() throws IOException, SQLException {
         File jobDirectory = mkTestDir();
         ThreadCount counter = new ThreadCount();
 
@@ -387,7 +386,7 @@ public class SchedulerTest extends XPMEnvironment {
     }
 
     @Test(description = "Test of the token resource - one job at a time")
-    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException, DatabaseException {
+    public void test_token_resource() throws ExperimaestroCannotOverwrite, InterruptedException, IOException, SQLException {
 
         File jobDirectory = mkTestDir();
 
@@ -464,7 +463,7 @@ public class SchedulerTest extends XPMEnvironment {
      * @param states The state
      * @param jobs   The jobs
      */
-    private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) throws DatabaseException {
+    private int checkState(EnumSet<ResourceState> states, WaitingJob... jobs) throws SQLException {
 
         int errors = 0;
         for (int i = 0; i < jobs.length; i++) {

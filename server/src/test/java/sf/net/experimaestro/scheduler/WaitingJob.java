@@ -20,19 +20,16 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
@@ -95,13 +92,13 @@ public class WaitingJob extends Job {
 
 
     @Override
-    public void save() throws DatabaseException {
+    public void save() throws SQLException {
         super.save();
         LOGGER.debug("Stored %s with state %s", this, getState());
     }
 
     @Override
-    public boolean setState(ResourceState state) throws DatabaseException {
+    public boolean setState(ResourceState state) throws SQLException {
         ResourceState oldState = this.getState();
         final Status status = status();
 

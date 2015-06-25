@@ -20,13 +20,17 @@ package sf.net.experimaestro.scheduler;
 
 import com.google.common.collect.AbstractIterator;
 import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.sql.*;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Iterator;
 import java.util.WeakHashMap;
 
@@ -113,7 +117,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         return value;
     }
 
-    protected T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
+    protected T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try (PreparedStatement st = connection.prepareCall(query)) {
             // Sets the variables
             p.apply(st);
@@ -137,12 +141,12 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
             // No result
             return null;
-        } catch (Throwable e) {
-            throw new DatabaseException(e);
+        } catch (Exception e) {
+            throw new SQLException(e);
         }
     }
 
-    CloseableIterable<T> find(final String query, final Functional.ExceptionalConsumer<PreparedStatement> p) throws DatabaseException {
+    CloseableIterable<T> find(final String query, final Functional.ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try {
             {
                 final CallableStatement st = connection.prepareCall(query);
@@ -187,19 +191,21 @@ public abstract class DatabaseObjects<T extends Identifiable> {
                                 return getOrCreate(result);
 
 
-                            } catch (SQLException | DatabaseException e) {
+                            } catch (SQLException e) {
                                 throw new XPMRuntimeException(e, "Error while fetching resource from DB");
                             }
                         }
                     };
                 }
             };
+        } catch (SQLException e) {
+            throw e;
         } catch (Exception e) {
-            throw new DatabaseException(e);
+            throw new SQLException(e);
         }
     }
 
-    private T getOrCreate(ResultSet result) throws SQLException, DatabaseException {
+    private T getOrCreate(ResultSet result) throws SQLException {
         // Get from cache
         long id = result.getLong(1);
         T object = getFromCache(id);
@@ -221,7 +227,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
      * @param result The result
      * @return The new object
      */
-    abstract protected T create(ResultSet result) throws DatabaseException;
+    abstract protected T create(ResultSet result) throws SQLException;
 
     /**
      * Get an object from cache
@@ -236,16 +242,13 @@ public abstract class DatabaseObjects<T extends Identifiable> {
     }
 
 
-    final public void delete(T object) throws DatabaseException {
+    final public void delete(T object) throws SQLException {
         synchronized (map) {
-            try {
-                try (final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
-                    st.setLong(1, object.getId());
-                    st.execute();
-                }
-            } catch (SQLException e) {
-                throw new DatabaseException(e);
+            try (final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
+                st.setLong(1, object.getId());
+                st.execute();
             }
+
 
             final T remove = map.remove(object.getId());
             assert remove != null : "Object was not in cache !";
@@ -255,19 +258,19 @@ public abstract class DatabaseObjects<T extends Identifiable> {
     }
 
     protected void save(T object, String query, Functional.ExceptionalConsumer<PreparedStatement> f)
-            throws DatabaseException {
+            throws SQLException {
         try (PreparedStatement st = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             // Get the key
             f.apply(st);
             int affectedRows = st.executeUpdate();
             if (affectedRows == 0) {
-                throw new DatabaseException("Creating object failed, no rows inserted.");
+                throw new SQLException("Creating object failed, no rows inserted.");
             }
             try (ResultSet generatedKeys = st.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     object.setId(generatedKeys.getLong(1));
                 } else {
-                    throw new DatabaseException("Creating object failed, no ID obtained.");
+                    throw new SQLException("Creating object failed, no ID obtained.");
                 }
             }
 
@@ -275,10 +278,20 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             synchronized (map) {
                 map.put(object.getId(), object);
             }
+        } catch (SQLException e) {
+            throw e;
         } catch (Exception e) {
-            throw new DatabaseException(e);
+            throw new SQLException(e);
         }
     }
 
 
+    /**
+     * Forget an ID - only used for testing
+     */
+    void forget(Long id) {
+        synchronized (map) {
+            map.remove(id);
+        }
+    }
 }

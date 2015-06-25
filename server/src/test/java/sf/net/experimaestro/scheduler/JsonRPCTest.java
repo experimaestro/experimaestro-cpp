@@ -28,7 +28,6 @@ import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.tasks.ServerTask;
 import sf.net.experimaestro.utils.XPMEnvironment;
 
@@ -36,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -55,7 +55,7 @@ public class JsonRPCTest extends XPMEnvironment {
     }
 
     @Test
-    void removeResource() throws IOException, JSONRPC2SessionException, DatabaseException {
+    void removeResource() throws IOException, JSONRPC2SessionException, SQLException {
         File jobDirectory = mkTestDir();
 
         XPMEnvironment.getDirectory();

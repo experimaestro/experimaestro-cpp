@@ -18,10 +18,8 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.DatabaseException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.Connectors;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
@@ -30,6 +28,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -173,11 +172,11 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
      * @param identifier The string identifier
      * @return The connector in database or null if none exist
      */
-    public static Connector find(String identifier) throws DatabaseException {
+    public static Connector find(String identifier) throws SQLException {
         return Scheduler.get().connectors().find(identifier);
     }
 
-    public void persist() throws DatabaseException {
+    public void persist() throws SQLException {
         Scheduler.get().connectors().save(this);
     }
 }

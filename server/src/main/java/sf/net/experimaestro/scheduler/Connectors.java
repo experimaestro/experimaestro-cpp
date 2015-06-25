@@ -18,13 +18,9 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.hsqldb.Database;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SSHConnector;
-import sf.net.experimaestro.exceptions.DatabaseException;
-import sf.net.experimaestro.utils.Functional;
 
-import javax.xml.crypto.Data;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.*;
@@ -49,13 +45,13 @@ public class Connectors extends DatabaseObjects<Connector> {
     }
 
 
-    public Connector find(String uri) throws DatabaseException {
+    public Connector find(String uri) throws SQLException {
         final String query = format("%s WHERE path = ?", SELECT_QUERY);
         return findUnique(query, st -> st.setString(1, uri));
     }
 
     @Override
-    protected Connector create(ResultSet result) throws DatabaseException {
+    protected Connector create(ResultSet result) throws SQLException {
         try {
             // OK, create connector
             long id = result.getLong(1);
@@ -67,12 +63,12 @@ public class Connectors extends DatabaseObjects<Connector> {
             final Connector connector = constructor.newInstance(id, uri, value);
 
             return connector;
-        } catch (SQLException | InstantiationException | InvocationTargetException | IllegalAccessException e) {
-            throw new DatabaseException(e, "Error retrieving database object");
+        } catch (InstantiationException | InvocationTargetException | IllegalAccessException e) {
+            throw new SQLException("Error retrieving database object", e);
         }
     }
 
-    public void save(Connector connector) throws DatabaseException {
+    public void save(Connector connector) throws SQLException {
         save(connector, "INSERT INTO Connectors(type, uri, value) VALUES(?, ?, ?)", st -> {
             st.setLong(1, getTypeValue(connector.getClass()));
             st.setString(2, connector.getIdentifier());
