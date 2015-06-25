@@ -120,9 +120,9 @@ public class JavaTask extends Task {
                             taskLogger.warn("Cannot override resource [%s]", old);
                             throw new RuntimeException(e);
                         }
+                    } else {
+                        job.save();
                     }
-
-                    job.save();
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 

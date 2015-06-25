@@ -637,10 +637,10 @@ public class XPM {
                     old.replaceBy(job);
                     job = (CommandLineTask) old;
                 }
+            } else {
+                // Store in scheduler
+                job.save();
             }
-
-            // Store in scheduler
-            job.save();
 
         }
 

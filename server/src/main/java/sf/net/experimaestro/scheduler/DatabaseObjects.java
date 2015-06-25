@@ -25,8 +25,10 @@ import com.google.gson.stream.JsonReader;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.ExceptionalConsumer;
 import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -129,7 +131,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         return value;
     }
 
-    protected T findUnique(String query, Functional.ExceptionalConsumer<PreparedStatement> p) throws SQLException {
+    protected T findUnique(String query, ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try (PreparedStatement st = connection.prepareCall(query)) {
             // Sets the variables
             p.apply(st);
@@ -158,7 +160,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    CloseableIterable<T> find(final String query, final Functional.ExceptionalConsumer<PreparedStatement> p) throws SQLException {
+    CloseableIterable<T> find(final String query, final ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try {
             {
                 final CallableStatement st = connection.prepareCall(query);
@@ -269,7 +271,11 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    protected void save(T object, String query, Functional.ExceptionalConsumer<PreparedStatement> f)
+    protected void save(T object, String query, ExceptionalConsumer<PreparedStatement> f) throws SQLException {
+        save(object, query, f, false);
+    }
+
+    public void save(T object, String query, ExceptionalConsumer<PreparedStatement> f, boolean update)
             throws SQLException {
         try (PreparedStatement st = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             // Get the key
@@ -278,11 +284,14 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             if (affectedRows == 0) {
                 throw new SQLException("Creating object failed, no rows inserted.");
             }
-            try (ResultSet generatedKeys = st.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    object.setId(generatedKeys.getLong(1));
-                } else {
-                    throw new SQLException("Creating object failed, no ID obtained.");
+
+            if (!update) {
+                try (ResultSet generatedKeys = st.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        object.setId(generatedKeys.getLong(1));
+                    } else {
+                        throw new SQLException("Creating object failed, no ID obtained.");
+                    }
                 }
             }
 
@@ -297,6 +306,18 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         }
     }
 
+    public void save(T object, SQLInsert sqlInsert, boolean update, Object... values) throws SQLException {
+        final long id = sqlInsert.execute(connection, update, object.getId(), values);
+        if (!update) {
+            assert id >= 0;
+            object.setId(id);
+        }
+        synchronized (map) {
+            map.put(object.getId(), object);
+        }
+    }
+
+
 
     /**
      * Forget an ID - only used for testing
@@ -309,11 +330,12 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
     /**
      * Load data
+     *
      * @param object
      */
-    public void loadData(T object) {
+    public void loadData(T object, String dataFieldName) {
         final Gson gson = GsonConverter.builder.create();
-        try (PreparedStatement st = prepareStatement(format("SELECT data FROM %s WHERE id=?", tableName))) {
+        try (PreparedStatement st = prepareStatement(format("SELECT %s FROM %s WHERE id=?", dataFieldName, tableName))) {
             st.setLong(1, object.getId());
             st.execute();
             final ResultSet resultSet = st.getResultSet();
@@ -332,4 +354,5 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
         }
     }
+
 }

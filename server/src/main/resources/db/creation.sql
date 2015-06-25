@@ -1,26 +1,32 @@
--- Main tables
-
+--
 -- Connectors
+--
+
 
 CREATE TABLE Connectors (
   id IDENTITY,
-  type  BIGINT        NOT NULL,
-  uri   VARCHAR(4096) NOT NULL,
-  data  BLOB NOT NULL
+  type BIGINT        NOT NULL,
+  uri  VARCHAR(4096) NOT NULL,
+  data BLOB          NOT NULL
 );
 
 
+--
 -- Resources
+--
+
+
 CREATE TABLE Resources (
   id IDENTITY,
-  path     VARCHAR(4096),
+  path      VARCHAR(4096),
   connector BIGINT,
-  status   BIGINT,
-  type     BIGINT,
-  priority INT DEFAULT 0 NOT NULL,
-  data     BLOB NOT NULL,
+  status    BIGINT,
+  type      BIGINT,
+  priority  INT DEFAULT 0 NOT NULL,
+  data      BLOB          NOT NULL,
 
-  FOREIGN KEY (connector) REFERENCES Connectors ON DELETE RESTRICT
+  FOREIGN KEY (connector) REFERENCES Connectors
+    ON DELETE RESTRICT
 );
 
 CREATE INDEX status_index ON resources (status);
@@ -35,6 +41,26 @@ CREATE TABLE TokenResources (
   FOREIGN KEY (id) REFERENCES Resources
     ON DELETE CASCADE
 );
+
+-- Job resource
+CREATE TABLE Job (
+  id          BIGINT NOT NULL PRIMARY KEY,
+  submitted   TIMESTAMP,
+  start       TIMESTAMP,
+  end         TIMESTAMP,
+  unsatisfied INT    NOT NULL,
+  holding     INT    NOT NULL,
+  priority    INT    NOT NULL,
+  progress    DOUBLE NOT NULL,
+
+  FOREIGN KEY (id) REFERENCES Resources
+    ON DELETE CASCADE
+);
+
+--
+-- Other
+--
+
 
 -- Dependencies between resources
 
@@ -81,7 +107,9 @@ CREATE TABLE NetworkShareAccess (
 );
 
 
+--
 -- Experiments
+--
 
 CREATE TABLE Experiments (
   id IDENTITY,

@@ -166,6 +166,7 @@ public class CommandLineTask extends Job {
     }
 
     public JSONObject toJSON() throws IOException {
+        loadData();
         JSONObject info = new JSONObject();
         info.put("command", commands.toString());
         info.put("working-directory", workingDirectory);

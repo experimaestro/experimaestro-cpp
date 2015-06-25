@@ -33,7 +33,16 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Random;
+import java.util.TreeSet;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
@@ -289,7 +298,7 @@ public class SchedulerTest extends XPMEnvironment {
 
             try {
                 jobs[j].save();
-            } catch(SQLException e) {
+            } catch (SQLException e) {
                 LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
             }
             LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
@@ -356,6 +365,28 @@ public class SchedulerTest extends XPMEnvironment {
                 LOGGER.error(e, "error while waiting");
             }
         }
+    }
+
+    @Test(description = "The required dependency cannot be deleted")
+    public void test_cannot_delete_required() throws IOException, SQLException {
+        File jobDirectory = mkTestDir();
+        ThreadCount counter = new ThreadCount();
+
+
+        WaitingJob jobA = new WaitingJob(counter, jobDirectory, "jobA", new Action(250, 0, 0));
+        jobA.save();
+        WaitingJob jobB = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
+        jobB.addDependency(jobA.createDependency(null));
+        jobB.save();
+
+        try {
+            Scheduler.get().resources().delete(jobA);
+            throw new AssertionError("Deletion of requirement should have been prevented");
+        } catch(SQLIntegrityConstraintViolationException e) {
+        }
+
+        Scheduler.get().resources().delete(jobB);
+        Scheduler.get().resources().delete(jobA);
     }
 
 
@@ -531,9 +562,11 @@ public class SchedulerTest extends XPMEnvironment {
 
     static public class ComplexDependenciesParameters {
         String name;
+
         Long seed = null;
 
         int maxExecutionTime = 50;
+
         int minExecutionTime = 10;
 
         // Number of jobs

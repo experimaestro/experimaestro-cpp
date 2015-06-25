@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -18,9 +18,32 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /**
- * A consumer that can throw an exception
+ * An illegal exception
  */
-public interface ExceptionalConsumer<T> {
-    void apply(T t) throws Exception;
+public class XPMIllegalArgumentException extends XPMRuntimeException {
+    public XPMIllegalArgumentException() {
+        super();
+    }
+
+    public XPMIllegalArgumentException(String message, Throwable t) {
+        super(message, t);
+    }
+
+    public XPMIllegalArgumentException(Throwable t, String format, Object... values) {
+        super(t, format, values);
+    }
+
+    public XPMIllegalArgumentException(String message) {
+        super(message);
+    }
+
+    public XPMIllegalArgumentException(String format, Object... values) {
+        super(format, values);
+    }
+
+    public XPMIllegalArgumentException(Throwable t) {
+        super(t);
+    }
 }

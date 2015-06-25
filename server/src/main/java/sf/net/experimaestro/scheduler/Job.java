@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,6 +58,7 @@ abstract public class Job extends Resource {
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     final static private Logger LOGGER = Logger.getLogger();
+
 
     /**
      * The priority of the job (the higher, the more urgent)z
@@ -99,7 +102,7 @@ abstract public class Job extends Resource {
 
     /**
      * Progress
-     *
+     * <p>
      * The value is negative if not set
      */
     transient double progress = -1;
@@ -178,7 +181,7 @@ abstract public class Job extends Resource {
      * This is where the real job gets done
      *
      * @param locks The locks that were taken
-     * @param fake Do everything as if starting but do not start the process
+     * @param fake  Do everything as if starting but do not start the process
      * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process
@@ -314,6 +317,7 @@ abstract public class Job extends Resource {
     /**
      * Called when a resource state has changed. After an update, the entity will be
      * saved to the database and further cascading operations make take place.
+     *
      * @param message The message
      */
     @Override
@@ -387,7 +391,8 @@ abstract public class Job extends Resource {
 
     /**
      * Called when the job has ended
-     *  @param eoj The message
+     *
+     * @param eoj The message
      */
     private void endOfJobMessage(EndOfJobMessage eoj) throws SQLException {
         this.endTimestamp = eoj.timestamp;
@@ -667,26 +672,30 @@ abstract public class Job extends Resource {
         return new ReadWriteDependency(this);
     }
 
-
-    @Override
-    protected void doReplaceBy(Resource resource) {
-        super.doReplaceBy(resource);
-
-        Job job = (Job) resource;
-        this.priority = job.priority;
-        this.startTimestamp = job.startTimestamp;
-        this.endTimestamp = job.endTimestamp;
-        this.priority = job.priority;
-    }
-
     @Override
     public void save() throws SQLException {
+        // Save
         super.save();
+
+
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");
             Scheduler.notifyRunners();
         }
+    }
 
+    private static final SQLInsert SQL_INSERT = new SQLInsert("Job", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
+
+    @Override
+    protected void save(Resources resources, Resource old) throws SQLException {
+        // Update status
+        boolean update = this.inDatabase() || old != null;
+
+        // Save resource
+        super.save(resources, old);
+
+        // Execute
+        SQL_INSERT.execute(resources.connection, update, getId(), priority, new Timestamp(timestamp), new Timestamp(startTimestamp), new Timestamp(endTimestamp), nbUnsatisfied, nbHolding, progress);
     }
 
     public XPMProcess getProcess() {
@@ -701,6 +710,7 @@ abstract public class Job extends Resource {
     public double getProgress() {
         return progress;
     }
+
     public void setProgress(double progress) {
         this.progress = progress;
     }
@@ -708,9 +718,8 @@ abstract public class Job extends Resource {
     /**
      * This is where the real job gets done
      *
-     *
      * @param locks The locks that were taken
-     * @param fake Use this to prepare everything without starting the process
+     * @param fake  Use this to prepare everything without starting the process
      * @return The process corresponding status the job (or null if fake is true)
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should
      *                   return the process (unless fake is true)
@@ -719,6 +728,7 @@ abstract public class Job extends Resource {
 
     /**
      * Start a process
+     *
      * @param locks The locks that were taken
      * @return The process corresponding status the job
      * @throws Throwable If something goes wrong <b>before</b> starting the process. Otherwise, it should

@@ -22,6 +22,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -39,7 +40,10 @@ import java.sql.SQLException;
 @Exposed
 @TypeIdentifier("TOKEN")
 public class TokenResource extends Resource {
+
     final static private Logger LOGGER = Logger.getLogger();
+
+    private static final SQLInsert SQL_INSERT = new SQLInsert("TokenResources", false, "id", "limit", "used");
 
     /**
      * Maximum number of tokens available
@@ -76,6 +80,18 @@ public class TokenResource extends Resource {
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Should not happen - object not in DB");
         }
+    }
+
+    @Override
+    protected void save(Resources resources, Resource old) throws SQLException {
+        // Update status
+        boolean update = this.inDatabase() || old != null;
+
+        // Save resource
+        super.save(resources, old);
+
+        // Insert token resource
+        SQL_INSERT.execute(resources.connection, update, getId(), limit, usedTokens);
     }
 
     public String toDetailedString() {

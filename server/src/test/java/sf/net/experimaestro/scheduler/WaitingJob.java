@@ -78,7 +78,9 @@ public class WaitingJob extends Job {
         status.counter = counter;
         this.debugId = debugId;
 
-        counter.add(actions.length);
+        if (counter != null) {
+            counter.add(actions.length);
+        }
 
         this.actions = new ArrayList<>(Arrays.asList(actions));
         status.currentIndex = 0;

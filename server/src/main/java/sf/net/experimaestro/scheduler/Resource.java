@@ -19,8 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.gson.Gson;
-import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
-import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
@@ -34,17 +32,15 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.GsonSerialization;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -52,7 +48,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -63,6 +58,11 @@ import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
 @Exposed
 @TypeIdentifier("RESOURCE")
 public class Resource implements Identifiable {
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, status) VALUES(?,?,?)";
+
+    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "data");
+
+
     /**
      * Extension for the lock file
      */
@@ -384,7 +384,7 @@ public class Resource implements Identifiable {
         return true;
     }
 
-    private boolean inDatabase() {
+    protected boolean inDatabase() {
         return resourceID != null;
     }
 
@@ -514,39 +514,15 @@ public class Resource implements Identifiable {
         return extension.transform(getConnector().resolve(locator));
     }
 
-    final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
-        if (resource.getClass() != this.getClass()) {
-            throw new ExperimaestroCannotOverwrite("Class %s and %s differ", resource.getClass(), this.getClass());
-        }
-
+    synchronized final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         if (!resource.getLocator().equals(this.locator)) {
             throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), this.getLocator());
         }
 
-        doReplaceBy(resource);
-    }
+        resource.save(Scheduler.get().resources(), this);
 
-    protected void doReplaceBy(Resource resource) {
-        // Remove dependencies that are not anymore
-        final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
-        while (iterator.hasNext()) {
-            final Map.Entry<Resource, Dependency> entry = iterator.next();
-            final Dependency dependency = resource.ingoingDependencies.remove(entry.getKey());
-            if (dependency != null) {
-                entry.getValue().replaceBy(dependency);
-            } else {
-                iterator.remove();
-            }
-        }
-
-        // Add new dependencies
-        resource.ingoingDependencies.entrySet().stream()
-                .forEach(entry -> {
-                    entry.getValue().to = this;
-                    this.ingoingDependencies.put(entry.getKey(), entry.getValue());
-                });
-
-        this.state = resource.state;
+        // Not in DB anymore
+        this.setId(null);
     }
 
     public Connector getConnector() {
@@ -562,18 +538,78 @@ public class Resource implements Identifiable {
         return getConnector().getMainConnector();
     }
 
-    /**
-     * Save the entity in DB
-     */
     public void save() throws SQLException {
+        save(Scheduler.get().resources(), null);
+    }
+
+    protected void save(Resources resources, Resource old) throws SQLException {
+        boolean update = old != null;
+        if (update && getId() == null) {
+            throw new SQLException("Resource not in database");
+        } else if (!update && getId() != null) {
+            throw new SQLException("Resource already in database");
+        }
+
         // Update the status
         updateStatus();
 
-        // Save in DB
-        Scheduler.get().resources().save(this);
+        // Save resource
+        // Save on file
+        final long typeValue = DatabaseObjects.getTypeValue(getClass());
+        LOGGER.debug("Saving resource [%s] of type %s [%d], status %s [%s]",
+                getLocator(), getClass(), typeValue,
+                getState(), getState().value());
 
-        LOGGER.debug("Resource %s stored", this);
-        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
+        try(final JsonSerializationInputStream jsonInputStream = new JsonSerializationInputStream(out -> {
+            try (JsonWriter writer = new JsonWriter(out)) {
+                saveJson(writer);
+            }
+        })) {
+            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), jsonInputStream);
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
+
+        if (update) {
+            // Remove dependencies that are not anymore
+            final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
+            while (iterator.hasNext()) {
+                final Map.Entry<Resource, Dependency> entry = iterator.next();
+                final Dependency dependency = old.ingoingDependencies.remove(entry.getKey());
+                if (dependency != null) {
+                    entry.getValue().replaceBy(dependency);
+                } else {
+                }
+            }
+
+            // Delete old
+            try (PreparedStatement st = resources.connection.prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
+                for (Dependency dependency : old.ingoingDependencies.values()) {
+                    if (!ingoingDependencies.containsKey(dependency.getFrom())) {
+                        st.setLong(1, dependency.getFrom().getId());
+                        st.setLong(2, getId());
+                        st.execute();
+                    }
+                }
+            }
+
+        }
+
+        // Save dependencies (if not already in DB)
+        try (PreparedStatement st = resources.connection.prepareStatement(INSERT_DEPENDENCY)) {
+            st.setLong(2, getId());
+            for (Dependency dependency : getIngoingDependencies().values()) {
+                if (!update || !old.ingoingDependencies.containsKey(dependency.getFrom())) {
+                    st.setLong(1, dependency.getFrom().getId());
+                    st.setLong(3, dependency.status.getId());
+                    st.execute();
+                }
+            }
+        }
+
+
+        LOGGER.debug("Resource %s saved/updated", this);
+        Scheduler.get().notify(new SimpleMessage(!update ? Message.Type.RESOURCE_ADDED : Message.Type.STATE_CHANGED, this));
     }
 
     /**
@@ -594,7 +630,7 @@ public class Resource implements Identifiable {
             return;
         }
 
-        Scheduler.get().resources().loadData(this);
+        Scheduler.get().resources().loadData(this, "data");
         dataLoaded = true;
     }
 

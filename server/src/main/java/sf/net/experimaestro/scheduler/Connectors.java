@@ -68,12 +68,4 @@ public class Connectors extends DatabaseObjects<Connector> {
         }
     }
 
-    public void save(Connector connector) throws SQLException {
-        save(connector, "INSERT INTO Connectors(type, uri, value) VALUES(?, ?, ?)", st -> {
-            st.setLong(1, getTypeValue(connector.getClass()));
-            st.setString(2, connector.getIdentifier());
-            st.setNull(3, Types.BLOB);
-        });
-    }
-
 }

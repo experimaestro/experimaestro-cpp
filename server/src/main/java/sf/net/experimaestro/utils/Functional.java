@@ -29,9 +29,6 @@ import java.util.function.Function;
  * Streams utility functions
  */
 public class Functional {
-    public interface ExceptionalConsumer<T> {
-        void apply(T t) throws Exception;
-    }
 
     /**
      * Propagate exceptions by wrapping them into a runtime exception

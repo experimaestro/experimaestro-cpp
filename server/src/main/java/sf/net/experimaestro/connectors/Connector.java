@@ -18,12 +18,20 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.Connectors;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -39,7 +47,7 @@ import java.sql.SQLException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public abstract class Connector implements Comparable<Connector>,Identifiable {
+public abstract class Connector implements Comparable<Connector>, Identifiable {
     /**
      * Each connector has a unique integer ID
      */
@@ -174,6 +182,7 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
 
     /**
      * Find a connector given its string ID
+     *
      * @param identifier The string identifier
      * @return The connector in database or null if none exist
      */
@@ -183,10 +192,37 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
 
     /**
      * Save object to database
+     *
      * @throws SQLException If something goes wrong
      */
     public void save() throws SQLException {
-        Scheduler.get().connectors().save(this);
+        save(Scheduler.get().connectors(), null);
+    }
+
+    public void save(Connectors connectors, Connector old) throws SQLException {
+        try (InputStream jsonInputStream = new JsonSerializationInputStream(out -> {
+            try (JsonWriter writer = new JsonWriter(out)) {
+                saveJson(writer);
+            }
+        })) {
+            connectors.save(this, "INSERT INTO Connectors(type, uri, data) VALUES(?, ?, ?)", st -> {
+                st.setLong(1, DatabaseObjects.getTypeValue(getClass()));
+                st.setString(2, getIdentifier());
+                st.setBlob(3, jsonInputStream);
+            }, old != null);
+        } catch (IOException e) {
+            throw new XPMRuntimeException(e, "Unexpected I/O error");
+        }
+    }
+
+    /**
+     * Save everything which is not saved in DB on disk
+     *
+     * @param writer The writer
+     */
+    protected void saveJson(JsonWriter writer) {
+        final Gson gson = GsonConverter.builder.create();
+        gson.toJson(this, this.getClass(), writer);
     }
 
     /**
@@ -197,7 +233,7 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
             return;
         }
 
-        Scheduler.get().connectors().loadData(this);
+        Scheduler.get().connectors().loadData(this, "data");
         dataLoaded = true;
     }
 }
