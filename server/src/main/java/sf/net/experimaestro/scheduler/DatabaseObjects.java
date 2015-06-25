@@ -19,12 +19,20 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.AbstractIterator;
+import com.google.gson.Gson;
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
+import com.google.gson.stream.JsonReader;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -35,6 +43,7 @@ import java.util.Iterator;
 import java.util.WeakHashMap;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
 
 /**
  * A set of objects stored in database
@@ -47,6 +56,9 @@ public abstract class DatabaseObjects<T extends Identifiable> {
      */
     protected final Connection connection;
 
+    /**
+     * The name of the table
+     */
     private final String tableName;
 
     private final String idFieldName;
@@ -292,6 +304,32 @@ public abstract class DatabaseObjects<T extends Identifiable> {
     void forget(Long id) {
         synchronized (map) {
             map.remove(id);
+        }
+    }
+
+    /**
+     * Load data
+     * @param object
+     */
+    public void loadData(T object) {
+        final Gson gson = GsonConverter.builder.create();
+        try (PreparedStatement st = prepareStatement(format("SELECT data FROM %s WHERE id=?", tableName))) {
+            st.setLong(1, object.getId());
+            st.execute();
+            final ResultSet resultSet = st.getResultSet();
+            resultSet.next();
+            try (InputStream is = resultSet.getBinaryStream(1);
+                 Reader reader = new InputStreamReader(is);
+                 JsonReader jsonReader = new JsonReader(reader)
+            ) {
+                final ReflectiveTypeAdapterFactory.Adapter<T> adapter
+                        = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(object.getClass());
+                adapter.read(jsonReader, object);
+            } catch (IOException e) {
+                throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", this);
+            }
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
         }
     }
 }

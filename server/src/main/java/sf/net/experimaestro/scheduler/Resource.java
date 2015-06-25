@@ -589,31 +589,12 @@ public class Resource implements Identifiable {
     /**
      * Load data from database
      */
-    public void loadData() {
+    protected void loadData() {
         if (dataLoaded) {
             return;
         }
 
-        final Gson gson = GsonConverter.builder.create();
-        try (PreparedStatement st = prepareStatement("SELECT data FROM Resources WHERE id=?")) {
-            st.setLong(1, getId());
-            st.execute();
-            final ResultSet resultSet = st.getResultSet();
-            resultSet.next();
-            try (InputStream is = resultSet.getBinaryStream(1);
-                 Reader reader = new InputStreamReader(is);
-                 JsonReader jsonReader = new JsonReader(reader)
-            ) {
-                final ReflectiveTypeAdapterFactory.Adapter<Resource> adapter
-                        = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(this.getClass());
-                adapter.read(jsonReader, this);
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e, "Error while deserializing resource %s JSON", this);
-            }
-        } catch (SQLException e) {
-            throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
-        }
-
+        Scheduler.get().resources().loadData(this);
         dataLoaded = true;
     }
 

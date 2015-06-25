@@ -202,7 +202,7 @@ public class CommandLineTask extends Job {
     }
 
     public Commands getCommands() {
-        this.loadData();
+        loadData();
         return commands;
     }
 

@@ -149,6 +149,7 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public String getHostName() {
+        loadData();
         return options.getHostName();
     }
 
@@ -162,6 +163,8 @@ public class SSHConnector extends SingleHostConnector {
         if (filesystem != null) {
             return filesystem;
         }
+
+        loadData();
 
         try {
             URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);

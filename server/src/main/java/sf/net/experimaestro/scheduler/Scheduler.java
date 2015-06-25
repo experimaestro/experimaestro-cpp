@@ -269,7 +269,7 @@ final public class Scheduler {
      */
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws SQLException {
         // Save the connector in DB if necessary
-        connector.persist();
+        connector.save();
 
         NetworkShare networkShare = NetworkShare.find(host, name);
 

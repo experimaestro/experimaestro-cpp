@@ -50,6 +50,11 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
      */
     private String identifier;
 
+    /**
+     * Whether data has been loaded from database
+     */
+    private boolean dataLoaded;
+
     public Connector(String identifier) {
         this.identifier = identifier;
     }
@@ -176,7 +181,23 @@ public abstract class Connector implements Comparable<Connector>,Identifiable {
         return Scheduler.get().connectors().find(identifier);
     }
 
-    public void persist() throws SQLException {
+    /**
+     * Save object to database
+     * @throws SQLException If something goes wrong
+     */
+    public void save() throws SQLException {
         Scheduler.get().connectors().save(this);
+    }
+
+    /**
+     * Load data from database
+     */
+    protected void loadData() {
+        if (dataLoaded) {
+            return;
+        }
+
+        Scheduler.get().connectors().loadData(this);
+        dataLoaded = true;
     }
 }
