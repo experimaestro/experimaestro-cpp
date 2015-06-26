@@ -42,6 +42,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
@@ -49,7 +50,7 @@ import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
 /**
  * A set of objects stored in database
  */
-public abstract class DatabaseObjects<T extends Identifiable> {
+final public class DatabaseObjects<T extends Identifiable> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -64,16 +65,18 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
     private final String idFieldName;
 
+    private final Function<ResultSet, T> create;
+
     /**
      * Keeps a cache of resources
      */
     private WeakHashMap<Long, T> map = new WeakHashMap<>();
 
-
-    public DatabaseObjects(Connection connection) {
+    public DatabaseObjects(Connection connection, Function<ResultSet, T> create) {
         this.connection = connection;
         this.tableName = this.getClass().getSimpleName();
         this.idFieldName = "id";
+        this.create = create;
     }
 
 
@@ -133,7 +136,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         return value;
     }
 
-    protected T findUnique(String query, ExceptionalConsumer<PreparedStatement> p) throws SQLException {
+    public T findUnique(String query, ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try (PreparedStatement st = connection.prepareCall(query)) {
             // Sets the variables
             p.apply(st);
@@ -230,20 +233,12 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         }
 
         // Create and cache
-        final T t = create(result);
+        final T t = create.apply(result);
         synchronized (map) {
             map.put(t.getId(), t);
         }
         return t;
     }
-
-    /**
-     * Create a new object from a result
-     *
-     * @param result The result
-     * @return The new object
-     */
-    abstract protected T create(ResultSet result) throws SQLException;
 
     /**
      * Get an object from cache
@@ -273,7 +268,7 @@ public abstract class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    protected void save(T object, String query, ExceptionalConsumer<PreparedStatement> f) throws SQLException {
+    public void save(T object, String query, ExceptionalConsumer<PreparedStatement> f) throws SQLException {
         save(object, query, f, false);
     }
 
@@ -318,7 +313,6 @@ public abstract class DatabaseObjects<T extends Identifiable> {
             map.put(object.getId(), object);
         }
     }
-
 
 
     /**

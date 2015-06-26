@@ -26,6 +26,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
@@ -34,11 +35,15 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -54,6 +59,11 @@ import static java.lang.String.format;
 @Exposed
 @TypeIdentifier("RESOURCE")
 public class Resource implements Identifiable {
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.class, String.class})
+            .add(Resource.class, CommandLineTask.class, TokenResource.class);
+
+    public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
+
     public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, status) VALUES(?,?,?)";
 
     SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "data");
@@ -173,16 +183,6 @@ public class Resource implements Identifiable {
         this.resourceID = id;
         this.locator = locator;
         dataLoaded = false;
-    }
-
-    /**
-     * Get a resource by locator
-     *
-     * @param path The path of the resource
-     * @return The resource or null if there is no such resource
-     */
-    public static Resource getByLocator(String path) throws SQLException {
-        return Scheduler.get().resources().getByLocator(path);
     }
 
     @Override
@@ -548,7 +548,7 @@ public class Resource implements Identifiable {
         save(Scheduler.get().resources(), null);
     }
 
-    protected void save(Resources resources, Resource old) throws SQLException {
+    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         boolean update = old != null;
         if (update && getId() == null) {
             throw new SQLException("Resource not in database");
@@ -566,7 +566,7 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
-        try(final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
+        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
             resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), jsonInputStream);
         } catch (IOException e) {
             throw new SQLException(e);
@@ -615,6 +615,77 @@ public class Resource implements Identifiable {
     }
 
     /**
+     * Get a resource by locator
+     *
+     * @param path The path of the resource
+     * @return The resource or null if there is no such resource
+     */
+    static public Resource getByLocator(String path) throws SQLException {
+        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
+    }
+
+    static protected Resource create(ResultSet result) {
+        try {
+            long id = result.getLong(1);
+            long type = result.getLong(2);
+            String path = result.getString(3);
+            long status = result.getLong(4);
+
+            final Constructor<? extends Resource> constructor = REGISTRY.get(type);
+            final Resource resource = constructor.newInstance(id, path);
+
+            // Set stored values
+            resource.setState(ResourceState.fromValue(status));
+
+            return resource;
+        } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
+            throw new XPMRuntimeException("Error retrieving database object", e);
+        }
+    }
+
+    /**
+     * Iterator on resources
+     */
+    static public CloseableIterable<Resource> resources() throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        return resources.find(SELECT_BEGIN, st -> {
+        });
+    }
+
+    public static CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        StringBuilder sb = new StringBuilder();
+        sb.append(SELECT_BEGIN);
+        sb.append(" WHERE status in (");
+        boolean first = true;
+        for (ResourceState state : states) {
+            if (first) {
+                first = false;
+            } else {
+                sb.append(',');
+            }
+            sb.append(state.value());
+        }
+        sb.append(")");
+
+        final String query = sb.toString();
+        LOGGER.debug("Searching for resources in states %s: %s", states, query);
+        return resources.find(query, st -> {
+        });
+    }
+
+    static public Resource getById(long resourceId) throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final Resource r = resources.getFromCache(resourceId);
+        if (r != null) {
+            return r;
+        }
+
+        return resources.findUnique(SELECT_BEGIN + " WHERE id=?", st -> st.setLong(1, resourceId));
+    }
+
+
+    /**
      * Load data from database
      */
     protected void loadData() {
@@ -644,10 +715,6 @@ public class Resource implements Identifiable {
     @Expose
     public Dependency lock(String lockType) {
         return createDependency(lockType);
-    }
-
-    public static Resource getById(long resourceId) throws SQLException {
-        return Scheduler.get().resources().getById(resourceId);
     }
 
     public Map<Resource, Dependency> getIngoingDependencies() {

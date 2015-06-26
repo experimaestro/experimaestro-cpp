@@ -35,7 +35,7 @@ public class ConstructorRegistry<T> {
         this.parameterTypes = parameterTypes;
     }
 
-    ConstructorRegistry<T> add(Class<? extends T>... classes) {
+    public ConstructorRegistry<T> add(Class<? extends T>... classes) {
         for (Class<? extends T> aClass : classes) {
             try {
                 final TypeIdentifier annotation = aClass.getAnnotation(TypeIdentifier.class);

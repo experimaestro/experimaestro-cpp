@@ -687,7 +687,7 @@ abstract public class Job extends Resource {
     private static final SQLInsert SQL_INSERT = new SQLInsert("Job", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
 
     @Override
-    protected void save(Resources resources, Resource old) throws SQLException {
+    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         // Update status
         boolean update = this.inDatabase() || old != null;
 

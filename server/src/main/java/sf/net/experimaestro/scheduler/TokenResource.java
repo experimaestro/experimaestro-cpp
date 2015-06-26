@@ -83,7 +83,7 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    protected void save(Resources resources, Resource old) throws SQLException {
+    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         // Update status
         boolean update = this.inDatabase() || old != null;
 

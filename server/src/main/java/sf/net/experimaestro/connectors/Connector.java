@@ -23,7 +23,7 @@ import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.Connectors;
+import sf.net.experimaestro.scheduler.ConstructorRegistry;
 import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -32,11 +32,16 @@ import sf.net.experimaestro.utils.JsonSerializationInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import static java.lang.String.format;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -48,6 +53,14 @@ import java.sql.SQLException;
  */
 @Exposed
 public abstract class Connector implements Comparable<Connector>, Identifiable {
+    /**
+     * Our registry
+     */
+    static private ConstructorRegistry<Connector> REGISTRY
+            = new ConstructorRegistry(new Class[]{Long.class, String.class, String.class})
+            .add(SSHConnector.class);
+
+
     /**
      * Each connector has a unique integer ID
      */
@@ -181,16 +194,6 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     }
 
     /**
-     * Find a connector given its string ID
-     *
-     * @param identifier The string identifier
-     * @return The connector in database or null if none exist
-     */
-    public static Connector find(String identifier) throws SQLException {
-        return Scheduler.get().connectors().find(identifier);
-    }
-
-    /**
      * Save object to database
      *
      * @throws SQLException If something goes wrong
@@ -199,7 +202,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         save(Scheduler.get().connectors(), null);
     }
 
-    public void save(Connectors connectors, Connector old) throws SQLException {
+    public void save(DatabaseObjects<Connector> connectors, Connector old) throws SQLException {
         try (InputStream jsonInputStream = new JsonSerializationInputStream(out -> {
             try (JsonWriter writer = new JsonWriter(out)) {
                 saveJson(writer);
@@ -235,5 +238,30 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
 
         Scheduler.get().connectors().loadData(this, "data");
         dataLoaded = true;
+    }
+
+    static public Connector create(ResultSet result) {
+        try {
+            // OK, create connector
+            long id = result.getLong(1);
+            long type = result.getLong(2);
+            String uri = result.getString(3);
+            String value = result.getString(4);
+
+            final Constructor<? extends Connector> constructor = REGISTRY.get(type);
+            final Connector connector = constructor.newInstance(id, uri, value);
+
+            return connector;
+        } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
+            throw new XPMRuntimeException(e, "Error retrieving database object");
+        }
+    }
+    public static final String SELECT_QUERY = "SELECT id, type, uri, data FROM Connectors";
+
+
+
+    public static Connector findByURI(String uri) throws SQLException {
+        final String query = format("%s WHERE uri=?", SELECT_QUERY);
+        return Scheduler.get().connectors().findUnique(query, st -> st.setString(1, uri));
     }
 }

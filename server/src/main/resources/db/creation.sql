@@ -1,14 +1,33 @@
 --
--- Connectors
+-- Connectors and shares
 --
 
 
 CREATE TABLE Connectors (
-  id IDENTITY,
-  type BIGINT        NOT NULL,
-  uri  VARCHAR(4096) NOT NULL,
-  data BLOB          NOT NULL
+  id       IDENTITY,
+  type     BIGINT        NOT NULL,
+  uri      VARCHAR(4096) NOT NULL,
+  data     BLOB          NOT NULL
 );
+
+CREATE TABLE NetworkShares (
+  id       IDENTITY,
+  hostname VARCHAR(256) NOT NULL,
+  name     VARCHAR(256) NOT NULL
+);
+
+CREATE TABLE NetworkShareAccess (
+  share     BIGINT        NOT NULL,
+  connector BIGINT        NOT NULL,
+  path      VARCHAR(4096) NOT NULL,
+  priority  INT DEFAULT 0 NOT NULL,
+
+  FOREIGN KEY (share) REFERENCES NetworkShares
+    ON DELETE CASCADE,
+  FOREIGN KEY (connector) REFERENCES Connectors
+    ON DELETE CASCADE
+);
+
 
 --
 -- Resources
@@ -74,7 +93,9 @@ CREATE TABLE Dependencies (
     ON DELETE CASCADE
 );
 
+---
 --- A lock
+---
 
 CREATE TABLE Locks (
   id IDENTITY,
@@ -83,7 +104,21 @@ CREATE TABLE Locks (
 );
 
 
+-- Ensures that shares are not removed if a lock references it
+CREATE TABLE LockShares (
+  lock    BIGINT NOT NULL,
+  share   BIGINT NOT NULL,
+  path    VARCHAR(4096) NOT NULL,
+
+  -- do not delete a share if it is referenced
+  FOREIGN KEY (lock) REFERENCES Locks ON DELETE CASCADE,
+  FOREIGN KEY (share) REFERENCES NetworkShares ON DELETE RESTRICT
+);
+
+
+--
 -- Process
+--
 
 CREATE TABLE Processes (
   resource  BIGINT NOT NULL,
@@ -112,26 +147,6 @@ CREATE TABLE ProcessLocks (
     ON DELETE CASCADE
 );
 
-
--- Shares
-
-CREATE TABLE NetworkShares (
-  id IDENTITY,
-  hostname VARCHAR(256) NOT NULL,
-  name     VARCHAR(256) NOT NULL
-);
-
-CREATE TABLE NetworkShareAccess (
-  share     BIGINT        NOT NULL,
-  connector BIGINT        NOT NULL,
-  path      VARCHAR(4096) NOT NULL,
-  priority  INT DEFAULT 0 NOT NULL,
-
-  FOREIGN KEY (share) REFERENCES NetworkShares
-    ON DELETE CASCADE,
-  FOREIGN KEY (connector) REFERENCES Connectors
-    ON DELETE CASCADE
-);
 
 
 --

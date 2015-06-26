@@ -52,7 +52,7 @@ public class CommandLineTaskTest extends XPMEnvironment {
 
 
         Scheduler.get().resources().forget(id);
-        final CommandLineTask retrieved = (CommandLineTask) Scheduler.get().resources().getById(id);
+        final CommandLineTask retrieved = (CommandLineTask) Resource.getById(id);
 
         Assert.assertTrue(retrieved.getCommands().equals(commands));
     }

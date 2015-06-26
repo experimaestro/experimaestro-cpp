@@ -43,7 +43,7 @@ public class WaitingJob extends Job {
     final static private Logger LOGGER = Logger.getLogger();
 
     static {
-        Resources.REGISTRY.add(WaitingJob.class);
+        Resource.REGISTRY.add(WaitingJob.class);
     }
 
     /**

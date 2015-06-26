@@ -156,7 +156,7 @@ public class StatusServlet extends XPMServlet {
 
             Resource resource;
             try {
-                resource = scheduler.resources().getById(resourceId);
+                resource = Resource.getById(resourceId);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

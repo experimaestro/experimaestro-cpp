@@ -58,6 +58,6 @@ public class ReadWriteDependency extends Dependency {
         // Retrieve data about resource
         Resource resource = getFrom();
 
-        return new StatusLock(resource.getConnector().getMainConnector(), resource.getLocator(), pid, false);
+        return new StatusLock(resource.getPath(), pid, false);
     }
 }

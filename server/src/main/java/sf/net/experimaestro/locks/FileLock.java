@@ -19,12 +19,20 @@ package sf.net.experimaestro.locks;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchService;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -50,6 +58,11 @@ public class FileLock extends Lock {
     protected FileLock() {
     }
 
+    @Override
+    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+        super.save(locks);
+        saveShare(lockFile);
+    }
 
     @Override
     public String toString() {
@@ -57,6 +70,7 @@ public class FileLock extends Lock {
                 "lockFile=" + lockFile +
                 '}';
     }
+
 
     /**
      * Lock a file. If the file exists, waits for it to be deleted.

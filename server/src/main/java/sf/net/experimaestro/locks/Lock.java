@@ -18,18 +18,24 @@ package sf.net.experimaestro.locks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.ConstructorRegistry;
 import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
-import sf.net.experimaestro.scheduler.Locks;
-import sf.net.experimaestro.scheduler.Resources;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.StatusLock;
+import sf.net.experimaestro.scheduler.TokenLock;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.db.SQLInsert;
 
-import java.sql.PreparedStatement;
+import java.nio.file.Path;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import static java.lang.String.format;
 
 /**
  * A lock that can be removed.
@@ -41,6 +47,9 @@ import java.sql.SQLException;
  */
 @Exposed
 public abstract class Lock implements AutoCloseable, Identifiable {
+    static protected ConstructorRegistry<Lock> REGISTRY
+            = new ConstructorRegistry(new Class[]{}).add(TokenLock.class, FileLock.class, StatusLock.class);
+
     private Long id;
 
     @Override
@@ -79,11 +88,31 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
     SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
 
-    protected void save(Locks locks) throws SQLException {
+    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
         locks.save(this, sqlInsert, false,
                 DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this));
     }
 
+    protected void saveShare(Path path) throws SQLException {
+        // Add the share into DB so that we keep the reference
+        if (path instanceof XPMPath) {
+            final XPMPath xpmPath = (XPMPath) path;
+            final NetworkShare networkShare = NetworkShare.find(xpmPath.getHostName(), xpmPath.getShareName());
+            Scheduler.statement("INSERT INTO LockShares(lock, share) VALUES(?,?)")
+                    .setLong(1, getId())
+                    .setLong(2, networkShare.getId())
+                    .execute();
+        }
+    }
+
+    public static Lock findById(long id) throws SQLException {
+        final String query = format("SELECT id, type, data FROM Locks  WHERE id=?");
+        return Scheduler.get().locks().findUnique(query, st -> st.setLong(1, id));
+    }
+
+    public static Lock create(ResultSet rs) {
+        throw new UnsupportedOperationException();
+    }
 
 }
 

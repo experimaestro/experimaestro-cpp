@@ -356,7 +356,7 @@ public class JsonRPCMethods extends HttpServlet {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
-            resource = scheduler.resources().getById(rid);
+            resource = Resource.getById(rid);
         } catch (NumberFormatException e) {
             resource = Resource.getByLocator(resourceId);
         }

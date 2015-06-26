@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
@@ -29,6 +30,7 @@ import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -88,7 +90,7 @@ final public class Scheduler {
      */
     private final MessengerThread messengerThread;
 
-    private final Locks locks;
+    private final DatabaseObjects<Lock> locks;
 
     private LocalhostConnector localhostConnector;
 
@@ -127,7 +129,7 @@ final public class Scheduler {
     /**
      * Resources
      */
-    private Resources resources;
+    private DatabaseObjects<Resource> resources;
 
     /**
      * The queue for notifications
@@ -137,9 +139,9 @@ final public class Scheduler {
     /**
      * The network shares
      */
-    private NetworkShares networkShares;
+    private DatabaseObjects<NetworkShare> networkShares;
 
-    private Connectors connectors;
+    private DatabaseObjects<Connector> connectors;
 
     final static int DBVERSION = 1;
 
@@ -200,13 +202,13 @@ final public class Scheduler {
             }
         }
 
-        resources = new Resources(connection);
-        networkShares = new NetworkShares(connection);
-        connectors = new Connectors(connection);
-        locks = new Locks(connection);
+        resources = new DatabaseObjects<>(connection, Resource::create);
+        networkShares = new DatabaseObjects<>(connection, NetworkShare::create);
+        connectors = new DatabaseObjects<>(connection, Connector::create);
+        locks = new DatabaseObjects<>(connection, Lock::create);
 
         // Find or create localhost connector
-        localhostConnector = (LocalhostConnector) connectors.find("localhost");
+        localhostConnector = (LocalhostConnector) Connector.findByURI("localhost");
         if (localhostConnector == null) {
             localhostConnector = new LocalhostConnector();
             localhostConnector.save();
@@ -333,7 +335,7 @@ final public class Scheduler {
      * @return A closeable iterator
      */
     public CloseableIterable<Resource> resources(EnumSet<ResourceState> states) throws SQLException {
-        return resources.find(states);
+        return Resource.find(states);
     }
 
     /**
@@ -428,7 +430,7 @@ final public class Scheduler {
         LOGGER.info("Scheduler stopped");
     }
 
-    public Resources resources() {
+    public DatabaseObjects<Resource> resources() {
         return resources;
     }
 
@@ -453,7 +455,7 @@ final public class Scheduler {
         }
     }
 
-    public NetworkShares shares() {
+    public DatabaseObjects<NetworkShare> networkShares() {
         return networkShares;
     }
 
@@ -461,12 +463,8 @@ final public class Scheduler {
         return connection;
     }
 
-    public Connectors connectors() {
+    public DatabaseObjects<Connector> connectors() {
         return connectors;
-    }
-
-    public NetworkShares networkShares() {
-        return networkShares;
     }
 
 
@@ -482,7 +480,7 @@ final public class Scheduler {
         return new XPMStatement(get().connection, sql);
     }
 
-    public Locks locks() {
+    public DatabaseObjects<Lock> locks() {
         return locks;
     }
 
@@ -541,7 +539,7 @@ final public class Scheduler {
                     }
 
                     LOGGER.debug("Searching for ready jobs");
-                    try (final CloseableIterable<Resource> resources = Scheduler.this.resources.find(EnumSet.of(ResourceState.READY))) {
+                    try (final CloseableIterable<Resource> resources = Resource.find(EnumSet.of(ResourceState.READY))) {
                         /* TODO: consider a smarter way to retrieve good candidates (e.g. using a bloom filter for tokens) */
                         for (Resource resource : resources) {
                             try {
@@ -653,7 +651,7 @@ final public class Scheduler {
                     // Notify all the dependencies
                     try {
                         // Retrieve the resource that changed - and lock it
-                        Resource destination = resources.getById(messagePackage.destination);
+                        Resource destination = Resource.getById(messagePackage.destination);
                         LOGGER.debug("Sending message %s to %s", messagePackage.message, destination);
                         destination.notify(messagePackage.message);
                     } catch (Throwable e) {
@@ -714,7 +712,7 @@ final public class Scheduler {
                     // Retrieve the resource that changed - and lock it
                     Resource fromResource;
                     try {
-                        fromResource = resources.getById(resourceId);
+                        fromResource = Resource.getById(resourceId);
                     } catch (SQLException e) {
                         LOGGER.error("Could not retrieve resource with ID %d", resourceId);
                         throw new RuntimeException(e);

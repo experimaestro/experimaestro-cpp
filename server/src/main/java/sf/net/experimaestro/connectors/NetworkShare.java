@@ -18,10 +18,13 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.fs.XPMPath;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,10 +33,14 @@ import java.util.Collection;
  * Defines relationships between single host connectors and network shares
  */
 final public class NetworkShare implements Identifiable {
-    /** Internal ID */
+    /**
+     * Internal ID
+     */
     private long id;
 
-    /** The possible accesses to this network share */
+    /**
+     * The possible accesses to this network share
+     */
     private Collection<NetworkShareAccess> access;
 
     /**
@@ -46,7 +53,7 @@ final public class NetworkShare implements Identifiable {
      */
     String name;
 
-    public NetworkShare() {
+    protected NetworkShare() {
     }
 
     public NetworkShare(String host, String share) {
@@ -67,16 +74,6 @@ final public class NetworkShare implements Identifiable {
         access.add(networkShareAccess);
     }
 
-    /**
-     * Find a connector given its string ID
-     *
-     * @param host The host name
-     * @param name The share name
-     * @return The connector in database or null if none exist
-     */
-    public static NetworkShare find(String host, String name) throws SQLException {
-        return Scheduler.get().shares().find(host, name);
-    }
 
     /**
      * Find a network share for
@@ -110,9 +107,6 @@ final public class NetworkShare implements Identifiable {
         this.id = id;
     }
 
-    public void save() throws SQLException {
-        Scheduler.get().networkShares().save(this);
-    }
 
     public String getHost() {
         return host;
@@ -120,5 +114,49 @@ final public class NetworkShare implements Identifiable {
 
     public String getName() {
         return name;
+    }
+
+    public static final String SELECT_QUERY = "SELECT id, hostname, name FROM NetworkShares";
+
+    public static final String FINDBYNAME_QUERY = SELECT_QUERY + " WHERE hostname=? and name=?";
+
+    static public NetworkShare create(ResultSet result) {
+        try {
+            long id = result.getLong(1);
+            String hostname = null;
+            hostname = result.getString(2);
+
+
+            String name = result.getString(3);
+
+            final NetworkShare networkShare = new NetworkShare(hostname, name);
+            networkShare.setId(id);
+            return networkShare;
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not construct network share");
+        }
+    }
+
+    /**
+     * Find a connector given its string ID
+     *
+     * @param host The host name
+     * @param name The share name
+     * @return The connector in database or null if none exist
+     */
+    static public NetworkShare find(String host, String name) throws SQLException {
+        DatabaseObjects<NetworkShare> shares = Scheduler.get().networkShares();
+        return shares.findUnique(FINDBYNAME_QUERY, st -> {
+            st.setString(1, host);
+            st.setString(2, name);
+        });
+    }
+
+    public void save() throws SQLException {
+        DatabaseObjects<NetworkShare> shares = Scheduler.get().networkShares();
+        shares.save(this, "INSERT INTO NetworkShares(hostname, name) VALUES(?, ?)", st -> {
+            st.setString(1, getHost());
+            st.setString(2, getName());
+        });
     }
 }

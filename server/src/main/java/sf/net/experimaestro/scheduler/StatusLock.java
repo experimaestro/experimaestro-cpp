@@ -19,9 +19,8 @@ package sf.net.experimaestro.scheduler;
  */
 
 import bpiwowar.argparser.utils.ReadLineIterator;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -32,10 +31,10 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static sf.net.experimaestro.scheduler.Resource.LOCK_EXTENSION;
 import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
 
 /**
@@ -47,9 +46,7 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
 public class StatusLock extends Lock {
     final static private Logger LOGGER = Logger.getLogger();
 
-    String path;
-
-    private SingleHostConnector connector;
+    Path path;
 
     /**
      * Number of writers
@@ -71,12 +68,14 @@ public class StatusLock extends Lock {
      */
     private String pid;
 
-    protected StatusLock() {
+    @Override
+    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+        super.save(locks);
+        saveShare(path);
     }
 
 
-    public StatusLock(SingleHostConnector connector, String path, String pid, boolean writeAccess) throws LockException {
-        this.setConnector(connector);
+    public StatusLock(Path path, String pid, boolean writeAccess) throws LockException {
         this.path = path;
         this.pid = pid;
 
@@ -117,13 +116,7 @@ public class StatusLock extends Lock {
     public void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws LockException {
         // --- Lock the resource
-        Path path = null;
-        try {
-            path = getConnector().resolve(this.path);
-        } catch (IOException e) {
-            throw new LockException(e);
-        }
-        try (Lock ignored = getConnector().createLockFile(LOCK_EXTENSION.transform(path), true)) {
+        try (Lock ignored = new FileLock(path, true)) {
             Path statusPath = STATUS_EXTENSION.transform(path);
 
             // --- Read the resource state
@@ -228,11 +221,5 @@ public class StatusLock extends Lock {
         }
     }
 
-    public SingleHostConnector getConnector() {
-        return connector == null ? Scheduler.get().getLocalhostConnector() : connector;
-    }
 
-    public void setConnector(SingleHostConnector connector) {
-        this.connector = connector;
-    }
 }
