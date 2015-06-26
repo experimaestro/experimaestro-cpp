@@ -120,7 +120,7 @@ final public class NetworkShare implements Identifiable {
 
     public static final String FINDBYNAME_QUERY = SELECT_QUERY + " WHERE hostname=? and name=?";
 
-    static public NetworkShare create(ResultSet result) {
+    static public NetworkShare create(DatabaseObjects<NetworkShare> db, ResultSet result) {
         try {
             long id = result.getLong(1);
             String hostname = null;

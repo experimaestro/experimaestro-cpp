@@ -20,6 +20,7 @@ package sf.net.experimaestro.locks;
 
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.ConstructorRegistry;
@@ -48,9 +49,15 @@ import static java.lang.String.format;
 @Exposed
 public abstract class Lock implements AutoCloseable, Identifiable {
     static protected ConstructorRegistry<Lock> REGISTRY
-            = new ConstructorRegistry(new Class[]{}).add(TokenLock.class, FileLock.class, StatusLock.class);
+            = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
 
     private Long id;
+
+    public Lock() {}
+
+    public Lock(long id) {
+        this.id = id;
+    }
 
     @Override
     final public void close() throws LockException, SQLException {
@@ -86,7 +93,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         save(Scheduler.get().locks());
     }
 
-    SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
+    static private final SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
 
     protected void save(DatabaseObjects<Lock> locks) throws SQLException {
         locks.save(this, sqlInsert, false,
@@ -110,8 +117,15 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         return Scheduler.get().locks().findUnique(query, st -> st.setLong(1, id));
     }
 
-    public static Lock create(ResultSet rs) {
-        throw new UnsupportedOperationException();
+    public static Lock create(DatabaseObjects<Lock> db, ResultSet rs) {
+        try {
+            long id = rs.getLong(1);
+            final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id);
+            db.loadFromJson(lock, rs.getBinaryStream(3));
+            return lock;
+        } catch(Throwable e) {
+            throw new XPMRuntimeException(e, "Could not create lock object from DB");
+        }
     }
 
 }

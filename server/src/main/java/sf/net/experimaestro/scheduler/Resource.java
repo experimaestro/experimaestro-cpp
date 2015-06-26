@@ -624,7 +624,7 @@ public class Resource implements Identifiable {
         return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
 
-    static protected Resource create(ResultSet result) {
+    static protected Resource create(DatabaseObjects<Resource> db, ResultSet result) {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);

@@ -42,6 +42,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 import java.util.WeakHashMap;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static java.lang.String.format;
@@ -65,14 +66,14 @@ final public class DatabaseObjects<T extends Identifiable> {
 
     private final String idFieldName;
 
-    private final Function<ResultSet, T> create;
+    private final BiFunction<DatabaseObjects<T>, ResultSet, T> create;
 
     /**
      * Keeps a cache of resources
      */
     private WeakHashMap<Long, T> map = new WeakHashMap<>();
 
-    public DatabaseObjects(Connection connection, Function<ResultSet, T> create) {
+    public DatabaseObjects(Connection connection, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
         this.connection = connection;
         this.tableName = this.getClass().getSimpleName();
         this.idFieldName = "id";
@@ -233,7 +234,7 @@ final public class DatabaseObjects<T extends Identifiable> {
         }
 
         // Create and cache
-        final T t = create.apply(result);
+        final T t = create.apply(this, result);
         synchronized (map) {
             map.put(t.getId(), t);
         }
@@ -330,24 +331,29 @@ final public class DatabaseObjects<T extends Identifiable> {
      * @param object
      */
     public void loadData(T object, String dataFieldName) {
-        final Gson gson = GsonConverter.builder.create();
         try (PreparedStatement st = prepareStatement(format("SELECT %s FROM %s WHERE id=?", dataFieldName, tableName))) {
             st.setLong(1, object.getId());
             st.execute();
             final ResultSet resultSet = st.getResultSet();
             resultSet.next();
-            try (InputStream is = resultSet.getBinaryStream(1);
-                 Reader reader = new InputStreamReader(is);
-                 JsonReader jsonReader = new JsonReader(reader)
-            ) {
-                final ReflectiveTypeAdapterFactory.Adapter<T> adapter
-                        = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(object.getClass());
-                adapter.read(jsonReader, object);
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", this);
-            }
+            final InputStream binaryStream = resultSet.getBinaryStream(1);
+            loadFromJson(object, binaryStream);
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
+        }
+    }
+
+    public void loadFromJson(T object, InputStream binaryStream) {
+        final Gson gson = GsonConverter.builder.create();
+        try (InputStream is = binaryStream;
+             Reader reader = new InputStreamReader(is);
+             JsonReader jsonReader = new JsonReader(reader)
+        ) {
+            final ReflectiveTypeAdapterFactory.Adapter<T> adapter
+                    = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(object.getClass());
+            adapter.read(jsonReader, object);
+        } catch (IOException e) {
+            throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", this);
         }
     }
 

@@ -59,28 +59,6 @@ public class GsonConverter<T>  {
         builder.setExclusionStrategies(new GsonExclusionStrategy());
     }
 
-    public byte[] convertToDatabaseColumn(T object) {
-        Gson gson = builder.create();
-        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        final Writer writer = new OutputStreamWriter(buffer);
-        gson.toJson(object, type, writer);
-        try {
-            writer.flush();
-            buffer.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return buffer.toByteArray();
-    }
-
-    public T convertToEntityAttribute(byte[] json) {
-        Gson gson = builder.create();
-        final ByteArrayInputStream buffer = new ByteArrayInputStream(json);
-        final InputStreamReader reader = new InputStreamReader(buffer);
-        final Object commands = gson.fromJson(reader, type);
-        return (T) commands;
-    }
-
     private static class AbstractObjectFactory implements TypeAdapterFactory {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {

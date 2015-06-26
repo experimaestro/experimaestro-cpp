@@ -31,7 +31,8 @@ import java.sql.SQLException;
 public class TokenLock extends Lock {
     private TokenResource resource;
 
-    protected TokenLock() {
+    public TokenLock(long id) {
+        super(id);
     }
 
     public TokenLock(TokenResource resource) {

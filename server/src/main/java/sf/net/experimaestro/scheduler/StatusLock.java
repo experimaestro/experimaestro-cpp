@@ -83,6 +83,10 @@ public class StatusLock extends Lock {
         LOGGER.debug("Created status lock [pid=%s] on %s", pid, path);
     }
 
+    public StatusLock(long id) {
+        super(id);
+    }
+
     @Override
     public void doClose() {
         try {

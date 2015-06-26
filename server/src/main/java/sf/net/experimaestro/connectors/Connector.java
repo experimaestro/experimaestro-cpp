@@ -240,7 +240,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         dataLoaded = true;
     }
 
-    static public Connector create(ResultSet result) {
+    static public Connector create(DatabaseObjects<Connector> db, ResultSet result) {
         try {
             // OK, create connector
             long id = result.getLong(1);

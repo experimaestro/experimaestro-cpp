@@ -71,6 +71,9 @@ public class FileLock extends Lock {
                 '}';
     }
 
+    public FileLock(long id) {
+        super(id);
+    }
 
     /**
      * Lock a file. If the file exists, waits for it to be deleted.
@@ -153,4 +156,7 @@ public class FileLock extends Lock {
         // TODO Auto-generated method stub
     }
 
+    public Path path() {
+        return lockFile;
+    }
 }
