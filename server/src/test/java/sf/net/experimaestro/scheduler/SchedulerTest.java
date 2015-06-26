@@ -382,13 +382,14 @@ public class SchedulerTest extends XPMEnvironment {
         waitToFinish(0, counter, new WaitingJob[] { jobA, jobB }, 1000, 3);
 
         try {
+            jobA.delete(false);
             Scheduler.get().resources().delete(jobA);
             throw new AssertionError("Deletion of requirement should have been prevented");
-        } catch(SQLIntegrityConstraintViolationException e) {
+        } catch(RuntimeException e) {
         }
 
-        Scheduler.get().resources().delete(jobB);
-        Scheduler.get().resources().delete(jobA);
+        jobB.delete(false);
+        jobA.delete(false);
     }
 
 

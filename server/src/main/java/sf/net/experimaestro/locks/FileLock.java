@@ -112,7 +112,7 @@ public class FileLock extends Lock {
      * @see bpiwowar.expmanager.rsrc.Lock#close()
      */
 
-    public void close() {
+    public void doClose() {
         if (lockFile != null && Files.exists(lockFile)) {
             boolean success = false;
             try {

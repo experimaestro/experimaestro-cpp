@@ -380,7 +380,7 @@ public class Resource implements Identifiable {
         return true;
     }
 
-    protected boolean inDatabase() {
+    public boolean inDatabase() {
         return resourceID != null;
     }
 
@@ -498,11 +498,21 @@ public class Resource implements Identifiable {
                     }
                 }
             } else
-                throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies", this);
+                throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
+                        dependencies);
         }
 
         // Remove
         Scheduler.get().resources().delete(this);
+
+        // Remove dependencies
+        for (Dependency dependency : getIngoingDependencies().values()) {
+            final Resource from = dependency.getFrom();
+            if (from.outgoingDependencies != null) {
+                from.outgoingDependencies.remove(this);
+            }
+        }
+
         Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
     }
 

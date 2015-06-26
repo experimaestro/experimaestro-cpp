@@ -179,7 +179,6 @@ public abstract class XPMProcess {
      */
     public void adopt(List<Lock> locks) throws SQLException {
         // Changing the ownership of the different logs
-        this.locks = locks;
         try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ProcessLocks(process, lock) VALUES(?,?)")) {
             st.setLong(1, job.getId());
 
@@ -196,6 +195,7 @@ public abstract class XPMProcess {
                 }
             }
         }
+        this.locks = locks;
     }
 
     /**
@@ -206,20 +206,16 @@ public abstract class XPMProcess {
         try {
             if (locks != null) {
                 LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
-                try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ProcessLocks WHERE process=? AND lock=?")) {
-                    st.setLong(1, job.getId());
-                    while (!locks.isEmpty()) {
-                        final Lock lock = locks.get(locks.size() - 1);
-                        st.setLong(2, lock.getId());
-                        lock.close();
-                        locks.remove(locks.size() - 1);
-                    }
+                while (!locks.isEmpty()) {
+                    final Lock lock = locks.get(locks.size() - 1);
+                    lock.close();
+                    locks.remove(locks.size() - 1);
                 }
                 locks = null;
             }
 
             if (inDatabase) {
-                Scheduler.statement("DELETE FROM Processes WHERE id=?")
+                Scheduler.statement("DELETE FROM Processes WHERE resource=?")
                         .setLong(1, job.getId())
                         .execute();
             }

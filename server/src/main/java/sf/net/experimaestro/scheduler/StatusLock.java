@@ -85,7 +85,7 @@ public class StatusLock extends Lock {
     }
 
     @Override
-    public void close() {
+    public void doClose() {
         try {
             updateStatusFile(pid, null, /*not used*/false);
             LOGGER.debug("Removed status lock [pid=%s] on %s", pid, path);

@@ -40,7 +40,7 @@ class TokenLock extends Lock {
 
 
     @Override
-    public void close() throws LockException {
+    public void doClose() throws LockException {
         if (resource != null) {
             try {
                 resource.unlock();

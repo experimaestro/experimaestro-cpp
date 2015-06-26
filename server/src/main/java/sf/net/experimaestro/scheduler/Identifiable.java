@@ -22,6 +22,9 @@ package sf.net.experimaestro.scheduler;
  * Simple interface for objects that can be idenfitied by an integer value
  */
 public interface Identifiable {
+    /** In database ? */
+    default boolean inDatabase() { return getId() != null; }
+
     /** Returns the ID (or null if not set) */
     Long getId();
 

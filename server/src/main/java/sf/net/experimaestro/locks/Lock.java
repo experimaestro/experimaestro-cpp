@@ -20,10 +20,16 @@ package sf.net.experimaestro.locks;
 
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Locks;
 import sf.net.experimaestro.scheduler.Resources;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
+
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * A lock that can be removed.
@@ -38,7 +44,17 @@ public abstract class Lock implements AutoCloseable, Identifiable {
     private Long id;
 
     @Override
-    abstract public void close() throws LockException;
+    final public void close() throws LockException, SQLException {
+        // Do close
+        doClose();
+
+        // Remove from DB
+        if (inDatabase()) {
+            Scheduler.statement("DELETE FROM Locks WHERE id=?").setLong(1, id).execute();
+        }
+    }
+
+    protected abstract void doClose() throws LockException;
 
     /**
      * Change ownership
@@ -57,12 +73,15 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         this.id = id;
     }
 
-    synchronized final public void save() {
+    synchronized final public void save() throws SQLException {
         save(Scheduler.get().locks());
     }
 
-    protected void save(Locks locks) {
-        throw new UnsupportedOperationException();
+    SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
+
+    protected void save(Locks locks) throws SQLException {
+        locks.save(this, sqlInsert, false,
+                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this));
     }
 
 

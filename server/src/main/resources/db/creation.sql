@@ -15,7 +15,7 @@ CREATE TABLE Connectors (
 --
 
 CREATE TABLE Resources (
-  id        IDENTITY,
+  id IDENTITY,
   path      VARCHAR(4096),
   connector BIGINT,
   status    BIGINT,
@@ -79,7 +79,7 @@ CREATE TABLE Dependencies (
 CREATE TABLE Locks (
   id IDENTITY,
   type BIGINT NOT NULL,
-  data BLOB NOT NULL
+  data BLOB   NOT NULL
 );
 
 
@@ -101,11 +101,15 @@ CREATE TABLE Processes (
 
 CREATE TABLE ProcessLocks (
   process BIGINT NOT NULL,
-  lock     BIGINT NOT NULL,
+  lock    BIGINT NOT NULL,
+
+  -- Ensures that no locks are left behind
   CONSTRAINT ProcessLocks_process FOREIGN KEY (process) REFERENCES Resources
     ON DELETE RESTRICT,
+
+  -- Removing a lock will remove the process lock
   CONSTRAINT ProcessLocks_lock FOREIGN KEY (lock) REFERENCES Locks
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
 );
 
 

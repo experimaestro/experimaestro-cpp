@@ -24,6 +24,7 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Serializable;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -161,7 +162,7 @@ abstract public class Dependency implements Serializable {
         }
     }
 
-    final public void unlock() throws LockException {
+    final public void unlock() throws LockException, SQLException {
         LOGGER.debug("Unlocking dependency %s", this);
         assert lock != null : format("Lock of dependency %s is null", this);
         lock.close();
