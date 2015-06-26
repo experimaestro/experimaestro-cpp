@@ -27,7 +27,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumSet;
-import java.util.Iterator;
 
 /**
  * Access to all resources
@@ -50,6 +49,7 @@ public class Resources extends DatabaseObjects<Resource> {
      */
     public Resources(Connection connection) {
         super(connection);
+
     }
 
     /**
@@ -88,32 +88,6 @@ public class Resources extends DatabaseObjects<Resource> {
     public CloseableIterable<Resource> resources() throws SQLException {
         return find(SELECT_BEGIN, st -> {
         });
-    }
-
-    static public class Placeholders implements Iterable<String> {
-        int count;
-
-        public Placeholders(int count) {
-            this.count = count;
-        }
-
-        @Override
-        public Iterator<String> iterator() {
-            return new Iterator<String>() {
-                int i = 0;
-
-                @Override
-                public boolean hasNext() {
-                    return i < count;
-                }
-
-                @Override
-                public String next() {
-                    ++i;
-                    return "?";
-                }
-            };
-        }
     }
 
     public CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {

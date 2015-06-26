@@ -18,8 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
-
 import java.util.EnumSet;
 import java.util.HashMap;
 

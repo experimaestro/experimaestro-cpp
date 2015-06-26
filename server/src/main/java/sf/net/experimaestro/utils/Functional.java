@@ -111,10 +111,6 @@ public class Functional {
         };
     }
 
-    public interface ExceptionalRunnable {
-        void apply() throws Throwable;
-    }
-
     public static Runnable runnable(ExceptionalRunnable p) {
         return () -> {
             try {

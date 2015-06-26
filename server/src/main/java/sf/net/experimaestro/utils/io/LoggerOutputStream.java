@@ -80,7 +80,7 @@ public class LoggerOutputStream extends OutputStream {
      */
     protected Level level;
     /**
-     * Remembers the size of the buffer for speed.
+     * Remembers the value of the buffer for speed.
      */
     private int bufLength;
 

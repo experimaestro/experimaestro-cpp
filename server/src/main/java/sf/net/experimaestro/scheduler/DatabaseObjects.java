@@ -22,8 +22,12 @@ import com.google.common.collect.AbstractIterator;
 import com.google.gson.Gson;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
+import sf.net.experimaestro.db.Table;
 import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.ExceptionalConsumer;
 import sf.net.experimaestro.utils.GsonConverter;
@@ -79,7 +83,10 @@ public abstract class DatabaseObjects<T extends Identifiable> {
 
 
     public static long getTypeValue(Class<?> aClass) {
-        return getTypeValue(aClass.getAnnotation(TypeIdentifier.class).value());
+        final TypeIdentifier annotation = aClass.getAnnotation(TypeIdentifier.class);
+        assert annotation != null : format("Class %s has no TypeIdentifier annotation", aClass);
+
+        return getTypeValue(annotation.value());
     }
 
     /**

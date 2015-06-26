@@ -18,14 +18,10 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.sun.tools.internal.jxc.ap.Const;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.lang.reflect.Constructor;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * A registry of constructors

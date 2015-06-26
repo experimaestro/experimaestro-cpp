@@ -379,6 +379,8 @@ public class SchedulerTest extends XPMEnvironment {
         jobB.addDependency(jobA.createDependency(null));
         jobB.save();
 
+        waitToFinish(0, counter, new WaitingJob[] { jobA, jobB }, 1000, 3);
+
         try {
             Scheduler.get().resources().delete(jobA);
             throw new AssertionError("Deletion of requirement should have been prevented");

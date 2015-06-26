@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
@@ -86,6 +87,10 @@ final public class Scheduler {
      * Messenger
      */
     private final MessengerThread messengerThread;
+
+    private final Locks locks;
+
+    private LocalhostConnector localhostConnector;
 
     /**
      * Listeners
@@ -198,6 +203,14 @@ final public class Scheduler {
         resources = new Resources(connection);
         networkShares = new NetworkShares(connection);
         connectors = new Connectors(connection);
+        locks = new Locks(connection);
+
+        // Find or create localhost connector
+        localhostConnector = (LocalhostConnector) connectors.find("localhost");
+        if (localhostConnector == null) {
+            localhostConnector = new LocalhostConnector();
+            localhostConnector.save();
+        }
 
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
@@ -459,6 +472,18 @@ final public class Scheduler {
 
     public static PreparedStatement prepareStatement(String sql) throws SQLException {
         return get().getConnection().prepareStatement(sql);
+    }
+
+    public LocalhostConnector getLocalhostConnector() {
+        return localhostConnector;
+    }
+
+    public static XPMStatement statement(String sql) throws SQLException {
+        return new XPMStatement(get().connection, sql);
+    }
+
+    public Locks locks() {
+        return locks;
     }
 
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {

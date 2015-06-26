@@ -59,7 +59,7 @@ public class JsonRPCTest extends XPMEnvironment {
         File jobDirectory = mkTestDir();
 
         XPMEnvironment.getDirectory();
-        final Resource resource = new Resource(LocalhostConnector.getInstance(), jobDirectory.toPath().resolve("resource-1"));
+        final Resource resource = new Resource(Scheduler.get().getLocalhostConnector(), jobDirectory.toPath().resolve("resource-1"));
         resource.save();
         final long id = resource.getId();
 

@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.db.SQLInsert;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -32,7 +33,7 @@ import static java.lang.String.format;
  * Access to connectors
  */
 public class Locks extends DatabaseObjects<Lock> {
-    public static final String SELECT_QUERY = "SELECT id, type, uri, value FROM Locks";
+    SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
 
     /**
      * Our registry
@@ -42,12 +43,6 @@ public class Locks extends DatabaseObjects<Lock> {
 
     public Locks(Connection connection) {
         super(connection);
-    }
-
-
-    public Lock find(String uri) throws SQLException {
-        final String query = format("%s WHERE path = ?", SELECT_QUERY);
-        return findUnique(query, st -> st.setString(1, uri));
     }
 
     @Override

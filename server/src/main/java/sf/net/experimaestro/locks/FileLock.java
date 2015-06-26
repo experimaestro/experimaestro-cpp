@@ -19,6 +19,7 @@ package sf.net.experimaestro.locks;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
@@ -33,6 +34,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@TypeIdentifier("file")
 public class FileLock extends Lock {
 
     final static private Logger LOGGER = Logger.getLogger();

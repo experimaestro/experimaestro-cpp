@@ -31,7 +31,7 @@ import static java.lang.String.format;
  * Access to connectors
  */
 public class Connectors extends DatabaseObjects<Connector> {
-    public static final String SELECT_QUERY = "SELECT id, type, uri, value FROM Connectors";
+    public static final String SELECT_QUERY = "SELECT id, type, uri, data FROM Connectors";
 
     /**
      * Our registry
@@ -46,7 +46,7 @@ public class Connectors extends DatabaseObjects<Connector> {
 
 
     public Connector find(String uri) throws SQLException {
-        final String query = format("%s WHERE path = ?", SELECT_QUERY);
+        final String query = format("%s WHERE uri=?", SELECT_QUERY);
         return findUnique(query, st -> st.setString(1, uri));
     }
 

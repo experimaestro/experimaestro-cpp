@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The process corresponding status a waiting job
  */
+@TypeIdentifier("WAITING")
 class WaitingJobProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 

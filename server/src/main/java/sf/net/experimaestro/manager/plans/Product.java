@@ -59,7 +59,7 @@ public class Product extends NAryOperator {
     protected void doPostInit(List<Map<Operator, Integer>> parentStreams) {
         super.doPostInit(parentStreams);
 
-        // Computes the output size
+        // Computes the output value
         outputSize = 0;
         for (Operator parent : parents)
             outputSize += parent.outputSize();

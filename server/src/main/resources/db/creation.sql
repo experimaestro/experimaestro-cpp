@@ -10,14 +10,12 @@ CREATE TABLE Connectors (
   data BLOB          NOT NULL
 );
 
-
 --
 -- Resources
 --
 
-
 CREATE TABLE Resources (
-  id IDENTITY,
+  id        IDENTITY,
   path      VARCHAR(4096),
   connector BIGINT,
   status    BIGINT,
@@ -78,9 +76,10 @@ CREATE TABLE Dependencies (
 
 --- A lock
 
-CREATE TABLE Lock (
+CREATE TABLE Locks (
   id IDENTITY,
-  type BIGINT NOT NULL
+  type BIGINT NOT NULL,
+  data BLOB NOT NULL
 );
 
 
@@ -101,11 +100,11 @@ CREATE TABLE Processes (
 );
 
 CREATE TABLE ProcessLocks (
-  resource BIGINT NOT NULL,
+  process BIGINT NOT NULL,
   lock     BIGINT NOT NULL,
-  FOREIGN KEY (resource) REFERENCES Resources
+  CONSTRAINT ProcessLocks_process FOREIGN KEY (process) REFERENCES Resources
     ON DELETE RESTRICT,
-  FOREIGN KEY (lock) REFERENCES Locks
+  CONSTRAINT ProcessLocks_lock FOREIGN KEY (lock) REFERENCES Locks
     ON DELETE RESTRICT
 );
 
@@ -164,3 +163,5 @@ CREATE TABLE ExperimentResources (
   FOREIGN KEY (resource) REFERENCES Resources
     ON DELETE RESTRICT
 );
+
+

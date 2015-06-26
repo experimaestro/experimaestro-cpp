@@ -43,6 +43,7 @@ import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
  * of a resource
  */
 @Exposed
+@TypeIdentifier("status")
 public class StatusLock extends Lock {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -228,10 +229,10 @@ public class StatusLock extends Lock {
     }
 
     public SingleHostConnector getConnector() {
-        return connector == null ? LocalhostConnector.getInstance() : connector;
+        return connector == null ? Scheduler.get().getLocalhostConnector() : connector;
     }
 
     public void setConnector(SingleHostConnector connector) {
-        this.connector = connector instanceof LocalhostConnector ? null : connector;
+        this.connector = connector;
     }
 }

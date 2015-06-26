@@ -18,19 +18,15 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.Gson;
-import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
-import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.db.SQLInsert;
@@ -162,7 +158,7 @@ public class Resource implements Identifiable {
     }
 
     public Resource(Connector connector, String name) {
-        this.connector = connector instanceof LocalhostConnector ? null : connector;
+        this.connector = connector;
         this.locator = name;
         outgoingDependencies = new HashMap<>();
         ingoingDependencies = new HashMap<>();
@@ -173,7 +169,7 @@ public class Resource implements Identifiable {
      * Construct from DB
      */
     public Resource(Long id, String locator) {
-        this(LocalhostConnector.getInstance(), locator);
+        this(Scheduler.get().getLocalhostConnector(), locator);
         this.resourceID = id;
         this.locator = locator;
         dataLoaded = false;
@@ -526,7 +522,7 @@ public class Resource implements Identifiable {
     }
 
     public Connector getConnector() {
-        return connector == null ? LocalhostConnector.getInstance() : connector;
+        return connector;
     }
 
     /**

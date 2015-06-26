@@ -405,7 +405,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
 
-                final LocalhostConnector connector = LocalhostConnector.getInstance();
+                final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
                 Path locator = connector.resolve(filename);
                 if (isFile) {
                     result = pythonContext.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
@@ -495,7 +495,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
 
-                final LocalhostConnector connector = LocalhostConnector.getInstance();
+                final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
                 Path locator = connector.resolve(filename);
                 if (isFile)
                     result = jsXPM.evaluateReader(new FileReader(filename), filename, 1, null);
@@ -1096,7 +1096,7 @@ public class JsonRPCMethods extends HttpServlet {
 //        for (int i = command.length; --i >= 0; )
 //            commandArgs.add(new CommandArgument(command[i].toString()));
 //
-//        Connector connector = LocalhostConnector.getInstance();
+//        Connector connector = Scheduler.get().getLocalhostConnector();
 //        CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
 //                env, new File(workingDirectory).getAbsolutePath());
 //

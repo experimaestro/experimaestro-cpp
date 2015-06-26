@@ -43,7 +43,7 @@ public class CommandLineTaskTest extends XPMEnvironment {
         Commands commands = new Commands();
         commands.addUnprotected("hello world");
         final String locator = new File(testDir, "commandlinetask").toString();
-        final CommandLineTask commandLineTask = new CommandLineTask(LocalhostConnector.getInstance(), locator);
+        final CommandLineTask commandLineTask = new CommandLineTask(Scheduler.get().getLocalhostConnector(), locator);
         commandLineTask.setCommands(commands);
         commandLineTask.setState(ResourceState.ON_HOLD);
 

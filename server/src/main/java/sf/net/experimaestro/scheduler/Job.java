@@ -409,7 +409,6 @@ abstract public class Job extends Resource {
             for (Dependency dependency : requiredResources) {
                 try {
                     dependency.unlock();
-
                 } catch (Throwable e) {
                     LOGGER.error(e, "Error while unlocking dependency %s", dependency);
                 }

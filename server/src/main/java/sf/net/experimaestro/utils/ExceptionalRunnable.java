@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -18,19 +18,9 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Gives an identifier to a given class
+ *
  */
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface TypeIdentifier {
-
-    String value();
-
-
+public interface ExceptionalRunnable {
+    void apply() throws Throwable;
 }

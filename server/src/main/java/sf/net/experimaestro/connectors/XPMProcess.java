@@ -59,6 +59,11 @@ public abstract class XPMProcess {
     static private Logger LOGGER = Logger.getLogger();
 
     /**
+     * True when the process is stored in DB
+     */
+    transient boolean inDatabase = false;
+
+    /**
      * The checker
      */
     protected transient ScheduledFuture<?> checker = null;
@@ -90,7 +95,7 @@ public abstract class XPMProcess {
      * @param pid The process ID
      */
     protected XPMProcess(SingleHostConnector connector, String pid, final Job job) {
-        this.connector = connector instanceof LocalhostConnector ? null : connector;
+        this.connector = connector;
         this.pid = pid;
         this.job = job;
     }
@@ -172,14 +177,23 @@ public abstract class XPMProcess {
     /**
      * Adopt the locks
      */
-    public void adopt(List<Lock> locks) {
+    public void adopt(List<Lock> locks) throws SQLException {
         // Changing the ownership of the different logs
         this.locks = locks;
-        for (Lock lock : locks) {
-            try {
-                lock.changeOwnership(pid);
-            } catch (Throwable e) {
-                LOGGER.error(e, "Could not adopt lock %s", lock);
+        try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ProcessLocks(process, lock) VALUES(?,?)")) {
+            st.setLong(1, job.getId());
+
+            for (Lock lock : locks) {
+                try {
+                    lock.changeOwnership(pid);
+                    if (inDatabase) {
+                        lock.save();
+                        st.setLong(2, lock.getId());
+                        st.execute();
+                    }
+                } catch (Throwable e) {
+                    LOGGER.error(e, "Could not adopt lock %s", lock);
+                }
             }
         }
     }
@@ -189,14 +203,28 @@ public abstract class XPMProcess {
      */
     public void dispose() throws LockException {
         close();
-        if (locks != null) {
-            LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
-            while (!locks.isEmpty()) {
-                locks.get(locks.size() - 1).close();
-                locks.remove(locks.size() - 1);
+        try {
+            if (locks != null) {
+                LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
+                try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ProcessLocks WHERE process=? AND lock=?")) {
+                    st.setLong(1, job.getId());
+                    while (!locks.isEmpty()) {
+                        final Lock lock = locks.get(locks.size() - 1);
+                        st.setLong(2, lock.getId());
+                        lock.close();
+                        locks.remove(locks.size() - 1);
+                    }
+                }
+                locks = null;
             }
 
-            locks = null;
+            if (inDatabase) {
+                Scheduler.statement("DELETE FROM Processes WHERE id=?")
+                        .setLong(1, job.getId())
+                        .execute();
+            }
+        } catch (SQLException e) {
+            throw new LockException(e);
         }
 
     }
@@ -254,15 +282,6 @@ public abstract class XPMProcess {
         // The process failed, but we do not know how
         return -1;
 
-    }
-
-    /**
-     * Add a lock to release after this job has completed
-     *
-     * @param lock The lock to add
-     */
-    public void addLock(Lock lock) {
-        locks.add(lock);
     }
 
     /**
@@ -335,7 +354,7 @@ public abstract class XPMProcess {
      * The host where this process is running (or give an access to the process, e.g. for OAR processes)
      */
     protected SingleHostConnector getConnector() {
-        return connector == null ? LocalhostConnector.getInstance() : connector;
+        return connector;
     }
 
     final private static SQLInsert SQL_INSERT = new SQLInsert("Processes", false, "resource", "type", "connector", "pid", "data");
@@ -348,20 +367,22 @@ public abstract class XPMProcess {
         final Connection connection = Scheduler.get().getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
                 DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this));
+        inDatabase = true;
 
         // Save the locks
-        try (PreparedStatement st = connection.prepareStatement("INSERT INTO ProcessLocks(resource, lock) VALUES(?,?)")) {
-            // Insert into DB
-            st.setLong(1, job.getId());
+        if (locks != null) {
+            try (PreparedStatement st = connection.prepareStatement("INSERT INTO ProcessLocks(process, lock) VALUES(?,?)")) {
+                // Insert into DB
+                st.setLong(1, job.getId());
 
-            for (Lock lock : locks) {
-                // Save lock
-                lock.save();
+                for (Lock lock : locks) {
+                    // Save lock
+                    lock.save();
 
-                // Save relationship
-                st.setLong(2, lock.getId());
-                st.execute();
-
+                    // Save relationship
+                    st.setLong(2, lock.getId());
+                    st.execute();
+                }
             }
         }
     }

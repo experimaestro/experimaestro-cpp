@@ -219,7 +219,7 @@ public abstract class Operator {
     }
 
     /**
-     * Returns the size of the output
+     * Returns the value of the output
      */
     public int outputSize() {
         return outputSize;

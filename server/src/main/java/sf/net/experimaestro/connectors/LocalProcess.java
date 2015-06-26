@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.log.Logger;
@@ -57,7 +58,7 @@ public class LocalProcess extends XPMProcess {
     // http://stackoverflow.com/questions/2318220/how-to-programmatically-detect-if-a-process-is-running-with-java-under-windows
 
     public LocalProcess(Job job, Process process, boolean detach) {
-        super(LocalhostConnector.getInstance(), String.valueOf(ProcessUtils.getPID(process)), job);
+        super(Scheduler.get().getLocalhostConnector(), String.valueOf(ProcessUtils.getPID(process)), job);
         this.process = process;
         if (!detach) {
             // If we need to destroy this process
@@ -141,7 +142,7 @@ public class LocalProcess extends XPMProcess {
             process = null;
         } else {
             LOGGER.info("Process was not started by server: killing it externally with PID %s", getPID());
-            AbstractProcessBuilder killingProcessBuilder = LocalhostConnector.getInstance().processBuilder();
+            AbstractProcessBuilder killingProcessBuilder = Scheduler.get().getLocalhostConnector().processBuilder();
             killingProcessBuilder.command("kill", getPID()).detach(false);
             try {
                 final XPMProcess killingProcess = killingProcessBuilder.detach(false).start();

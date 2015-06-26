@@ -52,7 +52,7 @@ public class CommandTest  {
             final Commands commands = new Commands();
             final Command command = new Command();
 
-            final LocalhostConnector connector = LocalhostConnector.getInstance();
+            final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
 
             final Path dataPath = connector.resolve(dataFile.getAbsolutePath());
 

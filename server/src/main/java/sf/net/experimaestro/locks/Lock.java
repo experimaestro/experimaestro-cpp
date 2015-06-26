@@ -21,6 +21,9 @@ package sf.net.experimaestro.locks;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.Locks;
+import sf.net.experimaestro.scheduler.Resources;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 /**
  * A lock that can be removed.
@@ -54,8 +57,14 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         this.id = id;
     }
 
-    public void save() {
-        throw new UnsupportedOperationException("Not implemented");
+    synchronized final public void save() {
+        save(Scheduler.get().locks());
     }
+
+    protected void save(Locks locks) {
+        throw new UnsupportedOperationException();
+    }
+
+
 }
 
