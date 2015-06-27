@@ -60,7 +60,6 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.EntityManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -68,6 +67,7 @@ import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -110,22 +110,19 @@ public class XPM {
     @Help("Retrieve (or creates) a token resource with a given xpath")
     static public TokenResource token_resource(
             @Argument(name = "path", help = "The path of the resource") String path
-    ) throws ExperimaestroCannotOverwrite {
+    ) throws ExperimaestroCannotOverwrite, SQLException {
+        final Resource resource = Resource.getByLocator(path);
+        final TokenResource tokenResource;
+        if (resource == null) {
+            tokenResource = new TokenResource(path, 0);
+            tokenResource.save();
+        } else {
+            if (!(resource instanceof TokenResource))
+                throw new AssertionError(String.format("Resource %s exists and is not a token", path));
+            tokenResource = (TokenResource) resource;
+        }
 
-        return Transaction.evaluate((em, t) -> {
-            final Resource resource = Resource.getByLocator(em, path);
-            final TokenResource tokenResource;
-            if (resource == null) {
-                tokenResource = new TokenResource(path, 0);
-                tokenResource.save(t);
-            } else {
-                if (!(resource instanceof TokenResource))
-                    throw new AssertionError(String.format("Resource %s exists and is not a token", path));
-                tokenResource = (TokenResource) resource;
-            }
-
-            return tokenResource;
-        });
+        return tokenResource;
     }
 
     protected static ScriptContext context() {
@@ -146,13 +143,6 @@ public class XPM {
 
         throw new XPMRuntimeException("Unsupported stdout type [%s]", stdout.getClass());
     }
-
-    @Help(value = "Unwrap an annotated XML value into a native JS object")
-    public static Object js_unwrap(Object object) {
-
-        return object.toString();
-    }
-
 
     public static Object get(Scriptable scope, final String name) {
 
@@ -481,192 +471,182 @@ public class XPM {
         final ScriptContext scriptContext = context();
         final Logger rootLogger = scriptContext.getLogger("xpm");
 
-        try (Transaction transaction = Transaction.create()) {
-            EntityManager em = transaction.em();
 
-            Job job = null;
-            // --- XPMProcess arguments: convert the javascript array into a Java array
-            // of String
-            LOGGER.debug("Adding command line job");
+        CommandLineTask job = null;
+        // --- XPMProcess arguments: convert the javascript array into a Java array
+        // of String
+        LOGGER.debug("Adding command line job");
 
-            // --- Create the task
+        // --- Create the task
 
 
-            final Connector connector = (Connector) options.get("connector");
+        final Connector connector = (Connector) options.get("connector");
 
-            // Resolve the path for the given connector
-            if (!(path instanceof java.nio.file.Path)) {
-                path = Connector.create(path.toString());
-            }
-
-            job = new Job(connector, (java.nio.file.Path) path);
-            CommandLineTask task = new CommandLineTask(commands);
-            if (scriptContext.submittedJobs.containsKey(path)) {
-                rootLogger.info("Not submitting %s [duplicate]", path);
-                if (simulate()) {
-                    return job;
-                }
-
-                return Resource.getByLocator(em, connector.resolve((java.nio.file.Path) path));
-            }
-
-
-            // --- Environment
-            task.environment = scriptContext.environment.get();
-            ArrayList<Dependency> dependencies = new ArrayList<>();
-
-            // --- Set defaults
-            if (scriptContext.getDefaultLauncher() != null) {
-                task.setLauncher(scriptContext.getDefaultLauncher());
-            }
-
-
-            // --- Options
-            if (options != null) {
-
-                final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
-                if (!unmatched.isEmpty()) {
-                    throw new IllegalArgumentException(format("Some options are not allowed: %s",
-                            Output.toString(", ", unmatched)));
-                }
-
-
-                // --- XPMProcess launcher
-                if (options.containsKey("launcher")) {
-                    final Object launcher = options.get("launcher");
-                    if (launcher != null)
-                        task.setLauncher((Launcher) launcher);
-
-                }
-
-                // --- Redirect standard output
-                if (options.containsKey("stdin")) {
-                    final Object stdin = options.get("stdin");
-                    if (stdin instanceof String) {
-                        task.setInput((String) stdin);
-                    } else if (stdin instanceof java.nio.file.Path) {
-                        task.setInput((java.nio.file.Path) stdin);
-                    } else
-                        throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
-                }
-
-                // --- Redirect standard output
-                if (options.containsKey("stdout")) {
-                    java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stdout"));
-                    task.setOutput(fileObject);
-                }
-
-                // --- Redirect standard error
-                if (options.containsKey("stderr")) {
-                    java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stderr"));
-                    task.setError(fileObject);
-                }
-
-
-                // --- Resources to lock
-                if (options.containsKey("lock")) {
-                    List locks = (List) options.get("lock");
-                    for (int i = locks.size(); --i >= 0; ) {
-                        Object lock_i = locks.get(i);
-                        Dependency dependency = null;
-
-                        if (lock_i instanceof Dependency) {
-                            dependency = (Dependency) lock_i;
-                        } else if (lock_i instanceof List) {
-                            List array = (List) lock_i;
-                            if (array.size() != 2) {
-                                throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
-                            }
-
-                            final Object depObject = array.get(0);
-                            Resource resource = null;
-                            if (depObject instanceof Resource) {
-                                resource = (Resource) depObject;
-                            } else {
-                                final String rsrcPath = Context.toString(depObject);
-                                resource = Resource.getByLocator(em, rsrcPath);
-                                if (resource == null)
-                                    if (simulate()) {
-                                        if (!scriptContext.submittedJobs.containsKey(rsrcPath))
-                                            LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
-                                    } else {
-                                        throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
-                                    }
-                            }
-
-                            final Object lockType = array.get(1);
-                            LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
-
-                            if (!simulate()) {
-                                dependency = resource.createDependency(lockType);
-                            }
-                        } else {
-                            throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
-                                    i, lock_i.getClass());
-                        }
-
-                        if (!simulate()) {
-                            dependencies.add(dependency);
-                        }
-                    }
-
-                }
-
-
-            }
-
-
-            job.setState(ResourceState.WAITING);
-            job.setJobRunner(task);
-            if (simulate()) {
-                PrintWriter pw = new LoggerPrintWriter(rootLogger, Level.INFO);
-                pw.format("[SIMULATE] Starting job: %s%n", task.toString());
-                pw.format("Command: %s%n", task.getCommands().toString());
-                pw.format("Locator: %s", path.toString());
-                pw.flush();
-            } else {
-                // Prepare
-                scriptContext.prepare(job);
-
-                // Add dependencies
-                dependencies.forEach(job::addDependency);
-
-                // Register within an experimentId
-                if (scriptContext.getExperimentId() != null) {
-                    TaskReference reference = scriptContext.getTaskReference();
-                    reference.add(job);
-                    em.persist(reference);
-                }
-
-                final Resource old = Resource.getByLocator(transaction.em(), job.getLocator());
-
-                // Replace old if necessary
-                if (old != null) {
-                    if (!old.canBeReplaced()) {
-                        rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
-                                "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
-                        return old;
-                    } else {
-                        rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
-                        old.lock(transaction, true);
-                        em.refresh(old);
-                        old.replaceBy(job);
-                        job = (Job) old;
-                    }
-                }
-
-                // Store in scheduler
-                job.save(transaction);
-
-
-                transaction.commit();
-            }
-
-            scriptContext.submittedJobs.put(job.getLocator().toString(), job);
-
-            return job;
+        // Resolve the path for the given connector
+        if (!(path instanceof java.nio.file.Path)) {
+            path = Connector.create(path.toString());
         }
 
+        job = new CommandLineTask(connector, (java.nio.file.Path) path);
+        job.setCommands(commands);
+        if (scriptContext.submittedJobs.containsKey(path)) {
+            rootLogger.info("Not submitting %s [duplicate]", path);
+            if (simulate()) {
+                return job;
+            }
+
+            return Resource.getByLocator(connector.resolve((java.nio.file.Path) path));
+        }
+
+
+        // --- Environment
+        job.environment = scriptContext.environment.get();
+        ArrayList<Dependency> dependencies = new ArrayList<>();
+
+        // --- Set defaults
+        if (scriptContext.getDefaultLauncher() != null) {
+            job.setLauncher(scriptContext.getDefaultLauncher());
+        }
+
+
+        // --- Options
+        if (options != null) {
+
+            final ArrayList unmatched = new ArrayList(Sets.difference(options.keySet(), COMMAND_LINE_OPTIONS));
+            if (!unmatched.isEmpty()) {
+                throw new IllegalArgumentException(format("Some options are not allowed: %s",
+                        Output.toString(", ", unmatched)));
+            }
+
+
+            // --- XPMProcess launcher
+            if (options.containsKey("launcher")) {
+                final Object launcher = options.get("launcher");
+                if (launcher != null)
+                    job.setLauncher((Launcher) launcher);
+
+            }
+
+            // --- Redirect standard output
+            if (options.containsKey("stdin")) {
+                final Object stdin = options.get("stdin");
+                if (stdin instanceof String) {
+                    job.setInput((String) stdin);
+                } else if (stdin instanceof java.nio.file.Path) {
+                    job.setInput((java.nio.file.Path) stdin);
+                } else
+                    throw new XPMRuntimeException("Unsupported stdin type [%s]", stdin.getClass());
+            }
+
+            // --- Redirect standard output
+            if (options.containsKey("stdout")) {
+                java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stdout"));
+                job.setOutput(fileObject);
+            }
+
+            // --- Redirect standard error
+            if (options.containsKey("stderr")) {
+                java.nio.file.Path fileObject = XPM.getPath(connector, options.get("stderr"));
+                job.setError(fileObject);
+            }
+
+
+            // --- Resources to lock
+            if (options.containsKey("lock")) {
+                List locks = (List) options.get("lock");
+                for (int i = locks.size(); --i >= 0; ) {
+                    Object lock_i = locks.get(i);
+                    Dependency dependency = null;
+
+                    if (lock_i instanceof Dependency) {
+                        dependency = (Dependency) lock_i;
+                    } else if (lock_i instanceof List) {
+                        List array = (List) lock_i;
+                        if (array.size() != 2) {
+                            throw new XPMRhinoException(new IllegalArgumentException("Wrong number of arguments for lock"));
+                        }
+
+                        final Object depObject = array.get(0);
+                        Resource resource = null;
+                        if (depObject instanceof Resource) {
+                            resource = (Resource) depObject;
+                        } else {
+                            final String rsrcPath = Context.toString(depObject);
+                            resource = Resource.getByLocator(rsrcPath);
+                            if (resource == null)
+                                if (simulate()) {
+                                    if (!scriptContext.submittedJobs.containsKey(rsrcPath))
+                                        LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
+                                } else {
+                                    throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
+                                }
+                        }
+
+                        final Object lockType = array.get(1);
+                        LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
+
+                        if (!simulate()) {
+                            dependency = resource.createDependency(lockType);
+                        }
+                    } else {
+                        throw new XPMRuntimeException("Element %d for option 'lock' is not a dependency but %s",
+                                i, lock_i.getClass());
+                    }
+
+                    if (!simulate()) {
+                        dependencies.add(dependency);
+                    }
+                }
+
+            }
+
+
+        }
+
+
+        job.setState(ResourceState.WAITING);
+        if (simulate()) {
+            PrintWriter pw = new LoggerPrintWriter(rootLogger, Level.INFO);
+            pw.format("[SIMULATE] Starting job: %s%n", job.toString());
+            pw.format("Command: %s%n", job.getCommands().toString());
+            pw.format("Locator: %s", path.toString());
+            pw.flush();
+        } else {
+            // Prepare
+            scriptContext.prepare(job);
+
+            // Add dependencies
+            dependencies.forEach(job::addDependency);
+
+            // Register within an experimentId
+            if (scriptContext.getExperiment() != null) {
+                TaskReference reference = scriptContext.getTaskReference();
+                reference.add(job);
+            }
+
+            final Resource old = Resource.getByLocator(job.getLocator());
+
+            // Replace old if necessary
+            if (old != null) {
+                if (!old.canBeReplaced()) {
+                    rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
+                            "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                    return old;
+                } else {
+                    rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
+                    old.replaceBy(job);
+                    job = (CommandLineTask) old;
+                }
+            } else {
+                // Store in scheduler
+                job.save();
+            }
+
+        }
+
+        scriptContext.submittedJobs.put(job.getLocator().toString(), job);
+
+        return job;
     }
 
     /**

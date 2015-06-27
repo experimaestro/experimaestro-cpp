@@ -22,19 +22,17 @@ import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
  * An OAR process
  */
-@Entity
-@DiscriminatorValue("oar")
-class OARProcess extends XPMProcess {
+@TypeIdentifier("oar")
+public class OARProcess extends XPMProcess {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**

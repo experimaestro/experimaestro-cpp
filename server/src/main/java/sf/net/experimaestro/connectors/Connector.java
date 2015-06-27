@@ -18,19 +18,30 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.ConstructorRegistry;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
+import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import static java.lang.String.format;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -40,17 +51,19 @@ import java.nio.file.Paths;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
-@Table(name = "connector", uniqueConstraints = @UniqueConstraint(name = "identifier", columnNames = "identifier"))
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Exposed
-public abstract class Connector implements Comparable<Connector> {
+public abstract class Connector implements Comparable<Connector>, Identifiable {
+    /**
+     * Our registry
+     */
+    static private ConstructorRegistry<Connector> REGISTRY
+            = new ConstructorRegistry(new Class[]{Long.class, String.class, String.class})
+            .add(SSHConnector.class);
+
+
     /**
      * Each connector has a unique integer ID
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     /**
@@ -58,11 +71,20 @@ public abstract class Connector implements Comparable<Connector> {
      */
     private String identifier;
 
+    /**
+     * Whether data has been loaded from database
+     */
+    private boolean dataLoaded;
+
     public Connector(String identifier) {
         this.identifier = identifier;
     }
 
     protected Connector() {
+    }
+
+    public Connector(long id) {
+        this.id = id;
     }
 
     static public Path create(String path) {
@@ -155,38 +177,91 @@ public abstract class Connector implements Comparable<Connector> {
         return identifier.compareTo(other.identifier);
     }
 
-    public ConnectorDelegator delegate() {
-        return new ConnectorDelegator(this);
-    }
-
     public abstract Path resolve(String path) throws IOException;
 
     public String resolve(Path path) throws IOException {
         return getMainConnector().resolve(path);
     }
 
-    public long getKey() {
+    @Override
+    public Long getId() {
         return id;
     }
 
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     /**
-     * Find a connector given its string ID
-     * @param em The entity manager
-     * @param identifier The string identifier
-     * @return The connector in database or null if none exist
+     * Save object to database
+     *
+     * @throws SQLException If something goes wrong
      */
-    public static Connector find(EntityManager em, String identifier) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaQuery<Connector> q = cb.createQuery(Connector.class);
+    public void save() throws SQLException {
+        save(Scheduler.get().connectors(), null);
+    }
 
-        final Root<Connector> shares = q.from(Connector.class);
-        q.select(shares).where(shares.get(Connector_.identifier).in(identifier));
-
-        try {
-            return em.createQuery(q).getSingleResult();
-        } catch (NoResultException e) {
-            return null;
+    public void save(DatabaseObjects<Connector> connectors, Connector old) throws SQLException {
+        try (InputStream jsonInputStream = new JsonSerializationInputStream(out -> {
+            try (JsonWriter writer = new JsonWriter(out)) {
+                saveJson(writer);
+            }
+        })) {
+            connectors.save(this, "INSERT INTO Connectors(type, uri, data) VALUES(?, ?, ?)", st -> {
+                st.setLong(1, DatabaseObjects.getTypeValue(getClass()));
+                st.setString(2, getIdentifier());
+                st.setBlob(3, jsonInputStream);
+            }, old != null);
+        } catch (IOException e) {
+            throw new XPMRuntimeException(e, "Unexpected I/O error");
         }
     }
 
+    /**
+     * Save everything which is not saved in DB on disk
+     *
+     * @param writer The writer
+     */
+    protected void saveJson(JsonWriter writer) {
+        final Gson gson = GsonConverter.builder.create();
+        gson.toJson(this, this.getClass(), writer);
+    }
+
+    /**
+     * Load data from database
+     */
+    protected void loadData() {
+        if (dataLoaded) {
+            return;
+        }
+
+        Scheduler.get().connectors().loadData(this, "data");
+        dataLoaded = true;
+    }
+
+    static public Connector create(DatabaseObjects<Connector> db, ResultSet result) {
+        try {
+            // OK, create connector
+            long id = result.getLong(1);
+            long type = result.getLong(2);
+            String uri = result.getString(3);
+            String value = result.getString(4);
+
+            final Constructor<? extends Connector> constructor = REGISTRY.get(type);
+            final Connector connector = constructor.newInstance(id, uri, value);
+
+            return connector;
+        } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
+            throw new XPMRuntimeException(e, "Error retrieving database object");
+        }
+    }
+    public static final String SELECT_QUERY = "SELECT id, type, uri, data FROM Connectors";
+
+
+
+    public static Connector findByURI(String uri) throws SQLException {
+        final String query = format("%s WHERE uri=?", SELECT_QUERY);
+        return Scheduler.get().connectors().findUnique(query, st -> st.setString(1, uri));
+    }
 }

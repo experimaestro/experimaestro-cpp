@@ -18,42 +18,35 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LockException;
+import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.Test;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.utils.XPMEnvironment;
 
-import java.sql.SQLException;
+import java.io.File;
 
 /**
- * This lock calls {@linkplain TokenResource#unlock()} when
- * released.
+ * Test for command line task
  */
-@TypeIdentifier("token")
-public class TokenLock extends Lock {
-    private TokenResource resource;
+public class FileLockTest extends XPMEnvironment {
 
-    public TokenLock(long id) {
-        super(id);
+    @BeforeSuite
+    public static void setup() throws Throwable {
+        prepare();
     }
 
-    public TokenLock(TokenResource resource) {
-        this.resource = resource;
+    @Test(enabled = true)
+    public void testSave() throws Exception {
+        final File testDir = mkTestDir();
+
+        final FileLock lock = new FileLock(testDir.toPath().resolve("lock"), true);
+        lock.save();
+
+        Scheduler.get().locks().forget(lock.getId());
+        final FileLock otherLock = (FileLock)Lock.findById(lock.getId());
+
+        assert otherLock.path().equals(lock.path());
     }
 
-
-    @Override
-    public void doClose() throws LockException {
-        if (resource != null) {
-            try {
-                resource.unlock();
-            } catch (SQLException e) {
-                throw new LockException(e);
-            }
-            resource = null;
-        }
-    }
-
-    @Override
-    public void changeOwnership(String pid) throws LockException {
-        // TODO: maybe ensure that we only unlock valid locks (using an ID)
-    }
 }

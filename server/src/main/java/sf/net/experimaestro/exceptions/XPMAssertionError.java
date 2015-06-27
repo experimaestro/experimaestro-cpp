@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -18,20 +18,27 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.QName;
-
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
-
-@Converter(autoApply = true)
-public class QNameConverter implements AttributeConverter<QName, String> {
-    @Override
-    public String convertToDatabaseColumn(QName attribute) {
-        return attribute.toString();
+public class XPMAssertionError extends XPMRuntimeException {
+    public XPMAssertionError() {
     }
 
-    @Override
-    public QName convertToEntityAttribute(String dbData) {
-        return QName.parse(dbData);
+    public XPMAssertionError(String message, Throwable t) {
+        super(message, t);
+    }
+
+    public XPMAssertionError(Throwable t, String format, Object... values) {
+        super(t, format, values);
+    }
+
+    public XPMAssertionError(String message) {
+        super(message);
+    }
+
+    public XPMAssertionError(String format, Object... values) {
+        super(format, values);
+    }
+
+    public XPMAssertionError(Throwable t) {
+        super(t);
     }
 }

@@ -35,7 +35,13 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -88,13 +94,11 @@ public abstract class GenericFunction {
         if (executable.isVarArgs()) {
             final Class<?> varargType = types[types.length - 1].getComponentType();
             int nbVarargs = args.length - length;
-            if (nbVarargs > 0) {
-                final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
-                for (int i = 0; i < nbVarargs; i++) {
-                    array[i] = converters[i + length].apply(args[i + length]);
-                }
-                methodArgs[methodArgs.length - 1] = array;
+            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
+            for (int i = 0; i < nbVarargs; i++) {
+                array[i] = converters[i + length].apply(args[i + length]);
             }
+            methodArgs[methodArgs.length - 1] = array;
         }
 
         return methodArgs;
@@ -176,9 +180,9 @@ public abstract class GenericFunction {
             if (argument != null && argument.types().length > 0) {
                 argTypes = argument.types();
             } else {
-                argTypes = new Class<?>[] { types[types.length - 1].getComponentType() };
+                argTypes = new Class<?>[]{types[types.length - 1].getComponentType()};
             }
-            for(int i = 0; i < argTypes.length; ++i) {
+            for (int i = 0; i < argTypes.length; ++i) {
                 argTypes[i] = ClassUtils.primitiveToWrapper(argTypes[i]);
             }
 
@@ -192,7 +196,7 @@ public abstract class GenericFunction {
                 int oldScore = converter.score;
 
                 // Find the best among the k
-                for(int k = 0; k < argTypes.length; ++k) {
+                for (int k = 0; k < argTypes.length; ++k) {
                     converter.score = oldScore;
                     Function f = converter.converter(lcx, o, argTypes[k], nullable);
                     if (k == 0 || converter.score > bestScore) {
@@ -284,7 +288,7 @@ public abstract class GenericFunction {
 
             logger.error(message);
             logger.error("Candidates are:");
-            for(ScoredDeclaration scoredDeclaration: scoredDeclarations) {
+            for (ScoredDeclaration scoredDeclaration : scoredDeclarations) {
                 logger.error("[%d] %s", scoredDeclaration.score, scoredDeclaration.method);
             }
             throw ScriptRuntime.typeError(message);

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -19,18 +19,9 @@ package sf.net.experimaestro.scheduler;
  */
 
 /**
- * An entity lock
+ * Annotation for Gson serialization
  */
-interface EntityLock extends AutoCloseable {
-    /** Returns true if shared */
-    boolean isShared();
-
-    /** Make shared
-     * @param timeout*/
-    default void makeExclusive(long timeout) {}
-
-    @Override
-    void close();
-
-    boolean isClosed();
+public @interface GsonSerialization {
+    /** Should this value be serialized */
+    boolean serialize();
 }

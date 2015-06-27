@@ -28,6 +28,7 @@ import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.TaskOperator;
@@ -126,7 +127,7 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Associated experiment
      */
-    private Updatable<Long> experimentId;
+    private Updatable<Experiment> experiment;
 
     /**
      * The current task
@@ -176,13 +177,13 @@ final public class ScriptContext implements AutoCloseable {
         this.cleaner = new Cleaner();
 
         defaultLocks = new Updatable<>(new HashMap<>(), x -> new HashMap(x));
-        experimentId = Updatable.create(null);
+        experiment = Updatable.create(null);
         priority = Updatable.create(0);
         simulate = Updatable.create(false);
         workingDirectory = new Mutable<>();
         defaultLauncher = Updatable.create(new DirectLauncher());
         threadContext.set(this);
-        connector = Updatable.create(LocalhostConnector.getInstance());
+        connector = Updatable.create(Scheduler.get().getLocalhostConnector());
         currentScriptPath = Updatable.create(null);
         environment = Updatable.create(new HashMap<>(), x -> new HashMap<>(x));
         properties = new HashMap<>();
@@ -202,7 +203,7 @@ final public class ScriptContext implements AutoCloseable {
         counts = other.counts;
 
         defaultLocks = other.defaultLocks.reference();
-        experimentId = other.experimentId.reference();
+        experiment = other.experiment.reference();
         priority = other.priority.reference();
         simulate = other.simulate.reference();
         defaultLauncher = other.defaultLauncher.reference();
@@ -388,14 +389,12 @@ final public class ScriptContext implements AutoCloseable {
         this.workingDirectory.setValue(workingDirectory);
     }
 
-    public Long getExperimentId() {
-
-        return experimentId.get();
+    public Experiment getExperiment() {
+        return experiment.get();
     }
 
-    public void setExperimentId(long experimentId) {
-
-        this.experimentId.set(experimentId);
+    public void setExperiment(Experiment experiment) {
+        this.experiment.set(experiment);
     }
 
     public Cleaner getCleaner() {

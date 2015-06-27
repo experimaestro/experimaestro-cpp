@@ -19,6 +19,7 @@ package sf.net.experimaestro.utils;
  */
 
 import sf.net.experimaestro.exceptions.WrappedException;
+import sf.net.experimaestro.exceptions.XPMAssertionError;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -28,11 +29,10 @@ import java.util.function.Function;
  * Streams utility functions
  */
 public class Functional {
-    public interface ExceptionalConsumer<T> {
-        void apply(T t) throws Exception;
-    }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <V> Consumer<V> propagate(ExceptionalConsumer<V> callable) {
         return t -> {
             try {
@@ -45,7 +45,9 @@ public class Functional {
         };
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <V> Consumer<V> ignore(ExceptionalConsumer<V> callable) {
         return t -> {
             try {
@@ -60,7 +62,9 @@ public class Functional {
         void apply(T t, U u) throws Exception;
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <T, U> BiConsumer<T, U> propagate(ExceptionalBiConsumer<T, U> callable) {
         return (t, u) -> {
             try {
@@ -77,7 +81,9 @@ public class Functional {
         T apply(R r) throws Throwable;
     }
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <R, T> Function<R, T> propagateFunction(ExceptionalFunction<R, T> function) {
         return r -> {
             try {
@@ -91,7 +97,9 @@ public class Functional {
     }
 
 
-    /** Propagate exceptions by wrapping them into a runtime exception */
+    /**
+     * Propagate exceptions by wrapping them into a runtime exception
+     */
     public static <R, T> Function<R, T> ignoreFunction(ExceptionalFunction<R, T> callable, T defaultValue) {
         return r -> {
             try {
@@ -101,5 +109,24 @@ public class Functional {
                 return defaultValue;
             }
         };
+    }
+
+    public static Runnable runnable(ExceptionalRunnable p) {
+        return () -> {
+            try {
+                p.apply();
+            } catch (Throwable throwable) {
+                throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+            }
+        };
+    }
+
+
+    public static void shouldNotThrow(ExceptionalRunnable p) {
+        try {
+            p.apply();
+        } catch (Throwable throwable) {
+            throw new XPMAssertionError(throwable, "Should not have thrown an exception");
+        }
     }
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -32,18 +32,15 @@ import sf.net.experimaestro.utils.gson.JsonAdapter;
 import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.AttributeConverter;
 import java.io.*;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.file.Path;
 
 /**
  * Converts a command into a JSON string
  */
-public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
+public class GsonConverter<T>  {
     final static private Logger LOGGER = Logger.getLogger();
 
     private final Type type;
@@ -55,43 +52,18 @@ public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
     final static public GsonBuilder builder = new GsonBuilder();
 
     static {
+        // Last has more priority
+        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
         builder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
         builder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
         builder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
-        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
-    }
-
-    @Override
-    public byte[] convertToDatabaseColumn(T object) {
-        Gson gson = builder.create();
-        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        final Writer writer = new OutputStreamWriter(buffer);
-        gson.toJson(object, type, writer);
-        try {
-            writer.flush();
-            buffer.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return buffer.toByteArray();
-    }
-
-    @Override
-    public T convertToEntityAttribute(byte[] json) {
-        Gson gson = builder.create();
-        final ByteArrayInputStream buffer = new ByteArrayInputStream(json);
-        final InputStreamReader reader = new InputStreamReader(buffer);
-        final Object commands = gson.fromJson(reader, type);
-        return (T) commands;
+        builder.setExclusionStrategies(new GsonExclusionStrategy());
     }
 
     private static class AbstractObjectFactory implements TypeAdapterFactory {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
-            if (rawType.equals(Json.class)) {
-                return null;
-            }
             if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
                 return new AbstractObjectAdapter(gson, type);
             return null;
@@ -118,6 +90,7 @@ public class GsonConverter<T> implements AttributeConverter<T, byte[]> {
                 final Class<?> aClass = value.getClass();
                 assert !aClass.isArray();
                 out.value(aClass.getName());
+                LOGGER.info("Serializing %s", value.getClass());
                 gson.toJson(value, value.getClass(), out);
                 out.endArray();
             }

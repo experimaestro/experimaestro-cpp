@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,9 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.SSHOptions;
-
-import javax.persistence.AttributeConverter;
-
 /**
- * SSH options converter
+ * A consumer that can throw an exception
  */
-public class SSHOptionsConverter extends GsonConverter<SSHOptions> implements AttributeConverter<SSHOptions, byte[]> {
-    public SSHOptionsConverter() {
-        super(SSHOptions.class);
-    }
+public interface ExceptionalConsumer<T> {
+    void apply(T t) throws Exception;
 }

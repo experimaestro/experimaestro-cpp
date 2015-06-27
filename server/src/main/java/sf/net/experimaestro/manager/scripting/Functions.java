@@ -44,7 +44,6 @@ import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -59,6 +58,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -253,7 +253,7 @@ public class Functions {
                                     @Argument(name = "path")
                                     String path,
                                     @Argument(name = "priority")
-                                    Integer priority) {
+                                    Integer priority) throws SQLException {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 
@@ -276,14 +276,14 @@ public class Functions {
     @Help("Include a repository from introspection of a java project")
     static public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
         if (connector == null)
-            connector = LocalhostConnector.getInstance();
+            connector = Scheduler.get().getLocalhostConnector();
         JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
     }
 
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) {
+    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         get_locks(lockMode, json, dependencies);
@@ -291,7 +291,7 @@ public class Functions {
         return dependencies;
     }
 
-    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) {
+    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) throws SQLException {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {
@@ -313,7 +313,7 @@ public class Functions {
 
     @Expose(value = "$$")
     @Help("Get the resource associated with the json object")
-    static public Resource get_resource(Json json) {
+    static public Resource get_resource(Json json) throws SQLException {
         Resource resource;
         if (json instanceof JsonObject) {
             resource = getResource((JsonObject) json);
@@ -327,7 +327,7 @@ public class Functions {
         throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
     }
 
-    private static Resource getResource(JsonObject json) {
+    private static Resource getResource(JsonObject json) throws SQLException {
         if (json.containsKey(Manager.XP_RESOURCE.toString())) {
             final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
             if (o instanceof Resource) {
@@ -338,11 +338,11 @@ public class Functions {
                 if (scriptContext.simulate()) {
                     final Resource resource = scriptContext.submittedJobs.get(uri);
                     if (resource == null) {
-                        return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
+                        return Resource.getByLocator(uri);
                     }
                     return resource;
                 } else {
-                    return Transaction.evaluate(em -> Resource.getByLocator(em, uri));
+                    return Resource.getByLocator(uri);
                 }
             }
 
@@ -355,11 +355,7 @@ public class Functions {
     static public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
         if (!context().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
-            try (Transaction t = Transaction.create()) {
-                t.em().persist(experiment);
-                context().setExperimentId(experiment.getId());
-                t.commit();
-            }
+            experiment.save();
         }
         context().setWorkingDirectory(workdir);
     }

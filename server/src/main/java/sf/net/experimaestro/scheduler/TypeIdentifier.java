@@ -18,9 +18,19 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
- * Created by bpiwowar on 24/10/14.
+ * Gives an identifier to a given class
  */
-public enum ResourceType {
-    COMMAND_LINE_JOB;
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface TypeIdentifier {
+
+    String value();
+
+
 }

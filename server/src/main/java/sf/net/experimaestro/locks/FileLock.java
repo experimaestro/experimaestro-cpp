@@ -19,12 +19,20 @@ package sf.net.experimaestro.locks;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Entity;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchService;
+import java.sql.SQLException;
 
 import static java.lang.String.format;
 
@@ -34,7 +42,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
+@TypeIdentifier("file")
 public class FileLock extends Lock {
 
     final static private Logger LOGGER = Logger.getLogger();
@@ -50,12 +58,21 @@ public class FileLock extends Lock {
     protected FileLock() {
     }
 
+    @Override
+    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+        super.save(locks);
+        saveShare(lockFile);
+    }
 
     @Override
     public String toString() {
         return "FileLock{" +
                 "lockFile=" + lockFile +
                 '}';
+    }
+
+    public FileLock(long id) {
+        super(id);
     }
 
     /**
@@ -112,7 +129,7 @@ public class FileLock extends Lock {
      * @see bpiwowar.expmanager.rsrc.Lock#close()
      */
 
-    public void close() {
+    public void doClose() {
         if (lockFile != null && Files.exists(lockFile)) {
             boolean success = false;
             try {
@@ -139,4 +156,7 @@ public class FileLock extends Lock {
         // TODO Auto-generated method stub
     }
 
+    public Path path() {
+        return lockFile;
+    }
 }

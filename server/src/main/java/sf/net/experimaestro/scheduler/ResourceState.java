@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import java.util.EnumSet;
+import java.util.HashMap;
 
 /**
  * The resource state
@@ -56,6 +57,13 @@ public enum ResourceState {
      */
     DONE;
 
+    static private final HashMap<Long, ResourceState> REGISTRY = new HashMap<>();
+    static {
+        for(ResourceState state: ResourceState.values()) {
+            REGISTRY.put(state.value, state);
+        }
+    }
+
     /**
      * States in which a resource can replaced
      */
@@ -79,7 +87,12 @@ public enum ResourceState {
      * States in which the job has finished (whatever the outcome)
      */
     final static EnumSet<ResourceState> FINISHED_STATE
-            = EnumSet.of(DONE, ERROR, ON_HOLD);
+            = EnumSet.of(DONE, ERROR);
+
+    /**
+     * Database value
+     */
+    private final long value;
 
 
     /**
@@ -113,5 +126,16 @@ public enum ResourceState {
 
     public boolean isFinished() {
         return FINISHED_STATE.contains(this);
+    }
+
+    public static ResourceState fromValue(long status) {
+        return REGISTRY.get(status);
+    }
+
+    ResourceState() {
+        value = DatabaseObjects.getTypeValue(toString());
+    }
+    public long value() {
+        return value;
     }
 }

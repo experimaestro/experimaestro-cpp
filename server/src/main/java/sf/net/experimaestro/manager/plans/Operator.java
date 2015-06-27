@@ -41,9 +41,9 @@ import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
 import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.NotNull;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.Tasks;
-import sf.net.experimaestro.scheduler.Transaction;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.WrappedResult;
@@ -219,7 +219,7 @@ public abstract class Operator {
     }
 
     /**
-     * Returns the size of the output
+     * Returns the value of the output
      */
     public int outputSize() {
         return outputSize;
@@ -609,8 +609,9 @@ public abstract class Operator {
 
     /**
      * Get a simplified view of the plan
-     * @return A map for task operators
+     *
      * @param experiment
+     * @return A map for task operators
      */
     public IdentityHashMap<TaskOperator, TaskReference> getTaskOperatorMap(Experiment experiment) {
         IdentityHashMap<TaskOperator, TaskReference> map = new IdentityHashMap<>();
@@ -621,15 +622,15 @@ public abstract class Operator {
     /**
      * Recursion through the structure
      *
-     * @see #getTaskOperatorMap(sf.net.experimaestro.manager.experiments.Experiment)
      * @param experiment
-     * @param map The current map
+     * @param map        The current map
      * @param descendant The current descendant
+     * @see #getTaskOperatorMap(sf.net.experimaestro.manager.experiments.Experiment)
      */
     private void getTaskOperatorMap(Experiment experiment, IdentityHashMap<TaskOperator, TaskReference> map, TaskReference descendant) {
         if (this instanceof TaskOperator) {
             TaskOperator task = (TaskOperator) this;
-            TaskReference reference  = map.get(task);
+            TaskReference reference = map.get(task);
 
             if (descendant != null) {
                 descendant.addParent(reference);
@@ -645,7 +646,7 @@ public abstract class Operator {
             descendant = reference;
         }
 
-        for(Operator parent: getParents()) {
+        for (Operator parent : getParents()) {
             parent.getTaskOperatorMap(experiment, map, descendant);
         }
     }
@@ -680,6 +681,7 @@ public abstract class Operator {
 
     static public class ReturnValue {
         Json nodes[];
+
         Contexts contexts;
 
         public ReturnValue(Contexts contexts, Json... nodes) {
@@ -690,7 +692,9 @@ public abstract class Operator {
 
     public class OperatorIterator extends AbstractIterator<Value> {
         private final MutableInt counter;
+
         Iterator<ReturnValue> iterator;
+
         private long id = 0;
 
         OperatorIterator(ScriptContext scriptContext) {
@@ -734,7 +738,7 @@ public abstract class Operator {
 
     @Expose(context = true)
     @Help("Runs a JSON query against the input: each returned item is a new input")
-    public Operator select(LanguageContext cx, String query, Object f){
+    public Operator select(LanguageContext cx, String query, Object f) {
         JsonPathFunction function = new JsonPathFunction(query, (java.util.function.Function<Json, Object>) f);
         Operator operator = new FunctionOperator(function);
         operator.addParent(this);
@@ -744,7 +748,7 @@ public abstract class Operator {
 
     @Expose()
     @Help("Runs an JSON against the input: each returned item is a new input")
-    public Operator select(String query){
+    public Operator select(String query) {
         JsonPathFunction function = new JsonPathFunction(query, x -> x);
         Operator operator = new FunctionOperator(function);
         operator.addParent(this);
@@ -752,7 +756,7 @@ public abstract class Operator {
     }
 
     @Expose
-    public Operator group_by(Operator... operators) {
+    public Operator group_by(@NotNull Operator... operators) {
         return group_by(Manager.XP_ARRAY, operators);
     }
 
@@ -783,7 +787,7 @@ public abstract class Operator {
 
         groupBy.addParent(orderBy);
 
-        return  groupBy;
+        return groupBy;
     }
 
     @Expose
@@ -814,7 +818,7 @@ public abstract class Operator {
     }
 
     @Expose("to_dot")
-    public String toDot(boolean simplify){
+    public String toDot(boolean simplify) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(baos);
         Operator operator = prepare();
@@ -825,7 +829,7 @@ public abstract class Operator {
     }
 
     @Expose("to_dot")
-    public String toDOT(boolean simplify, boolean initialize){
+    public String toDOT(boolean simplify, boolean initialize) {
         Operator operator = getOperator(simplify, initialize);
 
 
@@ -881,19 +885,15 @@ public abstract class Operator {
     }
 
     private Object doRun(boolean simulate, boolean details) throws ExperimaestroCannotOverwrite {
-        try(ScriptContext scriptContext = ScriptContext.get().copy()) {
+        try (ScriptContext scriptContext = ScriptContext.get().copy()) {
             scriptContext.counts(details);
 
-            // If we have an experimentId, get the task reference and store them
-            Long experimentId = ScriptContext.get().getExperimentId();
-            if (experimentId != null) {
-                try (Transaction transaction = Transaction.create()) {
-                    Experiment experiment = transaction.em().find(Experiment.class, experimentId);
-                    IdentityHashMap<TaskOperator, TaskReference> map = getTaskOperatorMap(experiment);
-                    map.values().forEach(Functional.propagate(t -> transaction.em().persist(t)));
-                    scriptContext.setTaskOperatorMap(map);
-                    transaction.commit();
-                }
+            // If we have an experiment, get the task reference and store them
+            Experiment experiment = ScriptContext.get().getExperiment();
+            if (experiment != null) {
+                IdentityHashMap<TaskOperator, TaskReference> map = getTaskOperatorMap(experiment);
+                map.values().forEach(Functional.propagate(TaskReference::persists));
+                scriptContext.setTaskOperatorMap(map);
             }
 
 

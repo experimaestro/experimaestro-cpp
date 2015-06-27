@@ -19,20 +19,25 @@ package sf.net.experimaestro.server;
  */
 
 import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Message;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceState;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleMessage;
 
-import javax.persistence.EntityManager;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.SQLException;
 
 /**
  * Handles notification
  */
 public class NotificationServlet extends XPMServlet {
     private static final String END_OF_JOB = "eoj";
+
     private static final String PROGRESS = "progress";
 
     final Scheduler scheduler;
@@ -54,46 +59,52 @@ public class NotificationServlet extends XPMServlet {
         final String command = parts[2];
         long resourceId = Long.parseLong(jobIdString);
 
+        final Job job;
+        try {
+            job = getJob(request, resp, resourceId);
+        } catch (SQLException e) {
+            error404(request, resp);
+            return;
+        }
+        if (job == null) {
+            error404(request, resp);
+            return;
+        }
+
         switch (command) {
-            case END_OF_JOB:
+            case END_OF_JOB: {
                 resp.setContentType("application/json");
                 resp.setStatus(HttpServletResponse.SC_ACCEPTED);
 
-                Transaction.run(Functional.propagate(em -> {
-                    final Job job = getJob(request, resp, em, resourceId);
-                    if (job == null) return;
-                    final XPMProcess process = job.getProcess();
-                    if (process != null) {
-                        try {
-                            process.check();
-                        } catch (Exception e) {
-                            // FIXME: what to do here?
-                        }
+                final XPMProcess process = job.getProcess();
+                if (process != null) {
+                    try {
+                        process.check();
+                    } catch (Exception e) {
+                        // FIXME: what to do here?
                     }
-
-                }));
+                }
+            }
 
                 return;
-            case PROGRESS:
+            case PROGRESS: {
                 resp.setContentType("application/json");
                 resp.setStatus(HttpServletResponse.SC_ACCEPTED);
 
                 double progress = Double.parseDouble(parts[3]);
 
-                Transaction.run(Functional.propagate(em -> {
-                    final Job job = getJob(request, resp, em, resourceId);
-                    if (job.getState() == ResourceState.RUNNING) {
-                        job.setProgress(progress);
-                        Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
-                    }
-                }));
+                if (job.getState() == ResourceState.RUNNING) {
+                    job.setProgress(progress);
+                    Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
+                }
+            }
         }
 
         return;
     }
 
-    private Job getJob(HttpServletRequest request, HttpServletResponse resp, EntityManager em, long resourceId) throws IOException {
-        final Job job = em.find(Job.class, resourceId);
+    private Job getJob(HttpServletRequest request, HttpServletResponse resp, long resourceId) throws IOException, SQLException {
+        final Job job = (Job) Resource.getById(resourceId);
         if (job == null) {
             error404(request, resp);
             return null;

@@ -26,34 +26,40 @@ public enum DependencyStatus {
     /**
      * The resource can be used as is
      */
-    OK,
+    OK(1),
 
     /**
      * The resource can be used when properly locked
      */
-    OK_LOCK,
+    OK_LOCK(2),
 
     /**
      * The resource is not ready yet
      */
-    WAIT,
+    WAIT(3),
 
     /**
      * The resource is not ready yet, and is on hold (this can only be changed
      * by the external intervention)
      */
-    HOLD,
+    HOLD(4),
 
     /**
      * The resource is not ready, and this is due status an error (possibly among
      * dependencies)
      */
-    ERROR,
+    ERROR(5),
 
     /**
      * Unactive dependency
      */
-    UNACTIVE;
+    UNACTIVE(6);
+
+    private final int id;
+
+    DependencyStatus(int id) {
+        this.id = id;
+    }
 
     /**
      * Returns true if the resource is ready
@@ -69,5 +75,9 @@ public enum DependencyStatus {
      */
     public boolean isBlocking() {
         return this == HOLD || this == ERROR;
+    }
+
+    public int getId() {
+        return id;
     }
 }

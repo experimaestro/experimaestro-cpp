@@ -19,25 +19,32 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import java.io.File;
+import java.nio.file.FileSystemException;
+import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.stream.Stream;
 
 import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
+import static sf.net.experimaestro.utils.Functional.shouldNotThrow;
 
 /**
  * Extends Job status collect some information for testing purposes
  */
-@Entity
-@DiscriminatorValue("-1")
+@TypeIdentifier("WAITINGJOB")
 public class WaitingJob extends Job {
     final static private Logger LOGGER = Logger.getLogger();
+
+    static {
+        Resource.REGISTRY.add(WaitingJob.class);
+    }
 
     /**
      * The statuses of the different jobs
@@ -54,71 +61,93 @@ public class WaitingJob extends Job {
     /* id for debugging */
     private String debugId;
 
-    protected WaitingJob() {
+    public WaitingJob(Long id, String path) {
+        super(id, path);
     }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {
-        super(LocalhostConnector.getInstance(), new File(dir, debugId).toString());
+        super(Scheduler.get().getLocalhostConnector(), new File(dir, debugId).toString());
 
-        JobRunner jobRunner = new WaitingJobRunner();
 
         Status status = new Status();
         synchronized (statuses) {
             statusIndex = statuses.size();
             statuses.add(status);
         }
-        setJobRunner(jobRunner);
+
         status.counter = counter;
         this.debugId = debugId;
-        counter.add(actions.length);
+
+        if (counter != null) {
+            counter.add(actions.length);
+        }
 
         this.actions = new ArrayList<>(Arrays.asList(actions));
         status.currentIndex = 0;
 
         // put ourselves in waiting mode (rather than ON HOLD default)
-        setState(WAITING);
+        shouldNotThrow(() -> super.setState(WAITING));
+
+    }
+
+
+
+
+    @Override
+    public void save() throws SQLException {
+        super.save();
+        LOGGER.debug("Stored %s with state %s", this, getState());
     }
 
     @Override
-    public void stored() {
-        super.stored();
-
-        final ResourceState state = getState();
-
-        LOGGER.debug("Stored %s with state %s", this, state);
-
-        if (state.isUnactive() && (oldState == null || !oldState.isUnactive())) {
-            status().counter.del();
-            final int count = status().counter.getCount();
-            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-                    this, oldState, state, count + 1, count);
-        } else if (!state.isUnactive() && oldState != null && oldState.isUnactive()) {
-            status().counter.add();
-            final int count = status().counter.getCount();
-            LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
-                    this, oldState, state, count - 1, count);
-        }
-
-        // If we reached a final state
-        if (state.isFinished()) {
-            final int lockID = actions.get(status().currentIndex).removeLockID;
-            if (lockID > 0) {
-                IntLocks.removeLock(lockID);
-            }
-        }
+    public boolean setState(ResourceState state) throws SQLException {
+        ResourceState oldState = this.getState();
+        final Status status = status();
 
         switch (state) {
             case READY:
-                status().readyTimestamp = System.currentTimeMillis();
+                status.readyTimestamp = System.currentTimeMillis();
                 break;
             case DONE:
             case ERROR:
             case ON_HOLD:
                 break;
         }
+
+        final boolean b = super.setState(state);
+
+        if (status != null) {
+            // Decrease the counter when the state is DONE or ERROR
+            if (state.isUnactive() && !oldState.isUnactive()) {
+                status.counter.del();
+                final int count = status.counter.getCount();
+                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+                        this, oldState, state, count + 1, count);
+            }
+            else if (!state.isUnactive() && oldState.isUnactive()) {
+                status.counter.add();
+                final int count = status.counter.getCount();
+                LOGGER.debug("Job %s went from %s to %s [counter = %d to %d]",
+                        this, oldState, state, count - 1, count);
+            }
+
+            // If we reached a final state
+            if (state.isFinished()) {
+                final int lockID = actions.get(status.currentIndex).removeLockID;
+                if (lockID > 0) {
+                    IntLocks.removeLock(lockID);
+                }
+            }
+
+        }
+
+
+
+        return b;
     }
 
     Status status() {
+        if (statuses.isEmpty()) return null;
         return statuses.get(statusIndex);
     }
 
@@ -127,10 +156,6 @@ public class WaitingJob extends Job {
     }
 
     public void restart(WaitingJobProcess.Action action) {
-        Transaction.run(em -> em.find(WaitingJob.class, getId()).restart(action, em));
-    }
-
-    private void restart(WaitingJobProcess.Action action, EntityManager em) {
         status().currentIndex = 0;
         actions.clear();
         actions.add(action);
@@ -155,4 +180,30 @@ public class WaitingJob extends Job {
         // Counter
         transient ThreadCount counter;
     }
+
+
+    @Override
+    public XPMProcess start(ArrayList<Lock> locks, boolean fake) {
+        if (fake) return null;
+
+        WaitingJob.Status status = status();
+        assert status.readyTimestamp > 0;
+        if (status.currentIndex >= actions.size()) {
+            throw new AssertionError("No next action");
+        }
+
+        final WaitingJobProcess.Action action = actions.get(status.currentIndex);
+        return new WaitingJobProcess(getMainConnector(), this, action);
+    }
+
+    @Override
+    public Path outputFile() throws FileSystemException {
+        return null;
+    }
+
+    @Override
+    public Stream<Dependency> dependencies() {
+        return Stream.of();
+    }
+
 }

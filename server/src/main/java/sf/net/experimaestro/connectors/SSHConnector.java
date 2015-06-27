@@ -26,15 +26,14 @@ import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.utils.jpa.SSHOptionsConverter;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.Convert;
-import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -54,8 +53,8 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
 @Exposed
+@TypeIdentifier("SSH")
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
 
@@ -78,7 +77,6 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Connection options
      */
-    @Convert(converter = SSHOptionsConverter.class)
     private SSHOptions options = new SSHOptions();
 
     /**
@@ -94,7 +92,9 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Used for serialization
      */
-    protected SSHConnector() {
+    public SSHConnector(Long id, String uri, String value) {
+        this(URI.create(uri), null);
+        setId(id);
     }
 
     public SSHConnector(String username, String hostname) {
@@ -116,6 +116,9 @@ public class SSHConnector extends SingleHostConnector {
     public SSHConnector(URI uri, ConnectorOptions options) {
         this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
         this.basePath = uri.getPath();
+        if (this.basePath.isEmpty()) {
+            basePath = "/";
+        }
     }
 
     /**
@@ -146,6 +149,7 @@ public class SSHConnector extends SingleHostConnector {
 
     @Override
     public String getHostName() {
+        loadData();
         return options.getHostName();
     }
 
@@ -160,8 +164,10 @@ public class SSHConnector extends SingleHostConnector {
             return filesystem;
         }
 
+        loadData();
+
         try {
-            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getUserName() + basePath);
+            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);

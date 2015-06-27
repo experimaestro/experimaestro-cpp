@@ -21,24 +21,32 @@ package sf.net.experimaestro.scheduler;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.FileNameTransformer;
+import sf.net.experimaestro.utils.GsonSerialization;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.*;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.util.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -48,13 +56,19 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@SuppressWarnings("JpaAttributeTypeInspection")
-@Entity(name = "resources")
-@DiscriminatorColumn(name = "resourceType", discriminatorType = DiscriminatorType.INTEGER)
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@Table(name = "resources", indexes = @Index(columnList = "locator"))
 @Exposed
-public class Resource {
+@TypeIdentifier("RESOURCE")
+public class Resource implements Identifiable {
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.class, String.class})
+            .add(Resource.class, CommandLineTask.class, TokenResource.class);
+
+    public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
+
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, status) VALUES(?,?,?)";
+
+    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "data");
+
+
     /**
      * Extension for the lock file
      */
@@ -103,125 +117,72 @@ public class Resource {
      */
     public static final FileNameTransformer INPUT_EXTENSION = new FileNameTransformer("", ".xpm.input.");
 
-    public static final String JOB_TYPE = "1";
-    public static final String TOKEN_RESOURCE_TYPE = "2";
 
     final static private Logger LOGGER = Logger.getLogger();
-    static private SharedLongLocks resourceLocks = new SharedLongLocks();
-    /**
-     * Version for optimistic locks
-     */
-    @Version
-    @Column(name = "version")
-    protected long version;
 
     /**
      * The path with the connector
      */
-    @Column(name = "locator", updatable = false)
     protected String locator;
-    /**
-     * Keeps the state of the resource before saving
-     */
-    protected transient ResourceState oldState;
-    transient boolean prepared = false;
+
     /**
      * The resource ID
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
+    @GsonSerialization(serialize = false)
     private Long resourceID;
-    /**
-     * Comparator on the database ID
-     */
-    static public final Comparator<Resource> ID_COMPARATOR = new Comparator<Resource>() {
-        @Override
-        public int compare(Resource o1, Resource o2) {
-            return Long.compare(o1.resourceID, o2.resourceID);
-        }
-    };
+
     /**
      * The connector
      * <p>
      * A null value is used for LocalhostConnector
      */
-    @JoinColumn(name = "connector", updatable = false)
-    @ManyToOne(cascade = CascadeType.PERSIST)
-    private Connector connector;
+    transient private Connector connector;
+
     /**
      * The outgoing dependencies (resources that depend on this)
      */
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "from")
-    @MapKey(name = "to")
-    private Map<Resource, Dependency> outgoingDependencies = new HashMap<>();
+    transient private Map<Resource, Dependency> outgoingDependencies;
+
     /**
      * The ingoing dependencies (resources that we depend upon)
      */
-    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE, CascadeType.REFRESH}, fetch = FetchType.LAZY, mappedBy = "to")
-    @MapKey(name = "from")
-    private Map<Resource, Dependency> ingoingDependencies = new HashMap<>();
+    transient private Map<Resource, Dependency> ingoingDependencies;
 
     /**
      * The resource state
      */
-    @Column(name = "state")
-    private ResourceState state = ResourceState.ON_HOLD;
+    transient private ResourceState state = ResourceState.ON_HOLD;
+
     /**
      * Cached Path
      */
     transient private Path path;
 
     /**
-     * Called when deserializing from database
+     * Flag that says whether the data has been loaded
      */
-    protected Resource() {
-        LOGGER.trace("Constructor of resource [%s@%s]", System.identityHashCode(this), this);
-    }
+    transient private boolean dataLoaded;
 
     public Resource(Connector connector, Path path) throws IOException {
         this(connector, path.toString());
     }
 
     public Resource(Connector connector, String name) {
-        this.connector = connector instanceof LocalhostConnector ? null : connector;
+        this.connector = connector;
         this.locator = name;
+        outgoingDependencies = new HashMap<>();
+        ingoingDependencies = new HashMap<>();
+        dataLoaded = true;
     }
 
     /**
-     * Get a resource by locator
-     *
-     * @param em   The current entity manager
-     * @param path The path of the resource
-     * @return The resource or null if there is no such resource
+     * Construct from DB
      */
-    public static Resource getByLocator(EntityManager em, String path) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Resource> cq = cb.createQuery(Resource.class);
-        Root<Resource> root = cq.from(Resource.class);
-        cq.where(root.get("locator").in(cb.parameter(String.class, "locator")));
-
-
-        TypedQuery<Resource> query = em.createQuery(cq);
-        query.setParameter("locator", path);
-        List<Resource> result = query.getResultList();
-        assert result.size() <= 1;
-
-        if (result.isEmpty())
-            return null;
-
-        return result.get(0);
-    }
-
-    /**
-     * Lock a resource by ID
-     *
-     * @param transaction
-     * @param resourceId
-     * @param exclusive
-     * @param timeout     A timeout value (in ms) or a negative value (no timeout)
-     */
-    public static EntityLock lock(Transaction transaction, long resourceId, boolean exclusive, long timeout) {
-        return transaction.lock(resourceLocks, resourceId, exclusive, timeout);
+    public Resource(Long id, String locator) {
+        this(Scheduler.get().getLocalhostConnector(), locator);
+        this.resourceID = id;
+        this.locator = locator;
+        dataLoaded = false;
     }
 
     @Override
@@ -252,14 +213,19 @@ public class Resource {
      * Returns a detailed description
      */
     public String toDetailedString() {
-        return toString() + "@" + version;
+        return toString();
     }
 
     /**
      * Get the ID
      */
+    @Override
     public Long getId() {
         return resourceID;
+    }
+
+    public void setId(Long id) {
+        this.resourceID = id;
     }
 
     /**
@@ -268,7 +234,7 @@ public class Resource {
      * Calls {@linkplain #doUpdateStatus()}.
      * If the update fails for some reason, then we just put the state into HOLD
      */
-    final public boolean updateStatus() {
+    synchronized final public boolean updateStatus() throws SQLException {
         try {
             boolean b = doUpdateStatus();
             return b;
@@ -305,11 +271,9 @@ public class Resource {
     /**
      * Notifies the resource that something happened
      *
-     * @param t
-     * @param em
      * @param message The message
      */
-    public void notify(Transaction t, EntityManager em, Message message) {
+    public void notify(Message message) throws SQLException {
         switch (message.getType()) {
             case RESOURCE_REMOVED:
                 break;
@@ -380,16 +344,44 @@ public class Resource {
      * @param state
      * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
      */
-    public boolean setState(ResourceState state) {
+    synchronized public boolean setState(ResourceState state) throws SQLException {
         if (this.state == state)
             return false;
+
+        // Update in DB
+        if (inDatabase()) {
+            try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET status=? WHERE id=?")) {
+                st.setLong(1, state.value());
+                st.setLong(2, getId());
+                st.execute();
+                final int count = st.getUpdateCount();
+
+                if (count != 1) {
+                    throw new SQLException(format("Updating resource resulted in %d updated rows", count));
+                }
+            } catch (SQLException e) {
+                throw new SQLException(e);
+            }
+            LOGGER.debug("Stored new state [%s] of job %s in database", state, this);
+        }
         this.state = state;
 
-        // FIXME: Should be done when the operation is committed
-//        if (this.isStored()) {
-//            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
-//        }
+        if (inDatabase()) {
+            if (state == ResourceState.READY) {
+                LOGGER.debug("Notifying runners");
+                Scheduler.notifyRunners();
+            }
+            LOGGER.debug("Notifying dependencies of %s [new state %s]", this, state);
+            Scheduler.get().addChangedResource(this);
+        }
+
+        Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+
         return true;
+    }
+
+    public boolean inDatabase() {
+        return resourceID != null;
     }
 
     /**
@@ -438,19 +430,18 @@ public class Resource {
     public void clean() {
     }
 
-    protected Dependency addIngoingDependency(Dependency dependency) {
+    synchronized protected Dependency addIngoingDependency(Dependency dependency) {
         dependency.to = this;
-        return this.ingoingDependencies.put(dependency.getFrom(), dependency);
+        dependency.from.addOutgoingDependency(dependency);
+
+        final Dependency put = this.ingoingDependencies.put(dependency.getFrom(), dependency);
+        assert put == null;
+        return put;
     }
 
-    /**
-     * Called when the resource was persisted/updated and committed
-     */
-    public void stored() {
-        // We switched from a stopped state to a non stopped state : notify dependents
-        if (oldState != null && oldState.isUnactive() ^ state.isUnactive()) {
-            Scheduler.get().addChangedResource(this);
-        }
+    synchronized protected void addOutgoingDependency(Dependency dependency) {
+        LOGGER.debug("Adding dependency from %s to %s [outgoing]", this, dependency.getTo());
+        outgoingDependencies.put(dependency.getTo(), dependency);
     }
 
     /**
@@ -460,7 +451,7 @@ public class Resource {
      * @return The old resource, or null if there was nothing
      * @throws ExperimaestroCannotOverwrite If the old resource could not be overriden
      */
-    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite {
+    synchronized public Resource put(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         // Get the group
         final boolean newResource = !resource.isStored();
         if (newResource) {
@@ -492,9 +483,10 @@ public class Resource {
      *
      * @param recursive Delete dependent resources
      */
-    public synchronized void delete(boolean recursive) {
-        if (getState() == ResourceState.RUNNING)
+    public synchronized void delete(boolean recursive) throws SQLException {
+        if (getState() == ResourceState.RUNNING) {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
+        }
 
         Collection<Dependency> dependencies = getOutgoingDependencies();
         if (!dependencies.isEmpty()) {
@@ -506,62 +498,41 @@ public class Resource {
                     }
                 }
             } else
-                throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies", this);
+                throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
+                        dependencies);
         }
 
         // Remove
-        Transaction.run((em, t) -> {
-            Resource ourselves = em.find(Resource.class, getId());
-            em.remove(ourselves);
-            SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, ourselves);
-            this.notify(t, em, message);
-            notify(t, em, message);
-        });
+        Scheduler.get().resources().delete(this);
 
+        // Remove dependencies
+        for (Dependency dependency : getIngoingDependencies().values()) {
+            final Resource from = dependency.getFrom();
+            if (from.outgoingDependencies != null) {
+                from.outgoingDependencies.remove(this);
+            }
+        }
 
+        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
         return extension.transform(getConnector().resolve(locator));
     }
 
-    final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite {
-        if (resource.getClass() != this.getClass()) {
-            throw new ExperimaestroCannotOverwrite("Class %s and %s differ", resource.getClass(), this.getClass());
-        }
-
+    synchronized final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         if (!resource.getLocator().equals(this.locator)) {
             throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), this.getLocator());
         }
 
-        doReplaceBy(resource);
-    }
+        resource.save(Scheduler.get().resources(), this);
 
-    protected void doReplaceBy(Resource resource) {
-        // Remove dependencies that are not anymore
-        final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
-        while (iterator.hasNext()) {
-            final Map.Entry<Resource, Dependency> entry = iterator.next();
-            final Dependency dependency = resource.ingoingDependencies.remove(entry.getKey());
-            if (dependency != null) {
-                entry.getValue().replaceBy(dependency);
-            } else {
-                iterator.remove();
-            }
-        }
-
-        // Add new dependencies
-        resource.ingoingDependencies.entrySet().stream()
-                .forEach(entry -> {
-                    entry.getValue().to = this;
-                    this.ingoingDependencies.put(entry.getKey(), entry.getValue());
-                });
-
-        this.state = resource.state;
+        // Not in DB anymore
+        this.setId(null);
     }
 
     public Connector getConnector() {
-        return connector == null ? LocalhostConnector.getInstance() : connector;
+        return connector;
     }
 
     /**
@@ -573,119 +544,157 @@ public class Resource {
         return getConnector().getMainConnector();
     }
 
-    public EntityLock lock(Transaction t, boolean exclusive) {
-        return t.lock(resourceLocks, this.getId(), exclusive, 0);
+    public void save() throws SQLException {
+        save(Scheduler.get().resources(), null);
     }
 
-    public EntityLock lock(Transaction t, boolean exclusive, long timeout) {
-        return t.lock(resourceLocks, this.getId(), exclusive, timeout);
-    }
-
-    @PostLoad
-    protected void postLoad() {
-        cacheState();
-        prepared = true;
-        LOGGER.debug("Loaded %s (state %s) - version %d", this, state, version);
-    }
-
-    /**
-     * Cache the current state to allow notification when resource is stored in database
-     */
-    protected void cacheState() {
-        oldState = state;
-    }
-
-    /**
-     * Called after an INSERT or UPDATE
-     */
-    @PostUpdate
-    @PostPersist
-    public void _post_update() {
-        Transaction.current().registerPostCommit(this::saved);
-    }
-
-    @PostRemove
-    public void postRemove() {
-        Transaction.current().registerPostCommit(this::removed);
-    }
-
-    public void save(Transaction transaction) {
-        final EntityManager em = transaction.em();
-
-        // Look up connector in DB, and replace if needed
-        if (connector != null) {
-            final Connector _connector = Connector.find(em, this.connector.getIdentifier());
-            if (_connector != null) {
-                connector = _connector;
-            }
+    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+        boolean update = old != null;
+        if (update && getId() == null) {
+            throw new SQLException("Resource not in database");
+        } else if (!update && getId() != null) {
+            throw new SQLException("Resource already in database");
         }
-
-        // Lock all the dependencies
-        // This avoids to miss any notification
-        List<EntityLock> locks = new ArrayList<>();
-        lockDependencies:
-        while (true) {
-            // We loop until we get all the locks - using a timeout just in case
-            for (Dependency dependency : getDependencies()) {
-                final EntityLock lock = dependency.from.lock(transaction, false, 100);
-                if (lock == null) {
-                    for (EntityLock _lock : locks) {
-                        _lock.close();
-                    }
-                    continue lockDependencies;
-                }
-
-                locks.add(lock);
-            }
-
-            break;
-        }
-
-        for (Dependency dependency : getDependencies()) {
-            if (!em.contains(dependency.from)) {
-                dependency.from = em.find(Resource.class, dependency.from.getId());
-            } else {
-                em.refresh(dependency.from);
-            }
-        }
-
-        prepared = true;
-        em.persist(this);
 
         // Update the status
         updateStatus();
+
+        // Save resource
+        // Save on file
+        final long typeValue = DatabaseObjects.getTypeValue(getClass());
+        LOGGER.debug("Saving resource [%s] of type %s [%d], status %s [%s]",
+                getLocator(), getClass(), typeValue,
+                getState(), getState().value());
+
+        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
+            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), jsonInputStream);
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
+
+        if (update) {
+            // Remove dependencies that are not anymore
+            final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
+            while (iterator.hasNext()) {
+                final Map.Entry<Resource, Dependency> entry = iterator.next();
+                final Dependency dependency = old.ingoingDependencies.remove(entry.getKey());
+                if (dependency != null) {
+                    entry.getValue().replaceBy(dependency);
+                } else {
+                }
+            }
+
+            // Delete old
+            try (PreparedStatement st = resources.connection.prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
+                for (Dependency dependency : old.ingoingDependencies.values()) {
+                    if (!ingoingDependencies.containsKey(dependency.getFrom())) {
+                        st.setLong(1, dependency.getFrom().getId());
+                        st.setLong(2, getId());
+                        st.execute();
+                    }
+                }
+            }
+
+        }
+
+        // Save dependencies (if not already in DB)
+        try (PreparedStatement st = resources.connection.prepareStatement(INSERT_DEPENDENCY)) {
+            st.setLong(2, getId());
+            for (Dependency dependency : getIngoingDependencies().values()) {
+                if (!update || !old.ingoingDependencies.containsKey(dependency.getFrom())) {
+                    st.setLong(1, dependency.getFrom().getId());
+                    st.setLong(3, dependency.status.getId());
+                    st.execute();
+                }
+            }
+        }
+
+
+        LOGGER.debug("Resource %s saved/updated", this);
+        Scheduler.get().notify(new SimpleMessage(!update ? Message.Type.RESOURCE_ADDED : Message.Type.STATE_CHANGED, this));
     }
 
     /**
-     * Called before adding this entity to the database
+     * Get a resource by locator
+     *
+     * @param path The path of the resource
+     * @return The resource or null if there is no such resource
      */
-    @PrePersist
-    protected void prePersist() {
-        if (!prepared) {
-            throw new AssertionError("The object has not been prepared");
+    static public Resource getByLocator(String path) throws SQLException {
+        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
+    }
+
+    static protected Resource create(DatabaseObjects<Resource> db, ResultSet result) {
+        try {
+            long id = result.getLong(1);
+            long type = result.getLong(2);
+            String path = result.getString(3);
+            long status = result.getLong(4);
+
+            final Constructor<? extends Resource> constructor = REGISTRY.get(type);
+            final Resource resource = constructor.newInstance(id, path);
+
+            // Set stored values
+            resource.setState(ResourceState.fromValue(status));
+
+            return resource;
+        } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
+            throw new XPMRuntimeException("Error retrieving database object", e);
         }
     }
 
-    public void removed(Transaction transaction) {
-        LOGGER.debug("Resource %s removed", this, version);
-        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
-        clean();
+    /**
+     * Iterator on resources
+     */
+    static public CloseableIterable<Resource> resources() throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        return resources.find(SELECT_BEGIN, st -> {
+        });
     }
 
-    public void saved(Transaction transaction) {
-        LOGGER.debug("Resource %s stored with version=%s", this, version);
-        if (oldState != state) {
-            if (oldState == null) {
-                Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
+    public static CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        StringBuilder sb = new StringBuilder();
+        sb.append(SELECT_BEGIN);
+        sb.append(" WHERE status in (");
+        boolean first = true;
+        for (ResourceState state : states) {
+            if (first) {
+                first = false;
             } else {
-                Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+                sb.append(',');
             }
+            sb.append(state.value());
         }
-        stored();
-        cacheState();
+        sb.append(")");
 
-        // Move back to false
-        prepared = false;
+        final String query = sb.toString();
+        LOGGER.debug("Searching for resources in states %s: %s", states, query);
+        return resources.find(query, st -> {
+        });
+    }
+
+    static public Resource getById(long resourceId) throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final Resource r = resources.getFromCache(resourceId);
+        if (r != null) {
+            return r;
+        }
+
+        return resources.findUnique(SELECT_BEGIN + " WHERE id=?", st -> st.setLong(1, resourceId));
+    }
+
+
+    /**
+     * Load data from database
+     */
+    protected void loadData() {
+        if (dataLoaded) {
+            return;
+        }
+
+        Scheduler.get().resources().loadData(this, "data");
+        dataLoaded = true;
     }
 
     @Expose("output")
@@ -707,6 +716,11 @@ public class Resource {
     public Dependency lock(String lockType) {
         return createDependency(lockType);
     }
+
+    public Map<Resource, Dependency> getIngoingDependencies() {
+        return ingoingDependencies;
+    }
+
 
     /**
      * Defines how printing should be done

@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import com.jcraft.jsch.ChannelExec;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ import java.io.OutputStream;
 /**
  * An SSH process
  */
+@TypeIdentifier("ssh")
 public class SSHProcess extends XPMProcess {
 
     transient private ChannelExec channel;

@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -298,6 +299,19 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         public java.lang.String toString() {
             return string;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            String string1 = (String) o;
+            return Objects.equals(string, string1.string);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(string);
+        }
     }
 
     public static class Path implements CommandComponent, Serializable {
@@ -350,6 +364,20 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         public java.lang.String toString() {
             return java.lang.String.format("ParameterFile(%s)", key);
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ParameterFile that = (ParameterFile) o;
+            return Objects.equals(key, that.key) &&
+                    Objects.equals(content, that.content);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, content);
+        }
     }
 
 
@@ -363,6 +391,24 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         public java.lang.String toString(CommandContext environment) throws IOException {
             return environment.getWorkingDirectory();
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof WorkingDirectory;
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Command command = (Command) o;
+        return Objects.equals(list, command.list);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(list);
     }
 
     /**

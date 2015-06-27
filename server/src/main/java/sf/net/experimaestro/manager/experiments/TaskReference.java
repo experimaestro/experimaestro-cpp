@@ -18,32 +18,27 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.scheduler.Resource;
 
-import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
 /**
  * A task contains resources and is linked to other dependent tasks
  */
-@Entity
 public class TaskReference {
-    @Id()
-    @GeneratedValue()
     long id;
 
     /**
      * The parents
      */
-    @OneToMany
     private final Collection<TaskReference> parents = new ArrayList<>();
 
     /**
      * The children
      */
-    @OneToMany
     private final Collection<TaskReference> children = new ArrayList<>();
 
     /**
@@ -54,13 +49,11 @@ public class TaskReference {
     /**
      * The experiment ID
      */
-    @ManyToOne(fetch = FetchType.EAGER)
     Experiment experiment;
 
     /**
      * The associated resources
      */
-    @OneToMany
     Collection<Resource> resources = new ArrayList<>();
 
     public TaskReference() {
@@ -89,5 +82,12 @@ public class TaskReference {
      */
     public void add(Resource resource) {
         resources.add(resource);
+    }
+
+    /**
+     * Save in database
+     */
+    public void persists() {
+        throw new NotImplementedException();
     }
 }

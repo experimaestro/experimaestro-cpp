@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.jpa;
+package sf.net.experimaestro.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,20 +18,18 @@ package sf.net.experimaestro.utils.jpa;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
-import java.io.File;
+/**
+ * Simple interface for objects that can be idenfitied by an integer value
+ */
+public interface Identifiable {
+    /** In database ? */
+    default boolean inDatabase() { return getId() != null; }
 
+    /** Returns the ID (or null if not set) */
+    Long getId();
 
-@Converter
-public class FileConverter implements AttributeConverter<File, String> {
-    @Override
-    public String convertToDatabaseColumn(File attribute) {
-      return  attribute.getAbsolutePath();
-    }
-
-    @Override
-    public File convertToEntityAttribute(String dbData) {
-        return  new File(dbData);
-    }
+    /** Sets the ID
+     * @param id The new ID (or null when removing)
+     */
+    void setId(Long id);
 }

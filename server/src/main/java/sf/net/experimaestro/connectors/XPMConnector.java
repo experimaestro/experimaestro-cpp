@@ -21,8 +21,8 @@ package sf.net.experimaestro.connectors;
 import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.TypeIdentifier;
 
-import javax.persistence.Entity;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
@@ -33,7 +33,7 @@ import java.nio.file.Paths;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Entity
+@TypeIdentifier("xpm")
 public class XPMConnector extends SingleHostConnector {
     final private static XPMConnector SINGLETON = new XPMConnector();
     /**

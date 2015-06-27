@@ -19,14 +19,15 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.PostLoad;
 import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * A class that can be locked a given number of times at the same time.
@@ -35,13 +36,14 @@ import java.io.IOException;
  * example
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 23/11/12
  */
-@Entity
-@DiscriminatorValue(Resource.TOKEN_RESOURCE_TYPE)
 @Exposed
+@TypeIdentifier("TOKEN")
 public class TokenResource extends Resource {
+
     final static private Logger LOGGER = Logger.getLogger();
+
+    private static final SQLInsert SQL_INSERT = new SQLInsert("TokenResources", false, "id", "limit", "used");
 
     /**
      * Maximum number of tokens available
@@ -58,13 +60,8 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-    protected TokenResource() {
-    }
-
-    @PostLoad
-    protected void postLoad() {
-        super.postLoad();
-        wasBlocking = isBlocking();
+    public TokenResource(Long id, String locator) {
+        super(id, locator);
     }
 
     /**
@@ -74,11 +71,27 @@ public class TokenResource extends Resource {
      * @param limit The maximum number of tokens
      */
     public TokenResource(String path, int limit) {
-        super(null, path);
+        super((Long)null, path);
         this.limit = limit;
         this.usedTokens = 0;
         this.wasBlocking = isBlocking();
-        setState(ResourceState.DONE);
+        try {
+            setState(ResourceState.DONE);
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Should not happen - object not in DB");
+        }
+    }
+
+    @Override
+    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+        // Update status
+        boolean update = this.inDatabase() || old != null;
+
+        // Save resource
+        super.save(resources, old);
+
+        // Insert token resource
+        SQL_INSERT.execute(resources.connection, update, getId(), limit, usedTokens);
     }
 
     public String toDetailedString() {
@@ -133,49 +146,66 @@ public class TokenResource extends Resource {
      *
      * @return
      */
-    synchronized void unlock() {
+    synchronized void unlock() throws SQLException {
         if (usedTokens >= 0) {
-            --usedTokens;
-            LOGGER.debug("Releasing one token (%s/%s) [version %d]", usedTokens, limit, version);
-        } else {
-            LOGGER.warn("Attempt to release non existent token (%d/%d) [version %d]", usedTokens, limit, version);
-            usedTokens = 0;
-        }
-    }
-
-    public void increaseUsedTokens() {
-        ++usedTokens;
-        LOGGER.debug("Getting one more token (%s/%s) [version %d]", usedTokens, limit, version);
-    }
-
-    @Override
-    public void stored() {
-        // Notify scheduler state has changed
-        if (wasBlocking && !isBlocking()) {
-            LOGGER.debug("Token %s is not blocking anymore: notifying scheduler",
-                    this, wasBlocking, isBlocking());
+            setValue(usedTokens - 1);
             Scheduler.get().notifyRunners();
+            LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
+        } else {
+            LOGGER.warn("Attempt to release non existent token (%d/%d)", usedTokens, limit);
         }
     }
+
+    public void increaseUsedTokens() throws SQLException {
+        setValue(usedTokens + 1);
+        LOGGER.debug("Getting one more token (%s/%s)", usedTokens, limit);
+    }
+
 
     private boolean isBlocking() {
         return usedTokens >= limit;
     }
 
+    /**
+     * Sets the number of used tokens
+     *
+     * @param usedTokens The new value
+     * @throws SQLException If something goes wrong
+     */
+    synchronized private void setValue(final int usedTokens) throws SQLException {
+        if (this.usedTokens == usedTokens) return;
+
+        // Set in DB first
+        final String s = "UPDATE TokenResources SET used=? WHERE id=?";
+        try(final PreparedStatement st = Scheduler.get().getConnection().prepareStatement(s)) {
+            st.setInt(1, usedTokens);
+            st.setLong(2, getId());
+            st.execute();
+        }
+
+       this.usedTokens = usedTokens;
+    }
+
     @Expose("set_limit")
-    public void setLimit(final int limit) {
-        // Get a database copy of this resource first
-        Transaction.run((em, t) -> {
-            this.lock(t, true);
-            TokenResource self = em.find(TokenResource.class, getId());
-            if (limit != self.limit) {
-                self.limit = limit;
-                if (!isBlocking()) {
-                    // Notify runners if nothing
-                    Scheduler.notifyRunners();
-                }
+    synchronized public void setLimit(final int limit) throws SQLException {
+        if (this.limit == limit) return;
+
+        // Set in DB first
+        final String s = "UPDATE TokenResources SET limit=? WHERE id=?";
+        try(final PreparedStatement st = Scheduler.get().getConnection().prepareStatement(s)) {
+            st.setInt(1, limit);
+            st.setLong(2, getId());
+            st.execute();
+        }
+
+        // and then change in memory
+        if (limit != this.limit) {
+            this.limit = limit;
+            if (!isBlocking()) {
+                // Notify runners if nothing
+                Scheduler.notifyRunners();
             }
-        });
+        }
     }
 
 }

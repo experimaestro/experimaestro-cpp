@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.utils;
 
 /*
  * This file is part of experimaestro.
@@ -18,8 +18,21 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.List;
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
 
-public interface PersistentClassesAdder {
-    public void add(List<Class<?>> classes);
+/**
+ * Defines the default exclusion strategy in XPM
+ */
+public class GsonExclusionStrategy implements ExclusionStrategy {
+    @Override
+    public boolean shouldSkipField(FieldAttributes f) {
+        final GsonSerialization annotation = f.getAnnotation(GsonSerialization.class);
+        return (annotation != null && !annotation.serialize());
+    }
+
+    @Override
+    public boolean shouldSkipClass(Class<?> clazz) {
+        return false;
+    }
 }

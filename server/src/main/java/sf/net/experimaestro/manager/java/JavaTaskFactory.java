@@ -23,16 +23,28 @@ import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
+import sf.net.experimaestro.manager.Input;
+import sf.net.experimaestro.manager.JsonInput;
+import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.Task;
+import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.Type;
+import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Command;
+import sf.net.experimaestro.scheduler.Commands;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -44,11 +56,17 @@ import java.util.Map;
 @Exposed
 public class JavaTaskFactory extends TaskFactory {
     public static final String JVM_OPTIONS = "$jvm";
+
     final JavaTasksIntrospection javaTasksIntrospection;
+
     final Connector connector;
+
     final String taskClassname;
+
     final ArrayList<PathArgument> pathArguments = new ArrayList<>();
+
     private final Type output;
+
     Map<String, Input> inputs = new HashMap<>();
 
     /**
@@ -192,27 +210,30 @@ public class JavaTaskFactory extends TaskFactory {
         // Check dependencies
         if (!simulate) {
             for (Json element : json.values()) {
-                Transaction.run(em -> {
-                    if (element instanceof JsonObject) {
-                        JsonObject object = (JsonObject) element;
-                        final Json r = object.get(Manager.XP_RESOURCE.toString());
-                        if (r == null) return;
+                if (element instanceof JsonObject) {
+                    JsonObject object = (JsonObject) element;
+                    final Json r = object.get(Manager.XP_RESOURCE.toString());
+                    if (r == null) continue;
 
-                        final Object o = r.get();
-                        Resource resource;
-                        if (o instanceof Resource) {
-                            resource = (Resource) o;
-                        } else {
-                            resource = Resource.getByLocator(em, o.toString());
-                            if (resource == null) {
-                                throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                                        o.toString(), getId());
-                            }
+                    final Object o = r.get();
+                    Resource resource;
+                    if (o instanceof Resource) {
+                        resource = (Resource) o;
+                    } else {
+                        try {
+                            resource = Resource.getByLocator(o.toString());
+                        } catch (SQLException e) {
+                            throw new XPMRuntimeException(e, "Error while searching the resource %s the task %s depends upon",
+                                    o.toString(), getId());
                         }
-                        final Dependency lock = resource.createDependency("READ");
-                        commands.addDependency(lock);
+                        if (resource == null) {
+                            throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                                    o.toString(), getId());
+                        }
                     }
-                });
+                    final Dependency lock = resource.createDependency("READ");
+                    commands.addDependency(lock);
+                }
             }
         }
 

@@ -19,30 +19,23 @@ package sf.net.experimaestro.server;
  */
 
 import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.manager.experiments.Experiment_;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.Transaction;
-import sf.net.experimaestro.utils.CloseableIterator;
+import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.arrays.ListAdaptator;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.persistence.LockModeType;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
 
 /**
  * Gives the current task status
@@ -51,7 +44,8 @@ import java.util.List;
  */
 public class StatusServlet extends XPMServlet {
     public static final String RESOURCE_PATH = "/resource/";
-    public static final String EXPERIMENTS_PATH= "/experiments";
+
+    public static final String EXPERIMENTS_PATH = "/experiments";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -96,25 +90,24 @@ public class StatusServlet extends XPMServlet {
 
                 out.format("<div id=\"state-%s\" class=\"xpm-resource-list\">", state);
                 out.println("<ul>");
-                Transaction.run(em -> {
-                    try (final CloseableIterator<Resource> resources = scheduler.resources(em, EnumSet.of(state), LockModeType.NONE)) {
-                        while (resources.hasNext()) {
-                            Resource resource = resources.next();
-                            if (resource.getState() == state) {
-                                out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
-                                try {
-                                    out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-                                    out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                    out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getLocator());
-                                } catch (Throwable t) {
-                                    out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
-                                }
+                try (final CloseableIterable<Resource> resources = scheduler.resources(EnumSet.of(state))) {
+                    for(Resource resource: resources) {
+                        if (resource.getState() == state) {
+                            out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
+                            try {
+                                out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
+                                out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
+                                out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getLocator());
+                            } catch (Throwable t) {
+                                out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                             }
                         }
-                    } catch (CloseException e) {
-                        LOGGER.warn("Error while closing the iterator");
                     }
-                });
+                } catch (CloseException e) {
+                    LOGGER.warn("Error while closing the iterator");
+                } catch (SQLException e) {
+                    LOGGER.warn("Error while retrieving resources");
+                }
                 out.println("</ul></div>");
             }
             out.println("</div>");
@@ -142,19 +135,11 @@ public class StatusServlet extends XPMServlet {
 
         if (localPath.equals(EXPERIMENTS_PATH)) {
             final PrintWriter out = startHTMLResponse(response);
-            Transaction.run(em -> {
-                final CriteriaBuilder cb = em.getCriteriaBuilder();
-                final CriteriaQuery<Experiment> cq = cb.createQuery(Experiment.class);
-                final Root<Experiment> experiment = cq.from(Experiment.class);
 
-                cq.orderBy(cb.desc(experiment.get(Experiment_.timestamp)));
-                final List<Experiment> experiments = em.createQuery(cq).getResultList();
-
-                for(Experiment o: experiments) {
-                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
-                }
-            });
-            out.print("<div>hello world</div>");
+//                for(Experiment o: experiments) {
+//                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
+//                }
+            out.print("<div>Not implemented</div>");
             return;
         }
 
@@ -169,7 +154,12 @@ public class StatusServlet extends XPMServlet {
             }
             PrintWriter out = startHTMLResponse(response);
 
-            Resource resource = Transaction.evaluate(em -> em.find(Resource.class, resourceId));
+            Resource resource;
+            try {
+                resource = Resource.getById(resourceId);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
             header(out, String.format("Details of resource %s", resource.getLocator()));
 
             if (resource != null) {

@@ -265,7 +265,7 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
     }
 
     /**
-     * @return the accept queue size
+     * @return the accept queue value
      */
     @ManagedAttribute("Accept Queue size")
     public int getAcceptQueueSize() {
@@ -273,7 +273,7 @@ public class UnixSocketConnector extends AbstractNetworkConnector implements Con
     }
 
     /**
-     * @param acceptQueueSize the accept queue size (also known as accept backlog)
+     * @param acceptQueueSize the accept queue value (also known as accept backlog)
      */
     public void setAcceptQueueSize(int acceptQueueSize) {
         _acceptQueueSize = acceptQueueSize;

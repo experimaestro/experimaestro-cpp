@@ -201,6 +201,10 @@ public class SSHOptions extends ConnectorOptions {
         return options;
     }
 
+    public int getPort() {
+        return port < 0 ? SSHD_DEFAULT_PORT : port;
+    }
+
 
     private interface ProxyConfiguration {
         void configure(DefaultSessionFactory factory) throws IOException;

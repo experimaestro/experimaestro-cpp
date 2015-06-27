@@ -98,7 +98,7 @@ public class DotName extends AbstractList<String> implements Comparable<DotName>
      * @param dotNames
      */
     public DotName(DotName... dotNames) {
-        // Compute total size
+        // Compute total value
         int size = 0;
         for (int i = 0; i < dotNames.length; i++)
             size += dotNames[i].size();

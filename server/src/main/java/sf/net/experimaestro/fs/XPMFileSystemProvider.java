@@ -22,7 +22,7 @@ import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.scheduler.Transaction;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -33,6 +33,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -44,10 +45,8 @@ import static java.lang.String.format;
  */
 public class XPMFileSystemProvider extends FileSystemProvider {
 
-    final static private Logger LOGGER = Logger.getLogger();
-
     public static final String SCHEME = "shares";
-
+    final static private Logger LOGGER = Logger.getLogger();
     public static FileSystemProvider instance = new XPMFileSystemProvider();
 
     @Override
@@ -86,26 +85,29 @@ public class XPMFileSystemProvider extends FileSystemProvider {
     protected Path resolvePath(Path path) {
         XPMPath _path = (XPMPath) path;
 
-        return Transaction.evaluate(em -> {
-            NetworkShare share = NetworkShare.find(em, _path.getHostName(), _path.getShareName());
-            NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
-            Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
-            for (NetworkShareAccess access : accesses) {
-                final SingleHostConnector connector = access.getConnector();
-                final String hostPath = access.getPath();
-                try {
-                    return connector
-                            .resolveFile(hostPath)
-                            .resolve(_path.getLocalPath())
-                            .normalize();
+        NetworkShare share = null;
+        try {
+            share = NetworkShare.find(_path.getHostName(), _path.getShareName());
+        } catch (SQLException e) {
+            throw new XPMRuntimeException("Could not find shares://%s/%s", _path.getHostName(), _path.getShareName());
+        }
+        NetworkShareAccess accesses[] = share.getAccess().toArray(new NetworkShareAccess[0]);
+        Arrays.sort(accesses, (o1, o2) -> Long.compare(o2.getPriority(), o1.getPriority()));
+        for (NetworkShareAccess access : accesses) {
+            final SingleHostConnector connector = access.getConnector();
+            final String hostPath = access.getPath();
+            try {
+                return connector
+                        .resolveFile(hostPath)
+                        .resolve(_path.getLocalPath())
+                        .normalize();
 
-                } catch (IOException e) {
-                    LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
-                    continue;
-                }
+            } catch (IOException e) {
+                LOGGER.error(e, "Error trying to access %s from %s", hostPath, connector);
+                continue;
             }
-            return null;
-        });
+        }
+        return null;
     }
 
     @Override

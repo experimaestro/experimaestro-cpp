@@ -124,13 +124,13 @@ public class Manager {
 //
 //                case Node.DOCUMENT_FRAGMENT_NODE:
 //                    Iterable<Element> elements = XMLUtils.elements(node.getChildNodes());
-//                    int size = Iterables.size(elements);
-//                    if (size == 1) {
+//                    int value = Iterables.value(elements);
+//                    if (value == 1) {
 //                        document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
 //                        break;
 //                    }
 //
-//                    throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+//                    throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", value));
 //
 //                default:
 //                    throw new NotImplementedException("Cannot convert " + node.getClass() + " into a document");
@@ -138,11 +138,11 @@ public class Manager {
 //
 //        } else {
 //            Iterable<? extends Node> elements = XMLUtils.iterable((NodeList) object);
-//            int size = Iterables.size(elements);
-//            if (size == 1) {
+//            int value = Iterables.value(elements);
+//            if (value == 1) {
 //                document.appendChild(document.adoptNode(Iterables.get(elements, 0).cloneNode(true)));
 //            } else
-//                throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", size));
+//                throw new NotImplementedException(String.format("Cannot convert a fragment with %d children", value));
 //        }
 //
 //        return document;

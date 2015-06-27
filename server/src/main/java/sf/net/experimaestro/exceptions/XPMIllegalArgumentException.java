@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package sf.net.experimaestro.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,32 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.util.List;
 
 /**
- * Extra configuration for Hibernate
+ * An illegal exception
  */
-public class TestClassAdder implements PersistentClassesAdder {
-    @Override
-    public void add(List<Class<?>> classes) {
-        classes.add(WaitingJob.class);
-        classes.add(WaitingJobProcess.class);
+public class XPMIllegalArgumentException extends XPMRuntimeException {
+    public XPMIllegalArgumentException() {
+        super();
+    }
+
+    public XPMIllegalArgumentException(String message, Throwable t) {
+        super(message, t);
+    }
+
+    public XPMIllegalArgumentException(Throwable t, String format, Object... values) {
+        super(t, format, values);
+    }
+
+    public XPMIllegalArgumentException(String message) {
+        super(message);
+    }
+
+    public XPMIllegalArgumentException(String format, Object... values) {
+        super(format, values);
+    }
+
+    public XPMIllegalArgumentException(Throwable t) {
+        super(t);
     }
 }

@@ -18,9 +18,25 @@ package sf.net.experimaestro.locks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.fs.XPMPath;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.ConstructorRegistry;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
+import sf.net.experimaestro.scheduler.Identifiable;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.StatusLock;
+import sf.net.experimaestro.scheduler.TokenLock;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.db.SQLInsert;
 
-import javax.persistence.*;
+import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import static java.lang.String.format;
 
 /**
  * A lock that can be removed.
@@ -30,17 +46,31 @@ import javax.persistence.*;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Table(name = "locks")
-@Entity(name = "locks")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "type")
-public abstract class Lock implements AutoCloseable {
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+@Exposed
+public abstract class Lock implements AutoCloseable, Identifiable {
+    static protected ConstructorRegistry<Lock> REGISTRY
+            = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
+
     private Long id;
 
+    public Lock() {}
+
+    public Lock(long id) {
+        this.id = id;
+    }
+
     @Override
-    abstract public void close() throws RuntimeException;
+    final public void close() throws LockException, SQLException {
+        // Do close
+        doClose();
+
+        // Remove from DB
+        if (inDatabase()) {
+            Scheduler.statement("DELETE FROM Locks WHERE id=?").setLong(1, id).execute();
+        }
+    }
+
+    protected abstract void doClose() throws LockException;
 
     /**
      * Change ownership
@@ -48,5 +78,55 @@ public abstract class Lock implements AutoCloseable {
      * @param pid The new owner PID
      */
     public abstract void changeOwnership(String pid) throws LockException;
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    synchronized final public void save() throws SQLException {
+        save(Scheduler.get().locks());
+    }
+
+    static private final SQLInsert sqlInsert = new SQLInsert("Locks", true, "id", "type", "data");
+
+    protected void save(DatabaseObjects<Lock> locks) throws SQLException {
+        locks.save(this, sqlInsert, false,
+                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this));
+    }
+
+    protected void saveShare(Path path) throws SQLException {
+        // Add the share into DB so that we keep the reference
+        if (path instanceof XPMPath) {
+            final XPMPath xpmPath = (XPMPath) path;
+            final NetworkShare networkShare = NetworkShare.find(xpmPath.getHostName(), xpmPath.getShareName());
+            Scheduler.statement("INSERT INTO LockShares(lock, share) VALUES(?,?)")
+                    .setLong(1, getId())
+                    .setLong(2, networkShare.getId())
+                    .execute();
+        }
+    }
+
+    public static Lock findById(long id) throws SQLException {
+        final String query = format("SELECT id, type, data FROM Locks  WHERE id=?");
+        return Scheduler.get().locks().findUnique(query, st -> st.setLong(1, id));
+    }
+
+    public static Lock create(DatabaseObjects<Lock> db, ResultSet rs) {
+        try {
+            long id = rs.getLong(1);
+            final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id);
+            db.loadFromJson(lock, rs.getBinaryStream(3));
+            return lock;
+        } catch(Throwable e) {
+            throw new XPMRuntimeException(e, "Could not create lock object from DB");
+        }
+    }
+
 }
 
