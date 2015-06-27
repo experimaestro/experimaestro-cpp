@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import com.google.common.collect.AbstractIterator;
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
@@ -73,9 +74,9 @@ final public class DatabaseObjects<T extends Identifiable> {
      */
     private WeakHashMap<Long, T> map = new WeakHashMap<>();
 
-    public DatabaseObjects(Connection connection, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
+    public DatabaseObjects(Connection connection, String tableName, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
         this.connection = connection;
-        this.tableName = this.getClass().getSimpleName();
+        this.tableName = tableName;
         this.idFieldName = "id";
         this.create = create;
     }

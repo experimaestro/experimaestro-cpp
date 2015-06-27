@@ -202,10 +202,10 @@ final public class Scheduler {
             }
         }
 
-        resources = new DatabaseObjects<>(connection, Resource::create);
-        networkShares = new DatabaseObjects<>(connection, NetworkShare::create);
-        connectors = new DatabaseObjects<>(connection, Connector::create);
-        locks = new DatabaseObjects<>(connection, Lock::create);
+        resources = new DatabaseObjects<>(connection, "Resources", Resource::create);
+        networkShares = new DatabaseObjects<>(connection, "NetworkShare", NetworkShare::create);
+        connectors = new DatabaseObjects<>(connection, "Connectors", Connector::create);
+        locks = new DatabaseObjects<>(connection, "Locks", Lock::create);
 
         // Find or create localhost connector
         localhostConnector = (LocalhostConnector) Connector.findByURI("localhost");

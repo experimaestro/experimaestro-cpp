@@ -52,10 +52,11 @@ public class GsonConverter<T>  {
     final static public GsonBuilder builder = new GsonBuilder();
 
     static {
+        // Last has more priority
+        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
         builder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
         builder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
         builder.registerTypeAdapter(byte[].class, new ByteArrayAdapter());
-        builder.registerTypeAdapterFactory(new AbstractObjectFactory());
         builder.setExclusionStrategies(new GsonExclusionStrategy());
     }
 
@@ -63,9 +64,6 @@ public class GsonConverter<T>  {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
-            if (rawType.equals(Json.class)) {
-                return null;
-            }
             if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
                 return new AbstractObjectAdapter(gson, type);
             return null;
