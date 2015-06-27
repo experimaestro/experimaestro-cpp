@@ -361,7 +361,7 @@ abstract public class Job extends Resource {
      *
      * @param message The message
      */
-    private void dependencyChanged(DependencyChangedMessage message) throws SQLException {
+    synchronized private void dependencyChanged(DependencyChangedMessage message) throws SQLException {
         LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
@@ -395,7 +395,7 @@ abstract public class Job extends Resource {
      *
      * @param eoj The message
      */
-    private void endOfJobMessage(EndOfJobMessage eoj) throws SQLException {
+    synchronized private void endOfJobMessage(EndOfJobMessage eoj) throws SQLException {
         this.endTimestamp = eoj.timestamp;
 
         // Lock all the required dependencies and refresh
