@@ -60,7 +60,7 @@ CREATE TABLE TokenResources (
 );
 
 -- Job resource
-CREATE TABLE Job (
+CREATE TABLE Jobs (
   id          BIGINT NOT NULL PRIMARY KEY,
   submitted   TIMESTAMP,
   start       TIMESTAMP,
@@ -84,6 +84,7 @@ CREATE TABLE Job (
 CREATE TABLE Dependencies (
   fromId BIGINT   NOT NULL,
   toId   BIGINT   NOT NULL,
+  type   BIGINT   NOT NULL,
   status SMALLINT NOT NULL,
 
   -- Foreign key for the source (restricting deletion)

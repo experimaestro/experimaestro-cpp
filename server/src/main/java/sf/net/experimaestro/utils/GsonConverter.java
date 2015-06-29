@@ -90,7 +90,7 @@ public class GsonConverter<T>  {
                 final Class<?> aClass = value.getClass();
                 assert !aClass.isArray();
                 out.value(aClass.getName());
-                LOGGER.info("Serializing %s", value.getClass());
+                LOGGER.debug("Serializing %s", value.getClass());
                 gson.toJson(value, value.getClass(), out);
                 out.endArray();
             }

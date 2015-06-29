@@ -57,8 +57,8 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * Our registry
      */
     static private ConstructorRegistry<Connector> REGISTRY
-            = new ConstructorRegistry(new Class[]{Long.class, String.class, String.class})
-            .add(SSHConnector.class);
+            = new ConstructorRegistry(new Class[]{Long.class, String.class})
+            .add(SSHConnector.class, LocalhostConnector.class, XPMConnector.class);
 
 
     /**
@@ -246,22 +246,31 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
             long id = result.getLong(1);
             long type = result.getLong(2);
             String uri = result.getString(3);
-            String value = result.getString(4);
 
             final Constructor<? extends Connector> constructor = REGISTRY.get(type);
-            final Connector connector = constructor.newInstance(id, uri, value);
+            final Connector connector = constructor.newInstance(id, uri);
 
             return connector;
         } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
             throw new XPMRuntimeException(e, "Error retrieving database object");
         }
     }
-    public static final String SELECT_QUERY = "SELECT id, type, uri, data FROM Connectors";
+    public static final String SELECT_QUERY = "SELECT id, type, uri FROM Connectors";
 
 
 
     public static Connector findByURI(String uri) throws SQLException {
         final String query = format("%s WHERE uri=?", SELECT_QUERY);
         return Scheduler.get().connectors().findUnique(query, st -> st.setString(1, uri));
+    }
+
+    public static Connector findById(long id) throws SQLException {
+        final DatabaseObjects<Connector> connectors = Scheduler.get().connectors();
+        final Connector fromCache = connectors.getFromCache(id);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        final String query = format("%s WHERE id=?", SELECT_QUERY);
+        return connectors.findUnique(query, st -> st.setLong(1, id));
     }
 }

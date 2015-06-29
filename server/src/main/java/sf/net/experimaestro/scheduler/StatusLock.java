@@ -35,6 +35,7 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static sf.net.experimaestro.scheduler.Resource.LOCK_EXTENSION;
 import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
 
 /**
@@ -120,7 +121,7 @@ public class StatusLock extends Lock {
     public void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws LockException {
         // --- Lock the resource
-        try (Lock ignored = new FileLock(path, true)) {
+        try (Lock ignored = new FileLock(LOCK_EXTENSION.transform(path), true)) {
             Path statusPath = STATUS_EXTENSION.transform(path);
 
             // --- Read the resource state

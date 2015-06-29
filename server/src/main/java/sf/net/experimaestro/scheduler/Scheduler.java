@@ -26,6 +26,7 @@ import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.connectors.NetworkShareAccess;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.XPMConnector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
@@ -36,14 +37,27 @@ import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Timer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -145,6 +159,8 @@ final public class Scheduler {
 
     final static int DBVERSION = 1;
 
+    private XPMConnector xpmConnector;
+
     /**
      * Initialise the task manager
      *
@@ -208,11 +224,19 @@ final public class Scheduler {
         locks = new DatabaseObjects<>(connection, "Locks", Lock::create);
 
         // Find or create localhost connector
-        localhostConnector = (LocalhostConnector) Connector.findByURI("localhost");
+        localhostConnector = (LocalhostConnector) Connector.findByURI(LocalhostConnector.IDENTIFIER);
         if (localhostConnector == null) {
             localhostConnector = new LocalhostConnector();
             localhostConnector.save();
         }
+
+        xpmConnector = (XPMConnector) Connector.findByURI(XPMConnector.ID);
+        if (xpmConnector == null) {
+            xpmConnector = new XPMConnector();
+            xpmConnector.save();
+        }
+
+        LOGGER.info("Loaded connectors (local=%d, xpm=%d)", localhostConnector.getId(), xpmConnector.getId());
 
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
@@ -476,6 +500,10 @@ final public class Scheduler {
         return localhostConnector;
     }
 
+    public XPMConnector getXPMConnector() {
+        return xpmConnector;
+    }
+
     public static XPMStatement statement(String sql) throws SQLException {
         return new XPMStatement(get().connection, sql);
     }
@@ -719,42 +747,45 @@ final public class Scheduler {
                     }
 
 
-                    Collection<Dependency> dependencies = fromResource.getOutgoingDependencies();
-                    LOGGER.info("Notifying dependencies from %s [%d]", fromResource, dependencies.size());
+                    try (CloseableIterable<Dependency> dependencies = fromResource.getOutgoingDependencies()) {
+                        LOGGER.info("Notifying dependencies from %s", fromResource);
 
-                    for (Dependency dep : dependencies) {
-                        if (dep.status == DependencyStatus.UNACTIVE) {
-                            LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
+                        for (Dependency dep : dependencies) {
+                            if (dep.status == DependencyStatus.UNACTIVE) {
+                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
 
-                        } else
-                            try {
-                                // when the dependency status is null, the dependency is not active anymore
-                                LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
-                                // Preserves the previous state
-                                synchronized (dep.getTo()) {
-                                    DependencyStatus beforeState = dep.status;
+                            } else
+                                try {
+                                    // when the dependency status is null, the dependency is not active anymore
+                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
+                                    // Preserves the previous state
+                                    synchronized (dep.getTo()) {
+                                        DependencyStatus beforeState = dep.status;
 
-                                    if (dep.update()) {
-                                        final Resource depResource = dep.getTo();
+                                        if (dep.update()) {
+                                            final Resource depResource = dep.getTo();
 
-                                        if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                            LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                            continue;
+                                            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                                                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                                                continue;
+                                            }
+
+                                            // Queue this change in dependency state
+                                            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+
+                                        } else {
+                                            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                                         }
-
-                                        // Queue this change in dependency state
-                                        depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-
-                                    } else {
-                                        LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
                                     }
+                                } catch (RuntimeException e) {
+                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
                                 }
-                            } catch (RuntimeException e) {
-                                LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
-                            }
+                        }
                     }
+                } catch (CloseException e) {
+                    LOGGER.error(e, "Caught exception while closing iterator");
                 } catch (Exception e) {
-                    LOGGER.error("Caught exception in notifier", e);
+                    LOGGER.error(e, "Caught exception in notifier");
                 }
             }
 

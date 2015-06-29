@@ -35,6 +35,7 @@ import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -92,7 +93,7 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Used for serialization
      */
-    public SSHConnector(Long id, String uri, String value) {
+    public SSHConnector(Long id, String uri) {
         this(URI.create(uri), null);
         setId(id);
     }

@@ -18,8 +18,10 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
@@ -43,8 +45,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
@@ -72,7 +74,13 @@ final public class DatabaseObjects<T extends Identifiable> {
     /**
      * Keeps a cache of resources
      */
-    private WeakHashMap<Long, T> map = new WeakHashMap<>();
+//    private WeakHashMap<Long, T> map = new WeakHashMap<>();
+    Cache<Long, T> map = CacheBuilder.newBuilder()
+            .concurrencyLevel(4)
+            .weakValues()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
+
 
     public DatabaseObjects(Connection connection, String tableName, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
         this.connection = connection;
@@ -98,8 +106,9 @@ final public class DatabaseObjects<T extends Identifiable> {
             throw new XPMRuntimeException("Type %s cannot be converted to value (too long - limit 12 chars)", typeString);
         }
 
+        // 5 bits per character
         // A-Z, space, -, =,
-        int shift = 24;
+        int shift = 58;
         long value = 0;
         for (int i = 0; i < typeString.length(); ++i) {
             final char c = typeString.charAt(i);
@@ -133,6 +142,7 @@ final public class DatabaseObjects<T extends Identifiable> {
                 }
             }
             value += (long) (v << shift);
+            shift -= 5;
         }
 
         return value;
@@ -248,9 +258,9 @@ final public class DatabaseObjects<T extends Identifiable> {
      * @param id The ID of the object
      * @return The object or null if none exists
      */
-    protected T getFromCache(long id) {
+    public T getFromCache(long id) {
         synchronized (map) {
-            return map.get(id);
+            return map.getIfPresent(id);
         }
     }
 
@@ -262,11 +272,8 @@ final public class DatabaseObjects<T extends Identifiable> {
                 st.execute();
             }
 
-
-            final T remove = map.remove(object.getId());
-            assert remove != null : "Object was not in cache !";
-
-            remove.setId(null);
+            map.invalidate(object.getId());
+            object.setId(null);
         }
     }
 
@@ -322,7 +329,7 @@ final public class DatabaseObjects<T extends Identifiable> {
      */
     void forget(Long id) {
         synchronized (map) {
-            map.remove(id);
+            map.invalidate(id);
         }
     }
 

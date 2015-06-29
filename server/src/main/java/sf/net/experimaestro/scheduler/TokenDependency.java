@@ -37,7 +37,8 @@ import static java.lang.String.format;
 public class TokenDependency extends Dependency {
     final static private Logger LOGGER = Logger.getLogger();
 
-    protected TokenDependency() {
+    protected TokenDependency(long fromId, long toId, DependencyStatus status) {
+        super(fromId, toId, status);
     }
 
     public TokenDependency(Resource from) {
@@ -46,7 +47,7 @@ public class TokenDependency extends Dependency {
 
     @Override
     public String toString() {
-        return format("Token[%s]/%s", from.toDetailedString(), super.toString());
+        return format("Token[%s]/%s", getFrom().toDetailedString(), super.toString());
     }
 
     /**

@@ -35,23 +35,22 @@ import java.nio.file.Paths;
  */
 @TypeIdentifier("xpm")
 public class XPMConnector extends SingleHostConnector {
-    final private static XPMConnector SINGLETON = new XPMConnector();
     /**
      * A special connector for DB handled resources
      */
-    private static final String ID = "xpmdb";
+    public static final String ID = "xpmdb://";
 
-    protected XPMConnector() {
-        super(ID + "://");
+    public XPMConnector() {
+        super(ID);
+    }
+
+    public XPMConnector(Long id, String uri) {
+        super(id);
     }
 
     @Override
     public Path resolve(String path) {
         return Paths.get(path);
-    }
-
-    public static XPMConnector getInstance() {
-        return SINGLETON;
     }
 
     @Override

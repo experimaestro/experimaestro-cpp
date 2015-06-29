@@ -26,43 +26,53 @@ public enum DependencyStatus {
     /**
      * The resource can be used as is
      */
-    OK(1),
+    OK,
 
     /**
      * The resource can be used when properly locked
      */
-    OK_LOCK(2),
+    OK_LOCK,
 
     /**
      * The resource is not ready yet
      */
-    WAIT(3),
+    WAIT,
 
     /**
      * The resource is not ready yet, and is on hold (this can only be changed
      * by the external intervention)
      */
-    HOLD(4),
+    HOLD,
 
     /**
      * The resource is not ready, and this is due status an error (possibly among
      * dependencies)
      */
-    ERROR(5),
+    ERROR,
 
     /**
      * Unactive dependency
      */
-    UNACTIVE(6);
+    UNACTIVE;
 
-    private final int id;
+    private static final DependencyStatus VALUES[] = new DependencyStatus[]{OK, OK_LOCK, WAIT, HOLD, ERROR, UNACTIVE};
 
-    DependencyStatus(int id) {
-        this.id = id;
+    static {
+        short id = 0;
+        for (DependencyStatus value : VALUES) {
+            value.id = id++;
+        }
+
+    }
+
+    private short id;
+
+    DependencyStatus() {
     }
 
     /**
      * Returns true if the resource is ready
+     *
      * @return Boolean
      */
     public boolean isOK() {
@@ -71,13 +81,21 @@ public enum DependencyStatus {
 
     /**
      * Returns whether this resource is in a blocking state
+     *
      * @return A boolean
      */
     public boolean isBlocking() {
         return this == HOLD || this == ERROR;
     }
 
-    public int getId() {
+    public short getId() {
         return id;
+    }
+
+    public static DependencyStatus fromId(int id) {
+        if (id < 0 || id >= VALUES.length) {
+            throw new IndexOutOfBoundsException("id " + id + " is not valid as a dependency status");
+        }
+        return VALUES[id];
     }
 }

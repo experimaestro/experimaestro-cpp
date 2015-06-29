@@ -28,10 +28,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
@@ -85,8 +85,8 @@ public class CommandLineTask extends Job {
      */
     private String jobErrorPath;
 
-    public CommandLineTask(Long id, String locator) {
-        super(id, locator);
+    public CommandLineTask(long id, Connector connector, String locator) throws SQLException {
+        super(id, connector, locator);
     }
 
     public CommandLineTask(Connector connector, String path) {

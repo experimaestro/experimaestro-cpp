@@ -24,6 +24,7 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
@@ -35,11 +36,15 @@ import static java.lang.String.format;
  */
 @Exposed
 abstract public class Dependency implements Serializable {
+    final static private ConstructorRegistry<Dependency> REGISTRY = new ConstructorRegistry(
+            new Class[] { Long.TYPE, Long.TYPE, DependencyStatus.class }
+    ).add(ExclusiveDependency.class, ReadWriteDependency.class, TokenDependency.class);
+
     final static private Logger LOGGER = Logger.getLogger();
 
-    Resource from;
+    ResourceReference from;
 
-    Resource to;
+    ResourceReference to;
 
     /**
      * The state of this dependency
@@ -54,13 +59,19 @@ abstract public class Dependency implements Serializable {
     protected Dependency() {
     }
 
+    protected Dependency(long fromId, long toId, DependencyStatus status) {
+        this.from = new ResourceReference(fromId);
+        this.to = new ResourceReference(toId);
+        this.status = status;
+    }
+
     public Dependency(Resource from) {
-        this.from = from;
+        this.from = new ResourceReference(from);
     }
 
     protected Dependency(Resource from, Resource to) {
-        this.from = from;
-        this.to = to;
+        this.from = from.reference();
+        this.to = to.reference();
     }
 
     @Override
@@ -89,11 +100,11 @@ abstract public class Dependency implements Serializable {
     }
 
     public Resource getFrom() {
-        return from;
+        return from.get();
     }
 
     public Resource getTo() {
-        return to;
+        return to.get();
     }
 
     @Override
@@ -110,10 +121,10 @@ abstract public class Dependency implements Serializable {
      * {@link DependencyStatus#ERROR} if it cannot be satisfied
      */
     protected DependencyStatus accept() {
-        LOGGER.debug("From [%s] is in state %s [status=%s]", from, from.getState(), to);
+        LOGGER.debug("From [%s] is in state %s [status=%s]", from, getFrom().getState(), to);
 
         // Handle simple cases
-        switch (from.getState()) {
+        switch (getFrom().getState()) {
             case ERROR:
             case ON_HOLD:
                 return DependencyStatus.HOLD;
@@ -157,7 +168,7 @@ abstract public class Dependency implements Serializable {
             lock = _lock(pid);
             assert lock != null;
             return lock;
-        } catch(Throwable e) {
+        } catch (Throwable e) {
             throw new LockException(e);
         }
     }
@@ -171,8 +182,8 @@ abstract public class Dependency implements Serializable {
     }
 
     public void replaceBy(Dependency dependency) {
-        assert dependency.from.getId() == this.from.getId();
-        assert dependency.to.getId() == this.to.getId();
+        assert dependency.getFrom().getId() == this.getFrom().getId();
+        assert dependency.getTo().getId() == this.getTo().getId();
         if (dependency.getClass() != dependency.getClass())
             throw new AssertionError("Cannot replace dependency");
 
@@ -180,6 +191,10 @@ abstract public class Dependency implements Serializable {
     }
 
     void doReplaceBy(Dependency dependency) {
+        // Do nothing ATM
+    }
 
+    public static Dependency create(long fromId, long toId, long type, DependencyStatus dependencyStatus)  {
+        return REGISTRY.newInstance(type, fromId, toId, dependencyStatus);
     }
 }

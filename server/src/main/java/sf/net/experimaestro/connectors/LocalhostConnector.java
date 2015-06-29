@@ -28,6 +28,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystems;
@@ -42,11 +43,21 @@ import java.util.Map;
 @Exposed
 @TypeIdentifier("local")
 public class LocalhostConnector extends SingleHostConnector {
+
     static final private Logger LOGGER = Logger.getLogger();
     private static final String TMPDIR = System.getProperty("java.io.tmpdir").toString();
 
+    public static final String IDENTIFIER = "file://";
+
+    /**
+     * Used for serialization
+     */
+    public LocalhostConnector(Long id, String uri) {
+        super(id);
+    }
+
     public LocalhostConnector() {
-        super("file://");
+        super(IDENTIFIER);
     }
 
     @Override

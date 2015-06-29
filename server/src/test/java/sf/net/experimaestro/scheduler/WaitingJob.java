@@ -18,7 +18,7 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -61,8 +61,8 @@ public class WaitingJob extends Job {
     /* id for debugging */
     private String debugId;
 
-    public WaitingJob(Long id, String path) {
-        super(id, path);
+    public WaitingJob(long id, Connector connector, String locator) throws SQLException {
+        super(id, connector, locator);
     }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {

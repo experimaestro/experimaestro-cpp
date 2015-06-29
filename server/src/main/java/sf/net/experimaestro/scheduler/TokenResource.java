@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
@@ -60,9 +61,10 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-    public TokenResource(Long id, String locator) {
-        super(id, locator);
+    public TokenResource(long id, Connector connector, String locator) throws SQLException {
+        super(id, connector, locator);
     }
+
 
     /**
      * Creates a new token resource
@@ -71,7 +73,7 @@ public class TokenResource extends Resource {
      * @param limit The maximum number of tokens
      */
     public TokenResource(String path, int limit) {
-        super((Long)null, path);
+        super(Scheduler.get().getXPMConnector(), path);
         this.limit = limit;
         this.usedTokens = 0;
         this.wasBlocking = isBlocking();

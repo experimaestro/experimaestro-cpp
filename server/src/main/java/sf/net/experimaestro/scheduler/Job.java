@@ -122,8 +122,8 @@ abstract public class Job extends Resource {
         super(connector, path);
     }
 
-    public Job(Long id, String path) {
-        super(id, path);
+    public Job(long id, Connector connector, String locator) throws SQLException {
+        super(id, connector, locator);
     }
 
     private boolean isDone() {
@@ -684,7 +684,7 @@ abstract public class Job extends Resource {
         }
     }
 
-    private static final SQLInsert SQL_INSERT = new SQLInsert("Job", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
+    private static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
 
     @Override
     protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {

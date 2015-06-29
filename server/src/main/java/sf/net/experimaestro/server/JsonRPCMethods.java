@@ -661,29 +661,26 @@ public class JsonRPCMethods extends HttpServlet {
 
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
-        final Collection<Dependency> deps = resource.getOutgoingDependencies();
-
-        if (deps.isEmpty())
-            return 0;
-
         int nbUpdated = 0;
+        try (final CloseableIterable<Dependency> deps = resource.getOutgoingDependencies()) {
 
-        for (Dependency dependency : deps) {
-            final Resource to = dependency.getTo();
-            LOGGER.info("Invalidating %s", to);
+            for (Dependency dependency : deps) {
+                final Resource to = dependency.getTo();
+                LOGGER.info("Invalidating %s", to);
 
-            invalidate(to);
+                invalidate(to);
 
-            final ResourceState state = to.getState();
-            if (state == ResourceState.RUNNING)
-                ((Job) to).stop();
-            if (!state.isActive()) {
-                nbUpdated++;
-                // We invalidate grand-children if the child was done
-                if (state == ResourceState.DONE) {
-                    invalidate(to);
+                final ResourceState state = to.getState();
+                if (state == ResourceState.RUNNING)
+                    ((Job) to).stop();
+                if (!state.isActive()) {
+                    nbUpdated++;
+                    // We invalidate grand-children if the child was done
+                    if (state == ResourceState.DONE) {
+                        invalidate(to);
+                    }
+                    ((Job) to).restart();
                 }
-                ((Job) to).restart();
             }
         }
         return nbUpdated;
@@ -736,7 +733,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         int nbUpdated = 0;
         try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
-            for(Resource resource: resources) {
+            for (Resource resource : resources) {
                 if (resource.updateStatus()) {
                     nbUpdated++;
                 } else {
@@ -786,7 +783,7 @@ public class JsonRPCMethods extends HttpServlet {
             // TODO order the tasks so that dependencies are removed first
             HashSet<Resource> toRemove = new HashSet<>();
             try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
-                for(Resource resource: resources) {
+                for (Resource resource : resources) {
                     if (idPattern != null) {
                         if (!idPattern.matcher(resource.getIdentifier()).matches())
                             continue;
@@ -867,7 +864,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         int n = 0;
         try (final CloseableIterable<Resource> resources = scheduler.resources(statesSet)) {
-            for(Resource resource: resources) {
+            for (Resource resource : resources) {
                 if (resource instanceof Job) {
                     ((Job) resource).stop();
                     n++;
@@ -964,7 +961,7 @@ public class JsonRPCMethods extends HttpServlet {
         boolean recursive = _recursive == null ? false : _recursive;
 
         try (final CloseableIterable<Resource> resources = scheduler.resources(set)) {
-            for(Resource resource: resources) {
+            for (Resource resource : resources) {
                 Map<String, String> map = new HashMap<>();
                 map.put("type", resource.getClass().getCanonicalName());
                 map.put("state", resource.getState().toString());

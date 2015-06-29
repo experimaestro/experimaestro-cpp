@@ -32,7 +32,7 @@ import java.nio.file.Paths;
 public class JsonPathAdapter extends TypeAdapter<Path> {
     @Override
     public void write(JsonWriter out, Path value) throws IOException {
-        out.value(value.toAbsolutePath().toString());
+        out.value(value.toAbsolutePath().toUri().toString());
     }
 
     @Override

@@ -18,10 +18,12 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.AbstractIterator;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
@@ -59,14 +61,14 @@ import static java.lang.String.format;
 @Exposed
 @TypeIdentifier("RESOURCE")
 public class Resource implements Identifiable {
-    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.class, String.class})
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.TYPE, Connector.class, String.class})
             .add(Resource.class, CommandLineTask.class, TokenResource.class);
 
-    public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
+    public static final String SELECT_BEGIN = "SELECT id, type, path, status, connector FROM resources";
 
-    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, status) VALUES(?,?,?)";
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, type, status) VALUES(?,?,?,?)";
 
-    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "data");
+    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "connector", "data");
 
 
     /**
@@ -139,11 +141,6 @@ public class Resource implements Identifiable {
     transient private Connector connector;
 
     /**
-     * The outgoing dependencies (resources that depend on this)
-     */
-    transient private Map<Resource, Dependency> outgoingDependencies;
-
-    /**
      * The ingoing dependencies (resources that we depend upon)
      */
     transient private Map<Resource, Dependency> ingoingDependencies;
@@ -167,10 +164,9 @@ public class Resource implements Identifiable {
         this(connector, path.toString());
     }
 
-    public Resource(Connector connector, String name) {
-        this.connector = connector;
-        this.locator = name;
-        outgoingDependencies = new HashMap<>();
+    public Resource(Connector connector, String locator) {
+        this.connector = connector == null ? Scheduler.get().getLocalhostConnector() : connector;
+        this.locator = locator;
         ingoingDependencies = new HashMap<>();
         dataLoaded = true;
     }
@@ -178,10 +174,11 @@ public class Resource implements Identifiable {
     /**
      * Construct from DB
      */
-    public Resource(Long id, String locator) {
-        this(Scheduler.get().getLocalhostConnector(), locator);
-        this.resourceID = id;
+    public Resource(long id, Connector connector, String locator) throws SQLException {
+        this.connector = connector;
         this.locator = locator;
+        ingoingDependencies = null;
+        this.resourceID = id;
         dataLoaded = false;
     }
 
@@ -284,14 +281,58 @@ public class Resource implements Identifiable {
      * The set of resources the resource is dependent upon
      */
     public Collection<Dependency> getDependencies() {
-        return ingoingDependencies.values();
+        return ingoingDependencies().values();
     }
 
     /**
      * The set of dependencies that are dependent on this resource
      */
-    public Collection<Dependency> getOutgoingDependencies() {
-        return outgoingDependencies.values();
+    public CloseableIterable<Dependency> getOutgoingDependencies() {
+        return new CloseableIterable<Dependency>() {
+            PreparedStatement st;
+
+            ResultSet resultSet;
+
+            @Override
+            public void close() throws CloseException {
+                try {
+                    if (st != null) {
+                        st.close();
+                        resultSet.close();
+                    }
+                } catch (SQLException e1) {
+                    throw new CloseException(e1);
+                }
+            }
+
+            @Override
+            public Iterator<Dependency> iterator() {
+                return new AbstractIterator<Dependency>() {
+                    @Override
+                    protected Dependency computeNext() {
+                        try {
+                            if (st == null) {
+                                st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE toId=?");
+                                st.setLong(1, getId());
+                                st.execute();
+                                resultSet = st.getResultSet();
+                            }
+
+                            if (!resultSet.next()) {
+                                return endOfData();
+                            }
+
+                            final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
+                            final long type = resultSet.getLong(3);
+                            return Dependency.create(Resource.this.getId(), resultSet.getLong(1), type, dependencyStatus);
+                        } catch (SQLException e) {
+                            throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", this);
+                        }
+                    }
+                };
+            }
+        };
+
     }
 
     /**
@@ -431,17 +472,11 @@ public class Resource implements Identifiable {
     }
 
     synchronized protected Dependency addIngoingDependency(Dependency dependency) {
-        dependency.to = this;
-        dependency.from.addOutgoingDependency(dependency);
+        dependency.to = reference();
 
-        final Dependency put = this.ingoingDependencies.put(dependency.getFrom(), dependency);
+        final Dependency put = this.ingoingDependencies().put(dependency.getFrom(), dependency);
         assert put == null;
         return put;
-    }
-
-    synchronized protected void addOutgoingDependency(Dependency dependency) {
-        LOGGER.debug("Adding dependency from %s to %s [outgoing]", this, dependency.getTo());
-        outgoingDependencies.put(dependency.getTo(), dependency);
     }
 
     /**
@@ -488,30 +523,23 @@ public class Resource implements Identifiable {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
         }
 
-        Collection<Dependency> dependencies = getOutgoingDependencies();
-        if (!dependencies.isEmpty()) {
-            if (recursive) {
-                for (Dependency dependency : dependencies) {
-                    Resource dep = dependency.getTo();
-                    if (dep != null) {
-                        dep.delete(true);
-                    }
+        try (CloseableIterable<Dependency> dependencies = getOutgoingDependencies()) {
+            for (Dependency dependency : dependencies) {
+                Resource dep = dependency.getTo();
+                if (dep != null) {
+                    dep.delete(true);
                 }
-            } else
+            }
+            if (!recursive) {
                 throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
                         dependencies);
-        }
+            }
 
+        } catch (CloseException e) {
+            LOGGER.error(e, "Error while closing iterator");
+        }
         // Remove
         Scheduler.get().resources().delete(this);
-
-        // Remove dependencies
-        for (Dependency dependency : getIngoingDependencies().values()) {
-            final Resource from = dependency.getFrom();
-            if (from.outgoingDependencies != null) {
-                from.outgoingDependencies.remove(this);
-            }
-        }
 
         Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
     }
@@ -550,6 +578,10 @@ public class Resource implements Identifiable {
 
     protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         boolean update = old != null;
+        if (update) {
+            setId(old.getId());
+        }
+
         if (update && getId() == null) {
             throw new SQLException("Resource not in database");
         } else if (!update && getId() != null) {
@@ -566,44 +598,44 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
+        if (!connector.inDatabase()) {
+            connector.save();
+        }
+
         try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
-            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), jsonInputStream);
+            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), connector.getId(), jsonInputStream);
         } catch (IOException e) {
             throw new SQLException(e);
         }
 
         if (update) {
-            // Remove dependencies that are not anymore
-            final Iterator<Map.Entry<Resource, Dependency>> iterator = ingoingDependencies.entrySet().iterator();
-            while (iterator.hasNext()) {
-                final Map.Entry<Resource, Dependency> entry = iterator.next();
-                final Dependency dependency = old.ingoingDependencies.remove(entry.getKey());
-                if (dependency != null) {
-                    entry.getValue().replaceBy(dependency);
-                } else {
-                }
-            }
+            ingoingDependencies(); // just load from db if needed
 
-            // Delete old
+            // Delete dependencies that are not required anymore
             try (PreparedStatement st = resources.connection.prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
-                for (Dependency dependency : old.ingoingDependencies.values()) {
+                for (Dependency dependency : old.ingoingDependencies().values()) {
                     if (!ingoingDependencies.containsKey(dependency.getFrom())) {
+                        // Remove dependency
                         st.setLong(1, dependency.getFrom().getId());
                         st.setLong(2, getId());
                         st.execute();
+                    } else {
+                        // Replace dependency
+                        dependency.replaceBy(dependency);
                     }
                 }
             }
 
         }
 
-        // Save dependencies (if not already in DB)
+        // Save dependencies
         try (PreparedStatement st = resources.connection.prepareStatement(INSERT_DEPENDENCY)) {
             st.setLong(2, getId());
-            for (Dependency dependency : getIngoingDependencies().values()) {
+            for (Dependency dependency : ingoingDependencies().values()) {
                 if (!update || !old.ingoingDependencies.containsKey(dependency.getFrom())) {
                     st.setLong(1, dependency.getFrom().getId());
-                    st.setLong(3, dependency.status.getId());
+                    st.setLong(3, DatabaseObjects.getTypeValue(dependency.getClass()));
+                    st.setShort(4, dependency.status.getId());
                     st.execute();
                 }
             }
@@ -630,9 +662,10 @@ public class Resource implements Identifiable {
             long type = result.getLong(2);
             String path = result.getString(3);
             long status = result.getLong(4);
+            Connector connector = Connector.findById(result.getLong(5));
 
             final Constructor<? extends Resource> constructor = REGISTRY.get(type);
-            final Resource resource = constructor.newInstance(id, path);
+            final Resource resource = constructor.newInstance(id, connector, path);
 
             // Set stored values
             resource.setState(ResourceState.fromValue(status));
@@ -717,10 +750,33 @@ public class Resource implements Identifiable {
         return createDependency(lockType);
     }
 
-    public Map<Resource, Dependency> getIngoingDependencies() {
+    synchronized private Map<Resource, Dependency> ingoingDependencies() {
+        if (ingoingDependencies == null) {
+            HashMap<Resource, Dependency> ingoingDependencies = new HashMap<>();
+
+            try (PreparedStatement st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE toId=?")) {
+                st.setLong(1, getId());
+                st.execute();
+                try (final ResultSet resultSet = st.getResultSet()) {
+                    while (resultSet.next()) {
+                        final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
+                        final long type = resultSet.getLong(3);
+                        final Dependency dependency = Dependency.create(resultSet.getLong(1), this.getId(), type, dependencyStatus);
+                        ingoingDependencies.put(dependency.getFrom(), dependency);
+                    }
+                }
+
+                this.ingoingDependencies = ingoingDependencies;
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Could not retrieved ingoing dependencies from DB");
+            }
+        }
         return ingoingDependencies;
     }
 
+    public ResourceReference reference() {
+        return new ResourceReference(this);
+    }
 
     /**
      * Defines how printing should be done

@@ -22,6 +22,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * A registry of constructors
@@ -42,8 +43,9 @@ public class ConstructorRegistry<T> {
                 if (annotation == null) {
                     throw new RuntimeException("Class " + aClass + " has no TypeIdentifier annotation");
                 }
-                map.put(DatabaseObjects.getTypeValue(annotation.value()),
-                        aClass.getConstructor(parameterTypes));
+                final long typeValue = DatabaseObjects.getTypeValue(annotation.value());
+                map.put(typeValue,
+                        aClass.getDeclaredConstructor(parameterTypes));
             } catch (NoSuchMethodException e) {
                 throw new XPMRuntimeException(e, "Cannot add class %s to registry", aClass);
             }
@@ -53,5 +55,21 @@ public class ConstructorRegistry<T> {
 
     public Constructor<? extends T> get(long typeId) {
         return map.get(typeId);
+    }
+
+    public T newInstance(long type, Object... objects) {
+        try {
+            final Constructor<? extends T> constructor = get(type);
+            if (constructor.isAccessible()) {
+                return constructor.newInstance(objects);
+            }
+            constructor.setAccessible(true);
+            final T t = constructor.newInstance(objects);
+            constructor.setAccessible(false);
+            return t;
+
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new XPMRuntimeException("Cannot create object of type %s");
+        }
     }
 }
