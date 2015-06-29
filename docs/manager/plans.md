@@ -2,22 +2,22 @@
 
 ## PlanInput
 
-[[[
+[[[js
 
-```js
 var profiles = new PlanInput("profiles", [
     {
         training_collections: trec_1992_99,
-        tasks: collection_ids
+        tasks: collection_ids *h*
     }
 ]);
-```
 
-```python
+
+[[[python
+
 profiles = PlanInput("profiles", [{
-    training_collections: trec_1992_99,
-    tasks: collection_ids
+    "training_collections": trec_1992_99,
+    "tasks": collection_ids
 }])
-```
+
 
 ]]]
