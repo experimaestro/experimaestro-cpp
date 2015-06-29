@@ -20,9 +20,12 @@ package sf.net.experimaestro.utils.gson;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -32,11 +35,23 @@ import java.nio.file.Paths;
 public class JsonPathAdapter extends TypeAdapter<Path> {
     @Override
     public void write(JsonWriter out, Path value) throws IOException {
-        out.value(value.toAbsolutePath().toUri().toString());
+        if (value == null) {
+            out.nullValue();
+        } else {
+            out.value(value.toAbsolutePath().toUri().toString());
+        }
     }
 
     @Override
     public Path read(JsonReader in) throws IOException {
-        return Paths.get(in.nextString());
+        if (in.peek() == JsonToken.NULL) return null;
+        final String str = in.nextString();
+        final URI path;
+        try {
+            path = new URI(str);
+        } catch (URISyntaxException e) {
+            throw new IOException("Could not decode " + str + " as URI", e);
+        }
+        return Paths.get(path);
     }
 }
