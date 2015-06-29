@@ -109,6 +109,8 @@ public class CommandLineTask extends Job {
 
     @Override
     public XPMProcess start(ArrayList<Lock> locks, boolean fake) throws Exception {
+        loadData();
+
         SingleHostConnector singleHostConnector = getMainConnector();
 
         final Path runFile = Resource.RUN_EXTENSION.transform(getPath());
