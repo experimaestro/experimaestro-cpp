@@ -22,7 +22,6 @@ import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.DirectLauncher;
 import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.Repository;
@@ -155,11 +154,6 @@ final public class ScriptContext implements AutoCloseable {
     Map<String, Object> properties;
 
     /**
-     * Environment
-     */
-    Updatable<Map<String, String>> environment;
-
-    /**
      * Submitted jobs
      *
      * @param staticContext
@@ -185,7 +179,6 @@ final public class ScriptContext implements AutoCloseable {
         threadContext.set(this);
         connector = Updatable.create(Scheduler.get().getLocalhostConnector());
         currentScriptPath = Updatable.create(null);
-        environment = Updatable.create(new HashMap<>(), x -> new HashMap<>(x));
         properties = new HashMap<>();
         submittedJobs = new HashMap<>();
     }
@@ -209,7 +202,6 @@ final public class ScriptContext implements AutoCloseable {
         defaultLauncher = other.defaultLauncher.reference();
         connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
-        environment = other.environment.reference();
 
         // Copy global values
         counts = other.counts;
@@ -465,14 +457,6 @@ final public class ScriptContext implements AutoCloseable {
 
     public void setCurrentScriptPath(Path currentScriptPath) {
         this.currentScriptPath.set(currentScriptPath);
-    }
-
-    public String setEnv(String key, String value) {
-        return environment.modify().put(key, value);
-    }
-
-    public String getEnv(String key) {
-        return environment.get().get(key);
     }
 
     // Only used for tests

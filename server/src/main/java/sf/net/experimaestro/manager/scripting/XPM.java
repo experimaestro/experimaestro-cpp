@@ -360,16 +360,6 @@ public class XPM {
         return context().simulate();
     }
 
-    @Expose
-    public String env(String key, String value) {
-        return context().setEnv(key, value);
-    }
-
-    @Expose
-    public String env(String key) {
-        return context().getEnv(key);
-    }
-
     @Expose(context = true)
     public String evaluate(LanguageContext lc, List<Object> command) throws Exception {
         return evaluate(lc, command, ImmutableMap.of());

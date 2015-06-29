@@ -144,6 +144,7 @@ public class OARLauncher extends Launcher {
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
         final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
+        unixScriptProcessBuilder.environment(environment);
 
         if (useNotify) {
             unixScriptProcessBuilder.setDoCleanup(false);

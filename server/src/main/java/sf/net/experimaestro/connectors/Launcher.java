@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.Help;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -27,6 +28,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * sf.net.experimaestro.connectors
@@ -39,6 +42,11 @@ public abstract class Launcher implements Serializable {
      * The notification URL
      */
     private URL notificationURL;
+
+    /**
+     * The environment to set
+     */
+    HashMap<String, String> environment = new HashMap<>();
 
     /**
      * Creates and returns a new process builder
@@ -72,4 +80,18 @@ public abstract class Launcher implements Serializable {
     public URL getNotificationURL() {
         return notificationURL;
     }
+
+    @Expose("env")
+    @Help("Sets an environment variable and returns the old value (if any)")
+    public String env(String key, String value) {
+        return environment.put(key, value);
+    }
+
+    @Expose("env")
+    @Help("Gets the value of the environment variable")
+    public String env(String key) {
+        return environment.get(key);
+    }
+
+
 }

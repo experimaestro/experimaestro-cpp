@@ -44,6 +44,7 @@ public class DirectLauncher extends Launcher {
     public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
         final XPMScriptProcessBuilder xpmScriptProcessBuilder = connector.scriptProcessBuilder(scriptFile);
         xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
+        xpmScriptProcessBuilder.environment(environment);
         return xpmScriptProcessBuilder;
     }
 }
