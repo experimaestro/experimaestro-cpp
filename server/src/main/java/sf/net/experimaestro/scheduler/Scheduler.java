@@ -33,6 +33,7 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.ThreadCount;
 import sf.net.experimaestro.utils.log.Logger;
@@ -735,7 +736,6 @@ final public class Scheduler {
                     }
 
                     LOGGER.debug("Notifying dependencies from R%d", resourceId);
-                    // Notify all the dependencies
 
                     // Retrieve the resource that changed - and lock it
                     Resource fromResource;
@@ -747,36 +747,21 @@ final public class Scheduler {
                     }
 
 
-                    try (CloseableIterable<Dependency> dependencies = fromResource.getOutgoingDependencies()) {
+                    try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies()) {
                         LOGGER.info("Notifying dependencies from %s", fromResource);
 
-                        for (Dependency dep : dependencies) {
+                        while (dependencies.hasNext()) {
+                            Dependency dep = dependencies.next();
+                            final Resource to = dep.getTo();
                             if (dep.status == DependencyStatus.UNACTIVE) {
-                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, dep.getTo());
+                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, to);
 
                             } else
                                 try {
                                     // when the dependency status is null, the dependency is not active anymore
-                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, dep.getTo(), dep.status);
+                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, to, dep.status);
                                     // Preserves the previous state
-                                    synchronized (dep.getTo()) {
-                                        DependencyStatus beforeState = dep.status;
-
-                                        if (dep.update()) {
-                                            final Resource depResource = dep.getTo();
-
-                                            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
-                                                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
-                                                continue;
-                                            }
-
-                                            // Queue this change in dependency state
-                                            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
-
-                                        } else {
-                                            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
-                                        }
-                                    }
+                                    to.updatedDependency(dep);
                                 } catch (RuntimeException e) {
                                     LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
                                 }

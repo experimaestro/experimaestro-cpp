@@ -18,7 +18,6 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.AbstractIterator;
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
@@ -29,6 +28,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.FileNameTransformer;
 import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
@@ -47,7 +47,6 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -287,11 +286,12 @@ public class Resource implements Identifiable {
     /**
      * The set of dependencies that are dependent on this resource
      */
-    public CloseableIterable<Dependency> getOutgoingDependencies() {
-        return new CloseableIterable<Dependency>() {
-            PreparedStatement st;
+    public CloseableIterator<Dependency> getOutgoingDependencies() {
+        return new CloseableIterator<Dependency>() {
 
-            ResultSet resultSet;
+            public ResultSet resultSet;
+
+            public PreparedStatement st;
 
             @Override
             public void close() throws CloseException {
@@ -306,30 +306,26 @@ public class Resource implements Identifiable {
             }
 
             @Override
-            public Iterator<Dependency> iterator() {
-                return new AbstractIterator<Dependency>() {
-                    @Override
-                    protected Dependency computeNext() {
-                        try {
-                            if (st == null) {
-                                st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE toId=?");
-                                st.setLong(1, getId());
-                                st.execute();
-                                resultSet = st.getResultSet();
-                            }
-
-                            if (!resultSet.next()) {
-                                return endOfData();
-                            }
-
-                            final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
-                            final long type = resultSet.getLong(3);
-                            return Dependency.create(Resource.this.getId(), resultSet.getLong(1), type, dependencyStatus);
-                        } catch (SQLException e) {
-                            throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", this);
-                        }
+            protected Dependency computeNext() {
+                try {
+                    if (st == null) {
+                        st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE fromId=?");
+                        st.setLong(1, getId());
+                        st.execute();
+                        resultSet = st.getResultSet();
                     }
-                };
+
+                    if (!resultSet.next()) {
+                        return endOfData();
+                    }
+
+                    final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
+                    final long type = resultSet.getLong(3);
+                    final long toId = resultSet.getLong(2);
+                    return Dependency.create(Resource.this.getId(), toId, type, dependencyStatus);
+                } catch (SQLException e) {
+                    throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", this);
+                }
             }
         };
 
@@ -523,18 +519,18 @@ public class Resource implements Identifiable {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
         }
 
-        try (CloseableIterable<Dependency> dependencies = getOutgoingDependencies()) {
-            for (Dependency dependency : dependencies) {
+        try (CloseableIterator<Dependency> dependencies = getOutgoingDependencies()) {
+            while (dependencies.hasNext()) {
+                if (!recursive) {
+                    throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
+                            dependencies);
+                }
+                Dependency dependency = dependencies.next();
                 Resource dep = dependency.getTo();
                 if (dep != null) {
                     dep.delete(true);
                 }
             }
-            if (!recursive) {
-                throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
-                        dependencies);
-            }
-
         } catch (CloseException e) {
             LOGGER.error(e, "Error while closing iterator");
         }
@@ -776,6 +772,30 @@ public class Resource implements Identifiable {
 
     public ResourceReference reference() {
         return new ResourceReference(this);
+    }
+
+    synchronized public void updatedDependency(Dependency dep) throws SQLException {
+        if (ingoingDependencies != null) {
+            dep = ingoingDependencies.get(dep.getFrom());
+            assert dep != null;
+        }
+
+        DependencyStatus beforeState = dep.status;
+
+        if (dep.update()) {
+            final Resource depResource = dep.getTo();
+
+            if (!ResourceState.NOTIFIABLE_STATE.contains(depResource.getState())) {
+                LOGGER.debug("We won't notify resource %s since its state is %s", depResource, depResource.getState());
+                return;
+            }
+
+            // Queue this change in dependency state
+            notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+
+        } else {
+            LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
+        }
     }
 
     /**

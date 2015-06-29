@@ -53,6 +53,7 @@ import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.CloseableIterable;
+import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMInformation;
 import sf.net.experimaestro.utils.log.Logger;
@@ -662,9 +663,10 @@ public class JsonRPCMethods extends HttpServlet {
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
         int nbUpdated = 0;
-        try (final CloseableIterable<Dependency> deps = resource.getOutgoingDependencies()) {
+        try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies()) {
 
-            for (Dependency dependency : deps) {
+            while (deps.hasNext()) {
+                Dependency dependency = deps.next();
                 final Resource to = dependency.getTo();
                 LOGGER.info("Invalidating %s", to);
 
