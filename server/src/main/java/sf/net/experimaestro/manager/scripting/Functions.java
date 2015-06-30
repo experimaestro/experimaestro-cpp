@@ -199,6 +199,7 @@ public class Functions {
 
     private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
         java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
+
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
             sc.setCurrentScriptPath(scriptPath);
             Scriptable scope = ((JavaScriptContext) cx).scope();
@@ -397,5 +398,10 @@ public class Functions {
         java.nio.file.Path scriptpath = context().getCurrentScriptPath().getParent().resolve(path);
         LOGGER.debug("Including repository file [%s]", scriptpath);
         return include(cx, scriptpath, repositoryMode);
+    }
+
+    @Expose
+    static public LocalhostConnector get_localhost_connector() {
+        return Scheduler.get().getLocalhostConnector();
     }
 }

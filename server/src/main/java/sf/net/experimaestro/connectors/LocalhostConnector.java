@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
@@ -161,6 +162,10 @@ public class LocalhostConnector extends SingleHostConnector {
         }
     }
 
+    @Expose
+    public String env(String key) {
+        return System.getenv(key);
+    }
 
 }
 

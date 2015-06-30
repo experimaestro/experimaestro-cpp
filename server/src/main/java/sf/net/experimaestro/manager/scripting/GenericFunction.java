@@ -94,7 +94,7 @@ public abstract class GenericFunction {
         if (executable.isVarArgs()) {
             final Class<?> varargType = types[types.length - 1].getComponentType();
             int nbVarargs = args.length - length;
-            final Object array[] = (Object[]) Array.newInstance(varargType, nbVarargs);
+            final Object array[] = (Object[]) Array.newInstance(varargType, max(0, nbVarargs));
             for (int i = 0; i < nbVarargs; i++) {
                 array[i] = converters[i + length].apply(args[i + length]);
             }

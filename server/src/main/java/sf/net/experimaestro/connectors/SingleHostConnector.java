@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -165,4 +166,5 @@ abstract public class SingleHostConnector extends Connector {
      */
     abstract public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile)
             throws IOException;
+
 }

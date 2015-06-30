@@ -21,6 +21,8 @@ package sf.net.experimaestro.scheduler;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.Gson;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
@@ -77,8 +79,15 @@ final public class DatabaseObjects<T extends Identifiable> {
 //    private WeakHashMap<Long, T> map = new WeakHashMap<>();
     Cache<Long, T> map = CacheBuilder.newBuilder()
             .concurrencyLevel(4)
-            .weakValues()
-            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .softValues()
+//            .expireAfterWrite(1, TimeUnit.MINUTES)
+//            .expireAfterAccess(1, TimeUnit.MICROSECONDS)
+            .removalListener(new RemovalListener<Long, T>() {
+                @Override
+                public void onRemoval(RemovalNotification<Long, T> notification) {
+                    LOGGER.info("Removed key %s", notification.getKey());
+                }
+            })
             .build();
 
 
@@ -319,7 +328,8 @@ final public class DatabaseObjects<T extends Identifiable> {
             object.setId(id);
         }
         synchronized (map) {
-            map.put(object.getId(), object);
+            // We use a new key to avoid
+            map.put(id, object);
         }
     }
 

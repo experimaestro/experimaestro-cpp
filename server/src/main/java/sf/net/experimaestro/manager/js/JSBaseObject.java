@@ -110,7 +110,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         // Search for property accessor
         function = getMethodFunction(ExposeMode.FIELDS);
-        if (function != null) {
+        if (function != null && !function.isEmpty()) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
             final Object result = function.call(jcx, thisObject(), name);
             return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);

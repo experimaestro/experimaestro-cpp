@@ -199,7 +199,6 @@ final public class ScriptContext implements AutoCloseable {
         experiment = other.experiment.reference();
         priority = other.priority.reference();
         simulate = other.simulate.reference();
-        defaultLauncher = other.defaultLauncher.reference();
         connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
 
@@ -211,9 +210,11 @@ final public class ScriptContext implements AutoCloseable {
         if (newRepository) {
             properties = new HashMap<>();
             workingDirectory = new Mutable<>();
+            defaultLauncher = other.defaultLauncher.reference();
         } else {
             properties = other.properties;
             workingDirectory = other.workingDirectory;
+            defaultLauncher = other.defaultLauncher;
         }
 
         // Sets the current thread context

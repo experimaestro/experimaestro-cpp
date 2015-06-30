@@ -90,7 +90,7 @@ public class SQLInsert {
         updateSQL = _update.toString();
     }
 
-    public long execute(Connection connection, boolean update, Object id, Object... values) throws SQLException {
+    public long execute(Connection connection, boolean update, Long id, Object... values) throws SQLException {
         if (values.length != nbFields) {
             throw new XPMIllegalArgumentException("Expected %d fields, got %d", nbFields, values.length);
         }
@@ -123,6 +123,6 @@ public class SQLInsert {
 
         }
 
-        return -1;
+        return id;
     }
 }

@@ -490,7 +490,6 @@ public class XPM {
 
 
         // --- Environment
-        job.environment = scriptContext.environment.get();
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         // --- Set defaults

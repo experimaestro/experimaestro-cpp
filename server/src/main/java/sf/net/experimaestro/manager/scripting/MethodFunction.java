@@ -45,7 +45,7 @@ public class MethodFunction extends GenericFunction {
     }
 
     public boolean isEmpty() {
-        return groups.isEmpty();
+        return groups.stream().allMatch(g -> g.methods.isEmpty());
     }
 
     @Override
@@ -73,7 +73,6 @@ public class MethodFunction extends GenericFunction {
     public void add(Object thisObj, List<Method> methods) {
         groups.add(new Group(thisObj, methods));
     }
-
 
     /**
      * Represent all the methods from a given ancestor (or self)
