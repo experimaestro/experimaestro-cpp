@@ -82,12 +82,12 @@ final public class DatabaseObjects<T extends Identifiable> {
             .softValues()
 //            .expireAfterWrite(1, TimeUnit.MINUTES)
 //            .expireAfterAccess(1, TimeUnit.MICROSECONDS)
-            .removalListener(new RemovalListener<Long, T>() {
-                @Override
-                public void onRemoval(RemovalNotification<Long, T> notification) {
-                    LOGGER.info("Removed key %s", notification.getKey());
-                }
-            })
+//            .removalListener(new RemovalListener<Long, T>() {
+//                @Override
+//                public void onRemoval(RemovalNotification<Long, T> notification) {
+//                    LOGGER.info("Removed key %s", notification.getKey());
+//                }
+//            })
             .build();
 
 
