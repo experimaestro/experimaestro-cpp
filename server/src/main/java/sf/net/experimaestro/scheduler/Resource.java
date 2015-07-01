@@ -664,7 +664,7 @@ public class Resource implements Identifiable {
             final Resource resource = constructor.newInstance(id, connector, path);
 
             // Set stored values
-            resource.setState(ResourceState.fromValue(status));
+            resource.state = ResourceState.fromValue(status);
 
             return resource;
         } catch (InstantiationException | SQLException | InvocationTargetException | IllegalAccessException e) {
