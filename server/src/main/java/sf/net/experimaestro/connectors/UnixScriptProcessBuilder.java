@@ -159,12 +159,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             if (notificationURL != null) {
                 final URL url = new URL(notificationURL, format("%d", job.getId()));
                 writer.format("export XPM_NOTIFICATION_URL=\"%s\"%n", protect(url.toString(), QUOTED_SPECIAL));
-                // Notification program is ourselves
-                writer.format("export XPM_NOTIFICATION=\"%s\"", protect(env.resolve(runFile), QUOTED_SPECIAL));
-
-                writer.format("if \"$1\" == \"progress\"; then%n");
-                writer.format(" wget --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/progress/$2\"");
-                writer.format("fi%n");
             }
 
             if (directory() != null) {

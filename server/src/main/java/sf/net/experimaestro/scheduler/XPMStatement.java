@@ -59,4 +59,7 @@ public class XPMStatement {
         st.close();
     }
 
+    public XPMStatement setDouble(int index, double value) throws SQLException {
+        return protect(() -> st.setDouble(index, value));
+    }
 }

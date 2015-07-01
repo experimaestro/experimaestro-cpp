@@ -25,6 +25,7 @@ import org.json.simple.JSONObject;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -712,7 +713,18 @@ abstract public class Job extends Resource {
     }
 
     public void setProgress(double progress) {
-        this.progress = progress;
+        if (progress != this.progress) {
+            if (inDatabase()) try {
+                Scheduler.statement("UPDATE Jobs SET progress=? WHERE id=?")
+                        .setDouble(1, progress)
+                        .setLong(2, getId())
+                        .execute();
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Could not set progress in database");
+            }
+
+            this.progress = progress;
+        }
     }
 
     /**
