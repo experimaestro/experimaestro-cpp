@@ -324,7 +324,7 @@ public class Resource implements Identifiable {
                     final long toId = resultSet.getLong(2);
                     return Dependency.create(Resource.this.getId(), toId, type, dependencyStatus);
                 } catch (SQLException e) {
-                    throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", this);
+                    throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", Resource.this);
                 }
             }
         };

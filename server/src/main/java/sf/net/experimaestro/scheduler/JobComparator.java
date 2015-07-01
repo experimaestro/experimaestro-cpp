@@ -51,8 +51,8 @@ public class JobComparator implements Comparator<Job> {
         // returns > 0 if b should run before a
 
         // First, if one is ready status start (dependencies are OK)
-        if (a.nbUnsatisfied == 0 ^ b.nbUnsatisfied == 0)
-            return a.nbUnsatisfied > b.nbUnsatisfied ? 1 : -1;
+        if (a.getNbUnsatisfied() == 0 ^ b.getNbUnsatisfied() == 0)
+            return a.getNbUnsatisfied() > b.getNbUnsatisfied() ? 1 : -1;
 
 
         // Then check on priority

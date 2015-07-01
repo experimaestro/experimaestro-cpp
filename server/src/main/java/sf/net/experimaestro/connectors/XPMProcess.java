@@ -20,6 +20,7 @@ package sf.net.experimaestro.connectors;
 
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.scheduler.ConstructorRegistry;
 import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
@@ -39,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
@@ -56,6 +58,9 @@ import java.util.concurrent.TimeUnit;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public abstract class XPMProcess {
+    static ConstructorRegistry<XPMProcess> REGISTRY
+            = new ConstructorRegistry(new Class[]{}).add(LocalProcess.class, SSHProcess.class, OARProcess.class);
+
     static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -382,6 +387,27 @@ public abstract class XPMProcess {
                     st.execute();
                 }
             }
+        }
+    }
+
+    public static XPMProcess load(Job job) throws SQLException {
+        try(PreparedStatement st = Scheduler.get().prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
+            st.setLong(1, job.getId());
+            st.execute();
+            final ResultSet rs = st.getResultSet();
+            if (!rs.next()) {
+                return null;
+            }
+
+            long type = rs.getLong(1);
+
+
+            final XPMProcess process = REGISTRY.newInstance(type);
+            process.connector = (SingleHostConnector)Connector.findById(rs.getLong(2));
+            process.pid = rs.getString(3);
+            process.job = job;
+            DatabaseObjects.loadFromJson(process, rs.getBinaryStream(4));
+            return process;
         }
     }
 }

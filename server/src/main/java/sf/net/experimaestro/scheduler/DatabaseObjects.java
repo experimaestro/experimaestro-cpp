@@ -361,7 +361,7 @@ final public class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    public void loadFromJson(T object, InputStream binaryStream) {
+    static public <T> void loadFromJson(T object, InputStream binaryStream) {
         final Gson gson = GsonConverter.builder.create();
         try (InputStream is = binaryStream;
              Reader reader = new InputStreamReader(is);
@@ -371,7 +371,7 @@ final public class DatabaseObjects<T extends Identifiable> {
                     = (ReflectiveTypeAdapterFactory.Adapter) gson.getAdapter(object.getClass());
             adapter.read(jsonReader, object);
         } catch (IOException e) {
-            throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", this);
+            throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", object);
         }
     }
 

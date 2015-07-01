@@ -28,6 +28,10 @@ public class Holder<T> {
         this.value = value;
     }
 
+    public Holder() {
+        
+    }
+
     public T get() {
         return value;
     }

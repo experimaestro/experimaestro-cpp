@@ -242,20 +242,6 @@ final public class Scheduler {
         // Add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
-        // Loop over resources in state RUNNING
-        try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
-            for (Resource resource : resources) {
-                Job job = (Job) resource;
-                if (job.process != null) {
-                    job.process.init(job);
-                } else {
-                    job.setState(ResourceState.ERROR);
-                    LOGGER.error("No process attached to a running job. New status is: %s", job.getState());
-                }
-                job.updateStatus();
-            }
-        }
-
         // Start the thread that notify dependencies
         LOGGER.info("Starting the notifier thread");
         notifier = new Notifier();
@@ -267,7 +253,20 @@ final public class Scheduler {
         messengerThread = new MessengerThread();
         messengerThread.start();
         runningThreadsCounter.add();
-
+        Scheduler.prepareStatement("UPDATE Resources SET status=? WHERE id=?", ResourceState.RUNNING.value(), 115).execute();
+        // Loop over resources in state RUNNING
+        try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+            for (Resource resource : resources) {
+                Job job = (Job) resource;
+                if (job.getProcess() != null) {
+                    job.getProcess().init(job);
+                } else {
+                    job.setState(ResourceState.ERROR);
+                    LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
+                }
+                job.updateStatus();
+            }
+        }
 
         // Start the thread that start the jobs
         LOGGER.info("Starting the job runner thread");
@@ -493,8 +492,18 @@ final public class Scheduler {
     }
 
 
-    public static PreparedStatement prepareStatement(String sql) throws SQLException {
-        return get().getConnection().prepareStatement(sql);
+    public static PreparedStatement prepareStatement(String sql, Object... values) throws SQLException {
+        final PreparedStatement preparedStatement = get().getConnection().prepareStatement(sql);
+        for (int i = 0; i < values.length; i++) {
+            Object value = getObject(values[i]);
+            preparedStatement.setObject(i + 1, value);
+        }
+
+        return preparedStatement;
+    }
+
+    protected static Object getObject(Object value1) {
+        return value1;
     }
 
     public LocalhostConnector getLocalhostConnector() {

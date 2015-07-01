@@ -29,9 +29,9 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
+import sf.net.experimaestro.utils.Holder;
 import sf.net.experimaestro.utils.ProcessUtils;
 import sf.net.experimaestro.utils.Time;
-import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -40,7 +40,6 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,53 +59,14 @@ abstract public class Job extends Resource {
 
     final static private Logger LOGGER = Logger.getLogger();
 
+    static transient private JobData jobData;
 
-    /**
-     * The priority of the job (the higher, the more urgent)z
-     */
-    int priority;
-
-    /**
-     * When was the job submitted (in case the priority is not enough)
-     */
-    long timestamp = System.currentTimeMillis();
+    private Holder<XPMProcess> process;
 
 //    /**
 //     * Requirements (ignored for the moment)
 //     */
 //    transient ComputationalRequirements requirements;
-
-    /**
-     * When did the job start (0 if not started)
-     */
-    transient long startTimestamp;
-
-    /**
-     * When did the job stop (0 when it did not stop yet)
-     */
-    transient long endTimestamp;
-
-    /**
-     * Our job monitor (null when there is no attached process)
-     */
-    transient XPMProcess process;
-
-    /**
-     * Number of unsatisfied jobs
-     */
-    transient int nbUnsatisfied = 0;
-
-    /**
-     * Number of holding jobs
-     */
-    transient int nbHolding = 0;
-
-    /**
-     * Progress
-     * <p>
-     * The value is negative if not set
-     */
-    transient double progress = -1;
 
 
     /**
@@ -117,12 +77,24 @@ abstract public class Job extends Resource {
      */
     public Job(Connector connector, Path path) throws IOException {
         super(connector, path);
+        jobData = new JobData(this);
+        process = new Holder<>();
     }
 
     public Job(Connector connector, String path) {
         super(connector, path);
+        jobData = new JobData(this);
+        process = new Holder<>();
     }
 
+    /**
+     * Initialize from database
+     *
+     * @param id
+     * @param connector
+     * @param locator
+     * @throws SQLException
+     */
     public Job(long id, Connector connector, String locator) throws SQLException {
         super(id, connector, locator);
     }
@@ -162,8 +134,9 @@ abstract public class Job extends Resource {
      * @return the priority
      */
     final public int getPriority() {
-        return priority;
+        return jobData().getPriority();
     }
+
 
     /**
      * TaskReference priority - the higher, the better
@@ -171,11 +144,11 @@ abstract public class Job extends Resource {
      * @param priority the priority status set
      */
     final public void setPriority(int priority) {
-        this.priority = priority;
+        jobData().setPriority(priority);
     }
 
     public long getTimestamp() {
-        return this.timestamp;
+        return jobData().getTimestamp();
     }
 
     /**
@@ -188,8 +161,14 @@ abstract public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks, boolean fake) throws Throwable {
-        process = start(locks, fake);
-        return process;
+        setProcess(start(locks, fake));
+        return getProcess();
+    }
+
+    private void setProcess(XPMProcess process) {
+        if (getProcess() != null) {
+            throw new AssertionError("Should not set a process when we already have one");
+        }
     }
 
     public void generateFiles() throws Throwable {
@@ -207,6 +186,8 @@ abstract public class Job extends Resource {
         ArrayList<Lock> locks = new ArrayList<>();
         // Those locks are used only in case of problem to unlock everything
         ArrayList<Lock> depLocks = new ArrayList<>();
+
+        jobData();
 
         try {
             // We are running (prevents other task status try status replace ourselves)
@@ -263,18 +244,18 @@ abstract public class Job extends Resource {
 
                 // Change the state
                 setState(ResourceState.RUNNING);
-                startTimestamp = System.currentTimeMillis();
+                jobData.setStartTimestamp(System.currentTimeMillis());
 
                 // Commits all the changes so far
 
                 // Now, starts the job
-                process = startJob(locks, false);
-                process.save();
-                process.adopt(locks);
+                process.set(startJob(locks, false));
+                getProcess().save();
+                getProcess().adopt(locks);
                 locks = null;
 
                 // Store the current state
-                LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, startTimestamp, process.getPID());
+                LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, jobData.getStartTimestamp(), getProcess());
                 for (Dependency dep : getDependencies()) {
                     LOGGER.info("[STARTED JOB] Dependency: %s", dep);
                 }
@@ -295,9 +276,9 @@ abstract public class Job extends Resource {
         } finally {
             // Dispose of the locks that we own
             if (locks != null) {
-                if (process != null) {
+                if (getProcess() != null) {
                     LOGGER.info("An error occurred: disposing process");
-                    process.destroy();
+                    getProcess().destroy();
                 }
 
                 LOGGER.info("An error occurred: disposing locks");
@@ -363,31 +344,32 @@ abstract public class Job extends Resource {
      * @param message The message
      */
     synchronized private void dependencyChanged(DependencyChangedMessage message) throws SQLException {
-        LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, nbUnsatisfied, nbHolding);
+        jobData();
+
+        LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
         int diffHold = (message.newStatus.isBlocking() ? 1 : 0) - (message.oldStatus.isBlocking() ? 1 : 0);
 
         if (diff != 0 || diffHold != 0) {
-            nbUnsatisfied -= diff;
-            nbHolding += diffHold;
+            jobData.setRequired(jobData.getNbUnsatisfied() - diff, jobData.getNbHolding() + diffHold);
 
             // Change the state in function of the number of unsatisfied requirements
-            if (nbUnsatisfied == 0) {
+            if (jobData.getNbUnsatisfied() == 0) {
                 setState(ResourceState.READY);
             } else {
-                if (nbHolding > 0)
+                if (jobData.getNbHolding() > 0)
                     setState(ResourceState.ON_HOLD);
                 else
                     setState(ResourceState.WAITING);
             }
 
             // Store the result
-            assert nbHolding >= 0;
-            assert nbUnsatisfied >= nbHolding : String.format("Number of unsatisfied (%d) < number of holding (%d)",
-                    nbUnsatisfied, nbHolding);
+            assert jobData.getNbHolding() >= 0;
+            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("Number of unsatisfied (%d) < number of holding (%d)",
+                    jobData.getNbUnsatisfied(), jobData.getNbHolding());
         }
-        LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, nbUnsatisfied, nbHolding,
+        LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, jobData.getNbUnsatisfied(), jobData.getNbHolding(),
                 diff, diffHold, message.fromId, message.newStatus);
     }
 
@@ -397,7 +379,8 @@ abstract public class Job extends Resource {
      * @param eoj The message
      */
     synchronized private void endOfJobMessage(EndOfJobMessage eoj) throws SQLException {
-        this.endTimestamp = eoj.timestamp;
+        jobData();
+        jobData.setEndTimestamp(eoj.timestamp);
 
         // Lock all the required dependencies and refresh
 
@@ -422,10 +405,10 @@ abstract public class Job extends Resource {
         // (2) dispose old XPM process
 
         try {
-            if (process != null) {
-                LOGGER.debug("Disposing of old XPM process [%s]", process);
-                process.dispose();
-                process = null;
+            if (getProcess() != null) {
+                LOGGER.debug("Disposing of old XPM process [%s]", getProcess());
+                getProcess().dispose();
+                setProcess(null);
             } else {
                 LOGGER.warn("There was no XPM process attached...");
             }
@@ -438,15 +421,17 @@ abstract public class Job extends Resource {
     }
 
     public long getStartTimestamp() {
-        return startTimestamp;
+        return jobData().getStartTimestamp();
     }
 
     public long getEndTimestamp() {
-        return endTimestamp;
+        return jobData().getEndTimestamp();
     }
 
     @Override
     public JSONObject toJSON() throws IOException {
+        jobData();
+
         JSONObject info = super.toJSON();
 
         if (getState() == ResourceState.DONE
@@ -458,14 +443,14 @@ abstract public class Job extends Resource {
 
             JSONObject events = new JSONObject();
             info.put("events", events);
-            info.put("progress", progress);
+            info.put("progress", jobData.getProgress());
 
             events.put("start", longDateFormat.format(new Date(start)));
 
             if (getState() != ResourceState.RUNNING && end >= 0) {
                 events.put("end", longDateFormat.format(new Date(end)));
-                if (process != null)
-                    events.put("pid", process.getPID());
+                if (getProcess() != null)
+                    events.put("pid", getProcess().getPID());
             }
         }
 
@@ -491,6 +476,7 @@ abstract public class Job extends Resource {
     @Override
     public void printXML(PrintWriter out, PrintConfig config) {
         super.printXML(out, config);
+        jobData();
 
         out.format("<h2>Locking status</h2>%n");
 
@@ -509,15 +495,15 @@ abstract public class Job extends Resource {
                         longDateFormat.format(new Date(end)));
                 out.format("<div>Duration: %s</div>",
                         Time.formatTimeInMilliseconds(end - start));
-                if (process != null)
-                    out.format("<div>PID: %s</div>", process.getPID());
+                if (getProcess() != null)
+                    out.format("<div>PID: %s</div>", getProcess().getPID());
             }
         }
 
         if (!getDependencies().isEmpty()) {
             out.format("<h2>Dependencies</h2><ul>");
             out.format("<div>%d unsatisfied / %d holding dependencie(s)</div>",
-                    nbUnsatisfied, nbHolding);
+                    jobData.getNbUnsatisfied(), jobData.getNbHolding());
             for (Dependency dependency : getDependencies()) {
 
                 Resource resource = dependency.getFrom();
@@ -548,10 +534,13 @@ abstract public class Job extends Resource {
 
             case ERROR:
             case HOLD:
-                ++nbHolding;
+                jobData();
+                jobData.setRequired(jobData.getNbUnsatisfied(), jobData.getNbHolding() + 1);
+                break;
 
             case WAIT:
-                ++nbUnsatisfied;
+                jobData.setRequired(jobData.getNbUnsatisfied() + 1, jobData.getNbHolding());
+                break;
         }
 
         addIngoingDependency(dependency);
@@ -570,7 +559,7 @@ abstract public class Job extends Resource {
             if (getState() != ResourceState.DONE) {
                 changes = true;
                 if (this instanceof Job) {
-                    this.endTimestamp = Files.getLastModifiedTime(doneFile).toMillis();
+                    jobData().setEndTimestamp(Files.getLastModifiedTime(doneFile).toMillis());
                 }
                 this.setState(ResourceState.DONE);
             }
@@ -600,20 +589,15 @@ abstract public class Job extends Resource {
             if (nbHolding > 0)
                 state = ResourceState.ON_HOLD;
 
-            if (nbUnsatisfied != this.nbUnsatisfied) {
-                changes = true;
-                this.nbUnsatisfied = nbUnsatisfied;
-            }
-
-            if (nbHolding != this.nbHolding) {
-                changes = true;
-                this.nbHolding = nbHolding;
-            }
+            changes = jobData().setRequired(nbUnsatisfied, nbHolding);
 
             LOGGER.debug("After update, state of %s is %s [unsatisfied=%d, holding=%d]", this, state, nbUnsatisfied, nbHolding);
             changes |= setState(state);
         }
 
+        if (changes) {
+            jobData.save(true, getId());
+        }
         return changes;
     }
 
@@ -622,9 +606,9 @@ abstract public class Job extends Resource {
      */
     public boolean stop() throws SQLException {
         // Process is running
-        if (process != null) {
+        if (getProcess() != null) {
             try {
-                process.destroy();
+                getProcess().destroy();
             } catch (FileSystemException e) {
                 LOGGER.error(e, "The process could not be stopped");
                 return false;
@@ -685,8 +669,6 @@ abstract public class Job extends Resource {
         }
     }
 
-    private static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
-
     @Override
     protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         // Update status
@@ -696,11 +678,25 @@ abstract public class Job extends Resource {
         super.save(resources, old);
 
         // Execute
-        SQL_INSERT.execute(resources.connection, update, getId(), priority, new Timestamp(timestamp), new Timestamp(startTimestamp), new Timestamp(endTimestamp), nbUnsatisfied, nbHolding, progress);
+        jobData().save(update, getId());
     }
 
     public XPMProcess getProcess() {
-        return process;
+        if (process == null) {
+            try {
+                process = new Holder(XPMProcess.load(this));
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Error while loading process from database");
+            }
+        }
+        return process.get();
+    }
+
+    private JobData jobData() {
+        if (jobData == null) {
+            jobData = new JobData(this);
+        }
+        return jobData;
     }
 
     public boolean isActiveWaiting() {
@@ -709,22 +705,11 @@ abstract public class Job extends Resource {
 
 
     public double getProgress() {
-        return progress;
+        return jobData().getProgress();
     }
 
     public void setProgress(double progress) {
-        if (progress != this.progress) {
-            if (inDatabase()) try {
-                Scheduler.statement("UPDATE Jobs SET progress=? WHERE id=?")
-                        .setDouble(1, progress)
-                        .setLong(2, getId())
-                        .execute();
-            } catch (SQLException e) {
-                throw new XPMRuntimeException(e, "Could not set progress in database");
-            }
-
-            this.progress = progress;
-        }
+        jobData().setProgress(progress);
     }
 
     /**
@@ -752,4 +737,7 @@ abstract public class Job extends Resource {
 
     public abstract Stream<Dependency> dependencies();
 
+    public int getNbUnsatisfied() {
+        return jobData().getNbUnsatisfied();
+    }
 }

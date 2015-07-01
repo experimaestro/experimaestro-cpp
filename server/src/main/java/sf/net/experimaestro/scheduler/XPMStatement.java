@@ -62,4 +62,12 @@ public class XPMStatement {
     public XPMStatement setDouble(int index, double value) throws SQLException {
         return protect(() -> st.setDouble(index, value));
     }
+
+    public XPMStatement setObject(int index, Object object) throws SQLException {
+        return protect(() -> st.setObject(index, object));
+    }
+
+    public XPMStatement setInt(int index, int value) throws SQLException {
+        return protect(() -> st.setDouble(index, value));
+    }
 }
