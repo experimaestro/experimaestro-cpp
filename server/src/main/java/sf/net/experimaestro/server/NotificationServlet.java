@@ -79,7 +79,7 @@ public class NotificationServlet extends XPMServlet {
                 final XPMProcess process = job.getProcess();
                 if (process != null) {
                     try {
-                        process.check();
+                        process.check(true);
                     } catch (Exception e) {
                         // FIXME: what to do here?
                     }

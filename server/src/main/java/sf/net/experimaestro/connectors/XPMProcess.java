@@ -245,8 +245,9 @@ public abstract class XPMProcess {
      *
      * @return True if the job is running
      * @throws Exception
+     * @param checkFiles
      */
-    public boolean isRunning() throws Exception {
+    public boolean isRunning(boolean checkFiles) throws Exception {
         // We have no process, check
         return Files.exists(Job.LOCK_EXTENSION.transform(job.getPath()));
     }
@@ -282,9 +283,10 @@ public abstract class XPMProcess {
 
     /**
      * Asynchronous check the state of the job monitor
+     * @param checkFiles Whether files should be checked rather than the process
      */
-    public void check() throws Exception {
-        if (!isRunning()) {
+    public void check(boolean checkFiles) throws Exception {
+        if (!isRunning(checkFiles)) {
             // We are not running: send a message
             LOGGER.debug("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getPath());
@@ -320,7 +322,7 @@ public abstract class XPMProcess {
             while (true) {
                 try {
                     try {
-                        if (!isRunning()) {
+                        if (!isRunning(false)) {
                             return exitValue();
                         }
                     } catch (Exception e) {

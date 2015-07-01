@@ -79,11 +79,12 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning() throws Exception {
-        if (process != null)
+    public boolean isRunning(boolean checkFiles) throws Exception {
+        if (!checkFiles && process != null) {
             return ProcessUtils.isRunning(process);
+        }
 
-        return super.isRunning();
+        return super.isRunning(checkFiles);
     }
 
     @Override
