@@ -7,3 +7,4 @@ project.properties
 *.pyc
 /target
 git.properties
+log4j.properties
