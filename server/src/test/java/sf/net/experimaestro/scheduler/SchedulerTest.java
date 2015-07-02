@@ -59,59 +59,34 @@ public class SchedulerTest extends XPMEnvironment {
         prepare();
     }
 
-    @DataProvider()
-    static Object[][] complexDependenciesTestProvider() {
+    @Test
+    public void test_basic() throws ExperimaestroCannotOverwrite, IOException, SQLException {
+        new ComplexDependenciesParameters("basic", 132481234l)
+                .jobs(10, 50, 5)
+                .dependencies(.5, 2)
+                .failures(0, 0, 0)
+                .token(0)
+                .run();
+    }
 
+    @Test
+    public void test_failures() throws ExperimaestroCannotOverwrite, IOException, SQLException {
+        new ComplexDependenciesParameters("failures", 132481234l)
+                .jobs(10, 50, 10)
+                .dependencies(.5, 2)
+                .failures(0.10, 1, 0)
+                .token(0)
+                .run();
+    }
 
-        final LinkedList<ComplexDependenciesParameters> p = new LinkedList<>();
-
-        p.add(
-                new ComplexDependenciesParameters("basic", 132481234l)
-                        .jobs(10, 50, 5)
-                        .dependencies(.5, 2)
-                        .failures(0, 0, 0)
-                        .token(0)
-        );
-
-        p.add(
-                new ComplexDependenciesParameters("failures", 132481234l)
-                        .jobs(10, 50, 10)
-                        .dependencies(.5, 2)
-                        .failures(0.10, 1, 0)
-                        .token(0)
-        );
-
-        p.add(
-                new ComplexDependenciesParameters("failures-and-tokens", -8451050260222287949l)
-                        .jobs(100, 150, 10)
-                        .dependencies(.2, 25)
-                        .failures(0.10, 3, 2)
-                        .token(3)
-
-        );
-
-        final String property = System.getProperty("xpm.test.scheduler.complex.limit");
-        if (property != null) {
-            HashSet<String> only = new HashSet<>(Arrays.asList(property.split(",")));
-            LOGGER.info("Limits to complex dependency tests to [%s]", only);
-            Iterator<ComplexDependenciesParameters> it = p.iterator();
-            while (it.hasNext()) {
-                final String name = it.next().name;
-                if (!only.contains(name)) {
-                    LOGGER.info("Removing %s", name);
-                    it.remove();
-                }
-            }
-        }
-
-        final Object[][] objects = new Object[p.size()][];
-        Iterator<ComplexDependenciesParameters> it = p.iterator();
-        for (int i = 0; i < p.size(); i++) {
-            objects[i] = new Object[]{it.next()};
-            LOGGER.info("Adding complex dependencies task: %s", objects[i]);
-        }
-
-        return objects;
+    @Test
+    public void test_failures_and_tokens() throws ExperimaestroCannotOverwrite, IOException, SQLException {
+        new ComplexDependenciesParameters("failures-and-tokens", -8451050260222287949l)
+                .jobs(100, 150, 10)
+                .dependencies(.2, 25)
+                .failures(0.10, 3, 2)
+                .token(3)
+                .run();
     }
 
     /**
@@ -209,131 +184,6 @@ public class SchedulerTest extends XPMEnvironment {
         Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
     }
 
-
-    @Test(description = "Run jobs generated at random", dataProvider = "complexDependenciesTestProvider")
-    public void test_complex_dependencies(ComplexDependenciesParameters p) throws ExperimaestroCannotOverwrite, IOException, SQLException {
-        Random random = new Random();
-        long seed = p.seed == null ? random.nextLong() : p.seed;
-        LOGGER.info("Seed is %d", seed);
-        random.setSeed(seed);
-
-        // Prepares directory and counter
-        File jobDirectory = new File(mkTestDir(), p.name);
-        jobDirectory.mkdir();
-        ThreadCount counter = new ThreadCount();
-
-        // Our set of jobs
-        WaitingJob[] jobs = new WaitingJob[p.nbJobs];
-
-        // --- Generate the dependencies
-
-        // Number of potential dependencies
-        int nbCouples = p.nbJobs * (p.nbJobs - 1) / 2;
-
-        // Maximum number of dependencies
-        final int maxDependencies = min(p.maxDeps, nbCouples);
-
-        // The list of dependencies
-        TreeSet<Link> dependencies = new TreeSet<>();
-
-        // Number of generated dependencies
-        int n = min(min((int) (long) (nbCouples * p.dependencyRatio * random.nextDouble()), Integer.MAX_VALUE), maxDependencies);
-        long[] values = new long[n];
-        // Draw n dependencies among nbCouples possible
-        RandomSampler.sample(n, nbCouples, n, 0, values, 0, random);
-
-        LOGGER.debug("Sampling %d values from %d", n, nbCouples);
-        for (long v : values) {
-            final Link link = new Link(v);
-            dependencies.add(link);
-            LOGGER.debug("LINK %d status %d [%d]", link.from, link.to, v);
-            assert link.from < p.nbJobs;
-            assert link.to < p.nbJobs;
-            assert link.from < link.to;
-        }
-
-        // --- Select the jobs that will fail
-        ResourceState[] states = new ResourceState[jobs.length];
-        for (int i = 0; i < states.length; i++)
-            states[i] = ResourceState.DONE;
-        n = (int) max(p.minFailures, random.nextDouble() * p.failureRatio * jobs.length);
-        long[] values2 = new long[n];
-        RandomSampler.sample(n, jobs.length - p.minFailureId, n, p.minFailureId, values2, 0, random);
-        for (int i = 0; i < n; i++)
-            states[((int) values2[i])] = ResourceState.ERROR;
-
-        // --- Generate token resource
-        final TokenResource token;
-        if (p.token > 0) {
-            final String path = format("scheduler_test/test_complex_dependency/%s", p.name);
-            token = new TokenResource(path, p.token);
-            token.save();
-        } else {
-            token = null;
-        }
-
-        final MutableLong totalTime = new MutableLong();
-
-        // --- Generate new jobs
-        for (int i = 0; i < jobs.length; i++) {
-            final int j = i;
-
-            int waitingTime = random.nextInt(p.maxExecutionTime - p.minExecutionTime) + p.minExecutionTime;
-            jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
-
-            totalTime.add(jobs[j].totalTime() + JOB_PROCESSING_TIME);
-
-            ArrayList<String> deps = new ArrayList<>();
-            for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
-                assert j == link.to;
-                jobs[j].addDependency(jobs[link.from].createDependency(null));
-                if (states[link.from].isBlocking())
-                    states[j] = ResourceState.ON_HOLD;
-                deps.add(jobs[link.from].toString());
-            }
-
-            if (token != null) {
-                jobs[j].addDependency(token.createDependency(null));
-            }
-
-            try {
-                jobs[j].save();
-            } catch (SQLException e) {
-                LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
-            }
-            LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
-        }
-
-
-        LOGGER.info("Waiting for jobs status finish (%d remaining) / total time = %dms",
-                counter.getCount(), totalTime.longValue());
-
-        waitToFinish(0, counter, jobs, totalTime.longValue(), 5);
-
-        waitBeforeCheck();
-
-        int count = counter.getCount();
-
-        LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
-
-        if (count > 0) {
-            LOGGER.error("Time out: %d jobs were not processed", count);
-        }
-
-        // --- Check
-        LOGGER.info("Checking job states");
-        int errors = 0;
-        for (int i = 0; i < jobs.length; i++)
-            errors += checkState(EnumSet.of(states[i]), jobs[i]);
-
-        LOGGER.info("Checking job dependencies");
-        for (Link link : dependencies) {
-            if (states[link.from] == ResourceState.DONE && jobs[link.to].getState() == ResourceState.DONE)
-                errors += checkSequence(false, true, jobs[link.from], jobs[link.to]);
-        }
-
-        Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
-    }
 
     private void waitToFinish(int limit, ThreadCount counter, WaitingJob[] jobs, long timeout, int tries) {
         LOGGER.info("Waiting for operations status finish [limit=%d, tries=%d]", limit, tries);
@@ -563,7 +413,7 @@ public class SchedulerTest extends XPMEnvironment {
         }
     }
 
-    static public class ComplexDependenciesParameters {
+    public class ComplexDependenciesParameters {
         String name;
 
         Long seed = null;
@@ -628,6 +478,132 @@ public class SchedulerTest extends XPMEnvironment {
             this.token = token;
             return this;
         }
+
+
+        public void run() throws ExperimaestroCannotOverwrite, IOException, SQLException {
+            Random random = new Random();
+            long seed = this.seed == null ? random.nextLong() : this.seed;
+            LOGGER.info("Seed is %d", seed);
+            random.setSeed(seed);
+
+            // Prepares directory and counter
+            File jobDirectory = new File(mkTestDir(), name);
+            jobDirectory.mkdir();
+            ThreadCount counter = new ThreadCount();
+
+            // Our set of jobs
+            WaitingJob[] jobs = new WaitingJob[nbJobs];
+
+            // --- Generate the dependencies
+
+            // Number of potential dependencies
+            int nbCouples = nbJobs * (nbJobs - 1) / 2;
+
+            // Maximum number of dependencies
+            final int maxDependencies = min(maxDeps, nbCouples);
+
+            // The list of dependencies
+            TreeSet<Link> dependencies = new TreeSet<>();
+
+            // Number of generated dependencies
+            int n = min(min((int) (long) (nbCouples * dependencyRatio * random.nextDouble()), Integer.MAX_VALUE), maxDependencies);
+            long[] values = new long[n];
+            // Draw n dependencies among nbCouples possible
+            RandomSampler.sample(n, nbCouples, n, 0, values, 0, random);
+
+            LOGGER.debug("Sampling %d values from %d", n, nbCouples);
+            for (long v : values) {
+                final Link link = new Link(v);
+                dependencies.add(link);
+                LOGGER.debug("LINK %d status %d [%d]", link.from, link.to, v);
+                assert link.from < nbJobs;
+                assert link.to < nbJobs;
+                assert link.from < link.to;
+            }
+
+            // --- Select the jobs that will fail
+            ResourceState[] states = new ResourceState[jobs.length];
+            for (int i = 0; i < states.length; i++)
+                states[i] = ResourceState.DONE;
+            n = (int) max(minFailures, random.nextDouble() * failureRatio * jobs.length);
+            long[] values2 = new long[n];
+            RandomSampler.sample(n, jobs.length - minFailureId, n, minFailureId, values2, 0, random);
+            for (int i = 0; i < n; i++)
+                states[((int) values2[i])] = ResourceState.ERROR;
+
+            // --- Generate token resource
+            final TokenResource token;
+            if (this.token > 0) {
+                final String path = format("scheduler_test/test_complex_dependency/%s", name);
+                token = new TokenResource(path, this.token);
+                token.save();
+            } else {
+                token = null;
+            }
+
+            final MutableLong totalTime = new MutableLong();
+
+            // --- Generate new jobs
+            for (int i = 0; i < jobs.length; i++) {
+                final int j = i;
+
+                int waitingTime = random.nextInt(maxExecutionTime - minExecutionTime) + minExecutionTime;
+                jobs[j] = new WaitingJob(counter, jobDirectory, "job" + j, new Action(waitingTime, states[j] == ResourceState.DONE ? 0 : 1, 0));
+
+                totalTime.add(jobs[j].totalTime() + JOB_PROCESSING_TIME);
+
+                ArrayList<String> deps = new ArrayList<>();
+                for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
+                    assert j == link.to;
+                    jobs[j].addDependency(jobs[link.from].createDependency(null));
+                    if (states[link.from].isBlocking())
+                        states[j] = ResourceState.ON_HOLD;
+                    deps.add(jobs[link.from].toString());
+                }
+
+                if (token != null) {
+                    jobs[j].addDependency(token.createDependency(null));
+                }
+
+                try {
+                    jobs[j].save();
+                } catch (SQLException e) {
+                    LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
+                }
+                LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
+            }
+
+
+            LOGGER.info("Waiting for jobs status finish (%d remaining) / total time = %dms",
+                    counter.getCount(), totalTime.longValue());
+
+            waitToFinish(0, counter, jobs, totalTime.longValue(), 5);
+
+            waitBeforeCheck();
+
+            int count = counter.getCount();
+
+            LOGGER.info("Finished waiting [%d]: %d jobs remaining", System.currentTimeMillis(), counter.getCount());
+
+            if (count > 0) {
+                LOGGER.error("Time out: %d jobs were not processed", count);
+            }
+
+            // --- Check
+            LOGGER.info("Checking job states");
+            int errors = 0;
+            for (int i = 0; i < jobs.length; i++)
+                errors += checkState(EnumSet.of(states[i]), jobs[i]);
+
+            LOGGER.info("Checking job dependencies");
+            for (Link link : dependencies) {
+                if (states[link.from] == ResourceState.DONE && jobs[link.to].getState() == ResourceState.DONE)
+                    errors += checkSequence(false, true, jobs[link.from], jobs[link.to]);
+            }
+
+            Assert.assertTrue(errors == 0, "Detected " + errors + " errors after running jobs");
+        }
+
     }
 
 
