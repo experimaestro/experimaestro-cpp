@@ -81,6 +81,15 @@ CREATE TABLE Jobs (
 --
 
 
+
+--- A lock
+
+CREATE TABLE Locks (
+  id IDENTITY,
+  type BIGINT NOT NULL,
+  data BLOB   NOT NULL
+);
+
 -- Dependencies between resources
 
 CREATE TABLE Dependencies (
@@ -98,17 +107,6 @@ CREATE TABLE Dependencies (
   FOREIGN KEY (lock) REFERENCES Locks
     ON DELETE SET NULL
 );
-
----
---- A lock
----
-
-CREATE TABLE Locks (
-  id IDENTITY,
-  type BIGINT NOT NULL,
-  data BLOB   NOT NULL
-);
-
 
 -- Ensures that shares are not removed if a lock references it
 CREATE TABLE LockShares (
