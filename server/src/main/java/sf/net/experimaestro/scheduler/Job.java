@@ -361,6 +361,10 @@ abstract public class Job extends Resource {
 
         if (diff != 0 || diffHold != 0) {
             jobData.setRequired(jobData.getNbUnsatisfied() - diff, jobData.getNbHolding() + diffHold);
+            // Store the result
+            assert jobData.getNbHolding() >= 0;
+            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("[job %s] Number of unsatisfied (%d) < number of holding (%d)",
+                    this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
 
             // Change the state in function of the number of unsatisfied requirements
             if (jobData.getNbUnsatisfied() == 0) {
@@ -372,10 +376,8 @@ abstract public class Job extends Resource {
                     setState(ResourceState.WAITING);
             }
 
-            // Store the result
-            assert jobData.getNbHolding() >= 0;
-            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("[job %s] Number of unsatisfied (%d) < number of holding (%d)",
-                    this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
+            // Save dependency
+            message.dependency.save(true);
         }
         LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, jobData.getNbUnsatisfied(), jobData.getNbHolding(),
                 diff, diffHold, message, message.newStatus);

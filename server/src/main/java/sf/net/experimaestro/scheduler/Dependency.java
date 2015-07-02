@@ -19,12 +19,12 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.exceptions.LockException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
@@ -37,8 +37,11 @@ import static java.lang.String.format;
 @Exposed
 abstract public class Dependency implements Serializable {
     final static private ConstructorRegistry<Dependency> REGISTRY = new ConstructorRegistry(
-            new Class[] { Long.TYPE, Long.TYPE, DependencyStatus.class }
+            new Class[]{Long.TYPE, Long.TYPE, DependencyStatus.class}
     ).add(ExclusiveDependency.class, ReadWriteDependency.class, TokenDependency.class);
+
+    public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=? and status=? WHERE fromId=? and toId=?";
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, fromId, toId) VALUES(?,?,?,?)";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -188,13 +191,27 @@ abstract public class Dependency implements Serializable {
             throw new AssertionError("Cannot replace dependency");
 
         doReplaceBy(dependency);
+        try {
+            save(true);
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not update in Db");
+        }
     }
 
     void doReplaceBy(Dependency dependency) {
         // Do nothing ATM
     }
 
-    public static Dependency create(long fromId, long toId, long type, DependencyStatus dependencyStatus)  {
+    public static Dependency create(long fromId, long toId, long type, DependencyStatus dependencyStatus) {
         return REGISTRY.newInstance(type, fromId, toId, dependencyStatus);
+    }
+
+    public void save(boolean update) throws SQLException {
+        Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
+                .setLong(1, DatabaseObjects.getTypeValue(this.getClass()))
+                .setInt(2, status.getId())
+                .setLong(3, from.id())
+                .setLong(4, to.id())
+                .execute();
     }
 }

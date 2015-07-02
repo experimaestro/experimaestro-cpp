@@ -27,6 +27,7 @@ import java.sql.SQLException;
  */
 public class ResourceReference {
     Long id;
+
     Resource resource;
 
     public ResourceReference(Resource resource) {
@@ -44,6 +45,11 @@ public class ResourceReference {
             return resource.toString();
         }
         return "R" + this.id;
+    }
+
+    public long id() {
+        if (id != null) return id;
+        return resource.getId();
     }
 
     Resource get() {

@@ -65,7 +65,6 @@ public class Resource implements Identifiable {
 
     public static final String SELECT_BEGIN = "SELECT id, type, path, status, connector FROM resources";
 
-    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, type, status) VALUES(?,?,?,?)";
 
     SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "connector", "data");
 
@@ -284,6 +283,7 @@ public class Resource implements Identifiable {
     }
 
     public static final String SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status FROM Dependencies WHERE fromId=?";
+
     public static final String SELECT_ACTIVE_DEPENDENCIES = SELECT_DEPENDENCIES + " AND status != " + DependencyStatus.UNACTIVE.getId();
 
     /**
@@ -632,15 +632,9 @@ public class Resource implements Identifiable {
         }
 
         // Save dependencies
-        try (PreparedStatement st = resources.connection.prepareStatement(INSERT_DEPENDENCY)) {
-            st.setLong(2, getId());
-            for (Dependency dependency : ingoingDependencies().values()) {
-                if (!update || !old.ingoingDependencies.containsKey(dependency.getFrom())) {
-                    st.setLong(1, dependency.getFrom().getId());
-                    st.setLong(3, DatabaseObjects.getTypeValue(dependency.getClass()));
-                    st.setShort(4, dependency.status.getId());
-                    st.execute();
-                }
+        for (Dependency dependency : ingoingDependencies().values()) {
+            if (!update || !old.ingoingDependencies.containsKey(dependency.getFrom())) {
+                dependency.save(false);
             }
         }
 
