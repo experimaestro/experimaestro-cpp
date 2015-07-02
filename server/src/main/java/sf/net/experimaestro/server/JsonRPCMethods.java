@@ -663,7 +663,7 @@ public class JsonRPCMethods extends HttpServlet {
     // Restart all the job (recursion)
     private int invalidate(Resource resource) throws Exception {
         int nbUpdated = 0;
-        try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies()) {
+        try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies(false)) {
 
             while (deps.hasNext()) {
                 Dependency dependency = deps.next();

@@ -59,7 +59,7 @@ abstract public class Job extends Resource {
 
     final static private Logger LOGGER = Logger.getLogger();
 
-    static transient private JobData jobData;
+    transient private JobData jobData;
 
     private Holder<XPMProcess> process;
 
@@ -337,10 +337,9 @@ abstract public class Job extends Resource {
                         depMessage.toString(), getState(), oldState, this);
 
                 break;
-
-            default:
-                super.notify(message);
         }
+
+        super.notify(message);
     }
 
     /**
@@ -351,12 +350,14 @@ abstract public class Job extends Resource {
      * @param message The message
      */
     synchronized private void dependencyChanged(DependencyChangedMessage message) throws SQLException {
-        jobData();
+        assert message.dependency.getTo() == this;
 
-        LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d", this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
+        jobData();
 
         int diff = (message.newStatus.isOK() ? 1 : 0) - (message.oldStatus.isOK() ? 1 : 0);
         int diffHold = (message.newStatus.isBlocking() ? 1 : 0) - (message.oldStatus.isBlocking() ? 1 : 0);
+        LOGGER.debug("[before] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d]",
+                this, jobData.getNbUnsatisfied(), jobData.getNbHolding(), diff, diffHold);
 
         if (diff != 0 || diffHold != 0) {
             jobData.setRequired(jobData.getNbUnsatisfied() - diff, jobData.getNbHolding() + diffHold);
@@ -373,11 +374,11 @@ abstract public class Job extends Resource {
 
             // Store the result
             assert jobData.getNbHolding() >= 0;
-            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("Number of unsatisfied (%d) < number of holding (%d)",
-                    jobData.getNbUnsatisfied(), jobData.getNbHolding());
+            assert jobData.getNbUnsatisfied() >= jobData.getNbHolding() : String.format("[job %s] Number of unsatisfied (%d) < number of holding (%d)",
+                    this, jobData.getNbUnsatisfied(), jobData.getNbHolding());
         }
         LOGGER.debug("[after] Locks for job %s: unsatisfied=%d, holding=%d [%d/%d] in %s -> %s", this, jobData.getNbUnsatisfied(), jobData.getNbHolding(),
-                diff, diffHold, message.fromId, message.newStatus);
+                diff, diffHold, message, message.newStatus);
     }
 
     /**
@@ -546,6 +547,7 @@ abstract public class Job extends Resource {
                 break;
 
             case WAIT:
+                jobData();
                 jobData.setRequired(jobData.getNbUnsatisfied() + 1, jobData.getNbHolding());
                 break;
         }
@@ -602,7 +604,7 @@ abstract public class Job extends Resource {
             changes |= setState(state);
         }
 
-        if (changes) {
+        if (changes && inDatabase()) {
             jobData.save(true, getId());
         }
         return changes;
@@ -677,7 +679,7 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
         // Update status
         boolean update = this.inDatabase() || old != null;
 
@@ -686,6 +688,8 @@ abstract public class Job extends Resource {
 
         // Execute
         jobData().save(update, getId());
+
+        LOGGER.debug("Resource %s saved/updated [%s]", this, jobData);
     }
 
     public XPMProcess getProcess() {

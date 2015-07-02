@@ -268,10 +268,15 @@ final public class Scheduler {
             }
         }
 
+        // Loop over resources for which we need to notify (Scheduler stopped before or within the process)
+        try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
+                + " WHERE oldStatus != status", null)) {
+            changed.forEach(r -> addChangedResource(r));
+        }
 
 
 
-        // Start the thread that start the jobs
+            // Start the thread that start the jobs
         LOGGER.info("Starting the job runner thread");
         readyJobSemaphore.setValue(true);
         runner = new JobRunner("JobRunner");
@@ -719,8 +724,12 @@ final public class Scheduler {
      * The notifier thread for resources that changed of state
      */
     private class Notifier extends Thread {
-        public Notifier() {
+
+        private final XPMStatement updateStatus;
+
+        public Notifier() throws SQLException {
             super("Notifier");
+            updateStatus = statement("UPDATE Resources SET oldStatus = ? WHERE id = ?");
         }
 
         @Override
@@ -759,26 +768,28 @@ final public class Scheduler {
                     }
 
 
-                    try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies()) {
+                    try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies(true)) {
                         LOGGER.info("Notifying dependencies from %s", fromResource);
 
                         while (dependencies.hasNext()) {
                             Dependency dep = dependencies.next();
                             final Resource to = dep.getTo();
-                            if (dep.status == DependencyStatus.UNACTIVE) {
-                                LOGGER.debug("We won't notify [%s] status [%s] since the dependency is not active", fromResource, to);
-
-                            } else
-                                try {
-                                    // when the dependency status is null, the dependency is not active anymore
-                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, to, dep.status);
-                                    // Preserves the previous state
-                                    to.updatedDependency(dep);
-                                } catch (RuntimeException e) {
-                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
-                                }
+                            assert dep.status != DependencyStatus.UNACTIVE;
+                            try {
+                                // when the dependency status is null, the dependency is not active anymore
+                                LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, to, dep.status);
+                                // Preserves the previous state
+                                to.updatedDependency(dep);
+                            } catch (RuntimeException e) {
+                                // FIXME: Should schedule a full update of resource
+                                LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
+                            }
                         }
                     }
+
+                    // OK - update db
+                    updateStatus.setInt(1, fromResource.getState().value());
+                    updateStatus.setLong(2, fromResource.getId());
                 } catch (CloseException e) {
                     LOGGER.error(e, "Caught exception while closing iterator");
                 } catch (Exception e) {

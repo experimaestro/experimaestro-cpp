@@ -67,7 +67,7 @@ public class Resource implements Identifiable {
 
     public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(fromId, toId, type, status) VALUES(?,?,?,?)";
 
-    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "connector", "data");
+    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "connector", "data");
 
 
     /**
@@ -283,12 +283,14 @@ public class Resource implements Identifiable {
         return ingoingDependencies().values();
     }
 
+    public static final String SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status FROM Dependencies WHERE fromId=?";
+    public static final String SELECT_ACTIVE_DEPENDENCIES = SELECT_DEPENDENCIES + " AND status != " + DependencyStatus.UNACTIVE.getId();
+
     /**
      * The set of dependencies that are dependent on this resource
      */
-    public CloseableIterator<Dependency> getOutgoingDependencies() {
+    public CloseableIterator<Dependency> getOutgoingDependencies(boolean restrictToActive) {
         return new CloseableIterator<Dependency>() {
-
             public ResultSet resultSet;
 
             public PreparedStatement st;
@@ -309,7 +311,8 @@ public class Resource implements Identifiable {
             protected Dependency computeNext() {
                 try {
                     if (st == null) {
-                        st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE fromId=?");
+                        final String sql = restrictToActive ? SELECT_DEPENDENCIES : SELECT_ACTIVE_DEPENDENCIES;
+                        st = Scheduler.prepareStatement(sql);
                         st.setLong(1, getId());
                         st.execute();
                         resultSet = st.getResultSet();
@@ -519,7 +522,7 @@ public class Resource implements Identifiable {
             throw new XPMRuntimeException("Cannot delete the running task [%s]", this);
         }
 
-        try (CloseableIterator<Dependency> dependencies = getOutgoingDependencies()) {
+        try (CloseableIterator<Dependency> dependencies = getOutgoingDependencies(false)) {
             while (dependencies.hasNext()) {
                 if (!recursive) {
                     throw new XPMRuntimeException("Cannot delete the resource %s: it has dependencies [%s]", this,
@@ -572,7 +575,9 @@ public class Resource implements Identifiable {
         save(Scheduler.get().resources(), null);
     }
 
-    protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+        LOGGER.debug("Saving resource %s [old=%s]", this, old);
+
         boolean update = old != null;
         if (update) {
             setId(old.getId());
@@ -599,7 +604,9 @@ public class Resource implements Identifiable {
         }
 
         try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
-            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(), connector.getId(), jsonInputStream);
+            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(),
+                    update ? old.getState().value() : getState().value(),
+                    connector.getId(), jsonInputStream);
         } catch (IOException e) {
             throw new SQLException(e);
         }
@@ -639,6 +646,9 @@ public class Resource implements Identifiable {
 
 
         LOGGER.debug("Resource %s saved/updated", this);
+        if (update && old.getState() != getState()) {
+            Scheduler.get().addChangedResource(this);
+        }
         Scheduler.get().notify(new SimpleMessage(!update ? Message.Type.RESOURCE_ADDED : Message.Type.STATE_CHANGED, this));
     }
 
@@ -652,7 +662,7 @@ public class Resource implements Identifiable {
         return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
 
-    static protected Resource create(DatabaseObjects<Resource> db, ResultSet result) {
+    static protected Resource create(DatabaseObjects<Resource> ignored, ResultSet result) {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);
@@ -791,7 +801,7 @@ public class Resource implements Identifiable {
             }
 
             // Queue this change in dependency state
-            notify(new DependencyChangedMessage(dep, beforeState, dep.status));
+            depResource.notify(new DependencyChangedMessage(dep, beforeState, dep.status));
 
         } else {
             LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);

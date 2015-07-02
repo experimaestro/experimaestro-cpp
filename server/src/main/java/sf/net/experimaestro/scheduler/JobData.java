@@ -18,9 +18,9 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.db.SQLInsert;
+import sf.net.experimaestro.utils.log.Logger;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,6 +33,8 @@ import static java.lang.String.format;
  * Data associated to a job
  */
 public class JobData {
+    final static public Logger LOGGER = Logger.getLogger();
+
     static final SQLInsert SQL_INSERT = new SQLInsert("Jobs", false, "id", "priority", "submitted", "start", "end", "unsatisfied", "holding", "progress");
 
     private final Job job;
@@ -68,14 +70,22 @@ public class JobData {
                 startTimestamp = rs.getTimestamp(3).getTime();
                 endTimestamp = rs.getTimestamp(4).getTime();
 
-                progress = rs.getDouble(7);
-
                 nbUnsatisfied = rs.getInt(5);
                 nbHolding = rs.getInt(6);
+
+                progress = rs.getDouble(7);
+
+                LOGGER.debug("Retrieved job [%s] data: %s", job, this);
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e, "Could not load data");
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return format("submitted=%d, start=%d, end=%d, unsatisfied=%d, holding=%d, progress=%.3f",
+                 timestamp, startTimestamp, endTimestamp, nbUnsatisfied, nbHolding, progress);
     }
 
     public void save(boolean update, long id) throws SQLException {
@@ -131,6 +141,7 @@ public class JobData {
                 Scheduler.statement("UPDATE Jobs SET unsatisfied=?, holding=? WHERE id=?")
                         .setInt(1, nbUnsatisfied).setInt(2, nbHolding).setLong(3, job.getId())
                         .execute();
+                LOGGER.debug("Updated job %s: unsatisfied=%d, holding=%d", job, nbUnsatisfied, nbHolding);
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e, "Could not set progress in database");
             }

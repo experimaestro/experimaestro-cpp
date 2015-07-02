@@ -23,26 +23,19 @@ package sf.net.experimaestro.scheduler;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 final public class DependencyChangedMessage extends Message {
-    long fromId;
+    Dependency dependency;
     final DependencyStatus oldStatus;
     DependencyStatus newStatus;
 
     public DependencyChangedMessage(Dependency dependency, DependencyStatus oldStatus, DependencyStatus newStatus) {
         super(Type.DEPENDENCY_CHANGED);
-        this.fromId = dependency.getFrom().getId();
+        this.dependency = dependency;
         this.oldStatus = oldStatus;
         this.newStatus = newStatus;
     }
 
     @Override
     public String toString() {
-        return String.format("Dependency changed [%d / %s]", fromId, newStatus);
-    }
-
-    public void merge(DependencyChangedMessage newMessage) {
-        assert fromId == newMessage.fromId;
-        assert oldStatus == newMessage.oldStatus;
-
-        newStatus = newMessage.newStatus;
+        return String.format("Dependency changed [%s / %s -> %s]", dependency, oldStatus, newStatus);
     }
 }
