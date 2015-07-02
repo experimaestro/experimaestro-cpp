@@ -264,7 +264,7 @@ abstract public class Job extends Resource {
                 // Store the current state
                 LOGGER.info("Task [%s] is running (start=%d) with PID [%s]", this, jobData.getStartTimestamp(), getProcess());
                 for (Dependency dep : getDependencies()) {
-                    LOGGER.info("[STARTED JOB] Dependency: %s", dep);
+                    LOGGER.debug("[STARTED JOB] Dependency: %s", dep);
                 }
 
                 // Flush to database
@@ -566,6 +566,7 @@ abstract public class Job extends Resource {
         // Check the done file
         final Path path = getPath();
         final Path doneFile = DONE_EXTENSION.transform(path);
+
         if (Files.exists(doneFile)) {
             if (getState() != ResourceState.DONE) {
                 changes = true;
@@ -578,6 +579,13 @@ abstract public class Job extends Resource {
             if (getState() == ResourceState.DONE) {
                 changes = true;
                 this.setState(ResourceState.WAITING);
+            } else if (getState() == ResourceState.RUNNING) {
+                final XPMProcess process = getProcess();
+                if (process != null) {
+                    if (!process.isRunning(true)) {
+                        Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+                    }
+                }
             }
         }
 

@@ -416,4 +416,8 @@ public abstract class XPMProcess {
         Scheduler.statement("DELETE FROM Processes WHERE resource=?").setLong(1, job.getId()).execute();
     }
 
+    public long exitTime() {
+        // FIXME: implement this
+        return System.currentTimeMillis();
+    }
 }
