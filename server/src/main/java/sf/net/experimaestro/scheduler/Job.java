@@ -165,10 +165,17 @@ abstract public class Job extends Resource {
         return getProcess();
     }
 
-    private void setProcess(XPMProcess process) {
-        if (getProcess() != null) {
+    private void setProcess(XPMProcess process) throws SQLException {
+        if (getProcess() != null && process != null) {
             throw new AssertionError("Should not set a process when we already have one");
         }
+
+        if (process != null) {
+            process.save();
+        } else {
+            this.process.get().delete();
+        }
+        this.process.set(process);
     }
 
     public void generateFiles() throws Throwable {

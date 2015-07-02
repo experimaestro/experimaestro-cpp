@@ -76,7 +76,7 @@ public abstract class XPMProcess {
     /**
      * The job to notify when finished with this
      */
-    protected Job job;
+    transient protected Job job;
 
     /**
      * Our process ID
@@ -410,4 +410,10 @@ public abstract class XPMProcess {
             return process;
         }
     }
+
+
+    public void delete() throws SQLException {
+        Scheduler.statement("DELETE FROM Processes WHERE resource=?").setLong(1, job.getId()).execute();
+    }
+
 }
