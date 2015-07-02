@@ -22,7 +22,8 @@ var logger = xpm.logger("xpm.tests");
 
 function check_array(results, expected) {
 	if (results.length != expected.length) {
-		throw format("The arrays differ in length (got %s, expected %s)", results.length, expected.length);
+		throw format("The arrays differ in length (got %s, expected %s) for arrays (actual=%s, expected=%s)",
+            results.length, expected.length, results, expected);
     }
 
     // Sort the results
