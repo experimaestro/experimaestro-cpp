@@ -25,6 +25,7 @@ import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.CloseableIterable;
@@ -282,10 +283,6 @@ public class Resource implements Identifiable {
         return ingoingDependencies().values();
     }
 
-    public static final String SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status FROM Dependencies WHERE fromId=?";
-
-    public static final String SELECT_ACTIVE_DEPENDENCIES = SELECT_DEPENDENCIES + " AND status != " + DependencyStatus.UNACTIVE.getId();
-
     /**
      * The set of dependencies that are dependent on this resource
      */
@@ -311,7 +308,8 @@ public class Resource implements Identifiable {
             protected Dependency computeNext() {
                 try {
                     if (st == null) {
-                        final String sql = restrictToActive ? SELECT_DEPENDENCIES : SELECT_ACTIVE_DEPENDENCIES;
+                        final String sql = restrictToActive ? Dependency.SELECT_OUTGOING_DEPENDENCIES
+                                : Dependency.SELECT_OUTGOING_ACTIVE_DEPENDENCIES;
                         st = Scheduler.prepareStatement(sql);
                         st.setLong(1, getId());
                         st.execute();
@@ -322,10 +320,7 @@ public class Resource implements Identifiable {
                         return endOfData();
                     }
 
-                    final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
-                    final long type = resultSet.getLong(3);
-                    final long toId = resultSet.getLong(2);
-                    return Dependency.create(Resource.this.getId(), toId, type, dependencyStatus);
+                    return Dependency.create(resultSet);
                 } catch (SQLException e) {
                     throw new XPMRuntimeException("Could not retrieve ingoing dependencies [%s] from DB", Resource.this);
                 }
@@ -754,14 +749,12 @@ public class Resource implements Identifiable {
         if (ingoingDependencies == null) {
             HashMap<Resource, Dependency> ingoingDependencies = new HashMap<>();
 
-            try (PreparedStatement st = Scheduler.prepareStatement("SELECT fromId, toId, type, status FROM Dependencies WHERE toId=?")) {
+            try (PreparedStatement st = Scheduler.prepareStatement(Dependency.SELECT_INGOING_DEPENDENCIES)) {
                 st.setLong(1, getId());
                 st.execute();
-                try (final ResultSet resultSet = st.getResultSet()) {
-                    while (resultSet.next()) {
-                        final DependencyStatus dependencyStatus = DependencyStatus.fromId(resultSet.getShort(4));
-                        final long type = resultSet.getLong(3);
-                        final Dependency dependency = Dependency.create(resultSet.getLong(1), this.getId(), type, dependencyStatus);
+                try (final ResultSet rs = st.getResultSet()) {
+                    while (rs.next()) {
+                        Dependency dependency = Dependency.create(rs);
                         ingoingDependencies.put(dependency.getFrom(), dependency);
                     }
                 }

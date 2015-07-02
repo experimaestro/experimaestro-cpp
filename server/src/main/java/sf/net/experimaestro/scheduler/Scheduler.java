@@ -158,7 +158,7 @@ final public class Scheduler {
 
     private DatabaseObjects<Connector> connectors;
 
-    final static int DBVERSION = 1;
+    final static int DBVERSION = 2;
 
     private XPMConnector xpmConnector;
 
@@ -205,7 +205,8 @@ final public class Scheduler {
                 }
             } else {
                 while (version < DBVERSION) {
-                    try (final InputStream stream = Scheduler.class.getResourceAsStream(format("/db/update-%4d.sql", version));
+                    String resourcename = format("/db/update-%04d.sql", version);
+                    try (final InputStream stream = Scheduler.class.getResourceAsStream(resourcename);
                          final Reader reader = new InputStreamReader(stream)) {
                         scriptRunner.runScript(reader);
                         version++;
@@ -590,6 +591,9 @@ final public class Scheduler {
                             try {
                                 Job job = (Job) resource;
                                 synchronized (job) {
+                                    if (!job.checkProcess()) {
+                                        continue;
+                                    }
                                     this.setName(name + "/" + job);
 
                                     LOGGER.debug("Looking at %s", job);

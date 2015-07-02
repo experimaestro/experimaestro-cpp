@@ -37,8 +37,8 @@ import static java.lang.String.format;
 public class TokenDependency extends Dependency {
     final static private Logger LOGGER = Logger.getLogger();
 
-    protected TokenDependency(long fromId, long toId, DependencyStatus status) {
-        super(fromId, toId, status);
+    protected TokenDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
+        super(fromId, toId, lock, status);
     }
 
     public TokenDependency(Resource from) {

@@ -34,8 +34,8 @@ import sf.net.experimaestro.utils.log.Logger;
 public class ReadWriteDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 
-    public ReadWriteDependency(long fromId, long toId, DependencyStatus status) {
-        super(fromId, toId, status);
+    public ReadWriteDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
+        super(fromId, toId, lock, status);
     }
 
     public ReadWriteDependency(Resource from) {

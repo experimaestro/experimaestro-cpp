@@ -23,6 +23,7 @@ import sf.net.experimaestro.utils.ExceptionalRunnable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 
 /**
  * Utility class to execute statements
@@ -41,6 +42,16 @@ public class XPMStatement {
 
     public XPMStatement setLong(int index, long id) throws SQLException {
         return protect(() -> st.setLong(index, id));
+    }
+
+    public XPMStatement setLong(int index, Long value) throws SQLException {
+        return protect(() -> {
+            if (value == null) {
+                st.setLong(index, value);
+            } else {
+                st.setNull(index, Types.BIGINT);
+            }
+        });
     }
 
     private XPMStatement protect(ExceptionalRunnable r) throws SQLException {

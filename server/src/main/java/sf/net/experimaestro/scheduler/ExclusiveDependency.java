@@ -36,8 +36,8 @@ import java.nio.file.Path;
 public class ExclusiveDependency extends Dependency {
     static final private Logger LOGGER = Logger.getLogger();
 
-    public ExclusiveDependency(long fromId, long toId, DependencyStatus status) {
-        super(fromId, toId, status);
+    public ExclusiveDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
+        super(fromId, toId, lock, status);
     }
 
     public ExclusiveDependency(Resource from, Resource to) {

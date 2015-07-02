@@ -4,14 +4,14 @@
 
 
 CREATE TABLE Connectors (
-  id       IDENTITY,
-  type     BIGINT        NOT NULL,
-  uri      VARCHAR(4096) NOT NULL,
-  data     BLOB          NOT NULL
+  id IDENTITY,
+  type BIGINT        NOT NULL,
+  uri  VARCHAR(4096) NOT NULL,
+  data BLOB          NOT NULL
 );
 
 CREATE TABLE NetworkShares (
-  id       IDENTITY,
+  id IDENTITY,
   hostname VARCHAR(256) NOT NULL,
   name     VARCHAR(256) NOT NULL
 );
@@ -37,9 +37,9 @@ CREATE TABLE Resources (
   id IDENTITY,
   path      VARCHAR(4096),
   connector BIGINT,
-  status    INT NOT NULL,
+  status    INT           NOT NULL,
   -- Used to check if a notification has been done after XPM has been stopped
-  oldStatus INT NOT NULL,
+  oldStatus INT           NOT NULL,
   type      BIGINT,
   priority  INT DEFAULT 0 NOT NULL,
   data      BLOB          NOT NULL,
@@ -88,12 +88,15 @@ CREATE TABLE Dependencies (
   toId   BIGINT   NOT NULL,
   type   BIGINT   NOT NULL,
   status SMALLINT NOT NULL,
+  lock   BIGINT,
 
   -- Foreign key for the source (restricting deletion)
   FOREIGN KEY (fromId) REFERENCES Resources
     ON DELETE RESTRICT,
   FOREIGN KEY (toId) REFERENCES Resources
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  FOREIGN KEY (lock) REFERENCES Locks
+    ON DELETE SET NULL
 );
 
 ---
@@ -109,13 +112,15 @@ CREATE TABLE Locks (
 
 -- Ensures that shares are not removed if a lock references it
 CREATE TABLE LockShares (
-  lock    BIGINT NOT NULL,
-  share   BIGINT NOT NULL,
-  path    VARCHAR(4096) NOT NULL,
+  lock  BIGINT        NOT NULL,
+  share BIGINT        NOT NULL,
+  path  VARCHAR(4096) NOT NULL,
 
   -- do not delete a share if it is referenced
-  FOREIGN KEY (lock) REFERENCES Locks ON DELETE CASCADE,
-  FOREIGN KEY (share) REFERENCES NetworkShares ON DELETE RESTRICT
+  FOREIGN KEY (lock) REFERENCES Locks
+    ON DELETE CASCADE,
+  FOREIGN KEY (share) REFERENCES NetworkShares
+    ON DELETE RESTRICT
 );
 
 
@@ -149,7 +154,6 @@ CREATE TABLE ProcessLocks (
   CONSTRAINT ProcessLocks_lock FOREIGN KEY (lock) REFERENCES Locks
     ON DELETE CASCADE
 );
-
 
 
 --

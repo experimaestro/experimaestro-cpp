@@ -25,6 +25,7 @@ import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Serializable;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
@@ -37,11 +38,20 @@ import static java.lang.String.format;
 @Exposed
 abstract public class Dependency implements Serializable {
     final static private ConstructorRegistry<Dependency> REGISTRY = new ConstructorRegistry(
-            new Class[]{Long.TYPE, Long.TYPE, DependencyStatus.class}
+            new Class[]{Long.TYPE, Long.TYPE, Lock.class, DependencyStatus.class}
     ).add(ExclusiveDependency.class, ReadWriteDependency.class, TokenDependency.class);
 
-    public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=? and status=? WHERE fromId=? and toId=?";
-    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, fromId, toId) VALUES(?,?,?,?)";
+    public static final String _SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status, lock FROM Dependencies";
+
+    public static final String SELECT_OUTGOING_DEPENDENCIES = _SELECT_DEPENDENCIES + " WHERE fromId=?";
+
+    public static final String SELECT_INGOING_DEPENDENCIES = _SELECT_DEPENDENCIES + " WHERE toId=?";
+
+    public static final String SELECT_OUTGOING_ACTIVE_DEPENDENCIES = SELECT_OUTGOING_DEPENDENCIES + " AND status != " + DependencyStatus.UNACTIVE.getId();
+
+    public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=?, status=?, lock=? WHERE fromId=? and toId=?";
+
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, fromId, toId, lock) VALUES(?,?,?,?, ?)";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -62,7 +72,7 @@ abstract public class Dependency implements Serializable {
     protected Dependency() {
     }
 
-    protected Dependency(long fromId, long toId, DependencyStatus status) {
+    protected Dependency(long fromId, long toId, Lock lock, DependencyStatus status) {
         this.from = new ResourceReference(fromId);
         this.to = new ResourceReference(toId);
         this.status = status;
@@ -178,9 +188,19 @@ abstract public class Dependency implements Serializable {
 
     final public void unlock() throws LockException, SQLException {
         LOGGER.debug("Unlocking dependency %s", this);
-        assert lock != null : format("Lock of dependency %s is null", this);
-        lock.close();
-        lock = null;
+        if (lock != null) {
+            lock.close();
+            lock = null;
+        } else {
+            LOGGER.warn("Lock of dependency %s is null", this);
+        }
+
+        // Update in DB
+        Scheduler.statement("UPDATE Dependencies SET status=? WHERE fromId=? and toId=?")
+                .setInt(1, status.ordinal())
+                .setLong(2, from.id())
+                .setLong(3, to.id())
+                .execute();
         status = DependencyStatus.UNACTIVE;
     }
 
@@ -202,16 +222,29 @@ abstract public class Dependency implements Serializable {
         // Do nothing ATM
     }
 
-    public static Dependency create(long fromId, long toId, long type, DependencyStatus dependencyStatus) {
-        return REGISTRY.newInstance(type, fromId, toId, dependencyStatus);
-    }
-
     public void save(boolean update) throws SQLException {
         Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
                 .setLong(1, DatabaseObjects.getTypeValue(this.getClass()))
                 .setInt(2, status.getId())
                 .setLong(3, from.id())
-                .setLong(4, to.id())
+                .setLong(4, lock == null ? null : lock.getId())
+                .setLong(5, to.id())
                 .execute();
+    }
+
+    /**
+     * Create from a result. Must have been queried with {@linkplain #SELECT_INGOING_DEPENDENCIES},
+     * {@linkplain #SELECT_OUTGOING_DEPENDENCIES}, or {@linkplain #SELECT_OUTGOING_ACTIVE_DEPENDENCIES}.
+     *
+     * @param rs
+     * @return
+     */
+    public static Dependency create(ResultSet rs) throws SQLException {
+        final long type = rs.getLong(3);
+        final DependencyStatus dependencyStatus = DependencyStatus.fromId(rs.getShort(4));
+        Long lockId = rs.getLong(5);
+        Lock lock = rs.wasNull() ? null : Lock.findById(lockId);
+        long fromId = rs.getLong(1);
+        return REGISTRY.newInstance(type, fromId, rs.getLong(2), lock, dependencyStatus);
     }
 }

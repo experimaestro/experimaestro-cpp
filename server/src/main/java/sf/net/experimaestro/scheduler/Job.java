@@ -182,6 +182,28 @@ abstract public class Job extends Resource {
         startJob(Lists.newArrayList(), true);
     }
 
+    /**
+     * Checks that no process is currently running, and update the job state accordingly.
+     *
+     * This is mostly used when the database was corrupted.
+     *
+     * @return true if a no process is running, false
+     * @throws Exception If something goes wrong while checking
+     */
+    public boolean checkProcess() throws Exception {
+        final XPMProcess process = getProcess();
+        if (process != null) {
+            if (process.isRunning(true)) {
+                setState(ResourceState.RUNNING);
+            } else {
+                Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+            }
+
+            return false;
+        }
+
+        return true;
+    }
 
     /*
       * (non-Javadoc)
@@ -256,7 +278,7 @@ abstract public class Job extends Resource {
                 // Commits all the changes so far
 
                 // Now, starts the job
-                process.set(startJob(locks, false));
+                startJob(locks, false);
                 getProcess().save();
                 getProcess().adopt(locks);
                 locks = null;
@@ -407,6 +429,7 @@ abstract public class Job extends Resource {
                     LOGGER.error(e, "Error while unlocking dependency %s", dependency);
                 }
             }
+
         } catch (RuntimeException e) {
             LOGGER.error(e, "Error while unactivating dependencies");
         }
