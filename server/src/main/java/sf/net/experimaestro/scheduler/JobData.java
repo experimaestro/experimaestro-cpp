@@ -41,8 +41,6 @@ public class JobData {
 
     private long endTimestamp;
 
-    private XPMProcess process;
-
     private int nbUnsatisfied = 0;
 
     private int nbHolding = 0;
@@ -94,7 +92,7 @@ public class JobData {
 
     public void setStartTimestamp(long startTimestamp) {
         if (startTimestamp != this.startTimestamp) {
-            updateValue(new Timestamp(startTimestamp), "startTimestamp");
+            updateValue(new Timestamp(startTimestamp), "start");
         }
         this.startTimestamp = startTimestamp;
     }
@@ -108,7 +106,7 @@ public class JobData {
 
     public void setEndTimestamp(long endTimestamp) {
         if (endTimestamp != this.endTimestamp) {
-            updateValue(endTimestamp, "endTimestamp");
+            updateValue(new Timestamp(endTimestamp), "end");
         }
         this.endTimestamp = endTimestamp;
     }
@@ -163,7 +161,7 @@ public class JobData {
     protected void updateValue(Object object, String sqlField) {
         if (job.inDatabase()) try {
             Scheduler.statement(format("UPDATE Jobs SET %s=? WHERE id=?", sqlField))
-                    .setObject(1, object).execute();
+                    .setObject(1, object).setLong(2, job.getId()).execute();
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not set progress in database");
         }
