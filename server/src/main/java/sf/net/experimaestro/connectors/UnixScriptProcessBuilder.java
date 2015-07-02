@@ -178,7 +178,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             // Remove traps
             writer.format(" trap - 0%n");
             // Kills remaining processes
-            writer.println(" test ! -z \"$PID\" && kill -9 $PID");
+            writer.println(" test ! -z \"$PID\" && pkill -KILL -P $PID");
 
             // Remove locks
             for (String file : lockFiles) {
