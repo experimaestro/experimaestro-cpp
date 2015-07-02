@@ -388,7 +388,7 @@ public class Resource implements Identifiable {
         // Update in DB
         if (inDatabase()) {
             try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET status=? WHERE id=?")) {
-                st.setLong(1, state.value());
+                st.setInt(1, state.value());
                 st.setLong(2, getId());
                 st.execute();
                 final int count = st.getUpdateCount();
@@ -657,7 +657,7 @@ public class Resource implements Identifiable {
             long id = result.getLong(1);
             long type = result.getLong(2);
             String path = result.getString(3);
-            long status = result.getLong(4);
+            int status = result.getInt(4);
             Connector connector = Connector.findById(result.getLong(5));
 
             final Constructor<? extends Resource> constructor = REGISTRY.get(type);

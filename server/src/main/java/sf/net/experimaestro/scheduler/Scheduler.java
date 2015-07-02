@@ -253,7 +253,7 @@ final public class Scheduler {
         messengerThread = new MessengerThread();
         messengerThread.start();
         runningThreadsCounter.add();
-        Scheduler.prepareStatement("UPDATE Resources SET status=? WHERE id=?", ResourceState.RUNNING.value(), 115).execute();
+
         // Loop over resources in state RUNNING
         try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
             for (Resource resource : resources) {
@@ -267,6 +267,9 @@ final public class Scheduler {
                 job.updateStatus();
             }
         }
+
+
+
 
         // Start the thread that start the jobs
         LOGGER.info("Starting the job runner thread");
