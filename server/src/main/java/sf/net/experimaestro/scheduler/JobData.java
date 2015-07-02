@@ -61,7 +61,7 @@ public class JobData {
                 st.execute();
                 final ResultSet rs = st.getResultSet();
                 if (!rs.next()) {
-                    throw new XPMRuntimeException("No Job data for %s", this);
+                    throw new XPMRuntimeException("No Job data for %s", job);
                 }
 
                 priority = rs.getInt(1);

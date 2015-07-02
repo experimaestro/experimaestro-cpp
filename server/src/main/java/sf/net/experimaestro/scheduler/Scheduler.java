@@ -275,8 +275,7 @@ final public class Scheduler {
         }
 
 
-
-            // Start the thread that start the jobs
+        // Start the thread that start the jobs
         LOGGER.info("Starting the job runner thread");
         readyJobSemaphore.setValue(true);
         runner = new JobRunner("JobRunner");
@@ -590,49 +589,50 @@ final public class Scheduler {
                         for (Resource resource : resources) {
                             try {
                                 Job job = (Job) resource;
-                                this.setName(name + "/" + job);
+                                synchronized (job) {
+                                    this.setName(name + "/" + job);
 
-                                LOGGER.debug("Looking at %s", job);
+                                    LOGGER.debug("Looking at %s", job);
 
-                                if (job.getState() != ResourceState.READY) {
-                                    LOGGER.debug("Job %s state is not in state READY anymore but [%s]", job, job.getState());
-                                    continue;
-                                }
+                                    if (job.getState() != ResourceState.READY) {
+                                        LOGGER.debug("Job %s state is not in state READY anymore but [%s]", job, job.getState());
+                                        continue;
+                                    }
 
-                                // Checks the tokens
-                                boolean tokensAvailable = true;
-                                for (Dependency dependency : job.getDependencies()) {
-                                    if (dependency instanceof TokenDependency) {
-                                        TokenDependency tokenDependency = (TokenDependency) dependency;
-                                        if (!tokenDependency.canLock()) {
-                                            LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
-                                            tokensAvailable = false;
-                                            break;
+                                    // Checks the tokens
+                                    boolean tokensAvailable = true;
+                                    for (Dependency dependency : job.getDependencies()) {
+                                        if (dependency instanceof TokenDependency) {
+                                            TokenDependency tokenDependency = (TokenDependency) dependency;
+                                            if (!tokenDependency.canLock()) {
+                                                LOGGER.debug("Token dependency [%s] prevents running job", tokenDependency);
+                                                tokensAvailable = false;
+                                                break;
+                                            }
+                                            LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
                                         }
-                                        LOGGER.debug("OK to lock token dependency: %s", tokenDependency);
+                                    }
+                                    if (!tokensAvailable) {
+                                        continue;
+                                    }
+
+                                    try {
+                                        job.run();
+
+                                        LOGGER.info("Job %s has started", job);
+                                    } catch (LockException e) {
+                                        // We could not lock the resources: update the job state
+                                        LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
+                                        job.setState(ResourceState.WAITING);
+                                        job.updateStatus();
+                                        LOGGER.info("Finished launching %s", job);
+                                    } catch (Throwable t) {
+                                        LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
+                                        job.setState(ResourceState.ERROR);
+                                    } finally {
+                                        this.setName(name);
                                     }
                                 }
-                                if (!tokensAvailable) {
-                                    continue;
-                                }
-
-                                try {
-                                    job.run();
-
-                                    LOGGER.info("Job %s has started", job);
-                                } catch (LockException e) {
-                                    // We could not lock the resources: update the job state
-                                    LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                    job.setState(ResourceState.WAITING);
-                                    job.updateStatus();
-                                    LOGGER.info("Finished launching %s", job);
-                                } catch (Throwable t) {
-                                    LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
-                                    job.setState(ResourceState.ERROR);
-                                } finally {
-                                    this.setName(name);
-                                }
-
                             } catch (Exception e) {
                                 // FIXME: should do something smarter
                                 LOGGER.error(e, "Caught an exception");
