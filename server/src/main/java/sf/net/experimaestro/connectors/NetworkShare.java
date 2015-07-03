@@ -24,6 +24,7 @@ import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -57,12 +58,32 @@ final public class NetworkShare implements Identifiable {
     }
 
     public NetworkShare(String host, String share) {
-        this.host = host;
-        this.name = share;
+        this(null, host, share);
         this.access = new ArrayList<>();
     }
 
+    public NetworkShare(Long id, String host, String name) {
+        this.host = host;
+        this.name = name;
+    }
+
     public Collection<NetworkShareAccess> getAccess() {
+        if (access == null) {
+            try(PreparedStatement st = Scheduler.prepareStatement("SELECT connector, path, priority FROM NetworkShareAccess WHERE share=?")) {
+                ArrayList<NetworkShareAccess> accesses = new ArrayList<>();
+                st.setLong(1, getId());
+                st.execute();
+                ResultSet rs = st.getResultSet();
+                while (rs.next()) {
+                    NetworkShareAccess nsa = new NetworkShareAccess((SingleHostConnector) Connector.findById(rs.getLong(1)), rs.getString(2), rs.getInt(3));
+                    nsa.setShare(this);
+                    accesses.add(nsa);
+                }
+                this.access = accesses;
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e, "Cannot get share accesses");
+            }
+        }
         return access;
     }
 
@@ -129,8 +150,7 @@ final public class NetworkShare implements Identifiable {
 
             String name = result.getString(3);
 
-            final NetworkShare networkShare = new NetworkShare(hostname, name);
-            networkShare.setId(id);
+            final NetworkShare networkShare = new NetworkShare(id, hostname, name);
             return networkShare;
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not construct network share");
