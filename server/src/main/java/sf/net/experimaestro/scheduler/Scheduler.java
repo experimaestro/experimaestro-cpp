@@ -298,6 +298,9 @@ final public class Scheduler {
 
             executorService = Executors.newFixedThreadPool(1);
 
+            // Check every 5 minutes if a running job has finished (in case we missed the notification)
+            scheduler.scheduleAtFixedRate(new RunningJobChecker(), 0, 5, TimeUnit.MINUTES);
+
 
             LOGGER.info("Done - ready status work now");
         }
@@ -408,7 +411,7 @@ final public class Scheduler {
         for (Listener listener : listeners) {
             try {
                 listener.notify(message);
-            } catch(RuntimeException e) {
+            } catch (RuntimeException e) {
                 LOGGER.warn("Exception when notifying %s / %s", message, e);
             }
         }
@@ -520,7 +523,7 @@ final public class Scheduler {
                 }
             }
             return connection;
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not create SQL connection");
         }
     }
@@ -855,6 +858,33 @@ final public class Scheduler {
                 LOGGER.info("Stopping notifier thread");
                 runningThreadsCounter.del();
                 closeConnection();
+            }
+        }
+    }
+
+    /**
+     * Checks running jobs
+     */
+    private class RunningJobChecker implements Runnable {
+        @Override
+        public void run() {
+            try (Connection ignored = getConnection()) {
+                try (final CloseableIterable<Resource> resources = Scheduler.this.resources(EnumSet.of(ResourceState.RUNNING))) {
+                    for (Resource resource : resources) {
+                        Job job = (Job) resource;
+
+                        try {
+                            XPMProcess process = job.getProcess();
+                            if (process != null && !process.isRunning(true)) {
+                                Scheduler.this.sendMessage(job, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+                            }
+                        } catch (Throwable e) {
+                            LOGGER.error(e, "could not check if job %s is running", job);
+                        }
+                    }
+                }
+            } catch (SQLException | CloseException e) {
+                LOGGER.error(e, "Error while checking running jobs");
             }
         }
     }
