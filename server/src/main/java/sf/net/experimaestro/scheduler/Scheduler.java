@@ -505,19 +505,24 @@ final public class Scheduler {
     }
 
     static public Connection getConnection() {
-        Scheduler scheduler = get();
-        if (scheduler._connection.get() == null) {
-            try {
-                Connection connection = scheduler.dataSource.getConnection();
-                connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-                connection.setAutoCommit(true);
-                scheduler._connection.set(connection);
-                return connection;
-            } catch (SQLException e) {
-                throw new XPMRuntimeException(e);
+        try {
+            Scheduler scheduler = get();
+            Connection connection = scheduler._connection.get();
+            if (connection == null || connection.isClosed()) {
+                try {
+                    connection = scheduler.dataSource.getConnection();
+                    connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+                    connection.setAutoCommit(true);
+                    scheduler._connection.set(connection);
+                    return connection;
+                } catch (SQLException e) {
+                    throw new XPMRuntimeException(e);
+                }
             }
+            return connection;
+        } catch(SQLException e) {
+            throw new XPMRuntimeException(e, "Could not create SQL connection");
         }
-        return scheduler._connection.get();
     }
 
     static public void closeConnection() {
