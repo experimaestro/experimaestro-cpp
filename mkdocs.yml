@@ -4,7 +4,8 @@ pages:
 - Home: 'index.md'
 - Scheduler:
     - Home: scheduler/index.md
-    - Connectors: scheduler/connectors.md
+    - "Connectors & Launchers": scheduler/connectors.md
+    - Notification: scheduler/notification.md
 - Manager:
     - Introduction: manager/index.md
     - JSON: manager/json.md
