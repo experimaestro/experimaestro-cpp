@@ -47,9 +47,9 @@ public class XPMStatement {
     public XPMStatement setLong(int index, Long value) throws SQLException {
         return protect(() -> {
             if (value == null) {
-                st.setLong(index, value);
-            } else {
                 st.setNull(index, Types.BIGINT);
+            } else {
+                st.setLong(index, value);
             }
         });
     }
@@ -57,8 +57,11 @@ public class XPMStatement {
     private XPMStatement protect(ExceptionalRunnable r) throws SQLException {
         try {
             r.apply();
-        } catch (RuntimeException | SQLException e) {
+        } catch(SQLException e) {
+          throw e;
+        } catch (RuntimeException e) {
             st.close();
+            throw new SQLException(e);
         } catch (Throwable e) {
             throw new AssertionError("Should not happen", e);
         }
@@ -80,5 +83,13 @@ public class XPMStatement {
 
     public XPMStatement setInt(int index, int value) throws SQLException {
         return protect(() -> st.setDouble(index, value));
+    }
+
+    public int executeUpdate() throws SQLException {
+        try {
+            return st.executeUpdate();
+        } finally {
+            st.close();
+        }
     }
 }
