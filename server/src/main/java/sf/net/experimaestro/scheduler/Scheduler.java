@@ -371,6 +371,8 @@ final public class Scheduler {
                 process.check(false);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
+            } finally {
+                closeConnection();
             }
         }, 0, rate, units);
 
