@@ -26,16 +26,15 @@ import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -235,12 +234,6 @@ public class SSHConnector extends SingleHostConnector {
         return _session.session;
     }
 
-    private interface StreamSetter {
-        public void setStream(OutputStream out, boolean dontClose);
-
-        int streamNumber();
-    }
-
     /**
      * an SSH session
      */
@@ -351,7 +344,21 @@ public class SSHConnector extends SingleHostConnector {
 
             return new SSHProcess(SSHConnector.this, job(), channel);
         }
+    }
 
+    @Expose(optional = 1, optionalsAtStart = true)
+    public String env(Launcher launcher, String key) throws IOException, LaunchException, InterruptedException {
+        return execute(launcher, "echo", "$" + key);
+    }
 
+    private String execute(Launcher launcher, String... command) throws IOException, LaunchException, InterruptedException {
+        if (launcher == null) {
+            launcher = new DirectLauncher();
+        }
+
+        AbstractProcessBuilder builder = launcher.processBuilder(this);
+        builder.command(command);
+        String returned = builder.execute(LOGGER);
+        return returned;
     }
 }

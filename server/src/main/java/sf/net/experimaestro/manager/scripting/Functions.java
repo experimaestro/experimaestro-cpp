@@ -18,7 +18,11 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -185,7 +189,13 @@ public class Functions {
 
     @Expose(context = true)
     static public Map<String, Object> include_repository(LanguageContext cx, String path) throws Exception {
-        final Path scriptPath = context().get().getCurrentScriptPath().getParent().resolve(path);
+        final URI _uri = new URI(path);
+        final Path scriptPath;
+        if (_uri.getScheme() == null) {
+            scriptPath = context().get().getCurrentScriptPath().getParent().resolve(path);
+        } else {
+            scriptPath = Paths.get(_uri);
+        }
         return (Map<String, Object>) include(cx, scriptPath, true);
     }
 
@@ -198,12 +208,9 @@ public class Functions {
      */
 
     private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
-        java.nio.file.Path oldResourceLocator = context().getCurrentScriptPath();
-
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
             sc.setCurrentScriptPath(scriptPath);
             Scriptable scope = ((JavaScriptContext) cx).scope();
-            // Avoid adding the protocol if this is a local file
             final String sourceName = scriptPath.toString();
 
             final Object result = Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);

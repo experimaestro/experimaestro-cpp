@@ -34,8 +34,10 @@ import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Stack;
 
 import static java.lang.String.format;
 
@@ -140,7 +142,19 @@ public class XPMPath implements Path {
 
     @Override
     public Path normalize() {
-        throw new NotImplementedException();
+        Stack<String> normalizedParts = new Stack<>();
+        for(String part: parts) {
+            switch (part) {
+                case ".":
+                    break;
+                case "..":
+                    normalizedParts.pop();
+                    break;
+                default:
+                    normalizedParts.add(part);
+            }
+        }
+        return new XPMPath(host, share, normalizedParts.toArray(new String[normalizedParts.size()]));
     }
 
     @Override

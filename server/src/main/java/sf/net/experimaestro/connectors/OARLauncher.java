@@ -207,7 +207,7 @@ public class OARLauncher extends Launcher {
         private ShortLivedInformation information;
 
         public ProcessBuilder(SingleHostConnector connector) {
-            this.connector = connector;
+            this(connector, false);
         }
 
         public ProcessBuilder(SingleHostConnector connector, boolean shortLived) {
@@ -244,7 +244,8 @@ public class OARLauncher extends Launcher {
                 final XPMProcess process = builder.start();
                 return process;
             } else {
-                // Use a full
+                // Use a full OAR process
+
                 final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getPath()));
                 final String runpath = UnixScriptProcessBuilder.protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
 

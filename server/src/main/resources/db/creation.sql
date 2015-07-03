@@ -10,6 +10,8 @@ CREATE TABLE Connectors (
   data BLOB          NOT NULL
 );
 
+CREATE UNIQUE INDEX ConnectorURI ON Connectors(uri);
+
 CREATE TABLE NetworkShares (
   id IDENTITY,
   hostname VARCHAR(256) NOT NULL,
@@ -22,6 +24,7 @@ CREATE TABLE NetworkShareAccess (
   path      VARCHAR(4096) NOT NULL,
   priority  INT DEFAULT 0 NOT NULL,
 
+  PRIMARY KEY (share, connector),
   FOREIGN KEY (share) REFERENCES NetworkShares
     ON DELETE CASCADE,
   FOREIGN KEY (connector) REFERENCES Connectors

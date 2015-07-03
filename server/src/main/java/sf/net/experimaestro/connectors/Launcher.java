@@ -21,6 +21,8 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -87,7 +89,7 @@ public abstract class Launcher implements Serializable {
         return environment.put(key, value);
     }
 
-    @Expose("env")
+    @Expose(value="env")
     @Help("Gets the value of the environment variable")
     public String env(String key) {
         return environment.get(key);

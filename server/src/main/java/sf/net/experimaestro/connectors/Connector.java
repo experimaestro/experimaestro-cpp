@@ -117,20 +117,27 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * Return a new connector from an URI
      */
     @Expose(optional = 1)
-    public static Connector create(String uriString, ConnectorOptions options) throws URISyntaxException {
+    public static Connector create(String uriString, ConnectorOptions options) throws URISyntaxException, SQLException {
         return create(new URI(uriString), options);
     }
 
-    public static Connector create(URI uri, ConnectorOptions options) {
+    public static Connector create(URI uri, ConnectorOptions options) throws SQLException {
+        Connector connector;
+
         switch (uri.getScheme()) {
             case "ssh":
-                return new SSHConnector(uri, options);
+                connector = new SSHConnector(uri, options);
+                break;
             case "local":
             case "file":
-                return new LocalhostConnector();
+                connector = Scheduler.get().getLocalhostConnector();
+                break;
             default:
                 throw new IllegalArgumentException("Unknown connector scheme: " + uri.getScheme());
         }
+
+        Connector dbConnector = Connector.findByURI(connector.getIdentifier());
+        return dbConnector == null ? connector : dbConnector;
     }
 
     /**
@@ -255,8 +262,8 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
             throw new XPMRuntimeException(e, "Error retrieving database object");
         }
     }
-    public static final String SELECT_QUERY = "SELECT id, type, uri FROM Connectors";
 
+    public static final String SELECT_QUERY = "SELECT id, type, uri FROM Connectors";
 
 
     public static Connector findByURI(String uri) throws SQLException {

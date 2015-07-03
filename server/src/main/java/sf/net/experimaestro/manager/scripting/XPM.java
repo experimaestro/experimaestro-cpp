@@ -414,41 +414,7 @@ public class XPM {
                 builder.redirectOutput(AbstractCommandBuilder.Redirect.PIPE);
             }
 
-            builder.redirectError(AbstractCommandBuilder.Redirect.PIPE);
-
-            builder.detach(false);
-
-            XPMProcess p = builder.start();
-
-            final Logger logger = sc.getMainLogger();
-            new Thread("stderr") {
-
-                BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-
-                @Override
-                public void run() {
-                    errorStream.lines().forEach(line -> {
-                        logger.info(line);
-                    });
-                }
-            }.start();
-
-
-            BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            int len = 0;
-            char[] buffer = new char[8192];
-            StringBuilder sb = new StringBuilder();
-            while ((len = input.read(buffer, 0, buffer.length)) >= 0) {
-                sb.append(buffer, 0, len);
-            }
-            input.close();
-
-            int error = p.waitFor();
-            if (error != 0) {
-                logger.warn("Output was: %s", sb.toString());
-                throw new XPMRhinoException("Command returned an error code %d", error);
-            }
-            return sb.toString();
+            return builder.execute(sc.getMainLogger());
         }
     }
 

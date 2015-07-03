@@ -18,12 +18,20 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.Map;
+
+import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
 /**
  * Created by bpiwowar on 26/9/14.
@@ -120,6 +128,43 @@ public abstract class AbstractCommandBuilder {
             throw new IllegalArgumentException();
         this.output = destination;
         return this;
+    }
+
+    public String execute(Logger errLogger) throws IOException, LaunchException, InterruptedException {
+
+        detach(false);
+
+        XPMProcess p = start();
+
+        if (errLogger != null) {
+            redirectError(AbstractCommandBuilder.Redirect.PIPE);
+            new Thread("stderr") {
+                BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+
+                @Override
+                public void run() {
+                    errorStream.lines().forEach(line -> {
+                        errLogger.info(line);
+                    });
+                }
+            }.start();
+        }
+
+        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        int len = 0;
+        char[] buffer = new char[8192];
+        StringBuilder sb = new StringBuilder();
+        while ((len = input.read(buffer, 0, buffer.length)) >= 0) {
+            sb.append(buffer, 0, len);
+        }
+        input.close();
+
+        int error = p.waitFor();
+        if (error != 0) {
+            errLogger.warn("Output was: %s", sb.toString());
+            throw new XPMRhinoException("Command returned an error code %d", error);
+        }
+        return sb.toString();
     }
 
     /**
