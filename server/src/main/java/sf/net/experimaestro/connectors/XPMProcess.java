@@ -367,7 +367,7 @@ public abstract class XPMProcess {
      */
     public void save() throws SQLException {
         // Save the process
-        final Connection connection = Scheduler.get().getConnection();
+        final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
                 DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this));
         inDatabase = true;

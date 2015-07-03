@@ -60,11 +60,6 @@ final public class DatabaseObjects<T extends Identifiable> {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-     * The underlying SQL connection
-     */
-    protected final Connection connection;
-
-    /**
      * The name of the table
      */
     private final String tableName;
@@ -91,8 +86,7 @@ final public class DatabaseObjects<T extends Identifiable> {
             .build();
 
 
-    public DatabaseObjects(Connection connection, String tableName, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
-        this.connection = connection;
+    public DatabaseObjects(String tableName, BiFunction<DatabaseObjects<T>, ResultSet, T> create) {
         this.tableName = tableName;
         this.idFieldName = "id";
         this.create = create;
@@ -158,7 +152,7 @@ final public class DatabaseObjects<T extends Identifiable> {
     }
 
     public T findUnique(String query, ExceptionalConsumer<PreparedStatement> p) throws SQLException {
-        try (PreparedStatement st = connection.prepareCall(query)) {
+        try (PreparedStatement st = Scheduler.getConnection().prepareCall(query)) {
             // Sets the variables
             p.apply(st);
 
@@ -188,7 +182,7 @@ final public class DatabaseObjects<T extends Identifiable> {
 
     CloseableIterable<T> find(final String query, final ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try {
-            final CallableStatement st = connection.prepareCall(query);
+            final CallableStatement st = Scheduler.getConnection().prepareCall(query);
             if (p != null) {
                 p.apply(st);
             }
@@ -264,7 +258,7 @@ final public class DatabaseObjects<T extends Identifiable> {
 
     final public void delete(T object) throws SQLException {
         synchronized (map) {
-            try (final PreparedStatement st = connection.prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
+            try (final PreparedStatement st = Scheduler.getConnection().prepareStatement(format("DELETE FROM %s WHERE %s=?", tableName, idFieldName))) {
                 st.setLong(1, object.getId());
                 st.execute();
             }
@@ -280,7 +274,7 @@ final public class DatabaseObjects<T extends Identifiable> {
 
     public void save(T object, String query, ExceptionalConsumer<PreparedStatement> f, boolean update)
             throws SQLException {
-        try (PreparedStatement st = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement st = Scheduler.getConnection().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             // Get the key
             f.apply(st);
             int affectedRows = st.executeUpdate();
@@ -310,7 +304,7 @@ final public class DatabaseObjects<T extends Identifiable> {
     }
 
     public void save(T object, SQLInsert sqlInsert, boolean update, Object... values) throws SQLException {
-        final long id = sqlInsert.execute(connection, update, object.getId(), values);
+        final long id = sqlInsert.execute(Scheduler.getConnection(), update, object.getId(), values);
         if (!update) {
             assert id >= 0;
             object.setId(id);

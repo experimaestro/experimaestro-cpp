@@ -89,7 +89,7 @@ public class JobData {
     }
 
     public void save(boolean update, long id) throws SQLException {
-        JobData.SQL_INSERT.execute(Scheduler.get().getConnection(), update, id, getPriority(), new Timestamp(getTimestamp()),
+        JobData.SQL_INSERT.execute(Scheduler.getConnection(), update, id, getPriority(), new Timestamp(getTimestamp()),
                 new Timestamp(getStartTimestamp()), new Timestamp(getEndTimestamp()), getNbUnsatisfied(), getNbHolding(), getProgress());
     }
 

@@ -93,7 +93,7 @@ public class TokenResource extends Resource {
         super.save(resources, old);
 
         // Insert token resource
-        SQL_INSERT.execute(resources.connection, update, getId(), limit, usedTokens);
+        SQL_INSERT.execute(Scheduler.getConnection(), update, getId(), limit, usedTokens);
     }
 
     public String toDetailedString() {
@@ -179,7 +179,7 @@ public class TokenResource extends Resource {
 
         // Set in DB first
         final String s = "UPDATE TokenResources SET used=? WHERE id=?";
-        try(final PreparedStatement st = Scheduler.get().getConnection().prepareStatement(s)) {
+        try(final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
             st.setInt(1, usedTokens);
             st.setLong(2, getId());
             st.execute();
@@ -194,7 +194,7 @@ public class TokenResource extends Resource {
 
         // Set in DB first
         final String s = "UPDATE TokenResources SET limit=? WHERE id=?";
-        try(final PreparedStatement st = Scheduler.get().getConnection().prepareStatement(s)) {
+        try(final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
             st.setInt(1, limit);
             st.setLong(2, getId());
             st.execute();

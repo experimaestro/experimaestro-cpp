@@ -25,7 +25,6 @@ import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.CloseableIterable;
@@ -42,6 +41,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -385,7 +385,7 @@ public class Resource implements Identifiable {
 
         // Update in DB
         if (inDatabase()) {
-            try (final PreparedStatement st = Scheduler.get().getConnection().prepareStatement("UPDATE Resources SET status=? WHERE id=?")) {
+            try (final PreparedStatement st = Scheduler.getConnection().prepareStatement("UPDATE Resources SET status=? WHERE id=?")) {
                 st.setInt(1, state.value());
                 st.setLong(2, getId());
                 st.execute();
@@ -567,7 +567,21 @@ public class Resource implements Identifiable {
     }
 
     public void save() throws SQLException {
-        save(Scheduler.get().resources(), null);
+        // For saving, we use
+        Scheduler scheduler = Scheduler.get();
+        boolean success = false;
+        Connection connection = Scheduler.getConnection();
+        connection.setAutoCommit(false);
+        try {
+            save(scheduler.resources(), null);
+            success = true;
+        } finally {
+            if (success) {
+                connection.commit();
+            } else {
+                connection.rollback();
+            }
+        }
     }
 
     synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
@@ -610,7 +624,7 @@ public class Resource implements Identifiable {
             ingoingDependencies(); // just load from db if needed
 
             // Delete dependencies that are not required anymore
-            try (PreparedStatement st = resources.connection.prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
+            try (PreparedStatement st = Scheduler.getConnection().prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
                 for (Dependency dependency : old.ingoingDependencies().values()) {
                     if (!ingoingDependencies.containsKey(dependency.getFrom())) {
                         // Remove dependency

@@ -214,23 +214,28 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     public void handle(String message) {
-        JSONObject object;
         try {
-            Object parse = JSONValue.parse(message);
-            object = (JSONObject) parse;
-
-        } catch (Throwable t) {
-            LOGGER.warn(t, "Error while handling JSON request");
-
+            JSONObject object;
             try {
-                mos.error(null, 1, "Could not parse JSON: " + t.getMessage());
-            } catch (IOException e) {
-                LOGGER.error(e, "Could not send the error message");
-            }
-            return;
-        }
+                Object parse = JSONValue.parse(message);
+                object = (JSONObject) parse;
 
-        handleJSON(object);
+            } catch (Throwable t) {
+                LOGGER.warn(t, "Error while handling JSON request");
+
+                try {
+                    mos.error(null, 1, "Could not parse JSON: " + t.getMessage());
+                } catch (IOException e) {
+                    LOGGER.error(e, "Could not send the error message");
+                }
+                return;
+            }
+
+            handleJSON(object);
+        } finally {
+            // Close DB connection if opened
+            Scheduler.closeConnection();
+        }
     }
 
     void handleJSON(JSONObject object) {

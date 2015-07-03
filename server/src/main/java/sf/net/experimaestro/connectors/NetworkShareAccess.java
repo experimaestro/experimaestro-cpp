@@ -93,7 +93,7 @@ public class NetworkShareAccess implements Serializable {
     public void setPriority(int priority) throws SQLException {
         this.priority = priority;
         if (share != null) {
-            try (PreparedStatement st = Scheduler.get().getConnection()
+            try (PreparedStatement st = Scheduler.getConnection()
                     .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
                 st.setString(1, path);
                 st.setLong(2, share.getId());
@@ -112,7 +112,7 @@ public class NetworkShareAccess implements Serializable {
 
     public void setPath(String path) throws SQLException {
         if (share != null) {
-            try (PreparedStatement st = Scheduler.get().getConnection()
+            try (PreparedStatement st = Scheduler.getConnection()
                     .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
                 st.setString(1, path);
                 st.setLong(2, share.getId());
@@ -136,7 +136,7 @@ public class NetworkShareAccess implements Serializable {
      */
     public void save(NetworkShare share) throws SQLException {
         // Add to database
-        try (PreparedStatement st = Scheduler.get().getConnection()
+        try (PreparedStatement st = Scheduler.getConnection()
                 .prepareStatement("INSERT INTO NetworkShareAccess(share, connector, path) VALUES(?,?,?)")) {
             st.setLong(1, share.getId());
             st.setLong(2, connector.getId());

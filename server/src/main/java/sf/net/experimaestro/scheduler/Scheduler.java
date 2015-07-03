@@ -20,7 +20,13 @@ package sf.net.experimaestro.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
+import org.apache.commons.dbcp2.PoolableConnection;
+import org.apache.commons.dbcp2.PoolableConnectionFactory;
+import org.apache.commons.dbcp2.PoolingDataSource;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.NetworkShare;
@@ -46,7 +52,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -98,7 +103,7 @@ final public class Scheduler {
     /**
      * Database connection
      */
-    private final Connection connection;
+    private final ThreadLocal<Connection> _connection = new ThreadLocal<>();
 
     /**
      * Messenger
@@ -162,6 +167,8 @@ final public class Scheduler {
 
     private XPMConnector xpmConnector;
 
+    private final PoolingDataSource<PoolableConnection> dataSource;
+
     /**
      * Initialise the task manager
      *
@@ -176,118 +183,124 @@ final public class Scheduler {
 
         // Initialise the database - we do not use any isolation
         Class.forName("org.hsqldb.jdbcDriver");
-        connection = DriverManager.getConnection(format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory));
-        connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-        connection.setAutoCommit(true);
 
-        // Read the property file
-        final File file = new File(baseDirectory, "xpm.ini");
-        Properties properties = new Properties();
-        if (file.exists()) {
-            try (final FileInputStream inStream = new FileInputStream(file)) {
-                properties.load(inStream);
-            }
-        }
-        int version = Integer.parseInt(properties.getProperty("db.version", "0"));
+        String connectURI = format("jdbc:hsqldb:file:%s/xpm.db;shutdown=true", baseDirectory);
+        DriverManagerConnectionFactory connectionFactory = new DriverManagerConnectionFactory(connectURI, null);
+        PoolableConnectionFactory poolableConnectionFactory = new PoolableConnectionFactory(connectionFactory, null);
+        ObjectPool<PoolableConnection> connectionPool = new GenericObjectPool<>(poolableConnectionFactory);
+        poolableConnectionFactory.setPool(connectionPool);
+        dataSource = new PoolingDataSource<>(connectionPool);
 
-        if (version != DBVERSION) {
-            final ScriptRunner scriptRunner = new ScriptRunner(connection, true, true);
-
-            if (version == 0) {
-                try (final InputStream stream = Scheduler.class.getResourceAsStream("/db/creation.sql");
-                     final Reader reader = new InputStreamReader(stream)) {
-                    scriptRunner.runScript(reader);
-                    version = DBVERSION;
-                    properties.setProperty("db.version", Integer.toString(version));
-                    try (FileOutputStream out = new FileOutputStream(file)) {
-                        properties.store(out, "");
-                    }
+        try (Connection connection = getConnection()) {
+            // Read the property file
+            final File file = new File(baseDirectory, "xpm.ini");
+            Properties properties = new Properties();
+            if (file.exists()) {
+                try (final FileInputStream inStream = new FileInputStream(file)) {
+                    properties.load(inStream);
                 }
-            } else {
-                while (version < DBVERSION) {
-                    String resourcename = format("/db/update-%04d.sql", version);
-                    try (final InputStream stream = Scheduler.class.getResourceAsStream(resourcename);
+            }
+            int version = Integer.parseInt(properties.getProperty("db.version", "0"));
+
+            if (version != DBVERSION) {
+                final ScriptRunner scriptRunner = new ScriptRunner(connection, true, true);
+
+                if (version == 0) {
+                    try (final InputStream stream = Scheduler.class.getResourceAsStream("/db/creation.sql");
                          final Reader reader = new InputStreamReader(stream)) {
                         scriptRunner.runScript(reader);
-                        version++;
+                        version = DBVERSION;
                         properties.setProperty("db.version", Integer.toString(version));
                         try (FileOutputStream out = new FileOutputStream(file)) {
                             properties.store(out, "");
                         }
                     }
-                }
-
-            }
-        }
-
-        resources = new DatabaseObjects<>(connection, "Resources", Resource::create);
-        networkShares = new DatabaseObjects<>(connection, "NetworkShare", NetworkShare::create);
-        connectors = new DatabaseObjects<>(connection, "Connectors", Connector::create);
-        locks = new DatabaseObjects<>(connection, "Locks", Lock::create);
-
-        // Find or create localhost connector
-        localhostConnector = (LocalhostConnector) Connector.findByURI(LocalhostConnector.IDENTIFIER);
-        if (localhostConnector == null) {
-            localhostConnector = new LocalhostConnector();
-            localhostConnector.save();
-        }
-
-        xpmConnector = (XPMConnector) Connector.findByURI(XPMConnector.ID);
-        if (xpmConnector == null) {
-            xpmConnector = new XPMConnector();
-            xpmConnector.save();
-        }
-
-        LOGGER.info("Loaded connectors (local=%d, xpm=%d)", localhostConnector.getId(), xpmConnector.getId());
-
-        // Add a shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
-
-        // Start the thread that notify dependencies
-        LOGGER.info("Starting the notifier thread");
-        notifier = new Notifier();
-        notifier.start();
-        runningThreadsCounter.add();
-
-        // Start the thread that notify dependencies
-        LOGGER.info("Starting the messager thread");
-        messengerThread = new MessengerThread();
-        messengerThread.start();
-        runningThreadsCounter.add();
-
-        // Loop over resources in state RUNNING
-        try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
-            for (Resource resource : resources) {
-                Job job = (Job) resource;
-                if (job.getProcess() != null) {
-                    job.getProcess().init(job);
                 } else {
-                    job.setState(ResourceState.ERROR);
-                    LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
+                    while (version < DBVERSION) {
+                        String resourcename = format("/db/update-%04d.sql", version);
+                        try (final InputStream stream = Scheduler.class.getResourceAsStream(resourcename);
+                             final Reader reader = new InputStreamReader(stream)) {
+                            scriptRunner.runScript(reader);
+                            version++;
+                            properties.setProperty("db.version", Integer.toString(version));
+                            try (FileOutputStream out = new FileOutputStream(file)) {
+                                properties.store(out, "");
+                            }
+                        }
+                    }
+
                 }
-                job.updateStatus();
             }
+
+            resources = new DatabaseObjects<>("Resources", Resource::create);
+            networkShares = new DatabaseObjects<>("NetworkShare", NetworkShare::create);
+            connectors = new DatabaseObjects<>("Connectors", Connector::create);
+            locks = new DatabaseObjects<>("Locks", Lock::create);
+
+            // Find or create localhost connector
+            localhostConnector = (LocalhostConnector) Connector.findByURI(LocalhostConnector.IDENTIFIER);
+            if (localhostConnector == null) {
+                localhostConnector = new LocalhostConnector();
+                localhostConnector.save();
+            }
+
+            xpmConnector = (XPMConnector) Connector.findByURI(XPMConnector.ID);
+            if (xpmConnector == null) {
+                xpmConnector = new XPMConnector();
+                xpmConnector.save();
+            }
+
+            LOGGER.info("Loaded connectors (local=%d, xpm=%d)", localhostConnector.getId(), xpmConnector.getId());
+
+            // Add a shutdown hook
+            Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
+
+            // Start the thread that notify dependencies
+            LOGGER.info("Starting the notifier thread");
+            notifier = new Notifier();
+            notifier.start();
+            runningThreadsCounter.add();
+
+            // Start the thread that notify dependencies
+            LOGGER.info("Starting the messager thread");
+            messengerThread = new MessengerThread();
+            messengerThread.start();
+            runningThreadsCounter.add();
+
+            // Loop over resources in state RUNNING
+            try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+                for (Resource resource : resources) {
+                    Job job = (Job) resource;
+                    if (job.getProcess() != null) {
+                        job.getProcess().init(job);
+                    } else {
+                        job.setState(ResourceState.ERROR);
+                        LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
+                    }
+                    job.updateStatus();
+                }
+            }
+
+            // Loop over resources for which we need to notify (Scheduler stopped before or within the process)
+            try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
+                    + " WHERE oldStatus != status", null)) {
+                changed.forEach(r -> addChangedResource(r));
+            }
+
+
+            // Start the thread that start the jobs
+            LOGGER.info("Starting the job runner thread");
+            readyJobSemaphore.setValue(true);
+            runner = new JobRunner("JobRunner");
+            runner.start();
+            runningThreadsCounter.add();
+
+
+            executorService = Executors.newFixedThreadPool(1);
+
+
+            LOGGER.info("Done - ready status work now");
         }
-
-        // Loop over resources for which we need to notify (Scheduler stopped before or within the process)
-        try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
-                + " WHERE oldStatus != status", null)) {
-            changed.forEach(r -> addChangedResource(r));
-        }
-
-
-        // Start the thread that start the jobs
-        LOGGER.info("Starting the job runner thread");
-        readyJobSemaphore.setValue(true);
-        runner = new JobRunner("JobRunner");
-        runner.start();
-        runningThreadsCounter.add();
-
-
-        executorService = Executors.newFixedThreadPool(1);
-
-
-        LOGGER.info("Done - ready status work now");
     }
 
     public static Scheduler get() {
@@ -405,7 +418,7 @@ final public class Scheduler {
      * Shutdown the scheduler
      */
     synchronized public void close() {
-        if (connection == null && stopping) {
+        if (_connection == null && stopping) {
             return;
         }
 
@@ -447,12 +460,8 @@ final public class Scheduler {
 
 
         LOGGER.info("Closing database");
-        try {
-            if (!connection.isClosed()) {
-                Statement st = connection.createStatement();
-                st.execute("SHUTDOWN");
-                connection.close();    // if there are no other open connection
-            }
+        try (Connection connection = getConnection(); Statement st = connection.createStatement()) {
+            st.execute("SHUTDOWN");
         } catch (SQLException e) {
             LOGGER.error(e, "Error while shuting down the database");
         }
@@ -491,8 +500,36 @@ final public class Scheduler {
         return networkShares;
     }
 
-    public Connection getConnection() {
-        return connection;
+    static public Connection getConnection() {
+        Scheduler scheduler = get();
+        if (scheduler._connection.get() == null) {
+            try {
+                Connection connection = scheduler.dataSource.getConnection();
+                connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+                connection.setAutoCommit(true);
+                scheduler._connection.set(connection);
+                return connection;
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e);
+            }
+        }
+        return scheduler._connection.get();
+    }
+
+    static public void closeConnection() {
+        Scheduler scheduler = get();
+        Connection connection = scheduler._connection.get();
+        if (connection != null) {
+            try {
+                if (!connection.isClosed()) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                LOGGER.error(e, "Could not close connection");
+            } finally {
+                scheduler._connection.remove();
+            }
+        }
     }
 
     public DatabaseObjects<Connector> connectors() {
@@ -501,7 +538,7 @@ final public class Scheduler {
 
 
     public static PreparedStatement prepareStatement(String sql, Object... values) throws SQLException {
-        final PreparedStatement preparedStatement = get().getConnection().prepareStatement(sql);
+        final PreparedStatement preparedStatement = getConnection().prepareStatement(sql);
         for (int i = 0; i < values.length; i++) {
             Object value = getObject(values[i]);
             preparedStatement.setObject(i + 1, value);
@@ -523,7 +560,7 @@ final public class Scheduler {
     }
 
     public static XPMStatement statement(String sql) throws SQLException {
-        return new XPMStatement(get().connection, sql);
+        return new XPMStatement(getConnection(), sql);
     }
 
     public DatabaseObjects<Lock> locks() {
@@ -728,81 +765,88 @@ final public class Scheduler {
      * The notifier thread for resources that changed of state
      */
     private class Notifier extends Thread {
-
-        private final XPMStatement updateStatus;
-
         public Notifier() throws SQLException {
             super("Notifier");
-            updateStatus = statement("UPDATE Resources SET oldStatus = ? WHERE id = ?");
         }
 
         @Override
         public void run() {
-            LOGGER.info("Starting notifier thread");
-
-            while (!isStopping()) {
+            try {
+                final XPMStatement updateStatus;
                 try {
-                    final long resourceId;
-
-                    // Get the next resource ID
-                    synchronized (changedResources) {
-                        if (changedResources.isEmpty()) {
-                            try {
-                                changedResources.wait();
-                            } catch (InterruptedException e) {
-                            }
-                            continue;
-
-                        } else {
-                            final LongIterator iterator = changedResources.iterator();
-                            resourceId = iterator.next();
-                            iterator.remove();
-                        }
-                    }
-
-                    LOGGER.debug("Notifying dependencies from R%d", resourceId);
-
-                    // Retrieve the resource that changed - and lock it
-                    Resource fromResource;
-                    try {
-                        fromResource = Resource.getById(resourceId);
-                    } catch (SQLException e) {
-                        LOGGER.error("Could not retrieve resource with ID %d", resourceId);
-                        throw new RuntimeException(e);
-                    }
-
-
-                    try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies(true)) {
-                        LOGGER.info("Notifying dependencies from %s", fromResource);
-
-                        while (dependencies.hasNext()) {
-                            Dependency dep = dependencies.next();
-                            final Resource to = dep.getTo();
-                            assert dep.status != DependencyStatus.UNACTIVE;
-                            try {
-                                // when the dependency status is null, the dependency is not active anymore
-                                LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, to, dep.status);
-                                // Preserves the previous state
-                                to.updatedDependency(dep);
-                            } catch (RuntimeException e) {
-                                // FIXME: Should schedule a full update of resource
-                                LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
-                            }
-                        }
-                    }
-
-                    // OK - update db
-                    updateStatus.setInt(1, fromResource.getState().value());
-                    updateStatus.setLong(2, fromResource.getId());
-                } catch (CloseException e) {
-                    LOGGER.error(e, "Caught exception while closing iterator");
-                } catch (Exception e) {
-                    LOGGER.error(e, "Caught exception in notifier");
+                    updateStatus = statement("UPDATE Resources SET oldStatus = ? WHERE id = ?");
+                } catch (SQLException e) {
+                    Scheduler.this.close();
+                    throw new XPMRuntimeException(e);
                 }
-            }
 
-            runningThreadsCounter.del();
-            LOGGER.info("Stopping notifier thread");
+                LOGGER.info("Starting notifier thread");
+
+                while (!isStopping()) {
+                    try {
+                        final long resourceId;
+
+                        // Get the next resource ID
+                        synchronized (changedResources) {
+                            if (changedResources.isEmpty()) {
+                                try {
+                                    changedResources.wait();
+                                } catch (InterruptedException e) {
+                                }
+                                continue;
+
+                            } else {
+                                final LongIterator iterator = changedResources.iterator();
+                                resourceId = iterator.next();
+                                iterator.remove();
+                            }
+                        }
+
+                        LOGGER.debug("Notifying dependencies from R%d", resourceId);
+
+                        // Retrieve the resource that changed - and lock it
+                        Resource fromResource;
+                        try {
+                            fromResource = Resource.getById(resourceId);
+                        } catch (SQLException e) {
+                            LOGGER.error("Could not retrieve resource with ID %d", resourceId);
+                            throw new RuntimeException(e);
+                        }
+
+
+                        try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies(true)) {
+                            LOGGER.info("Notifying dependencies from %s", fromResource);
+
+                            while (dependencies.hasNext()) {
+                                Dependency dep = dependencies.next();
+                                final Resource to = dep.getTo();
+                                assert dep.status != DependencyStatus.UNACTIVE;
+                                try {
+                                    // when the dependency status is null, the dependency is not active anymore
+                                    LOGGER.debug("Notifying dependency: [%s] status [%s]; current dep. state=%s", fromResource, to, dep.status);
+                                    // Preserves the previous state
+                                    to.updatedDependency(dep);
+                                } catch (RuntimeException e) {
+                                    // FIXME: Should schedule a full update of resource
+                                    LOGGER.error(e, "Got an exception while notifying [%s]", fromResource);
+                                }
+                            }
+                        }
+
+                        // OK - update db
+                        updateStatus.setInt(1, fromResource.getState().value());
+                        updateStatus.setLong(2, fromResource.getId());
+                    } catch (CloseException e) {
+                        LOGGER.error(e, "Caught exception while closing iterator");
+                    } catch (Exception e) {
+                        LOGGER.error(e, "Caught exception in notifier");
+                    }
+                }
+            } finally {
+                LOGGER.info("Stopping notifier thread");
+                runningThreadsCounter.del();
+                closeConnection();
+            }
         }
     }
 }

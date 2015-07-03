@@ -505,6 +505,14 @@
             <version>2.3.2</version>
         </dependency>
 
+        <!-- For pooling connections -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-dbcp2</artifactId>
+            <version>2.1</version>
+        </dependency>
+
+
     </dependencies>
 
 
