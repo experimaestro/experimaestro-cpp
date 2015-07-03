@@ -23,11 +23,13 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.db.DbUtils;
 import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -63,6 +65,14 @@ public class TokenResource extends Resource {
 
     public TokenResource(long id, Connector connector, String locator) throws SQLException {
         super(id, connector, locator);
+
+        // Load
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT limit, used FROM TokenResources WHERE id=?")) {
+            st.setLong(1, id);
+            ResultSet rs = DbUtils.getFirst(st);
+            this.limit = rs.getInt(1);
+            this.usedTokens = rs.getInt(2);
+        }
     }
 
 
@@ -179,13 +189,13 @@ public class TokenResource extends Resource {
 
         // Set in DB first
         final String s = "UPDATE TokenResources SET used=? WHERE id=?";
-        try(final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
+        try (final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
             st.setInt(1, usedTokens);
             st.setLong(2, getId());
             st.execute();
         }
 
-       this.usedTokens = usedTokens;
+        this.usedTokens = usedTokens;
     }
 
     @Expose("set_limit")
@@ -194,7 +204,7 @@ public class TokenResource extends Resource {
 
         // Set in DB first
         final String s = "UPDATE TokenResources SET limit=? WHERE id=?";
-        try(final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
+        try (final PreparedStatement st = Scheduler.getConnection().prepareStatement(s)) {
             st.setInt(1, limit);
             st.setLong(2, getId());
             st.execute();
