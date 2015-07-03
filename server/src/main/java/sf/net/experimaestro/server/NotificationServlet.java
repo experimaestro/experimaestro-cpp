@@ -49,58 +49,62 @@ public class NotificationServlet extends XPMServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException {
-        String[] parts = request.getPathInfo().split("/");
-        if (parts.length < 3) {
-            error404(request, resp);
-            return;
-        }
-
-        final String jobIdString = parts[1];
-        final String command = parts[2];
-        long resourceId = Long.parseLong(jobIdString);
-
-        final Job job;
         try {
-            job = getJob(request, resp, resourceId);
-        } catch (SQLException e) {
-            error404(request, resp);
-            return;
-        }
-        if (job == null) {
-            error404(request, resp);
-            return;
-        }
+            String[] parts = request.getPathInfo().split("/");
+            if (parts.length < 3) {
+                error404(request, resp);
+                return;
+            }
 
-        switch (command) {
-            case END_OF_JOB: {
-                resp.setContentType("application/json");
-                resp.setStatus(HttpServletResponse.SC_ACCEPTED);
+            final String jobIdString = parts[1];
+            final String command = parts[2];
+            long resourceId = Long.parseLong(jobIdString);
 
-                final XPMProcess process = job.getProcess();
-                if (process != null) {
-                    try {
-                        process.check(true);
-                    } catch (Exception e) {
-                        // FIXME: what to do here?
+            final Job job;
+            try {
+                job = getJob(request, resp, resourceId);
+            } catch (SQLException e) {
+                error404(request, resp);
+                return;
+            }
+            if (job == null) {
+                error404(request, resp);
+                return;
+            }
+
+            switch (command) {
+                case END_OF_JOB: {
+                    resp.setContentType("application/json");
+                    resp.setStatus(HttpServletResponse.SC_ACCEPTED);
+
+                    final XPMProcess process = job.getProcess();
+                    if (process != null) {
+                        try {
+                            process.check(true);
+                        } catch (Exception e) {
+                            // FIXME: what to do here?
+                        }
+                    }
+                }
+
+                return;
+                case PROGRESS: {
+                    resp.setContentType("application/json");
+                    resp.setStatus(HttpServletResponse.SC_ACCEPTED);
+
+                    double progress = Double.parseDouble(parts[3]);
+
+                    if (job.getState() == ResourceState.RUNNING) {
+                        job.setProgress(progress);
+                        Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
                     }
                 }
             }
 
-                return;
-            case PROGRESS: {
-                resp.setContentType("application/json");
-                resp.setStatus(HttpServletResponse.SC_ACCEPTED);
-
-                double progress = Double.parseDouble(parts[3]);
-
-                if (job.getState() == ResourceState.RUNNING) {
-                    job.setProgress(progress);
-                    Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
-                }
-            }
+        } finally {
+            Scheduler.closeConnection();
         }
 
-        return;
     }
 
     private Job getJob(HttpServletRequest request, HttpServletResponse resp, long resourceId) throws IOException, SQLException {
