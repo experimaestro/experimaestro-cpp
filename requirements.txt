@@ -1,0 +1,7 @@
+icolor==1.2
+websocket-client>=0.21.0
+argcomplete>=0.8.1
+requests>=2.4.3
+# If you experience problems building lxml on Debian you can try something like:
+#  $ pip3 install --global-option=build_ext --global-option='-I/usr/include/libxml2'  lxml
+lxml==3.4.3
