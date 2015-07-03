@@ -18,13 +18,13 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
@@ -49,9 +49,13 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line launcher with OAR
@@ -226,12 +230,26 @@ public class OARLauncher extends Launcher {
 
                 final AbstractProcessBuilder builder = connector.processBuilder();
 
-                builder.environment(ImmutableMap.of(OAR_JOB_ID, information.jobId));
+                Map<String, String> env = new HashMap<>();
+                env.put(OAR_JOB_ID, information.jobId);
+                builder.environment(env);
 
                 ArrayList<String> command = new ArrayList<>();
                 command.add(OAR_JOB_ID + "=" + information.jobId);
                 command.add(oarshCommand);
                 command.add(information.hostname);
+
+                if (OARLauncher.this.environment != null) {
+                    OARLauncher.this.environment.forEach(
+                            (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                    );
+                }
+                if (environment() != null) {
+                    environment().forEach(
+                            (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                    );
+                }
+
                 this.command().stream().forEach(command::add);
                 builder.command(command);
 
@@ -247,7 +265,7 @@ public class OARLauncher extends Launcher {
                 // Use a full OAR process
 
                 final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getPath()));
-                final String runpath = UnixScriptProcessBuilder.protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
+                final String runpath = protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
 
                 ArrayList<String> command = new ArrayList<>();
 
@@ -364,18 +382,20 @@ public class OARLauncher extends Launcher {
                 try (WatchService watcher = directory.getFileSystem().newWatchService()) {
                     directory.register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
                     while (Files.exists(lockPath)) {
-                        LOGGER.debug("Waiting for information file %s", infopath);
+                        LOGGER.debug("Waiting for lock file to be removed %s", lockPath);
                         watcher.poll(1, TimeUnit.SECONDS);
                     }
                 } catch (NoSuchFileException | InterruptedException f) {
                     throw new RuntimeException(f);
                 }
+
+                // Create lock
                 Files.createFile(lockPath);
 
                 // Writes file
                 try (BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
                     writer.write(format("cleanup() {\n echo Removing lock file\nrm \"%s\"\n}\n",
-                            UnixScriptProcessBuilder.protect(connector.resolve(lockPath), UnixScriptProcessBuilder.QUOTED_SPECIAL)));
+                            protect(connector.resolve(lockPath), QUOTED_SPECIAL)));
                     writer.write("trap cleanup 0\n");
                     writer.write("env\n");
                     writer.write(format("echo %s=$(hostname)%n", XPM_HOSTNAME));
@@ -389,6 +409,7 @@ public class OARLauncher extends Launcher {
                 // Launch a new OAR sub
                 // The job outputs the environment and sleeps...
 
+                Files.deleteIfExists(infopath);
                 final AbstractProcessBuilder builder = connector.processBuilder();
                 builder.command(oarCommand, "--stdout=information.env", "--stderr=log.err",
                         format("--directory=%s", connector.resolve(directory)),

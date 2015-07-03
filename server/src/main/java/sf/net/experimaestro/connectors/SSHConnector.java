@@ -46,6 +46,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
 import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
@@ -281,19 +282,24 @@ public class SSHConnector extends SingleHostConnector {
                 channel = newExecChannel();
                 StringBuilder commandBuilder = new StringBuilder();
                 final String commandLine = CommandLineTask.getCommandLine(command());
+
+                // Set the environment (do not use SSH since they are filtered)
+                if (environment() != null) {
+                    for (Map.Entry<String, String> x : environment().entrySet()) {
+                        commandBuilder.append("export ");
+                        commandBuilder.append(x.getKey());
+                        commandBuilder.append("=\"");
+                        commandBuilder.append(protect(x.getValue(), QUOTED_SPECIAL));
+                        commandBuilder.append("\";");
+                    }
+                }
+
                 commandBuilder.append(commandLine);
 
                 // Set default
                 channel.setOutputStream(System.out, true);
                 channel.setErrStream(System.err, true);
                 channel.setInputStream(null);
-
-                // Set the environment
-                if (environment() != null) {
-                    for (Map.Entry<String, String> x : environment().entrySet()) {
-                        channel.setEnv(x.getKey(), x.getValue());
-                    }
-                }
 
                 setStream(commandBuilder, output, new StreamSetter() {
                     @Override
