@@ -14,5 +14,7 @@ theme: readthedocs
 extra_javascript:
     - jquery-ui.min.js
     - xpm.js
+extra_css:
+    - jquery-ui.min.css
 markdown_extensions:
     - xpm
