@@ -122,7 +122,7 @@ final public class Scheduler {
     /**
      * True when the application is stopping
      */
-    boolean stopping = false;
+    Boolean stopping = false;
 
     /**
      * The job runner (just one)
@@ -332,7 +332,9 @@ final public class Scheduler {
      */
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws SQLException {
         // Save the connector in DB if necessary
-        connector.save();
+        if (!connector.inDatabase()) {
+            connector.save();
+        }
 
         NetworkShare networkShare = NetworkShare.find(host, name);
 
@@ -427,14 +429,23 @@ final public class Scheduler {
      * Shutdown the scheduler
      */
     synchronized public void close() {
-        if (_connection == null && stopping) {
+        if (INSTANCE == null) {
             return;
         }
 
+        synchronized (stopping) {
+            if (stopping) {
+                try {
+                    wait();
+                    return;
+                } catch (InterruptedException e) {
+                    throw new XPMRuntimeException(e, "Error while waiting the process to stop");
+                }
+            }
+            stopping = true;
+        }
+
         LOGGER.info("Stopping the scheduler");
-
-
-        stopping = true;
 
         // Stop the checker
         LOGGER.info("Closing resource checker");
@@ -464,6 +475,7 @@ final public class Scheduler {
         notifier = null;
 
         if (executorService != null) {
+            LOGGER.error("Shutting down executor service");
             executorService.shutdown();
         }
 
@@ -475,8 +487,17 @@ final public class Scheduler {
             LOGGER.error(e, "Error while shuting down the database");
         }
 
+        try {
+            dataSource.close();
+        } catch (Exception e) {
+            LOGGER.error(e, "Error while closing the data source");
+        }
+
         INSTANCE = null;
 
+        synchronized (stopping) {
+            notifyAll();
+        }
         LOGGER.info("Scheduler stopped");
     }
 
