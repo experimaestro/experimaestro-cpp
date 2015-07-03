@@ -51,7 +51,7 @@ abstract public class Dependency implements Serializable {
 
     public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=?, status=?, lock=? WHERE fromId=? and toId=?";
 
-    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, fromId, toId, lock) VALUES(?,?,?,?, ?)";
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, lock, fromId, toId) VALUES(?,?,?,?,?)";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -223,13 +223,14 @@ abstract public class Dependency implements Serializable {
     }
 
     public void save(boolean update) throws SQLException {
-        Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
+        int updated = Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
                 .setLong(1, DatabaseObjects.getTypeValue(this.getClass()))
                 .setInt(2, status.getId())
-                .setLong(3, from.id())
-                .setLong(4, lock == null ? null : lock.getId())
+                .setLong(3, lock == null ? null : lock.getId())
+                .setLong(4, from.id())
                 .setLong(5, to.id())
-                .execute();
+                .executeUpdate();
+        LOGGER.debug("Dependency %s - updated rows = %d", this, updated);
     }
 
     /**
