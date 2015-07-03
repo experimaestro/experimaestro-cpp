@@ -406,7 +406,11 @@ final public class Scheduler {
      */
     public void notify(Message message) {
         for (Listener listener : listeners) {
-            listener.notify(message);
+            try {
+                listener.notify(message);
+            } catch(RuntimeException e) {
+                LOGGER.warn("Exception when notifying %s / %s", message, e);
+            }
         }
     }
 

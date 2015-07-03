@@ -43,7 +43,11 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
         this.methods = new JsonRPCMethods(server, scheduler, repositories, new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {
-                getRemote().sendString(message);
+                try {
+                    getRemote().sendString(message);
+                } catch(IllegalStateException e) {
+                    // Ignore: remote can be blocking
+                }
             }
         });
 
