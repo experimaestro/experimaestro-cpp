@@ -581,6 +581,7 @@ public class Resource implements Identifiable {
             } else {
                 connection.rollback();
             }
+            connection.setAutoCommit(true);
         }
     }
 
