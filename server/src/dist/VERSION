@@ -1,0 +1,10 @@
+Version: ${version}
+Build-date: ${buildDate.format('dd-MM-yyyy HH:mm:ss')}
+Application-name: ${appName}
+git.commit.id: ${git_commit_id}
+git.tags: ${git_tags}
+git.dirty: ${git_dirty}
+git.commit.message.short: ${git_commit_message_short}
+git.commit.time: ${git_commit_time}
+git.branch: ${git_branch}
+git.remote.origin.url: ${git_remote_origin_url}

@@ -53,7 +53,10 @@ public class XPMInformation {
     static public XPMInformation get() {
 
         if (xpmInformation == null) {
-            final URL resource = XPMInformation.class.getResource("/git.properties");
+            final URL resource = XPMInformation.class.getResource("/VERSION");
+            if (resource == null) {
+                return new XPMInformation();
+            }
             try (final InputStream inStream = resource.openStream()) {
                 final Properties properties = new Properties();
                 properties.load(inStream);

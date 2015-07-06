@@ -76,10 +76,9 @@ class JsonRPCClient:
 
 
 # --- Check paths
-def jarpaths():
+def binpaths():
     """Returns the different paths where the JAR file can be located"""
-    yield os.path.join(xpmdir, jarname)
-    yield os.path.join(xpmdir, "target", "experimaestro-%s-bin" % version, jarname)
+    yield os.path.join(xpmdir, "bin", "experimaestro-server")
 
 
 def start_jar(args, jarargs):
@@ -108,16 +107,16 @@ def start_jar(args, jarargs):
         command.append("-Dexec.args=%s" % " ".join(jarargs))
 
     else:
-        jarpath = None
-        for f in jarpaths():
+        binpath = None
+        for f in binpaths():
             print("Trying %s" % f)
             if os.path.isfile(f):
-                jarpath = f
+                binpath = f
                 break
 
-        if jarpath is None:
-            raise RuntimeError("Could not find experimaestro jar file")
-        command = ["java", "-Xmx1g", "-jar", jarpath] + jarargs
+        if binpath is None:
+            raise RuntimeError("Could not find experimaestro bin directory")
+        command = [binpath, "server"]
 
     def start_server(logger):
         logger.info("Starting experimaestro server...")

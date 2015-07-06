@@ -5,13 +5,13 @@ layout: default
 
 # Presentation
 
-Experimaestro is an experiment manager, and is composed of 
+Experimaestro is an experiment manager, and is composed of
 
 1. A [job scheduler](scheduler/index.html) that handles dependencies between jobs and provides locking mechanisms
    The job scheduler can be controlled via command line (`experimaestro` script) or via the web (where
    you can easily monitor jobs in real time)
 2. A [modular experiment description framework](manager/index.html), that allows easy description of the various parts of experiments:
-    - Experiments are written in JavaScript 
+    - Experiments are written in JavaScript
     - Tasks describe the components that can be used, take as input json objects and produce json objets as output
     - Tasks can be composed through the definition of an experimental plan
 
@@ -26,7 +26,7 @@ going down each day.
 This is an example of how an experimental plan is built.
 
 First, we define two tasks. In the example,
-the two tasks are multiplication and addition of two numbers, but in practice 
+the two tasks are multiplication and addition of two numbers, but in practice
 task launch jobs through the scheduler.
 <include file="src/test/resources/js/plan_composition.js" id="task"/>
 
@@ -54,15 +54,14 @@ pip3 install -r requirements.txt
 ## Java
 
 You need a working *Java 1.8* installation on your machine and
-*Maven 3* or higher.
+*Gradle* or higher.
 
 ```sh
 # From the project's root directory.
-mvn compile
-mvn install
-cd helper
-mvn install
+gradle installDist
 ```
+
+This will build and install all the dependencies into `server/build/install/experimaestro-server`. The command `experimaestro` is located in `server/build/install/experimaestro-server/bin/experimaestro`.
 
 Note that on a Linux box if you are not root and the alternative link
 is not set to the proper version (you can inspect that using
@@ -70,14 +69,6 @@ is not set to the proper version (you can inspect that using
 to update the link manually using `update-alternatives --config java`.
 The work around is to set the environment variable `JAVA_HOME` when
 calling maven. For example:
-
-```sh
-# From the project's root directory.
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn compile
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn install
-cd helper
-mvn install
-```
 
 To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
 

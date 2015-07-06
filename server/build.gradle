@@ -1,5 +1,15 @@
 description = 'experimaestro server'
 
+apply plugin: 'application'
+
+def generatedResources = "$buildDir/classes/main"
+
+sourceSets {
+    main {
+        output.resourcesDir = generatedResources
+    }
+}
+
 dependencies {
     compile project(':experimaestro-helper')
 
@@ -36,11 +46,85 @@ dependencies {
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
     compile group: 'net.sf.saxon', name: 'Saxon-HE', version: '9.5.1-6'
 
-
+    // Test modules
     testCompile group: 'org.testng', name: 'testng', version: '6.9.4'
     testCompile group: 'org.apache.sshd', name: 'sshd-core', version: '0.14.0'
     testCompile group: 'org.bouncycastle', name: 'bcprov-jdk16', version: '1.46'
     testCompile group: 'com.thetransactioncompany', name: 'jsonrpc2-client', version: '1.15'
 }
+
+buildscript {
+    dependencies {
+        classpath 'org.ajoberstar:gradle-git:1.2.0'
+    }
+    repositories {
+        mavenCentral()
+    }
+}
+
+import org.ajoberstar.grgit.Grgit
+
+task printHeadHash << {
+    def git = Grgit.open(project.file('..'))
+
+    println git.head().id
+    println git.head().author
+    println git.head().shortMessage
+    println git.tag.list()
+}
+
+mainClassName = 'bpiwowar.experiments.Run'
+
+ext {
+    // Open the Git repository in the main directory.
+    git = org.ajoberstar.grgit.Grgit.open(file('..'))
+    git_head = git.head()
+
+}
+
+jar.with {
+    from('src/dist') {
+        include 'VERSION'
+        expand(
+                buildDate: new Date(),
+                // Use revision with Git commit id:
+                version: project.version,
+                appName: applicationName,
+                git_commit_id: git_head.id,
+                git_dirty: false,
+                git_commit_message_short: git_head.shortMessage,
+                git_commit_time: git_head.time,
+                git_branch: git.branch.current.name,
+                git_tags: "",
+                git_remote_origin_url: "",
+
+        )
+    }
+}
+
+applicationDistribution.from("scripts") {
+    into "bin"
+}
+
+task gitVersion(type: Copy) {
+    from 'src/dist'
+    include 'VERSION'
+    into 'build/classes/main'
+    expand(
+            buildDate: new Date(),
+            version: project.version,
+            appName: applicationName,
+            git_commit_id: git_head.id,
+            git_dirty: false,
+            git_commit_message_short: git_head.shortMessage,
+            git_commit_time: git_head.time,
+            git_branch: git.branch.current.name,
+            git_tags: "",
+            git_remote_origin_url: "",
+
+    )
+}
+compileJava.dependsOn gitVersion
+
 
 test.useTestNG()

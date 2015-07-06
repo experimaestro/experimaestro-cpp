@@ -8,3 +8,6 @@ project.properties
 /target
 git.properties
 log4j.properties
+helper/build
+server/build
+.gradle
