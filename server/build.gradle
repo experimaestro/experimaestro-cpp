@@ -82,26 +82,6 @@ ext {
 
 }
 
-jar.with {
-    from('src/dist') {
-        include 'VERSION'
-        expand(
-                buildDate: new Date(),
-                // Use revision with Git commit id:
-                version: project.version,
-                appName: applicationName,
-                git_commit_id: git_head.id,
-                git_dirty: false,
-                git_commit_message_short: git_head.shortMessage,
-                git_commit_time: git_head.time,
-                git_branch: git.branch.current.name,
-                git_tags: "",
-                git_remote_origin_url: "",
-
-        )
-    }
-}
-
 applicationDistribution.from("scripts") {
     into "bin"
 }
