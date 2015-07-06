@@ -19,6 +19,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>net.bpiwowar</groupId>
+        <artifactId>experimaestro</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
     <groupId>net.bpiwowar</groupId>
     <artifactId>experimaestro-server</artifactId>
     <name>experimaestro</name>
@@ -27,6 +33,7 @@
 
 
     <properties>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <izpack-standalone.version>4.3.1</izpack-standalone.version>
         <staging.dir>${project.build.directory}/staging</staging.dir>
@@ -514,31 +521,6 @@
 
 
     </dependencies>
-
-
-    <!-- Reports for site -->
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-project-info-reports-plugin</artifactId>
-                <version>2.5</version>
-                <reportSets>
-                    <reportSet>
-                        <reports>
-                            <!--<report>dependencies</report>-->
-                            <report>project-team</report>
-                            <report>mailing-list</report>
-                            <!--<report>cim</report>-->
-                            <report>issue-tracking</report>
-                            <report>license</report>
-                            <report>scm</report>
-                        </reports>
-                    </reportSet>
-                </reportSets>
-            </plugin>
-        </plugins>
-    </reporting>
 
     <!-- Sourceforge information -->
     <distributionManagement>

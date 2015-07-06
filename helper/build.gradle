@@ -1,0 +1,5 @@
+
+description = 'Experimaestro helper package'
+dependencies {
+    compile group: 'net.bpiwowar', name: 'fson', version:'2.3.2-SNAPSHOT'
+}

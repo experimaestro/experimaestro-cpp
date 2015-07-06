@@ -18,18 +18,37 @@
 
 <assembly>
     <id>bin</id>
+
     <formats>
         <format>dir</format>
     </formats>
+
     <includeBaseDirectory>false</includeBaseDirectory>
 
-    <dependencySets>
-        <dependencySet>
-            <!--<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping> -->
-            <unpack>false</unpack>
-            <scope>runtime</scope>
-        </dependencySet>
+    <!--<dependencySets>-->
+        <!--<dependencySet>-->
+            <!--&lt;!&ndash;<outputFileNameMapping>${artifact.groupId}-${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping> &ndash;&gt;-->
+            <!--<unpack>false</unpack>-->
+            <!--<scope>runtime</scope>-->
+        <!--</dependencySet>-->
 
-    </dependencySets>
+    <!--</dependencySets>-->
+
+    <moduleSets>
+        <moduleSet>
+            <binaries>
+                <outputDirectory>/</outputDirectory>
+                <unpack>true</unpack>
+                <includeDependencies>true</includeDependencies>
+                <dependencySets>
+                    <dependencySet>
+                        <outputDirectory>lib</outputDirectory>
+                    </dependencySet>
+                </dependencySets>
+            </binaries>
+        </moduleSet>
+
+
+    </moduleSets>
 
 </assembly>
