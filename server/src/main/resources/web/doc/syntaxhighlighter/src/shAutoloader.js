@@ -57,8 +57,7 @@ sh.autoloader = function()
 	{
 		for (var i = 0; i < aliases.length; i++)
 			brushes[aliases[i]] = url;
-	};
-	
+	}
 	function getAliases(item)
 	{
 		return item.pop
@@ -114,8 +113,7 @@ sh.autoloader = function()
 		
 		// sync way of adding script tags to the page
 		document.body.appendChild(script);
-	};
-	
+	}
 	function checkAll()
 	{
 		for(var url in scripts)
@@ -124,7 +122,7 @@ sh.autoloader = function()
 		
 		if (allCalled)
 			SyntaxHighlighter.highlight(allParams);
-	};
+	}
 };
 
 })();

@@ -441,7 +441,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
     /**
      * Gives the inclusion relationship between two bitsets
      */
-    static public enum Inclusion {
+    public enum Inclusion {
         /**
          * Null intersection
          */

@@ -151,8 +151,7 @@ var sh = {
 			function defaultGetHtml(highlighter, name)
 			{
 				return sh.toolbar.getButtonHtml(highlighter, name, sh.config.strings[name]);
-			};
-			
+			}
 			for (var i = 0; i < list.length; i++)
 				html += (items[list[i]].getHtml || defaultGetHtml)(highlighter, list[i]);
 			
@@ -193,8 +192,7 @@ var sh = {
 					;
 
 				return match ? match[1] : null;
-			};
-			
+			}
 			var highlighter = getHighlighterById(findParentElement(target, '.syntaxhighlighter').id),
 				commandName = getValue('command')
 				;
@@ -386,9 +384,8 @@ sh['highlight']		= sh.highlight;
 function hasClass(target, className)
 {
 	return target.className.indexOf(className) != -1;
-};
-
-/**
+}
+	/**
  * Adds CSS class name to the target DOM element.
  * @param {DOMElement} target Target DOM element.
  * @param {String} className New CSS class to add.
@@ -397,9 +394,8 @@ function addClass(target, className)
 {
 	if (!hasClass(target, className))
 		target.className += ' ' + className;
-};
-
-/**
+}
+	/**
  * Removes CSS class name from the target DOM element.
  * @param {DOMElement} target Target DOM element.
  * @param {String} className CSS class to remove.
@@ -407,9 +403,8 @@ function addClass(target, className)
 function removeClass(target, className)
 {
 	target.className = target.className.replace(className, '');
-};
-
-/**
+}
+	/**
  * Converts the source to array object. Mostly used for function arguments and 
  * lists returned by getElementsByTagName() which aren't Array objects.
  * @param {List} source Source list.
@@ -423,9 +418,8 @@ function toArray(source)
 		result.push(source[i]);
 		
 	return result;
-};
-
-/**
+}
+	/**
  * Splits block of text into lines.
  * @param {String} block Block of text.
  * @return {Array} Returns array of lines.
@@ -444,9 +438,8 @@ function getHighlighterId(id)
 {
 	var prefix = 'highlighter_';
 	return id.indexOf(prefix) == 0 ? id : prefix + id;
-};
-
-/**
+}
+	/**
  * Finds Highlighter instance by ID.
  * @param {String} highlighterId Highlighter ID.
  * @return {Highlighter} Returns instance of the highlighter.
@@ -454,9 +447,8 @@ function getHighlighterId(id)
 function getHighlighterById(id)
 {
 	return sh.vars.highlighters[getHighlighterId(id)];
-};
-
-/**
+}
+	/**
  * Finds highlighter's DIV container.
  * @param {String} highlighterId Highlighter ID.
  * @return {Element} Returns highlighter's DIV element.
@@ -464,9 +456,8 @@ function getHighlighterById(id)
 function getHighlighterDivById(id)
 {
 	return document.getElementById(getHighlighterId(id));
-};
-
-/**
+}
+	/**
  * Stores highlighter so that getHighlighterById() can do its thing. Each
  * highlighter must call this method to preserve itself.
  * @param {Highilghter} highlighter Highlighter instance.
@@ -474,9 +465,8 @@ function getHighlighterDivById(id)
 function storeHighlighter(highlighter)
 {
 	sh.vars.highlighters[getHighlighterId(highlighter.id)] = highlighter;
-};
-
-/**
+}
+	/**
  * Looks for a child or parent node which has specified classname.
  * Equivalent to jQuery's $(container).find(".className")
  * @param {Element} target Target element.
@@ -508,9 +498,8 @@ function findElement(target, search, reverse /* optional */)
 		found = findElement(nodes[i], search, reverse);
 	
 	return found;
-};
-
-/**
+}
+	/**
  * Looks for a parent node which has specified classname.
  * This is an alias to <code>findElement(container, className, true)</code>.
  * @param {Element} target Target element.
@@ -520,9 +509,8 @@ function findElement(target, search, reverse /* optional */)
 function findParentElement(target, className)
 {
 	return findElement(target, className, true);
-};
-
-/**
+}
+	/**
  * Finds an index of element in the array.
  * @ignore
  * @param {Object} searchElement
@@ -538,17 +526,15 @@ function indexOf(array, searchElement, fromIndex)
 			return i;
 	
 	return -1;
-};
-
-/**
+}
+	/**
  * Generates a unique element ID.
  */
 function guid(prefix)
 {
 	return (prefix || '') + Math.round(Math.random() * 1000000).toString();
-};
-
-/**
+}
+	/**
  * Merges two objects. Values from obj2 override values in obj1.
  * Function is NOT recursive and works only for one dimensional objects.
  * @param {Object} obj1 First object.
@@ -566,9 +552,8 @@ function merge(obj1, obj2)
 		result[name] = obj2[name];
 		
 	return result;
-};
-
-/**
+}
+	/**
  * Attempts to convert string to boolean.
  * @param {String} value Input string.
  * @return {Boolean} Returns true if input was "true", false if input was "false" and value otherwise.
@@ -577,9 +562,8 @@ function toBoolean(value)
 {
 	var result = { "true" : true, "false" : false }[value];
 	return result == null ? value : result;
-};
-
-/**
+}
+	/**
  * Opens up a centered popup window.
  * @param {String} url		URL to open in the window.
  * @param {String} name		Popup name.
@@ -604,9 +588,8 @@ function popup(url, name, width, height, options)
 	var win = window.open(url, name, options);
 	win.focus();
 	return win;
-};
-
-/**
+}
+	/**
  * Adds event handler to the target object.
  * @param {Object} obj		Target object.
  * @param {String} type		Name of the event.
@@ -628,9 +611,8 @@ function attachEvent(obj, type, func, scope)
 		}
 			
 		func.call(scope || window, e);
-	};
-	
-	if (obj.attachEvent) 
+	}
+	if (obj.attachEvent)
 	{
 		obj.attachEvent('on' + type, handler);
 	}
@@ -638,18 +620,16 @@ function attachEvent(obj, type, func, scope)
 	{
 		obj.addEventListener(type, handler, false);
 	}
-};
-
-/**
+}
+	/**
  * Displays an alert.
  * @param {String} str String to display.
  */
 function alert(str)
 {
 	window.alert(sh.config.strings.alert + str);
-};
-
-/**
+}
+	/**
  * Finds a brush by its alias.
  *
  * @param {String} alias		Brush alias.
@@ -692,9 +672,8 @@ function findBrush(alias, showAlert)
 		alert(sh.config.strings.noBrush + alias);
 	
 	return result;
-};
-
-/**
+}
+	/**
  * Executes a callback on each line and replaces each line with result from the callback.
  * @param {Object} str			Input string.
  * @param {Object} callback		Callback function taking one string argument and returning a string.
@@ -707,9 +686,8 @@ function eachLine(str, callback)
 		lines[i] = callback(lines[i], i);
 		
 	return lines.join('\n');
-};
-
-/**
+}
+	/**
  * This is a special trim which only removes first and last empty lines
  * and doesn't affect valid leading space on the first line.
  * 
@@ -719,9 +697,8 @@ function eachLine(str, callback)
 function trimFirstAndLastLines(str)
 {
 	return str.replace(/^[ ]*[\n]+|[\n]*[ ]*$/g, '');
-};
-
-/**
+}
+	/**
  * Parses key/value pairs into hash object.
  * 
  * Understands the following formats:
@@ -771,9 +748,8 @@ function parseParams(str)
 	}
 	
 	return result;
-};
-
-/**
+}
+	/**
  * Wraps each line of the string into <code/> tag with given style applied to it.
  * 
  * @param {String} str   Input string.
@@ -821,9 +797,8 @@ function wrapLinesWithCode(str, css)
 		});
 
 	return str;
-};
-
-/**
+}
+	/**
  * Pads number with zeros until it's length is the same as given length.
  * 
  * @param {Number} number	Number to pad.
@@ -838,9 +813,8 @@ function padNumber(number, length)
 		result = '0' + result;
 	
 	return result;
-};
-
-/**
+}
+	/**
  * Replaces tabs with spaces.
  * 
  * @param {String} code		Source code.
@@ -855,9 +829,8 @@ function processTabs(code, tabSize)
 		tab += ' ';
 
 	return code.replace(/\t/g, tab);
-};
-
-/**
+}
+	/**
  * Replaces tabs with smart spaces.
  * 
  * @param {String} code    Code to fix the tabs in.
@@ -884,8 +857,7 @@ function processSmartTabs(code, tabSize)
 			+ spaces.substr(0, count)
 			+ line.substr(pos + 1, line.length) // pos + 1 will get rid of the tab
 			;
-	};
-
+	}
 	// Go through all the lines and do the 'smart tabs' magic.
 	code = eachLine(code, function(line)
 	{
@@ -907,9 +879,8 @@ function processSmartTabs(code, tabSize)
 	});
 	
 	return code;
-};
-
-/**
+}
+	/**
  * Performs various string fixes based on configuration.
  */
 function fixInputString(str)
@@ -923,9 +894,8 @@ function fixInputString(str)
 		str = str.replace(br, '');
 		
 	return str;
-};
-
-/**
+}
+	/**
  * Removes all white space at the begining and end of a string.
  * 
  * @param {String} str   String to trim.
@@ -934,9 +904,8 @@ function fixInputString(str)
 function trim(str)
 {
 	return str.replace(/^\s+|\s+$/g, '');
-};
-
-/**
+}
+	/**
  * Unindents a block of text by the lowest common indent amount.
  * @param {String} str   Text to unindent.
  * @return {String}      Returns unindented text block.
@@ -944,7 +913,7 @@ function trim(str)
 function unindent(str)
 {
 	var lines = splitLines(fixInputString(str)),
-		indents = new Array(),
+		indents = [],
 		regex = /^\s*/,
 		min = 1000
 		;
@@ -973,9 +942,8 @@ function unindent(str)
 			lines[i] = lines[i].substr(min);
 	
 	return lines.join('\n');
-};
-
-/**
+}
+	/**
  * Callback method for Array.sort() which sorts matches by
  * index position and then by length.
  * 
@@ -1000,9 +968,8 @@ function matchesSortCallback(m1, m2)
 	}
 	
 	return 0;
-};
-
-/**
+}
+	/**
  * Executes given regular expression on provided code and returns all
  * matches that are found.
  * 
@@ -1015,8 +982,7 @@ function getMatches(code, regexInfo)
 	function defaultAdd(match, regexInfo)
 	{
 		return match[0];
-	};
-	
+	}
 	var index = 0,
 		match = null,
 		matches = [],
@@ -1034,9 +1000,8 @@ function getMatches(code, regexInfo)
 	}
 	
 	return matches;
-};
-
-/**
+}
+	/**
  * Turns all URLs in the code into <a/> tags.
  * @param {String} code Input code.
  * @return {String} Returns code with </a> tags.
@@ -1063,9 +1028,8 @@ function processUrls(code)
 		
 		return '<a href="' + m + '">' + m + '</a>' + suffix;
 	});
-};
-
-/**
+}
+	/**
  * Finds all <SCRIPT TYPE="syntaxhighlighter" /> elementss.
  * @return {Array} Returns array of all found SyntaxHighlighter tags.
  */
@@ -1080,9 +1044,8 @@ function getSyntaxHighlighterScriptTags()
 			result.push(tags[i]);
 			
 	return result;
-};
-
-/**
+}
+	/**
  * Strips <![CDATA[]]> from <SCRIPT /> content because it should be used
  * there in most cases for XHTML compliance.
  * @param {String} original	Input code.
@@ -1114,10 +1077,8 @@ function stripCData(original)
 	}
 	
 	return changed ? copy : original;
-};
-
-
-/**
+}
+	/**
  * Quick code mouse double click handler.
  */
 function quickCodeHandler(e)
@@ -1163,9 +1124,8 @@ function quickCodeHandler(e)
 		textarea.parentNode.removeChild(textarea);
 		removeClass(highlighterDiv, 'source');
 	});
-};
-
-/**
+}
+	/**
  * Match object.
  */
 sh.Match = function(value, index, css)
@@ -1345,7 +1305,7 @@ sh.Highlighter.prototype = {
 				var itemJ = matches[j];
 				
 				if (itemJ === null) 
-					continue;
+
 				else if (itemJ.index > itemIEndPos) 
 					break;
 				else if (itemJ.index == itemI.index && itemJ.length > itemI.length)
@@ -1467,8 +1427,6 @@ sh.Highlighter.prototype = {
 				indent = /^(&nbsp;|\s)+/.exec(line),
 				spaces = null,
 				lineNumber = lineNumbers ? lineNumbers[i] : firstLine + i;
-				;
-
 			if (indent != null)
 			{
 				spaces = indent[0].toString();
@@ -1516,8 +1474,7 @@ sh.Highlighter.prototype = {
 		{
 			var result = match ? (match.brushName || brushName) : brushName;
 			return result ? result + ' ' : '';
-		};
-		
+		}
 		// Finally, go through the final list of matches and pull the all
 		// together adding everything in between that isn't a match.
 		for (var i = 0; i < matches.length; i++) 
@@ -1673,7 +1630,7 @@ sh.Highlighter.prototype = {
 		storeHighlighter(this);
 		
 		// local params take precedence over defaults
-		this.params = merge(sh.defaults, params || {})
+		this.params = merge(sh.defaults, params || {});
 		
 		// process light mode
 		if (this.getParam('light') == true)

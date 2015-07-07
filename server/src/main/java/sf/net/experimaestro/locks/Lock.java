@@ -121,7 +121,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         try {
             long id = rs.getLong(1);
             final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id);
-            db.loadFromJson(lock, rs.getBinaryStream(3));
+            DatabaseObjects.loadFromJson(lock, rs.getBinaryStream(3));
             return lock;
         } catch(Throwable e) {
             throw new XPMRuntimeException(e, "Could not create lock object from DB");

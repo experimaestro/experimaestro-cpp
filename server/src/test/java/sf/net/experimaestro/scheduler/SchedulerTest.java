@@ -394,9 +394,8 @@ public class SchedulerTest extends XPMEnvironment {
             Link link = (Link) o;
 
             if (to != link.to) return false;
-            if (from != link.from) return false;
+            return from == link.from;
 
-            return true;
         }
 
         @Override

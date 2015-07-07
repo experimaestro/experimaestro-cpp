@@ -25,5 +25,5 @@ public interface Converter<U, V> {
      * @param u The value of type U
      * @return The value of type V
      */
-    public V convert(U u);
+    V convert(U u);
 }

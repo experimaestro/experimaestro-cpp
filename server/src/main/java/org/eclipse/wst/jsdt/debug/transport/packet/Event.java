@@ -25,7 +25,7 @@ public interface Event extends Packet {
 	 * 
 	 * @return the name of the event
 	 */
-	public String getEvent();
+	String getEvent();
 
 	/**
 	 * Returns the body of the {@link Event}.<br>
@@ -35,5 +35,5 @@ public interface Event extends Packet {
 	 *  
 	 * @return the body of the {@link Event} or an empty {@link Map} never <code>null</code>
 	 */
-	public Map getBody();
+	Map getBody();
 }

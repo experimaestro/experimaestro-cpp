@@ -46,9 +46,8 @@ public class DependencyPK implements Serializable {
         DependencyPK that = (DependencyPK) o;
 
         if (from != that.from) return false;
-        if (to != that.to) return false;
+        return to == that.to;
 
-        return true;
     }
 
     @Override

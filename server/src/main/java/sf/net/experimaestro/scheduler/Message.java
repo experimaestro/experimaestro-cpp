@@ -40,6 +40,6 @@ abstract public class Message {
         PROGRESS,
 
         RESOURCE_ADDED,
-        RESOURCE_REMOVED;
+        RESOURCE_REMOVED
     }
 }

@@ -56,12 +56,12 @@ function listFilter(list) { // header is any element, list is an unordered list
 /** Create an element */
 $e = function (e) {
     return $(document.createElement(e));
-}
+};
 
 /** Create a text node */
 $t = function (s) {
     return $(document.createTextNode(s));
-}
+};
 
 /** Transform json into HTML lists */
 json2html = function (json) {
@@ -73,7 +73,7 @@ json2html = function (json) {
         c.append($e('li').append($e('span').append($e("b").text(key + ": "))).append(json2html(json[key])));
     }
     return c;
-}
+};
 
 function safe_tags(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -120,7 +120,7 @@ var resource_action_callback = function () {
             }
         });
     }
-}
+};
 
 // --- action: Get the details of a resource
 var resource_link_callback = function () {
@@ -184,12 +184,12 @@ $().ready(function () {
                 var old_counter_id = e.parents(".xpm-resource-list").attr("id") + "-count";
                 var c = $("#" + old_counter_id);
                 c.text(Number(c.text()) - 1);
-            }
+            };
 
             //console.debug("Received: " + e.data);
             var r = $.parseJSON(e.data);
             if (r.error) {
-                console.error("Error: " + e.data)
+                console.error("Error: " + e.data);
                 return;
             }
             if (!r.result)
@@ -274,10 +274,10 @@ $().ready(function () {
                     console.warn("Unhandled notification " + r.event);
                     break;
             }
-        }
+        };
 
         websocket.onopen = function () {
-            noty({text: "Web socket opened", type: 'information', timeout: 2000})
+            noty({text: "Web socket opened", type: 'information', timeout: 2000});
             $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
             var p = {id: 1, method: "listen", params: []};
             this.send(JSON.stringify(p));
@@ -291,13 +291,13 @@ $().ready(function () {
                     clearInterval(websocket.ping);
                 }
             }, 120000);
-        }
+        };
 
         websocket.onerror = function (e) {
             noty({text: "Web socket error: " + e, type: 'information', timeout: 5000})
         };
         websocket.onclose = function (e) {
-            noty({text: "Web socket closed", type: 'information', timeout: 2000})
+            noty({text: "Web socket closed", type: 'information', timeout: 2000});
             $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
             clearInterval(this.ping);
         };

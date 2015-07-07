@@ -24,13 +24,11 @@
 		function getKeywordsCSS(str)
 		{
 			return '\\b([a-z_]|)' + str.replace(/ /g, '(?=:)\\b|\\b([a-z_\\*]|\\*|)') + '(?=:)\\b';
-		};
-	
+		}
 		function getValuesCSS(str)
 		{
 			return '\\b' + str.replace(/ /g, '(?!-)(?!:)\\b|\\b()') + '\:\\b';
-		};
-
+		}
 		var keywords =	'ascent azimuth background-attachment background-color background-image background-position ' +
 						'background-repeat background baseline bbox border-collapse border-color border-spacing border-style border-top ' +
 						'border-right border-bottom border-left border-top-color border-right-color border-bottom-color border-left-color ' +
@@ -82,8 +80,7 @@
 			{ regex: new RegExp(getValuesCSS(values), 'g'),				css: 'value' },			// values
 			{ regex: new RegExp(this.getKeywords(fonts), 'g'),			css: 'color1' }			// fonts
 			];
-	};
-
+	}
 	Brush.prototype	= new SyntaxHighlighter.Highlighter();
 	Brush.aliases	= ['sass', 'scss'];
 

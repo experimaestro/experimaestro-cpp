@@ -54,7 +54,7 @@ public abstract class SocketTransportService implements TransportService {
 		listeners.put(key, serverSocket);
 		return key;
 
-	};
+	}
 
 	/* (non-Javadoc)
 	 * @see org.eclipse.wst.jsdt.debug.transport.TransportService#stopListening(org.eclipse.wst.jsdt.debug.transport.TransportService.ListenerKey)

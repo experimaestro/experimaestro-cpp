@@ -108,7 +108,7 @@ public class ScriptSource {
 			functionSources = new FunctionSource[flength];
 			functionNames = new ArrayList(flength);
 			
-			int start = 0, end = 0;;
+			int start = 0, end = 0;
 			for (int i = 0; i < functions.length; i++) {
 				int[] lines = functions[i].getLineNumbers();
 				if(lines != null && lines.length > 0) {

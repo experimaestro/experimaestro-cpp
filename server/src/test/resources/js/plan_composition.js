@@ -35,7 +35,7 @@ tasks.add("ns:mult", {
     },
 
     run: function(x) {
-        logger.debug("Task mult: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) * $(x.y))
+        logger.debug("Task mult: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) * $(x.y));
         return $(x.x) * $(x.y);
     }
 });
@@ -47,7 +47,7 @@ tasks.add("ns:plus", {
     },
 
     run: function(x) {
-        logger.debug("Task plus: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) + $(x.y))
+        logger.debug("Task plus: got x=%s and y=%s: %s", $(x.x), $(x.y), $(x.x) + $(x.y));
         return $(x.x) + $(x.y)
     }
 });
@@ -243,7 +243,7 @@ function test_groupby_all() {
 
 function test_groupby() {
     var plan1 = tasks("ns:identity").plan({ x: [1, 2, 3] });
-    var plan2 = tasks("ns:plus").plan({ x: plan1, y: [10, 20] })
+    var plan2 = tasks("ns:plus").plan({ x: plan1, y: [10, 20] });
     var plan3 = tasks("ns:sum").plan({ x: plan2.group_by(plan1) });
     
     var result = plan3();

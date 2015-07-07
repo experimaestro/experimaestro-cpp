@@ -52,8 +52,7 @@
 				];
 			
 		this.forHtmlScript(SyntaxHighlighter.regexLib.aspScriptTags);
-	};
-
+	}
 	Brush.prototype	= new SyntaxHighlighter.Highlighter();
 	Brush.aliases	= ['py', 'python'];
 

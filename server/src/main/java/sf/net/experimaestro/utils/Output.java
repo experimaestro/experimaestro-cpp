@@ -110,11 +110,8 @@ public class Output {
 
     static public <T> void print(PrintWriter out, String separator,
                                  Iterable<T> iterable) {
-        print(out, separator, iterable, new Formatter<T>() {
-            public String format(T t) {
-                return t.toString();
-            }
-
+        print(out, separator, iterable, t -> {
+            return t.toString();
         });
     }
 
@@ -234,7 +231,7 @@ public class Output {
         return sb.toString();
     }
 
-    static public interface Formatter<T> {
+    public interface Formatter<T> {
         String format(T t);
     }
 

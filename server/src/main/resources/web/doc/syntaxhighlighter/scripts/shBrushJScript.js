@@ -40,8 +40,7 @@
 			];
 	
 		this.forHtmlScript(r.scriptScriptTags);
-	};
-
+	}
 	Brush.prototype	= new SyntaxHighlighter.Highlighter();
 	Brush.aliases	= ['js', 'jscript', 'javascript'];
 

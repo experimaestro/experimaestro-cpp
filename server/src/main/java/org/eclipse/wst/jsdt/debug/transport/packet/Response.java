@@ -26,14 +26,14 @@ public interface Response extends Packet {
 	 * 
 	 * @return the name of the original issued command, never <code>null</code>
 	 */
-	public String getCommand();
+	String getCommand();
 	
 	/**
 	 * Returns the request sequence
 	 * 
 	 * @return the request sequence
 	 */
-	public int getRequestSequence();
+	int getRequestSequence();
 	
 	/**
 	 * Returns the body of the {@link Response}.<br>
@@ -43,19 +43,19 @@ public interface Response extends Packet {
 	 *  
 	 * @return the body of the {@link Response} or an empty {@link Map} never <code>null</code>
 	 */
-	public Map getBody();
+	Map getBody();
 
 	/**
 	 * Returns <code>true</code> if the original {@link Request} was successful
 	 * 
 	 * @return <code>true</code> if the original {@link Request} was successful, <code>false</code> otherwise
 	 */
-	public boolean isSuccess();
+	boolean isSuccess();
 	
 	/**
 	 * Returns <code>true</code> if the issued command left the connected VM in a running state.
 	 * 
 	 * @return <code>true</code> if the underlying command is running, <code>false</code> otherwise
 	 */
-	public boolean isRunning();
+	boolean isRunning();
 }

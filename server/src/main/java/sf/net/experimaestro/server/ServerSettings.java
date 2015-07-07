@@ -58,7 +58,7 @@ public class ServerSettings {
     }
 
 
-    static enum Style {
-        SMOOTHNESS, BLITZER;
+    enum Style {
+        SMOOTHNESS, BLITZER
     }
 }

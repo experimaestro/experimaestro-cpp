@@ -47,9 +47,8 @@ final public class StreamReference {
         StreamReference that = (StreamReference) o;
 
         if (contextIndex != that.contextIndex) return false;
-        if (inputIndex != that.inputIndex) return false;
+        return inputIndex == that.inputIndex;
 
-        return true;
     }
 
     @Override

@@ -83,7 +83,7 @@ public class TaskOperator extends UnaryOperator {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?
-                    input.iterator(scriptContext) : ImmutableList.of(new Value(new Json[0])).iterator();
+                    input.iterator(scriptContext) : ImmutableList.of(new Value()).iterator();
 
             @Override
             protected ReturnValue computeNext() {

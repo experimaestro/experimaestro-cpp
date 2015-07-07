@@ -72,7 +72,7 @@ public final class DebugShell {
     		//forward all other args to Rhino
     		argList.add(arg);
 		}
-    	String[] newArgs = (String[]) argList.toArray(new String[0]); 
+    	String[] newArgs = argList.toArray(new String[0]);
     	
 		TransportService service = new RhinoTransportService();
 		RhinoDebuggerImpl debugger = new RhinoDebuggerImpl(service, port, suspend, trace);

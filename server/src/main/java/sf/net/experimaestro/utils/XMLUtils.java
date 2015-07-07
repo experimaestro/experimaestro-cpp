@@ -202,22 +202,17 @@ public class XMLUtils {
     }
 
     private static Iterable<Node> nodes(final NodeList nodes) {
-        return new Iterable<Node>() {
-            @Override
-            public Iterator<Node> iterator() {
-                return new AbstractIterator<Node>() {
-                    int i = 0;
+        return () -> new AbstractIterator<Node>() {
+            int i = 0;
 
-                    @Override
-                    protected boolean storeNext() {
-                        if (i < nodes.getLength()) {
-                            Node node = nodes.item(i++);
-                            value = node;
-                            return true;
-                        }
-                        return false;
-                    }
-                };
+            @Override
+            protected boolean storeNext() {
+                if (i < nodes.getLength()) {
+                    Node node = nodes.item(i++);
+                    value = node;
+                    return true;
+                }
+                return false;
             }
         };
     }
@@ -265,20 +260,15 @@ public class XMLUtils {
     }
 
     public static Iterable<? extends Node> iterable(final NodeList list) {
-        return new Iterable<Node>() {
+        return () -> new com.google.common.collect.AbstractIterator<Node>() {
+            int i = 0;
+
             @Override
-            public Iterator<Node> iterator() {
-                return new com.google.common.collect.AbstractIterator<Node>() {
-                    int i = 0;
+            protected Node computeNext() {
+                if (i >= list.getLength())
+                    return endOfData();
 
-                    @Override
-                    protected Node computeNext() {
-                        if (i >= list.getLength())
-                            return endOfData();
-
-                        return list.item(i++);
-                    }
-                };
+                return list.item(i++);
             }
         };
     }

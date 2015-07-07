@@ -314,8 +314,8 @@ public abstract class Task {
     final public Task copy() {
         try {
             Constructor<? extends Task> constructor = this.getClass()
-                    .getConstructor(new Class<?>[]{});
-            Task copy = constructor.newInstance(new Object[]{});
+                    .getConstructor();
+            Task copy = constructor.newInstance();
             copy.init(this);
             return copy;
         } catch (RuntimeException e) {

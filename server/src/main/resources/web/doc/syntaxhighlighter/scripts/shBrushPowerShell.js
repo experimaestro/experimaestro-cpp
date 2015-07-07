@@ -62,8 +62,7 @@
 			{ regex: new RegExp(this.getKeywords(keywords), 'gmi'),	css: 'keyword' },
 			{ regex: new RegExp(this.getKeywords(alias), 'gmi'),	css: 'keyword' }
 		];
-	};
-
+	}
 	Brush.prototype	= new SyntaxHighlighter.Highlighter();
 	Brush.aliases	= ['powershell', 'ps'];
 

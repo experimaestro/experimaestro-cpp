@@ -24,29 +24,29 @@ public interface Constants {
 	 * <br>
 	 * Value is: <code>:</code>
 	 */
-	public static final String COLON = ":"; //$NON-NLS-1$
+	String COLON = ":"; //$NON-NLS-1$
 	/**
 	 * Constant for the text representation of localhost<br>
 	 * <br>
 	 * Value is: <code>localhost</code>
 	 */
-	public static final String LOCALHOST = "localhost"; //$NON-NLS-1$
+	String LOCALHOST = "localhost"; //$NON-NLS-1$
 	/**
 	 * Constant for the IP address representation of localhost<br>
 	 * <br>
 	 * Value is: <code>127.0.0.1</code> 
 	 */
-	public static final String LOCALHOST_IP = "127.0.0.1"; //$NON-NLS-1$
+	String LOCALHOST_IP = "127.0.0.1"; //$NON-NLS-1$
 	/**
 	 * "port" constant<br>
 	 * <br>
 	 * Value is: <code>port</code>
 	 */
-	public static final String PORT = "port"; //$NON-NLS-1$
+	String PORT = "port"; //$NON-NLS-1$
 	/**
 	 * UTF-8 encoding constant<br>
 	 * <br>
 	 * Value is: <code>UTF-8</code>
 	 */
-	public static final String UTF_8 = "UTF-8"; //$NON-NLS-1$
+	String UTF_8 = "UTF-8"; //$NON-NLS-1$
 }

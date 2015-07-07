@@ -76,12 +76,7 @@ public class Introspection {
 
 	public static void addImplementors(final ArrayList<Class<?>> list,
 			final Class<?> which, final String packageName, final int levels) {
-		addClasses(new Checker() {
-			public boolean accepts(Class<?> aClass) {
-				return which.isAssignableFrom(aClass);
-			}
-
-		}, list, packageName, levels);
+		addClasses(aClass -> which.isAssignableFrom(aClass), list, packageName, levels);
 	}
 
 	static public ArrayList<Class<?>> getClasses(final Checker checker,

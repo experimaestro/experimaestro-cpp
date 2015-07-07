@@ -1,4 +1,4 @@
-var y = new Constant({v: 3}, {v: 4})
+var y = new Constant({v: 3}, {v: 4});
 
 var a = tasks.copy("a", {
    x: [1, 2],

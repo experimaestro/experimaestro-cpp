@@ -32,7 +32,7 @@ public interface TransportService {
 	 * @return the key that uniquely identifies this service
 	 * @throws IOException
 	 */
-	public ListenerKey startListening(String address) throws IOException;
+	ListenerKey startListening(String address) throws IOException;
 
 	/**
 	 * Stops listening for the given key
@@ -40,7 +40,7 @@ public interface TransportService {
 	 * @param listenerKey
 	 * @throws IOException
 	 */
-	public void stopListening(ListenerKey listenerKey) throws IOException;
+	void stopListening(ListenerKey listenerKey) throws IOException;
 
 	/**
 	 * Listens for a {@link Connection} to be made to and accepts it. The method can block until a {@link Connection} is made.
@@ -51,7 +51,7 @@ public interface TransportService {
 	 * @return the resulting {@link Connection}
 	 * @throws IOException
 	 */
-	public Connection accept(ListenerKey listenerKey, long attachTimeout, long handshakeTimeout) throws IOException;
+	Connection accept(ListenerKey listenerKey, long attachTimeout, long handshakeTimeout) throws IOException;
 
 	/**
 	 * Attaches to the given address and returns the resulting {@link Connection}. This method can block until a {@link Connection} is made
@@ -62,6 +62,6 @@ public interface TransportService {
 	 * @return the resulting {@link Connection}
 	 * @throws IOException
 	 */
-	public Connection attach(String address, long attachTimeout, long handshakeTimeout) throws IOException;
+	Connection attach(String address, long attachTimeout, long handshakeTimeout) throws IOException;
 
 }

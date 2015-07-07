@@ -27,7 +27,7 @@ public interface Packet {
 	 * 
 	 * @return the type, never <code>null</code>
 	 */
-	public String getType();
+	String getType();
 	
 	/**
 	 * Returns the JSON representation of this packet. 
@@ -36,5 +36,5 @@ public interface Packet {
 	 * This method cannot return <code>null</code>
 	 * @return the composed JSON map
 	 */
-	public Map toJSON();
+	Map toJSON();
 }

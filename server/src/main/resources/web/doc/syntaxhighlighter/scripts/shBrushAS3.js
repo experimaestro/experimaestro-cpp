@@ -47,8 +47,7 @@
 			];
 	
 		this.forHtmlScript(SyntaxHighlighter.regexLib.scriptScriptTags);
-	};
-
+	}
 	Brush.prototype	= new SyntaxHighlighter.Highlighter();
 	Brush.aliases	= ['actionscript3', 'as3'];
 

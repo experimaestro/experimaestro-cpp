@@ -31,5 +31,5 @@ public interface ListenerKey {
 	 * 
 	 * @return the address to try and communicate with, never <code>null</code>
 	 */
-	public String address();
+	String address();
 }

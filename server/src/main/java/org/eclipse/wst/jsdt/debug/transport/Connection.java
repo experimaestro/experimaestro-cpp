@@ -30,14 +30,14 @@ public interface Connection {
 	 * 
 	 * @return <code>true</code> if the connection is open <code>false</code> otherwise
 	 */
-	public boolean isOpen();
+	boolean isOpen();
 
 	/**
 	 * Closes the connection.
 	 * 
 	 * @throws IOException if the connection failed to close or is already closed
 	 */
-	public void close() throws IOException;
+	void close() throws IOException;
 
 	/**
 	 * Writes the given packet to the connection
@@ -45,7 +45,7 @@ public interface Connection {
 	 * @param packet the packet to write, <code>null</code> is not accepted
 	 * @throws IOException if the write failed
 	 */
-	public void writePacket(Packet packet) throws IOException;
+	void writePacket(Packet packet) throws IOException;
 
 	/**
 	 * Reads the next packet from the connection. This is non-blocking.<br>
@@ -55,6 +55,6 @@ public interface Connection {
 	 * @return the next {@link Packet} from the connection
 	 * @throws IOException if the connection is prematurely closed or the read failed
 	 */
-	public Packet readPacket() throws IOException;
+	Packet readPacket() throws IOException;
 
 }

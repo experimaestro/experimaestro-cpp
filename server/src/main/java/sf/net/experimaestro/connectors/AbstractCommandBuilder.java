@@ -219,7 +219,7 @@ public abstract class AbstractCommandBuilder {
             return type;
         }
 
-        static public enum Type {
+        public enum Type {
             READ, APPEND, WRITE, PIPE, INHERIT;
 
             public boolean isReader() {

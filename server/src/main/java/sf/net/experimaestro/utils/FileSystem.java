@@ -34,19 +34,11 @@ public class FileSystem {
     /**
      * A filter for directories
      */
-    final public static FileFilter DIRECTORY_FILTER = new FileFilter() {
-        public boolean accept(File pathname) {
-            return pathname.isDirectory();
-        }
-    };
+    final public static FileFilter DIRECTORY_FILTER = pathname -> pathname.isDirectory();
     /**
      * A filter for files
      */
-    final public static FileFilter FILE_FILTER = new FileFilter() {
-        public boolean accept(File pathname) {
-            return pathname.isFile();
-        }
-    };
+    final public static FileFilter FILE_FILTER = pathname -> pathname.isFile();
     private static final Logger logger = Logger.getLogger(FileSystem.class);
 
     /**

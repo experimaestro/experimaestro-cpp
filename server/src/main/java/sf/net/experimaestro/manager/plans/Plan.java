@@ -145,12 +145,9 @@ public class Plan extends Operator {
         // Now run
         final Iterator<Value> iterator = operator.iterator(scriptContext);
 
-        return Iterators.transform(iterator, new Function<Value, Json>() {
-            @Override
-            public Json apply(Value from) {
-                assert from.getNodes().length == 1;
-                return from.getNodes()[0];
-            }
+        return Iterators.transform(iterator, from -> {
+            assert from.getNodes().length == 1;
+            return from.getNodes()[0];
         });
 
     }
@@ -493,7 +490,7 @@ public class Plan extends Operator {
                 array.add(ValueType.wrap(e));
             }
 
-            return new Constant(new Json[]{array});
+            return new Constant(array);
         }
 
         if (value instanceof Map) {

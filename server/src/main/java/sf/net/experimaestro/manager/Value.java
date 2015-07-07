@@ -111,8 +111,8 @@ public abstract class Value {
     final public Value copy() {
         try {
             Constructor<? extends Value> constructor = this.getClass()
-                    .getConstructor(new Class<?>[]{});
-            Value copy = constructor.newInstance(new Object[]{});
+                    .getConstructor();
+            Value copy = constructor.newInstance();
             copy.init(this);
             return copy;
         } catch (RuntimeException e) {

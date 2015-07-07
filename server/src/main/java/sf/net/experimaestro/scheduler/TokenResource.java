@@ -161,7 +161,7 @@ public class TokenResource extends Resource {
     synchronized void unlock() throws SQLException {
         if (usedTokens >= 0) {
             setValue(usedTokens - 1);
-            Scheduler.get().notifyRunners();
+            Scheduler.notifyRunners();
             LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
         } else {
             LOGGER.warn("Attempt to release non existent token (%d/%d)", usedTokens, limit);

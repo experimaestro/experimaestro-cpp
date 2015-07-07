@@ -109,12 +109,7 @@ public abstract class Operator {
     public static void ensureConnections(final Map<Operator, Operator> simplified, Set<Operator> set) {
         ArrayList<Operator> list = new ArrayList<>(set);
         set.clear();
-        for (Operator operator : Iterables.transform(list, new Function<Operator, Operator>() {
-            @Override
-            public Operator apply(Operator input) {
-                return getSimplified(simplified, input);
-            }
-        })) {
+        for (Operator operator : Iterables.transform(list, input -> getSimplified(simplified, input))) {
             set.add(operator);
         }
 
@@ -124,12 +119,7 @@ public abstract class Operator {
      * Copy a collection of operators
      */
     protected static Iterable<Operator> copy(Iterable<Operator> collection, final boolean deep, final Map<Object, Object> map) {
-        return Iterables.transform(collection, new Function<Operator, Operator>() {
-            @Override
-            public Operator apply(Operator input) {
-                return input.copy(deep, map);
-            }
-        });
+        return Iterables.transform(collection, input -> input.copy(deep, map));
     }
 
     static public Operator simplify(Operator operator) {

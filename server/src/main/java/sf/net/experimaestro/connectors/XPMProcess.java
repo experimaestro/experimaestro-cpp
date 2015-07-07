@@ -391,7 +391,7 @@ public abstract class XPMProcess {
     }
 
     public static XPMProcess load(Job job) throws SQLException {
-        try(PreparedStatement st = Scheduler.get().prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
+        try(PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
             st.setLong(1, job.getId());
             st.execute();
             final ResultSet rs = st.getResultSet();

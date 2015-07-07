@@ -20,27 +20,27 @@ public interface Constants {
 	/**
 	 * Constant representing a space
 	 */
-	public static final String SPACE = " "; //$NON-NLS-1$
+	String SPACE = " "; //$NON-NLS-1$
 	/**
 	 * Constant representing a colon.<br>
 	 * <br>
 	 * Value is: <code>:</code>
 	 */
-	public static final String COLON = ":"; //$NON-NLS-1$
+	String COLON = ":"; //$NON-NLS-1$
 	/**
 	 * Constant representing the empty string
 	 */
-	public static final String EMPTY_STRING = ""; //$NON-NLS-1$
+	String EMPTY_STRING = ""; //$NON-NLS-1$
 	/**
 	 * UTF-8 encoding constant <br>
 	 * <br>
 	 * Value is: <code>UTF-8</code>
 	 */
-	public static final String UTF_8 = "UTF-8"; //$NON-NLS-1$
+	String UTF_8 = "UTF-8"; //$NON-NLS-1$
 	/**
 	 * Debug property name <br>
 	 * <br>
 	 * Value is: <code>rhino.debug</code>
 	 */
-	public static final String RHINO_DEBUG = "rhino.debug"; //$NON-NLS-1$
+	String RHINO_DEBUG = "rhino.debug"; //$NON-NLS-1$
 }

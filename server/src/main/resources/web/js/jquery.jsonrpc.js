@@ -151,7 +151,7 @@
 
       // Request method must be a string
       _validateRequestMethod: function(method) {
-        if(typeof(method) !== 'string') throw("Invalid method supplied for jsonRPC request")
+        if(typeof(method) !== 'string') throw("Invalid method supplied for jsonRPC request");
         return true;
       },
 
@@ -216,7 +216,7 @@
           jsonrpc: this.version,
           method: this.namespace ? this.namespace +'.'+ method : method,
           id: id
-        }
+        };
         if(params !== undefined) {
           dataObj.params = params;
         }

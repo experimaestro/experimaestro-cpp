@@ -40,30 +40,20 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
     /**
      * Returns the parentpath
      */
-    private static final XPathFunction ParentPath_1 = new XPathFunction() {
-        @Override
-        public Object evaluate(@SuppressWarnings("rawtypes") List args)
-                throws XPathFunctionException {
-            return new File(argToString(args.get(0))).getParentFile().toString();
-        }
-    };
+    private static final XPathFunction ParentPath_1 = args -> new File(argToString(args.get(0))).getParentFile().toString();
     /**
      * Returns the parentpath
      */
-    private static final XPathFunction JoinPath = new XPathFunction() {
-        @Override
-        public Object evaluate(@SuppressWarnings("rawtypes") List args)
-                throws XPathFunctionException {
-            File file = null;
-            for (int i = 0; i < args.size(); i++) {
-                String name = argToString(args.get(i));
-                if (file == null)
-                    file = new File(name);
-                else
-                    file = new File(file, name);
-            }
-            return file.getAbsolutePath();
+    private static final XPathFunction JoinPath = args -> {
+        File file = null;
+        for (int i = 0; i < args.size(); i++) {
+            String name = argToString(args.get(i));
+            if (file == null)
+                file = new File(name);
+            else
+                file = new File(file, name);
         }
+        return file.getAbsolutePath();
     };
     private XPathFunctionResolver resolver;
 

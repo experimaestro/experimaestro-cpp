@@ -95,9 +95,8 @@ abstract public class Dependency implements Serializable {
         Dependency that = (Dependency) o;
 
         if (!from.equals(that.from)) return false;
-        if (!to.equals(that.to)) return false;
+        return to.equals(that.to);
 
-        return true;
     }
 
     @Override
@@ -169,10 +168,8 @@ abstract public class Dependency implements Serializable {
         DependencyStatus old = status;
         status = accept();
 
-        if (status == old)
-            return false;
+        return status != old;
 
-        return true;
     }
 
     final public Lock lock(String pid) throws LockException {

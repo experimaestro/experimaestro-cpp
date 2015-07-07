@@ -73,7 +73,7 @@ public class PipedTransportService implements TransportService {
 		ListenerKey key = new PipedListenerKey(address == null ? Constants.EMPTY_STRING : address);
 		listeners.put(key, null);
 		return key;
-	};
+	}
 
 	/* (non-Javadoc)
 	 * @see org.eclipse.wst.jsdt.debug.transport.TransportService#stopListening(org.eclipse.wst.jsdt.debug.transport.ListenerKey)

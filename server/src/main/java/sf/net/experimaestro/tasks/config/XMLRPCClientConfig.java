@@ -78,8 +78,7 @@ public class XMLRPCClientConfig {
      * @throws FileNotFoundException
      * @throws MalformedURLException
      */
-    public XmlRpcClient getClient() throws IOException, FileNotFoundException,
-            MalformedURLException {
+    public XmlRpcClient getClient() throws IOException {
 
         XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
         final String url = xmlrpcConfig.getProperty("url");

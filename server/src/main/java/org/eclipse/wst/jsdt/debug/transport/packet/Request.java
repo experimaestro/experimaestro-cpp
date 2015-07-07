@@ -26,14 +26,14 @@ public interface Request extends Packet {
 	 * 
 	 * @return the underlying command, never <code>null</code>
 	 */
-	public String getCommand();
+	String getCommand();
 
 	/**
 	 * Returns the sequence for this request.
 	 * 
 	 * @return the request sequence
 	 */
-	public int getSequence();
+	int getSequence();
 	
 	/**
 	 * Returns the complete collection of JSON arguments in the {@link Request}.<br>
@@ -43,5 +43,5 @@ public interface Request extends Packet {
 	 * 
 	 * @return the arguments or an empty map never <code>null</code>
 	 */
-	public Map getArguments();
+	Map getArguments();
 }

@@ -254,7 +254,7 @@ public class LatticeNodeTest {
             Assert.assertEquals(join.joins.size(), 1);
             final Operator reference = join.joins.get(0).operator;
             if (reference == op0) { ++count0; }
-            else if (reference == op1) { ++count1; };
+            else if (reference == op1) { ++count1; }
         }
         Assert.assertEquals(count0, 2);
         Assert.assertEquals(count1, 1);
@@ -551,9 +551,8 @@ public class LatticeNodeTest {
 
             if (before != null ? !before.equals(triplet.before) : triplet.before != null) return false;
             if (parent != null ? !parent.equals(triplet.parent) : triplet.parent != null) return false;
-            if (operators != null ? !operators.equals(triplet.operators) : triplet.operators != null) return false;
+            return !(operators != null ? !operators.equals(triplet.operators) : triplet.operators != null);
 
-            return true;
         }
 
         @Override
