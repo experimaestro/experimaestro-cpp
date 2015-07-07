@@ -29,6 +29,9 @@ group = "net.bpiwowar"
 archivesBaseName = "experimaestro-helper"
 version = "1.0.0-SNAPSHOT"
 
+def ossrhUsername = hasProperty("ossrhUsername") ? ossrhUsername : null
+def ossrhPassword = hasProperty("ossrhPassword") ? ossrhPassword : null
+
 
 uploadArchives {
   repositories {
