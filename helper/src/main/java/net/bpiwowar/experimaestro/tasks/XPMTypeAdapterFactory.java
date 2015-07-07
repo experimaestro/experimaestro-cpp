@@ -62,7 +62,9 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
     }
 
 
-    /** Explores the fields of the registry class */
+    /** Explores the fields of the registry class
+     * @param registryClass The registry class
+     */
     public void addClass(Class<?> registryClass) {
         for(Field field: registryClass.getDeclaredFields()) {
             if (hasAnnotation(field, ClassChooser.class)) {

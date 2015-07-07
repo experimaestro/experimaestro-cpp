@@ -28,16 +28,19 @@ import java.lang.annotation.RetentionPolicy;
 public @interface ClassChooser {
     /**
      * The classes
+     * @return The candidate classes
      */
     Class<?>[] classes() default {};
 
     /**
      * The packages (containing the classes)
+     * @return Look all classes within the package of this class
      */
     Class<?>[] classesOfPackage() default {};
 
     /**
      * Given instances
+     * @return Class chooser instance annotation
      */
     ClassChooserInstance[] instances() default {};
 

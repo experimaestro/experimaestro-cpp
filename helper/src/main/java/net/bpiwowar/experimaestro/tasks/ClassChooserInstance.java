@@ -27,7 +27,7 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ClassChooserInstance {
     /** Name of the option
-     * @return A string, if empty => name = qualified class name
+     * @return A string, if empty =&gt; name = qualified class name
      */
     String name() default "";
 
