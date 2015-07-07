@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Commands;
@@ -370,7 +371,10 @@ public class OARLauncher extends Launcher {
                     builder.detach(false);
                     final XPMProcess process = builder.start();
                     try {
-                        process.waitFor();
+                        int code = process.waitFor();
+                        if (code != 0) {
+                            throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
+                        }
                     } catch (InterruptedException e) {
                         LOGGER.error(e, "Waiting interrupted");
                     }
@@ -417,7 +421,10 @@ public class OARLauncher extends Launcher {
                 builder.detach(false);
                 final XPMProcess process = builder.start();
                 try {
-                    process.waitFor();
+                    int code = process.waitFor();
+                    if (code != 0) {
+                        throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
+                    }
                 } catch (InterruptedException e) {
                     LOGGER.error(e, "Waiting interrupted");
                 }
