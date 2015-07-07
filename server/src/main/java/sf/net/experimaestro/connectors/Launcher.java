@@ -21,8 +21,6 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -31,7 +29,6 @@ import java.net.URL;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * sf.net.experimaestro.connectors
@@ -51,16 +48,25 @@ public abstract class Launcher implements Serializable {
     HashMap<String, String> environment = new HashMap<>();
 
     /**
+     * The connector
+     */
+    Connector connector;
+
+    /**
      * Creates and returns a new process builder
      *
      * @return A process builder
      */
-    public abstract AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException;
+    public abstract AbstractProcessBuilder processBuilder() throws FileSystemException;
 
     /**
      * Returns a script process builder that can be run
      */
-    public abstract XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException;
+    public abstract XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException;
+
+    public Launcher(Connector connector) {
+        this.connector = connector;
+    }
 
     /**
      * Sets the notification URL
@@ -89,7 +95,7 @@ public abstract class Launcher implements Serializable {
         return environment.put(key, value);
     }
 
-    @Expose(value="env")
+    @Expose(value = "env")
     @Help("Gets the value of the environment variable")
     public String env(String key) {
         return environment.get(key);

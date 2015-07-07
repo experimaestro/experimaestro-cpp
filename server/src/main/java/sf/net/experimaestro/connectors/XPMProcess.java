@@ -254,7 +254,7 @@ public abstract class XPMProcess {
      */
     public boolean isRunning(boolean checkFiles) throws Exception {
         // We have no process, check
-        return Files.exists(Job.LOCK_EXTENSION.transform(job.getPath()));
+        return Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
     }
 
     /**
@@ -263,12 +263,12 @@ public abstract class XPMProcess {
     public int exitValue() {
         // Check for done file
         try {
-            if (Files.exists(Resource.DONE_EXTENSION.transform(job.getPath())))
+            if (Files.exists(Resource.DONE_EXTENSION.transform(job.getLocator())))
                 return 0;
 
             // If the job is not done, check the ".code" file to get the error code
             // and otherwise return -1
-            final Path codeFile = Resource.CODE_EXTENSION.transform(job.getPath());
+            final Path codeFile = Resource.CODE_EXTENSION.transform(job.getLocator());
             if (Files.exists(codeFile)) {
                 final InputStream stream = Files.newInputStream(codeFile);
                 final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
@@ -294,7 +294,7 @@ public abstract class XPMProcess {
         if (!isRunning(checkFiles)) {
             // We are not running: send a message
             LOGGER.debug("End of job [%s]", job);
-            final Path file = Resource.CODE_EXTENSION.transform(job.getPath());
+            final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
             Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(), time));
             dispose();

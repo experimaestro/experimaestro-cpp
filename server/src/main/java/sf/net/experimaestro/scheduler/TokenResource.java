@@ -28,6 +28,7 @@ import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -63,8 +64,8 @@ public class TokenResource extends Resource {
      */
     transient boolean wasBlocking;
 
-    public TokenResource(long id, Connector connector, String locator) throws SQLException {
-        super(id, connector, locator);
+    public TokenResource(long id, Path locator) throws SQLException {
+        super(id, locator);
 
         // Load
         try (PreparedStatement st = Scheduler.prepareStatement("SELECT limit, used FROM TokenResources WHERE id=?")) {
@@ -82,8 +83,8 @@ public class TokenResource extends Resource {
      * @param path  The token path
      * @param limit The maximum number of tokens
      */
-    public TokenResource(String path, int limit) {
-        super(Scheduler.get().getXPMConnector(), path);
+    public TokenResource(Path path, int limit)  {
+        super(path);
         this.limit = limit;
         this.usedTokens = 0;
         this.wasBlocking = isBlocking();

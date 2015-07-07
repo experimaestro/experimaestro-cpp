@@ -27,7 +27,6 @@ import junit.framework.Assert;
 import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.tasks.ServerTask;
 import sf.net.experimaestro.utils.XPMEnvironment;
 
@@ -59,7 +58,7 @@ public class JsonRPCTest extends XPMEnvironment {
         File jobDirectory = mkTestDir();
 
         XPMEnvironment.getDirectory();
-        final Resource resource = new Resource(Scheduler.get().getLocalhostConnector(), jobDirectory.toPath().resolve("resource-1"));
+        final Resource resource = new Resource(jobDirectory.toPath().resolve("resource-1"));
         resource.save();
         final long id = resource.getId();
 

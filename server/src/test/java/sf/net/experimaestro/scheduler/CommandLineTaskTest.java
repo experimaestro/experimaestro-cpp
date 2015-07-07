@@ -21,10 +21,10 @@ package sf.net.experimaestro.scheduler;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.utils.XPMEnvironment;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Test for command line task
@@ -42,8 +42,8 @@ public class CommandLineTaskTest extends XPMEnvironment {
 
         Commands commands = new Commands();
         commands.addUnprotected("hello world");
-        final String locator = new File(testDir, "commandlinetask").toString();
-        final CommandLineTask commandLineTask = new CommandLineTask(Scheduler.get().getLocalhostConnector(), locator);
+        final Path locator = new File(testDir, "commandlinetask").toPath();
+        final CommandLineTask commandLineTask = new CommandLineTask(locator);
         commandLineTask.setCommands(commands);
         commandLineTask.setState(ResourceState.ON_HOLD);
 

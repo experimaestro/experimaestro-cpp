@@ -22,8 +22,8 @@ import bpiwowar.argparser.utils.Output;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.utils.RandomSampler;
 import sf.net.experimaestro.utils.ThreadCount;
@@ -32,15 +32,12 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Random;
 import java.util.TreeSet;
 
@@ -275,7 +272,7 @@ public class SchedulerTest extends XPMEnvironment {
         File jobDirectory = mkTestDir();
 
         ThreadCount counter = new ThreadCount();
-        TokenResource token = new TokenResource("scheduler_test/test_token_resource", 1);
+        TokenResource token = new TokenResource(NetworkShare.uriToPath("/tokens/scheduler_test/test_token_resource"), 1);
         token.save();
 
         // Sets 5 jobs
@@ -533,7 +530,7 @@ public class SchedulerTest extends XPMEnvironment {
             // --- Generate token resource
             final TokenResource token;
             if (this.token > 0) {
-                final String path = format("scheduler_test/test_complex_dependency/%s", name);
+                final Path path = NetworkShare.uriToPath(format("/scheduler_test/test_complex_dependency/%s", name));
                 token = new TokenResource(path, this.token);
                 token.save();
             } else {
@@ -567,7 +564,7 @@ public class SchedulerTest extends XPMEnvironment {
                 try {
                     jobs[j].save();
                 } catch (SQLException e) {
-                    LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getPath());
+                    LOGGER.error(e, "Error while saving job %d: path=%s", j, jobs[j].getLocator());
                 }
                 LOGGER.debug("Job [%s] created: final=%s, deps=%s", jobs[j], states[j], Output.toString(", ", deps));
             }

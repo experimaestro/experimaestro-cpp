@@ -18,8 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
 import org.w3c.dom.Document;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -105,8 +103,8 @@ public class OARLauncher extends Launcher {
      * Construction from a connector
      */
     @Expose
-    public OARLauncher() {
-        super();
+    public OARLauncher(Connector connector) {
+        super(connector);
     }
 
     /**
@@ -140,14 +138,13 @@ public class OARLauncher extends Launcher {
     }
 
     @Override
-    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) throws FileSystemException {
-
-        return new ProcessBuilder(connector);
+    public AbstractProcessBuilder processBuilder() throws FileSystemException {
+        return new ProcessBuilder(connector.getMainConnector());
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
-        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector, processBuilder(connector));
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
+        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector.getMainConnector(), processBuilder());
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
         unixScriptProcessBuilder.environment(environment);
 
@@ -265,7 +262,7 @@ public class OARLauncher extends Launcher {
             } else {
                 // Use a full OAR process
 
-                final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getPath()));
+                final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getLocator()));
                 final String runpath = protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
 
                 ArrayList<String> command = new ArrayList<>();

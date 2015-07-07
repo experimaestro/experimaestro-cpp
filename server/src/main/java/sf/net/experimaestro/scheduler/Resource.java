@@ -20,18 +20,13 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.CloseableIterator;
-import sf.net.experimaestro.utils.FileNameTransformer;
-import sf.net.experimaestro.utils.GsonSerialization;
-import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -61,13 +56,13 @@ import static java.lang.String.format;
 @Exposed
 @TypeIdentifier("RESOURCE")
 public class Resource implements Identifiable {
-    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.TYPE, Connector.class, String.class})
+    static ConstructorRegistry<Resource> REGISTRY = new ConstructorRegistry(new Class[]{Long.TYPE, Path.class})
             .add(Resource.class, CommandLineTask.class, TokenResource.class);
 
-    public static final String SELECT_BEGIN = "SELECT id, type, path, status, connector FROM resources";
+    public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
 
 
-    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "connector", "data");
+    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "data");
 
 
     /**
@@ -124,20 +119,13 @@ public class Resource implements Identifiable {
     /**
      * The path with the connector
      */
-    protected String locator;
+    protected Path locator;
 
     /**
      * The resource ID
      */
     @GsonSerialization(serialize = false)
     private Long resourceID;
-
-    /**
-     * The connector
-     * <p>
-     * A null value is used for LocalhostConnector
-     */
-    transient private Connector connector;
 
     /**
      * The ingoing dependencies (resources that we depend upon)
@@ -150,21 +138,11 @@ public class Resource implements Identifiable {
     transient private ResourceState state = ResourceState.ON_HOLD;
 
     /**
-     * Cached Path
-     */
-    transient private Path path;
-
-    /**
      * Flag that says whether the data has been loaded
      */
     transient private boolean dataLoaded;
 
-    public Resource(Connector connector, Path path) throws IOException {
-        this(connector, path.toString());
-    }
-
-    public Resource(Connector connector, String locator) {
-        this.connector = connector == null ? Scheduler.get().getLocalhostConnector() : connector;
+    public Resource(Path locator) {
         this.locator = locator;
         ingoingDependencies = new HashMap<>();
         dataLoaded = true;
@@ -173,8 +151,7 @@ public class Resource implements Identifiable {
     /**
      * Construct from DB
      */
-    public Resource(long id, Connector connector, String locator) throws SQLException {
-        this.connector = connector;
+    public Resource(long id, Path locator) throws SQLException {
         this.locator = locator;
         ingoingDependencies = null;
         this.resourceID = id;
@@ -337,22 +314,10 @@ public class Resource implements Identifiable {
     }
 
     /**
-     * Get the task from
-     *
-     * @return The task unique from
-     */
-    public String getLocator() {
-        return locator;
-    }
-
-    /**
      * Get a filesystem path
      */
-    public Path getPath() {
-        if (path != null) {
-            return path;
-        }
-        return path = Connector.create(this.locator);
+    public Path getLocator() {
+        return locator;
     }
 
     /**
@@ -376,7 +341,7 @@ public class Resource implements Identifiable {
     /**
      * Sets the state
      *
-     * @param state
+     * @param state The new state
      * @return <tt>true</tt> if state changed, <tt>false</tt> otherwise
      */
     synchronized public boolean setState(ResourceState state) throws SQLException {
@@ -539,31 +504,18 @@ public class Resource implements Identifiable {
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
-        return extension.transform(getConnector().resolve(locator));
+        return extension.transform(locator);
     }
 
     synchronized final public void replaceBy(Resource resource) throws ExperimaestroCannotOverwrite, SQLException {
         if (!resource.getLocator().equals(this.locator)) {
-            throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), this.getLocator());
+            throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), getLocator());
         }
 
         resource.save(Scheduler.get().resources(), this);
 
         // Not in DB anymore
         this.setId(null);
-    }
-
-    public Connector getConnector() {
-        return connector;
-    }
-
-    /**
-     * Returns the main connector associated with this resource
-     *
-     * @return a SingleHostConnector object
-     */
-    public final SingleHostConnector getMainConnector() {
-        return getConnector().getMainConnector();
     }
 
     public void save() throws SQLException {
@@ -609,14 +561,10 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
-        if (!connector.inDatabase()) {
-            connector.save();
-        }
-
         try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
-            resources.save(this, SQL_INSERT, update, typeValue, getLocator(), getState().value(),
+            resources.save(this, SQL_INSERT, update, typeValue, getLocator().toUri().toString(), getState().value(),
                     update ? old.getState().value() : getState().value(),
-                    connector.getId(), jsonInputStream);
+                    jsonInputStream);
         } catch (IOException e) {
             throw new SQLException(e);
         }
@@ -662,6 +610,10 @@ public class Resource implements Identifiable {
      * @param path The path of the resource
      * @return The resource or null if there is no such resource
      */
+    static public Resource getByLocator(Path path) throws SQLException {
+        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path.toString()));
+    }
+
     static public Resource getByLocator(String path) throws SQLException {
         return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
@@ -670,12 +622,11 @@ public class Resource implements Identifiable {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);
-            String path = result.getString(3);
+            Path path = NetworkShare.uriToPath(result.getString(3));
             int status = result.getInt(4);
-            Connector connector = Connector.findById(result.getLong(5));
 
             final Constructor<? extends Resource> constructor = REGISTRY.get(type);
-            final Resource resource = constructor.newInstance(id, connector, path);
+            final Resource resource = constructor.newInstance(id, path);
 
             // Set stored values
             resource.state = ResourceState.fromValue(status);
@@ -747,12 +698,12 @@ public class Resource implements Identifiable {
 
     @Expose
     public Path file() throws FileSystemException {
-        return getPath();
+        return getLocator();
     }
 
     @Expose
     public Path resolve(String path) throws FileSystemException {
-        return getPath().getParent().resolve(path);
+        return getLocator().getParent().resolve(path);
     }
 
     @Expose

@@ -175,7 +175,7 @@ final public class ScriptContext implements AutoCloseable {
         priority = Updatable.create(0);
         simulate = Updatable.create(false);
         workingDirectory = new Mutable<>();
-        defaultLauncher = Updatable.create(new DirectLauncher());
+        defaultLauncher = Updatable.create(new DirectLauncher(Scheduler.get().getLocalhostConnector()));
         threadContext.set(this);
         connector = Updatable.create(Scheduler.get().getLocalhostConnector());
         currentScriptPath = Updatable.create(null);

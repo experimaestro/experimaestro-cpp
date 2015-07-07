@@ -32,17 +32,18 @@ import java.nio.file.Path;
 @Exposed
 public class DirectLauncher extends Launcher {
     @Expose
-    public DirectLauncher() {
+    public DirectLauncher(Connector connector) {
+        super(connector);
     }
 
     @Override
-    public AbstractProcessBuilder processBuilder(SingleHostConnector connector) {
-        return connector.processBuilder();
+    public AbstractProcessBuilder processBuilder() {
+        return connector.getMainConnector().processBuilder();
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(SingleHostConnector connector, Path scriptFile) throws IOException {
-        final XPMScriptProcessBuilder xpmScriptProcessBuilder = connector.scriptProcessBuilder(scriptFile);
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
+        final XPMScriptProcessBuilder xpmScriptProcessBuilder = connector.getMainConnector().scriptProcessBuilder(scriptFile);
         xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
         xpmScriptProcessBuilder.environment(environment);
         return xpmScriptProcessBuilder;

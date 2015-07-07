@@ -87,17 +87,6 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         this.id = id;
     }
 
-    static public Path create(String path) {
-        try {
-            if (path.startsWith("/")) {
-                return Paths.get(path);
-            }
-            return Paths.get(new URI(path));
-        } catch (URISyntaxException e) {
-            throw new AssertionError("Unexpected conversion error", e);
-        }
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

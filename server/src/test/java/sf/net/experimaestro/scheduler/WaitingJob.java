@@ -61,12 +61,12 @@ public class WaitingJob extends Job {
     /* id for debugging */
     private String debugId;
 
-    public WaitingJob(long id, Connector connector, String locator) throws SQLException {
-        super(id, connector, locator);
+    public WaitingJob(long id, Path locator) throws SQLException {
+        super(id, locator);
     }
 
     public WaitingJob(ThreadCount counter, File dir, String debugId, WaitingJobProcess.Action... actions) {
-        super(Scheduler.get().getLocalhostConnector(), new File(dir, debugId).toString());
+        super(new File(dir, debugId).toPath());
 
 
         Status status = new Status();
@@ -193,7 +193,7 @@ public class WaitingJob extends Job {
         }
 
         final WaitingJobProcess.Action action = actions.get(status.currentIndex);
-        return new WaitingJobProcess(getMainConnector(), this, action);
+        return new WaitingJobProcess(Scheduler.get().getLocalhostConnector(), this, action);
     }
 
     @Override

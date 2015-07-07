@@ -22,10 +22,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.XPMProcess;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.FileNameTransformer;
@@ -75,14 +75,8 @@ abstract public class Job extends Resource {
      * The job is by default initialized as "WAITING": its state should be updated after
      * the initialization has finished
      */
-    public Job(Connector connector, Path path) throws IOException {
-        super(connector, path);
-        jobData = new JobData(this);
-        process = new Holder<>();
-    }
-
-    public Job(Connector connector, String path) {
-        super(connector, path);
+    public Job(Path path) {
+        super(path);
         jobData = new JobData(this);
         process = new Holder<>();
     }
@@ -91,17 +85,16 @@ abstract public class Job extends Resource {
      * Initialize from database
      *
      * @param id
-     * @param connector
      * @param locator
      * @throws SQLException
      */
-    public Job(long id, Connector connector, String locator) throws SQLException {
-        super(id, connector, locator);
+    public Job(long id, Path locator) throws SQLException {
+        super(id, locator);
     }
 
     private boolean isDone() {
         try {
-            return Files.exists(DONE_EXTENSION.transform(getPath()));
+            return Files.exists(DONE_EXTENSION.transform(getLocator()));
         } catch (Exception e) {
             LOGGER.error("Error while checking if " + getLocator() + DONE_EXTENSION + " exists");
             return false;
@@ -232,7 +225,7 @@ abstract public class Job extends Resource {
 
                 // Try status lock - discard if something goes wrong
                 try {
-                    locks.add(getMainConnector().createLockFile(LOCK_EXTENSION.transform(getPath()), false));
+                    locks.add(FileLock.of(LOCK_EXTENSION.transform(getLocator()), false));
                 } catch (LockException | IOException e) {
                     LOGGER.info(e, "Could not lock job [%s]: %s", this, e);
                     throw e;
@@ -587,7 +580,7 @@ abstract public class Job extends Resource {
         boolean changes = super.doUpdateStatus();
 
         // Check the done file
-        final Path path = getPath();
+        final Path path = getLocator();
         final Path doneFile = DONE_EXTENSION.transform(path);
 
         if (Files.exists(doneFile)) {
@@ -683,7 +676,7 @@ abstract public class Job extends Resource {
      */
     private void removeJobFile(FileNameTransformer t) {
         try {
-            final Path file = t.transform(getPath());
+            final Path file = t.transform(getLocator());
             if (Files.exists(file)) {
                 Files.delete(file);
             }

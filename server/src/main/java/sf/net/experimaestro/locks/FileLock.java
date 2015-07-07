@@ -25,13 +25,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
@@ -158,5 +152,9 @@ public class FileLock extends Lock {
 
     public Path path() {
         return lockFile;
+    }
+
+    public static FileLock of(Path path, boolean wait) throws LockException {
+        return new FileLock(path, wait);
     }
 }

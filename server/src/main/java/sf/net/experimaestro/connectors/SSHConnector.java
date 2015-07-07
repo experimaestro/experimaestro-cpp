@@ -31,6 +31,7 @@ import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.CommandLineTask;
+import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.TypeIdentifier;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -359,10 +360,10 @@ public class SSHConnector extends SingleHostConnector {
 
     private String execute(Launcher launcher, String... command) throws IOException, LaunchException, InterruptedException {
         if (launcher == null) {
-            launcher = new DirectLauncher();
+            launcher = new DirectLauncher(Scheduler.get().getLocalhostConnector());
         }
 
-        AbstractProcessBuilder builder = launcher.processBuilder(this);
+        AbstractProcessBuilder builder = launcher.processBuilder();
         builder.command(command);
         String returned = builder.execute(LOGGER);
         return returned;

@@ -820,7 +820,7 @@ public class JsonRPCMethods extends HttpServlet {
                 final Resource resource = ((SimpleMessage) message).getResource();
                 if (message instanceof SimpleMessage) {
                     map.put("resource", resource.getId());
-                    Path locator = resource.getPath();
+                    Path locator = resource.getLocator();
                     if (locator != null)
                         map.put("locator", locator.toString());
                 }

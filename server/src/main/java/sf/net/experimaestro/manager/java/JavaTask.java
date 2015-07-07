@@ -83,12 +83,10 @@ public class JavaTask extends Task {
 
 
         // --- Check if this wasn't already done
-        String _path = path.toString();
-
         final Logger taskLogger = taskContext.getLogger("JavaTask");
 
         try {
-            final Resource old = Resource.getByLocator(_path);
+            final Resource old = Resource.getByLocator(path);
             if (old != null && !old.canBeReplaced()) {
 
                 taskLogger.log(old.getState() == ResourceState.DONE ?
@@ -99,7 +97,7 @@ public class JavaTask extends Task {
 
                 // --- Build the command
 
-                CommandLineTask job = new CommandLineTask(javaFactory.connector, _path);
+                CommandLineTask job = new CommandLineTask(path);
                 job.setCommands(commands);
 
                 taskContext.prepare(job);

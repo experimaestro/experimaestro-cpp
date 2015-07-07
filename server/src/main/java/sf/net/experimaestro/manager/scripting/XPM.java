@@ -30,11 +30,7 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
-import sf.net.experimaestro.connectors.AbstractCommandBuilder;
-import sf.net.experimaestro.connectors.AbstractProcessBuilder;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.XPMProcess;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
@@ -60,10 +56,9 @@ import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
@@ -110,11 +105,11 @@ public class XPM {
     @Help("Retrieve (or creates) a token resource with a given xpath")
     static public TokenResource token_resource(
             @Argument(name = "path", help = "The path of the resource") String path
-    ) throws ExperimaestroCannotOverwrite, SQLException {
-        final Resource resource = Resource.getByLocator(path);
+    ) throws ExperimaestroCannotOverwrite, SQLException, URISyntaxException {
+        final Resource resource = Resource.getByLocator(NetworkShare.uriToPath(path));
         final TokenResource tokenResource;
         if (resource == null) {
-            tokenResource = new TokenResource(path, 0);
+            tokenResource = new TokenResource(NetworkShare.uriToPath(path), 0);
             tokenResource.save();
         } else {
             if (!(resource instanceof TokenResource))
@@ -395,7 +390,7 @@ public class XPM {
 
         // Run the process and captures the output
 
-        AbstractProcessBuilder builder = launcher.processBuilder(commandConnector.getMainConnector());
+        AbstractProcessBuilder builder = launcher.processBuilder();
 
         try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector.getMainConnector())) {
             // Transform the list
@@ -440,10 +435,10 @@ public class XPM {
 
         // Resolve the path for the given connector
         if (!(path instanceof java.nio.file.Path)) {
-            path = Connector.create(path.toString());
+            path = NetworkShare.uriToPath(path.toString());
         }
 
-        job = new CommandLineTask(connector, (java.nio.file.Path) path);
+        job = new CommandLineTask((java.nio.file.Path) path);
         job.setCommands(commands);
         if (scriptContext.submittedJobs.containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);

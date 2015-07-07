@@ -24,6 +24,10 @@ import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,6 +69,17 @@ final public class NetworkShare implements Identifiable {
     public NetworkShare(Long id, String host, String name) {
         this.host = host;
         this.name = name;
+    }
+
+    public static Path uriToPath(String path) {
+        try {
+            if (path.startsWith("/")) {
+                return Paths.get(path);
+            }
+            return Paths.get(new URI(path));
+        } catch (URISyntaxException e) {
+            throw new AssertionError("Unexpected conversion error", e);
+        }
     }
 
     public Collection<NetworkShareAccess> getAccess() {
