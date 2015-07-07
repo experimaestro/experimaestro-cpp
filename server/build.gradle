@@ -107,4 +107,10 @@ task gitVersion(type: Copy) {
 compileJava.dependsOn gitVersion
 
 
+task(server, dependsOn: 'classes', type: JavaExec) {
+    main = 'bpiwowar.experiments.Run'
+    classpath = sourceSets.main.runtimeClasspath
+    args 'server'
+}
+
 test.useTestNG()

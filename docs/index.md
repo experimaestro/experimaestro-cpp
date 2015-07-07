@@ -79,21 +79,25 @@ To locate the path of to set to `JAVA_HOME` you can do `locate jdk | less`.
 To enable shell completion follow instructions in
 [argcomplete](https://pypi.python.org/pypi/argcomplete) documentation.
 
-Here is just what I did for *zsh*:
-* Add something like this to my `.zshrc`:
-  ```sh
+### ZSH
+
+Add to `.zshrc`:
+
+```sh
   # Register python completion
   if type register-python-argcomplete &> /dev/null
   then
     eval "$(register-python-argcomplete 'experimaestro')"
   fi
-  ```
+```
+
 * Re-launch your shell: `exec zsh`
 
 # Test your installation
 
 To test your installation is working properly you can try to start a
 server like this:
+
 
 ```sh
 experimaestro --verbose --debug start-server
@@ -102,7 +106,7 @@ experimaestro --verbose --debug start-server
 You should get something like:
 
 ```
-INFO:root:Starting with maven
+INFO:root:Starting with gradle
 INFO:root:Waiting for server to start (PID=37851)...
 INFO:root:Server started...
 ```

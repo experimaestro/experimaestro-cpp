@@ -91,20 +91,14 @@ def start_jar(args, jarargs):
     workdir = conf.config.sub("server")["database"]
     mkdir_p(workdir)
 
-    # Check what if we start using maven
-    mvnFile = os.path.join(xpmdir, "pom.xml")
-    if not os.path.exists(mvnFile):
-        mvnFile = None
+    # Check what if we start using gradle
+    gradlewFile = os.path.join(os.path.dirname(xpmdir), "gradlew.bat" if os.name == "nt" else "gradlew")
+    if not os.path.exists(gradlewFile):
+        gradlewFile = None
 
-    if args.maven or mvnFile is not None:
-        logging.info("Starting with maven")
-        command = ["mvn", "exec:java", "-Dexec.mainClass=bpiwowar.experiments.Run"]
-        jarargs = [ "server" ]
-        if mvnFile is not None:
-            command.append("--file")
-            command.append(mvnFile)
-        jarargs = [arg for arg in jarargs]
-        command.append("-Dexec.args=%s" % " ".join(jarargs))
+    if args.gradle or gradlewFile is not None:
+        logging.info("Starting with gradle")
+        command = [gradlewFile, "--project-dir", os.path.dirname(gradlewFile), "server"]
 
     else:
         binpath = None
@@ -545,7 +539,7 @@ parser.add_argument("--config", dest="config", default="~/.experimaestro/setting
 parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
 
 p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
-p_start.add_argument("--maven", dest="maven", action="store_true", help="Force starts using maven")
+p_start.add_argument("--gradle", dest="gradle", action="store_true", help="Force starts using gradle")
 p_start.add_argument("--timeout", action="store", default=30, type=int, help="Timeout (in second) to ping server")
 
 subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
