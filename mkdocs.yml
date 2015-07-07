@@ -17,5 +17,6 @@ extra_javascript:
     - xpm.js
 extra_css:
     - jquery-ui.min.css
+    - xpm.css
 markdown_extensions:
     - xpm

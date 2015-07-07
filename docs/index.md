@@ -41,7 +41,7 @@ then by building `plan2` that takes as input the output of `plan1`.
 Experimaestro is implemented using several languages and thus, you
 have to install multiple ecosystem with the right version.
 
-## Python
+## Python 3
 
 You need a working `python3` interpreter on your system along with `pip3`.
 
@@ -51,15 +51,17 @@ To install required python's modules type:
 pip3 install -r requirements.txt
 ```
 
-## Java
+## Java (≥ 8)
 
-You need a working *Java 1.8* installation on your machine and
-*Gradle* or higher.
+You need a working *Java* installation (version ≥ 1.8) on your machine. [Gradle](https://gradle.org) is
+used for building but is not a requirement.
 
-```sh
+[[[{"language": "sh", "title": "*nix"}
 # From the project's root directory.
-gradle installDist
-```
+./gradlew installDist
+[[[{"language": "bat", "title": "windows"}
+gradlew.bat installDist
+]]]
 
 This will build and install all the dependencies into `server/build/install/experimaestro-server`. The command `experimaestro` is located in `server/build/install/experimaestro-server/bin/experimaestro`.
 

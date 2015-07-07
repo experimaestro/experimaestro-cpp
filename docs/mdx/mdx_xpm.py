@@ -2,7 +2,7 @@ import markdown
 from markdown.preprocessors import Preprocessor
 import sys
 import re
-
+import json
 import pygments
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
@@ -23,7 +23,7 @@ class MyPreprocessor(Preprocessor):
 
 
         for line in lines:
-            m_start = re.compile(r'\[\[\[(.*)').match(line)
+            m_start = re.compile(r'\[\[\[\s*(?:(\{.*)|(\w+))').match(line)
             m_end = re.compile(r'\]\]\]').match(line)
             if m_start:
                 if inside is None:
@@ -33,9 +33,20 @@ class MyPreprocessor(Preprocessor):
                 else:
                     inside.append(highlight(currentid, language, code))
                 code = ""
-                language = m_start.group(1)
+                jsonstring = m_start.group(1)
+                language = m_start.group(2)
+                if jsonstring is None:
+                    title = language
+                else:
+                    try:
+                        data = json.loads(jsonstring)
+                        title = data["title"]
+                        language = data["language"]
+                    except ValueError:
+                        title = "Bad JSON"
+                        language = "none"
                 currentid = "xpmlg-%s-%s" % (divid, language)
-                new_lines.append("<li><a href='#{0}'>{1}</a></li>".format(currentid, language))
+                new_lines.append("<li><a href='#{0}'>{1}</a></li>".format(currentid, title))
             elif m_end:
                 new_lines.append("</ul>")
                 for l in inside:
