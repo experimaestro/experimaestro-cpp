@@ -19,6 +19,7 @@ package sf.net.experimaestro.utils.introspection;
  */
 
 import com.google.common.collect.ImmutableMap;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -46,6 +47,7 @@ public class ClassInfoLoader {
     public ClassInfoLoader(Path[] classpath, ClassLoader classLoader) throws IOException {
         this.classpath = classpath.clone();
         for (int i = 0; i < classpath.length; i++) {
+            // Transform files so as to use the JAR FileSystem on top of it
             if (Files.isRegularFile(this.classpath[i])) {
                 final URI uri;
                 try {
@@ -53,12 +55,16 @@ public class ClassInfoLoader {
                 } catch (URISyntaxException e) {
                     throw new RuntimeException(e);
                 }
+                try {
+                    this.classpath[i] = FileSystems.getFileSystem(uri).getPath("/");
+                } catch (FileSystemNotFoundException e) {
                     try {
-                        this.classpath[i] = FileSystems.getFileSystem(uri).getPath("/");
-                    } catch(FileSystemNotFoundException e) {
-                        this.classpath[i] = FileSystems.newFileSystem(uri, ImmutableMap.of(), null)
-                                .getPath("/");
+                        this.classpath[i] = FileSystems.newFileSystem(uri, ImmutableMap.of(), null).getPath("/");
+                    } catch(Throwable e2) {
+                        LOGGER.error(e2, "Error while creating ZIP filesystem with %s", uri);
+                        throw new IOException("Could not create ZIP filesystem with " + uri + ": " + e2);
                     }
+                }
             }
         }
         this.classLoader = classLoader;

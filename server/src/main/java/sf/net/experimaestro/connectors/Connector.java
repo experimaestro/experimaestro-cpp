@@ -37,11 +37,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -268,5 +269,9 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         }
         final String query = format("%s WHERE id=?", SELECT_QUERY);
         return connectors.findUnique(query, st -> st.setLong(1, id));
+    }
+
+    public String quotedPath(Path path) throws IOException {
+        return '"' + protect(resolve(path), QUOTED_SPECIAL) + '"';
     }
 }

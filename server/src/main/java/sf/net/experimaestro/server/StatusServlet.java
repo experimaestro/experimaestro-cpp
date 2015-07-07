@@ -18,6 +18,7 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import bpiwowar.experiments.Run;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
@@ -104,9 +105,11 @@ public class StatusServlet extends XPMServlet {
                             }
                         }
                     } catch (CloseException e) {
-                        LOGGER.warn("Error while closing the iterator");
+                        LOGGER.warn(e, "Error while closing the iterator");
                     } catch (SQLException e) {
-                        LOGGER.warn("Error while retrieving resources");
+                        LOGGER.warn(e, "Error while retrieving resources");
+                    } catch(RuntimeException e) {
+                        LOGGER.warn(e, "Error while retrieving resources");
                     }
                     out.println("</ul></div>");
                 }

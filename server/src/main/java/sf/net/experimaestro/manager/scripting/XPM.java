@@ -372,14 +372,6 @@ public class XPM {
         ScriptContext sc = context();
         Command command = Command.getCommand(jsargs);
 
-        // Get the connector
-        final Connector commandConnector;
-        if (options.containsKey("connector")) {
-            commandConnector = (Connector) options.get("connector");
-        } else {
-            commandConnector = sc.getConnector();
-        }
-
         // Get the launcher
         final Launcher launcher;
         if (options.containsKey("launcher")) {
@@ -392,7 +384,8 @@ public class XPM {
 
         AbstractProcessBuilder builder = launcher.processBuilder();
 
-        try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector.getMainConnector())) {
+        SingleHostConnector commandConnector = launcher.getMainConnector();
+        try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector)) {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {

@@ -51,9 +51,9 @@ CREATE TABLE Resources (
     ON DELETE RESTRICT
 );
 
-CREATE INDEX status_index ON resources (status);
-CREATE UNIQUE INDEX status_path ON resources (path);
-CREATE INDEX status_priority ON resources (priority);
+CREATE INDEX resources_index ON resources (status);
+CREATE UNIQUE INDEX resources_path ON resources (path);
+CREATE INDEX resources_priority ON resources (priority);
 
 -- Token resource
 CREATE TABLE TokenResources (

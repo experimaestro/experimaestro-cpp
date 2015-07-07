@@ -35,17 +35,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.FileSystemException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchService;
+import java.io.*;
+import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -95,9 +86,11 @@ public class OARLauncher extends Launcher {
     private String unixtimestampCommand = "date +%s";
 
     /**
-     *
+     * The information
      */
     private boolean useNotify = false;
+
+    private ShortLivedInformation information;
 
     /**
      * Construction from a connector
@@ -191,6 +184,7 @@ public class OARLauncher extends Launcher {
         long remainingTime = 100;
     }
 
+
     /**
      * Process builder for OAR
      */
@@ -205,8 +199,6 @@ public class OARLauncher extends Launcher {
 
         // The associated connector
         private SingleHostConnector connector;
-
-        private ShortLivedInformation information;
 
         public ProcessBuilder(SingleHostConnector connector) {
             this(connector, false);
@@ -359,6 +351,7 @@ public class OARLauncher extends Launcher {
                 final Path infopath = directory.resolve("information.env");
                 final Path commandpath = directory.resolve("command.sh");
                 final Path lockPath = directory.resolve("information.lock");
+                final Path donePath = directory.resolve("information.done");
 
                 // Kill old job
                 if (information.jobId != null) {
@@ -395,13 +388,14 @@ public class OARLauncher extends Launcher {
 
                 // Writes file
                 try (BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
-                    writer.write(format("cleanup() {\n echo Removing lock file\nrm \"%s\"\n}\n",
-                            protect(connector.resolve(lockPath), QUOTED_SPECIAL)));
+                    writer.write(format("cleanup() {\n echo Removing lock file\nrm %s\n}\n",
+                            connector.quotedPath(lockPath)));
                     writer.write("trap cleanup 0\n");
                     writer.write("env\n");
                     writer.write(format("echo %s=$(hostname)%n", XPM_HOSTNAME));
                     writer.write(format("echo %s=%s%n", XPM_SLEEPTIME, information.jobDuration));
                     writer.write(format("echo %s=$(%s)%n", XPM_STARTTIME, unixtimestampCommand));
+                    writer.write(format("touch %s%n", connector.quotedPath(donePath)));
                     writer.write(format("sleep %d%n", information.jobDuration));
                 }
                 Files.setPosixFilePermissions(commandpath, PosixFilePermissions.fromString("rwxr-x---"));
@@ -410,7 +404,7 @@ public class OARLauncher extends Launcher {
                 // Launch a new OAR sub
                 // The job outputs the environment and sleeps...
 
-                Files.deleteIfExists(infopath);
+                Files.deleteIfExists(donePath);
                 final AbstractProcessBuilder builder = connector.processBuilder();
                 builder.command(oarCommand, "--stdout=information.env", "--stderr=log.err",
                         format("--directory=%s", connector.resolve(directory)),
@@ -429,8 +423,8 @@ public class OARLauncher extends Launcher {
                 // Wait that the job is launched
                 try (WatchService watcher = directory.getFileSystem().newWatchService()) {
                     directory.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
-                    while (!Files.exists(infopath)) {
-                        LOGGER.debug("Waiting for information file %s", infopath);
+                    while (!Files.exists(donePath)) {
+                        LOGGER.debug("Waiting for information file to be generated [%s]", donePath);
                         watcher.poll(1, TimeUnit.SECONDS);
                     }
                     readInformation(infopath);

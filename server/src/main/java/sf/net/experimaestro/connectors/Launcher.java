@@ -102,4 +102,7 @@ public abstract class Launcher implements Serializable {
     }
 
 
+    public SingleHostConnector getMainConnector() {
+        return connector.getMainConnector();
+    }
 }

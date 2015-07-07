@@ -283,8 +283,9 @@ public class Functions {
     @Expose(value = "java_repository", optional = 1, optionalsAtStart = true)
     @Help("Include a repository from introspection of a java project")
     static public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
-        if (connector == null)
-            connector = Scheduler.get().getLocalhostConnector();
+        if (connector == null) {
+            connector = ScriptContext.get().getConnector();
+        }
         JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
     }
 

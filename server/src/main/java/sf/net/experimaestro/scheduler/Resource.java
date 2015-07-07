@@ -611,7 +611,7 @@ public class Resource implements Identifiable {
      * @return The resource or null if there is no such resource
      */
     static public Resource getByLocator(Path path) throws SQLException {
-        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path.toString()));
+        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path.toUri().toString()));
     }
 
     static public Resource getByLocator(String path) throws SQLException {
