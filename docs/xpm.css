@@ -1,0 +1,11 @@
+.ui-tabs .ui-tabs-panel {
+    padding: 0;
+}
+
+div.tabs ul.ui-tabs-nav {
+    margin-bottom: 0;
+}
+
+div.tabs.ui-tabs {
+
+}
