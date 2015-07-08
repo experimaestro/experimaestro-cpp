@@ -30,6 +30,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.JsonAbstract;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -206,6 +207,7 @@ public class SSHOptions extends ConnectorOptions {
     }
 
 
+    @JsonAbstract
     private interface ProxyConfiguration {
         void configure(DefaultSessionFactory factory) throws IOException;
     }

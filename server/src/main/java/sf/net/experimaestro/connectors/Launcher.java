@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.utils.JsonAbstract;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -36,6 +37,7 @@ import java.util.HashMap;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
+@JsonAbstract
 public abstract class Launcher implements Serializable {
     /**
      * The notification URL

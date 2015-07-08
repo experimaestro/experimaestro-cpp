@@ -21,6 +21,7 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.connectors.AbstractCommandBuilder;
+import sf.net.experimaestro.utils.JsonAbstract;
 
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -29,6 +30,7 @@ import java.util.stream.Stream;
  * An abstract command
  */
 @Exposed
+@JsonAbstract
 public abstract class AbstractCommand {
     /**
      * The input redirect

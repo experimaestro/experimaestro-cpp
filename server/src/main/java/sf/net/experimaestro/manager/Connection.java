@@ -20,12 +20,14 @@ package sf.net.experimaestro.manager;
 
 import sf.net.experimaestro.exceptions.NoSuchParameter;
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.utils.JsonAbstract;
 
 /**
  * Defines a connection to between one or more output values and one input
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonAbstract
 public abstract class Connection {
     /**
      * The destination

@@ -22,6 +22,7 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.fs.XPMPath;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.JsonAbstract;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -39,6 +40,7 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonAbstract
 abstract public class SingleHostConnector extends Connector {
     /**
      * Underlying filesystem

@@ -18,6 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.utils.JsonAbstract;
+
 import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -38,6 +40,7 @@ import java.util.stream.Stream;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonAbstract
 public interface CommandComponent {
 
     /**

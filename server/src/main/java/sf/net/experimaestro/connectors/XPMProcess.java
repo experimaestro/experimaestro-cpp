@@ -26,6 +26,7 @@ import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.JsonAbstract;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.db.SQLInsert;
 import sf.net.experimaestro.utils.log.Logger;
@@ -57,6 +58,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonAbstract
 public abstract class XPMProcess {
     static ConstructorRegistry<XPMProcess> REGISTRY
             = new ConstructorRegistry(new Class[]{}).add(LocalProcess.class, SSHProcess.class, OARProcess.class);

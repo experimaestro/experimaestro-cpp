@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager;
  */
 
 import sf.net.experimaestro.manager.json.Json;
+import sf.net.experimaestro.utils.JsonAbstract;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonAbstract
 public abstract class Input {
     final static Logger LOGGER = Logger.getLogger();
 
