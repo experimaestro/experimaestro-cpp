@@ -32,7 +32,7 @@ import sf.net.experimaestro.utils.gson.JsonAdapter;
 import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.*;
+import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -40,7 +40,7 @@ import java.nio.file.Path;
 /**
  * Converts a command into a JSON string
  */
-public class GsonConverter<T>  {
+public class GsonConverter<T> {
     final static private Logger LOGGER = Logger.getLogger();
 
     private final Type type;
@@ -64,8 +64,16 @@ public class GsonConverter<T>  {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
-            if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers())))
+
+         if (rawType.getAnnotation(JsonAbstract.class) != null) {
                 return new AbstractObjectAdapter(gson, type);
+            }
+
+            if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers()))) {
+                if (rawType.getCanonicalName().startsWith("sf.net.experimaestro")) {
+                    LOGGER.warn("Not using Abstract Object Adapter for %s", rawType);
+                }
+            }
             return null;
         }
 
