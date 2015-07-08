@@ -55,14 +55,21 @@ public abstract class TaskFactory {
      * The group
      */
     String group;
+
     /**
      * The module
+     *
+     * Avoids serializing this
      */
-    Module module;
+    transient Module module;
+
     /**
      * The repository
+     *
+     * Avoids serializing this
+     *
      */
-    private Repository repository;
+    transient private Repository repository;
 
     /**
      * Initialise a task
@@ -79,6 +86,8 @@ public abstract class TaskFactory {
         this.version = version;
         this.group = group;
     }
+
+    protected TaskFactory() {}
 
     protected TaskFactory(Repository repository) {
         this(repository, null, null, null);

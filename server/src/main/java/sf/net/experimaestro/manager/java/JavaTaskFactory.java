@@ -21,17 +21,8 @@ package sf.net.experimaestro.manager.java;
 import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Input;
-import sf.net.experimaestro.manager.JsonInput;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.Type;
-import sf.net.experimaestro.manager.ValueType;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
@@ -57,15 +48,13 @@ import java.util.Map;
 public class JavaTaskFactory extends TaskFactory {
     public static final String JVM_OPTIONS = "$jvm";
 
-    final JavaTasksIntrospection javaTasksIntrospection;
+    transient java.nio.file.Path[] classpath;
 
-    final Connector connector;
-
-    final String taskClassname;
+    String taskClassname;
 
     final ArrayList<PathArgument> pathArguments = new ArrayList<>();
 
-    private final Type output;
+    Type output;
 
     Map<String, Input> inputs = new HashMap<>();
 
@@ -74,19 +63,20 @@ public class JavaTaskFactory extends TaskFactory {
      */
     Map<String, String> prefixes = new HashMap<>();
 
+    /** Used only for deserialization */
+    protected JavaTaskFactory() {}
+
     /**
      * Initialise a task
      *
-     * @param javaTasksIntrospection The introspection object
-     * @param connector              The connector
-     * @param repository             The repository
-     * @param classInfo              The java class from which to build a task factory
-     * @param namespaces             The namespaces
+     * @param classpath  The class path
+     * @param repository The repository
+     * @param classInfo  The java class from which to build a task factory
+     * @param namespaces The namespaces
      */
-    public JavaTaskFactory(JavaTasksIntrospection javaTasksIntrospection, Connector connector, Repository repository, ClassInfo classInfo, Map<String, String> namespaces) {
+    public JavaTaskFactory(java.nio.file.Path[] classpath, Repository repository, ClassInfo classInfo, Map<String, String> namespaces) {
         super(repository);
-        this.javaTasksIntrospection = javaTasksIntrospection;
-        this.connector = connector;
+        this.classpath = classpath;
         this.taskClassname = classInfo.getName();
 
         namespaces.forEach((key, value) -> prefixes.put(value, key));
@@ -177,7 +167,7 @@ public class JavaTaskFactory extends TaskFactory {
         Command classpath = new Command();
         final Commands commands = new Commands(command);
 
-        Arrays.asList(javaTasksIntrospection.classpath).stream().forEach(f -> {
+        Arrays.asList(this.classpath).stream().forEach(f -> {
             classpath.add(new Command.Path(f));
             classpath.add(new Command.String(":"));
         });
@@ -238,5 +228,9 @@ public class JavaTaskFactory extends TaskFactory {
         }
 
         return commands;
+    }
+
+    public void setClasspath(java.nio.file.Path[] classpath) {
+        this.classpath = classpath;
     }
 }

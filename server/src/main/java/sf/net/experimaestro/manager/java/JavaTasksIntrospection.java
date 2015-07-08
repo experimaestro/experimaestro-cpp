@@ -22,22 +22,27 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.bpiwowar.experimaestro.tasks.AbstractTask;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repository;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.Introspection;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -54,19 +59,57 @@ public class JavaTasksIntrospection {
         this.classpath = classpath;
     }
 
-    public static void addToRepository(Repository repository, Connector connector, String[] paths) throws ExperimaestroException, IOException {
-        Path[] classpath = Arrays.stream(paths).map(path -> {
-            try {
-                return connector.getMainConnector().resolveFile(path);
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e, "Could not resolve path %s", path);
-            }
-        }).toArray(n -> new Path[n]);
+    public static void addToRepository(Repository repository, Path[] classpath, Path cachepath) throws ExperimaestroException, IOException {
+        // First check if cache is OK
+        if (cachepath != null) {
+            boolean validCache = Files.exists(cachepath);
 
+            // Check based on modification time
+            if (validCache) {
+                FileTime cacheTime = Files.getLastModifiedTime(cachepath);
+                for (Path path : classpath) {
+                    try {
+                        FileTime modifiedTime = Files.getLastModifiedTime(path);
+                        if (cacheTime.compareTo(modifiedTime) <= 0) {
+                            validCache = false;
+                            break;
+                        }
+                    } catch (NoSuchFileException e) {
+                        LOGGER.warn("File not found: %s", path);
+                    }
+                }
+            }
+
+            if (validCache) {
+                final Gson gson = GsonConverter.builder.create();
+
+                try (BufferedReader in = Files.newBufferedReader(cachepath)) {
+                    JavaTaskFactories factories = gson.fromJson(in, JavaTaskFactories.class);
+                    factories.factories.forEach(f -> {
+                        repository.addFactory(f);
+                        f.setClasspath(factories.classpath);
+                    });
+                    return;
+                } catch (Throwable t) {
+                    ScriptContext.get().getLogger("javatask").error("Error while reading cache file (%s) -- regenerating", t.toString());
+                }
+            }
+
+        }
+
+        // Run
         final JavaTasksIntrospection javaTasksIntrospection = new JavaTasksIntrospection(classpath);
         final ClassInfoLoader classLoader = new ClassInfoLoader(classpath, JavaTasksIntrospection.class.getClassLoader());
-        javaTasksIntrospection.addToRepository(repository, classLoader, connector);
+        Collection<JavaTaskFactory> list = javaTasksIntrospection.addToRepository(repository, classLoader);
+
+        if (cachepath != null) {
+            final Gson gson = GsonConverter.builder.create();
+            try (BufferedWriter writer = Files.newBufferedWriter(cachepath)) {
+                gson.toJson(new JavaTaskFactories(classpath, list), writer);
+            }
+        }
     }
+
 
     private static void forEachClass(ClassInfoLoader cl, Path[] classpath, BiFunction<ClassInfo, Description, ?> f) throws IOException, ExperimaestroException {
 
@@ -118,17 +161,18 @@ public class JavaTasksIntrospection {
         }
     }
 
-    private void addToRepository(Repository repository, ClassInfoLoader cl, Connector connector) throws ExperimaestroException, IOException {
+    private Collection<JavaTaskFactory> addToRepository(Repository repository, ClassInfoLoader cl) throws ExperimaestroException, IOException {
+        ArrayList<JavaTaskFactory> factories = new ArrayList<>();
         BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
             // Creates the task factory
-            JavaTaskFactory factory = new JavaTaskFactory(this, connector, repository, classInfo, description.namespaces);
+            JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, classInfo, description.namespaces);
             repository.addFactory(factory);
+            factories.add(factory);
             return true;
         };
 
-        // FIXME: switch to this one
         forEachClass(cl, classpath, f);
-
+        return factories;
     }
 
     /**

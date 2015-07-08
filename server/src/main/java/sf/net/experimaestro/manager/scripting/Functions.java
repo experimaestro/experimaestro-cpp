@@ -27,10 +27,7 @@ import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
@@ -64,6 +61,7 @@ import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -280,16 +278,28 @@ public class Functions {
         ScriptContext.get().setDefaultLauncher(launcher);
     }
 
-    @Expose(value = "java_repository", optional = 1, optionalsAtStart = true)
+    @Expose(value = "java_repository", optional = 1)
     @Help("Include a repository from introspection of a java project")
-    static public void includeJavaRepository(Connector connector, String[] paths) throws IOException, ExperimaestroException, ClassNotFoundException {
-        if (connector == null) {
-            connector = ScriptContext.get().getConnector();
-        }
-        JavaTasksIntrospection.addToRepository(context().getRepository(), connector, paths);
+    static public void includeJavaRepository(final Connector connector, String[] paths, Path cachePath) throws IOException, ExperimaestroException, ClassNotFoundException {
+        Path[] classpath = Arrays.stream(paths).map(path -> {
+            try {
+                return connector.getMainConnector().resolveFile(path);
+            } catch (IOException e) {
+                throw new XPMRuntimeException(e, "Could not resolve path %s", path);
+            }
+        }).toArray(n -> new Path[n]);
+
+        JavaTasksIntrospection.addToRepository(context().getRepository(), classpath, cachePath);
     }
 
-    @Expose()
+    @Expose(optional = 1)
+    static public void includeJavaRepository(String[] paths, Path cachePath) throws IOException, ExperimaestroException, ClassNotFoundException {
+        includeJavaRepository(ScriptContext.get().getConnector(), paths, cachePath);
+    }
+
+
+
+        @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
     static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
