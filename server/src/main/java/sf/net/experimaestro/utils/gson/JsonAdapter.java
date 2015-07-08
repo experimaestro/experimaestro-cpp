@@ -32,11 +32,18 @@ import java.io.IOException;
 public class JsonAdapter extends TypeAdapter<Json> {
     @Override
     public void write(JsonWriter out, Json value) throws IOException {
-        value.write(out);
+        if (value == null) {
+            out.nullValue();
+        } else {
+            value.write(out);
+        }
     }
 
     @Override
     public Json read(JsonReader in) throws IOException {
+        if (in.peek() == JsonToken.NULL) {
+            return null;
+        }
         return readValue(in);
     }
 
