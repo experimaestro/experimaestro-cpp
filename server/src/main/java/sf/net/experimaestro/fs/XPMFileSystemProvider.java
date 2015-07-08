@@ -119,7 +119,6 @@ public class XPMFileSystemProvider extends FileSystemProvider {
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
         Path path = resolvePath(dir);
         Files.createDirectory(path);
-        throw new NotImplementedException();
     }
 
     @Override

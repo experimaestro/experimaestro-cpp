@@ -19,6 +19,7 @@ package sf.net.experimaestro.scheduler;
  */
 
 import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -77,7 +78,11 @@ public abstract class CommandContext implements Closeable {
     }
 
     public String resolve(Path file) throws IOException {
-        return connector.resolve(file);
+        String resolve = connector.resolve(file);
+        if (resolve == null) {
+            throw new XPMRuntimeException("Could not resolve path %s", file);
+        }
+        return resolve;
     }
 
     abstract Path getAuxiliaryFile(String prefix, String suffix) throws IOException;

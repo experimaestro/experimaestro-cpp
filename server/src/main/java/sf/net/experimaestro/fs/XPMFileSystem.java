@@ -19,9 +19,11 @@ package sf.net.experimaestro.fs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
@@ -81,8 +83,9 @@ public class XPMFileSystem extends FileSystem {
 
     @Override
     public Path getPath(String first, String... more) {
+        // FIXME: no clue what it should do
         if ( more == null || more.length == 0 ) {
-            return new XPMPath(null, first );
+            return new XPMPath(null, first, false);
         }
 
         StringBuilder builder = new StringBuilder( first );
@@ -90,7 +93,7 @@ public class XPMFileSystem extends FileSystem {
             builder.append( PATH_SEPARATOR )
                     .append( part );
         }
-        return new XPMPath(null, builder.toString());
+        return new XPMPath(null, builder.toString(), false);
     }
 
     @Override
@@ -108,7 +111,34 @@ public class XPMFileSystem extends FileSystem {
         throw new NotImplementedException();
     }
 
-    public Path getPath(URI uri) {
-        return new XPMPath(uri.getHost(), uri.getPath());
+    /**
+     * Structure of a path
+     * shares:host:share:path
+     * @param _uri The URI
+     * @return an XPM path
+     */
+    public XPMPath getPath(URI _uri) {
+        if (_uri.getPath() != null) {
+            throw new XPMIllegalArgumentException("XPM path %s is not valid", _uri);
+        }
+
+        String[] fields = _uri.getSchemeSpecificPart().split(":", 3);
+        if (fields.length != 3 || fields[0].isEmpty() || fields[1].isEmpty()) {
+            throw new XPMIllegalArgumentException("XPM path %s is not valid", _uri);
+        }
+
+
+        final String path = fields[2];
+
+        String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
+        boolean absolute = parts[0].isEmpty();
+
+        // Get the rest of the path
+        int offset = absolute ? 1 : 0;
+        int newLength = parts.length - offset;
+        String[] _parts = new String[newLength];
+        System.arraycopy(parts, offset, _parts, 0, newLength);
+
+        return new XPMPath(fields[0], fields[1], absolute, _parts);
     }
 }
