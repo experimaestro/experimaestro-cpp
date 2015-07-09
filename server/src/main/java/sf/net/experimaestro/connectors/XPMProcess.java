@@ -371,7 +371,7 @@ public abstract class XPMProcess {
         // Save the process
         final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
-                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this));
+                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.ofFull(this));
         inDatabase = true;
 
         // Save the locks

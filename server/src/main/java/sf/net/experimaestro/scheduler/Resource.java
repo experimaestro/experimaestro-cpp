@@ -20,6 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
@@ -62,7 +63,7 @@ public class Resource implements Identifiable {
     public static final String SELECT_BEGIN = "SELECT id, type, path, status FROM resources";
 
 
-    SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "data");
+    public static SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "data");
 
 
     /**
@@ -119,6 +120,7 @@ public class Resource implements Identifiable {
     /**
      * The path with the connector
      */
+    @GsonSerialization(serialize = false)
     protected Path locator;
 
     /**
@@ -561,7 +563,7 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
-        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this)) {
+        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.ofRaw(this)) {
             resources.save(this, SQL_INSERT, update, typeValue, getLocator().toUri().toString(), getState().value(),
                     update ? old.getState().value() : getState().value(),
                     jsonInputStream);
@@ -760,6 +762,9 @@ public class Resource implements Identifiable {
             LOGGER.debug("No change in dependency status [%s -> %s]", beforeState, dep.status);
         }
     }
+
+    /** Does nothing for a resource */
+    public void setLauncher(Launcher launcher) {}
 
     /**
      * Defines how printing should be done

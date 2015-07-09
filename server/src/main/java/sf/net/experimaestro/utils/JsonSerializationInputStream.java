@@ -19,16 +19,12 @@ package sf.net.experimaestro.utils;
  */
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.log.Logger;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.io.Writer;
+import java.io.*;
 
 /**
  * A stream for serializing
@@ -39,14 +35,23 @@ public class JsonSerializationInputStream extends InputStream {
     final static private Logger LOGGER = Logger.getLogger();
 
 
-    static public JsonSerializationInputStream of(Object object) {
+    static public JsonSerializationInputStream ofRaw(Object object) {
+        return of(object, GsonConverter.rawBuilder);
+    }
+
+    static public JsonSerializationInputStream ofFull(Object object) {
+        return of(object, GsonConverter.builder);
+    }
+
+    static public JsonSerializationInputStream of(Object object, GsonBuilder builder) {
         return new JsonSerializationInputStream(out -> {
             try (JsonWriter writer = new JsonWriter(out)) {
-                final Gson gson = GsonConverter.builder.create();
+                final Gson gson = builder.create();
                 gson.toJson(object, object.getClass(), writer);
             }
         });
     }
+
     public JsonSerializationInputStream(ExceptionalConsumer<Writer> f) {
         outputStream = new PipedOutputStream();
         try {
@@ -59,8 +64,8 @@ public class JsonSerializationInputStream extends InputStream {
         new Thread(() -> {
             try (OutputStreamWriter writer = new OutputStreamWriter(outputStream)) {
                 f.apply(writer);
-            } catch(IOException e) {
-              LOGGER.warn(e, "I/O exception");
+            } catch (IOException e) {
+                LOGGER.warn(e, "I/O exception");
             } catch (Exception e) {
                 throw new XPMRuntimeException(e);
             }

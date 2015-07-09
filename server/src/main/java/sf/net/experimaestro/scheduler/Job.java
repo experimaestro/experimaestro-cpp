@@ -606,7 +606,7 @@ abstract public class Job extends Resource {
         }
 
         // Check dependencies if we are in waiting or ready
-        if (getState() == ResourceState.WAITING || getState() == ResourceState.READY) {
+        if (getState() == ResourceState.WAITING || getState() == ResourceState.READY || getState() == ResourceState.ON_HOLD) {
             // reset the count
             int nbUnsatisfied = 0;
             int nbHolding = 0;

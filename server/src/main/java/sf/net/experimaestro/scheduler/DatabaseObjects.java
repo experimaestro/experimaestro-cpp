@@ -344,7 +344,7 @@ final public class DatabaseObjects<T extends Identifiable> {
     }
 
     static public <T> void loadFromJson(T object, InputStream binaryStream) {
-        final Gson gson = GsonConverter.builder.create();
+        final Gson gson = GsonConverter.rawBuilder.create();
         try (InputStream is = binaryStream;
              Reader reader = new InputStreamReader(is);
              JsonReader jsonReader = new JsonReader(reader)

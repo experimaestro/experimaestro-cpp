@@ -97,7 +97,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
     protected void save(DatabaseObjects<Lock> locks) throws SQLException {
         locks.save(this, sqlInsert, false,
-                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this));
+                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.ofFull(this));
     }
 
     protected void saveShare(Path path) throws SQLException {

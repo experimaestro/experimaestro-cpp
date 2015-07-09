@@ -18,9 +18,13 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
  * Annotation for Gson serialization
  */
+@Retention(RetentionPolicy.RUNTIME)
 public @interface GsonSerialization {
     /** Should this value be serialized */
     boolean serialize();

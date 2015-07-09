@@ -28,6 +28,7 @@ import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 
 import java.io.IOException;
@@ -65,17 +66,19 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     /**
      * Each connector has a unique integer ID
      */
+    @GsonSerialization(serialize = false)
     private Long id;
 
     /**
      * The string identifier
      */
+    @GsonSerialization(serialize = false)
     private String identifier;
 
     /**
      * Whether data has been loaded from database
      */
-    private boolean dataLoaded;
+    transient private boolean dataLoaded;
 
     public Connector(String identifier) {
         this.identifier = identifier;
@@ -221,7 +224,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * @param writer The writer
      */
     protected void saveJson(JsonWriter writer) {
-        final Gson gson = GsonConverter.builder.create();
+        final Gson gson = GsonConverter.rawBuilder.create();
         gson.toJson(this, this.getClass(), writer);
     }
 

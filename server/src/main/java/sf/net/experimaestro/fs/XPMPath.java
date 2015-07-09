@@ -32,6 +32,7 @@ import java.net.URISyntaxException;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Stack;
 
 import static java.lang.String.format;
@@ -225,7 +226,7 @@ public class XPMPath implements Path {
         int cpl = 0;
         final int l1 = parts.length;
         final int l2 = unixOther.parts.length;
-        while(cpl < l1 && cpl < l2 && parts[cpl].equals(unixOther.parts[cpl])) {
+        while (cpl < l1 && cpl < l2 && parts[cpl].equals(unixOther.parts[cpl])) {
             ++cpl;
         }
 
@@ -240,10 +241,10 @@ public class XPMPath implements Path {
 
         // copy common part from this
         int offset = 0;
-        for(int i = 0; i < l1 - cpl; ++i) {
+        for (int i = 0; i < l1 - cpl; ++i) {
             _parts[offset++] = STEP_BACK;
         }
-        for(int i = cpl; i < l2; ++i) {
+        for (int i = cpl; i < l2; ++i) {
             _parts[offset++] = unixOther.parts[i];
         }
 
@@ -263,8 +264,10 @@ public class XPMPath implements Path {
     @Override
     public URI toUri() {
         try {
-            final String path = XPMFileSystem.PATH_SEPARATOR + share + XPMFileSystem.PATH_SEPARATOR + Output.toString(XPMFileSystem.PATH_SEPARATOR, parts);
-            return new URI(XPMFileSystemProvider.SCHEME, node, path, "");
+            String ssp = node + ":" + share + ":";
+            if (isAbsolute()) ssp = ssp + "/";
+            ssp = ssp + Output.toString(XPMFileSystem.PATH_SEPARATOR, parts);
+            return new URI(XPMFileSystemProvider.SCHEME, ssp, null);
         } catch (URISyntaxException e) {
             throw new XPMRuntimeException(e, "Could not build an URI");
         }
@@ -277,6 +280,34 @@ public class XPMPath implements Path {
         } else {
             return getRoot().resolve(this);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        XPMPath xpmPath = (XPMPath) o;
+
+        if (!node.equals(xpmPath.node) || !share.equals(xpmPath.share)) {
+            return false;
+        }
+
+        // If one path is absolute, convert it to absolute before comparing
+        if (xpmPath.isAbsolute()) {
+            if (!isAbsolute()) {
+                return toAbsolutePath().equals(o);
+            }
+        } else {
+            if (isAbsolute()) {
+                return xpmPath.toAbsolutePath().equals(this);
+            }
+        }
+        return Arrays.equals(parts, xpmPath.parts);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(node, share, parts, absolute);
     }
 
     @Override

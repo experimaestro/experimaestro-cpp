@@ -327,6 +327,10 @@ final public class ScriptContext implements AutoCloseable {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
             ((Job) resource).addDependency(dependency);
         }
+
+        if (defaultLauncher.get() != null) {
+            resource.setLauncher(defaultLauncher.get());
+        }
     }
 
     public ScriptContext addNewTaskListener(Consumer<Job> listener) {

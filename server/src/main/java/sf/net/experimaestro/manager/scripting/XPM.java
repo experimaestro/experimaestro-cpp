@@ -432,6 +432,7 @@ public class XPM {
         }
 
         job = new CommandLineTask((java.nio.file.Path) path);
+
         job.setCommands(commands);
         if (scriptContext.submittedJobs.containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
@@ -447,10 +448,7 @@ public class XPM {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         // --- Set defaults
-        if (scriptContext.getDefaultLauncher() != null) {
-            job.setLauncher(scriptContext.getDefaultLauncher());
-        }
-
+        scriptContext.prepare(job);
 
         // --- Options
         if (options != null) {
@@ -555,8 +553,6 @@ public class XPM {
             pw.format("Locator: %s", path.toString());
             pw.flush();
         } else {
-            // Prepare
-            scriptContext.prepare(job);
 
             // Add dependencies
             dependencies.forEach(job::addDependency);
@@ -569,6 +565,8 @@ public class XPM {
 
             final Resource old = Resource.getByLocator(job.getLocator());
 
+            job.updateStatus();
+
             // Replace old if necessary
             if (old != null) {
                 if (!old.canBeReplaced()) {
@@ -578,7 +576,6 @@ public class XPM {
                 } else {
                     rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
                     old.replaceBy(job);
-                    job = (CommandLineTask) old;
                 }
             } else {
                 // Store in scheduler

@@ -108,11 +108,11 @@ public class JavaTask extends Task {
                     pw.format("Path: %s", path);
                     pw.flush();
                 } else {
+                    job.updateStatus();
                     if (old != null) {
                         // Lock and refresh the resource to be overwritten
                         try {
                             old.replaceBy(job);
-                            job = (CommandLineTask) old;
                             taskLogger.info(String.format("Overwriting resource [%s]", job));
                         } catch (ExperimaestroCannotOverwrite e) {
                             taskLogger.warn("Cannot override resource [%s]", old);
