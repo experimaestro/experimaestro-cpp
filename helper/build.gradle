@@ -22,6 +22,9 @@ artifacts {
 }
 
 signing {
+    // Skip signing snapshot archives or travis builds
+    if (System.env.TRAVIS || version.endsWith("-SNAPSHOT")) return
+
     sign configurations.archives
 }
 
