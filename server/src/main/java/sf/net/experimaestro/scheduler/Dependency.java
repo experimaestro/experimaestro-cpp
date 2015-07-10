@@ -245,4 +245,8 @@ abstract public class Dependency implements Serializable {
         long fromId = rs.getLong(1);
         return REGISTRY.newInstance(type, fromId, rs.getLong(2), lock, dependencyStatus);
     }
+
+    public long getFromId() {
+        return from.id();
+    }
 }

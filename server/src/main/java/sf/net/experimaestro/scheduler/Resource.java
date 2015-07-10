@@ -577,11 +577,12 @@ public class Resource implements Identifiable {
 
             // Delete dependencies that are not required anymore
             try (PreparedStatement st = Scheduler.getConnection().prepareStatement("DELETE FROM Dependencies WHERE fromId=? and toId=?")) {
+                st.setLong(2, getId());
+
                 for (Dependency dependency : old.ingoingDependencies().values()) {
                     if (!ingoingDependencies.containsKey(dependency.getFrom())) {
                         // Remove dependency
-                        st.setLong(1, dependency.getFrom().getId());
-                        st.setLong(2, getId());
+                        st.setLong(1, dependency.getFromId());
                         st.execute();
                     } else {
                         // Replace dependency
