@@ -1,6 +1,8 @@
 language: java
 jdk:
   - oraclejdk8
+sudo: false
+cache: bundler
 branches:
   only:
    - master
