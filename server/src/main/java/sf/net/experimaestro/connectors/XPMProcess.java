@@ -18,6 +18,7 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.Gson;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.ConstructorRegistry;
@@ -26,6 +27,7 @@ import sf.net.experimaestro.scheduler.EndOfJobMessage;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.GsonConverter;
 import sf.net.experimaestro.utils.JsonAbstract;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.db.SQLInsert;
@@ -371,7 +373,7 @@ public abstract class XPMProcess {
         // Save the process
         final Connection connection = Scheduler.getConnection();
         SQL_INSERT.execute(connection, false, job.getId(),
-                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.ofFull(this));
+                DatabaseObjects.getTypeValue(getClass()), connector.getId(), pid, JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder));
         inDatabase = true;
 
         // Save the locks
@@ -408,7 +410,7 @@ public abstract class XPMProcess {
             process.connector = (SingleHostConnector)Connector.findById(rs.getLong(2));
             process.pid = rs.getString(3);
             process.job = job;
-            DatabaseObjects.loadFromJson(process, rs.getBinaryStream(4));
+            DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));
             return process;
         }
     }

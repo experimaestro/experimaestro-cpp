@@ -354,19 +354,25 @@ public class OARLauncher extends Launcher {
                 final Path donePath = directory.resolve("information.done");
 
                 // Kill old job
-                if (information.jobId != null) {
-                    LOGGER.info("Killing old job [%s]", information.jobId);
-                    final AbstractProcessBuilder builder = connector.processBuilder();
-                    builder.command("oardel", information.jobId);
-                    builder.detach(false);
-                    final XPMProcess process = builder.start();
-                    try {
-                        int code = process.waitFor();
-                        if (code != 0) {
-                            throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
+                if (information.jobId != null && Files.exists(lockPath)) {
+                    final OARStat oarStat = new OARStat(connector, information.jobId, false);
+                    if (!oarStat.isRunning()) {
+                        Files.delete(lockPath);
+                    } else {
+                        LOGGER.info("Killing old job [%s]", information.jobId);
+                        final AbstractProcessBuilder builder = connector.processBuilder();
+                        builder.command("oardel", information.jobId);
+                        builder.detach(false);
+                        final XPMProcess process = builder.start();
+                        try {
+
+                            int code = process.waitFor();
+                            if (code != 0) {
+                                throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
+                            }
+                        } catch (InterruptedException e) {
+                            LOGGER.error(e, "Waiting interrupted");
                         }
-                    } catch (InterruptedException e) {
-                        LOGGER.error(e, "Waiting interrupted");
                     }
                 }
 

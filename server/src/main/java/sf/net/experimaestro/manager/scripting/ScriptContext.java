@@ -300,14 +300,6 @@ final public class ScriptContext implements AutoCloseable {
         return task;
     }
 
-    public void startedJob(Job job) {
-        // Notify listeners that a job has started
-        for (Consumer<Job> listener : newTaskListeners) {
-            listener.accept(job);
-        }
-
-    }
-
     public Logger getMainLogger() {
         return staticContext.getMainLogger();
     }

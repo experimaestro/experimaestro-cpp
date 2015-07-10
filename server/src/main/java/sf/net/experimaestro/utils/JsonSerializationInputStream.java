@@ -34,15 +34,12 @@ public class JsonSerializationInputStream extends InputStream {
     private final PipedOutputStream outputStream;
     final static private Logger LOGGER = Logger.getLogger();
 
-
-    static public JsonSerializationInputStream ofRaw(Object object) {
-        return of(object, GsonConverter.rawBuilder);
-    }
-
-    static public JsonSerializationInputStream ofFull(Object object) {
-        return of(object, GsonConverter.builder);
-    }
-
+    /**
+     * Creates an input stream for an object to serialize
+     * @param object The object to serialize
+     * @param builder The GSON builder to use
+     * @return An input stream
+     */
     static public JsonSerializationInputStream of(Object object, GsonBuilder builder) {
         return new JsonSerializationInputStream(out -> {
             try (JsonWriter writer = new JsonWriter(out)) {

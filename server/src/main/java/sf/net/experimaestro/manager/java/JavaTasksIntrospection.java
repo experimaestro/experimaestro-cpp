@@ -81,7 +81,7 @@ public class JavaTasksIntrospection {
             }
 
             if (validCache) {
-                final Gson gson = GsonConverter.builder.create();
+                final Gson gson = GsonConverter.defaultBuilder.create();
 
                 try (BufferedReader in = Files.newBufferedReader(cachepath)) {
                     JavaTaskFactories factories = gson.fromJson(in, JavaTaskFactories.class);
@@ -103,7 +103,7 @@ public class JavaTasksIntrospection {
         Collection<JavaTaskFactory> list = javaTasksIntrospection.addToRepository(repository, classLoader);
 
         if (cachepath != null) {
-            final Gson gson = GsonConverter.builder.create();
+            final Gson gson = GsonConverter.defaultBuilder.create();
             try (BufferedWriter writer = Files.newBufferedWriter(cachepath)) {
                 gson.toJson(new JavaTaskFactories(classpath, list), writer);
             }

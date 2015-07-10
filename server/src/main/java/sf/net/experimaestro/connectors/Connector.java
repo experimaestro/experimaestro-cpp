@@ -224,7 +224,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * @param writer The writer
      */
     protected void saveJson(JsonWriter writer) {
-        final Gson gson = GsonConverter.rawBuilder.create();
+        final Gson gson = GsonConverter.connectorBuilder.create();
         gson.toJson(this, this.getClass(), writer);
     }
 
@@ -236,7 +236,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
             return;
         }
 
-        Scheduler.get().connectors().loadData(this, "data");
+        Scheduler.get().connectors().loadData(GsonConverter.connectorBuilder, this, "data");
         dataLoaded = true;
     }
 

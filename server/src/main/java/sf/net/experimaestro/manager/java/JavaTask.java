@@ -100,6 +100,8 @@ public class JavaTask extends Task {
                 CommandLineTask job = new CommandLineTask(path);
                 job.setCommands(commands);
 
+                commands.dependencies().forEach(job::addDependency);
+
                 taskContext.prepare(job);
                 if (taskContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
@@ -124,7 +126,6 @@ public class JavaTask extends Task {
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 
-                taskContext.startedJob(job);
             }
         } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);

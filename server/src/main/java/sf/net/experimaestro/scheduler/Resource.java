@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.utils.GsonConverter.defaultBuilder;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a
@@ -563,7 +564,7 @@ public class Resource implements Identifiable {
                 getLocator(), getClass(), typeValue,
                 getState(), getState().value());
 
-        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.ofRaw(this)) {
+        try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this, defaultBuilder)) {
             resources.save(this, SQL_INSERT, update, typeValue, getLocator().toUri().toString(), getState().value(),
                     update ? old.getState().value() : getState().value(),
                     jsonInputStream);
@@ -689,7 +690,7 @@ public class Resource implements Identifiable {
             return;
         }
 
-        Scheduler.get().resources().loadData(this, "data");
+        Scheduler.get().resources().loadData(defaultBuilder, this, "data");
         dataLoaded = true;
     }
 

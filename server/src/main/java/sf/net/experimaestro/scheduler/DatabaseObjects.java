@@ -25,6 +25,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
 import sf.net.experimaestro.exceptions.CloseException;
@@ -328,23 +329,24 @@ final public class DatabaseObjects<T extends Identifiable> {
     /**
      * Load data
      *
+     * @param builder
      * @param object
      */
-    public void loadData(T object, String dataFieldName) {
+    public void loadData(GsonBuilder builder, T object, String dataFieldName) {
         try (PreparedStatement st = prepareStatement(format("SELECT %s FROM %s WHERE id=?", dataFieldName, tableName))) {
             st.setLong(1, object.getId());
             st.execute();
             final ResultSet resultSet = st.getResultSet();
             resultSet.next();
             final InputStream binaryStream = resultSet.getBinaryStream(1);
-            loadFromJson(object, binaryStream);
+            loadFromJson(builder, object, binaryStream);
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not retrieve data for %s", this);
         }
     }
 
-    static public <T> void loadFromJson(T object, InputStream binaryStream) {
-        final Gson gson = GsonConverter.rawBuilder.create();
+    static public <T> void loadFromJson(GsonBuilder builder, T object, InputStream binaryStream) {
+        final Gson gson = builder.create();
         try (InputStream is = binaryStream;
              Reader reader = new InputStreamReader(is);
              JsonReader jsonReader = new JsonReader(reader)

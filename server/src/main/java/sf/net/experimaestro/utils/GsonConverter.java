@@ -36,8 +36,8 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
 import java.nio.file.Path;
+import java.util.HashSet;
 
 /**
  * Converts a command into a JSON string
@@ -45,13 +45,22 @@ import java.nio.file.Path;
 public class GsonConverter {
     final static private Logger LOGGER = Logger.getLogger();
 
-    final static public GsonBuilder builder = new GsonBuilder();
-    final static public GsonBuilder rawBuilder = new GsonBuilder();
+    /**
+     * The builder to use in most cases
+     */
+    final static public GsonBuilder defaultBuilder = new GsonBuilder();
+
+    /**
+     * Used to serialize connectors
+     */
+    final static public GsonBuilder connectorBuilder = new GsonBuilder();
 
     static {
         // Last has more priority
-        for (GsonBuilder gsonBuilder : new GsonBuilder[]{builder, rawBuilder}) {
-            gsonBuilder.registerTypeAdapterFactory(new AbstractObjectFactory());
+        defaultBuilder.registerTypeAdapterFactory(new AbstractObjectFactory());
+        connectorBuilder.registerTypeAdapterFactory(new AbstractObjectFactory(Connector.class));
+
+        for (GsonBuilder gsonBuilder : new GsonBuilder[]{defaultBuilder, connectorBuilder}) {
 
             gsonBuilder.registerTypeHierarchyAdapter(Json.class, new JsonAdapter());
             gsonBuilder.registerTypeHierarchyAdapter(Path.class, new JsonPathAdapter());
@@ -60,14 +69,26 @@ public class GsonConverter {
             gsonBuilder.setExclusionStrategies(new GsonExclusionStrategy());
         }
 
-        builder.registerTypeHierarchyAdapter(Connector.class, new ConnectorAdapter());
-
+        defaultBuilder.registerTypeHierarchyAdapter(Connector.class, new ConnectorAdapter());
     }
 
     private static class AbstractObjectFactory implements TypeAdapterFactory {
+        Class<?>[] classes;
+
+        public AbstractObjectFactory(Class<?>... classes) {
+            this.classes = classes;
+        }
+
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
+
+            for (Class<?> aClass : classes) {
+                if (aClass.isAssignableFrom(rawType)) {
+                    return null;
+                }
+            }
+
 
             if (rawType.getAnnotation(JsonAbstract.class) != null) {
                 return new AbstractObjectAdapter(gson, type);

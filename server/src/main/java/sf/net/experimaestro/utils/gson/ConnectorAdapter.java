@@ -32,7 +32,7 @@ public class ConnectorAdapter extends TypeAdapter<Connector> {
         try {
             final Connector connector = Connector.findByURI(id);
             if (connector == null) {
-                throw new IOException("Could not find the connector (not in DB)" + id);
+                throw new IOException("Could not find the connector " + id + "(not in DB)");
             }
             return connector;
         } catch (SQLException e) {

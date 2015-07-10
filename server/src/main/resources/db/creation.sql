@@ -115,7 +115,6 @@ CREATE TABLE Dependencies (
 CREATE TABLE LockShares (
   lock  BIGINT        NOT NULL,
   share BIGINT        NOT NULL,
-  path  VARCHAR(4096) NOT NULL,
 
   -- do not delete a share if it is referenced
   FOREIGN KEY (lock) REFERENCES Locks

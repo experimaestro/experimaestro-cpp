@@ -29,6 +29,8 @@ import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.StatusLock;
 import sf.net.experimaestro.scheduler.TokenLock;
+import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.JsonAbstract;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.db.SQLInsert;
 
@@ -47,6 +49,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
+@JsonAbstract
 public abstract class Lock implements AutoCloseable, Identifiable {
     static protected ConstructorRegistry<Lock> REGISTRY
             = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
@@ -97,7 +100,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
     protected void save(DatabaseObjects<Lock> locks) throws SQLException {
         locks.save(this, sqlInsert, false,
-                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.ofFull(this));
+                DatabaseObjects.getTypeValue(this.getClass()), JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder));
     }
 
     protected void saveShare(Path path) throws SQLException {
@@ -121,7 +124,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         try {
             long id = rs.getLong(1);
             final Lock lock = REGISTRY.get(rs.getLong(2)).newInstance(id);
-            DatabaseObjects.loadFromJson(lock, rs.getBinaryStream(3));
+            DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, lock, rs.getBinaryStream(3));
             return lock;
         } catch(Throwable e) {
             throw new XPMRuntimeException(e, "Could not create lock object from DB");
