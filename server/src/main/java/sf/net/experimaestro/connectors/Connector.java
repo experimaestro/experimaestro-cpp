@@ -114,6 +114,11 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         return create(new URI(uriString), options);
     }
 
+    @Expose()
+    public Launcher default_launcher() {
+        return new DirectLauncher(this);
+    }
+
     public static Connector create(URI uri, ConnectorOptions options) throws SQLException {
         Connector connector;
 

@@ -41,6 +41,7 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @JsonAbstract
+@Exposed
 abstract public class SingleHostConnector extends Connector {
     /**
      * Underlying filesystem

@@ -80,7 +80,7 @@ public abstract class CommandContext implements Closeable {
     public String resolve(Path file) throws IOException {
         String resolve = connector.resolve(file);
         if (resolve == null) {
-            throw new XPMRuntimeException("Could not resolve path %s", file);
+            throw new XPMRuntimeException("Could not resolve path %s with connector %s", file, connector);
         }
         return resolve;
     }

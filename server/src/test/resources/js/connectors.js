@@ -73,7 +73,7 @@ function get_ssh_connector() {
 function test_share() {
     var server = get_ssh_connector();
     define_share("test", "root", server, "/");
-    var p = path("shares://test/root" + repository_path.get_ancestor(2).resolve("hello").get_path());
+    var p = path("shares:test:root:" + repository_path.get_ancestor(2).resolve("hello").get_path());
     var s = p.read_all();
     logger.info("Read (share): [%s]", s);
     assert_true(s == "world\n");
@@ -83,8 +83,8 @@ function test_share() {
 function test_share_resolution() {
     var server = get_ssh_connector();
     define_share("test", "root", server, "/");
-    var p = path("shares://test/root" + repository_path.get_ancestor(2).resolve("hello").get_path());
-    var s = xpm.evaluate(["/bin/cat", p], { connector: server });
+    var p = path("shares:test:root:" + repository_path.get_ancestor(2).resolve("hello").get_path());
+    var s = xpm.evaluate(["/bin/cat", p], { launcher: server.default_launcher() });
     logger.info("Read (share resolution): [%s]", s);
     assert_true(s == "world");
 }
