@@ -37,7 +37,6 @@ import java.util.*;
  * Order the input using some operators
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 21/2/13
  */
 @Exposed
 public class OrderBy extends UnaryOperator {
@@ -62,17 +61,19 @@ public class OrderBy extends UnaryOperator {
      * @param order     The order shared by different order by operators
      * @param operators A subset of operators from order or <tt>null</tt> for all
      */
-    public OrderBy(Order<Operator> order, Set<Operator> operators) {
+    public OrderBy(ScriptContext sc, Order<Operator> order, Set<Operator> operators) {
+        super(sc);
         this.order = order;
         this.operators = operators == null ? null : new HashSet<>(operators);
     }
 
-    public OrderBy() {
+    public OrderBy(ScriptContext sc) {
+        super(sc);
     }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        OrderBy copy = new OrderBy();
+        OrderBy copy = new OrderBy(ScriptContext.get());
 
         copy.operators = operators != null ? Sets.newHashSet(Operator.copy(operators, deep, map)) : null;
         copy.order = new Order<>();
@@ -88,7 +89,7 @@ public class OrderBy extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             public Iterator<Value> iterator;
 

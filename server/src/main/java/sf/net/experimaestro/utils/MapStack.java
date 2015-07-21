@@ -28,7 +28,6 @@ import java.util.*;
  * New values are inserted on the top of the stack
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/2/13
  */
 public class MapStack<Key, Value> extends AbstractMap<Key, Value> {
     MapStack<Key, Value> previous;

@@ -52,7 +52,8 @@ public class TaskOperator extends UnaryOperator {
      *
      * @param plan The associated plan
      */
-    public TaskOperator(Plan plan) {
+    public TaskOperator(ScriptContext sc, Plan plan) {
+        super(sc);
         this.plan = plan;
     }
 
@@ -62,7 +63,7 @@ public class TaskOperator extends UnaryOperator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        TaskOperator copy = new TaskOperator(plan);
+        TaskOperator copy = new TaskOperator(ScriptContext.get(), plan);
         copy.mappings = new TreeMap<>(mappings);
         return super.copy(deep, map, copy);
     }
@@ -76,10 +77,9 @@ public class TaskOperator extends UnaryOperator {
     /**
      * Creates an iterator
      *
-     * @param scriptContext The current context
      */
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             // Parent values
             final Iterator<Value> iterator = input != null ?

@@ -31,10 +31,13 @@ import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
  * joins & products
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 12/3/13
  */
 @Exposed
 public class ProductReference extends NAryOperator {
+
+    public ProductReference(ScriptContext sc) {
+        super(sc);
+    }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
@@ -43,7 +46,7 @@ public class ProductReference extends NAryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         // TODO: implement _iterator
         throw new NotImplementedException();
     }
@@ -68,7 +71,7 @@ public class ProductReference extends NAryOperator {
         // Process union of operators
         for (int i = inputValues.length; --i >= 0; ) {
             Plan.OperatorIterable values = inputValues[i];
-            Union union = new Union();
+            Union union = new Union(scriptContext);
             for (Operator operator : values) {
                 union.addParent(operator);
             }
@@ -106,7 +109,7 @@ public class ProductReference extends NAryOperator {
         for (int i = 0; i < joins.length; i++) {
             lattice.add(joins[i], inputOperators[i]);
         }
-        MergeResult merge = lattice.merge();
+        MergeResult merge = lattice.merge(scriptContext);
 
         // Build the trie structure for product/joins
 
@@ -115,7 +118,7 @@ public class ProductReference extends NAryOperator {
             mapping[i] = merge.map.get(inputOperators[i]);
         }
 
-        ReorderNodes reorder = new ReorderNodes(mapping);
+        ReorderNodes reorder = new ReorderNodes(scriptContext, mapping);
         reorder.addParent(merge.operator);
 
         return reorder;

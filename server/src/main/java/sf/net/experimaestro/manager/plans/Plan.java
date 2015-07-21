@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -27,7 +26,6 @@ import com.google.common.collect.Multimap;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
-import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -84,7 +82,8 @@ public class Plan extends Operator {
      *
      * @param factory
      */
-    public Plan(TaskFactory factory) {
+    public Plan(ScriptContext sc, TaskFactory factory) {
+        super(sc);
         this.factory = factory;
     }
 
@@ -120,7 +119,7 @@ public class Plan extends Operator {
 
     @Override
     public Plan doCopy(boolean deep, Map<Object, Object> map) {
-        Plan copy = new Plan(factory);
+        Plan copy = new Plan(ScriptContext.get(), factory);
         for (Multimap<DotName, Operator> multimap : inputsList) {
             HashMultimap<DotName, Operator> mapCopy = HashMultimap.create();
             copy.inputsList.add(mapCopy);
@@ -201,7 +200,7 @@ public class Plan extends Operator {
         ArrayList<Operator> outputs = new ArrayList<>();
 
         for (Multimap<DotName, Operator> inputs : inputsList) {
-            TaskOperator self = new TaskOperator(this);
+            TaskOperator self = new TaskOperator(scriptContext, this);
 
             if (inputs.isEmpty()) {
                 self.addParent(new Constant(JsonNull.getSingleton()));
@@ -227,7 +226,7 @@ public class Plan extends Operator {
 
                 for (int i = inputValues.length; --i >= 0; ) {
                     OperatorIterable values = inputValues[i];
-                    Union union = new Union();
+                    Union union = new Union(scriptContext);
                     for (Operator operator : values) {
                         union.addParent(operator);
                     }
@@ -265,7 +264,7 @@ public class Plan extends Operator {
                 for (int i = 0; i < joins.length; i++) {
                     lattice.add(joins[i], inputOperators[i]);
                 }
-                LatticeNode.MergeResult merge = lattice.merge();
+                LatticeNode.MergeResult merge = lattice.merge(scriptContext);
 
                 self.addParent(merge.operator);
 
@@ -290,7 +289,7 @@ public class Plan extends Operator {
             map.put(this, outputs.get(0));
             planOperator = outputs.get(0);
         } else {
-            Union union = new Union();
+            Union union = new Union(scriptContext);
             map.put(this, union);
             for (Operator output : outputs)
                 union.addParent(output);
@@ -331,7 +330,7 @@ public class Plan extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         throw new UnsupportedOperationException();
     }
 
@@ -384,7 +383,7 @@ public class Plan extends Operator {
      */
     @Expose(context = true)
     public Plan(LanguageContext cx, TaskFactory factory, Map object){
-        this(factory);
+        this(ScriptContext.get(), factory);
         add(getMappings(object, cx));
     }
 

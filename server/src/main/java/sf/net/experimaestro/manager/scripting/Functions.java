@@ -124,13 +124,13 @@ public class Functions {
     @Help(value = "Transform plans outputs with a function")
     public static Operator transform(JavaScriptContext cx, @NoJavaization Callable f, Operator... operators) throws FileSystemException {
         final JSTransform transform = new JSTransform(cx, f, operators);
-        FunctionOperator transformOperator = new FunctionOperator(transform);
+        FunctionOperator transformOperator = new FunctionOperator(ScriptContext.get(), transform);
 
         Operator inputOperator;
         if (operators.length == 1)
             inputOperator = operators[0];
         else {
-            ProductReference pr = new ProductReference();
+            ProductReference pr = new ProductReference(ScriptContext.get());
             for (Operator operator : operators) {
                 pr.addParent(operator);
             }

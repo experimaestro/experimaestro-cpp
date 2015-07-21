@@ -31,7 +31,6 @@ import java.util.*;
  * A constant in a plan just generate json values
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 21/2/13
  */
 @Exposed
 public class Constant extends Operator {
@@ -48,7 +47,7 @@ public class Constant extends Operator {
     }
 
     public Constant(String name, Iterable<Json> values) {
-        super(name);
+        super(ScriptContext.get(), name);
         for (Json json : values) {
             this.values.add(json);
         }
@@ -60,7 +59,7 @@ public class Constant extends Operator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return Iterators.transform(values.iterator(), input -> new ReturnValue(null, input));
     }
 

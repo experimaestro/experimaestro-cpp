@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import com.google.common.collect.Lists;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,11 +30,14 @@ import java.util.Map;
  * An operator with multiple inputs
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 20/2/13
  */
 @Exposed
 abstract public class NAryOperator extends Operator {
     ArrayList<Operator> parents = new ArrayList<>();
+
+    public NAryOperator(ScriptContext sc) {
+        super(sc);
+    }
 
     @Override
     public List<Operator> getParents() {

@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.AbstractList;
 import java.util.List;
@@ -34,6 +35,10 @@ abstract public class UnaryOperator extends Operator {
      * The input operator
      */
     Operator input;
+
+    public UnaryOperator(ScriptContext sc) {
+        super(sc);
+    }
 
     @Override
     public List<Operator> getParents() {

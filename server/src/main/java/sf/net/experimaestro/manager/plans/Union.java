@@ -37,11 +37,13 @@ import java.util.Map;
 public class Union extends NAryOperator {
 
     @Expose
-    public Union() {}
+    public Union(ScriptContext scriptContext) {
+        super(scriptContext);
+    }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        Union copy = new Union();
+        Union copy = new Union(ScriptContext.get());
         return super.copy(deep, map, copy);
     }
 
@@ -52,7 +54,7 @@ public class Union extends NAryOperator {
 
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
 
         return new AbstractIterator<ReturnValue>() {
             int parent = -1;

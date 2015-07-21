@@ -45,8 +45,12 @@ public class Join extends Product {
      */
     ArrayList<JoinReference> joins = new ArrayList<>();
 
+    public Join(ScriptContext sc) {
+        super(sc);
+    }
+
     @Override
-    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new JoinIterator(scriptContext);
     }
 

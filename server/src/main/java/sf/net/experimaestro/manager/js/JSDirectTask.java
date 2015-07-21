@@ -98,18 +98,21 @@ public class JSDirectTask extends Task {
                 jsoninput.put(entry.getKey(), input);
             }
 
-            final Object returned = runFunction.call(cx, jsScope, jsObject,
-                    new Object[]{jsoninput, resultObject});
-            LOGGER.debug("Returned %s", returned);
-            if (returned == Undefined.instance || returned == null) {
-                throw new XPMRuntimeException(
-                        "Undefined returned by the function run of task [%s]",
-                        factory.getId());
+            // Switch to our context
+            try (ScriptContext.Swap ignored = taskContext.swap()) {
+                final Object returned = runFunction.call(cx, jsScope, jsObject,
+                        new Object[]{jsoninput, resultObject});
+
+                LOGGER.debug("Returned %s", returned);
+                if (returned == Undefined.instance || returned == null) {
+                    throw new XPMRuntimeException(
+                            "Undefined returned by the function run of task [%s]",
+                            factory.getId());
+                }
+                LOGGER.debug("[/Running] task: %s", factory.getId());
+
+                return JSUtils.toJSON(jsScope, returned);
             }
-            LOGGER.debug("[/Running] task: %s", factory.getId());
-
-            return JSUtils.toJSON(jsScope, returned);
-
         }
 
 

@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.plans;
 
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.ImmutableList;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.Heap;
 import sf.net.experimaestro.utils.HeapElement;
 import sf.net.experimaestro.utils.IdentityHashSet;
@@ -71,7 +72,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
      * @param set       The set of indices to merge upon
      * @return The merged result
      */
-    static private Operator merge(OperatorMap opMap, List<Operator> operators, BitSet set) {
+    static private Operator merge(ScriptContext scriptContext, OperatorMap opMap, List<Operator> operators, BitSet set) {
         // Simple case
         if (operators.size() == 1) {
             return operators.get(0);
@@ -79,7 +80,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
         // Simple case: no intersection, we have a product
         if (set.isEmpty()) {
-            Product product = new Product();
+            Product product = new Product(scriptContext);
             for (Operator parent : operators) {
                 product.addParent(parent);
             }
@@ -87,7 +88,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
         }
 
         // Need a join
-        Join join = new Join();
+        Join join = new Join(scriptContext);
         // This will hold the common order between the OrderBy operators
         Order<Operator> order = new Order();
 
@@ -106,7 +107,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
         for (Operator parent : operators) {
             // Order the results first
-            OrderBy orderBy = new OrderBy(order, null);
+            OrderBy orderBy = new OrderBy(scriptContext, order, null);
             orderBy.addParent(parent);
 
             // Add the sorted stream to the join
@@ -272,10 +273,12 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
     /**
      * Merge all the operators in the map
      *
+     *
+     * @param scriptContext
      * @param opMap The operator map (useful to find the ID of an operator, and its ancestors)
      * @return A merged result, or null if no operator were added to the lattice
      */
-    MergeResult merge(OperatorMap opMap) {
+    MergeResult merge(ScriptContext scriptContext, OperatorMap opMap) {
         // Special case: nothing to merge
         if (parents.isEmpty()) {
             return null;
@@ -293,7 +296,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
         // Loop while we have only one operator left
         while (!heap.isEmpty()) {
             // Get the node to merge
-            heap.peek().merge(opMap, heap);
+            heap.peek().merge(scriptContext, opMap, heap);
         }
 
         assert resultOperator != null : "No result operator at root node";
@@ -310,7 +313,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
      * @param opMap The operator map (useful to find the ID of an operator, and its ancestors)
      * @param heap  The heap for updating priorities over nodes
      */
-    private void merge(OperatorMap opMap, Heap<LatticeNode> heap) {
+    private void merge(ScriptContext scriptContext, OperatorMap opMap, Heap<LatticeNode> heap) {
         boolean remove = false;
 
         if (isRoot()) {
@@ -330,7 +333,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
                     BitSet intersection = (BitSet) currentSet.clone();
                     intersection.and(parent.set);
                     final ImmutableList<Operator> list = ImmutableList.of(resultOperator, parent.resultOperator);
-                    resultOperator = merge(opMap, list, intersection);
+                    resultOperator = merge(scriptContext, opMap, list, intersection);
                     mergedOperators.addAll(parent.mergedOperators);
                 }
 
@@ -347,7 +350,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
             mergedOperators.addAll(operators);
             operators.clear();
 
-            resultOperator = merge(opMap, mergedOperators, set);
+            resultOperator = merge(scriptContext, opMap, mergedOperators, set);
 
             if (parents.isEmpty() && isRootParent()) {
                 heap.remove(this);
@@ -365,7 +368,7 @@ final public class LatticeNode implements HeapElement<LatticeNode> {
 
                 child.mergedOperators.addAll(this.mergedOperators);
 
-                child.resultOperator = merge(opMap, ImmutableList.of(child.resultOperator, this.resultOperator), this.set);
+                child.resultOperator = merge(scriptContext, opMap, ImmutableList.of(child.resultOperator, this.resultOperator), this.set);
                 remove = true;
                 child.operators.clear();
             }

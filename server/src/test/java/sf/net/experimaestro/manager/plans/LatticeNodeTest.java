@@ -21,6 +21,8 @@ package sf.net.experimaestro.manager.plans;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.Assert;
+import org.testng.annotations.AfterTest;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonString;
@@ -75,6 +77,17 @@ public class LatticeNodeTest {
             list.add(triplet);
             unroll(opMap, parent.node, list);
         }
+    }
+
+    @BeforeTest
+    void setup() {
+        final StaticContext pc = new StaticContext(null, LOGGER.getLoggerRepository());
+        final ScriptContext scriptContext = pc.scriptContext();
+    }
+
+    @AfterTest
+    void tearDown() {
+        ScriptContext.get().close();
     }
 
     @Test
@@ -135,7 +148,7 @@ public class LatticeNodeTest {
     }
 
     @Test(description = "Simple merge c0 -> {op0, op1} -> op")
-    public void SimpleOperatorTest(){
+    public void SimpleOperatorTest() {
         Builder builder = new Builder();
 
         final Constant c0 = new Constant(json("A"), json("B"));
@@ -152,7 +165,7 @@ public class LatticeNodeTest {
     }
 
     @Test(description = "Test that the output of a plan is OK")
-    public void FlatOperatorSimpleTest(){
+    public void FlatOperatorSimpleTest() {
         Builder builder = new Builder();
         OperatorMap opMap = builder.opMap;
         Lattice lattice = builder.lattice;
@@ -180,7 +193,7 @@ public class LatticeNodeTest {
         triplets.checkEmpty();
 
         // op0 ... op5 -> op6
-        final MergeResult result = lattice.merge();
+        final MergeResult result = lattice.merge(ScriptContext.get());
         final HashSet<String> set = builder.run(result);
 
         check(set, result.map, new String[]{"AC", "A", "C"}, op0, op1, op2);
@@ -214,14 +227,15 @@ public class LatticeNodeTest {
         final FakeOperator op1 = builder.createOperator(true, opMap.setOf(op0), op0);
 
         final Order order = new Order();
-        Join op2join = new Join();
+        final ScriptContext scriptContext = ScriptContext.get();
+        Join op2join = new Join(scriptContext);
         order.add(op0);
         op2join.addJoin(op0);
 
-        OrderBy orderBy0 = new OrderBy(order, null);
+        OrderBy orderBy0 = new OrderBy(scriptContext, order, null);
         orderBy0.addParent(op0);
 
-        OrderBy orderBy1 = new OrderBy(order, null);
+        OrderBy orderBy1 = new OrderBy(scriptContext, order, null);
         orderBy1.addParent(op1);
 
         op2join.addParents(orderBy0, orderBy1);
@@ -235,7 +249,7 @@ public class LatticeNodeTest {
         triplets.checkEmpty();
 
         // Check results
-        final MergeResult result = lattice.merge();
+        final MergeResult result = lattice.merge(scriptContext);
         HashSet<String> set = builder.run(result);
 
         check(set, result.map, new String[]{"A", "A", "AA"}, op0, op1, op2);
@@ -250,11 +264,14 @@ public class LatticeNodeTest {
         Assert.assertEquals(joins.length, 3);
         int count0 = 0;
         int count1 = 0;
-        for(Join join: joins) {
+        for (Join join : joins) {
             Assert.assertEquals(join.joins.size(), 1);
             final Operator reference = join.joins.get(0).operator;
-            if (reference == op0) { ++count0; }
-            else if (reference == op1) { ++count1; }
+            if (reference == op0) {
+                ++count0;
+            } else if (reference == op1) {
+                ++count1;
+            }
         }
         Assert.assertEquals(count0, 2);
         Assert.assertEquals(count1, 1);
@@ -277,7 +294,7 @@ public class LatticeNodeTest {
             set.add((T) operator);
         }
 
-        for(Operator parent: operator.getParents()) {
+        for (Operator parent : operator.getParents()) {
             search(set, visited, parent, aClass);
         }
     }
@@ -338,7 +355,7 @@ public class LatticeNodeTest {
         triplets.checkEmpty();
 
         // op0 ... op5 -> op6
-        final MergeResult result = lattice.merge();
+        final MergeResult result = lattice.merge(ScriptContext.get());
         HashSet<String> set = builder.run(result);
 
         // Check all
@@ -415,14 +432,14 @@ public class LatticeNodeTest {
         }
 
 
-        public HashSet<String> run(MergeResult result){
+        public HashSet<String> run(MergeResult result) {
             HashSet<String> set = new HashSet<>();
             final FakeOperator op = new FakeOperator("result");
             op.addParent(result.operator);
 
             op.prepare();
             op.init();
-            try(final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext()) {
+            try (final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext()) {
 
                 final Iterator<Value> iterator = op.iterator(pc);
                 while (iterator.hasNext()) {
@@ -434,7 +451,7 @@ public class LatticeNodeTest {
         }
 
         public MergeResult merge() {
-            return lattice.merge();
+            return lattice.merge(ScriptContext.get());
         }
     }
 
@@ -460,6 +477,7 @@ public class LatticeNodeTest {
         private String id;
 
         public FakeOperator(String id) {
+            super(ScriptContext.get());
             this.id = id;
         }
 
@@ -480,7 +498,7 @@ public class LatticeNodeTest {
         }
 
         @Override
-        protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+        protected Iterator<ReturnValue> _iterator() {
             return new FakeIterator(scriptContext);
         }
 

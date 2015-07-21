@@ -43,13 +43,14 @@ public class ReorderNodes extends UnaryOperator {
      *
      * @param mapping
      */
-    public ReorderNodes(int[] mapping) {
+    public ReorderNodes(ScriptContext scriptContext, int[] mapping) {
+        super(scriptContext);
         this.mapping = mapping;
     }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        return new ReorderNodes(Arrays.copyOf(mapping, mapping.length));
+        return new ReorderNodes(ScriptContext.get(), Arrays.copyOf(mapping, mapping.length));
     }
 
     @Override
@@ -58,7 +59,7 @@ public class ReorderNodes extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> inputIterator = input.iterator(scriptContext);
 

@@ -47,7 +47,8 @@ public class GroupBy extends UnaryOperator {
     List<Operator> operators = new ArrayList<>();
     int[] indices;
 
-    public GroupBy(QName qname) {
+    public GroupBy(ScriptContext sc, QName qname) {
+        super(sc);
         this.wrapperQName = qname;
     }
 
@@ -62,7 +63,7 @@ public class GroupBy extends UnaryOperator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        GroupBy copy = new GroupBy(wrapperQName);
+        GroupBy copy = new GroupBy(ScriptContext.get(), wrapperQName);
         copy.operators = Lists.newArrayList(Operator.copy(operators, deep, map));
         return super.copy(deep, map, copy);
     }
@@ -102,7 +103,7 @@ public class GroupBy extends UnaryOperator {
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         int maxIndex = 0;
         for (int i : indices)
             maxIndex = max(maxIndex, i);

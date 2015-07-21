@@ -38,14 +38,18 @@ import java.util.Map;
 public class Product extends NAryOperator {
     final static private Logger LOGGER = Logger.getLogger();
 
+    public Product(ScriptContext sc) {
+        super(sc);
+    }
+
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        Product copy = new Product();
+        Product copy = new Product(ScriptContext.get());
         return super.copy(deep, map, copy);
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new ProductIterator(scriptContext);
     }
 

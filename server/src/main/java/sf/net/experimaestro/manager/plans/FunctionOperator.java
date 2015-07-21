@@ -31,18 +31,18 @@ import java.util.Map;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 22/2/13
  */
 @Exposed
 public class FunctionOperator extends UnaryOperator {
     Function function;
 
-    public FunctionOperator(Function function) {
+    public FunctionOperator(ScriptContext scriptContext, Function function) {
+        super(scriptContext);
         this.function = function;
     }
 
-    protected FunctionOperator() {
-
+    protected FunctionOperator(ScriptContext scriptContext) {
+        super(scriptContext);
     }
 
     @Override
@@ -52,12 +52,12 @@ public class FunctionOperator extends UnaryOperator {
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        FunctionOperator copy = new FunctionOperator(function);
+        FunctionOperator copy = new FunctionOperator(ScriptContext.get(), function);
         return super.copy(deep, map, copy);
     }
 
     @Override
-    protected Iterator<ReturnValue> _iterator(final ScriptContext scriptContext) {
+    protected Iterator<ReturnValue> _iterator() {
         return new AbstractIterator<ReturnValue>() {
             Iterator<Value> iterator = input.iterator(scriptContext);
             public Iterator<? extends Json> innerIterator = ImmutableSet.<Json>of().iterator();

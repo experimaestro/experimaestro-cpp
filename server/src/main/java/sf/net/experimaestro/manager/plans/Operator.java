@@ -20,7 +20,6 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import bpiwowar.argparser.utils.Output;
-import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
@@ -28,6 +27,7 @@ import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Manager;
@@ -37,30 +37,15 @@ import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.js.JsonPathFunction;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.NotNull;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Tasks;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.WrappedResult;
 import sf.net.experimaestro.utils.log.Logger;
 
-import javax.xml.xpath.XPathExpressionException;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Base class for all operators
@@ -86,10 +71,17 @@ public abstract class Operator {
      */
     Map<StreamReference, Integer> contextMappings = new HashMap<>();
 
-    public Operator() {
+    /**
+     * The script context for this operator
+     */
+    ScriptContext scriptContext;
+
+    public Operator(ScriptContext sc) {
+        this(sc, null);
     }
 
-    public Operator(String name) {
+    public Operator(ScriptContext sc, String name) {
+        this.scriptContext = sc;
         this.name = name;
     }
 
@@ -112,6 +104,30 @@ public abstract class Operator {
         for (Operator operator : Iterables.transform(list, input -> getSimplified(simplified, input))) {
             set.add(operator);
         }
+    }
+
+    @Expose
+    @Help("Give specific parameters for this operator")
+    public void parameters(Map<String, Object> map) {
+        parameters("", map);
+    }
+
+    @Expose
+    public void launcher(Launcher launcher) {
+        scriptContext.setDefaultLauncher(launcher);
+    }
+
+    private void parameters(String prefix, Map<String, Object> map) {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            final String key = entry.getKey();
+            final Object value = entry.getValue();
+            if (value instanceof Map) {
+                // recursively set the parameters
+                parameters(prefix.isEmpty() ? key : (prefix + "." + key), (Map<String, Object>) value);
+            } else {
+                scriptContext.setParameter(key, value.toString());
+            }
+        }
 
     }
 
@@ -125,7 +141,7 @@ public abstract class Operator {
     static public Operator simplify(Operator operator) {
         HashMap<Operator, Operator> map = new HashMap<>();
         operator = simplify(operator, map);
-        operator.ensureConnections(map, new HashSet<Operator>());
+        operator.ensureConnections(map, new HashSet<>());
         return operator;
     }
 
@@ -202,7 +218,6 @@ public abstract class Operator {
      * Prepare an operator
      *
      * @return
-     * @throws XPathExpressionException
      */
     public Operator prepare() {
         return prepare(new HashMap<>(), new OperatorMap());
@@ -221,7 +236,7 @@ public abstract class Operator {
      * @param deep Deep copy
      */
     final public Operator copy(boolean deep) {
-        return copy(deep, new IdentityHashMap<Object, Object>());
+        return copy(deep, new IdentityHashMap<>());
     }
 
     final protected Operator copy(boolean deep, Map<Object, Object> map) {
@@ -253,10 +268,9 @@ public abstract class Operator {
     /**
      * Creates a new iterator
      *
-     * @param scriptContext Options
      * @return A new iterator over return values
      */
-    protected abstract Iterator<ReturnValue> _iterator(ScriptContext scriptContext);
+    protected abstract Iterator<ReturnValue> _iterator();
 
 
 //    CachedIterable<Value> cachedIterable;
@@ -293,7 +307,6 @@ public abstract class Operator {
     /**
      * Initialize the node (called before the initialization of parents)
      *
-     * @throws javax.xml.xpath.XPathExpressionException
      */
     protected void doPreInit() {
     }
@@ -320,9 +333,8 @@ public abstract class Operator {
      * @param processed A map of already processed operators along with the returned value
      * @param needed    (input) The set of needed operator streams that should go out of this operator
      * @return A map operator -> integer
-     * @throws XPathExpressionException
      */
-    final private Map<Operator, Integer> init(HashMap<Operator, Map<Operator, Integer>> processed, Multimap<Operator, Operator> needed) {
+    private Map<Operator, Integer> init(HashMap<Operator, Map<Operator, Integer>> processed, Multimap<Operator, Operator> needed) {
         // Check if already visited, and if so, return cached value
         Map<Operator, Integer> cached = processed.get(this);
         if (cached != null) {
@@ -375,6 +387,8 @@ public abstract class Operator {
 
     /**
      * Init our ancestors and ourselves
+     * <p>
+     * This method is only called for the root of the query tree
      */
     public void init() {
 
@@ -688,7 +702,7 @@ public abstract class Operator {
         private long id = 0;
 
         OperatorIterator(ScriptContext scriptContext) {
-            iterator = _iterator(scriptContext);
+            iterator = _iterator();
             if (scriptContext.counts() != null)
                 scriptContext.counts().put(Operator.this, this.counter = new MutableInt(0));
             else
@@ -730,7 +744,7 @@ public abstract class Operator {
     @Help("Runs a JSON query against the input: each returned item is a new input")
     public Operator select(LanguageContext cx, String query, Object f) {
         JsonPathFunction function = new JsonPathFunction(query, (java.util.function.Function<Json, Object>) f);
-        Operator operator = new FunctionOperator(function);
+        Operator operator = new FunctionOperator(ScriptContext.get(), function);
         operator.addParent(this);
         return operator;
     }
@@ -740,7 +754,7 @@ public abstract class Operator {
     @Help("Runs an JSON against the input: each returned item is a new input")
     public Operator select(String query) {
         JsonPathFunction function = new JsonPathFunction(query, x -> x);
-        Operator operator = new FunctionOperator(function);
+        Operator operator = new FunctionOperator(ScriptContext.get(), function);
         operator.addParent(this);
         return operator;
     }
@@ -756,7 +770,7 @@ public abstract class Operator {
     }
 
     public Operator group_by(QName qname, Operator... operators) {
-        GroupBy groupBy = new GroupBy(qname);
+        GroupBy groupBy = new GroupBy(ScriptContext.get(), qname);
 
         // Get ancestors
         HashSet<Operator> ancestors = new HashSet<>();
@@ -772,7 +786,7 @@ public abstract class Operator {
             groupBy.add(operator);
             order.add(operator, false);
         }
-        OrderBy orderBy = new OrderBy(order, null);
+        OrderBy orderBy = new OrderBy(ScriptContext.get(), order, null);
         orderBy.addParent(this);
 
         groupBy.addParent(orderBy);
@@ -819,8 +833,8 @@ public abstract class Operator {
     }
 
     @Expose("to_dot")
-    public String toDOT(boolean simplify, boolean initialize) {
-        Operator operator = getOperator(simplify, initialize);
+    public String toDOT(ScriptContext sc, boolean simplify, boolean initialize) {
+        Operator operator = getOperator(sc, simplify, initialize);
 
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -840,7 +854,7 @@ public abstract class Operator {
 //        getOperator().setDefaultLocks(_empty);
 //    }
 
-    private Operator getOperator(boolean simplify, boolean initialize) {
+    private Operator getOperator(ScriptContext sc, boolean simplify, boolean initialize) {
         Operator operator = prepare();
         if (simplify)
             operator = Operator.simplify(operator);
@@ -853,28 +867,28 @@ public abstract class Operator {
 
     @Expose
     public Object run() throws ExperimaestroCannotOverwrite {
-        return doRun(false, false);
+        return doRun(ScriptContext.get(), false, false);
     }
 
     @Expose
     public Object simulate() throws ExperimaestroCannotOverwrite {
-        return doRun(true, false);
+        return doRun(ScriptContext.get(), true, false);
     }
 
     @Expose
     public Object simulate(boolean details) throws ExperimaestroCannotOverwrite {
-        return doRun(true, details);
+        return doRun(ScriptContext.get(), true, details);
     }
 
     @Expose
     @Help("Wrap each output into an array")
     public Operator arrays() {
-        final FunctionOperator operator = new FunctionOperator(ArrayWrap.INSTANCE);
+        final FunctionOperator operator = new FunctionOperator(ScriptContext.get(), ArrayWrap.INSTANCE);
         operator.addParent(this);
         return operator;
     }
 
-    private Object doRun(boolean simulate, boolean details) throws ExperimaestroCannotOverwrite {
+    private Object doRun(ScriptContext sc, boolean simulate, boolean details) throws ExperimaestroCannotOverwrite {
         try (ScriptContext scriptContext = ScriptContext.get().copy()) {
             scriptContext.counts(details);
 
@@ -888,7 +902,7 @@ public abstract class Operator {
 
 
             ArrayList<Json> result = new ArrayList<>();
-            Operator operator = getOperator(true, true);
+            Operator operator = getOperator(sc, true, true);
 
             final Iterator<Value> nodes = operator.iterator(scriptContext);
             while (nodes.hasNext()) {

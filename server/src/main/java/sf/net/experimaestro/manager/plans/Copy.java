@@ -42,7 +42,7 @@ public class Copy extends Plan {
 
     @Expose
     public Copy(LanguageContext cx, String outputType, Map plan){
-        super(null);
+        super(ScriptContext.get(), null);
         this.outputType = new Type(QName.parse(outputType, cx.getNamespaceContext()));
         this.setFactory(new AnonymousTaskFactory());
         PlanInputs mappings = Plan.getMappings(plan, cx);

@@ -36,10 +36,7 @@ import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.CachedIterable;
-import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.Mutable;
-import sf.net.experimaestro.utils.Updatable;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Closeable;
@@ -149,6 +146,11 @@ final public class ScriptContext implements AutoCloseable {
     private IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap = new IdentityHashMap<>();
 
     /**
+     * Parameters
+     */
+    MapStack<String, String> parameters;
+
+    /**
      * Properties set by the script that will be returned
      */
     Map<String, Object> properties;
@@ -181,6 +183,7 @@ final public class ScriptContext implements AutoCloseable {
         currentScriptPath = Updatable.create(null);
         properties = new HashMap<>();
         submittedJobs = new HashMap<>();
+        parameters = new MapStack<>();
     }
 
     @Override
@@ -188,7 +191,7 @@ final public class ScriptContext implements AutoCloseable {
         return format("ScriptContext@%X", System.identityHashCode(this));
     }
 
-    private ScriptContext(ScriptContext other, boolean newRepository) {
+    private ScriptContext(ScriptContext other, boolean newRepository, boolean setThreadContext) {
         LOGGER.debug("Creating script context [%s] from context [%s]", this, other);
 
         staticContext = other.staticContext;
@@ -211,6 +214,7 @@ final public class ScriptContext implements AutoCloseable {
             workingDirectory = new Mutable<>();
             defaultLauncher = other.defaultLauncher.reference();
             defaultLocks = other.defaultLocks.reference();
+            parameters = new MapStack<>(other.parameters);
         } else {
             properties = other.properties;
             workingDirectory = other.workingDirectory;
@@ -218,9 +222,11 @@ final public class ScriptContext implements AutoCloseable {
             defaultLocks = other.defaultLocks;
         }
 
-        // Sets the current thread context
-        oldCurrent = threadContext.get();
-        threadContext.set(this);
+        if (setThreadContext) {
+            // Sets the current thread context
+            oldCurrent = threadContext.get();
+            threadContext.set(this);
+        }
     }
 
 
@@ -338,11 +344,15 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public ScriptContext copy() {
-        return new ScriptContext(this, false);
+        return new ScriptContext(this, false, true);
     }
 
     public ScriptContext copy(boolean newRepository) {
-        return new ScriptContext(this, newRepository);
+        return new ScriptContext(this, newRepository, true);
+    }
+
+    public ScriptContext copy(boolean newRepository, boolean setThreadContext) {
+        return new ScriptContext(this, newRepository, setThreadContext);
     }
 
     public TaskFactory getFactory(QName qName) {
@@ -460,5 +470,36 @@ final public class ScriptContext implements AutoCloseable {
     // Only used for tests
     public static void force(ScriptContext sc) {
         threadContext.set(sc);
+    }
+
+    public void setParameter(String key, String value) {
+        parameters.put(key, value);
+    }
+
+    /**
+     * Swap the thread-local script context with this one
+     *
+     * Useful for a try-resource block where we want the old context to be set back.
+     * @return A closeable object that will put back the context
+     */
+    public Swap swap() {
+        return new Swap();
+    }
+
+    public class Swap implements Closeable {
+        private final ScriptContext old;
+
+        Swap() {
+            old = threadContext.get();
+            threadContext.set(ScriptContext.this);
+        }
+
+        @Override
+        public void close()  {
+            if (threadContext.get() != ScriptContext.this) {
+                LOGGER.error("Current thread context [%s] is not ourselves [%s]", threadContext.get(), ScriptContext.this);
+            }
+            threadContext.set(old);
+        }
     }
 }

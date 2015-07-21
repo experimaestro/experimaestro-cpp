@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.collect.ImmutableList;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -44,8 +45,8 @@ public class Lattice {
     }
 
 
-    public MergeResult merge() {
-        MergeResult result = root.merge(opMap);
+    public MergeResult merge(ScriptContext scriptContext) {
+        MergeResult result = root.merge(scriptContext, opMap);
 
         // Operators without context = plain product
         if (!operators.isEmpty()) {
@@ -53,7 +54,7 @@ public class Lattice {
                 return new MergeResult(operators.get(0), operators);
             }
 
-            Product product = new Product();
+            Product product = new Product(scriptContext);
             if (result == null) {
                 result = new MergeResult(null, ImmutableList.of());
             } else {

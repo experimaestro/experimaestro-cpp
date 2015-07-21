@@ -49,7 +49,8 @@ public class Tasks {
     @Expose(context = true)
     static public Operator merge(LanguageContext cx, String outputType, Object... objects) {
         Int2ObjectOpenHashMap<String> map = new Int2ObjectOpenHashMap<>();
-        ProductReference pr = new ProductReference();
+        final ScriptContext scriptContext = ScriptContext.get();
+        ProductReference pr = new ProductReference(scriptContext);
         for (Object object : objects) {
             if (object instanceof Map) {
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>)object).entrySet()) {
@@ -75,7 +76,7 @@ public class Tasks {
 
 
         QName qname = QName.parse(outputType, cx.getNamespaceContext());
-        FunctionOperator operator = new FunctionOperator(new MergeFunction(qname, map));
+        FunctionOperator operator = new FunctionOperator(scriptContext, new MergeFunction(qname, map));
         operator.addParent(pr);
         return operator;
     }
@@ -135,8 +136,6 @@ public class Tasks {
     }
 
     class TaskRef implements ScriptingReference<Object> {
-        private static final long serialVersionUID = 1L;
-
         private final QName id;
 
         public TaskRef(QName id) {
