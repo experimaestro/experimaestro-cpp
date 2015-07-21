@@ -24,6 +24,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
+import com.pastdev.jsch.nio.file.UnixSshSftpHybridFileSystemProvider;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.FileLock;
@@ -59,6 +60,7 @@ import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
 @TypeIdentifier("SSH")
 public class SSHConnector extends SingleHostConnector {
     static final private Logger LOGGER = Logger.getLogger();
+    public static final String SSH_UNIX_SCHEME = UnixSshSftpHybridFileSystemProvider.SCHEME_SSH_SFTP_HYBRID_UNIX;
 
     /**
      * Static map to sessions
@@ -169,7 +171,7 @@ public class SSHConnector extends SingleHostConnector {
         loadData();
 
         try {
-            URI uri = new URI("ssh.unix://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);
+            URI uri = new URI(SSH_UNIX_SCHEME + "://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);
