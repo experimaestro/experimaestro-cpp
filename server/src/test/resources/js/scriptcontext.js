@@ -16,6 +16,8 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var ns = new Namespace("xpm.tests");
+
 tasks.add("ns:mult", {
     inputs: {
         x: { value: "xp:integer" },

@@ -21,15 +21,14 @@ package sf.net.experimaestro.manager.plans;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.Assert;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.utils.IdentityHashSet;
 import sf.net.experimaestro.utils.Output;
+import sf.net.experimaestro.utils.XPMEnvironment;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -47,7 +46,7 @@ import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class LatticeNodeTest {
+public class LatticeNodeTest extends XPMEnvironment {
     final static public Logger LOGGER = Logger.getLogger();
 
     static BitSet set(int... ints) {
@@ -79,14 +78,21 @@ public class LatticeNodeTest {
         }
     }
 
-    @BeforeTest
-    void setup() {
+    @BeforeSuite
+    public void setupSuite() throws Throwable {
+        prepare();
+    }
+
+    @BeforeMethod
+    public void setup() {
         final StaticContext pc = new StaticContext(null, LOGGER.getLoggerRepository());
+        LOGGER.info("Setting up test %s", ScriptContext.get());
         final ScriptContext scriptContext = pc.scriptContext();
     }
 
-    @AfterTest
-    void tearDown() {
+    @AfterMethod
+    public void tearDown() {
+        LOGGER.info("Tearing down test %s", ScriptContext.get());
         ScriptContext.get().close();
     }
 
@@ -439,15 +445,13 @@ public class LatticeNodeTest {
 
             op.prepare();
             op.init();
-            try (final ScriptContext pc = new StaticContext(null, LOGGER.getLoggerRepository()).scriptContext()) {
 
-                final Iterator<Value> iterator = op.iterator(pc);
-                while (iterator.hasNext()) {
-                    final String e = iterator.next().getNodes()[0].toString();
-                    set.add(e);
-                }
-                return set;
+            final Iterator<Value> iterator = op.iterator(ScriptContext.get());
+            while (iterator.hasNext()) {
+                final String e = iterator.next().getNodes()[0].toString();
+                set.add(e);
             }
+            return set;
         }
 
         public MergeResult merge() {

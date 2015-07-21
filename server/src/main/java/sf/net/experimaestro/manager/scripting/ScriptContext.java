@@ -163,9 +163,9 @@ final public class ScriptContext implements AutoCloseable {
     Map<String, Resource> submittedJobs;
 
     public ScriptContext(StaticContext staticContext) {
-
-        if (threadContext.get() != null)
+        if (threadContext.get() != null) {
             throw new IllegalStateException("Cannot create a new script context if another one is active");
+        }
 
         LOGGER.debug("Creating script context [%s] from static context", this);
 
