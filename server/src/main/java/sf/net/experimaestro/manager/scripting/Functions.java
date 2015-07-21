@@ -206,7 +206,7 @@ public class Functions {
      */
 
     private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
-        try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode)) {
+        try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode, true)) {
             sc.setCurrentScriptPath(scriptPath);
             Scriptable scope = ((JavaScriptContext) cx).scope();
             final String sourceName = scriptPath.toString();
@@ -421,5 +421,10 @@ public class Functions {
     @Expose
     static public LocalhostConnector get_localhost_connector() {
         return Scheduler.get().getLocalhostConnector();
+    }
+
+    @Expose
+    static public String parameters(String key) {
+        return ScriptContext.get().getParameter(key);
     }
 }

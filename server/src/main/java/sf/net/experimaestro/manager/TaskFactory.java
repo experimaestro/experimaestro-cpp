@@ -166,7 +166,7 @@ public abstract class TaskFactory {
     @Help("Creates a plan from this task")
     @Expose(value = "run", context = true)
     public Object run(LanguageContext cx, Map map) throws ExperimaestroCannotOverwrite {
-        final Plan plan = new Plan(ScriptContext.get(), this);
+        final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
         PlanInputs inputs= Plan.getMappings(map, cx);
         plan.add(inputs);
         return plan.run();
@@ -175,13 +175,13 @@ public abstract class TaskFactory {
     @Help("Creates a plan from this task")
     @Expose(value = "plan", context = true)
     public Plan plan() {
-        return new Plan(ScriptContext.get(), this);
+        return new Plan(ScriptContext.get().copy(true, false), this);
     }
 
     @Help("Creates a plan from this task")
     @Expose(value = "plan", context = true)
     public Object plan(LanguageContext cx, Map map) {
-        final Plan plan = new Plan(ScriptContext.get(), this);
+        final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
         PlanInputs inputs= Plan.getMappings(map, cx);
         plan.add(inputs);
         return plan;

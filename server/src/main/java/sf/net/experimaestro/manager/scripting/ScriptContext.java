@@ -347,10 +347,6 @@ final public class ScriptContext implements AutoCloseable {
         return new ScriptContext(this, false, true);
     }
 
-    public ScriptContext copy(boolean newRepository) {
-        return new ScriptContext(this, newRepository, true);
-    }
-
     public ScriptContext copy(boolean newRepository, boolean setThreadContext) {
         return new ScriptContext(this, newRepository, setThreadContext);
     }
@@ -474,6 +470,10 @@ final public class ScriptContext implements AutoCloseable {
 
     public void setParameter(String key, String value) {
         parameters.put(key, value);
+    }
+
+    public String getParameter(String key) {
+        return parameters.get(key);
     }
 
     /**

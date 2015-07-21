@@ -108,8 +108,9 @@ public abstract class Operator {
 
     @Expose
     @Help("Give specific parameters for this operator")
-    public void parameters(Map<String, Object> map) {
+    public Operator parameters(Map<String, Object> map) {
         parameters("", map);
+        return this;
     }
 
     @Expose

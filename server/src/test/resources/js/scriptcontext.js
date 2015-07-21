@@ -20,13 +20,28 @@ var ns = new Namespace("xpm.tests");
 
 tasks.add("ns:mult", {
     inputs: {
-        x: { value: "xp:integer" },
-        y: { value: "xp:integer" }
     },
 
     run: function(x) {
-        return $(x.x) * $(x.y);
+        return parameters("hello");
     }
 });
 
-//tasks.plan({ x: [1, 2], y: [3]}).parameters({oar: {cores: 1}});
+function test_parameter() {
+    var r = tasks("ns:mult")
+        .plan({})
+        .parameters({hello: "world"})
+        .run();
+
+    // Check that the context was world
+    if ($(r[0]) != "world") {
+        throw new Error(format("Parameter hello is not world but %s", $(r[0])));
+    }
+
+    // Check that global context is
+    var v = parameters("hello");
+    if (typeof(v) != "undefined") {
+        throw new Error(format("Parameter hello is not undefined but %s", v));
+    }
+
+}
