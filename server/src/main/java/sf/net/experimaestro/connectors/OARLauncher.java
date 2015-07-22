@@ -197,7 +197,7 @@ public class OARLauncher extends Launcher {
             long minutes = hours % 60;
             hours /= 60;
 
-            return format("nodes=1/cpu=1,walltime=%d:%02d:%02d", hours, minutes, seconds);
+            return format("nodes=1/core=1,walltime=%d:%02d:%02d", hours, minutes, seconds);
         }
     }
 
@@ -437,7 +437,8 @@ public class OARLauncher extends Launcher {
                 try {
                     int code = process.waitFor();
                     if (code != 0) {
-                        throw new XPMScriptRuntimeException("Error while killing old OAR job: %d", code);
+                        Files.delete(lockPath);
+                        throw new XPMScriptRuntimeException("Error while starting OAR job: code %d", code);
                     }
                 } catch (InterruptedException e) {
                     LOGGER.error(e, "Waiting interrupted");
