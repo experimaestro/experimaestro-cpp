@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
+import sf.net.experimaestro.exceptions.ExitException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -110,7 +111,9 @@ public class MethodFunction extends GenericFunction {
             try {
                 return method.invoke(isStatic ? null : baseObject, transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
-                LOGGER.debug(e,  "Error [%s] while invoking method %s", e, method);
+                if (!(e.getCause() instanceof ExitException)) {
+                    LOGGER.debug(e, "Error [%s] while invoking method %s", e, method);
+                }
                 throw cx.runtimeException(e, "Error [%s] while invoking method %s", e, method);
             } catch (XPMRhinoException e) {
                 throw e.addContext("While invoking method %s", method);

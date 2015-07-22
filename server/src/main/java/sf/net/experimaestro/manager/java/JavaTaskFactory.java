@@ -21,6 +21,7 @@ package sf.net.experimaestro.manager.java;
 import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import net.bpiwowar.experimaestro.tasks.Runner;
 import net.bpiwowar.experimaestro.tasks.TaskDescription;
+import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
@@ -35,6 +36,8 @@ import sf.net.experimaestro.tasks.Path;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,7 +214,7 @@ public class JavaTaskFactory extends TaskFactory {
                         resource = (Resource) o;
                     } else {
                         try {
-                            resource = Resource.getByLocator(o.toString());
+                            resource = Resource.getByLocator(NetworkShare.uriToPath(o.toString()));
                         } catch (SQLException e) {
                             throw new XPMRuntimeException(e, "Error while searching the resource %s the task %s depends upon",
                                     o.toString(), getId());

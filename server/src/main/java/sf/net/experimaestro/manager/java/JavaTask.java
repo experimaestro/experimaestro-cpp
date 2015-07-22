@@ -27,6 +27,7 @@ import sf.net.experimaestro.manager.Value;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
+import sf.net.experimaestro.manager.scripting.RunningContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
@@ -93,7 +94,7 @@ public class JavaTask extends Task {
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
-                Commands commands = javaFactory.commands(json, taskContext.simulate());
+                Commands commands = javaFactory.commands(json, RunningContext.get().simulate());
 
                 // --- Build the command
 
@@ -103,7 +104,7 @@ public class JavaTask extends Task {
                 commands.dependencies().forEach(job::addDependency);
 
                 taskContext.prepare(job);
-                if (taskContext.simulate()) {
+                if (RunningContext.get().simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", job.toString());
                     pw.format("Command: %s%n", job.getCommands().toString());
@@ -126,6 +127,7 @@ public class JavaTask extends Task {
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 
+                RunningContext.get().getSubmittedJobs().put(job.getLocator().toString(), job);
             }
         } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);

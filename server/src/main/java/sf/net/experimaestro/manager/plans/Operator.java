@@ -704,8 +704,8 @@ public abstract class Operator {
 
         OperatorIterator(ScriptContext scriptContext) {
             iterator = _iterator();
-            if (scriptContext.counts() != null)
-                scriptContext.counts().put(Operator.this, this.counter = new MutableInt(0));
+            if (RunningContext.get().counts() != null)
+                RunningContext.get().counts().put(Operator.this, this.counter = new MutableInt(0));
             else
                 this.counter = null;
         }
@@ -891,7 +891,10 @@ public abstract class Operator {
 
     private Object doRun(ScriptContext sc, boolean simulate, boolean details) throws ExperimaestroCannotOverwrite {
         try (ScriptContext scriptContext = ScriptContext.get().copy()) {
-            scriptContext.counts(details);
+            RunningContext rc = RunningContext.get();
+
+            rc.simulate(simulate);
+            rc.counts(details);
 
             // If we have an experiment, get the task reference and store them
             Experiment experiment = ScriptContext.get().getExperiment();
@@ -916,7 +919,7 @@ public abstract class Operator {
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PrintStream ps = new PrintStream(baos);
-            operator.printDOT(ps, scriptContext.counts());
+            operator.printDOT(ps, rc.counts());
             ps.flush();
 
             return new NativeArray(new Object[]{result, baos.toString()});

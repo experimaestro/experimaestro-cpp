@@ -32,15 +32,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.PropertyAccess;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Scripting;
-import sf.net.experimaestro.manager.scripting.ScriptingReference;
-import sf.net.experimaestro.manager.scripting.StaticContext;
-import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.manager.scripting.WrapperObject;
-import sf.net.experimaestro.manager.scripting.XPM;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
 import sf.net.experimaestro.utils.log.Logger;
@@ -78,9 +70,11 @@ public class JavaScriptRunner implements AutoCloseable {
     private final RhinoDebugger debugger;
 
     final private Context context;
+    private final StaticContext staticContext;
+    private final RunningContext runningContext;
 
     public JavaScriptRunner(Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
-        StaticContext staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
+        staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
         // --- Debugging via JSDT
         // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
         ContextFactory factory = new ContextFactory();
@@ -96,6 +90,7 @@ public class JavaScriptRunner implements AutoCloseable {
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
         scriptContext = staticContext.scriptContext();
+        runningContext = new RunningContext();
 
         // Create scope
         scope = Context.getCurrentContext().newObject(init());
@@ -264,9 +259,10 @@ public class JavaScriptRunner implements AutoCloseable {
                 LOGGER.error(e);
             }
 
-        // Close script context
-
+        // Close script contexts
+        runningContext.close();
         scriptContext.close();
+        staticContext.close();
 
         // Exit context
         Context.exit();

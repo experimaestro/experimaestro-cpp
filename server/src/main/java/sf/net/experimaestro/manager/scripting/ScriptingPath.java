@@ -223,13 +223,13 @@ public class ScriptingPath extends WrapperObject<Path> {
         public MyPrintWriter(ScriptContext scriptContext, OutputStream out) {
             super(out);
             this.scriptContext = scriptContext;
-            scriptContext.register(this);
+            scriptContext.staticContext.register(this);
         }
 
         @Override
         public void close() {
             super.close();
-            scriptContext.unregister(this);
+            scriptContext.staticContext.unregister(this);
         }
     }
 
@@ -239,13 +239,13 @@ public class ScriptingPath extends WrapperObject<Path> {
         public MyInputStreamReader(ScriptContext scriptContext, InputStream in) {
             super(in);
             this.scriptContext = scriptContext;
-            scriptContext.register(this);
+            scriptContext.staticContext.register(this);
         }
 
         @Override
         public void close() throws IOException {
             super.close();
-            scriptContext.unregister(this);
+            scriptContext.staticContext.unregister(this);
         }
     }
 

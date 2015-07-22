@@ -28,11 +28,11 @@ public class ConnectorAdapter extends TypeAdapter<Connector> {
             return null;
         }
 
-        final String id = in.nextString();
+        final long id = in.nextLong();
         try {
-            final Connector connector = Connector.findByURI(id);
+            final Connector connector = Connector.findById(id);
             if (connector == null) {
-                throw new IOException("Could not find the connector " + id + "(not in DB)");
+                throw new IOException("Could not find the connector " + id + " (not in DB)");
             }
             return connector;
         } catch (SQLException e) {

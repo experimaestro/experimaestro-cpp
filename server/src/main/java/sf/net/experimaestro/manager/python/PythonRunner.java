@@ -63,6 +63,8 @@ public class PythonRunner implements AutoCloseable {
 
     private final ScriptContext scriptContext;
 
+    private final RunningContext runningContext;
+
 
     public PythonRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler,
                         Hierarchy loggerRepository,
@@ -77,6 +79,7 @@ public class PythonRunner implements AutoCloseable {
         interpreter.setOut(out);
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
+        runningContext = new RunningContext();
 
         Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(m)));
 
@@ -158,8 +161,9 @@ public class PythonRunner implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-
+        runningContext.close();
         scriptContext.close();
+        staticContext.close();
     }
 
     public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {

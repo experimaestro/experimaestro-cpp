@@ -22,11 +22,7 @@ import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.Help;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Commands;
 
 import java.util.Map;
@@ -160,7 +156,7 @@ public abstract class TaskFactory {
 
     @Expose(context = true, value = "commands")
     public Commands commands(LanguageContext cx, JsonObject json) {
-        return commands(json, ScriptContext.get().simulate());
+        return commands(json, RunningContext.get().simulate());
     }
 
     @Help("Creates a plan from this task")

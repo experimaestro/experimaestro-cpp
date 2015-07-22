@@ -23,10 +23,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
@@ -353,15 +350,15 @@ public class Functions {
                 return (Resource) o;
             } else {
                 final String uri = o instanceof JsonString ? o.toString() : (String) o;
-                final ScriptContext scriptContext = ScriptContext.get();
-                if (scriptContext.simulate()) {
-                    final Resource resource = scriptContext.submittedJobs.get(uri);
+                Path path = NetworkShare.uriToPath(uri);
+                if (RunningContext.get().simulate()) {
+                    final Resource resource = RunningContext.get().getSubmittedJobs().get(uri);
                     if (resource == null) {
-                        return Resource.getByLocator(uri);
+                        return Resource.getByLocator(path);
                     }
                     return resource;
                 } else {
-                    return Resource.getByLocator(uri);
+                    return Resource.getByLocator(path);
                 }
             }
 
@@ -372,7 +369,7 @@ public class Functions {
     @Expose()
     @Help("Set the experiment for all future commands")
     static public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
-        if (!context().simulate()) {
+        if (!RunningContext.get().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
             experiment.save();
         }

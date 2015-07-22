@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.RunningContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.Graph;
 import sf.net.experimaestro.utils.JSUtils;
@@ -352,17 +353,16 @@ public abstract class Task {
     }
 
     @Expose("run")
-    public Object run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
+    public Json run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
         try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
-            return run(scriptContext.simulate(simulate));
+            RunningContext.get().simulate(simulate);
+            return run(scriptContext);
         }
     }
 
     @Expose("run")
-    public Object run() throws ValueMismatchException, NoSuchParameter {
-        try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
-            return run(scriptContext.simulate(false));
-        }
+    public Json run() throws ValueMismatchException, NoSuchParameter {
+        return run(false);
     }
 
 }

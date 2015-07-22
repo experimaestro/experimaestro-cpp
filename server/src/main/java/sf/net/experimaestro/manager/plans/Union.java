@@ -37,13 +37,17 @@ import java.util.Map;
 public class Union extends NAryOperator {
 
     @Expose
+    public Union() {
+        super(ScriptContext.get());
+    }
+
     public Union(ScriptContext scriptContext) {
         super(scriptContext);
     }
 
     @Override
     protected Operator doCopy(boolean deep, Map<Object, Object> map) {
-        Union copy = new Union(ScriptContext.get());
+        Union copy = new Union();
         return super.copy(deep, map, copy);
     }
 

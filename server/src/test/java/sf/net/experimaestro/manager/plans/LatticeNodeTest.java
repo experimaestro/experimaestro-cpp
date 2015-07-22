@@ -24,6 +24,7 @@ import org.testng.Assert;
 import org.testng.annotations.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonString;
+import sf.net.experimaestro.manager.scripting.RunningContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.manager.scripting.StaticContext;
 import sf.net.experimaestro.utils.IdentityHashSet;
@@ -88,12 +89,14 @@ public class LatticeNodeTest extends XPMEnvironment {
         final StaticContext pc = new StaticContext(null, LOGGER.getLoggerRepository());
         LOGGER.info("Setting up test %s", ScriptContext.get());
         final ScriptContext scriptContext = pc.scriptContext();
+        final RunningContext runningContext = new RunningContext();
     }
 
     @AfterMethod
     public void tearDown() {
         LOGGER.info("Tearing down test %s", ScriptContext.get());
         ScriptContext.get().close();
+        RunningContext.get().close();
     }
 
     @Test

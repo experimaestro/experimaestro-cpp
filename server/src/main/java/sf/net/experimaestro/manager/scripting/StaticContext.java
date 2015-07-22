@@ -21,12 +21,15 @@ package sf.net.experimaestro.manager.scripting;
 import org.apache.log4j.spi.LoggerRepository;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.Cleaner;
 import sf.net.experimaestro.utils.log.Logger;
+
+import java.io.Closeable;
 
 /**
  * Static context when running a script
  */
-public class StaticContext {
+public class StaticContext implements AutoCloseable {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
@@ -49,11 +52,28 @@ public class StaticContext {
      */
     final Logger mainLogger;
 
+    /**
+     * The resource cleaner
+     * <p>
+     * Used to close objects at the end of the execution of a script
+     */
+    Cleaner cleaner;
+
+
+    public void register(Closeable closeable) {
+        cleaner.register(closeable);
+    }
+
+    public void unregister(AutoCloseable autoCloseable) {
+        cleaner.unregister(autoCloseable);
+    }
+
 
     public StaticContext(Scheduler scheduler, LoggerRepository loggerRepository) {
         this.scheduler = scheduler;
         this.loggerRepository = loggerRepository;
         this.mainLogger = (Logger)loggerRepository.getLogger("xpm", Logger.factory());
+        this.cleaner = new Cleaner();
     }
 
     public ScriptContext scriptContext() {
@@ -67,5 +87,10 @@ public class StaticContext {
 
     public Logger getMainLogger() {
         return mainLogger;
+    }
+
+    @Override
+    public void close() {
+        cleaner.close();
     }
 }

@@ -37,11 +37,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonNull;
 import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.ExposeMode;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
@@ -518,7 +514,8 @@ public class Plan extends Operator {
 
     private List<Json> run(LanguageContext cx, boolean simulate){
         try(final ScriptContext scriptContext = ScriptContext.get().copy()) {
-            final Iterator<Json> iterator = run(scriptContext.simulate(simulate));
+            RunningContext.get().simulate(simulate);
+            final Iterator<Json> iterator = run(scriptContext);
             ArrayList<Json> values = new ArrayList<>();
 
             while (iterator.hasNext()) {

@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.mutable.MutableInt;
 import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.connectors.DirectLauncher;
 import sf.net.experimaestro.connectors.Launcher;
@@ -29,14 +28,16 @@ import sf.net.experimaestro.manager.Task;
 import sf.net.experimaestro.manager.TaskFactory;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.TaskOperator;
 import sf.net.experimaestro.manager.plans.Value;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Job;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.*;
+import sf.net.experimaestro.utils.CachedIterable;
+import sf.net.experimaestro.utils.MapStack;
+import sf.net.experimaestro.utils.Mutable;
+import sf.net.experimaestro.utils.Updatable;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Closeable;
@@ -89,26 +90,9 @@ final public class ScriptContext implements AutoCloseable {
     ArrayList<Consumer<Job>> newTaskListeners = new ArrayList<>();
 
     /**
-     * The resource cleaner
-     * <p>
-     * Used to close objects at the end of the execution of a script
-     */
-    Cleaner cleaner;
-
-    /**
      * Previous context
      */
     private ScriptContext oldCurrent = null;
-
-    /**
-     * Counts the number of items output by an operator; null if not used
-     */
-    private Map<Operator, MutableInt> counts;
-
-    /**
-     * Whether we should simulate
-     */
-    private Updatable<Boolean> simulate;
 
     /**
      * The default launcher
@@ -155,13 +139,6 @@ final public class ScriptContext implements AutoCloseable {
      */
     Map<String, Object> properties;
 
-    /**
-     * Submitted jobs
-     *
-     * @param staticContext
-     */
-    Map<String, Resource> submittedJobs;
-
     public ScriptContext(StaticContext staticContext) {
         if (threadContext.get() != null) {
             throw new IllegalStateException("Cannot create a new script context if another one is active");
@@ -170,19 +147,16 @@ final public class ScriptContext implements AutoCloseable {
         LOGGER.debug("Creating script context [%s] from static context", this);
 
         this.staticContext = staticContext;
-        this.cleaner = new Cleaner();
 
         defaultLocks = new Updatable<>(new HashMap<>(), x -> new HashMap(x));
         experiment = Updatable.create(null);
         priority = Updatable.create(0);
-        simulate = Updatable.create(false);
         workingDirectory = new Mutable<>();
         defaultLauncher = Updatable.create(new DirectLauncher(Scheduler.get().getLocalhostConnector()));
         threadContext.set(this);
         connector = Updatable.create(Scheduler.get().getLocalhostConnector());
         currentScriptPath = Updatable.create(null);
         properties = new HashMap<>();
-        submittedJobs = new HashMap<>();
         parameters = new MapStack<>();
     }
 
@@ -195,23 +169,15 @@ final public class ScriptContext implements AutoCloseable {
         LOGGER.debug("Creating script context [%s] from context [%s]", this, other);
 
         staticContext = other.staticContext;
-        cleaner = other.cleaner;
-        counts = other.counts;
-
         experiment = other.experiment.reference();
         priority = other.priority.reference();
-        simulate = other.simulate.reference();
         connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
-
-        // Copy global values
-        counts = other.counts;
-        submittedJobs = other.submittedJobs;
 
         // Initialise shared values
         if (newRepository) {
             properties = new HashMap<>();
-            workingDirectory = new Mutable<>();
+            workingDirectory = new Mutable<>(other.workingDirectory.getValue());
             defaultLauncher = other.defaultLauncher.reference();
             defaultLocks = other.defaultLocks.reference();
             parameters = new MapStack<>(other.parameters);
@@ -231,25 +197,7 @@ final public class ScriptContext implements AutoCloseable {
 
 
     static public ScriptContext get() {
-
         return threadContext.get();
-    }
-
-    public ScriptContext counts(boolean flag) {
-
-        if (flag) counts = new HashMap<>();
-        else counts = null;
-        return this;
-    }
-
-    public Map<Operator, MutableInt> counts() {
-
-        return counts;
-    }
-
-    public boolean simulate() {
-
-        return simulate.get();
     }
 
     public void setCachedIterable(Object key, CachedIterable<Value> cachedIterable) {
@@ -285,11 +233,6 @@ final public class ScriptContext implements AutoCloseable {
         return defaultLocks.get();
     }
 
-    public ScriptContext simulate(boolean simulate) {
-
-        this.simulate.set(simulate);
-        return this;
-    }
 
     public Scheduler getScheduler() {
 
@@ -393,11 +336,6 @@ final public class ScriptContext implements AutoCloseable {
         this.experiment.set(experiment);
     }
 
-    public Cleaner getCleaner() {
-
-        return cleaner;
-    }
-
     @Override
     public void close() {
 
@@ -408,9 +346,6 @@ final public class ScriptContext implements AutoCloseable {
         LOGGER.debug("Closing script context [%s] - restoring [%s]", this, oldCurrent);
 
         threadContext.set(oldCurrent);
-        if (oldCurrent == null) {
-            cleaner.close();
-        }
     }
 
     public void addDefaultLock(Resource resource, Object parameters) {
@@ -440,16 +375,6 @@ final public class ScriptContext implements AutoCloseable {
         return currentScriptPath.get();
     }
 
-
-    public void register(Closeable closeable) {
-        cleaner.register(closeable);
-    }
-
-    public void unregister(AutoCloseable autoCloseable) {
-        cleaner.unregister(autoCloseable);
-    }
-
-
     public Task getTask(QName qname) {
         TaskFactory factory = getFactory(qname);
         if (factory == null) {
@@ -478,8 +403,9 @@ final public class ScriptContext implements AutoCloseable {
 
     /**
      * Swap the thread-local script context with this one
-     *
+     * <p>
      * Useful for a try-resource block where we want the old context to be set back.
+     *
      * @return A closeable object that will put back the context
      */
     public Swap swap() {
@@ -495,7 +421,7 @@ final public class ScriptContext implements AutoCloseable {
         }
 
         @Override
-        public void close()  {
+        public void close() {
             if (threadContext.get() != ScriptContext.this) {
                 LOGGER.error("Current thread context [%s] is not ourselves [%s]", threadContext.get(), ScriptContext.this);
             }
