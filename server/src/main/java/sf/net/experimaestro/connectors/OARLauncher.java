@@ -182,6 +182,23 @@ public class OARLauncher extends Launcher {
          * Time (in s) that we need to run a short-lived process (default 100s)
          */
         long remainingTime = 100;
+
+        /**
+         * Wall time in hh:mm:ss format
+         * Adds a few seconds
+         * @return
+         */
+        public String oarSpecification() {
+            long hours = this.jobDuration + 30;
+
+            long seconds = hours % 60;
+            hours /= 60;
+
+            long minutes = hours % 60;
+            hours /= 60;
+
+            return format("nodes=1/cpu=1,walltime=%d:%02d:%02d", hours, minutes, seconds);
+        }
     }
 
 
@@ -394,7 +411,7 @@ public class OARLauncher extends Launcher {
 
                 // Writes file
                 try (BufferedWriter writer = Files.newBufferedWriter(commandpath)) {
-                    writer.write(format("cleanup() {\n echo Removing lock file\nrm %s\n}\n",
+                    writer.write(format("cleanup() {\n echo Removing lock file 1>&2\nrm %s\n}\n",
                             connector.quotedPath(lockPath)));
                     writer.write("trap cleanup 0\n");
                     writer.write("env\n");
@@ -412,7 +429,7 @@ public class OARLauncher extends Launcher {
 
                 Files.deleteIfExists(donePath);
                 final AbstractProcessBuilder builder = connector.processBuilder();
-                builder.command(oarCommand, "--stdout=information.env", "--stderr=log.err",
+                builder.command(oarCommand, "-l", information.oarSpecification(), "--stdout=information.env", "--stderr=log.err",
                         format("--directory=%s", connector.resolve(directory)),
                         connector.resolve(commandpath));
                 builder.detach(false);
