@@ -177,8 +177,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.format(" echo Cleaning up 1>&2%n");
             // Remove traps
             writer.format(" trap - 0%n");
-            // Kills remaining processes
-            writer.println(" test ! -z \"$PID\" && pkill -KILL -P $PID");
 
             // Remove locks
             for (String file : lockFiles) {
@@ -196,8 +194,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Notify if possible
             if (notificationURL != null) {
-                writer.format(" wget --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/eoj\"%n");
+                writer.format(" wget --tries=1 --connect-timeout=1 --read-timeout=1 --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/eoj\"%n");
             }
+
+            // Kills remaining processes
+            writer.println(" test ! -z \"$PID\" && pkill -KILL -P $PID");
 
             writer.format("}%n%n");
 
