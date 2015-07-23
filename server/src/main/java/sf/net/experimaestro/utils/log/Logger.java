@@ -174,15 +174,4 @@ public final class Logger extends org.apache.log4j.Logger {
         Logger makeNewLoggerInstance(String name);
     }
 
-    /**
-     * Our own logger factory
-     */
-    static public class DefaultFactory implements Factory {
-        @Override
-        public Logger makeNewLoggerInstance(String name) {
-            return new Logger(name);
-        }
-
-    }
-
 }

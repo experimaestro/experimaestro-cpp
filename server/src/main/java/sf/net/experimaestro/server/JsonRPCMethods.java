@@ -56,7 +56,9 @@ import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.XPMInformation;
+import sf.net.experimaestro.utils.log.DefaultFactory;
 import sf.net.experimaestro.utils.log.Logger;
+import sf.net.experimaestro.utils.log.Router;
 
 import javax.servlet.http.HttpServlet;
 import java.io.BufferedWriter;
@@ -492,6 +494,8 @@ public class JsonRPCMethods extends HttpServlet {
         Repositories repositories = new Repositories(new File("/").toPath());
         repositories.add(repository, 0);
 
+        Router.writer(getRequestErrorStream());
+
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
         try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, scheduler, loggerRepository, debugPort)) {
@@ -575,7 +579,7 @@ public class JsonRPCMethods extends HttpServlet {
         root.setLevel(Level.INFO);
         final Hierarchy loggerRepository = new Hierarchy(root) {
             public Logger getLogger(String name) {
-                return (Logger) this.getLogger(name, new Logger.DefaultFactory());
+                return (Logger) this.getLogger(name, new DefaultFactory());
             }
         };
         BufferedWriter stringWriter = getRequestErrorStream();
