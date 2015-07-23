@@ -78,7 +78,7 @@ public class StatusServlet extends XPMServlet {
                         "</div>\n");
 
                 out.println("<div id='tab-main' class='tab'>");
-                out.println("<ul><li><a href='#resources'>Resources</a></li><li><a href='#resource-detail'>Detail</a></li><li><a href='/status/experiments'>Experiments</a></li>" +
+                out.println("<ul><li><a href='#resources'>Resources</a></li><li><a href='/status/experiments'>Experiments</a></li>" +
                         "<li><a href='#xpm-info'>XPM info</a></li>" +
                         "</ul>");
                 out.println("<div id=\"resources\" class=\"tab\"><ul>");
@@ -98,7 +98,7 @@ public class StatusServlet extends XPMServlet {
                                 try {
                                     out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
                                     out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                    out.format("<a href=\"javascript:void(0)\">%s</a></li>", resource.getLocator());
+                                    out.format("<a href=\"javascript:void(0)\">%s [%d]</a></li>", resource.getLocator(), resource.getId());
                                 } catch (Throwable t) {
                                     out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                                 }

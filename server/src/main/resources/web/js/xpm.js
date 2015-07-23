@@ -138,8 +138,12 @@ var resource_link_callback = function () {
             $("#resource-detail-content").empty().append(json2html(r.result));
             $("#resource-detail-content").jstree();
 
-            // Activate the detail tab
-            $("#tab-main").tabs("option", "active", 1);
+            $(function() {
+                $( "#resource-detail" ).dialog({
+                    "maxWidth": "600ch",
+                    "width": "70%",
+                });
+            });
 
             //history.pushState();
 
