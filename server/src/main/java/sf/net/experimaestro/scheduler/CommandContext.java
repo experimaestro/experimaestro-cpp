@@ -18,6 +18,7 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.connectors.SingleHostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.utils.IdentityHashSet;
@@ -49,9 +50,9 @@ public abstract class CommandContext implements Closeable {
     private final static Logger LOGGER = Logger.getLogger();
 
     /**
-     * The host where the command is executed
+     * The launcher
      */
-    protected final SingleHostConnector connector;
+    protected final Launcher launcher;
 
     /**
      * The auxiliary files created during the command launch
@@ -73,14 +74,14 @@ public abstract class CommandContext implements Closeable {
      */
     private int uniqueCount;
 
-    public CommandContext(SingleHostConnector connector) {
-        this.connector = connector;
+    public CommandContext(Launcher launcher) {
+        this.launcher = launcher;
     }
 
     public String resolve(Path file) throws IOException {
-        String resolve = connector.resolve(file);
+        String resolve = launcher.getConnector().resolve(file);
         if (resolve == null) {
-            throw new XPMRuntimeException("Could not resolve path %s with connector %s", file, connector);
+            throw new XPMRuntimeException("Could not resolve path %s with launcher %s", file, launcher);
         }
         return resolve;
     }
@@ -137,13 +138,13 @@ public abstract class CommandContext implements Closeable {
      * A temporary environment: all the auxiliary files will be deleted
      */
     static public class Temporary extends CommandContext {
-        public Temporary(SingleHostConnector connector) {
-            super(connector);
+        public Temporary(Launcher launcher) {
+            super(launcher);
         }
 
         @Override
         Path getAuxiliaryFile(String prefix, String suffix) throws IOException {
-            final Path temporaryFile = connector.getTemporaryFile(prefix, suffix);
+            final Path temporaryFile = launcher.getTemporaryFile(prefix, suffix);
             files.add(temporaryFile);
             return temporaryFile;
         }
@@ -180,8 +181,8 @@ public abstract class CommandContext implements Closeable {
          */
         Path folder;
 
-        public FolderContext(SingleHostConnector connector, Path basepath, String name) throws FileSystemException {
-            super(connector);
+        public FolderContext(Launcher launcher, Path basepath, String name) throws FileSystemException {
+            super(launcher);
             this.folder = basepath;
             this.name = name;
         }
@@ -193,7 +194,7 @@ public abstract class CommandContext implements Closeable {
 
         @Override
         public String getWorkingDirectory() throws IOException {
-            return connector.resolve(folder);
+            return launcher.getConnector().resolve(folder);
         }
 
         @Override

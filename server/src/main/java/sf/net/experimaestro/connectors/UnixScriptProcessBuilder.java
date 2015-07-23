@@ -88,16 +88,16 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      * Commands
      *
      * @param file
-     * @param connector
+     * @param launcher
      * @throws IOException
      */
 
-    public UnixScriptProcessBuilder(Path file, SingleHostConnector connector) throws IOException {
-        super(connector, file, null);
+    public UnixScriptProcessBuilder(Path file, Launcher launcher) throws IOException {
+        super(launcher, file, null);
     }
 
-    public UnixScriptProcessBuilder(Path scriptFile, SingleHostConnector connector, AbstractProcessBuilder processBuilder) throws IOException {
-        super(connector, scriptFile, processBuilder);
+    public UnixScriptProcessBuilder(Path scriptFile, Launcher launcher, AbstractProcessBuilder processBuilder) throws IOException {
+        super(launcher, scriptFile, processBuilder);
     }
 
     /**
@@ -129,11 +129,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     final public XPMProcess start(boolean fake) throws LaunchException, IOException {
-        final Path runFile = connector.resolveFile(path);
+        final Path runFile = launcher.getMainConnector().resolveFile(path);
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
-        try (CommandContext env = new CommandContext.FolderContext(connector, basepath, baseName)) {
+        try (CommandContext env = new CommandContext.FolderContext(launcher, basepath, baseName)) {
             // Prepare the commands
             commands().prepare(env);
 
@@ -234,7 +234,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 case INHERIT:
                     break;
                 case READ:
-                    writer.format("cat \"%s\" | ", connector.resolve(input.file()));
+                    writer.format("cat \"%s\" | ", launcher.resolve(input.file()));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
@@ -290,10 +290,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 case INHERIT:
                     break;
                 case APPEND:
-                    writer.format(" %d>> %s", stream, protect(connector.resolve(redirect.file()), QUOTED_SPECIAL));
+                    writer.format(" %d>> %s", stream, protect(launcher.resolve(redirect.file()), QUOTED_SPECIAL));
                     break;
                 case WRITE:
-                    writer.format(" %d> %s", stream, protect(connector.resolve(redirect.file()), QUOTED_SPECIAL));
+                    writer.format(" %d> %s", stream, protect(launcher.resolve(redirect.file()), QUOTED_SPECIAL));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported output redirection type: " + input.type());
@@ -373,17 +373,17 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     public void removeLock(Path lockFile) throws IOException {
-        lockFiles.add(protect(connector.resolve(lockFile), SHELL_SPECIAL));
+        lockFiles.add(protect(launcher.resolve(lockFile), SHELL_SPECIAL));
     }
 
     @Override
     public void exitCodeFile(Path exitCodeFile) throws IOException {
-        exitCodePath = connector.resolve(exitCodeFile);
+        exitCodePath = launcher.resolve(exitCodeFile);
     }
 
     @Override
     public void doneFile(Path doneFile) throws IOException {
-        donePath = connector.resolve(doneFile);
+        donePath = launcher.resolve(doneFile);
     }
 
     public void setDoCleanup(boolean doCleanup) {

@@ -206,10 +206,6 @@ public class SSHConnector extends SingleHostConnector {
         }
     }
 
-    @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
-        return new UnixScriptProcessBuilder(scriptFile, this);
-    }
 
     ChannelSftp newSftpChannel() throws JSchException, IOException {
         return (ChannelSftp) getSession().openChannel("sftp");

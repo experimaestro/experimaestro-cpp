@@ -37,7 +37,12 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      * The process builder
      */
     protected final AbstractProcessBuilder processBuilder;
-    protected SingleHostConnector connector;
+
+    /**
+     * The launcher
+     */
+    protected Launcher launcher;
+
     /**
      * The script file
      */
@@ -60,11 +65,11 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
      */
     protected URL notificationURL;
 
-    public XPMScriptProcessBuilder(SingleHostConnector connector, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
-        this.connector = connector;
+    public XPMScriptProcessBuilder(Launcher launcher, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
+        this.launcher = launcher;
         this.scriptFile = scriptFile;
-        this.path = connector.resolve(scriptFile);
-        this.processBuilder = processBuilder == null ? connector.processBuilder() : processBuilder;
+        this.path = launcher.getConnector().resolve(scriptFile);
+        this.processBuilder = processBuilder == null ? launcher.processBuilder() : processBuilder;
     }
 
     /**

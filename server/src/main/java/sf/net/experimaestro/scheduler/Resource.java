@@ -120,7 +120,7 @@ public class Resource implements Identifiable {
     final static private Logger LOGGER = Logger.getLogger();
 
     /**
-     * The path with the connector
+     * The path with the launcher
      */
     @GsonSerialization(serialize = false)
     protected Path locator;
@@ -605,8 +605,10 @@ public class Resource implements Identifiable {
         LOGGER.debug("Resource %s saved/updated", this);
         if (update && old.getState() != getState()) {
             Scheduler.get().addChangedResource(this);
+            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+        } else if (!update) {
+            Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
         }
-        Scheduler.get().notify(new SimpleMessage(!update ? Message.Type.RESOURCE_ADDED : Message.Type.STATE_CHANGED, this));
     }
 
     /**

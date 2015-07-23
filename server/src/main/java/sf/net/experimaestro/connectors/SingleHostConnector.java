@@ -159,15 +159,4 @@ abstract public class SingleHostConnector extends Connector {
     public Path resolve(String path) throws IOException {
         return getFileSystem().getPath(path);
     }
-
-    /**
-     * Creates a script builder
-     *
-     * @param scriptFile The path to the script file to createSSHAgentIdentityRepository
-     * @return A builder
-     * @throws FileSystemException if an exception occurs while accessing the script file
-     */
-    abstract public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile)
-            throws IOException;
-
 }

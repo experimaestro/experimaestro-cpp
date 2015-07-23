@@ -20,10 +20,7 @@ package sf.net.experimaestro.scheduler;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.AbstractCommandBuilder;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.connectors.XPMScriptProcessBuilder;
+import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.LaunchException;
 import sf.net.experimaestro.utils.TemporaryDirectory;
 
@@ -53,7 +50,7 @@ public class CommandTest  {
             final Command command = new Command();
 
             final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
-
+            final Launcher launcher = new DirectLauncher(connector);
             final Path dataPath = connector.resolve(dataFile.getAbsolutePath());
 
 
@@ -66,10 +63,10 @@ public class CommandTest  {
 
 
             final Path locatorPath = new File(directory.getFile(), "task").toPath();
-//            ResourceLocator locator = new ResourceLocator(connector, locatorPath);
+//            ResourceLocator locator = new ResourceLocator(launcher, locatorPath);
             final Path runFile = Resource.RUN_EXTENSION.transform(locatorPath);
 
-            XPMScriptProcessBuilder builder = connector.scriptProcessBuilder(runFile);
+            XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile);
             builder.directory(directory.getFile().toPath());
 
             // Add commands

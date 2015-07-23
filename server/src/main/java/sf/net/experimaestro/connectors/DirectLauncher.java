@@ -40,12 +40,4 @@ public class DirectLauncher extends Launcher {
     public AbstractProcessBuilder processBuilder() {
         return connector.getMainConnector().processBuilder();
     }
-
-    @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
-        final XPMScriptProcessBuilder xpmScriptProcessBuilder = connector.getMainConnector().scriptProcessBuilder(scriptFile);
-        xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
-        xpmScriptProcessBuilder.environment(environment);
-        return xpmScriptProcessBuilder;
-    }
 }

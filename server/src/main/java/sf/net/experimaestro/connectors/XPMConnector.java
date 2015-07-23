@@ -83,8 +83,4 @@ public class XPMConnector extends SingleHostConnector {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) {
-        throw new NotImplementedException();
-    }
 }

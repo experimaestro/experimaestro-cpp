@@ -72,7 +72,7 @@ public class JsonPath extends Json {
 
     @Override
     public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        if (options.ignore.contains(ValueType.XP_PATH)) {
+        if (options.ignore.contains(ValueType.XP_PATH) || path == null) {
             writer.write("null");
         } else {
             writer.write('"');

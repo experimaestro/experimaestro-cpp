@@ -237,7 +237,7 @@ final public class Scheduler {
             connectors = new DatabaseObjects<>("Connectors", Connector::create);
             locks = new DatabaseObjects<>("Locks", Lock::create);
 
-            // Find or create localhost connector
+            // Find or create localhost launcher
             localhostConnector = (LocalhostConnector) Connector.findByURI(LocalhostConnector.IDENTIFIER);
             if (localhostConnector == null) {
                 localhostConnector = new LocalhostConnector();
@@ -327,11 +327,11 @@ final public class Scheduler {
      *
      * @param host      The host name for the share
      * @param name      The name of the share on the hosts
-     * @param connector The single host connector where this
-     * @param path      The path on the connector
+     * @param connector The single host launcher where this
+     * @param path      The path on the launcher
      */
     public static void defineShare(String host, String name, SingleHostConnector connector, String path, int priority) throws SQLException {
-        // Save the connector in DB if necessary
+        // Save the launcher in DB if necessary
         if (!connector.inDatabase()) {
             connector.save();
         }

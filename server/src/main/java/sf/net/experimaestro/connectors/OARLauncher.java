@@ -137,7 +137,7 @@ public class OARLauncher extends Launcher {
 
     @Override
     public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
-        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, connector.getMainConnector(), processBuilder());
+        final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this, processBuilder());
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
         unixScriptProcessBuilder.environment(environment);
 

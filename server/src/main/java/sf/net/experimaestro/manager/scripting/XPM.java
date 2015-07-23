@@ -385,7 +385,7 @@ public class XPM {
         AbstractProcessBuilder builder = launcher.processBuilder();
 
         SingleHostConnector commandConnector = launcher.getMainConnector();
-        try (CommandContext commandEnv = new CommandContext.Temporary(commandConnector)) {
+        try (CommandContext commandEnv = new CommandContext.Temporary(launcher)) {
             // Transform the list
             builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
                 try {

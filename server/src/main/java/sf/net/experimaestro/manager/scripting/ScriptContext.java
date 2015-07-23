@@ -100,11 +100,6 @@ final public class ScriptContext implements AutoCloseable {
     private Updatable<Launcher> defaultLauncher;
 
     /**
-     * The default connector
-     */
-    private Updatable<Connector> connector;
-
-    /**
      * Associated experiment
      */
     private Updatable<Experiment> experiment;
@@ -154,7 +149,6 @@ final public class ScriptContext implements AutoCloseable {
         workingDirectory = new Mutable<>();
         defaultLauncher = Updatable.create(new DirectLauncher(Scheduler.get().getLocalhostConnector()));
         threadContext.set(this);
-        connector = Updatable.create(Scheduler.get().getLocalhostConnector());
         currentScriptPath = Updatable.create(null);
         properties = new HashMap<>();
         parameters = new MapStack<>();
@@ -171,7 +165,6 @@ final public class ScriptContext implements AutoCloseable {
         staticContext = other.staticContext;
         experiment = other.experiment.reference();
         priority = other.priority.reference();
-        connector = other.connector.reference();
         currentScriptPath = other.currentScriptPath.reference();
 
         // Initialise shared values
@@ -354,17 +347,19 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public Launcher getDefaultLauncher() {
-
         return defaultLauncher.get();
     }
 
     public void setDefaultLauncher(Launcher defaultLauncher) {
-
         this.defaultLauncher.set(defaultLauncher);
     }
 
     public Connector getConnector() {
-        return connector.get();
+        Launcher launcher = defaultLauncher.get();
+        if (launcher == null) {
+            return Scheduler.get().getLocalhostConnector();
+        }
+        return launcher.getConnector();
     }
 
     public void setProperty(String key, Object value) {

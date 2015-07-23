@@ -28,6 +28,7 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.FileSystemException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 
@@ -50,9 +51,14 @@ public abstract class Launcher implements Serializable {
     HashMap<String, String> environment = new HashMap<>();
 
     /**
-     * The connector
+     * The launcher
      */
     Connector connector;
+
+    /**
+     * The temporary directory
+     */
+    private Path temporaryDirectory;
 
     /**
      * Creates and returns a new process builder
@@ -62,9 +68,18 @@ public abstract class Launcher implements Serializable {
     public abstract AbstractProcessBuilder processBuilder() throws FileSystemException;
 
     /**
-     * Returns a script process builder that can be run
+     * Creates a script builder
+     *
+     * @param scriptFile The path to the script file to createSSHAgentIdentityRepository
+     * @return A builder
+     * @throws FileSystemException if an exception occurs while accessing the script file
      */
-    public abstract XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException;
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
+        UnixScriptProcessBuilder xpmScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this);
+        xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
+        xpmScriptProcessBuilder.environment(environment);
+        return xpmScriptProcessBuilder;
+    }
 
     public Launcher(Connector connector) {
         this.connector = connector;
@@ -106,5 +121,23 @@ public abstract class Launcher implements Serializable {
 
     public SingleHostConnector getMainConnector() {
         return connector.getMainConnector();
+    }
+
+    public Connector getConnector() {
+        return connector;
+    }
+
+    @Expose("set_tmpdir")
+    @Help("Sets the temporary directory for this launcher")
+    public void setTemporaryDirectory(Path path) {
+        this.temporaryDirectory = path;
+    }
+
+    public Path getTemporaryFile(String prefix, String suffix) throws IOException {
+        return Files.createTempFile(temporaryDirectory, prefix, suffix);
+    }
+
+    public String resolve(Path file) throws IOException {
+        return getConnector().resolve(file);
     }
 }

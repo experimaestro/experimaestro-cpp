@@ -96,12 +96,6 @@ public class LocalhostConnector extends SingleHostConnector {
         return getFileSystem().getPath(TMPDIR);
     }
 
-    @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
-        return new UnixScriptProcessBuilder(scriptFile, this);
-    }
-
-
     /**
      * Localhost process builder
      */
