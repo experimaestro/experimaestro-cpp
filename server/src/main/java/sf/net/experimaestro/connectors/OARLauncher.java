@@ -39,6 +39,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +76,8 @@ public class OARLauncher extends Launcher {
     protected static final String OARJOBID_PREFIX = "OAR_JOB_ID=";
 
     static private final Logger LOGGER = Logger.getLogger();
+    private final String oarUser = "oar";
+    private final int oarPort = 6667;
 
     /**
      * oarsub command
@@ -89,6 +92,11 @@ public class OARLauncher extends Launcher {
      * The information
      */
     private boolean useNotify = false;
+
+    /**
+     * Use job key
+     */
+    private boolean useJobKey = true;
 
     private ShortLivedInformation information;
 
@@ -184,8 +192,14 @@ public class OARLauncher extends Launcher {
         long remainingTime = 100;
 
         /**
+         * Direct (SSH) connector instead of using oarsh
+         */
+        SingleHostConnector connector;
+
+        /**
          * Wall time in hh:mm:ss format
          * Adds a few seconds
+         *
          * @return
          */
         public String oarSpecification() {
@@ -224,6 +238,7 @@ public class OARLauncher extends Launcher {
         public ProcessBuilder(SingleHostConnector connector, boolean shortLived) {
             this.connector = connector;
             this.shortLived = shortLived;
+            useJobKey = connector instanceof SSHConnector;
         }
 
         @Override
@@ -235,27 +250,39 @@ public class OARLauncher extends Launcher {
                 // Check if the process is still alive
                 ensureShortLived();
 
-                final AbstractProcessBuilder builder = connector.processBuilder();
-
-                Map<String, String> env = new HashMap<>();
-                env.put(OAR_JOB_ID, information.jobId);
-                builder.environment(env);
+                final AbstractProcessBuilder builder = useJobKey ? information.connector.processBuilder() : connector.processBuilder();
 
                 ArrayList<String> command = new ArrayList<>();
-                command.add(OAR_JOB_ID + "=" + information.jobId);
-                command.add(oarshCommand);
-                command.add(information.hostname);
+                if (!useJobKey) {
+                    Map<String, String> env = new HashMap<>();
+                    env.put(OAR_JOB_ID, information.jobId);
+                    builder.environment(env);
 
-                if (OARLauncher.this.environment != null) {
-                    OARLauncher.this.environment.forEach(
-                            (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
-                    );
+                    command.add(OAR_JOB_ID + "=" + information.jobId);
+                    command.add(oarshCommand);
+                    command.add(information.hostname);
+                    if (OARLauncher.this.environment != null) {
+                        OARLauncher.this.environment.forEach(
+                                (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                        );
+                    }
+                    if (environment() != null) {
+                        environment().forEach(
+                                (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                        );
+                    }
+                } else {
+                    HashMap<String, String> environment = new HashMap<>();
+                    if (OARLauncher.this.environment != null) {
+                        environment.putAll(OARLauncher.this.environment);
+                    }
+                    if (environment() != null) {
+                        environment.putAll(environment());
+                    }
+
+                    builder.environment(environment);
                 }
-                if (environment() != null) {
-                    environment().forEach(
-                            (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
-                    );
-                }
+
 
                 this.command().stream().forEach(command::add);
                 builder.command(command);
@@ -268,6 +295,7 @@ public class OARLauncher extends Launcher {
 
                 final XPMProcess process = builder.start();
                 return process;
+
             } else {
                 // Use a full OAR process
 
@@ -348,23 +376,24 @@ public class OARLauncher extends Launcher {
         // TODO: Should open an SSH session (for this, we need to get the environment variable set by oarsh)
         private void ensureShortLived() throws IOException, LaunchException {
             // Get the short lived job ending time
+            final Path directory = connector.resolve(shortLivedJobDirectory);
+            final Path jobKeyFile = directory.resolve("information.key");
+
             if (information == null) {
                 information = new ShortLivedInformation();
                 // Create the directory if necessary
-                final Path directory = connector.resolve(shortLivedJobDirectory);
                 final Path infopath = directory.resolve("information.env");
                 if (!Files.isDirectory(directory)) {
                     Files.createDirectories(directory);
                 }
 
-                readInformation(infopath);
+                readInformation(infopath, useJobKey ? jobKeyFile : null);
             }
 
 
             // Starts the job if necessary
             long timestamp = System.currentTimeMillis() / 1000;
             if ((information.remainingTime + timestamp) > information.endTimestamp) {
-                final Path directory = connector.resolve(shortLivedJobDirectory);
                 final Path infopath = directory.resolve("information.env");
                 final Path commandpath = directory.resolve("command.sh");
                 final Path lockPath = directory.resolve("information.lock");
@@ -429,9 +458,21 @@ public class OARLauncher extends Launcher {
 
                 Files.deleteIfExists(donePath);
                 final AbstractProcessBuilder builder = connector.processBuilder();
-                builder.command(oarCommand, "-l", information.oarSpecification(), "--stdout=information.env", "--stderr=log.err",
-                        format("--directory=%s", connector.resolve(directory)),
-                        connector.resolve(commandpath));
+                ArrayList<String> args = new ArrayList<>();
+                args.addAll(Arrays.asList(
+                        oarCommand, "-l", information.oarSpecification(),
+                        "--stdout=information.env", "--stderr=log.err",
+                        format("--directory=%s", connector.resolve(directory))
+                ));
+
+                if (useJobKey) {
+                    args.add("--use-job-key");
+                    args.add(format("--export-job-key-to-file=%s", connector.resolve(jobKeyFile)));
+                }
+
+                args.add(connector.resolve(commandpath));
+
+                builder.command(args);
                 builder.detach(false);
                 final XPMProcess process = builder.start();
                 try {
@@ -451,7 +492,7 @@ public class OARLauncher extends Launcher {
                         LOGGER.debug("Waiting for information file to be generated [%s]", donePath);
                         watcher.poll(1, TimeUnit.SECONDS);
                     }
-                    readInformation(infopath);
+                    readInformation(infopath, useJobKey ? jobKeyFile : null);
                 } catch (NoSuchFileException | InterruptedException f) {
                     throw new RuntimeException(f);
                 }
@@ -462,10 +503,11 @@ public class OARLauncher extends Launcher {
         /**
          * Read information about the OAR sleeping job
          *
-         * @param infopath The path to the file containing the information
+         * @param infopath   The path to the file containing the information
+         * @param jobKeyPath
          * @throws IOException If an error occurs while reading the file
          */
-        private void readInformation(Path infopath) throws IOException {
+        private void readInformation(Path infopath, Path jobKeyPath) throws IOException {
             // Retrieve information if present
             if (Files.exists(infopath)) {
                 try (InputStream input = Files.newInputStream(infopath);
@@ -488,6 +530,17 @@ public class OARLauncher extends Launcher {
                     }
                 }
                 information.endTimestamp += information.jobDuration;
+
+                // Retrieve job key if generating it
+                if (jobKeyPath != null) {
+                    byte[] key = Files.readAllBytes(jobKeyPath);
+                    SSHOptions options = new SSHOptions();
+                    options.setStreamProxy((SSHConnector) connector);
+                    options.setPrivateKey("oarkey", key);
+                    options.strictHostChecking(false);
+                    options.setUseSSHAgent(false);
+                    information.connector = new SSHConnector(oarUser, information.hostname, oarPort, options);
+                }
             }
         }
 

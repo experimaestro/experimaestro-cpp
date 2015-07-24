@@ -24,10 +24,9 @@ import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
 import com.jcraft.jsch.agentproxy.USocketFactory;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
-import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.SessionFactory;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.JsonAbstract;
@@ -38,9 +37,11 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 
 /**
  * All the options for connecting to a host through SSH
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
@@ -65,7 +66,9 @@ public class SSHOptions extends ConnectorOptions {
      */
     boolean checkHost = true;
 
-    /** Default SSH port */
+    /**
+     * Default SSH port
+     */
     static final int SSHD_DEFAULT_PORT = 22;
 
     /**
@@ -88,6 +91,11 @@ public class SSHOptions extends ConnectorOptions {
      * Proxy for configuration
      */
     private ProxyConfiguration proxy;
+
+    /**
+     * Private keys to use
+     */
+    private ArrayList<IdentityOption> identities = new ArrayList<>();
 
     @Expose
     public SSHOptions() {
@@ -112,6 +120,12 @@ public class SSHOptions extends ConnectorOptions {
         }
     }
 
+    public void setStreamProxy(SSHConnector proxy) {
+        this.proxy = new NCProxyConfiguration(proxy.options);
+    }
+
+
+
     public DefaultSessionFactory getSessionFactory() throws IOException {
         DefaultSessionFactory factory = new DefaultSessionFactory();
 
@@ -119,6 +133,13 @@ public class SSHOptions extends ConnectorOptions {
         factory.setHostname(hostname);
         factory.setUsername(username);
         factory.setPort(port);
+        for(IdentityOption io: identities) {
+            try {
+                factory.jsch.addIdentity(io.keyName, io.prvKey, null, null);
+            } catch (JSchException e) {
+                throw new IOException(e);
+            }
+        }
 
         factory.setConfig("StrictHostKeyChecking", checkHost ? "yes" : "no");
 
@@ -198,12 +219,21 @@ public class SSHOptions extends ConnectorOptions {
 
         options.checkHost = this.checkHost;
         options.proxy = proxy;
+        options.identities = identities;
 
         return options;
     }
 
     public int getPort() {
         return port < 0 ? SSHD_DEFAULT_PORT : port;
+    }
+
+    public void setPrivateKey(String key, byte[] bytes) {
+        identities.add(new IdentityOption(key, bytes, null));
+    }
+
+    public void strictHostChecking(boolean checkHost) {
+        this.checkHost = checkHost;
     }
 
 
@@ -219,28 +249,28 @@ public class SSHOptions extends ConnectorOptions {
         private SessionFactory sessionFactory;
         private Session session;
 
-        public MySshProxy( SessionFactory sessionFactory ) throws JSchException {
+        public MySshProxy(SessionFactory sessionFactory) throws JSchException {
             this.sessionFactory = sessionFactory;
 //            this.session = sessionFactory.newSession();
         }
 
         public void close() {
-            if ( session != null && session.isConnected() ) {
+            if (session != null && session.isConnected()) {
                 session.disconnect();
             }
         }
 
-        public void connect( SocketFactory socketFactory, String host, int port, int timeout ) throws Exception {
+        public void connect(SocketFactory socketFactory, String host, int port, int timeout) throws Exception {
             if (session == null || !session.isConnected()) {
                 session = sessionFactory.newSession();
                 session.connect();
             }
 
-            channel = session.getStreamForwarder( host, port );
+            channel = session.getStreamForwarder(host, port);
             inputStream = channel.getInputStream();
             outputStream = channel.getOutputStream();
 
-            channel.connect( timeout );
+            channel.connect(timeout);
         }
 
         public InputStream getInputStream() {
@@ -278,6 +308,10 @@ public class SSHOptions extends ConnectorOptions {
             }
         }
 
+        public NCProxyConfiguration(SSHOptions options) {
+            this.sshOptions = options;
+        }
+
         @Override
         public void configure(DefaultSessionFactory builder) throws IOException {
 
@@ -297,6 +331,18 @@ public class SSHOptions extends ConnectorOptions {
             } catch (JSchException e) {
                 throw new IOException(e);
             }
+        }
+    }
+
+    static private class IdentityOption {
+        private final String keyName;
+        private final byte[] prvKey;
+        private final byte[] pass;
+
+        public IdentityOption(String key, byte[] prvKey, byte[] pass) {
+            this.keyName = key;
+            this.prvKey = prvKey;
+            this.pass = pass;
         }
     }
 }

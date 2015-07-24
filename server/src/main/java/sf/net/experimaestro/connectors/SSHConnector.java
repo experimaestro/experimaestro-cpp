@@ -22,7 +22,6 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import com.pastdev.jsch.nio.file.UnixSshSftpHybridFileSystemProvider;
 import sf.net.experimaestro.exceptions.LaunchException;
@@ -81,7 +80,7 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Connection options
      */
-    private SSHOptions options = new SSHOptions();
+    SSHOptions options = new SSHOptions();
 
     /**
      * Cached SSH session
