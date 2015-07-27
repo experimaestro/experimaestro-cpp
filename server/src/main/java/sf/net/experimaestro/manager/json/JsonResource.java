@@ -19,9 +19,8 @@ package sf.net.experimaestro.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Resource;
 
@@ -53,17 +52,17 @@ public class JsonResource extends Json {
 
     @Override
     public QName type() {
-        return ValueType.XP_RESOURCE;
+        return Constants.XP_RESOURCE_TYPE;
     }
 
     @Override
     public boolean canIgnore(JsonWriterOptions options) {
-        return options.ignore.contains(ValueType.XP_RESOURCE);
+        return options.ignore.contains(Constants.XP_RESOURCE_TYPE);
     }
 
     @Override
     public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        if (options.ignore.contains(ValueType.XP_RESOURCE)) {
+        if (options.ignore.contains(Constants.XP_RESOURCE_TYPE)) {
             writer.write("null");
         } else {
             write(writer);
@@ -79,7 +78,7 @@ public class JsonResource extends Json {
     public void write(Writer out) throws IOException {
         out.write(format("{ \"id\": \"%s\", \"$type\": \"%s\" }",
                 resource.getLocator().toString(),
-                ValueType.XP_RESOURCE.toString()
+                Constants.XP_RESOURCE_TYPE.toString()
         ));
     }
 
@@ -87,11 +86,11 @@ public class JsonResource extends Json {
     public void write(JsonWriter out) throws IOException {
         out.beginObject();
 
-        out.name(Manager.XP_VALUE.toString());
+        out.name(Constants.XP_VALUE.toString());
         out.value(resource.getLocator().toString());
 
-        out.name(Manager.XP_TYPE.toString());
-        out.value(Manager.XP_RESOURCE.toString());
+        out.name(Constants.XP_TYPE.toString());
+        out.value(Constants.XP_RESOURCE.toString());
 
         out.endObject();
     }

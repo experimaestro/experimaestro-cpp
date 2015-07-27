@@ -24,33 +24,40 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ * Marks a method which is exposed to scripts
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.CONSTRUCTOR, ElementType.METHOD})
 public @interface Expose {
-    /** The name of the function (by default, the name of the ) */
+    /**
+     * The name of the function (by default, the name of the method)
+     * @return an empty string if using default, otherwise a valid name
+     */
     String value() default "";
 
 
     /**
      * Number of arguments that are optional.
+     * @return An integer specifying the number of optional arguments
      */
     int optional() default 0;
 
     /**
      * Optional arguments are at the beginning when true
+     * @return true if the optional arguments are the first
      */
     boolean optionalsAtStart() default false;
 
     /**
      * Whether the context should be passed (language and script context)
-     * @return True if the first argument should be a {@linkplain ScriptContext} object
+     *
+     * @return True if the first argument should be a ScriptContext object
      */
     boolean context() default false;
 
     /**
      * How is this method used (ignored for constructors)
+     *
      * @return The mode (default: a method)
      */
     ExposeMode mode() default ExposeMode.METHOD;

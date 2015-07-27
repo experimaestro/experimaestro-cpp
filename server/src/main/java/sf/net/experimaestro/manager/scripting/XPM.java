@@ -36,13 +36,7 @@ import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRhinoIllegalArgumentException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.AlternativeType;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.Module;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
@@ -314,7 +308,7 @@ public class XPM {
         Resource resource = commandlineJob(jobId, _commands, jsOptions);
 
         // Update the json
-        json.put(Manager.XP_RESOURCE.toString(), new JsonResource(resource));
+        json.put(Constants.XP_RESOURCE.toString(), new JsonResource(resource));
         return resource;
     }
 
@@ -607,7 +601,7 @@ public class XPM {
      */
     @Expose
     public String ns() {
-        return Manager.EXPERIMAESTRO_NS;
+        return Constants.EXPERIMAESTRO_NS;
     }
 
 

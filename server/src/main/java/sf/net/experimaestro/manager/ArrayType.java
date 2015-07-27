@@ -28,7 +28,7 @@ import sf.net.experimaestro.manager.json.JsonArray;
  * @date 18/2/13
  */
 public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Manager.EXPERIMAESTRO_NS, "array");
+    final private static QName QNAME = new QName(Constants.EXPERIMAESTRO_NS, "array");
     private final Type innerType;
 
     public ArrayType(Type innerType) {

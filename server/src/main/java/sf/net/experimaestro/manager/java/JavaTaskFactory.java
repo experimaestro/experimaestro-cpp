@@ -18,9 +18,7 @@ package sf.net.experimaestro.manager.java;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import net.bpiwowar.experimaestro.tasks.Runner;
-import net.bpiwowar.experimaestro.tasks.TaskDescription;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
@@ -32,12 +30,7 @@ import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.Commands;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.tasks.Path;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
-import sf.net.experimaestro.utils.introspection.FieldInfo;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,101 +42,63 @@ import java.util.Map;
  */
 @Exposed
 public class JavaTaskFactory extends TaskFactory {
-    public static final String JVM_OPTIONS = "$jvm";
 
+
+    ArrayList<PathArgument> pathArguments;
+
+    Map<String, String> prefixes;
     transient java.nio.file.Path[] classpath;
 
-    String taskClassname;
+    public static final String JVM_OPTIONS = "$jvm";
 
-    final ArrayList<PathArgument> pathArguments = new ArrayList<>();
+    private final Map<String, Input> inputs = new HashMap<>();
 
-    Type output;
-
-    Map<String, Input> inputs = new HashMap<>();
+    private String taskClassname;
+    private Type output;
 
     /**
-     * Prefixes for namespaces - used for unique directory naming
+     * Used only for deserialization
      */
-    Map<String, String> prefixes = new HashMap<>();
-
-    /** Used only for deserialization */
-    protected JavaTaskFactory() {}
+    protected JavaTaskFactory() {
+    }
 
     /**
      * Initialise a task
      *
-     * @param classpath  The class path
-     * @param repository The repository
-     * @param classInfo  The java class from which to build a task factory
-     * @param namespaces The namespaces
+     * @param classpath   The class path
+     * @param repository  The repository
+     * @param information Java task information
      */
-    public JavaTaskFactory(java.nio.file.Path[] classpath, Repository repository, ClassInfo classInfo, Map<String, String> namespaces) {
+    public JavaTaskFactory(java.nio.file.Path[] classpath, Repository repository, JavaTaskInformation information) {
         super(repository);
         this.classpath = classpath;
-        this.taskClassname = classInfo.getName();
+//         = new JavaTaskInformation(classInfo, namespaces);
+        this.id = information.id;
+        taskClassname = information.taskClassname;
+        this.prefixes = information.prefixes;
+        this.pathArguments = information.pathArguments;
+        this.output = new ValueType(information.output);
 
-        namespaces.forEach((key, value) -> prefixes.put(value, key));
 
-        final TaskDescription description = classInfo.getAnnotation(TaskDescription.class);
-        if (description == null) {
-            throw new XPMRuntimeException("The class %s has no TaskDescription annotation", classInfo);
+        // Add inputs
+        for (Map.Entry<String, InputInformation> entry : information.inputs.entrySet()) {
+            String name = entry.getKey();
+            final InputInformation field = entry.getValue();
+            Input input = new JsonInput(getType(field));
+            input.setDocumentation(field.help);
+            input.setOptional(!field.required);
+            inputs.put(name, input);
         }
 
-        namespaces.putAll(Manager.PREDEFINED_PREFIXES);
-        this.id = QName.parse(description.id(), namespaces);
-        this.output = new Type(QName.parse(description.output(), namespaces));
-
-        for (FieldInfo field : classInfo.getDeclaredFields()) {
-            //final Object jsonArgument = field.getAnnotation(jsonArgumentClass.class);
-            final JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
-
-            // TODO: add default values, etc.
-            String fieldName = field.getName();
-            if (jsonArgument != null) {
-                Input input = new JsonInput(getType(field));
-                input.setDocumentation(jsonArgument.help());
-                input.setOptional(!jsonArgument.required());
-                String name = getString(jsonArgument.name(), fieldName);
-                inputs.put(name, input);
-            }
-
-            final Path path = field.getAnnotation(Path.class);
-            if (path != null) {
-                String copy = getString(path.copy(), fieldName);
-                String relativePath = getString(path.value(), fieldName);
-                pathArguments.add(new PathArgument(copy, relativePath));
-            }
-        }
 
         // Adds JVM
-        JsonInput input = new JsonInput(new Type(Manager.XP_OBJECT));
+        JsonInput input = new JsonInput(new Type(Constants.XP_OBJECT));
         input.setOptional(true);
-        inputs.put(JVM_OPTIONS, input);
+        this.inputs.put(JVM_OPTIONS, input);
     }
 
-    private static String getString(String value, String defaultValue) {
-        return "".equals(value) ? defaultValue : value;
-    }
-
-    private Type getType(FieldInfo field) {
-        final ClassInfo type = field.getType();
-
-        if (type.belongs(java.lang.Integer.class) || type.belongs(Integer.TYPE)
-                || type.belongs(java.lang.Long.class) || type.belongs(Long.TYPE)
-                || type.belongs(Short.class) || type.belongs(Short.TYPE)) {
-            return new ValueType(ValueType.XP_INTEGER);
-        }
-
-        if (type.belongs(java.lang.Double.class) || type.belongs(java.lang.Float.class)) {
-            return new ValueType(ValueType.XP_REAL);
-        }
-
-        if (type.belongs(String.class))
-            return new ValueType(ValueType.XP_STRING);
-
-
-        // Otherwise, just return any
-        return new ValueType(Manager.XP_ANY);
+    private Type getType(InputInformation field) {
+        return new ValueType(field.getValueType());
     }
 
     @Override
@@ -205,7 +160,7 @@ public class JavaTaskFactory extends TaskFactory {
             for (Json element : json.values()) {
                 if (element instanceof JsonObject) {
                     JsonObject object = (JsonObject) element;
-                    final Json r = object.get(Manager.XP_RESOURCE.toString());
+                    final Json r = object.get(Constants.XP_RESOURCE.toString());
                     if (r == null) continue;
 
                     final Object o = r.get();

@@ -75,7 +75,7 @@ public class Type {
      * @param element The XML node to validate
      */
     public void validate(Json element) throws ValueMismatchException {
-        if (qname().equals(Manager.XP_ANY))
+        if (qname().equals(Constants.XP_ANY))
             return;
 
         QName type = element.type();

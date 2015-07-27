@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager.plans.functions;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -68,7 +68,7 @@ public class MergeFunction implements Function {
             }
         }
         if (outputType != null)
-            returned.put(Manager.XP_TYPE.toString(), outputType.toString());
+            returned.put(Constants.XP_TYPE.toString(), outputType.toString());
         return ImmutableList.of(returned).iterator();
     }
 

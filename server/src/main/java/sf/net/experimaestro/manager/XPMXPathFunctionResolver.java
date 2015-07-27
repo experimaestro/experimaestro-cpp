@@ -26,7 +26,6 @@ import javax.xml.xpath.XPathFunction;
 import javax.xml.xpath.XPathFunctionException;
 import javax.xml.xpath.XPathFunctionResolver;
 import java.io.File;
-import java.util.List;
 
 import static java.lang.String.format;
 
@@ -94,7 +93,7 @@ public class XPMXPathFunctionResolver implements XPathFunctionResolver {
 
     @Override
     public XPathFunction resolveFunction(QName functionName, int arity) {
-        if (Manager.EXPERIMAESTRO_NS.equals(functionName.getNamespaceURI())) {
+        if (Constants.EXPERIMAESTRO_NS.equals(functionName.getNamespaceURI())) {
             final String name = functionName.getLocalPart();
             if ("parentPath".equals(name) && arity == 1)
                 return ParentPath_1;

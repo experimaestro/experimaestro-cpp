@@ -20,8 +20,8 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
@@ -67,7 +67,7 @@ public class JsonReal extends Json {
 
     @Override
     public QName type() {
-        return ValueType.XP_REAL;
+        return Constants.XP_REAL;
     }
 
     @Override

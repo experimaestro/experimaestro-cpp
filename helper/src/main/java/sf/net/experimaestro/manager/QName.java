@@ -20,9 +20,7 @@ package sf.net.experimaestro.manager;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Map;
@@ -36,7 +34,6 @@ import static java.lang.String.format;
 /**
  * A qualified name that can be compared
  *
- * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
 public class QName implements Comparable<QName> {
@@ -49,7 +46,6 @@ public class QName implements Comparable<QName> {
      * </ul>
      */
     final static Pattern QNAME_PATTERN;
-    final static private Logger LOGGER = Logger.getLogger();
 
     static {
         try {
@@ -58,7 +54,6 @@ public class QName implements Comparable<QName> {
                     Pattern
                             .compile("(?:\\{(\\w(?:\\w|[/\\.:-])+)\\}|(\\w+):)?((?:\\w|[-\\.$])+)");
         } catch (PatternSyntaxException e) {
-            LOGGER.error("Could not initialise the pattern: %s", e);
             throw e;
         }
     }
@@ -75,8 +70,8 @@ public class QName implements Comparable<QName> {
     /**
      * Constructs with an URI and a local name
      *
-     * @param uri
-     * @param localName
+     * @param uri The URI
+     * @param localName The local name
      */
     public QName(String uri, String localName) {
         this.uri = uri == null ? "" : uri;
@@ -85,9 +80,8 @@ public class QName implements Comparable<QName> {
 
     /**
      * Create a QName from an element
-     *
-     * @param node
-     * @return
+
+     * @param node The node that defines the qname
      */
     public QName(Node node) {
         this(node.getNamespaceURI(), node.getLocalName());
@@ -106,8 +100,10 @@ public class QName implements Comparable<QName> {
      * <li>prefix:name</li>
      * </ul>
      *
-     * @param qname A qualified name string
-     * @return
+     * @param qname    A qualified name string
+     * @param context  An XML element context
+     * @param prefixes The defined namespace prefixes
+     * @return A new QName object
      */
     public static QName parse(String qname, Element context,
                               Function<String, String> prefixes) {
@@ -124,13 +120,12 @@ public class QName implements Comparable<QName> {
             if (url == null && prefixes != null)
                 url = prefixes.apply(prefix);
             if (url == null)
-                throw new XPMRuntimeException(
-                        "Type [%s] is not a valid type: namespace prefix [%s] not bound",
-                        qname, prefix);
+                throw new RuntimeException(
+                        format("Type [%s] is not a valid type: namespace prefix [%s] not bound",
+                                qname, prefix));
         }
 
         String name = matcher.group(3);
-        LOGGER.debug("[%s] parsed as %s", qname, new QName(url, name));
         return new QName(url, name);
     }
 

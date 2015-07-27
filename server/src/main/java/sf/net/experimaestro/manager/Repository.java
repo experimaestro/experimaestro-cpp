@@ -49,7 +49,7 @@ public class Repository extends AbstractRepository {
     /**
      * The Experimaestro default module
      */
-    Module defaultModule = new Module(new QName(Manager.EXPERIMAESTRO_NS, "main"));
+    Module defaultModule = new Module(new QName(Constants.EXPERIMAESTRO_NS, "main"));
     /**
      * The list of available task factories
      */

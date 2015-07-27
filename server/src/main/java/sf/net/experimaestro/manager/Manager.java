@@ -50,36 +50,6 @@ import static java.lang.String.format;
  */
 public class Manager {
 
-    public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
-    public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
-
-    public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
-    public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
-    public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
-    public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
-    public static final String EXPERIMAESTRO_PREFIX = "xp";
-    public static final QName XP_TYPE = new QName(null, "$type");
-
-    /**
-     * The simple value of the object
-     */
-    public static final QName XP_VALUE = new QName(null, "$value");
-
-    /**
-     * The resource associated with the object
-     */
-    public static final QName XP_RESOURCE = new QName(null, "$resource");
-
-    /// Ignored value
-    public static final QName XP_IGNORE = new QName(null, "$ignore");
-    public static final String XPM_SIGNATURE = "signature.xpm";
-    public static final String OLD_XPM_SIGNATURE = ".xpm-signature";
-
-    static {
-        PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
-    }
-
-    public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
     /**
      * Get the namespaces (default and element based)
@@ -88,7 +58,7 @@ public class Manager {
      */
     public static Map<String, String> getNamespaces(Element element) {
         TreeMap<String, String> map = new TreeMap<>();
-        for (Entry<String, String> mapping : PREDEFINED_PREFIXES.entrySet())
+        for (Entry<String, String> mapping : Constants.PREDEFINED_PREFIXES.entrySet())
             map.put(mapping.getKey(), mapping.getValue());
         for (Entry<String, String> mapping : XMLUtils.getNamespaces(element))
             map.put(mapping.getKey(), mapping.getValue());
@@ -164,11 +134,11 @@ public class Manager {
         Files.createDirectories(directory ? uniquePath : uniquePath.getParent());
 
         // Create the signature
-        Path signature = directory ? uniquePath.resolve(Manager.XPM_SIGNATURE) : uniquePath;
+        Path signature = directory ? uniquePath.resolve(Constants.XPM_SIGNATURE) : uniquePath;
 
         if (directory) {
             // Move old signature to new location (no more hidden files !)
-            Path oldSignature = uniquePath.resolve(Manager.OLD_XPM_SIGNATURE);
+            Path oldSignature = uniquePath.resolve(Constants.OLD_XPM_SIGNATURE);
             if (Files.exists(oldSignature)) {
                 Files.move(oldSignature, signature);
             }

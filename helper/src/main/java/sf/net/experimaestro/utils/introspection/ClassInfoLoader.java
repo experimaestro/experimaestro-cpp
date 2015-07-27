@@ -18,10 +18,6 @@ package sf.net.experimaestro.utils.introspection;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableMap;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.log.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -31,13 +27,12 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A lightweight class info loader
  */
 public class ClassInfoLoader {
-    final static private Logger LOGGER = Logger.getLogger();
-
     final ClassLoader classLoader;
 
     private final Path[] classpath;
@@ -59,9 +54,9 @@ public class ClassInfoLoader {
                     this.classpath[i] = FileSystems.getFileSystem(uri).getPath("/");
                 } catch (FileSystemNotFoundException e) {
                     try {
-                        this.classpath[i] = FileSystems.newFileSystem(uri, ImmutableMap.of(), null).getPath("/");
+                        Map<String, ?> env = new HashMap<>();
+                        this.classpath[i] = FileSystems.newFileSystem(uri, env, null).getPath("/");
                     } catch(Throwable e2) {
-                        LOGGER.error(e2, "Error while creating ZIP filesystem with %s", uri);
                         throw new IOException("Could not create ZIP filesystem with " + uri + ": " + e2);
                     }
                 }
@@ -94,7 +89,7 @@ public class ClassInfoLoader {
                     return Files.newInputStream(file);
                 }
             } catch (IOException e) {
-                LOGGER.warn(e, "I/O error while trying to retrieve path %s", path);
+//                LOGGER.warn(e, "I/O error while trying to retrieve path %s", path);
             }
         }
 

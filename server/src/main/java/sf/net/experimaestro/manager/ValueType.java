@@ -23,7 +23,6 @@ import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.nio.file.Path;
-import java.util.HashSet;
 
 /**
  * Represents an atomic value
@@ -34,32 +33,8 @@ import java.util.HashSet;
 public class ValueType extends Type {
     final static private Logger LOGGER = Logger.getLogger();
 
-    // Set of all atomic types
-    public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
-
-    static final public QName XP_STRING = registerAtomicType(Manager.EXPERIMAESTRO_NS, "string");
-    static final public QName XP_REAL = registerAtomicType(Manager.EXPERIMAESTRO_NS, "real");
-    static final public QName XP_INTEGER = registerAtomicType(Manager.EXPERIMAESTRO_NS, "integer");
-    static final public QName XP_BOOLEAN = registerAtomicType(Manager.EXPERIMAESTRO_NS, "boolean");
-    static final public QName XP_RESOURCE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "resource");
-
-    /** Type path is generic (file or directory) */
-    public static final QName XP_PATH = registerAtomicType(Manager.EXPERIMAESTRO_NS, "path");
-    /** Corresponds to a file on disk */
-    public static final QName XP_FILE = registerAtomicType(Manager.EXPERIMAESTRO_NS, "file");
-    /** Corresponds to a directory on disk */
-    public static final QName XP_DIRECTORY = registerAtomicType(Manager.EXPERIMAESTRO_NS, "directory");
-
-    public static final QName XP_XML = registerAtomicType(Manager.EXPERIMAESTRO_NS, "xml");
-
     public ValueType(QName type) {
         super(type);
-    }
-
-    private static QName registerAtomicType(String ns, String local) {
-        QName qName = new QName(ns, local);
-        ATOMIC_TYPES.add(qName);
-        return qName;
     }
 
     /**
@@ -71,8 +46,8 @@ public class ValueType extends Type {
      */
     static public Json wrapString(String string, QName type) {
         JsonObject json = new JsonObject();
-        json.put(Manager.XP_VALUE.toString(), string);
-        json.put(Manager.XP_TYPE.toString(), type.toString());
+        json.put(Constants.XP_VALUE.toString(), string);
+        json.put(Constants.XP_TYPE.toString(), type.toString());
         return json;
     }
 
@@ -97,7 +72,7 @@ public class ValueType extends Type {
     }
 
     static public Json wrap(Path value) {
-        return wrapString(value.toString(), XP_PATH);
+        return wrapString(value.toString(), Constants.XP_PATH);
     }
 
     public static Json wrapObject(Object value) {
@@ -129,7 +104,7 @@ public class ValueType extends Type {
 
     @Override
     public void validate(Json element) throws ValueMismatchException {
-        if (qname().equals(Manager.XP_ANY))
+        if (qname().equals(Constants.XP_ANY))
             return;
 
         QName type = element.type();
@@ -137,7 +112,7 @@ public class ValueType extends Type {
         if (type.equals(qname()))
             return;
 
-        if (qname().equals(XP_REAL) && type.equals(XP_INTEGER))
+        if (qname().equals(Constants.XP_REAL) && type.equals(Constants.XP_INTEGER))
             return;
 
         throw new ValueMismatchException("Parameter was set to a value with a wrong type [%s] - expected [%s]",

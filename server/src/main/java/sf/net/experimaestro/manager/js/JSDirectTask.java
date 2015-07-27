@@ -76,7 +76,7 @@ public class JSDirectTask extends Task {
         // Handles the type
         if (outputType != null) {
             // If the output is a generic object, modify the value
-            resultObject.put(Manager.XP_TYPE.toString(), new JsonString(outputType.toString()));
+            resultObject.put(Constants.XP_TYPE.toString(), new JsonString(outputType.toString()));
         }
 
         // Copy the requested outputs

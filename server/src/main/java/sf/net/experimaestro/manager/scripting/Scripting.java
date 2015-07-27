@@ -23,7 +23,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -100,7 +100,7 @@ public class Scripting {
 
     public static void forEachConstant(BiConsumer<String, Object> f) {
         f.accept("PIPE", Command.Pipe.getInstance());
-        f.accept("xp", Manager.EXPERIMAESTRO_NS_OBJECT);
+        f.accept("xp", Constants.EXPERIMAESTRO_NS_OBJECT);
     }
 
     public static void forEachObject(BiConsumer<String, Object> f) {

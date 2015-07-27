@@ -18,11 +18,7 @@ package sf.net.experimaestro.utils.introspection;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
@@ -50,10 +46,10 @@ public interface AnnotatedElement {
                     try {
                         return annotationClass.getMethod(name).getDefaultValue();
                     } catch (NoSuchMethodException e) {
-                        throw new XPMRuntimeException(e);
+                        throw new RuntimeException(e);
                     }
                 });
     }
 
-    AnnotationInfo getAnnotationInfo(Class<?> annotationClass);
+    <T> AnnotationInfo<T> getAnnotationInfo(Class<T> annotationClass);
 }

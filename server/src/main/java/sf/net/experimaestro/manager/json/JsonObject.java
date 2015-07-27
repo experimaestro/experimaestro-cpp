@@ -21,9 +21,8 @@ package sf.net.experimaestro.manager.json;
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.utils.Output;
 
@@ -49,8 +48,8 @@ public class JsonObject extends Json {
 
     private TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
 
-    public static final String XP_TYPE_STRING = Manager.XP_TYPE.toString();
-    public static final String XP_VALUE_STRING = Manager.XP_VALUE.toString();
+    public static final String XP_TYPE_STRING = Constants.XP_TYPE.toString();
+    public static final String XP_VALUE_STRING = Constants.XP_VALUE.toString();
 
     public JsonObject() {}
 
@@ -67,24 +66,24 @@ public class JsonObject extends Json {
 
     @Override
     public boolean isSimple() {
-        if (!map.containsKey(Manager.XP_VALUE.toString())) {
+        if (!map.containsKey(Constants.XP_VALUE.toString())) {
             return false;
         }
 
-        return ValueType.ATOMIC_TYPES.contains(type());
+        return Constants.ATOMIC_TYPES.contains(type());
     }
 
     @Override
     public Object get() {
         QName parsedType = type();
 
-        Json value = map.get(Manager.XP_VALUE.toString());
+        Json value = map.get(Constants.XP_VALUE.toString());
         if (value == null)
             throw new IllegalArgumentException("No value in the Json object");
 
         switch (parsedType.getNamespaceURI()) {
 
-            case Manager.EXPERIMAESTRO_NS:
+            case Constants.EXPERIMAESTRO_NS:
                 switch (parsedType.getLocalPart()) {
                     case "string":
                         if (!(value instanceof JsonString))
@@ -137,9 +136,9 @@ public class JsonObject extends Json {
 
     @Override
     public QName type() {
-        Json type = map.get(Manager.XP_TYPE.toString());
+        Json type = map.get(Constants.XP_TYPE.toString());
         if (type == null)
-            return Manager.XP_OBJECT;
+            return Constants.XP_OBJECT;
 
         if (!(type instanceof JsonString))
             throw new IllegalArgumentException("No type in the Json object");
@@ -199,8 +198,8 @@ public class JsonObject extends Json {
             return true;
         }
 
-        if (map.containsKey(Manager.XP_IGNORE.toString())) {
-            Json value = map.get(Manager.XP_IGNORE.toString());
+        if (map.containsKey(Constants.XP_IGNORE.toString())) {
+            Json value = map.get(Constants.XP_IGNORE.toString());
             if (value instanceof JsonBoolean) {
                 if (((JsonBoolean) value).getBoolean()) {
                     return true;
@@ -219,14 +218,14 @@ public class JsonObject extends Json {
         }
 
         if (isSimple() && options.simplifyValues) {
-            map.get(Manager.XP_VALUE.toString()).writeDescriptorString(out, options);
+            map.get(Constants.XP_VALUE.toString()).writeDescriptorString(out, options);
             return;
         }
 
         Set<String> ignored_keys = new HashSet<>();
-        ignored_keys.add(Manager.XP_IGNORE.toString());
-        if (map.containsKey(Manager.XP_IGNORE.toString())) {
-            Json value = map.get(Manager.XP_IGNORE.toString());
+        ignored_keys.add(Constants.XP_IGNORE.toString());
+        if (map.containsKey(Constants.XP_IGNORE.toString())) {
+            Json value = map.get(Constants.XP_IGNORE.toString());
             if (value instanceof JsonString) {
                 ignored_keys.add(((JsonString) value).string);
             } else if (value instanceof JsonArray) {
@@ -293,7 +292,7 @@ public class JsonObject extends Json {
             QName qname = lcx.qname(entry.getKey());
             Object pValue = entry.getValue();
 
-            if (qname.equals(Manager.XP_TYPE)) {
+            if (qname.equals(Constants.XP_TYPE)) {
                 pValue = lcx.qname(entry.getValue());
             }
 

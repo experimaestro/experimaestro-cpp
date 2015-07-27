@@ -37,7 +37,7 @@ public class NSContext implements NamespaceContext {
     public String getNamespaceURI(String prefix) {
         String uri = node.lookupNamespaceURI(prefix);
         if (uri == null)
-            uri = Manager.PREDEFINED_PREFIXES.get(prefix);
+            uri = Constants.PREDEFINED_PREFIXES.get(prefix);
         if (uri == null)
             throw new XPMRuntimeException("Prefix %s not bound", prefix);
         LOGGER.debug("Prefix %s maps to %s", prefix, uri);

@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
@@ -70,7 +70,7 @@ public class JsonBoolean extends Json {
 
     @Override
     public QName type() {
-        return ValueType.XP_BOOLEAN;
+        return Constants.XP_BOOLEAN;
     }
 
     @Override

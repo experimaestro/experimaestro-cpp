@@ -26,12 +26,12 @@ import net.sf.saxon.om.StructuredQName;
 import net.sf.saxon.trans.XPathException;
 import net.sf.saxon.value.SequenceType;
 import net.sf.saxon.value.SingletonItem;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 
 import java.io.File;
 
 public class ParentPath extends ExtensionFunctionDefinition {
-    private static final StructuredQName NAME = new StructuredQName(Manager.EXPERIMAESTRO_PREFIX, Manager.EXPERIMAESTRO_NS, "parentPath");
+    private static final StructuredQName NAME = new StructuredQName(Constants.EXPERIMAESTRO_PREFIX, Constants.EXPERIMAESTRO_NS, "parentPath");
     private static final SequenceType[] SINGLE_STRING = new SequenceType[]{SequenceType.SINGLE_STRING};
     private static final long serialVersionUID = 1L;
 

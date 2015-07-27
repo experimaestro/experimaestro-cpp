@@ -34,7 +34,7 @@ public class FieldInfo implements AnnotatedElement {
     }
 
     @Override
-    public AnnotationInfo getAnnotationInfo(Class<?> annotationClass) {
+    public <T> AnnotationInfo<T> getAnnotationInfo(Class<T> annotationClass) {
         return annotations.get(annotationClass.getName());
     }
 

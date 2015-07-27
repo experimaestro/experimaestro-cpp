@@ -23,7 +23,7 @@ import java.util.HashMap;
 /**
  * Created by bpiwowar on 3/10/14.
  */
-public class AnnotationInfo {
+public class AnnotationInfo<T> {
     final public ClassInfo annotationClass;
     final public HashMap<String, Object> content = new HashMap<>();
 

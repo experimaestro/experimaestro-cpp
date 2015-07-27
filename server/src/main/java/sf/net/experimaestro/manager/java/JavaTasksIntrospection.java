@@ -18,16 +18,16 @@ package sf.net.experimaestro.manager.java;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-import net.bpiwowar.experimaestro.tasks.AbstractTask;
+import net.bpiwowar.experimaestro.tasks.Analyze;
 import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.Introspection;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
 import sf.net.experimaestro.utils.log.Logger;
@@ -35,23 +35,17 @@ import sf.net.experimaestro.utils.log.Logger;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
+import java.net.URI;
+import java.nio.file.*;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 /**
  *
  */
 public class JavaTasksIntrospection {
-    public static final String META_INF_PATH = "META-INF/net.bpiwowar.experimaestro/tasks.json";
     final static Logger LOGGER = Logger.getLogger();
     Path[] classpath;
 
@@ -111,78 +105,41 @@ public class JavaTasksIntrospection {
     }
 
 
-    private static void forEachClass(ClassInfoLoader cl, Path[] classpath, BiFunction<ClassInfo, Description, ?> f) throws IOException, ExperimaestroException {
-
-        for (Path base : classpath) {
-            final Path infoFile = base.resolve(META_INF_PATH);
-            if (!Files.exists(infoFile)) {
-                continue;
-            }
-
-            Type collectionType = new TypeToken<Description>() {
-            }.getType();
-            final Description description;
-            try {
-                final Gson gson = new GsonBuilder()
-                        .create();
-                final InputStreamReader reader = new InputStreamReader(Files.newInputStream(infoFile));
-                description = gson.fromJson(reader, collectionType);
-            } catch (IllegalStateException e) {
-                throw new ExperimaestroException(e, "Could not read json file %s", infoFile)
-                        .addContext("while inspecting resource %s", base);
-            }
-
-
-            final Consumer<Introspection.ClassFile> action = t -> {
-                try {
-                    final ClassInfo classInfo = new ClassInfo(cl, t.file);
-                    if (classInfo.belongs(AbstractTask.class)) {
-                        f.apply(classInfo, description);
-                    }
-                } catch (IOException e) {
-                    throw new XPMRuntimeException(e);
-                }
-            };
-
-            // Get forEachClass through package inspection
-            if (description.packages != null) {
-                for (String name : description.packages) {
-                    Introspection.findClasses(base, 1, name).forEach(action);
-                }
-            }
-
-            // Get forEachClass directly
-            if (description.classes != null) {
-                for (String name : description.classes) {
-                    final Path fileObject = base.resolve(name.replace('.', '/'));
-                    action.accept(new Introspection.ClassFile(fileObject, name));
-                }
-            }
-        }
-    }
-
     private Collection<JavaTaskFactory> addToRepository(Repository repository, ClassInfoLoader cl) throws ExperimaestroException, IOException {
         ArrayList<JavaTaskFactory> factories = new ArrayList<>();
-        BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
+        BiFunction<ClassInfo, Analyze.Description, ?> f = (classInfo, description) -> {
             // Creates the task factory
-            JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, classInfo, description.namespaces);
+            JavaTaskInformation information = new JavaTaskInformation(classInfo, description.namespaces);
+            JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, information);
             repository.addFactory(factory);
             factories.add(factory);
             return true;
         };
 
-        forEachClass(cl, classpath, f);
+        Analyze.forEachClass(cl, classpath, f, false);
         return factories;
     }
 
-    /**
-     * Json description
-     */
-    static class Description {
-        Map<String, String> namespaces;
-        ArrayList<String> packages;
-        ArrayList<String> classes;
+
+    public static void addJarToRepository(Repository repository, Path jarPath) throws IOException {
+        Path [] classpath = new Path[] { jarPath };
+        URI uri = URI.create("jar:" + jarPath.toUri() + "!/");
+        try (FileSystem fs = FileSystems.newFileSystem(uri, ImmutableMap.of())) {
+            final Path path = Paths.get(uri);
+            final Path taskPath = path.resolve(Constants.JAVATASK_TASKS_PATH);
+            if (!Files.isRegularFile(taskPath)) {
+                throw new XPMScriptRuntimeException("Could not find file %s", path);
+            }
+            final Gson gson = new GsonBuilder().create();
+            try(final BufferedReader reader = Files.newBufferedReader(taskPath)) {
+                final ArrayList<JavaTaskInformation> list = gson.fromJson(reader, Analyze.INFORMATION_TYPE);
+                for (JavaTaskInformation information : list) {
+                    // Creates the task factory
+                    JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, information);
+                    repository.addFactory(factory);
+                }
+            }
+        }
+
     }
-
-
 }

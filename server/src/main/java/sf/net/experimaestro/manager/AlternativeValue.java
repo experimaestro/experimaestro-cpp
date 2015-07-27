@@ -86,7 +86,7 @@ public class AlternativeValue extends Value {
     @Override
     public void set(Json value) {
         QName type = value.type();
-        if (!type.equals(ValueType.XP_STRING)) {
+        if (!type.equals(Constants.XP_STRING)) {
             if (alternativeInput.getType().qname().equals(type)) {
                 // Nothing to do
                 LOGGER.info("Alternative input already generated [%s]", alternativeInput.getType());
@@ -97,7 +97,7 @@ public class AlternativeValue extends Value {
         } else {
             String key = value.get().toString();
             final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
-            QName qname = QName.parse(key, null, Manager.PREDEFINED_PREFIXES);
+            QName qname = QName.parse(key, null, Constants.PREDEFINED_PREFIXES);
             TaskFactory subFactory = factories.get(qname);
             if (subFactory == null)
                 throw new XPMRuntimeException(

@@ -20,7 +20,7 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.common.base.Joiner;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.ExposeMode;
@@ -111,7 +111,7 @@ public class JsonArray extends Json implements Iterable<Json> {
 
     @Override
     public QName type() {
-        return Manager.XP_ARRAY;
+        return Constants.XP_ARRAY;
     }
 
     @Override

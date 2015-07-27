@@ -26,7 +26,7 @@ import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.*;
 import org.w3c.dom.Node;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSNamespaceContext;
@@ -256,7 +256,7 @@ public class JSUtils {
                 QName qname = QName.parse(JSUtils.toString(entry.getKey()), nsContext);
                 Object pValue = entry.getValue();
 
-                if (qname.equals(Manager.XP_TYPE))
+                if (qname.equals(Constants.XP_TYPE))
                     pValue = QName.parse(JSUtils.toString(pValue), nsContext).toString();
 
                 String key = qname.toString();

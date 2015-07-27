@@ -47,7 +47,7 @@ public class Copy extends Plan {
         this.setFactory(new AnonymousTaskFactory());
         PlanInputs mappings = Plan.getMappings(plan, cx);
 
-        Type anyType = new Type(Manager.XP_ANY);
+        Type anyType = new Type(Constants.XP_ANY);
 
         for (DotName name : mappings.getMap().keySet()) {
             if (name.size() != 1)
@@ -92,7 +92,7 @@ public class Copy extends Plan {
         public Json doRun(ScriptContext taskContext) {
             // We just copy the inputs as an output
             JsonObject json = new JsonObject();
-            json.put(Manager.XP_TYPE.toString(), outputType.qname().toString());
+            json.put(Constants.XP_TYPE.toString(), outputType.qname().toString());
 
             // Loop over non null inputs
             for (Map.Entry<String, Value> entry : values.entrySet()) {

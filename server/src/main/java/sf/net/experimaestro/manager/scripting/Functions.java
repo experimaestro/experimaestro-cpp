@@ -18,13 +18,11 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
+import com.sun.nio.zipfs.ZipPath;
+import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
@@ -51,15 +49,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystemException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
@@ -275,7 +272,7 @@ public class Functions {
         ScriptContext.get().setDefaultLauncher(launcher);
     }
 
-    @Expose(value = "java_repository", optional = 1)
+    @Expose(value = "inspect_java_repository", optional = 1)
     @Help("Include a repository from introspection of a java project")
     static public void includeJavaRepository(final Connector connector, String[] paths, Path cachePath) throws IOException, ExperimaestroException, ClassNotFoundException {
         Path[] classpath = Arrays.stream(paths).map(path -> {
@@ -289,14 +286,13 @@ public class Functions {
         JavaTasksIntrospection.addToRepository(context().getRepository(), classpath, cachePath);
     }
 
-    @Expose(optional = 1)
-    static public void includeJavaRepository(String[] paths, Path cachePath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        includeJavaRepository(ScriptContext.get().getConnector(), paths, cachePath);
+    @Expose(value = "load_java_repository")
+    @Help("Include a repository from introspection of a JAR file")
+    static public void includeJavaRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
+        JavaTasksIntrospection.addJarToRepository(context().getRepository(), jarPath);
     }
 
-
-
-        @Expose()
+    @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
     static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
@@ -340,12 +336,12 @@ public class Functions {
         if (resource != null) {
             return resource;
         }
-        throw new XPMRhinoException("Object does not contain a resource (key %s)", Manager.XP_RESOURCE);
+        throw new XPMRhinoException("Object does not contain a resource (key %s)", Constants.XP_RESOURCE);
     }
 
     private static Resource getResource(JsonObject json) throws SQLException {
-        if (json.containsKey(Manager.XP_RESOURCE.toString())) {
-            final Object o = json.get(Manager.XP_RESOURCE.toString()).get();
+        if (json.containsKey(Constants.XP_RESOURCE.toString())) {
+            final Object o = json.get(Constants.XP_RESOURCE.toString()).get();
             if (o instanceof Resource) {
                 return (Resource) o;
             } else {

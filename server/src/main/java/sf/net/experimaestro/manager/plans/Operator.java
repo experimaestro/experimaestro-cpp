@@ -30,7 +30,7 @@ import org.mozilla.javascript.NativeObject;
 import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
@@ -762,7 +762,7 @@ public abstract class Operator {
 
     @Expose
     public Operator group_by(@NotNull Operator... operators) {
-        return group_by(Manager.XP_ARRAY, operators);
+        return group_by(Constants.XP_ARRAY, operators);
     }
 
     @Expose()

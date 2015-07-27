@@ -18,8 +18,6 @@ package sf.net.experimaestro.utils.introspection;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -36,9 +34,8 @@ import static java.lang.String.format;
 /**
  * An object to hold class information. For speed purposes, this is reconstructed directly from the
  * classfile header without calling the classloader.
- * <p/>
- * See
- * http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html
+ * <p>
+ * See http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html
  */
 public class ClassInfo implements AnnotatedElement {
     /**
@@ -88,7 +85,10 @@ public class ClassInfo implements AnnotatedElement {
     private Class<?> theClass;
 
     /**
-     * This class was encountered on the classpath.
+     * Creates a class information without actually loading the information
+     *
+     * @param cil  The class info loader
+     * @param name The name of the class
      */
     public ClassInfo(ClassInfoLoader cil, String name) {
         this.classInfoLoader = cil;
@@ -102,6 +102,10 @@ public class ClassInfo implements AnnotatedElement {
 
     /**
      * Read class information from disk.
+     *
+     * @param classInfoLoader The class information loader
+     * @param stream          The input stream for the class bytecode
+     * @throws IOException if an error occurs while reading the stream
      */
     public ClassInfo(ClassInfoLoader classInfoLoader, final InputStream stream) throws IOException {
         this.classInfoLoader = classInfoLoader;
@@ -118,6 +122,9 @@ public class ClassInfo implements AnnotatedElement {
      */
     private static String readRefdString(DataInputStream inp, Object[] constantPool) throws IOException {
         Object constantPoolObj = readRefd(inp, constantPool);
+        if (constantPoolObj == null) {
+            return null;
+        }
         return (constantPoolObj instanceof Integer ? (String) constantPool[(Integer) constantPoolObj]
                 : (String) constantPoolObj);
     }
@@ -221,12 +228,13 @@ public class ClassInfo implements AnnotatedElement {
                 throw new IllegalStateException(format("Class name %s and %s do not match", name, this.name));
         }
         // Superclass name, with slashes replaced with dots
-        superclass = classInfoLoader.get(readRefdString(inp, constantPool).replace('/', '.'));
+        final String superclassName = toClassName(readRefdString(inp, constantPool));
+        superclass = superclassName == null ? null : classInfoLoader.get(superclassName);
 
         // Interfaces
         int interfaceCount = inp.readUnsignedShort();
         for (int i = 0; i < interfaceCount; i++) {
-            interfaces.add(classInfoLoader.get(readRefdString(inp, constantPool).replace('/', '.')));
+            interfaces.add(classInfoLoader.get(toClassName(readRefdString(inp, constantPool))));
         }
 
         // Fields
@@ -286,6 +294,13 @@ public class ClassInfo implements AnnotatedElement {
                 inp.skipBytes(attributeLength);
             }
         }
+    }
+
+    private String toClassName(String pathname) {
+        if (pathname != null) {
+            return pathname.replace('/', '.');
+        }
+        return null;
     }
 
     /**
@@ -415,13 +430,13 @@ public class ClassInfo implements AnnotatedElement {
                     try {
                         readFromInputStream(stream);
                     } catch (IOException e) {
-                        throw new XPMRuntimeException(e, "Could not read class %s", name);
+                        throw new RuntimeException(format("Could not read class %s", name), e);
                     }
                 } else {
                     try {
                         theClass = classInfoLoader.classLoader.loadClass(name);
                     } catch (ClassNotFoundException e) {
-                        throw new XPMRuntimeException(e, "Could not find class %s", name);
+                        throw new RuntimeException(format("Could not find class %s", name), e);
                     }
                 }
         }
@@ -437,7 +452,7 @@ public class ClassInfo implements AnnotatedElement {
 
 
     @Override
-    public AnnotationInfo getAnnotationInfo(Class<?> annotationClass) {
+    public <T> AnnotationInfo<T> getAnnotationInfo(Class<T> annotationClass) {
         return annotations.get(annotationClass.getName());
     }
 

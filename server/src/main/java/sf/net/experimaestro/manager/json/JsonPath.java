@@ -20,9 +20,8 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import org.json.simple.JSONValue;
-import sf.net.experimaestro.manager.Manager;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.scripting.Exposed;
 
 import java.io.IOException;
@@ -57,12 +56,12 @@ public class JsonPath extends Json {
 
     @Override
     public QName type() {
-        return ValueType.XP_PATH;
+        return Constants.XP_PATH;
     }
 
     @Override
     public boolean canIgnore(JsonWriterOptions options) {
-        return options.ignore.contains(ValueType.XP_PATH);
+        return options.ignore.contains(Constants.XP_PATH);
     }
 
     @Override
@@ -72,7 +71,7 @@ public class JsonPath extends Json {
 
     @Override
     public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        if (options.ignore.contains(ValueType.XP_PATH) || path == null) {
+        if (options.ignore.contains(Constants.XP_PATH) || path == null) {
             writer.write("null");
         } else {
             writer.write('"');
@@ -92,11 +91,11 @@ public class JsonPath extends Json {
     public void write(JsonWriter out) throws IOException {
         out.beginObject();
 
-        out.name(Manager.XP_VALUE.toString());
+        out.name(Constants.XP_VALUE.toString());
         out.value(get().toUri().toString());
 
-        out.name(Manager.XP_TYPE.toString());
-        out.value(ValueType.XP_PATH.toString());
+        out.name(Constants.XP_TYPE.toString());
+        out.value(Constants.XP_PATH.toString());
 
         out.endObject();
     }

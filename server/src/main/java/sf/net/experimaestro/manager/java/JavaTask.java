@@ -21,15 +21,15 @@ package sf.net.experimaestro.manager.java;
 import org.apache.log4j.Level;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.Value;
+import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.scripting.RunningContext;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.utils.introspection.ClassInfo;
+import sf.net.experimaestro.utils.introspection.FieldInfo;
 import sf.net.experimaestro.utils.io.LoggerPrintWriter;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -144,8 +144,8 @@ public class JavaTask extends Task {
 
         // --- Fill some fields in returned json
 
-        json.put(Manager.XP_TYPE.toString(), javaFactory.getOutput().toString());
-        json.put(Manager.XP_RESOURCE.toString(), path.toString());
+        json.put(Constants.XP_TYPE.toString(), javaFactory.getOutput().toString());
+        json.put(Constants.XP_RESOURCE.toString(), path.toString());
 
         for (PathArgument __path : javaFactory.pathArguments) {
             Path relativePath = uniqueDir.resolve(__path.relativePath);
@@ -154,4 +154,5 @@ public class JavaTask extends Task {
 
         return json;
     }
+
 }
