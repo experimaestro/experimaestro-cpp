@@ -38,6 +38,8 @@ import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
+import sf.net.experimaestro.manager.scripting.Languages.Languages;
+import sf.net.experimaestro.manager.scripting.Languages.PYTHON;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -137,13 +139,13 @@ public class Functions {
         return transformOperator;
     }
 
-    @Expose(value = "_")
-    @Deprecated
+    // Used in scripting languages which cannot use $ as first character
+    @Expose(value = "_", languages = Languages.PYTHON)
     public static Object _get_value(Object object) {
         return get_value(object);
     }
 
-    @Expose("$")
+    @Expose(value = "$", languages = Languages.JAVASCRIPT)
     public static Object get_value(Object object) {
         object = unwrap(object);
         if (object instanceof Json)

@@ -19,7 +19,6 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 
-import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.utils.Functional;
 
 import java.lang.reflect.Field;

@@ -35,7 +35,7 @@ import static java.lang.String.format;
 public class PythonNamespaceContext implements NamespaceContext {
     private final ThreadState threadState;
 
-    public PythonNamespaceContext(PythonContext scope) {
+    public PythonNamespaceContext() {
         threadState = Py.getThreadState();
     }
 

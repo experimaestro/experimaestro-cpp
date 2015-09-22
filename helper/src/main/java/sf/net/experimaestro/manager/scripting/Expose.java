@@ -22,6 +22,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.EnumSet;
 
 /**
  * Marks a method which is exposed to scripts
@@ -31,6 +32,7 @@ import java.lang.annotation.Target;
 public @interface Expose {
     /**
      * The name of the function (by default, the name of the method)
+     *
      * @return an empty string if using default, otherwise a valid name
      */
     String value() default "";
@@ -38,12 +40,14 @@ public @interface Expose {
 
     /**
      * Number of arguments that are optional.
+     *
      * @return An integer specifying the number of optional arguments
      */
     int optional() default 0;
 
     /**
      * Optional arguments are at the beginning when true
+     *
      * @return true if the optional arguments are the first
      */
     boolean optionalsAtStart() default false;
@@ -61,4 +65,10 @@ public @interface Expose {
      * @return The mode (default: a method)
      */
     ExposeMode mode() default ExposeMode.METHOD;
+
+    /**
+     * List of languages that may use this method
+     * @return List of languages or empty array if all
+     */
+    Languages[] languages() default {};
 }

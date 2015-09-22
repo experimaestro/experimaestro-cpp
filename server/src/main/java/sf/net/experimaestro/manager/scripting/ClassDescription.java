@@ -62,11 +62,9 @@ public class ClassDescription {
 
     /**
      * Analyze a class and returns the multi-map of names to methods
-     * <p>
-     * Any constructor annotated with JSFunction is a valid functoin
      *
-     * @param aClass
-     * @return
+     * @param aClass The class to analyze
+     * @return The object representing the class for scripting languages
      */
     public static ClassDescription analyzeClass(Class<?> aClass) {
         ClassDescription description = CLASS_DESCRIPTION.get(aClass);

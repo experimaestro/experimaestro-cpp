@@ -18,6 +18,8 @@ package sf.net.experimaestro.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.python.core.Py;
+import org.python.core.ThreadState;
 import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
@@ -78,7 +80,7 @@ public class PythonContext extends LanguageContext {
 
     @Override
     public NamespaceContext getNamespaceContext() {
-        return new PythonNamespaceContext(this);
+        return new PythonNamespaceContext();
     }
 
     @Override
@@ -106,8 +108,8 @@ public class PythonContext extends LanguageContext {
 
     @Override
     public ScriptLocation getScriptLocation() {
-        throw new org.apache.commons.lang.NotImplementedException();
-//        return new ScriptLocation(scriptStack[0].fileName, scriptStack[0].lineNumber);
+        ThreadState threadState = Py.getThreadState();
+        return new ScriptLocation(threadState.frame.f_code.co_filename , threadState.frame.f_lineno);
     }
 
 }
