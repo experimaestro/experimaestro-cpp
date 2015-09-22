@@ -29,6 +29,7 @@ import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
+import sf.net.experimaestro.manager.js.JavaScriptObject;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
@@ -127,12 +128,14 @@ public class PythonRunner implements AutoCloseable {
         final Class<?> objectClass = object.getClass();
 
         // Wrapper case
-        final Constructor constructor = WRAPPERS.get(objectClass);
-        if (constructor != null) {
-            try {
-                return new PythonObject(constructor.newInstance(object));
-            } catch(Exception e) {
-                throw new XPMRuntimeException(e, "Could not construct wrapper %s", objectClass);
+        // Wrapper case -- go up in the hierarchy
+        for (Map.Entry<Class, Constructor> entry : WRAPPERS.entrySet()) {
+            if (entry.getKey().isAssignableFrom(objectClass)) {
+                try {
+                    return new PythonObject(entry.getValue().newInstance(object));
+                } catch (Exception e) {
+                    throw new UnsupportedOperationException("Could not wrap object of class " + objectClass, e);
+                }
             }
         }
 
