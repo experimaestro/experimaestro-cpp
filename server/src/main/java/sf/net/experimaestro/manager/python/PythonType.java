@@ -34,6 +34,8 @@ class PythonType extends PyType {
     protected PythonType(Class<?> aClass) {
         super(PyObject.TYPE);
         this.description = ClassDescription.analyzeClass(aClass);
+        this.builtin = true;
+        this.name = description.getClassName();
     }
 
     @Override

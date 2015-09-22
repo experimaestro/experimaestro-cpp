@@ -38,8 +38,6 @@ import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
-import sf.net.experimaestro.manager.scripting.Languages.Languages;
-import sf.net.experimaestro.manager.scripting.Languages.PYTHON;
 import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;

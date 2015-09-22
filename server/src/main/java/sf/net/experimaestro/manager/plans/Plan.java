@@ -437,6 +437,10 @@ public class Plan extends Operator {
     static Operator getSimple(Object value, LanguageContext lcx){
         value = JSUtils.unwrap(value);
 
+        if (value == null) {
+            throw new IllegalArgumentException("Null value given");
+        }
+
         // --- Already an operator
         if (value instanceof Operator) {
             return (Operator) value;
