@@ -45,7 +45,7 @@ class PythonType extends PyType {
     public PyObject __call__(PyObject[] args, String[] keywords) {
         final ConstructorFunction constructorFunction = new ConstructorFunction(description.getClassName(), description.getConstructors());
 
-        final Object result = constructorFunction.call(null, null, args);
+        final Object result = constructorFunction.call(new PythonContext(), null, args);
         return PythonRunner.wrap(result);
     }
 

@@ -30,7 +30,7 @@ import java.util.ArrayList;
  */
 class PythonObject extends PyObject {
     private final ClassDescription description;
-    private final Object object;
+    final Object object;
 
     public PythonObject(Object object) {
         PythonType pythonType;
