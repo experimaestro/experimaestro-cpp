@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package sf.net.experimaestro.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -19,46 +19,44 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
+import org.python.core.Py;
+import org.python.core.PyObject;
+import org.python.core.ThreadState;
 import sf.net.experimaestro.manager.Namespace;
-import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.utils.JSUtils;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;
 
+import static java.lang.String.format;
+
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSNamespaceContext implements NamespaceContext {
-    private final Scriptable scope;
+public class PythonNamespaceContext implements NamespaceContext {
+    private final ThreadState threadState;
 
-    public JSNamespaceContext(Scriptable scope) {
-        this.scope = scope;
+    public PythonNamespaceContext(PythonContext scope) {
+        threadState = Py.getThreadState();
     }
 
     @Override
     public String getNamespaceURI(String prefix) {
-        if (scope == null)
-            return null;
+        final PyObject object = threadState.frame.getname(prefix);
 
-        Scriptable currentScope = scope;
-        Object object = Scriptable.NOT_FOUND;
-        while (currentScope != null && object == Scriptable.NOT_FOUND) {
-            object = ScriptableObject.getProperty(currentScope, prefix);
-            currentScope = currentScope.getParentScope();
+        if (object == null) {
+            return null;
         }
 
-        if (object == Scriptable.NOT_FOUND)
-            return null;
-        if (object instanceof Wrapper) {
-            object = ((Wrapper) object).unwrap();
+        if (object instanceof PythonObject) {
+            PythonObject pythonObject = (PythonObject) object;
+            if (pythonObject.object instanceof Namespace) {
+                return ((Namespace) pythonObject.object).getURI();
+            }
+
         }
-        if (object instanceof Namespace) {
-            return ((Namespace) object).getURI();
-        }
-        return JSUtils.toString(object);    }
+
+        throw new NotImplementedException(format("Could not return namespace for %s", object.getType()));
+    }
 
     @Override
     public String getPrefix(String namespaceURI) {

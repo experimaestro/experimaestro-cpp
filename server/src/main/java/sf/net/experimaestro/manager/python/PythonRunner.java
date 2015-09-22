@@ -20,11 +20,8 @@ package sf.net.experimaestro.manager.python;
 
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
-import org.python.core.Py;
-import org.python.core.PyCode;
-import org.python.core.PyObject;
-import org.python.core.PyString;
-import org.python.core.PyType;
+import org.mozilla.javascript.NativeJavaArray;
+import org.python.core.*;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
@@ -37,6 +34,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.ParameterizedType;
 import java.nio.file.Path;
@@ -127,6 +125,14 @@ public class PythonRunner implements AutoCloseable {
 
 
         final Class<?> objectClass = object.getClass();
+
+        if (object.getClass().isArray()) {
+            final PyList pyList = new PyList();
+            for(int i = Array.getLength(object); --i >= 0; ) {
+                pyList.add(wrap(Array.get(object, i)));
+            }
+            return pyList;
+        }
 
         // Wrapper case
         // Wrapper case -- go up in the hierarchy

@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.python;
 
 import org.python.core.PyObject;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
+import sf.net.experimaestro.manager.scripting.ExposeMode;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
 import java.lang.reflect.Method;
@@ -67,6 +68,14 @@ class PythonObject extends PyObject {
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
+        final ArrayList<Method> methods = description.getMethods().get(ExposeMode.CALL);
+        if (methods != null) {
+            final MethodFunction methodFunction = new MethodFunction("()");
+            methodFunction.add(object, methods);
+            final PythonContext pcx = new PythonContext();
+            return PythonRunner.wrap(methodFunction.call(pcx, this, args));
+        }
+
         return super.__call__(args, keywords);
     }
 

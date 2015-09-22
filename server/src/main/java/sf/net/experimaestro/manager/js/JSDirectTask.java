@@ -67,63 +67,68 @@ public class JSDirectTask extends Task {
 
         LOGGER.debug("[Running] task: %s", factory.getId());
 
-        final Context cx = Context.getCurrentContext();
+        final Context cx = Context.enter();
 
-        // Get the inputs
-        JsonObject resultObject = new JsonObject();
-        Type outputType = getFactory().getOutput();
+        try {
+            // Get the inputs
+            JsonObject resultObject = new JsonObject();
+            Type outputType = getFactory().getOutput();
 
-        // Handles the type
-        if (outputType != null) {
-            // If the output is a generic object, modify the value
-            resultObject.put(Constants.XP_TYPE.toString(), new JsonString(outputType.toString()));
-        }
-
-        // Copy the requested outputs
-        for (Entry<String, Input> namedInput : getInputs().entrySet()) {
-            final String copyTo = namedInput.getValue().getCopyTo();
-            if (copyTo != null || runFunction == null) {
-                String key = namedInput.getKey();
-                Value value = values.get(key);
-                resultObject.put(copyTo == null ? key : copyTo, value.get());
-            }
-        }
-
-
-        if (runFunction != null) {
-            // We have a run function
-            JsonObject jsoninput = new JsonObject();
-            for (Entry<String, Value> entry : values.entrySet()) {
-                Json input = entry.getValue().get();
-                jsoninput.put(entry.getKey(), input);
+            // Handles the type
+            if (outputType != null) {
+                // If the output is a generic object, modify the value
+                resultObject.put(Constants.XP_TYPE.toString(), new JsonString(outputType.toString()));
             }
 
-            // Switch to our context
-            try (ScriptContext.Swap ignored = taskContext.swap()) {
-                final Object returned = runFunction.call(cx, jsScope, jsObject,
-                        new Object[]{jsoninput, resultObject});
-
-                LOGGER.debug("Returned %s", returned);
-                if (returned == Undefined.instance || returned == null) {
-                    throw new XPMRuntimeException(
-                            "Undefined returned by the function run of task [%s]",
-                            factory.getId());
+            // Copy the requested outputs
+            for (Entry<String, Input> namedInput : getInputs().entrySet()) {
+                final String copyTo = namedInput.getValue().getCopyTo();
+                if (copyTo != null || runFunction == null) {
+                    String key = namedInput.getKey();
+                    Value value = values.get(key);
+                    resultObject.put(copyTo == null ? key : copyTo, value.get());
                 }
-                LOGGER.debug("[/Running] task: %s", factory.getId());
-
-                return JSUtils.toJSON(jsScope, returned);
             }
-        }
 
 
-        // Simplify the output if needed
-        if (outputType == null && values.size() == 1) {
+            if (runFunction != null) {
+                // We have a run function
+                JsonObject jsoninput = new JsonObject();
+                for (Entry<String, Value> entry : values.entrySet()) {
+                    Json input = entry.getValue().get();
+                    jsoninput.put(entry.getKey(), input);
+                }
+
+                // Switch to our context
+                try (ScriptContext.Swap ignored = taskContext.swap()) {
+                    final Object returned = runFunction.call(cx, jsScope, jsObject,
+                            new Object[]{jsoninput, resultObject});
+
+                    LOGGER.debug("Returned %s", returned);
+                    if (returned == Undefined.instance || returned == null) {
+                        throw new XPMRuntimeException(
+                                "Undefined returned by the function run of task [%s]",
+                                factory.getId());
+                    }
+                    LOGGER.debug("[/Running] task: %s", factory.getId());
+
+                    return JSUtils.toJSON(jsScope, returned);
+                }
+            }
+
+
+            // Simplify the output if needed
+            if (outputType == null && values.size() == 1) {
+                LOGGER.debug("[/Running] task: %s", factory.getId());
+                return values.values().iterator().next().get();
+            }
+
             LOGGER.debug("[/Running] task: %s", factory.getId());
-            return values.values().iterator().next().get();
+            return resultObject;
+        } finally {
+            Context.exit();
         }
 
-        LOGGER.debug("[/Running] task: %s", factory.getId());
-        return resultObject;
     }
 
     @Override

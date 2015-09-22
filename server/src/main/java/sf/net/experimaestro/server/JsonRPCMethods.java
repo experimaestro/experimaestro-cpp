@@ -32,26 +32,17 @@ import org.eclipse.jetty.server.Server;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.ContextualException;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.XPMCommandException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.manager.python.PythonRunner;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Listener;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleMessage;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
@@ -61,12 +52,7 @@ import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.log.Router;
 
 import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -397,82 +383,88 @@ public class JsonRPCMethods extends HttpServlet {
 
         final Hierarchy loggerRepository = getScriptLogger();
 
-        // TODO: should be a one shot repository - ugly
-        Repositories repositories = new Repositories(new File("/").toPath());
-        repositories.add(repository, 0);
+        // Enter JS context (so we have just one)
+        Context.enter();
+        try {
+            // TODO: should be a one shot repository - ugly
+            Repositories repositories = new Repositories(new File("/").toPath());
+            repositories.add(repository, 0);
 
-        // Creates and enters a Context. The Context stores information
-        // about the execution environment of a script.
-        try (PythonRunner pythonContext =
-                     new PythonRunner(environment, repositories, scheduler, loggerRepository,
-                             getRequestOutputStream(), getRequestErrorStream())
-        ) {
-            Object result = null;
-            for (JSONArray filePointer : files) {
-                boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
-                final String content = isFile ? null : filePointer.get(1).toString();
-                final String filename = filePointer.get(0).toString();
+            // Creates and enters a Context. The Context stores information
+            // about the execution environment of a script.
+            try (PythonRunner pythonContext =
+                         new PythonRunner(environment, repositories, scheduler, loggerRepository,
+                                 getRequestOutputStream(), getRequestErrorStream())
+            ) {
+                Object result = null;
+                for (JSONArray filePointer : files) {
+                    boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
+                    final String content = isFile ? null : filePointer.get(1).toString();
+                    final String filename = filePointer.get(0).toString();
 
-                final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
-                Path locator = connector.resolve(filename);
-                if (isFile) {
-                    result = pythonContext.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
-                } else {
-                    result = pythonContext.evaluateString(connector, locator, content, filename, 1, null);
+                    final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
+                    Path locator = connector.resolve(filename);
+                    if (isFile) {
+                        result = pythonContext.evaluateReader(connector, locator, new FileReader(filename), filename, 1, null);
+                    } else {
+                        result = pythonContext.evaluateString(connector, locator, content, filename, 1, null);
+                    }
                 }
-            }
 
-            if (result != null)
-                LOGGER.debug("Returns %s", result.toString());
-            else
-                LOGGER.debug("Null result");
+                if (result != null)
+                    LOGGER.debug("Returns %s", result.toString());
+                else
+                    LOGGER.debug("Null result");
 
-            return result != null && result != Scriptable.NOT_FOUND &&
-                    result != Undefined.instance ? result.toString() : "";
+                return result != null && result != Scriptable.NOT_FOUND &&
+                        result != Undefined.instance ? result.toString() : "";
 
-        } catch (ExitException e) {
-            if (e.getCode() == 0) {
-                return null;
-            }
-            throw e;
-        } catch (Throwable e) {
-            Throwable wrapped = e;
-            PyException pye = e instanceof PyException ? (PyException) e : null;
-            LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
-
-            while (wrapped.getCause() != null) {
-                wrapped = wrapped.getCause();
-                if (wrapped instanceof PyException) {
-                    pye = (PyException) wrapped;
+            } catch (ExitException e) {
+                if (e.getCode() == 0) {
+                    return null;
                 }
-            }
+                throw e;
+            } catch (Throwable e) {
+                Throwable wrapped = e;
+                PyException pye = e instanceof PyException ? (PyException) e : null;
+                LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);
 
-            LOGGER.printException(Level.INFO, wrapped);
+                while (wrapped.getCause() != null) {
+                    wrapped = wrapped.getCause();
+                    if (wrapped instanceof PyException) {
+                        pye = (PyException) wrapped;
+                    }
+                }
 
-            org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
+                LOGGER.printException(Level.INFO, wrapped);
 
-            logger.error(wrapped.toString());
+                org.apache.log4j.Logger logger = loggerRepository.getLogger("xpm-rpc");
 
-            for (Throwable ee = e; ee != null; ee = ee.getCause()) {
-                if (ee instanceof ContextualException) {
-                    ContextualException ce = (ContextualException) ee;
-                    List<String> context = ce.getContext();
-                    if (!context.isEmpty()) {
-                        logger.error("[Context]");
-                        for (String s : context) {
-                            logger.error(s);
+                logger.error(wrapped.toString());
+
+                for (Throwable ee = e; ee != null; ee = ee.getCause()) {
+                    if (ee instanceof ContextualException) {
+                        ContextualException ce = (ContextualException) ee;
+                        List<String> context = ce.getContext();
+                        if (!context.isEmpty()) {
+                            logger.error("[Context]");
+                            for (String s : context) {
+                                logger.error(s);
+                            }
                         }
                     }
                 }
+
+                if (pye != null) {
+                    logger.error("[Stack trace]");
+                    logger.error(pye.traceback.dumpStack());
+                }
+
+                throw new RuntimeException(errString.toString());
+
             }
-
-            if (pye != null) {
-                logger.error("[Stack trace]");
-                logger.error(pye.traceback.dumpStack());
-            }
-
-            throw new RuntimeException(errString.toString());
-
+        } finally {
+            Context.exit();
         }
     }
 

@@ -18,9 +18,6 @@ package sf.net.experimaestro.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.python.core.PyException;
 import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
@@ -28,7 +25,6 @@ import sf.net.experimaestro.manager.scripting.LanguageContext;
 import sf.net.experimaestro.manager.scripting.ScriptLocation;
 import sf.net.experimaestro.manager.scripting.ScriptingReference;
 import sf.net.experimaestro.manager.scripting.Wrapper;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;
@@ -82,8 +78,7 @@ public class PythonContext extends LanguageContext {
 
     @Override
     public NamespaceContext getNamespaceContext() {
-        // return new JSNamespaceContext(scope);
-        throw new NotImplementedException();
+        return new PythonNamespaceContext(this);
     }
 
     @Override
