@@ -40,6 +40,7 @@ import java.io.FileReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.ParameterizedType;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -170,7 +171,7 @@ public class PythonRunner implements AutoCloseable {
     }
 
     public Object evaluateReader(LocalhostConnector connector, Path locator, FileReader reader, String filename, int lineno, Object security) throws Exception {
-
+        ScriptContext.get().setCurrentScriptPath(Paths.get(filename));
         final PyCode code = interpreter.compile(reader, filename);
         return interpreter.eval(code);
     }

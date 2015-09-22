@@ -18,7 +18,7 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.sun.nio.zipfs.ZipPath;
+import org.apache.log4j.Hierarchy;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
@@ -30,6 +30,7 @@ import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
 import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSTransform;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
+import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonObject;
@@ -49,14 +50,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.*;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.jar.JarFile;
-import java.util.zip.ZipEntry;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
@@ -202,11 +204,21 @@ public class Functions {
     private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode, true)) {
             sc.setCurrentScriptPath(scriptPath);
-            Scriptable scope = ((JavaScriptContext) cx).scope();
+
+            Scriptable scope;
             final String sourceName = scriptPath.toString();
 
-            final Object result = Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
-            return repositoryMode ? sc.properties : result;
+            if (cx instanceof JavaScriptContext) {
+                scope = ((JavaScriptContext) cx).scope();
+
+                final Object result = Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
+                return repositoryMode ? sc.properties : result;
+            } else {
+                try (JavaScriptRunner jsXPM = new JavaScriptRunner(sc.getRepository(), sc.getScheduler(), (Hierarchy) sc.getMainLogger().getLoggerRepository(), null, sc)) {
+                    final Object result = jsXPM.evaluateReader(new InputStreamReader(inputStream), sourceName, 1, null);
+                    return repositoryMode ? sc.properties : result;
+                }
+            }
         } catch (FileNotFoundException e) {
             throw new XPMRhinoException("File not found: %s", scriptPath);
         }

@@ -32,6 +32,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import sf.net.experimaestro.manager.Repositories;
+import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
@@ -73,8 +74,12 @@ public class JavaScriptRunner implements AutoCloseable {
     private final StaticContext staticContext;
     private final RunningContext runningContext;
 
-    public JavaScriptRunner(Repositories repositories, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
-        staticContext = new StaticContext(scheduler, loggerRepository).repository(repositories);
+    public JavaScriptRunner(Repository repository, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
+        this(repository, scheduler, loggerRepository, debugPort, null);
+    }
+
+    public JavaScriptRunner(Repository repository, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort, ScriptContext scriptContext) throws Exception {
+        staticContext = new StaticContext(scheduler, loggerRepository).repository(repository);
         // --- Debugging via JSDT
         // http://wiki.eclipse.org/JSDT/Debug/Rhino/Embedding_Rhino_Debugger#Example_Code
         ContextFactory factory = new ContextFactory();
@@ -89,7 +94,7 @@ public class JavaScriptRunner implements AutoCloseable {
         context = factory.enterContext();
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
-        scriptContext = staticContext.scriptContext();
+        this.scriptContext = scriptContext == null ? staticContext.scriptContext() : scriptContext;
         runningContext = new RunningContext();
 
         // Create scope
