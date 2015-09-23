@@ -21,12 +21,10 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaClass;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ConstructorFunction;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
@@ -48,7 +46,7 @@ public class JavaScriptClass extends NativeJavaClass {
         String className = ClassDescription.getClassName((Class) javaClass);
         ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
         final JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        Object object = constructorFunction.call(jcx, null, args);
+        Object object = constructorFunction.call(jcx, null, null, args);
         return new JavaScriptObject(object);
     }
 

@@ -73,7 +73,7 @@ class PythonObject extends PyObject {
         function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(function.call(pcx, this, name));
+            return PythonRunner.wrap(function.call(pcx, this, null, name));
         }
 
 
@@ -94,7 +94,7 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(function.call(pcx, this, key));
+            return PythonRunner.wrap(function.call(pcx, this, null, key));
         }
 
         return super.__finditem__(key);
@@ -108,7 +108,7 @@ class PythonObject extends PyObject {
             final MethodFunction methodFunction = new MethodFunction("()");
             methodFunction.add(object, methods);
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(methodFunction.call(pcx, this, args));
+            return PythonRunner.wrap(methodFunction.call(pcx, this, null, args));
         }
 
         return super.__call__(args, keywords);

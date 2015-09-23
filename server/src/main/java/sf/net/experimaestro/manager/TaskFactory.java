@@ -161,7 +161,7 @@ public abstract class TaskFactory {
 
     @Help("Creates a plan from this task")
     @Expose(value = "run", context = true)
-    public Object run(LanguageContext cx, Map map) throws ExperimaestroCannotOverwrite {
+    public Object run(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
         final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
         PlanInputs inputs= Plan.getMappings(map, cx);
         plan.add(inputs);

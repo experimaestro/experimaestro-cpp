@@ -21,6 +21,9 @@ package sf.net.experimaestro.manager.python;
 import org.python.core.PyObject;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
+import java.util.Arrays;
+import java.util.HashMap;
+
 /**
  * Python wrapper for object methods
  */
@@ -32,7 +35,21 @@ class PythonMethod extends PyObject {
     }
 
     @Override
+    public String toString() {
+        return "Python method of " + methodFunction.getKey();
+    }
+
+    @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
-        return PythonRunner.wrap(methodFunction.call(new PythonContext(), null, PythonRunner.unwrap(args)));
+        HashMap<String, Object> options = new HashMap<>();
+
+        final int nbArgs = args.length - keywords.length;
+        for (int i = nbArgs; i < args.length; ++i) {
+            options.put(keywords[i - nbArgs], PythonRunner.unwrap(args[i]));
+        }
+        final Object[] unwrap = PythonRunner.unwrap(Arrays.copyOf(args, nbArgs));
+
+
+        return PythonRunner.wrap(methodFunction.call(new PythonContext(), null, options, unwrap));
     }
 }

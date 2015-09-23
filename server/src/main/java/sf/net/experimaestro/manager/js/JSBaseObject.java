@@ -85,7 +85,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         }
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        return JavaScriptRunner.wrap(jcx, function.call(jcx, thisObj, args));
+        return JavaScriptRunner.wrap(jcx, function.call(jcx, thisObj, null, args));
     }
 
     @Override
@@ -112,7 +112,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
-            final Object result = function.call(jcx, thisObject(), name);
+            final Object result = function.call(jcx, thisObject(), null, name);
             return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
         }
 
@@ -154,7 +154,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         MethodFunction function = getMethodFunction(ExposeMode.INDEX);
         if (function != null) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
-            final Object result = function.call(jcx, thisObject(), index);
+            final Object result = function.call(jcx, thisObject(), null, index);
             return JavaScriptRunner.wrap(Context.getCurrentContext(), start, result);
         }
         return NOT_FOUND;
@@ -184,7 +184,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
-            function.call(jcx, thisObject(), name, value);
+            function.call(jcx, thisObject(), null, name, value);
             return;
         }
 
@@ -289,7 +289,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             String className = ClassDescription.getClassName((Class) javaObject);
             ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
             JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-            Object object = constructorFunction.call(jcx, null, args);
+            Object object = constructorFunction.call(jcx, null, null, args);
 
             return (Scriptable) object;
 

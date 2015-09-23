@@ -79,7 +79,7 @@ public class PythonRunner implements AutoCloseable {
         runningContext = new RunningContext();
 
         Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(m)));
-        for(MethodFunction m: Scripting.getMethodFunctions(PythonFunctions.class)) {
+        for (MethodFunction m : Scripting.getMethodFunctions(PythonFunctions.class)) {
             interpreter.set(m.getKey(), new PythonMethod(m));
         }
 
@@ -128,7 +128,7 @@ public class PythonRunner implements AutoCloseable {
 
         if (object.getClass().isArray()) {
             final PyList pyList = new PyList();
-            for(int i = Array.getLength(object); --i >= 0; ) {
+            for (int i = Array.getLength(object); --i >= 0; ) {
                 pyList.add(wrap(Array.get(object, i)));
             }
             return pyList;
@@ -152,7 +152,7 @@ public class PythonRunner implements AutoCloseable {
         }
 
         if (object instanceof Boolean) {
-            return new PyBoolean(((Boolean)object).booleanValue());
+            return new PyBoolean(((Boolean) object).booleanValue());
         }
 
         // Exposed objects
@@ -164,11 +164,14 @@ public class PythonRunner implements AutoCloseable {
         throw new IllegalArgumentException(format("Cannot wrap class %s into python object", objectClass));
     }
 
-    public static Object[] unwrap(PyObject[] args) {
+    public static Object unwrap(PyObject arg) {
+        return arg.__tojava__(Object.class);
+    }
 
+    public static Object[] unwrap(PyObject[] args) {
         Object[] unwrapped = new Object[args.length];
         for (int i = 0; i < args.length; ++i) {
-            unwrapped[i] = args[i].__tojava__(Object.class);
+            unwrapped[i] = unwrap(args[i]);
         }
         return unwrapped;
     }
@@ -191,4 +194,5 @@ public class PythonRunner implements AutoCloseable {
         final PyCode code = interpreter.compile(content, name);
         return interpreter.eval(code);
     }
+
 }

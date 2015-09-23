@@ -37,7 +37,7 @@ public class JavaScriptFunction implements Function {
     public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
         try {
-            final Object result = function.call(jcx, thisObj, objects);
+            final Object result = function.call(jcx, thisObj, null, objects);
             return JavaScriptRunner.wrap(jcx, result);
         } catch(RhinoException e) {
             throw e;
