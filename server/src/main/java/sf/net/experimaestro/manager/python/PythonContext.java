@@ -75,7 +75,7 @@ public class PythonContext extends LanguageContext {
 
     @Override
     public Json toJSON(Object object) {
-        return Json.toJSON(this, object);
+        return PythonUtils.toJSON(object);
     }
 
     @Override

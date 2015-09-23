@@ -47,11 +47,11 @@ import java.util.stream.Stream;
  */
 public class Scripting {
     final static private Logger LOGGER = Logger.getLogger();
-    public static MethodFunction[] FUNCTIONS;
+    public static MethodFunction[] FUNCTIONS = getMethodFunctions(Functions.class);
 
-    static {
+    public static MethodFunction[] getMethodFunctions(Class<?> aClass) {
         MutableInt errors = new MutableInt(0);
-        FUNCTIONS = ClassDescription.analyzeClass(Functions.class).getMethods()
+        final MethodFunction[] methodFunctions = ClassDescription.analyzeClass(aClass).getMethods()
                 .entrySet().stream().map(e -> {
                     final MethodFunction methodFunction = new MethodFunction(e.getKey());
                     for (Method method : e.getValue()) {
@@ -63,11 +63,10 @@ public class Scripting {
                     methodFunction.add(null, e.getValue());
                     return methodFunction;
                 }).toArray(n -> new MethodFunction[n]);
-
-
         if (errors.intValue() > 0) {
             throw new RuntimeException("Errors while initializing the list of scripting functions");
         }
+        return methodFunctions;
     }
 
     public static void forEachType(Consumer<Class> f) {

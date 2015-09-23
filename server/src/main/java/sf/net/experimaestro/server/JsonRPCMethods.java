@@ -425,6 +425,9 @@ public class JsonRPCMethods extends HttpServlet {
                 }
                 throw e;
             } catch (Throwable e) {
+                // HACK: should not be necessary
+                e.printStackTrace(System.err);
+
                 Throwable wrapped = e;
                 PyException pye = e instanceof PyException ? (PyException) e : null;
                 LOGGER.info("Exception thrown there: %s", e.getStackTrace()[0]);

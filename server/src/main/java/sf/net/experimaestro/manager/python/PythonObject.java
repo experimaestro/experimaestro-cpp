@@ -18,9 +18,7 @@ package sf.net.experimaestro.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.mozilla.javascript.Context;
 import org.python.core.PyObject;
-import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ExposeMode;
 import sf.net.experimaestro.manager.scripting.MethodFunction;

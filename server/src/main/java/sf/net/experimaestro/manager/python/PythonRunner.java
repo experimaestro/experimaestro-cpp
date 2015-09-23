@@ -20,13 +20,10 @@ package sf.net.experimaestro.manager.python;
 
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.NativeJavaArray;
 import org.python.core.*;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JavaScriptObject;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
@@ -82,6 +79,9 @@ public class PythonRunner implements AutoCloseable {
         runningContext = new RunningContext();
 
         Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(m)));
+        for(MethodFunction m: Scripting.getMethodFunctions(PythonFunctions.class)) {
+            interpreter.set(m.getKey(), new PythonMethod(m));
+        }
 
         // Add classes
         for (PyType type : TYPES.values()) {
