@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
@@ -426,6 +427,15 @@ public class JsonRPCMethods extends HttpServlet {
                 throw e;
             } catch (Throwable e) {
                 // HACK: should not be necessary
+                if (e instanceof PyException) {
+                    try {
+                        final Field printingStackTrace = PyException.class.getDeclaredField("printingStackTrace");
+                        printingStackTrace.setAccessible(true);
+                        printingStackTrace.set(e, true);
+                        e.printStackTrace(System.err);
+                        printingStackTrace.set(e, false);
+                    } catch(Throwable e2) {}
+                }
                 e.printStackTrace(System.err);
 
                 Throwable wrapped = e;
