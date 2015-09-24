@@ -1,7 +1,7 @@
 package sf.net.experimaestro.manager.python;
 
 import org.mozilla.javascript.Undefined;
-import org.python.core.*;
+import org.python.core.PyObject;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
@@ -12,12 +12,9 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * A python task
