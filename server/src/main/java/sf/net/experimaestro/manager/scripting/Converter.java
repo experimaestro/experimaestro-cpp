@@ -105,7 +105,7 @@ public class Converter {
                     || object instanceof List || object instanceof Double || object instanceof Float
                     || object instanceof Integer || object instanceof Long
                     || object instanceof Path || object instanceof Boolean
-                    || object instanceof Resource) {
+                    || object instanceof Resource || object instanceof ScriptingPath) {
                 score -= 10;
                 return x -> Json.toJSON(lcx, x);
             }

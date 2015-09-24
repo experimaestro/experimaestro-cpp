@@ -165,7 +165,7 @@ class PythonTaskFactory extends TaskFactory {
         if (!definition.containsKey(key)) {
             return false;
         }
-        return ((PyBoolean) definition.get(key)).getValue() != 0;
+        return (boolean) definition.get(key);
     }
 
     @Override

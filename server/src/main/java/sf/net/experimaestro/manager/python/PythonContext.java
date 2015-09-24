@@ -27,10 +27,7 @@ import org.python.core.ThreadState;
 import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptLocation;
-import sf.net.experimaestro.manager.scripting.ScriptingReference;
-import sf.net.experimaestro.manager.scripting.Wrapper;
+import sf.net.experimaestro.manager.scripting.*;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;
@@ -48,7 +45,11 @@ public class PythonContext extends LanguageContext {
             }
 
             if (value instanceof PythonObject) {
-                return ((PythonObject)value).object;
+                Object object = ((PythonObject) value).object;
+                if (object instanceof WrapperObject) {
+                    object = ((WrapperObject)object).unwrap();
+                }
+                return object;
             }
 
             if (value instanceof PyDictionary) {

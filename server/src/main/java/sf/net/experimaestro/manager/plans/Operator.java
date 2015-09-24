@@ -867,8 +867,8 @@ public abstract class Operator {
     }
 
     @Expose
-    public Object run() throws ExperimaestroCannotOverwrite {
-        return doRun(ScriptContext.get(), false, false);
+    public Json[] run() throws ExperimaestroCannotOverwrite {
+        return (Json[]) doRun(ScriptContext.get(), false, false);
     }
 
     @Expose

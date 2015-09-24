@@ -19,6 +19,8 @@ package sf.net.experimaestro.manager;
  */
 
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
+import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.plans.Plan;
 import sf.net.experimaestro.manager.plans.PlanInputs;
@@ -159,13 +161,23 @@ public abstract class TaskFactory {
         return commands(json, RunningContext.get().simulate());
     }
 
-    @Help("Creates a plan from this task")
+    @Help("Runs")
     @Expose(value = "run", context = true)
-    public Object run(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
+    public Json[] run(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
         final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
-        PlanInputs inputs= Plan.getMappings(map, cx);
+        PlanInputs inputs = Plan.getMappings(map, cx);
         plan.add(inputs);
         return plan.run();
+    }
+
+    @Help("Runs and asserts that there was a single output")
+    @Expose(value = "run_", context = true)
+    public Json runOnce(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
+        final Json [] v = run(cx, map);
+        if (v.length != 1) {
+            throw new XPMScriptRuntimeException("Requested only one output, got %d", v.length);
+        }
+        return v[0];
     }
 
     @Help("Creates a plan from this task")

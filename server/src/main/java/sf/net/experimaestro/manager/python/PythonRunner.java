@@ -20,6 +20,7 @@ package sf.net.experimaestro.manager.python;
 
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
+import org.mozilla.javascript.ScriptableObject;
 import org.python.core.*;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
@@ -92,6 +93,10 @@ public class PythonRunner implements AutoCloseable {
         interpreter.set("tasks", wrap(new Tasks()));
         interpreter.set("logger", wrap(new ScriptingLogger("xpm")));
         interpreter.set("xpm", wrap(new XPM()));
+
+        Scripting.forEachConstant((name, value) -> {
+            interpreter.set(name, wrap(value));
+        });
     }
 
     /**
