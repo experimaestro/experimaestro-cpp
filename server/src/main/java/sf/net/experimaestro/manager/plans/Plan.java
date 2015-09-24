@@ -401,7 +401,7 @@ public class Plan extends Operator {
             final String name = JSUtils.toString(_id);
             DotName id = new DotName(prefix, DotName.parse(name));
 
-            final Object value = JSUtils.unwrap(object.get(name));
+            final Object value = object.get(name);
 
             try {
                 if (value instanceof List) {
@@ -411,11 +411,11 @@ public class Plan extends Operator {
                     } else {
                         for (int i = 0; i < array.size(); i++) {
                             final Object e = array.get(i);
-                            inputs.set(id, getSimple(e, lcx));
+                            inputs.set(id, getOperator(e, lcx));
                         }
                     }
                 } else {
-                    inputs.set(id, getSimple(value, lcx));
+                    inputs.set(id, getOperator(value, lcx));
                 }
 
             } catch (XPMRhinoException | XPMRuntimeException e) {
@@ -434,9 +434,7 @@ public class Plan extends Operator {
      * @param lcx
      * @return The Json object
      */
-    static Operator getSimple(Object value, LanguageContext lcx){
-        value = JSUtils.unwrap(value);
-
+    static Operator getOperator(Object value, LanguageContext lcx){
         if (value == null) {
             throw new IllegalArgumentException("Null value given");
         }

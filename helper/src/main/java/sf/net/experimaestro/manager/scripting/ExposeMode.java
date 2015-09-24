@@ -31,6 +31,10 @@ public enum ExposeMode {
 
     /** Index access */
     INDEX,
+
     /** Field access */
-    FIELDS
+    FIELDS,
+
+    /** Iterator */
+    ITERATOR
 }

@@ -57,12 +57,11 @@ public class PythonUtils {
         if (value instanceof Boolean)
             return new JsonBoolean((Boolean) value);
 
-        // --- A python object
-        if (value instanceof PyDictionary) {
+        // --- A map
+        if (value instanceof Map) {
             JsonObject json = new JsonObject();
             PythonNamespaceContext nsContext = new PythonNamespaceContext();
-
-            for (Object o : ((PyDictionary) value).entrySet()) {
+            for (Object o : ((Map) value).entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
                 QName qname = QName.parse(toString(entry.getKey()), nsContext);
                 Object pValue = entry.getValue();
@@ -109,7 +108,7 @@ public class PythonUtils {
         if (value instanceof Undefined)
             return JsonNull.getSingleton();
 
-        ScriptContext.get().getLogger("xpm").warn("Transformed %s into a JSON string", value.getClass());
+        ScriptContext.get().getLogger("PythonUtils").warn("Transformed %s into a JSON string", value.getClass());
 
         return new JsonString(value.toString());
     }

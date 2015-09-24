@@ -23,6 +23,8 @@ import sf.net.experimaestro.manager.json.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents an atomic value
@@ -39,7 +41,8 @@ public class ValueType extends Type {
 
     /**
      * Wraps a value into an XML document
-     *app
+     * app
+     *
      * @param string The value of the element
      * @param type   XML type of the element
      * @return An XML document representing the value
@@ -75,7 +78,19 @@ public class ValueType extends Type {
         return wrapString(value.toString(), Constants.XP_PATH);
     }
 
+    static public Json wrap(Map<?,?> value) {
+        JsonObject map = new JsonObject();
+        for(Map.Entry<?,?> entry: value.entrySet()) {
+            map.put(entry.toString(), wrapObject(entry.getValue()));
+        }
+        return wrapString(value.toString(), Constants.XP_PATH);
+    }
+
     public static Json wrapObject(Object value) {
+        if (value instanceof Json) {
+            return (Json) value;
+        }
+
         if (value instanceof Integer)
             return wrap((Integer) value);
         if (value instanceof Long)
@@ -87,6 +102,10 @@ public class ValueType extends Type {
 
         if (value instanceof Path)
             return wrap((Path) value);
+
+        if (value instanceof Map) {
+            return wrap((Map) value);
+        }
 
         // Otherwise, wrap as a string
         return new JsonString(value.toString());

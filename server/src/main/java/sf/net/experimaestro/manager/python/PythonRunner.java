@@ -92,7 +92,6 @@ public class PythonRunner implements AutoCloseable {
         interpreter.set("tasks", wrap(new Tasks()));
         interpreter.set("logger", wrap(new ScriptingLogger("xpm")));
         interpreter.set("xpm", wrap(new XPM()));
-
     }
 
     /**

@@ -100,6 +100,29 @@ class PythonObject extends PyObject {
         return super.__finditem__(key);
     }
 
+    public boolean __contains__(PyObject o) {
+        // FIXME: should have a FIELD_EXIST
+        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        if (function != null && !function.isEmpty()) {
+            final PythonContext pcx = new PythonContext();
+            final Object call = function.call(pcx, this, null, o);
+            return call != null;
+        }
+
+        return super.__contains__(o);
+    }
+
+    @Override
+    public PyObject __iter__() {
+        MethodFunction function = getMethodFunction(ExposeMode.ITERATOR);
+        if (function != null && !function.isEmpty()) {
+            final PythonContext pcx = new PythonContext();
+            final Iterator = function.call(pcx, this, null);
+
+        }
+
+        return super.__iter__();
+    }
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
