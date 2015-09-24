@@ -159,6 +159,15 @@ public class PythonRunner implements AutoCloseable {
             return new PyBoolean(((Boolean) object).booleanValue());
         }
 
+        if (object instanceof Long) {
+            return new PyLong((long)object);
+        }
+
+        if (object instanceof Number) {
+            return new PyFloat(((Number)object).doubleValue());
+        }
+
+
         // Exposed objects
         final Exposed exposed = objectClass.getAnnotation(Exposed.class);
         if (exposed != null) {

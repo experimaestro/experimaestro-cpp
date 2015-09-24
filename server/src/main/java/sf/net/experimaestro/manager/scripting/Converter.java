@@ -7,6 +7,7 @@ import sf.net.experimaestro.utils.arrays.ListAdaptator;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
@@ -105,7 +106,8 @@ public class Converter {
                     || object instanceof List || object instanceof Double || object instanceof Float
                     || object instanceof Integer || object instanceof Long
                     || object instanceof Path || object instanceof Boolean
-                    || object instanceof Resource || object instanceof ScriptingPath) {
+                    || object instanceof Resource || object instanceof ScriptingPath
+                    || object instanceof BigInteger) {
                 score -= 10;
                 return x -> Json.toJSON(lcx, x);
             }

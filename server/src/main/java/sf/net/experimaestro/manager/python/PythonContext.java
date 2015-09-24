@@ -20,10 +20,7 @@ package sf.net.experimaestro.manager.python;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.python.core.Py;
-import org.python.core.PyDictionary;
-import org.python.core.PyList;
-import org.python.core.ThreadState;
+import org.python.core.*;
 import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.json.Json;
@@ -77,6 +74,22 @@ public class PythonContext extends LanguageContext {
                     newArray[i] = toJavaFunction.apply(jcx, array[i]);
                 }
                 return newArray;
+            }
+
+            if (value instanceof PyBoolean) {
+                return ((PyBoolean)value).getValue();
+            }
+            if (value instanceof PyLong) {
+                return ((PyLong)value).getValue();
+            }
+            if (value instanceof PyInteger) {
+                return ((PyInteger)value).getValue();
+            }
+            if (value instanceof PyFloat) {
+                return ((PyFloat)value).getValue();
+            }
+            if (value instanceof PyString) {
+                return ((PyString)value).getString();
             }
 
             return value;

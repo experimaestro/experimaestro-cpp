@@ -154,4 +154,17 @@ public class PythonTask extends Task {
         }
         return Manager.uniquePath(basedir, prefix, taskId, cx.toJSON(json), directory);
     }
+
+    @Expose()
+    @Help("Returns a Json object corresponding to inputs of a given group (shallow copy)")
+    public Json group(String groupId, JsonObject p) {
+        JsonObject json = new JsonObject();
+        for (Map.Entry<String, Input> x : getFactory().getInputs().entrySet()) {
+            if (x.getValue().inGroup(groupId)) {
+                json.put(x.getKey(), p.get(x.getKey()));
+            }
+        }
+
+        return json;
+    }
 }

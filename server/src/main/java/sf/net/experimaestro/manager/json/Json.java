@@ -29,6 +29,7 @@ import sf.net.experimaestro.scheduler.Resource;
 
 import java.io.*;
 import java.lang.reflect.Array;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -247,6 +248,10 @@ abstract public class Json {
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
+
+        if (value instanceof BigInteger) {
+            return new JsonInteger(((BigInteger) value).longValueExact());
+        }
 
         return new JsonString(value.toString());
 

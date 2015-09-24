@@ -25,6 +25,10 @@ public class PythonUtils {
             value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();
         }
 
+        if (value instanceof PythonObject) {
+            value = ((PythonObject)value).object;
+        }
+
         if (value instanceof Json)
             return (Json) value;
 
@@ -75,7 +79,6 @@ public class PythonUtils {
                 json.put(key, key_value);
             }
             return json;
-
         }
 
         // -- An array
@@ -104,10 +107,6 @@ public class PythonUtils {
 
         if (value instanceof Resource)
             return new JsonResource((Resource) value);
-
-        // -- Undefined
-        if (value instanceof Undefined)
-            return JsonNull.getSingleton();
 
         ScriptContext.get().getLogger("PythonUtils").warn("Transformed %s into a JSON string", value.getClass());
 

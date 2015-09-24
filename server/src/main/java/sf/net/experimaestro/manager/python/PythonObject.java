@@ -112,6 +112,17 @@ class PythonObject extends PyObject {
         }
     }
 
+    @Override
+    public void __setitem__(PyObject key, PyObject value) {
+        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        if (function != null && !function.isEmpty()) {
+            final PythonContext pcx = new PythonContext();
+            PythonRunner.wrap(function.call(pcx, object, null, key, value));
+        } else {
+            super.__setattr__(key.toString(), value);
+        }
+    }
+
     public boolean __contains__(PyObject o) {
         // FIXME: should have a FIELD_EXIST
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
