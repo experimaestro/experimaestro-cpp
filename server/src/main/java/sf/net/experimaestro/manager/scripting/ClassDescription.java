@@ -169,6 +169,7 @@ public class ClassDescription {
             case FIELDS:
             case INDEX:
             case CALL:
+            case ITERATOR:
                 if (!name.equals("")) {
                     throw new AssertionError("Method " + method + " should not defined a name since" +
                             "it is will be called directly.");
@@ -183,6 +184,10 @@ public class ClassDescription {
         }
 
         // Add the method
+        addMethod(map, method, key);
+    }
+
+    private static void addMethod(Map<Object, ArrayList<Method>> map, Method method, Object key) {
         ArrayList<Method> methods = map.get(key);
         if (methods == null) {
             map.put(key, methods = new ArrayList<>());

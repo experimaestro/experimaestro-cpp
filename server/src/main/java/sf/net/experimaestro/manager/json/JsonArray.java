@@ -151,6 +151,7 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
+    @Expose(mode = ExposeMode.ITERATOR)
     public Iterator<Json> iterator() {
         return array.iterator();
     }
@@ -159,5 +160,6 @@ public class JsonArray extends Json implements Iterable<Json> {
     public Json get(int index) {
         return array.get(index);
     }
+
 
 }

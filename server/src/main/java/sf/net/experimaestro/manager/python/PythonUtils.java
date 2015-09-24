@@ -13,6 +13,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.JSUtils;
 
 import java.lang.reflect.Array;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,10 +79,10 @@ public class PythonUtils {
         }
 
         // -- An array
-        if (value instanceof PyList) {
-            PyList array = (PyList) value;
+        if (value instanceof List) {
+            List array = (List) value;
             JsonArray json = new JsonArray();
-            for (int i = 0; i < array.__len__(); i++)
+            for (int i = 0; i < array.size(); ++i)
                 json.add(toJSON(array.get(i)));
             return json;
         }

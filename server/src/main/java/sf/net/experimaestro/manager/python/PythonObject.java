@@ -19,6 +19,7 @@ package sf.net.experimaestro.manager.python;
  */
 
 import org.python.core.PyObject;
+import org.python.core.PyString;
 import sf.net.experimaestro.manager.scripting.ClassDescription;
 import sf.net.experimaestro.manager.scripting.ExposeMode;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
@@ -26,6 +27,7 @@ import sf.net.experimaestro.manager.scripting.PropertyAccess;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * A python object for exposed
@@ -52,7 +54,6 @@ class PythonObject extends PyObject {
 
         return function;
     }
-
 
 
     @Override
@@ -117,8 +118,17 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.ITERATOR);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            final Iterator = function.call(pcx, this, null);
+            return new PyObject() {
+                final Iterator iterator = (Iterator) function.call(pcx, this, null);
 
+                @Override
+                public PyObject __iternext__() {
+                    if (iterator.hasNext()) {
+                        return PythonRunner.wrap(iterator.next());
+                    }
+                    return null;
+                }
+            };
         }
 
         return super.__iter__();
@@ -137,4 +147,13 @@ class PythonObject extends PyObject {
         return super.__call__(args, keywords);
     }
 
+    @Override
+    public PyString __str__() {
+        return new PyString(object.toString());
+    }
+
+    @Override
+    public PyString __repr__() {
+        return new PyString(object.toString());
+    }
 }

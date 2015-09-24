@@ -278,6 +278,11 @@ public class Functions {
         throw new ExitException(code, message, objects);
     }
 
+    @Expose(value="to_json", context=true)
+    static public Json toJson(LanguageContext lcx, Object o) {
+        return lcx.toJSON(o);
+    }
+
     @Expose
     @Help("Defines the default launcher")
     static public void set_default_launcher(Launcher launcher) {
