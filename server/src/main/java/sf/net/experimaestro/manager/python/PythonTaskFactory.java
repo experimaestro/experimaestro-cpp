@@ -39,7 +39,7 @@ class PythonTaskFactory extends TaskFactory {
         final PythonNamespaceContext pythonNamespaceContext = new PythonNamespaceContext();
 
         // Analyze class
-        final PyDictionary pyInputs = (PyDictionary) pyClass.__getattr__("inputs").__getitem__(0);
+        final PyDictionary pyInputs = (PyDictionary) pyClass.__getattr__("inputs"); //.__getitem__(0);
         for (Object _keyvalue : pyInputs.entrySet()) {
             Entry keyvalue = (Entry) _keyvalue;
             String inputId = (String) keyvalue.getKey();
