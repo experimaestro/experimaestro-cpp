@@ -83,8 +83,8 @@ public class JavaScriptChecker extends XPMEnvironment {
         jcx = new JavaScriptRunner(repositories, scheduler, (Hierarchy) loggerRepository, null);
         final MethodFunction method = new MethodFunction(SSHD_SERVER_FUNCTION);
         final Method sshd_server = SSHServer.class.getDeclaredMethod("sshd_server");
-        method.add(null, ImmutableList.of(sshd_server));
-        ScriptableObject.putProperty(jcx.scope, SSHD_SERVER_FUNCTION, new JavaScriptFunction(method));
+        method.add(ImmutableList.of(sshd_server));
+        ScriptableObject.putProperty(jcx.scope, SSHD_SERVER_FUNCTION, new JavaScriptFunction(null, method));
 
         // Masks the context
         ScriptContext.force(null);

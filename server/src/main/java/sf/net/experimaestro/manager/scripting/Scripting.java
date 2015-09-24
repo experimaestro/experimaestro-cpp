@@ -60,7 +60,7 @@ public class Scripting {
                             errors.increment();
                         }
                     }
-                    methodFunction.add(null, e.getValue());
+                    methodFunction.add(e.getValue());
                     return methodFunction;
                 }).toArray(n -> new MethodFunction[n]);
         if (errors.intValue() > 0) {

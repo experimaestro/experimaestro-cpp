@@ -49,7 +49,7 @@ class PythonObject extends PyObject {
 
         ArrayList<Method> methods = description.getMethods().get(key);
         if (methods != null && !methods.isEmpty())
-            function.add(object, methods);
+            function.add(methods);
 
 
         return function;
@@ -61,7 +61,7 @@ class PythonObject extends PyObject {
         // Search for a function
         MethodFunction function = getMethodFunction(name);
         if (!function.isEmpty()) {
-            return new PythonMethod(function);
+            return new PythonMethod(object, function);
         }
 
         // Search for a property
@@ -74,7 +74,7 @@ class PythonObject extends PyObject {
         function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(function.call(pcx, this, null, name));
+            return PythonRunner.wrap(function.call(pcx, object, null, name));
         }
 
 
@@ -95,7 +95,7 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(function.call(pcx, this, null, key));
+            return PythonRunner.wrap(function.call(pcx, object, null, key));
         }
 
         return super.__finditem__(key);
@@ -106,7 +106,7 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            final Object call = function.call(pcx, this, null, o);
+            final Object call = function.call(pcx, object, null, o);
             return call != null;
         }
 
@@ -119,7 +119,7 @@ class PythonObject extends PyObject {
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             return new PyObject() {
-                final Iterator iterator = (Iterator) function.call(pcx, this, null);
+                final Iterator iterator = (Iterator) function.call(pcx, object, null);
 
                 @Override
                 public PyObject __iternext__() {
@@ -139,9 +139,9 @@ class PythonObject extends PyObject {
         final ArrayList<Method> methods = description.getMethods().get(ExposeMode.CALL);
         if (methods != null) {
             final MethodFunction methodFunction = new MethodFunction("()");
-            methodFunction.add(object, methods);
+            methodFunction.add(methods);
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(methodFunction.call(pcx, this, null, args));
+            return PythonRunner.wrap(methodFunction.call(pcx, object, null, args));
         }
 
         return super.__call__(args, keywords);

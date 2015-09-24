@@ -61,7 +61,7 @@ public class MethodFunction extends GenericFunction {
             public Iterable<MethodDeclaration> get(final int index) {
                 Group group = groups.get(index);
                 return Iterables.transform(group.methods,
-                        m -> new MethodDeclaration(group.thisObject, m));
+                        m -> new MethodDeclaration(m));
             }
 
             @Override
@@ -71,30 +71,26 @@ public class MethodFunction extends GenericFunction {
         });
     }
 
-    public void add(Object thisObj, List<Method> methods) {
-        groups.add(new Group(thisObj, methods));
+    public void add(List<Method> methods) {
+        groups.add(new Group(methods));
     }
 
     /**
      * Represent all the methods from a given ancestor (or self)
      */
     static class Group {
-        final Object thisObject;
         List<Method> methods = new ArrayList<>();
 
-        Group(Object thisObject, List<Method> methods) {
-            this.thisObject = thisObject;
+        Group(List<Method> methods) {
             this.methods = methods;
         }
     }
 
     static public class MethodDeclaration extends Declaration<Method> {
-        final Object baseObject;
         final Method method;
 
-        public MethodDeclaration(Object baseObject, Method method) {
+        public MethodDeclaration(Method method) {
             super(method);
-            this.baseObject = baseObject;
             this.method = method;
         }
 
@@ -106,10 +102,13 @@ public class MethodFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(LanguageContext cx, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
+        public Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException {
             boolean isStatic = (method.getModifiers() & Modifier.STATIC) != 0;
             try {
-                return method.invoke(isStatic ? null : baseObject, transformedArgs);
+                if (!isStatic && thisObj == null) {
+                    throw new AssertionError("Method " + method.getName() + " is not static, but the object is null");
+                }
+                return method.invoke(isStatic ? null : thisObj, transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {
                 if (!(e.getCause() instanceof ExitException)) {
                     LOGGER.debug(e, "Error [%s] while invoking method %s", e, method);

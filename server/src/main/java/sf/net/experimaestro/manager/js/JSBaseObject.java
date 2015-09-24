@@ -98,7 +98,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         // Search for a function
         MethodFunction function = getMethodFunction(name);
         if (!function.isEmpty()) {
-            return new JavaScriptFunction(function);
+            return new JavaScriptFunction(thisObject(), function);
         }
 
         // Search for a property
@@ -124,7 +124,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
         ArrayList<Method> methods = this.classDescription.getMethods().get(key);
         if (methods != null && !methods.isEmpty())
-            function.add(thisObject(), methods);
+            function.add(methods);
 
         // Walk the prototype chain
         for (Scriptable prototype = getPrototype(); prototype != null; prototype = prototype.getPrototype()) {
@@ -132,7 +132,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
                 JSBaseObject jsPrototype = (JSBaseObject) prototype;
                 methods = jsPrototype.classDescription.getMethods().get(key);
                 if (methods != null && !methods.isEmpty())
-                    function.add(jsPrototype, methods);
+                    function.add(methods);
             }
         }
         return function;

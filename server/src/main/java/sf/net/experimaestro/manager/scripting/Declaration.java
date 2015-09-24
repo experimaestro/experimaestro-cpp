@@ -59,7 +59,7 @@ abstract public class Declaration<T extends Executable> {
         return executable;
     }
 
-    public abstract Object invoke(LanguageContext cx, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
+    public abstract Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws InvocationTargetException, IllegalAccessException, InstantiationException;
 
 
     @Expose
@@ -221,7 +221,7 @@ abstract public class Declaration<T extends Executable> {
 
         // If the optional arguments are at the beginning, then shift
         if (expose.optionalsAtStart()) {
-            position = nextPosition.apply(position + Integer.max(nbArgs - args.length, 0) - 1);
+            position = nextPosition.apply(position + Integer.max(neededArgs + expose.optional() - args.length, 0) - 1);
         }
 
         // Normal arguments

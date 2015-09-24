@@ -18,6 +18,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 class PythonTaskFactory extends TaskFactory {
+    final PyClass pyClass;
     private Map<String, Input> inputs = new HashMap<>();
     private Type output;
 
@@ -33,6 +34,7 @@ class PythonTaskFactory extends TaskFactory {
 
     public PythonTaskFactory(Repository repository, QName id, String version, String group, PyClass pyClass) throws ValueMismatchException {
         super(repository, id, version, group);
+        this.pyClass = pyClass;
 
         final PythonNamespaceContext pythonNamespaceContext = new PythonNamespaceContext();
 

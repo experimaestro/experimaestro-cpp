@@ -60,7 +60,7 @@ public class ConstructorFunction extends GenericFunction {
         }
 
         @Override
-        public Object invoke(LanguageContext cx, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        public Object invoke(LanguageContext cx, Object thisObj, Object[] transformedArgs) throws IllegalAccessException, InvocationTargetException, InstantiationException {
             try {
                 return constructor.newInstance(transformedArgs);
             } catch (InvocationTargetException | IllegalArgumentException e) {

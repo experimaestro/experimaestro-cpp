@@ -18,7 +18,6 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.ScriptRuntime;
 import sf.net.experimaestro.exceptions.WrappedException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
@@ -120,7 +119,7 @@ public abstract class GenericFunction {
                 logger.warn("In %s", lcx.getScriptLocation());
                 logger.warn("Method %s is deprecated", argmax);
             }
-            final Object result = argmax.declaration.invoke(lcx, transformedArgs);
+            final Object result = argmax.declaration.invoke(lcx, thisObj, transformedArgs);
 
             return result;
         } catch (InvocationTargetException e) {

@@ -56,8 +56,8 @@ public class JavaScriptClass extends NativeJavaClass {
         ArrayList<Method> function = description.getMethods().get(name);
         if (!function.isEmpty()) {
             final MethodFunction method = new MethodFunction(name);
-            method.add(null, function);
-            return new JavaScriptFunction(method);
+            method.add(function);
+            return new JavaScriptFunction(null, method);
         }
 
         return NOT_FOUND;

@@ -1,13 +1,14 @@
 package sf.net.experimaestro.manager.python;
 
-import org.python.core.PyClass;
-import org.python.core.PyObject;
+import org.python.core.*;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
+
+import static sf.net.experimaestro.manager.python.PythonType.getPyClass;
 
 /**
  * Python specific functions
@@ -20,6 +21,9 @@ public class PythonFunctions  {
         return new TaskAnnotation(id);
     }
 
+    /**
+     * Transforms a class into a task
+     */
     private static class TaskAnnotation extends PyObject {
         private final String id;
 
@@ -34,6 +38,12 @@ public class PythonFunctions  {
             }
 
             PyClass pyClass = (PyClass) args[0];
+
+            final PyObject[] elements = new PyObject[pyClass.__bases__.__len__() + 1];
+            System.arraycopy(pyClass.__bases__.getArray(), 0, elements, 1, elements.length - 1);
+            elements[0] = getPyClass(PythonTask.class);
+
+            pyClass.__bases__ = new PyTuple(elements);
 
             ScriptContext sc = ScriptContext.get();
             String version = null;

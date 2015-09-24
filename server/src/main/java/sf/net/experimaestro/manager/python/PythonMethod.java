@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.python.core.PyFunction;
 import org.python.core.PyObject;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
 
@@ -28,9 +29,12 @@ import java.util.HashMap;
  * Python wrapper for object methods
  */
 class PythonMethod extends PyObject {
+    private final Object thisObj;
     private MethodFunction methodFunction;
 
-    public PythonMethod(MethodFunction methodFunction) {
+    public PythonMethod(Object thisObj, MethodFunction methodFunction) {
+        super(PyFunction.TYPE);
+        this.thisObj = thisObj;
         this.methodFunction = methodFunction;
     }
 
@@ -41,6 +45,11 @@ class PythonMethod extends PyObject {
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
+        final MethodFunction methodFunction = this.methodFunction;
+        return call(thisObj, args, keywords, methodFunction);
+    }
+
+    public static PyObject call(Object thisObj, PyObject[] args, String[] keywords, MethodFunction methodFunction) {
         HashMap<String, Object> options = new HashMap<>();
 
         final int nbArgs = args.length - keywords.length;
@@ -50,6 +59,6 @@ class PythonMethod extends PyObject {
         final Object[] unwrap = PythonRunner.unwrap(Arrays.copyOf(args, nbArgs));
 
 
-        return PythonRunner.wrap(methodFunction.call(new PythonContext(), null, options, unwrap));
+        return PythonRunner.wrap(methodFunction.call(new PythonContext(), thisObj, options, unwrap));
     }
 }

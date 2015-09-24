@@ -22,14 +22,17 @@ import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.scripting.MethodFunction;
+import sf.net.experimaestro.utils.JSUtils;
 
 /**
  * Wrapper for a function in javascript
  */
 public class JavaScriptFunction implements Function {
     private final MethodFunction function;
+    private final Object javaThis;
 
-    public JavaScriptFunction(MethodFunction function) {
+    public JavaScriptFunction(Object javaThis, MethodFunction function) {
+        this.javaThis = javaThis;
         this.function = function;
     }
 
@@ -37,7 +40,7 @@ public class JavaScriptFunction implements Function {
     public Object call(Context context, Scriptable scope, Scriptable thisObj, Object[] objects) {
         JavaScriptContext jcx = new JavaScriptContext(context, scope);
         try {
-            final Object result = function.call(jcx, thisObj, null, objects);
+            final Object result = function.call(jcx, javaThis, null, objects);
             return JavaScriptRunner.wrap(jcx, result);
         } catch(RhinoException e) {
             throw e;

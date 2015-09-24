@@ -162,7 +162,7 @@ public class JavaScriptRunner implements AutoCloseable {
                 ScriptableObject.defineProperty(XPM_SCOPE, name, wrap(context, XPM_SCOPE, value), 0);
             });
 
-            Scripting.forEachFunction(m -> ScriptableObject.defineProperty(XPM_SCOPE, m.getKey(), new JavaScriptFunction(m), 0));
+            Scripting.forEachFunction(m -> ScriptableObject.defineProperty(XPM_SCOPE, m.getKey(), new JavaScriptFunction(null, m), 0));
 
 
             Context.exit();
