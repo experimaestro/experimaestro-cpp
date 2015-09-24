@@ -251,7 +251,6 @@ abstract public class Declaration<T extends Executable> {
 
         // Process varargs
         if (isVarArgs) {
-            assert position == converter.functions.length - 1;
             final int lastix = types.length - 1;
             final Argument argument = getAnnotation(Argument.class, annotations[lastix]);
             final boolean nullable = nullable(lastix);
@@ -271,13 +270,13 @@ abstract public class Declaration<T extends Executable> {
                 argTypes[i] = ClassUtils.primitiveToWrapper(argTypes[i]);
             }
 
-            int nbVarArgs = args.length - neededArgs;
+            int nbVarArgs = args.length - nbArgs;
 
             final Converter.VarArgsConverter varArgsConverter = new Converter.VarArgsConverter(types[lastix].getComponentType());
 
             for (int i = 0; i < nbVarArgs && converter.isOK(); i++) {
                 final int j = nbArgs + i;
-                final Object o = lcx.toJava(args[(j)]);
+                final Object o = lcx.toJava(args[j]);
 
                 int bestScore = 0;
                 int oldScore = converter.score;
@@ -303,7 +302,7 @@ abstract public class Declaration<T extends Executable> {
                 }
             }
 
-            converter.functions[position] = varArgsConverter;
+            converter.functions[lastix] = varArgsConverter;
         }
 
         return converter;
