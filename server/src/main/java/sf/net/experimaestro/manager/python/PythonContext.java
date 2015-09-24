@@ -77,7 +77,7 @@ public class PythonContext extends LanguageContext {
             }
 
             if (value instanceof PyBoolean) {
-                return ((PyBoolean)value).getValue();
+                return ((PyBoolean)value).getBooleanValue();
             }
             if (value instanceof PyLong) {
                 return ((PyLong)value).getValue();
