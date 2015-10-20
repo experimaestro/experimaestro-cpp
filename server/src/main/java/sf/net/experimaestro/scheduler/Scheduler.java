@@ -52,8 +52,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.EnumSet;
@@ -809,19 +811,19 @@ final public class Scheduler {
     private class Notifier extends Thread {
         public Notifier() throws SQLException {
             super("Notifier");
+
+            // Retrieve not resources for which we did not have the time
+            final CallableStatement statement = Scheduler.getConnection().prepareCall("SELECT id FROM Resources WHERE status <> oldStatus");
+            statement.execute();
+            final ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                changedResources.add(resultSet.getLong(1));
+            }
         }
 
         @Override
         public void run() {
             try {
-                final XPMStatement updateStatus;
-                try {
-                    updateStatus = statement("UPDATE Resources SET oldStatus = ? WHERE id = ?");
-                } catch (SQLException e) {
-                    Scheduler.this.close();
-                    throw new XPMRuntimeException(e);
-                }
-
                 LOGGER.info("Starting notifier thread");
 
                 while (!isStopping()) {
@@ -843,8 +845,6 @@ final public class Scheduler {
                                 iterator.remove();
                             }
                         }
-
-                        LOGGER.debug("Notifying dependencies from R%d", resourceId);
 
                         // Retrieve the resource that changed - and lock it
                         Resource fromResource;
@@ -876,8 +876,10 @@ final public class Scheduler {
                         }
 
                         // OK - update db
+                        final XPMStatement updateStatus = statement("UPDATE Resources SET oldStatus = ? WHERE id = ?");
                         updateStatus.setInt(1, fromResource.getState().value());
                         updateStatus.setLong(2, fromResource.getId());
+                        updateStatus.executeUpdate();
                     } catch (CloseException e) {
                         LOGGER.error(e, "Caught exception while closing iterator");
                     } catch (Exception e) {
