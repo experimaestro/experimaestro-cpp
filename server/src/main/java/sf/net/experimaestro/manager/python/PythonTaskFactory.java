@@ -3,6 +3,7 @@ package sf.net.experimaestro.manager.python;
 import org.python.core.PyBoolean;
 import org.python.core.PyClass;
 import org.python.core.PyDictionary;
+import org.python.core.PyString;
 import sf.net.experimaestro.exceptions.ValueMismatchException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
@@ -38,8 +39,14 @@ class PythonTaskFactory extends TaskFactory {
 
         final PythonNamespaceContext pythonNamespaceContext = new PythonNamespaceContext();
 
+        // Get output
+        PyString outputType = (PyString) pyClass.__findattr__("output");
+        if (outputType != null) {
+            output = new Type(QName.parse(outputType.toString(), pythonNamespaceContext));
+        }
+
         // Analyze class
-        final PyDictionary pyInputs = (PyDictionary) pyClass.__getattr__("inputs"); //.__getitem__(0);
+        final PyDictionary pyInputs = (PyDictionary) pyClass.__getattr__("inputs");
         for (Object _keyvalue : pyInputs.entrySet()) {
             Entry keyvalue = (Entry) _keyvalue;
             String inputId = (String) keyvalue.getKey();
