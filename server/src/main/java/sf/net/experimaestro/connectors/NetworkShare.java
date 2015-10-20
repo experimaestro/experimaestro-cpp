@@ -159,10 +159,7 @@ final public class NetworkShare implements Identifiable {
     static public NetworkShare create(DatabaseObjects<NetworkShare> db, ResultSet result) {
         try {
             long id = result.getLong(1);
-            String hostname = null;
-            hostname = result.getString(2);
-
-
+            String hostname = result.getString(2);
             String name = result.getString(3);
 
             final NetworkShare networkShare = new NetworkShare(id, hostname, name);
