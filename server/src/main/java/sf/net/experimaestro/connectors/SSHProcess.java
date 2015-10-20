@@ -83,7 +83,7 @@ public class SSHProcess extends XPMProcess {
     }
 
     @Override
-    public int exitValue() {
+    public int exitValue(boolean checkFile) {
         return channel.getExitStatus();
     }
 

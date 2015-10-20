@@ -510,6 +510,7 @@ final public class Scheduler {
 
     public void sendMessage(Resource destination, Message message) {
         synchronized (messages) {
+            LOGGER.debug("Sending message %s", message);
             // Add the message (with a timestamp one ms before the time, to avoid locks)
             messages.add(new MessagePackage(message, destination, System.currentTimeMillis() - 1));
             // Notify
@@ -768,7 +769,6 @@ final public class Scheduler {
                                     if (isStopping())
                                         break mainLoop;
                                 }
-                                continue;
 
                             } else {
                                 messagePackage = messages.pop();
@@ -906,7 +906,7 @@ final public class Scheduler {
                         try {
                             XPMProcess process = job.getProcess();
                             if (process != null && !process.isRunning(true)) {
-                                Scheduler.this.sendMessage(job, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+                                Scheduler.this.sendMessage(job, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                             }
                         } catch (Throwable e) {
                             LOGGER.error(e, "could not check if job %s is running", job);

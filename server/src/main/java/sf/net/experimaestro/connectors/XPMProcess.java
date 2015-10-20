@@ -18,7 +18,6 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.Gson;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.scheduler.ConstructorRegistry;
@@ -258,13 +257,16 @@ public abstract class XPMProcess {
      */
     public boolean isRunning(boolean checkFiles) throws Exception {
         // We have no process, check
-        return Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
+        final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
+        LOGGER.info("Job %s is running: %s", this.job, exists);
+        return exists;
     }
 
     /**
      * Returns the error code
+     * @param checkFile Whether to ask the process (if available) or look at the file
      */
-    public int exitValue() {
+    public int exitValue(boolean checkFile) {
         // Check for done file
         try {
             if (Files.exists(Resource.DONE_EXTENSION.transform(job.getLocator())))
@@ -297,10 +299,10 @@ public abstract class XPMProcess {
     public void check(boolean checkFiles) throws Exception {
         if (!isRunning(checkFiles)) {
             // We are not running: send a message
-            LOGGER.debug("End of job [%s]", job);
+            LOGGER.info("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
-            Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(), time));
+            Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(checkFiles), time));
             dispose();
         }
     }
@@ -332,7 +334,7 @@ public abstract class XPMProcess {
                 try {
                     try {
                         if (!isRunning(false)) {
-                            return exitValue();
+                            return exitValue(false);
                         }
                     } catch (Exception e) {
                         // TODO: what to do here?

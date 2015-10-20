@@ -189,7 +189,7 @@ abstract public class Job extends Resource {
             if (process.isRunning(true)) {
                 setState(ResourceState.RUNNING);
             } else {
-                Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+                Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
             }
 
             return false;
@@ -599,7 +599,7 @@ abstract public class Job extends Resource {
                 final XPMProcess process = getProcess();
                 if (process != null) {
                     if (!process.isRunning(true)) {
-                        Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(), process.exitTime()));
+                        Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                     }
                 }
             }

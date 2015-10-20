@@ -278,7 +278,7 @@ public class Functions {
         throw new ExitException(code, message, objects);
     }
 
-    @Expose(value="to_json", context=true)
+    @Expose(value = "to_json", context = true)
     static public Json toJson(LanguageContext lcx, Object o) {
         return lcx.toJSON(o);
     }
@@ -340,6 +340,11 @@ public class Functions {
         }
     }
 
+    @Expose(value = "__", languages = Languages.PYTHON)
+    public static Object get_resource_py(Json json) throws SQLException {
+        return get_resource(json);
+    }
+
     @Expose(value = "$$")
     @Help("Get the resource associated with the json object")
     static public Resource get_resource(Json json) throws SQLException {
@@ -381,7 +386,7 @@ public class Functions {
 
     @Expose()
     @Help("Set the experiment for all future commands")
-    static public void  set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
+    static public void set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
         if (!RunningContext.get().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis());
             experiment.save();

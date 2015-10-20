@@ -122,7 +122,7 @@ class WaitingJobProcess extends XPMProcess {
     }
 
     @Override
-    public int exitValue() {
+    public int exitValue(boolean checkFile) {
         return 0;
     }
 

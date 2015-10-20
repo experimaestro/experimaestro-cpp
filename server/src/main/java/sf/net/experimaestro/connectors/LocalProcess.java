@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.FileSystemException;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -88,13 +89,13 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public int exitValue() {
+    public int exitValue(boolean checkFile) {
         // Try the easy way
-        if (process != null) {
+        if (process != null && !checkFile) {
             return process.exitValue();
         }
 
-        return super.exitValue();
+        return super.exitValue(checkFile);
     }
 
 

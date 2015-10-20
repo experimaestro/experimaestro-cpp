@@ -25,6 +25,7 @@ import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.ResourceState;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.scheduler.SimpleMessage;
+import sf.net.experimaestro.utils.log.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -36,6 +37,8 @@ import java.sql.SQLException;
  * Handles notification
  */
 public class NotificationServlet extends XPMServlet {
+    static final private Logger LOGGER = Logger.getLogger();
+
     private static final String END_OF_JOB = "eoj";
 
     private static final String PROGRESS = "progress";
@@ -82,6 +85,7 @@ public class NotificationServlet extends XPMServlet {
                         try {
                             process.check(true);
                         } catch (Exception e) {
+                            LOGGER.error(e, "Error while processing the end of job notification (job %d)", resourceId);
                             // FIXME: what to do here?
                         }
                     }
