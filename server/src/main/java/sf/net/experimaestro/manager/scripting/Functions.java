@@ -381,12 +381,11 @@ public class Functions {
 
     @Expose()
     @Help("Set the experiment for all future commands")
-    static public void set_experiment(String dotname, java.nio.file.Path workdir) throws ExperimaestroCannotOverwrite {
+    static public void  set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
         if (!RunningContext.get().simulate()) {
-            Experiment experiment = new Experiment(dotname, System.currentTimeMillis(), workdir);
+            Experiment experiment = new Experiment(dotname, System.currentTimeMillis());
             experiment.save();
         }
-        context().setWorkingDirectory(workdir);
     }
 
     @Expose

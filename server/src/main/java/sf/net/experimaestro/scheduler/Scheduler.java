@@ -38,6 +38,7 @@ import sf.net.experimaestro.exceptions.CloseException;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
+import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.Heap;
@@ -160,6 +161,7 @@ final public class Scheduler {
      * The network shares
      */
     private DatabaseObjects<NetworkShare> networkShares;
+    private DatabaseObjects<Experiment> experiments;
 
     private DatabaseObjects<Connector> connectors;
 
@@ -234,6 +236,7 @@ final public class Scheduler {
 
             resources = new DatabaseObjects<>("Resources", Resource::create);
             networkShares = new DatabaseObjects<>("NetworkShare", NetworkShare::create);
+            experiments = new DatabaseObjects<>("Experiments", Experiment::create);
             connectors = new DatabaseObjects<>("Connectors", Connector::create);
             locks = new DatabaseObjects<>("Locks", Lock::create);
 
@@ -600,6 +603,10 @@ final public class Scheduler {
 
     public DatabaseObjects<Lock> locks() {
         return locks;
+    }
+
+    public DatabaseObjects<Experiment> experiments() {
+        return experiments;
     }
 
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {

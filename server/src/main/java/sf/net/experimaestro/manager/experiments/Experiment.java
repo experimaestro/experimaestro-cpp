@@ -19,10 +19,16 @@ package sf.net.experimaestro.manager.experiments;
  */
 
 import org.apache.commons.lang.NotImplementedException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.scheduler.DatabaseObjects;
+import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
 
 import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -30,21 +36,16 @@ import java.util.Collection;
  * An experiment
  */
 @Exposed
-public class Experiment {
+public class Experiment implements Identifiable {
     /**
      * Experiment unique identifier
      */
-    long id;
+    Long id;
 
     /**
      * Tasks
      */
     Collection<TaskReference> tasks = new ArrayList<>();
-
-    /**
-     * Working directory
-     */
-    Path workingDirectory;
 
     /**
      * Timestamp
@@ -68,23 +69,31 @@ public class Experiment {
      * New task
      *
      * @param identifier       The experiment taskId
-     * @param workingDirectory The working directory for this experiment
      */
-    public Experiment(String identifier, long timestamp, Path workingDirectory) {
+    public Experiment(String identifier, long timestamp) {
         this.identifier = identifier;
         this.timestamp = timestamp;
-        this.workingDirectory = workingDirectory;
     }
 
     public void init(Scheduler scheduler) {
         this.scheduler = scheduler;
     }
 
-    public long getId() {
+    @Override
+    public boolean inDatabase() {
+        return id == null;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    public Object getName() {
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
         return identifier;
     }
 
@@ -92,7 +101,24 @@ public class Experiment {
         return timestamp;
     }
 
-    public void save() {
-        throw new NotImplementedException();
+    public void save() throws SQLException {
+        DatabaseObjects<Experiment> shares = Scheduler.get().experiments();
+        shares.save(this, "INSERT INTO Experiments(name, timestamp) VALUES(?, ?)", st -> {
+            st.setString(1, identifier);
+            st.setTimestamp(2, new Timestamp(timestamp));
+        });
     }
+
+
+    public static Experiment create(DatabaseObjects<Experiment> db, ResultSet result) {
+
+        try {
+            String identifier = result.getString(1);
+            long timestamp = result.getTimestamp(2).getTime();
+
+            final Experiment experiment = new Experiment(identifier, timestamp);
+            return experiment;
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not construct network share");
+        }    }
 }
