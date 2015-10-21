@@ -34,6 +34,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -64,6 +65,11 @@ public class LocalhostConnector extends SingleHostConnector {
     @Override
     public Path resolve(String path) {
         return new File(path).toPath();
+    }
+
+    @Override
+    public Path defaultTemporaryPath() {
+        return Paths.get(System.getProperty("java.io.tmpdir"));
     }
 
     @Override

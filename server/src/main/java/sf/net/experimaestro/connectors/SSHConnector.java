@@ -44,6 +44,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -231,6 +232,11 @@ public class SSHConnector extends SingleHostConnector {
 
         // Returns
         return _session.session;
+    }
+
+    @Override
+    public Path defaultTemporaryPath() {
+        return Paths.get("/tmp");
     }
 
     /**

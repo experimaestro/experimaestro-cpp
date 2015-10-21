@@ -54,6 +54,11 @@ public class XPMConnector extends SingleHostConnector {
     }
 
     @Override
+    public Path defaultTemporaryPath() {
+        return null;
+    }
+
+    @Override
     protected FileSystem doGetFileSystem() throws FileSystemException {
         throw new NotImplementedException();
     }

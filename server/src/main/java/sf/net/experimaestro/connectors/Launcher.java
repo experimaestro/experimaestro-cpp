@@ -134,7 +134,12 @@ public abstract class Launcher implements Serializable {
     }
 
     public Path getTemporaryFile(String prefix, String suffix) throws IOException {
-        return Files.createTempFile(temporaryDirectory, prefix, suffix);
+        if (temporaryDirectory != null) {
+            return Files.createTempFile(temporaryDirectory, prefix, suffix);
+        }
+
+        Path path = this.connector.defaultTemporaryPath();
+        return Files.createTempFile(path, prefix, suffix);
     }
 
     public String resolve(Path file) throws IOException {

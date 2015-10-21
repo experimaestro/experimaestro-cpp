@@ -282,4 +282,6 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     public String quotedPath(Path path) throws IOException {
         return '"' + protect(resolve(path), QUOTED_SPECIAL) + '"';
     }
+
+    public abstract Path defaultTemporaryPath();
 }
