@@ -366,8 +366,7 @@ def command_run_python(args):
         files.append(["<post>", args.post])
 
     logging.debug("Running python scripts %s" % [s[0] for s in files])
-
-    params = {"files": files, "environment": dict(os.environ)}
+    params = {"files": files, "environment": dict(os.environ), "pythonpath": args.pythonpath}
 
     run_server_command(client, "run-python", params)
 
@@ -547,6 +546,7 @@ subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro se
 # --- Scripting
 p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
 p_run_python = subparsers.add_parser("run-python", help="Run Python script in server")
+p_run_python.add_argument("--python-path", dest="pythonpath", default="", type=str, help="Python PATH")
 p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
 for p in [p_run_js, p_run_python]:
     p.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")

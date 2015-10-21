@@ -377,7 +377,8 @@ public class JsonRPCMethods extends HttpServlet {
     @RPCMethod(name = "run-python", help = "Run a python file")
     public String runPython(@RPCArgument(name = "files") List<JSONArray> files,
                             @RPCArgument(name = "environment") Map<String, String> environment,
-                            @RPCArgument(name = "debug", required = false) Integer debugPort) {
+                            @RPCArgument(name = "debug", required = false) Integer debugPort,
+                            @RPCArgument(name = "pythonpath", required=false) String pythonPath) {
 
         final StringWriter errString = new StringWriter();
 //        final PrintWriter err = new PrintWriter(errString);
@@ -394,7 +395,7 @@ public class JsonRPCMethods extends HttpServlet {
             // Creates and enters a Context. The Context stores information
             // about the execution environment of a script.
             try (PythonRunner pythonContext =
-                         new PythonRunner(environment, repositories, scheduler, loggerRepository,
+                         new PythonRunner(environment, repositories, scheduler, loggerRepository, pythonPath,
                                  getRequestOutputStream(), getRequestErrorStream())
             ) {
                 Object result = null;

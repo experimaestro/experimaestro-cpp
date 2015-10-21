@@ -20,10 +20,10 @@ package sf.net.experimaestro.manager.python;
 
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.ScriptableObject;
 import org.python.core.*;
 import org.python.util.PythonInterpreter;
 import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
@@ -34,11 +34,14 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static java.lang.String.format;
 
@@ -65,7 +68,7 @@ public class PythonRunner implements AutoCloseable {
 
 
     public PythonRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler,
-                        Hierarchy loggerRepository,
+                        Hierarchy loggerRepository, String pythonPath,
                         BufferedWriter out, BufferedWriter err) throws Exception {
 
         init();
@@ -73,30 +76,56 @@ public class PythonRunner implements AutoCloseable {
         this.staticContext = new StaticContext(scheduler, loggerRepository)
                 .repository(repositories);
         this.environment = environment;
-        interpreter = new PythonInterpreter();
+
+        PySystemState interpreterState = new PySystemState();
+        for(String path: pythonPath.split(":")) {
+            interpreterState.path.add(new PyString(path));
+        }
+        interpreter = new PythonInterpreter(null, interpreterState);
         interpreter.setOut(out);
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
         runningContext = new RunningContext();
 
-        Scripting.forEachFunction(m -> interpreter.set(m.getKey(), new PythonMethod(null, m)));
-        for (MethodFunction m : Scripting.getMethodFunctions(PythonFunctions.class)) {
-            interpreter.set(m.getKey(), new PythonMethod(null, m));
-        }
+
+
+
+        // XPM module
+        final PyModule xpmModule = imp.addModule("xpm");
 
         // Add classes
         for (PyType type : TYPES.values()) {
-            interpreter.set(type.getName(), type);
+            xpmModule.__setattr__(type.getName(), type);
+        }
+
+        // Add constants
+        Scripting.forEachConstant((name, value) -> {
+            xpmModule.__setattr__(name, wrap(value));
+        });
+        Scripting.forEachFunction(m -> xpmModule.__setattr__(m.getKey(), new PythonMethod(null, m)));
+
+        // Add Python specific functions
+        for (MethodFunction m : Scripting.getMethodFunctions(PythonFunctions.class)) {
+            xpmModule.__setattr__(m.getKey(), new PythonMethod(null, m));
+        }
+
+        // XPM object: wrap properties
+        final XPM xpm = new XPM();
+        ClassDescription xpmDescription = ClassDescription.analyzeClass(XPM.class);
+        for(Map.Entry<Object, ArrayList<Method>> x: xpmDescription.getMethods().entrySet()) {
+            final Object key = x.getKey();
+            if (key instanceof String) {
+                final MethodFunction methodFunction = new MethodFunction(key);
+                methodFunction.add(x.getValue());
+                xpmModule.__setattr__((String)key, new PythonMethod(xpm, methodFunction));
+            } else {
+                throw new XPMRuntimeException("Could not handle key ", key);
+            }
         }
 
         // Add properties
-        interpreter.set("tasks", wrap(new Tasks()));
-        interpreter.set("logger", wrap(new ScriptingLogger("xpm")));
-        interpreter.set("xpm", wrap(new XPM()));
-
-        Scripting.forEachConstant((name, value) -> {
-            interpreter.set(name, wrap(value));
-        });
+        xpmModule.__setattr__("tasks", wrap(new Tasks()));
+        xpmModule.__setattr__("logger", wrap(new ScriptingLogger("xpm")));
     }
 
     /**
