@@ -18,6 +18,7 @@ package sf.net.experimaestro.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.python.core.*;
@@ -28,6 +29,7 @@ import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.Functional;
+import sf.net.experimaestro.utils.iterators.AbstractIterator;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.BufferedWriter;
@@ -38,9 +40,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import static java.lang.String.format;
 
@@ -77,7 +82,7 @@ public class PythonRunner implements AutoCloseable {
         this.environment = environment;
 
         PySystemState interpreterState = new PySystemState();
-        for(String path: pythonPath.split(":")) {
+        for (String path : pythonPath.split(":")) {
             interpreterState.path.add(new PyString(path));
         }
         interpreter = new PythonInterpreter(null, interpreterState);
@@ -196,11 +201,46 @@ public class PythonRunner implements AutoCloseable {
             return new PyFloat(((Number) object).doubleValue());
         }
 
-
         // Exposed objects
         final Exposed exposed = objectClass.getAnnotation(Exposed.class);
         if (exposed != null) {
             return new PythonObject(object);
+        }
+
+        // Map entry as tuple
+        if (object instanceof Map.Entry) {
+            Map.Entry entry = (Map.Entry)object;
+            return new PyTuple(wrap(entry.getKey()), wrap(entry.getValue()));
+        }
+
+        // Entry set
+        if (object instanceof Set) {
+            Set set = (Set)object;
+
+            final AbstractSet wrappedSet = new AbstractSet() {
+                @Override
+                public Iterator iterator() {
+                    return new Iterator() {
+                        Iterator iterator = set.iterator();
+
+                        @Override
+                        public boolean hasNext() {
+                            return iterator.hasNext();
+                        }
+
+                        @Override
+                        public Object next() {
+                            return wrap(iterator.next());
+                        }
+                    };
+                }
+
+                @Override
+                public int size() {
+                    return 0;
+                }
+            };
+            return new PySet(wrappedSet, null);
         }
 
         throw new IllegalArgumentException(format("Cannot wrap class %s into python object", objectClass));

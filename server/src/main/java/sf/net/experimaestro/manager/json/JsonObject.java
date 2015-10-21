@@ -126,6 +126,11 @@ public class JsonObject extends Json {
         map.put(key, new JsonString(string));
     }
 
+    @Expose
+    public Iterable items() {
+        return map.entrySet();
+    }
+
     @Expose(mode = ExposeMode.FIELDS)
     public void put(String key, Json json) {
         if (sealed) {
