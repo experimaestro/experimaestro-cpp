@@ -41,7 +41,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 import static java.lang.String.format;
 
@@ -87,9 +86,6 @@ public class PythonRunner implements AutoCloseable {
         scriptContext = staticContext.scriptContext();
         runningContext = new RunningContext();
 
-
-
-
         // XPM module
         final PyModule xpmModule = imp.addModule("xpm");
 
@@ -102,7 +98,11 @@ public class PythonRunner implements AutoCloseable {
         Scripting.forEachConstant((name, value) -> {
             xpmModule.__setattr__(name, wrap(value));
         });
-        Scripting.forEachFunction(m -> xpmModule.__setattr__(m.getKey(), new PythonMethod(null, m)));
+
+        // Add functions
+        Scripting.forEachFunction(m -> {
+            xpmModule.__setattr__(m.getKey(), new PythonMethod(null, m));
+        });
 
         // Add Python specific functions
         for (MethodFunction m : Scripting.getMethodFunctions(PythonFunctions.class)) {
@@ -112,12 +112,12 @@ public class PythonRunner implements AutoCloseable {
         // XPM object: wrap properties
         final XPM xpm = new XPM();
         ClassDescription xpmDescription = ClassDescription.analyzeClass(XPM.class);
-        for(Map.Entry<Object, ArrayList<Method>> x: xpmDescription.getMethods().entrySet()) {
+        for (Map.Entry<Object, ArrayList<Method>> x : xpmDescription.getMethods().entrySet()) {
             final Object key = x.getKey();
             if (key instanceof String) {
                 final MethodFunction methodFunction = new MethodFunction(key);
                 methodFunction.add(x.getValue());
-                xpmModule.__setattr__((String)key, new PythonMethod(xpm, methodFunction));
+                xpmModule.__setattr__((String) key, new PythonMethod(xpm, methodFunction));
             } else {
                 throw new XPMRuntimeException("Could not handle key ", key);
             }
@@ -189,11 +189,11 @@ public class PythonRunner implements AutoCloseable {
         }
 
         if (object instanceof Long) {
-            return new PyLong((long)object);
+            return new PyLong((long) object);
         }
 
         if (object instanceof Number) {
-            return new PyFloat(((Number)object).doubleValue());
+            return new PyFloat(((Number) object).doubleValue());
         }
 
 
