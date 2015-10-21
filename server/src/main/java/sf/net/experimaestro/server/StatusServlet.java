@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.EnumSet;
 
 /**
@@ -125,7 +126,10 @@ public class StatusServlet extends XPMServlet {
                 out.println("<h2>Experimaestro build information</h2><dl>");
                 out.format("<dt>%s</dt><dd>%s</dd>%n", "Branch", xpmInformation.branch);
                 out.format("<dt>%s</dt><dd>%s</dd>%n", "Commit hash", xpmInformation.commitID);
-                out.format("<dt>%s</dt><dd>%s</dd>%n", "Commit time", xpmInformation.commitTime);
+                if (xpmInformation.commitTime != null) {
+                    final Date commitDate = new Date(Long.parseLong(xpmInformation.commitTime));
+                    out.format("<dt>%s</dt><dd>%s [%s]</dd>%n", "Commit time", commitDate.toString(), xpmInformation.commitTime);
+                }
                 out.format("<dt>%s</dt><dd>%b</dd>%n", "Dirty flag", xpmInformation.dirty);
                 out.format("<dt>%s</dt><dd>%s</dd>%n", "Origin", xpmInformation.remoteURL);
                 out.format("<dt>%s</dt><dd>%s</dd>%n", "Tags", xpmInformation.tags);
@@ -136,9 +140,11 @@ public class StatusServlet extends XPMServlet {
                 return;
             }
 
+            // Case of experiments
             if (localPath.equals(EXPERIMENTS_PATH)) {
                 final PrintWriter out = startHTMLResponse(response);
 
+//                Experiment.
 //                for(Experiment o: experiments) {
 //                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
 //                }
