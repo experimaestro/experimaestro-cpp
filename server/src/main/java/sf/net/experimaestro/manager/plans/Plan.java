@@ -27,6 +27,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.NativeObject;
+import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.DotName;
@@ -37,7 +38,12 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonNull;
 import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.scripting.*;
+import sf.net.experimaestro.manager.scripting.Expose;
+import sf.net.experimaestro.manager.scripting.ExposeMode;
+import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.manager.scripting.LanguageContext;
+import sf.net.experimaestro.manager.scripting.RunningContext;
+import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
@@ -423,6 +429,7 @@ public class Plan extends Operator {
                 throw e;
             }
         }
+
         return inputs;
     }
 
@@ -436,7 +443,7 @@ public class Plan extends Operator {
      */
     static Operator getOperator(Object value, LanguageContext lcx){
         if (value == null) {
-            throw new IllegalArgumentException("Null value given");
+            throw new XPMIllegalArgumentException("Null value given");
         }
 
         // --- Already an operator
