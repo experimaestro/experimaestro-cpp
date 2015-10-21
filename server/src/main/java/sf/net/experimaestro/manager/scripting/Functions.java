@@ -19,9 +19,21 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.*;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.*;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
+import sf.net.experimaestro.connectors.Connector;
+import sf.net.experimaestro.connectors.Launcher;
+import sf.net.experimaestro.connectors.LocalhostConnector;
+import sf.net.experimaestro.connectors.NetworkShare;
+import sf.net.experimaestro.connectors.SingleHostConnector;
+import sf.net.experimaestro.exceptions.ExitException;
+import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
+import sf.net.experimaestro.exceptions.ExperimaestroException;
+import sf.net.experimaestro.exceptions.XPMRhinoException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
@@ -58,6 +70,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
@@ -70,24 +83,19 @@ public class Functions {
     final static private Logger LOGGER = Logger.getLogger();
 
     @Expose(context = true, value = "merge")
-    static public NativeObject merge(LanguageContext cx,
-                                     @Argument(name = "objects", types = {Map.class, Json.class})
-                                     Object... objects) {
-        NativeObject returned = new NativeObject();
-
-        Scriptable scope = null; // FIXME
-        Context jcx = null;
+    static public Map merge(LanguageContext cx,
+                            @Argument(name = "objects", types = {Map.class, Json.class})
+                            Object... objects) {
+        Map returned = new HashMap<>();
 
         for (Object object : objects) {
-            object = JSUtils.unwrap(object);
             if (object instanceof Map) {
                 Map<?, ?> map = (Map) object;
                 for (Map.Entry<?, ?> entry : map.entrySet()) {
                     Object key = entry.getKey();
-                    if (returned.has(key.toString(), returned))
+                    if (returned.containsKey(key.toString()))
                         throw new XPMRhinoException("Conflicting id in merge: %s", key);
-                    returned.put(key.toString(), returned,
-                            JSBaseObject.XPMWrapFactory.INSTANCE.wrap(jcx, scope, entry.getValue(), Object.class));
+                    returned.put(key.toString(), entry.getValue());
                 }
             } else if (object instanceof Json) {
                 Json json = (Json) object;
@@ -95,7 +103,7 @@ public class Functions {
                     throw new XPMRhinoException("Cannot merge object of type " + object.getClass());
                 JsonObject jsonObject = (JsonObject) json;
                 for (Map.Entry<String, Json> entry : jsonObject.entrySet()) {
-                    returned.put(entry.getKey(), returned, entry.getValue());
+                    returned.put(entry.getKey(), entry.getValue());
                 }
 
             } else throw new XPMRhinoException("Cannot merge object of type " + object.getClass());

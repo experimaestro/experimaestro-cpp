@@ -29,12 +29,13 @@ public enum ExposeMode {
     /** Property access */
     PROPERTY,
 
-    /** Index access */
-    INDEX,
-
-    /** Field access */
+    /** Field or index access */
     FIELDS,
 
     /** Iterator */
-    ITERATOR
+    ITERATOR,
+
+    /** Length */
+    LENGTH
+
 }

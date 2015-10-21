@@ -156,10 +156,13 @@ public class JsonArray extends Json implements Iterable<Json> {
         return array.iterator();
     }
 
-    @Expose(mode = ExposeMode.INDEX)
+    @Expose(mode = ExposeMode.FIELDS)
     public Json get(int index) {
         return array.get(index);
     }
 
-
+    @Expose(mode = ExposeMode.LENGTH)
+    public int _size() {
+        return array.size();
+    }
 }

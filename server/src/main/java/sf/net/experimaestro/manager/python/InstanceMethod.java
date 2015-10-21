@@ -51,7 +51,7 @@ class InstanceMethod extends PyCode implements Traverseproc {
     }
 
     public PyObject call(ThreadState state, PyObject arg1, PyObject arg2, PyObject arg3, PyObject arg4, PyObject globals, PyObject[] defaults, PyObject closure) {
-        throw new UnsupportedOperationException();
+        return this.call(arg1, new PyObject[]{arg2, arg3, arg4}, Py.NoKeywords);
     }
 
     public int traverse(Visitproc visit, Object arg) {

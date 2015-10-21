@@ -33,6 +33,8 @@ import java.util.Iterator;
  * A python object for exposed
  */
 class PythonObject extends PyObject {
+    private static final Object NOT_FOUND = new Object();
+
     private final ClassDescription description;
     final Object object;
 
@@ -159,14 +161,46 @@ class PythonObject extends PyObject {
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
         final ArrayList<Method> methods = description.getMethods().get(ExposeMode.CALL);
+        final String key = "()";
         if (methods != null) {
-            final MethodFunction methodFunction = new MethodFunction("()");
+            final MethodFunction methodFunction = new MethodFunction(key);
             methodFunction.add(methods);
             final PythonContext pcx = new PythonContext();
             return PythonRunner.wrap(methodFunction.call(pcx, object, null, args));
         }
 
         return super.__call__(args, keywords);
+    }
+
+    @Override
+    public int __len__() {
+        final Object result = runFunction(ExposeMode.LENGTH);
+        if (result != NOT_FOUND) {
+            return (Integer) result;
+        }
+
+        return super.__len__();
+    }
+
+    private Object runFunction(ExposeMode mode, Object... args) {
+        final ArrayList<Method> methods = description.getMethods().get(mode);
+        if (methods != null) {
+            final MethodFunction methodFunction = new MethodFunction(mode.toString());
+            methodFunction.add(methods);
+            final PythonContext pcx = new PythonContext();
+            return methodFunction.call(pcx, object, null, args);
+        }
+        return NOT_FOUND;
+    }
+
+    @Override
+    public PyObject __finditem__(int key) {
+        final Object result = runFunction(ExposeMode.FIELDS, key);
+        if (result != NOT_FOUND) {
+            return (PyObject) result;
+        }
+
+        return super.__finditem__(key);
     }
 
     @Override

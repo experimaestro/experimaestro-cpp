@@ -44,7 +44,7 @@ public class ScriptingList extends WrapperObject<List> {
         return object.size();
     }
 
-    @Expose(mode = ExposeMode.INDEX)
+    @Expose(mode = ExposeMode.FIELDS)
     public Object get(int index) {
         return object.get(index);
     }

@@ -36,9 +36,14 @@ public class ScriptingMap extends WrapperObject<Map> {
         super(object);
     }
 
-    @Expose
+    @Expose(mode = ExposeMode.FIELDS)
     public Object get(String value) {
         return object.get(value);
+    }
+
+    @Expose(mode = ExposeMode.FIELDS)
+    public void put(Object key, Object value) {
+        object.put(key, value);
     }
 
 }

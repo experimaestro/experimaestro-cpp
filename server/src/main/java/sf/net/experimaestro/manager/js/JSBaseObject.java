@@ -151,7 +151,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
 
     @Override
     public Object get(int index, Scriptable start) {
-        MethodFunction function = getMethodFunction(ExposeMode.INDEX);
+        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
             final Object result = function.call(jcx, thisObject(), null, index);

@@ -167,9 +167,9 @@ public class ClassDescription {
         Object key = name;
         switch (mode) {
             case FIELDS:
-            case INDEX:
             case CALL:
             case ITERATOR:
+            case LENGTH:
                 if (!name.equals("")) {
                     throw new AssertionError("Method " + method + " should not defined a name since" +
                             "it is will be called directly.");
