@@ -138,7 +138,7 @@ public class Functions {
     }
 
     // Used in scripting languages which cannot use $ as first character
-    @Expose(value = "_", languages = Languages.PYTHON)
+    @Expose(value = "v_", languages = Languages.PYTHON)
     public static Object _get_value(Object object) {
         return get_value(object);
     }
@@ -340,7 +340,7 @@ public class Functions {
         }
     }
 
-    @Expose(value = "__", languages = Languages.PYTHON)
+    @Expose(value = "r_", languages = Languages.PYTHON)
     public static Object get_resource_py(Json json) throws SQLException {
         return get_resource(json);
     }
