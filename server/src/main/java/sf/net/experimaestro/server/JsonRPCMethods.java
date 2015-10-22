@@ -38,11 +38,21 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.*;
+import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.exceptions.ContextualException;
+import sf.net.experimaestro.exceptions.ExitException;
+import sf.net.experimaestro.exceptions.XPMCommandException;
+import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.Repositories;
 import sf.net.experimaestro.manager.js.JavaScriptRunner;
 import sf.net.experimaestro.manager.python.PythonRunner;
-import sf.net.experimaestro.scheduler.*;
+import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.Job;
+import sf.net.experimaestro.scheduler.Listener;
+import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.ResourceState;
+import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.SimpleMessage;
 import sf.net.experimaestro.utils.CloseableIterable;
 import sf.net.experimaestro.utils.CloseableIterator;
 import sf.net.experimaestro.utils.JSUtils;
@@ -52,7 +62,12 @@ import sf.net.experimaestro.utils.log.Logger;
 import sf.net.experimaestro.utils.log.Router;
 
 import javax.servlet.http.HttpServlet;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -378,7 +393,7 @@ public class JsonRPCMethods extends HttpServlet {
     public String runPython(@RPCArgument(name = "files") List<JSONArray> files,
                             @RPCArgument(name = "environment") Map<String, String> environment,
                             @RPCArgument(name = "debug", required = false) Integer debugPort,
-                            @RPCArgument(name = "pythonpath", required=false) String pythonPath) {
+                            @RPCArgument(name = "pythonpath", required = false) String pythonPath) {
 
         final StringWriter errString = new StringWriter();
 //        final PrintWriter err = new PrintWriter(errString);
@@ -435,7 +450,8 @@ public class JsonRPCMethods extends HttpServlet {
                         printingStackTrace.set(e, true);
                         e.printStackTrace(System.err);
                         printingStackTrace.set(e, false);
-                    } catch(Throwable e2) {}
+                    } catch (Throwable e2) {
+                    }
                 }
                 e.printStackTrace(System.err);
 
@@ -827,30 +843,38 @@ public class JsonRPCMethods extends HttpServlet {
             try {
                 HashMap<String, Object> map = new HashMap<>();
                 map.put("event", message.getType().toString());
-                final Resource resource = ((SimpleMessage) message).getResource();
+
                 if (message instanceof SimpleMessage) {
-                    map.put("resource", resource.getId());
+                    final SimpleMessage simpleMessage = (SimpleMessage) message;
+                    final Resource resource = simpleMessage.getResource();
+                    final Long resourceID = simpleMessage.getResourceID();
+                    if (resourceID == null) {
+                        return;
+                    }
+
+                    map.put("resource", resourceID);
                     Path locator = resource.getLocator();
                     if (locator != null)
                         map.put("locator", locator.toString());
+
+                    switch (message.getType()) {
+                        case STATE_CHANGED:
+                            map.put("state", resource.getState().toString());
+                            break;
+
+                        case PROGRESS:
+                            map.put("progress", ((Job) resource).getProgress());
+                        case RESOURCE_REMOVED:
+                            break;
+
+                        case RESOURCE_ADDED:
+                            map.put("state", resource.getState().toString());
+                            break;
+                    }
+
+                    mos.message(map);
                 }
 
-                switch (message.getType()) {
-                    case STATE_CHANGED:
-                        map.put("state", resource.getState().toString());
-                        break;
-
-                    case PROGRESS:
-                        map.put("progress", ((Job) resource).getProgress());
-                    case RESOURCE_REMOVED:
-                        break;
-
-                    case RESOURCE_ADDED:
-                        map.put("state", resource.getState().toString());
-                        break;
-                }
-
-                mos.message(map);
             } catch (IOException e) {
                 LOGGER.error(e, "Could not output");
             } catch (RuntimeException e) {

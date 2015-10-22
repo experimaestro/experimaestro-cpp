@@ -501,10 +501,13 @@ public class Resource implements Identifiable {
         } catch (CloseException e) {
             LOGGER.error(e, "Error while closing iterator");
         }
+
         // Remove
+        final SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
         Scheduler.get().resources().delete(this);
 
-        Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_REMOVED, this));
+        // Notify
+        Scheduler.get().notify(message);
     }
 
     public Path getFileWithExtension(FileNameTransformer extension) throws IOException {

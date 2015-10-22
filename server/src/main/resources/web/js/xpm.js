@@ -109,6 +109,8 @@ var resource_action_callback = function () {
                     $.jsonRPC.request('remove', {
                         params: {"id": rsrcid, "recursive": false},
                         success: function (r) {
+                            // We just notify - but wait for the server notification to
+                            // remove the job from the interface
                             noty({text: "Successful delete", type: 'success', timeout: 5000});
                         },
                         error: jsonrpc_error,
@@ -204,15 +206,20 @@ $().ready(function () {
                     // Get the resource
                     var e = $("#R" + r.resource);
 
-                    // Decrement old
-                    decrement(e);
+                    if (e.length > 1) {
+                        alert("Resource is in more than one state !");
+                    }
+                    if (e.length > 0) {
+                        // Decrement old
+                        decrement(e);
 
-                    // Increment new state
-                    var c = $("#state-" + r.state + "-count");
-                    c.text(Number(c.text()) + 1);
+                        // Increment new state
+                        var c = $("#state-" + r.state + "-count");
+                        c.text(Number(c.text()) + 1);
 
-                    // Put the item in the list
-                    $("#state-" + r.state).children("ul").append(e);
+                        // Put the item in the list
+                        $("#state-" + r.state).children("ul").append(e);
+                    }
 
                     break;
 

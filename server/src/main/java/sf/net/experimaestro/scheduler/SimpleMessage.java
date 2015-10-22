@@ -22,17 +22,25 @@ package sf.net.experimaestro.scheduler;
  * Simple messages that can be sent status resources
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 30/11/12
  */
 public class SimpleMessage extends Message {
+    /** The resource */
     Resource resource;
+
+    /** The resource ID */
+    private Long resourceID;
 
     public SimpleMessage(Type type, Resource resource) {
         super(type);
+        this.resourceID = resource.getId();
         this.resource = resource;
     }
 
     public Resource getResource() {
         return resource;
+    }
+
+    public Long getResourceID() {
+        return resourceID;
     }
 }
