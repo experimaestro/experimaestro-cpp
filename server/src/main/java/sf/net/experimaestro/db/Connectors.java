@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.db;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,24 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.scheduler.Resource;
+
+import java.sql.Blob;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ *
  */
-public interface CloseableIterable<T> extends Iterable<T>, AutoCloseable {
-    @Override
-    void close() throws CloseException;
+public class Connectors extends Table {
+    @Identity
+    Field<Long> id;
+
+    Field<Long> type;
+
+    @NotNull
+    @MaxSize(4096)
+    Field<String> uri;
+
+    @NotNull
+    Field<Blob> data;
+
 }

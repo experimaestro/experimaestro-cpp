@@ -20,6 +20,7 @@ package sf.net.experimaestro.server;
 
 import bpiwowar.experiments.Run;
 import sf.net.experimaestro.exceptions.CloseException;
+import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Resource.PrintConfig;
 import sf.net.experimaestro.scheduler.ResourceState;
@@ -144,6 +145,14 @@ public class StatusServlet extends XPMServlet {
             if (localPath.equals(EXPERIMENTS_PATH)) {
                 final PrintWriter out = startHTMLResponse(response);
 
+                try(final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
+                    for(Experiment experiment: experiments) {
+                        out.format("<div>Experiment: %s</div>", experiment.getName());
+                    }
+                } catch(SQLException | CloseException e) {
+                    error(out, e.toString());
+                }
+
 //                Experiment.
 //                for(Experiment o: experiments) {
 //                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
@@ -190,5 +199,9 @@ public class StatusServlet extends XPMServlet {
         } finally {
             Scheduler.closeConnection();
         }
+    }
+
+    private void error(PrintWriter out, String s) {
+        out.format("<div class='error'>%s</div>", s);
     }
 }

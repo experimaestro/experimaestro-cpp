@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.db;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,12 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.CloseException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ *
  */
-public interface CloseableIterable<T> extends Iterable<T>, AutoCloseable {
-    @Override
-    void close() throws CloseException;
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Identity {
 }

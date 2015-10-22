@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package sf.net.experimaestro.db;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,19 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.CloseException;
-
 /**
- * @author B. Piwowarski <benjamin@bpiwowar.net>
+ *
  */
-public interface CloseableIterable<T> extends Iterable<T>, AutoCloseable {
-    @Override
-    void close() throws CloseException;
+public class Predicate extends Value {
+    private final PredicateType type;
+
+    private final Value value1;
+
+    private final Value value2;
+
+    public Predicate(PredicateType type, Value value1, Value value2) {
+        this.type = type;
+        this.value1 = value1;
+        this.value2 = value2;
+    }
 }

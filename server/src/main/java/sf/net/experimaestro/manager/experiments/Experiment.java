@@ -18,14 +18,13 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.DatabaseObjects;
 import sf.net.experimaestro.scheduler.Identifiable;
 import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.utils.CloseableIterable;
 
-import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -68,7 +67,7 @@ public class Experiment implements Identifiable {
     /**
      * New task
      *
-     * @param identifier       The experiment taskId
+     * @param identifier The experiment taskId
      */
     public Experiment(String identifier, long timestamp) {
         this.identifier = identifier;
@@ -120,5 +119,16 @@ public class Experiment implements Identifiable {
             return experiment;
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not construct network share");
-        }    }
+        }
+    }
+
+    static private final String SELECT_BEGIN = "SELECT id, name, timestamp FROM Experiments";
+
+    /**
+     * Iterator on experiments
+     */
+    static public CloseableIterable<Experiment> experiments() throws SQLException {
+        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        return experiments.find(SELECT_BEGIN, st -> {});
+    }
 }

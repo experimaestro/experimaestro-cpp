@@ -181,7 +181,7 @@ final public class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    CloseableIterable<T> find(final String query, final ExceptionalConsumer<PreparedStatement> p) throws SQLException {
+    public CloseableIterable<T> find(final String query, final ExceptionalConsumer<PreparedStatement> p) throws SQLException {
         try {
             final CallableStatement st = Scheduler.getConnection().prepareCall(query);
             if (p != null) {
