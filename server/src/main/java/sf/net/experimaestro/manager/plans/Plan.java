@@ -37,6 +37,7 @@ import sf.net.experimaestro.manager.ValueType;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonArray;
 import sf.net.experimaestro.manager.json.JsonNull;
+import sf.net.experimaestro.manager.json.JsonPath;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.ExposeMode;
@@ -49,6 +50,7 @@ import sf.net.experimaestro.utils.io.LoggerPrintStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -481,6 +483,10 @@ public class Plan extends Operator {
 
         if (value instanceof NativeObject) {
             return new Constant(lcx.toJSON(value));
+        }
+
+        if (value instanceof Path) {
+            return new Constant(new JsonPath((Path) value));
         }
 
         // --- Plans & transformations
