@@ -24,19 +24,25 @@ import sf.net.experimaestro.locks.Lock;
 import java.sql.SQLException;
 
 /**
- * This lock calls {@linkplain TokenResource#unlock()} when
+ * This lock calls {@linkplain TokenResource#unlock(int)} when
  * released.
  */
 @TypeIdentifier("token")
 public class TokenLock extends Lock {
+    // The resource
     private TokenResource resource;
 
+    // Tokens to
+    int tokens = 1;
+
+    /// From database
     public TokenLock(long id) {
         super(id);
     }
 
-    public TokenLock(TokenResource resource) {
+    public TokenLock(TokenResource resource, int tokens) {
         this.resource = resource;
+        this.tokens = tokens;
     }
 
 
@@ -44,7 +50,7 @@ public class TokenLock extends Lock {
     public void doClose() throws LockException {
         if (resource != null) {
             try {
-                resource.unlock();
+                resource.unlock(tokens);
             } catch (SQLException e) {
                 throw new LockException(e);
             }

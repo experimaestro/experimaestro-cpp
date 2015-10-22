@@ -167,7 +167,8 @@ final public class Scheduler {
 
     private DatabaseObjects<Connector> connectors;
 
-    final static int DBVERSION = 2;
+    /** Current version of the database (used to run incremental SQL script updates) */
+    final static int DBVERSION = 1;
 
     private XPMConnector xpmConnector;
 

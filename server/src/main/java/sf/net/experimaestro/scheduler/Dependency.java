@@ -29,6 +29,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
+import static sf.net.experimaestro.utils.GsonConverter.defaultBuilder;
 
 /**
  * What is the state of a dependency.
@@ -72,10 +73,12 @@ abstract public class Dependency implements Serializable {
     protected Dependency() {
     }
 
+    /** Construct from database */
     protected Dependency(long fromId, long toId, Lock lock, DependencyStatus status) {
         this.from = new ResourceReference(fromId);
         this.to = new ResourceReference(toId);
         this.status = status;
+        this.lock = lock;
     }
 
     public Dependency(Resource from) {

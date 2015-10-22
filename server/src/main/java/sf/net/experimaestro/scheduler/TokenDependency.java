@@ -21,8 +21,10 @@ package sf.net.experimaestro.scheduler;
 import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.db.DbUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
@@ -37,8 +39,34 @@ import static java.lang.String.format;
 public class TokenDependency extends Dependency {
     final static private Logger LOGGER = Logger.getLogger();
 
-    protected TokenDependency(long fromId, long toId, Lock lock, DependencyStatus status) {
+    // Number of requested tokens
+    int tokens;
+
+    // The SQL queries
+    final private String SELECT_QUERY = "SELECT tokens FROM TokenDependencies WHERE fromId = ? AND toId = ?";
+    final private String INSERT_QUERY = "INSERT INTO tokens(tokens, fromId, toId) VALUES(?,?,?)";
+    final private String UPDATE_QUERY = "UPDATE tokens = ? WHERE fromId=? AND toId=?";
+
+    protected TokenDependency(long fromId, long toId, Lock lock, DependencyStatus status) throws SQLException {
         super(fromId, toId, lock, status);
+
+        try (PreparedStatement st = Scheduler.prepareStatement(SELECT_QUERY)) {
+            st.setLong(1, from.id());
+            st.setLong(2, to.id());
+            st.execute();
+            DbUtils.processOne(st, true, rs -> this.tokens = rs.getInt(1));
+        }
+    }
+
+    @Override
+    public void save(boolean update) throws SQLException {
+        super.save(update);
+        int updated = Scheduler.statement(update ? UPDATE_QUERY : INSERT_QUERY)
+                .setLong(1, this.tokens)
+                .setLong(2, from.id())
+                .setLong(3, to.id())
+                .executeUpdate();
+        LOGGER.debug("TokenDependency %s - updated rows = %d", this, updated);
     }
 
     public TokenDependency(Resource from) {
@@ -69,26 +97,26 @@ public class TokenDependency extends Dependency {
      */
     public boolean canLock() {
         TokenResource token = (TokenResource) getFrom();
-        return token.getUsedTokens() < token.getLimit();
+        return token.getUsedTokens() + tokens <= token.getLimit();
     }
 
     @Override
     protected Lock _lock(String pid) throws LockException {
         TokenResource token = (TokenResource) getFrom();
-        if (token.getUsedTokens() >= token.getLimit()) {
-            LOGGER.debug("All tokens are already taken (%s/%s) [token %s for %s]",
-                    token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
+        if (token.getUsedTokens() + tokens > token.getLimit()) {
+            LOGGER.debug("We need %d tokens, which is not possible (used=%s/limit=%s) [token %s for %s]",
+                    tokens, token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
             throw new LockException("All the tokens are already taken");
         }
 
         try {
-            token.increaseUsedTokens();
+            token.takeTokens(tokens);
         } catch (SQLException e) {
             throw new LockException(e);
         }
         LOGGER.debug("Taking one token (%s/%s) [token %s for %s]",
                 token.getUsedTokens(), token.getLimit(), getFrom(), getTo());
-        return new TokenLock(token);
+        return new TokenLock(token, tokens);
     }
 
 

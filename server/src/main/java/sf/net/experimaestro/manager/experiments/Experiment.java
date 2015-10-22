@@ -18,15 +18,6 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableSet;
-import sf.net.experimaestro.db.Db;
-import sf.net.experimaestro.db.Default;
-import sf.net.experimaestro.db.Field;
-import sf.net.experimaestro.db.Identity;
-import sf.net.experimaestro.db.Index;
-import sf.net.experimaestro.db.MaxSize;
-import sf.net.experimaestro.db.NotNull;
-import sf.net.experimaestro.db.Query;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.DatabaseObjects;
@@ -39,7 +30,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Set;
 
 /**
  * An experiment

@@ -18,6 +18,8 @@ package sf.net.experimaestro.utils.db;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.utils.ExceptionalConsumer;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,10 +29,24 @@ import java.util.function.Consumer;
  *
  */
 public class DbUtils {
-    public static void processOne(PreparedStatement st, Consumer<ResultSet> c) throws SQLException {
+    public static void processOne(PreparedStatement st, boolean optional, ExceptionalConsumer<ResultSet> c) throws SQLException {
         st.execute();
-        ResultSet resultSet = getFirst(st);
-        c.accept(resultSet);
+
+        // Retrieve first result
+        ResultSet resultSet = st.getResultSet();
+        if (!resultSet.next()) {
+            if (optional) return;
+            throw new SQLException("No result for query " + st.toString());
+        }
+
+        // Process result
+        try {
+            c.apply(resultSet);
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
+
+        // Check that we have no more
         if (resultSet.next()) {
             throw new SQLException("Too many results for query " + st.toString());
         }

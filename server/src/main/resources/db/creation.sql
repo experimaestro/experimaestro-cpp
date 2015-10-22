@@ -100,7 +100,11 @@ CREATE TABLE Dependencies (
   toId   BIGINT   NOT NULL,
   type   BIGINT   NOT NULL,
   status SMALLINT NOT NULL,
+  data   BLOB     NOT NULL, -- The data
   lock   BIGINT,
+
+  -- Primary key
+  PRIMARY KEY (fromId, toId),
 
   -- Foreign key for the source (restricting deletion)
   FOREIGN KEY (fromId) REFERENCES Resources
@@ -109,6 +113,17 @@ CREATE TABLE Dependencies (
     ON DELETE CASCADE,
   FOREIGN KEY (lock) REFERENCES Locks
     ON DELETE SET NULL
+);
+
+--- Token dependencies
+
+CREATE TABLE TokenDependencies (
+  fromId  BIGINT   NOT NULL,
+  toId    BIGINT   NOT NULL,
+  tokens  INT      NOT NULL DEFAULT 1,
+
+  PRIMARY KEY (fromId, toId),
+  FOREIGN KEY (fromId, toId) REFERENCES Dependencies ON DELETE CASCADE
 );
 
 -- Ensures that shares are not removed if a lock references it

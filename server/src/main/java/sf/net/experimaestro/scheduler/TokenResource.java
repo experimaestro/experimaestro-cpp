@@ -19,7 +19,6 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.Connector;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
@@ -158,19 +157,26 @@ public class TokenResource extends Resource {
      * Unlock a resource
      *
      * @return
+     * @param tokens
      */
-    synchronized void unlock() throws SQLException {
-        if (usedTokens >= 0) {
+    synchronized void unlock(int tokens) throws SQLException {
+        if (usedTokens >= tokens) {
             setValue(usedTokens - 1);
             Scheduler.notifyRunners();
-            LOGGER.debug("Releasing one token (%s/%s)", usedTokens, limit);
+            LOGGER.debug("Releasing %d token (%s/%s)", tokens, usedTokens, limit);
         } else {
-            LOGGER.warn("Attempt to release non existent token (%d/%d)", usedTokens, limit);
+            LOGGER.warn("Attempt to release %d non existent tokens (%d/%d)", tokens, usedTokens, limit);
+
+            // Release everything if there is any token left
+            if (usedTokens > 0) {
+                setValue(0);
+                Scheduler.notifyRunners();
+            }
         }
     }
 
-    public void increaseUsedTokens() throws SQLException {
-        setValue(usedTokens + 1);
+    public void takeTokens(int tokens) throws SQLException {
+        setValue(usedTokens + tokens);
         LOGGER.debug("Getting one more token (%s/%s)", usedTokens, limit);
     }
 
