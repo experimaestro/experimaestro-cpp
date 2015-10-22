@@ -25,4 +25,10 @@ public class Db {
     public static Predicate eq(Value value1, Value value2) {
         return new Predicate(PredicateType.EQUALS, value1, value2);
     }
+
+    /** Creates a simple query */
+    public static Query select(FieldReference... fields) {
+        final Query query = new Query();
+        return query;
+    }
 }

@@ -21,5 +21,5 @@ package sf.net.experimaestro.db;
 /**
  *
  */
-public class Type {
+public @interface Type {
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.db;
+package sf.net.experimaestro.db.tables;
 
 /*
  * This file is part of experimaestro.
@@ -18,54 +18,59 @@ package sf.net.experimaestro.db;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.db.*;
 import sf.net.experimaestro.scheduler.Scheduler;
 
-import java.sql.Blob;
 import java.sql.SQLException;
 
 /**
  * Resources
  */
 public class Resources extends Table {
-    public static Resources instance = new Resources();
+    final static private Resources T = new Resources();
 
     @Identity
-    public
     Field<Long> id;
 
     @NotNull
-    @MaxSize(4096)
-    public
+    @MaxSize(255)
     Field<String> path;
 
     @NotNull
-    public
-    Field<Long> status;
+    Field<Integer> status;
 
     @NotNull
-    public
-    Field<Long> type;
+    @IntegerType(bytes = 2)
+    Field<Integer> oldStatus;
 
     @NotNull
+    @IntegerType(bytes = 2)
+    Field<Integer> type;
+
+    @NotNull
+    @IntegerType(bytes = 2)
     @Default("0")
     Field<Integer> priority;
 
     @NotNull
-    @References(Connectors.class)
+    @IntegerType(bytes = 4)
     Field<Long> connector;
 
     @NotNull
-    Field<Blob> data;
+    Field<byte[]> data;
+
+    @Override
+    protected void init() {
+        super.init();
+
+    }
 
     static void test() throws SQLException {
-        final sf.net.experimaestro.db.Resources resources = Table.create(sf.net.experimaestro.db.Resources.class);
-
         final PlaceHolder path = new PlaceHolder();
-        final Query select = resources.ref().select(resources.id, resources.type, resources.path, resources.status)
-                .where(Db.eq(resources.path, path));
+        final Query select = T.ref().select(T.id, T.type, T.path, T.status)
+                .where(Db.eq(T.path, path));
 
         select.execute(Scheduler.get().getConnection());
     }
-
 
 }

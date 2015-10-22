@@ -128,4 +128,8 @@ public class Table {
             st.execute();
         }
     }
+
+    protected void init() {
+
+    }
 }

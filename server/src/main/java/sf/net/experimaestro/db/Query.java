@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 
 /**
@@ -48,9 +49,6 @@ public class Query {
     public String toString() {
         if (queryString == null) {
             // Get tables
-
-
-            //
             StringBuilder sb = new StringBuilder();
             sb.append("SELECT ");
             Joiner.on(") and (").appendTo(sb, predicates);
@@ -72,5 +70,14 @@ public class Query {
             // Execute query
             st.execute();
         }
+    }
+
+    /**
+     * Order fields for this query
+     * @param orders The orders
+     * @return This query
+     */
+    public Query orderby(Order orders) {
+        return this;
     }
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.db;
+package sf.net.experimaestro.db.tables;
 
 /*
  * This file is part of experimaestro.
@@ -18,9 +18,9 @@ package sf.net.experimaestro.db;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.scheduler.Resource;
-
-import java.sql.Blob;
+import sf.net.experimaestro.db.Field;
+import sf.net.experimaestro.db.Identity;
+import sf.net.experimaestro.db.Table;
 
 /**
  *
@@ -28,14 +28,4 @@ import java.sql.Blob;
 public class Connectors extends Table {
     @Identity
     Field<Long> id;
-
-    Field<Long> type;
-
-    @NotNull
-    @MaxSize(4096)
-    Field<String> uri;
-
-    @NotNull
-    Field<Blob> data;
-
 }

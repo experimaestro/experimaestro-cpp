@@ -26,7 +26,7 @@ import java.sql.Blob;
 /**
  * A database field
  */
-public class Field<T> extends Value {
+public class Field<T> extends Value implements Order, FieldReference {
     private final FieldType type;
 
     private final int maxsize;
@@ -52,7 +52,7 @@ public class Field<T> extends Value {
 
         if (instanceOf(type, Integer.class)) {
             this.type = FieldType.Integer;
-        } else if (instanceOf(type, Long.class)) {
+        } else if (instanceOf(type, IntegerType.class)) {
             this.type = FieldType.Long;
         } else if (instanceOf(type, String.class)) {
             this.type = FieldType.String;

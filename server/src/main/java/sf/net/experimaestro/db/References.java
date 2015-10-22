@@ -26,5 +26,5 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface References {
-    Class<? extends Table> value();
+    Class value();
 }
