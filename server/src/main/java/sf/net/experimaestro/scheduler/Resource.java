@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URI;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -394,7 +393,7 @@ public class Resource implements Identifiable {
      * @param type The parameters for the dependency
      * @return a new dependency or null if this object does not need to be locked
      */
-    public Dependency createDependency(Object type) {
+    public Dependency createDependency(DependencyParameters type) {
         return null;
     }
 
@@ -717,7 +716,7 @@ public class Resource implements Identifiable {
     }
 
     @Expose
-    public Dependency lock(String lockType) {
+    public Dependency lock(DependencyParameters lockType) {
         return createDependency(lockType);
     }
 

@@ -19,21 +19,9 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import org.mozilla.javascript.*;
+import sf.net.experimaestro.connectors.*;
+import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
@@ -51,6 +39,7 @@ import sf.net.experimaestro.manager.plans.FunctionOperator;
 import sf.net.experimaestro.manager.plans.Operator;
 import sf.net.experimaestro.manager.plans.ProductReference;
 import sf.net.experimaestro.scheduler.Dependency;
+import sf.net.experimaestro.scheduler.DependencyParameters;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
 import sf.net.experimaestro.utils.JSUtils;
@@ -320,7 +309,7 @@ public class Functions {
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
+    static public ArrayList<Dependency> get_locks(DependencyParameters lockMode, JsonObject json) throws SQLException {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
         get_locks(lockMode, json, dependencies);
@@ -328,7 +317,7 @@ public class Functions {
         return dependencies;
     }
 
-    static private void get_locks(String lockMode, Json json, ArrayList<Dependency> dependencies) throws SQLException {
+    static private void get_locks(DependencyParameters lockMode, Json json, ArrayList<Dependency> dependencies) throws SQLException {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {

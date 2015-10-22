@@ -20,10 +20,8 @@ package sf.net.experimaestro.scheduler;
 
 import sf.net.experimaestro.utils.ExceptionalRunnable;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.io.InputStream;
+import java.sql.*;
 
 /**
  * Utility class to execute statements
@@ -81,6 +79,10 @@ public class XPMStatement {
         return protect(() -> st.setObject(index, object));
     }
 
+    public XPMStatement setBlob(int index, InputStream is) throws SQLException {
+        return protect(() -> st.setBlob(index, is));
+    }
+
     public XPMStatement setInt(int index, int value) throws SQLException {
         return protect(() -> st.setDouble(index, value));
     }
@@ -91,5 +93,20 @@ public class XPMStatement {
         } finally {
             st.close();
         }
+    }
+
+    public XPMResultSet resultSet() throws SQLException {
+        return new XPMResultSet(this, st.getResultSet());
+    }
+
+    public void close() throws SQLException {
+        st.close();
+    }
+
+    public XPMResultSet singleResultSet() throws SQLException {
+        final ResultSet rs = st.getResultSet();
+        if (!rs.next()) throw new SQLException("Expected one result only (got 0)");
+        if (!rs.isLast()) throw new SQLException("Expected one result only (got > 1)");
+        return new XPMResultSet(this, rs);
     }
 }

@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.manager.scripting.Help;
+import sf.net.experimaestro.scheduler.LauncherParameters;
 import sf.net.experimaestro.utils.JsonAbstract;
 
 import java.io.IOException;
@@ -71,10 +72,11 @@ public abstract class Launcher implements Serializable {
      * Creates a script builder
      *
      * @param scriptFile The path to the script file to createSSHAgentIdentityRepository
+     * @param parameters
      * @return A builder
      * @throws FileSystemException if an exception occurs while accessing the script file
      */
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile, LauncherParameters parameters) throws IOException {
         UnixScriptProcessBuilder xpmScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this);
         xpmScriptProcessBuilder.setNotificationURL(getNotificationURL());
         xpmScriptProcessBuilder.environment(environment);

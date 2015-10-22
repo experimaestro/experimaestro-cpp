@@ -25,6 +25,7 @@ import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
 import sf.net.experimaestro.manager.scripting.Expose;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.Commands;
+import sf.net.experimaestro.scheduler.LauncherParameters;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.utils.Output;
 import sf.net.experimaestro.utils.log.Logger;
@@ -144,11 +145,10 @@ public class OARLauncher extends Launcher {
     }
 
     @Override
-    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile) throws IOException {
+    public XPMScriptProcessBuilder scriptProcessBuilder(Path scriptFile, LauncherParameters parameters) throws IOException {
         final UnixScriptProcessBuilder unixScriptProcessBuilder = new UnixScriptProcessBuilder(scriptFile, this, processBuilder());
         unixScriptProcessBuilder.setNotificationURL(getNotificationURL());
         unixScriptProcessBuilder.environment(environment);
-
         if (useNotify) {
             unixScriptProcessBuilder.setDoCleanup(false);
             Commands commands = new Commands();
@@ -550,5 +550,10 @@ public class OARLauncher extends Launcher {
     @Expose("use_notify")
     public void setUseNotify(boolean useNotify) {
         this.useNotify = useNotify;
+    }
+
+    @Expose
+    OARParameters parameters() {
+        return new OARParameters(this);
     }
 }

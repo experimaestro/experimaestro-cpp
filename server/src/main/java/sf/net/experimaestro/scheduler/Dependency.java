@@ -29,7 +29,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.utils.GsonConverter.defaultBuilder;
 
 /**
  * What is the state of a dependency.
@@ -170,7 +169,6 @@ abstract public class Dependency implements Serializable {
     synchronized final public boolean update() {
         DependencyStatus old = status;
         status = accept();
-
         return status != old;
 
     }
@@ -223,14 +221,20 @@ abstract public class Dependency implements Serializable {
     }
 
     public void save(boolean update) throws SQLException {
-        int updated = Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
+        final XPMStatement st = Scheduler.statement(update ? UPDATE_DEPENDENCY : INSERT_DEPENDENCY)
                 .setLong(1, DatabaseObjects.getTypeValue(this.getClass()))
                 .setInt(2, status.getId())
                 .setLong(3, lock == null ? null : lock.getId())
                 .setLong(4, from.id())
-                .setLong(5, to.id())
-                .executeUpdate();
-        LOGGER.debug("Dependency %s - updated rows = %d", this, updated);
+                .setLong(5, to.id());
+
+        int updated =  st.executeUpdate();
+
+                LOGGER.debug("Dependency %s - updated rows = %d", this, updated);
+    }
+
+    public long getToId() {
+        return to.id();
     }
 
     /**

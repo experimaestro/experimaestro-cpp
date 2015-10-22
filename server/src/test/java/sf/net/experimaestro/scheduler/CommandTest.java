@@ -66,7 +66,7 @@ public class CommandTest  {
 //            ResourceLocator locator = new ResourceLocator(launcher, locatorPath);
             final Path runFile = Resource.RUN_EXTENSION.transform(locatorPath);
 
-            XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile);
+            XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile, null);
             builder.directory(directory.getFile().toPath());
 
             // Add commands

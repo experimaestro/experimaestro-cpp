@@ -61,6 +61,11 @@ public class CommandLineTask extends Job {
     Launcher launcher;
 
     /**
+     * Launcher parameters
+     */
+    LauncherParameters parameters;
+
+    /**
      * The command status execute
      */
     private Commands commands;
@@ -108,7 +113,7 @@ public class CommandLineTask extends Job {
 
         final Path runFile = Resource.RUN_EXTENSION.transform(getLocator());
         LOGGER.info("Starting command with run file [%s]", runFile);
-        XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile);
+        XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile, parameters);
 
         // Sets the command
         builder.job(this);

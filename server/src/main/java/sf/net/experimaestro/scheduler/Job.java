@@ -687,7 +687,7 @@ abstract public class Job extends Resource {
 
 
     @Override
-    public ReadWriteDependency createDependency(Object object) {
+    public ReadWriteDependency createDependency(DependencyParameters object) {
         // TODO: assert object is nothing
         return new ReadWriteDependency(this);
     }

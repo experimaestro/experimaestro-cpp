@@ -31,6 +31,7 @@ import sf.net.experimaestro.connectors.Launcher;
 import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
 import sf.net.experimaestro.exceptions.XPMRhinoException;
 import sf.net.experimaestro.manager.Constants;
+import sf.net.experimaestro.manager.Parameters;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
@@ -75,6 +76,11 @@ public abstract class Operator {
      * The script context for this operator
      */
     ScriptContext scriptContext;
+
+    /**
+     * Parameters associated to this task
+     */
+    private IdentityHashMap<Object, Parameters> parameters;
 
     public Operator(ScriptContext sc) {
         this(sc, null);
@@ -924,5 +930,14 @@ public abstract class Operator {
 
             return new NativeArray(new Object[]{result, baos.toString()});
         }
+    }
+
+    @Expose
+    @Help("Set a specific set of parameters for an operator")
+    void parameters(Parameters... parameters) {
+        for (Parameters parameter : parameters) {
+            this.parameters.put(parameter.getKey(), parameter);
+        }
+
     }
 }

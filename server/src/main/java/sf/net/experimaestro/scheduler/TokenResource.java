@@ -147,9 +147,16 @@ public class TokenResource extends Resource {
         return false;
     }
 
+    @Expose
+    TokenParameters parameters() {
+        return new TokenParameters(this);
+    }
 
     @Override
-    public TokenDependency createDependency(Object values) {
+    public TokenDependency createDependency(DependencyParameters values) {
+        if (!(values instanceof TokenParameters)) {
+
+        }
         return new TokenDependency(this);
     }
 

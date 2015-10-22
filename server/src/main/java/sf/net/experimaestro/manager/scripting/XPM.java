@@ -152,17 +152,18 @@ public class XPM {
 
 
     @Expose("set_property")
-    public void setProperty(String name, Object object) {
+    public void setProperty(@NotNull String name, Object object) {
         context().setProperty(name, object);
     }
 
     @Expose("set_default_lock")
     @Help("Adds a new resource to lock for all jobs to be started")
     public void setDefaultLock(
+            @NotNull
             @Argument(name = "resource", help = "The resource to be locked")
             Resource resource,
             @Argument(name = "parameters", help = "The parameters to be given at lock time")
-            Object parameters) {
+            DependencyParameters parameters) {
 
         context().addDefaultLock(resource, parameters);
     }
@@ -176,8 +177,8 @@ public class XPM {
     @Expose("log_level")
     @Help(value = "Sets the logger debug level")
     public void setLogLevel(
-            @Argument(name = "name") String name,
-            @Argument(name = "level") String level
+            @Argument(name = "name") @NotNull String name,
+            @Argument(name = "level") @NotNull String level
     ) {
 
         context().getLogger(name).setLevel(Level.toLevel(level));
@@ -185,13 +186,11 @@ public class XPM {
 
     @Expose("get_script_path")
     public String getScriptPath() {
-
         return context().getCurrentScriptPath().toString();
     }
 
     @Expose("get_script_file")
     public ScriptingPath getScriptFile() throws FileSystemException {
-
         return new ScriptingPath(context().getCurrentScriptPath());
     }
 
@@ -518,7 +517,7 @@ public class XPM {
                                 }
                         }
 
-                        final Object lockType = array.get(1);
+                        final DependencyParameters lockType = (DependencyParameters) array.get(1);
                         LOGGER.debug("Adding dependency on [%s] of type [%s]", resource, lockType);
 
                         if (!simulate()) {

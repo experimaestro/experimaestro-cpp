@@ -30,10 +30,7 @@ import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.experiments.TaskReference;
 import sf.net.experimaestro.manager.plans.TaskOperator;
 import sf.net.experimaestro.manager.plans.Value;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
+import sf.net.experimaestro.scheduler.*;
 import sf.net.experimaestro.utils.CachedIterable;
 import sf.net.experimaestro.utils.MapStack;
 import sf.net.experimaestro.utils.Mutable;
@@ -72,7 +69,7 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Default locks
      */
-    Updatable<Map<Resource, Object>> defaultLocks;
+    Updatable<Map<Resource, DependencyParameters>> defaultLocks;
 
     /**
      * Priority
@@ -216,13 +213,12 @@ final public class ScriptContext implements AutoCloseable {
         setTask(taskOperator == null ? null : taskOperatorMap.get(taskOperator));
     }
 
-    public ScriptContext defaultLocks(Map<Resource, Object> defaultLocks) {
+    public ScriptContext defaultLocks(Map<Resource, DependencyParameters> defaultLocks) {
         this.defaultLocks.set(defaultLocks);
         return this;
     }
 
-    public Map<Resource, Object> defaultLocks() {
-
+    public Map<Resource, DependencyParameters> defaultLocks() {
         return defaultLocks.get();
     }
 
@@ -257,7 +253,7 @@ final public class ScriptContext implements AutoCloseable {
      */
     public void prepare(Resource resource) {
         // -- Adds default locks
-        for (Map.Entry<? extends Resource, ?> lock : defaultLocks.get().entrySet()) {
+        for (Map.Entry<? extends Resource, DependencyParameters> lock : defaultLocks.get().entrySet()) {
             Dependency dependency = lock.getKey().createDependency(lock.getValue());
             ((Job) resource).addDependency(dependency);
         }
@@ -273,8 +269,7 @@ final public class ScriptContext implements AutoCloseable {
         return this;
     }
 
-    public ScriptContext addDefaultLocks(Map<Resource, Object> map) {
-
+    public ScriptContext addDefaultLocks(Map<Resource, DependencyParameters> map) {
         defaultLocks.modify().putAll(map);
         return this;
     }
@@ -297,8 +292,7 @@ final public class ScriptContext implements AutoCloseable {
         return staticContext.repository;
     }
 
-    public Map<Resource, Object> getDefaultLocks() {
-
+    public Map<Resource, DependencyParameters> getDefaultLocks() {
         return defaultLocks.get();
     }
 
@@ -341,8 +335,7 @@ final public class ScriptContext implements AutoCloseable {
         threadContext.set(oldCurrent);
     }
 
-    public void addDefaultLock(Resource resource, Object parameters) {
-
+    public void addDefaultLock(Resource resource, DependencyParameters parameters) {
         defaultLocks.modify().put(resource, parameters);
     }
 

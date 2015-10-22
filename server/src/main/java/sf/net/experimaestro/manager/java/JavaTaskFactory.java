@@ -179,7 +179,7 @@ public class JavaTaskFactory extends TaskFactory {
                                     o.toString(), getId());
                         }
                     }
-                    final Dependency lock = resource.createDependency("READ");
+                    final Dependency lock = resource.createDependency(null);
                     commands.addDependency(lock);
                 }
             }
