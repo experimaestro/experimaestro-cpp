@@ -873,18 +873,18 @@ public abstract class Operator {
     }
 
     @Expose
-    public Json[] run() throws ExperimaestroCannotOverwrite {
-        return (Json[]) doRun(ScriptContext.get(), false, false);
+    public Json[] run(IdentityHashMap<Object, Parameters> parameters) throws ExperimaestroCannotOverwrite {
+        return (Json[]) doRun(ScriptContext.get(), false, false, parameters);
     }
 
     @Expose
     public Object simulate() throws ExperimaestroCannotOverwrite {
-        return doRun(ScriptContext.get(), true, false);
+        return doRun(ScriptContext.get(), true, false, null);
     }
 
     @Expose
     public Object simulate(boolean details) throws ExperimaestroCannotOverwrite {
-        return doRun(ScriptContext.get(), true, details);
+        return doRun(ScriptContext.get(), true, details, null);
     }
 
     @Expose
@@ -895,7 +895,7 @@ public abstract class Operator {
         return operator;
     }
 
-    private Object doRun(ScriptContext sc, boolean simulate, boolean details) throws ExperimaestroCannotOverwrite {
+    private Object doRun(ScriptContext sc, boolean simulate, boolean details, IdentityHashMap<Object, Parameters> parameters) throws ExperimaestroCannotOverwrite {
         try (ScriptContext scriptContext = ScriptContext.get().copy()) {
             RunningContext rc = RunningContext.get();
 
@@ -903,16 +903,19 @@ public abstract class Operator {
             rc.counts(details);
 
             // If we have an experiment, get the task reference and store them
-            Experiment experiment = ScriptContext.get().getExperiment();
+            Experiment experiment = scriptContext.getExperiment();
             if (experiment != null) {
                 IdentityHashMap<TaskOperator, TaskReference> map = getTaskOperatorMap(experiment);
                 map.values().forEach(Functional.propagate(TaskReference::persists));
                 scriptContext.setTaskOperatorMap(map);
             }
 
-
             ArrayList<Json> result = new ArrayList<>();
             Operator operator = getOperator(sc, true, true);
+
+            if (parameters != null) {
+                operator.parameters = parameters;
+            }
 
             final Iterator<Value> nodes = operator.iterator(scriptContext);
             while (nodes.hasNext()) {

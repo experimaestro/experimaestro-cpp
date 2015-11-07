@@ -138,7 +138,7 @@ public class SchedulerTest extends XPMEnvironment {
             final int finalI = i;
             jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, 0, 0));
             if (finalI > 0) {
-                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency());
             }
             jobs[finalI].save();
         }
@@ -167,7 +167,7 @@ public class SchedulerTest extends XPMEnvironment {
 
             jobs[finalI] = new WaitingJob(counter, jobDirectory, "job" + finalI, new Action(500, finalI == 0 ? 1 : 0, 0));
             if (finalI > 0) {
-                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency());
             }
             jobs[finalI].save();
         }
@@ -223,7 +223,7 @@ public class SchedulerTest extends XPMEnvironment {
         WaitingJob jobA = new WaitingJob(counter, jobDirectory, "jobA", new Action(250, 0, 0));
         jobA.save();
         WaitingJob jobB = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
-        jobB.addDependency(jobA.createDependency(null));
+        jobB.addDependency(jobA.createDependency());
         jobB.save();
 
         waitToFinish(0, counter, new WaitingJob[] { jobA, jobB }, 1000, 3);
@@ -251,7 +251,7 @@ public class SchedulerTest extends XPMEnvironment {
         jobA.save();
 
         WaitingJob jobB = new WaitingJob(counter, jobDirectory, "jobB", new Action(250, 0, 0));
-        jobB.addDependency(jobA.createDependency(null));
+        jobB.addDependency(jobA.createDependency());
 
         // Wait that A ends
         IntLocks.waitLockID(lockA);
@@ -283,7 +283,7 @@ public class SchedulerTest extends XPMEnvironment {
         for (int i = 0; i < jobs.length; i++) {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(250, failure.get(i) ? 1 : 0, 0));
             final WaitingJob job = jobs[i];
-            job.addDependency(token.createDependency(null));
+            job.addDependency(token.createDependency());
             job.save();
 
         }
@@ -317,7 +317,7 @@ public class SchedulerTest extends XPMEnvironment {
             jobs[i] = new WaitingJob(counter, jobDirectory, "job" + i, new Action(500, i == 0 ? 1 : 0, 0));
             final int finalI = i;
             if (finalI > 0) {
-                jobs[finalI].addDependency(jobs[finalI - 1].createDependency(null));
+                jobs[finalI].addDependency(jobs[finalI - 1].createDependency());
             }
             WaitingJob job = jobs[finalI];
             job.save();
@@ -551,14 +551,14 @@ public class SchedulerTest extends XPMEnvironment {
                 ArrayList<String> deps = new ArrayList<>();
                 for (Link link : dependencies.subSet(new Link(j, 0), true, new Link(j, Integer.MAX_VALUE), true)) {
                     assert j == link.to;
-                    jobs[j].addDependency(jobs[link.from].createDependency(null));
+                    jobs[j].addDependency(jobs[link.from].createDependency());
                     if (states[link.from].isBlocking())
                         states[j] = ResourceState.ON_HOLD;
                     deps.add(jobs[link.from].toString());
                 }
 
                 if (token != null) {
-                    jobs[j].addDependency(token.createDependency(null));
+                    jobs[j].addDependency(token.createDependency());
                 }
 
                 try {

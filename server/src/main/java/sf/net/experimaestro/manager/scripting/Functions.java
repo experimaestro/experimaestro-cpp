@@ -19,7 +19,10 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Callable;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
+import org.mozilla.javascript.Scriptable;
 import sf.net.experimaestro.connectors.*;
 import sf.net.experimaestro.exceptions.*;
 import sf.net.experimaestro.manager.Constants;
@@ -27,7 +30,6 @@ import sf.net.experimaestro.manager.Manager;
 import sf.net.experimaestro.manager.QName;
 import sf.net.experimaestro.manager.experiments.Experiment;
 import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
-import sf.net.experimaestro.manager.js.JSBaseObject;
 import sf.net.experimaestro.manager.js.JSTransform;
 import sf.net.experimaestro.manager.js.JavaScriptContext;
 import sf.net.experimaestro.manager.js.JavaScriptRunner;
@@ -42,7 +44,6 @@ import sf.net.experimaestro.scheduler.Dependency;
 import sf.net.experimaestro.scheduler.DependencyParameters;
 import sf.net.experimaestro.scheduler.Resource;
 import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.JSUtils;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.FileNotFoundException;
@@ -57,10 +58,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static sf.net.experimaestro.utils.JSUtils.unwrap;
 
@@ -306,32 +304,46 @@ public class Functions {
         JavaTasksIntrospection.addJarToRepository(context().getRepository(), jarPath);
     }
 
+    @Deprecated("Use get_locks(json, parameters...)")
+    static public ArrayList<Dependency> get_locks(String lockMode, JsonObject json) throws SQLException {
+        switch (lockMode) {
+            case "READ":
+                return get_locks(json);
+        }
+        throw new XPMScriptRuntimeException("Cannot handle %s lock mode");
+    }
+
     @Expose()
     @Help("Get a lock over all the resources defined in a JSON object. When a resource is found, don't try " +
             "to lock the resources below")
-    static public ArrayList<Dependency> get_locks(DependencyParameters lockMode, JsonObject json) throws SQLException {
+    static public ArrayList<Dependency> get_locks(JsonObject json, DependencyParameters... parameters) throws SQLException {
         ArrayList<Dependency> dependencies = new ArrayList<>();
 
-        get_locks(lockMode, json, dependencies);
+        IdentityHashMap<Object, DependencyParameters> pmap = new IdentityHashMap<>();
+        for (DependencyParameters parameter : parameters) {
+            pmap.put(parameter.getKey(), parameter);
+        }
+
+        get_locks(json, pmap, dependencies);
 
         return dependencies;
     }
 
-    static private void get_locks(DependencyParameters lockMode, Json json, ArrayList<Dependency> dependencies) throws SQLException {
+    static private void get_locks(Json json, IdentityHashMap<Object, DependencyParameters> pmap, ArrayList<Dependency> dependencies) throws SQLException {
         if (json instanceof JsonObject) {
             final Resource resource = getResource((JsonObject) json);
             if (resource != null) {
-                final Dependency dependency = resource.createDependency(lockMode);
+                final Dependency dependency = resource.createDependency(pmap);
                 dependencies.add(dependency);
             } else {
                 for (Json element : ((JsonObject) json).values()) {
-                    get_locks(lockMode, element, dependencies);
+                    get_locks(element, pmap, dependencies);
                 }
 
             }
         } else if (json instanceof JsonArray) {
             for (Json arrayElement : ((JsonArray) json)) {
-                get_locks(lockMode, arrayElement, dependencies);
+                get_locks(arrayElement, pmap, dependencies);
             }
 
         }

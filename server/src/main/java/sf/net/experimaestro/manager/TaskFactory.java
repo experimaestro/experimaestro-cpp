@@ -27,7 +27,10 @@ import sf.net.experimaestro.manager.plans.PlanInputs;
 import sf.net.experimaestro.manager.scripting.*;
 import sf.net.experimaestro.scheduler.Commands;
 
+import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -163,17 +166,19 @@ public abstract class TaskFactory {
 
     @Help("Runs")
     @Expose(value = "run", context = true)
-    public Json[] run(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
+    public Json[] run(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite {
         final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
         PlanInputs inputs = Plan.getMappings(map, cx);
         plan.add(inputs);
-        return plan.run();
+        IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
+        Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
+        return plan.run(pmap);
     }
 
     @Help("Runs and asserts that there was a single output")
     @Expose(value = "run_", context = true)
-    public Json runOnce(LanguageContext cx, @Options Map map) throws ExperimaestroCannotOverwrite {
-        final Json [] v = run(cx, map);
+    public Json runOnce(LanguageContext cx, @Options Map map,  Parameters... parameters) throws ExperimaestroCannotOverwrite {
+        final Json [] v = run(cx, map, parameters);
         if (v.length != 1) {
             throw new XPMScriptRuntimeException("Requested only one output, got %d", v.length);
         }
@@ -188,7 +193,7 @@ public abstract class TaskFactory {
 
     @Help("Creates a plan from this task")
     @Expose(value = "plan", context = true)
-    public Object plan(LanguageContext cx, Map map) {
+    public Object plan(LanguageContext cx, @Options Map map) {
         final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
         PlanInputs inputs= Plan.getMappings(map, cx);
         plan.add(inputs);

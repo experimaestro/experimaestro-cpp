@@ -26,10 +26,7 @@ import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
 import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.scheduler.Commands;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Resource;
+import sf.net.experimaestro.scheduler.*;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -179,7 +176,7 @@ public class JavaTaskFactory extends TaskFactory {
                                     o.toString(), getId());
                         }
                     }
-                    final Dependency lock = resource.createDependency(null);
+                    final Dependency lock = resource.createDependency((DependencyParameters)null);
                     commands.addDependency(lock);
                 }
             }

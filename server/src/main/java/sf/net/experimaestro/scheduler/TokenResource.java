@@ -153,11 +153,13 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    public TokenDependency createDependency(DependencyParameters values) {
-        if (!(values instanceof TokenParameters)) {
+    public TokenDependency createDependency(DependencyParameters p) {
+        int tokens = 1;
 
+        if (p instanceof TokenParameters) {
+            tokens = ((TokenParameters) p).tokens;
         }
-        return new TokenDependency(this);
+        return new TokenDependency(this, tokens);
     }
 
     /**

@@ -41,10 +41,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.String.format;
 import static sf.net.experimaestro.utils.GsonConverter.defaultBuilder;
@@ -772,6 +769,25 @@ public class Resource implements Identifiable {
 
     /** Does nothing for a resource */
     public void setLauncher(Launcher launcher) {}
+
+    public Dependency createDependency() {
+        return this.createDependency((DependencyParameters) null);
+    }
+
+    /**
+     * Create a dependency
+     * @param pmap The dependency parameters map
+     * @return The dependency
+     */
+    public Dependency createDependency(IdentityHashMap<Object, DependencyParameters> pmap) {
+        // Get resource specific parameters
+        DependencyParameters dp = pmap.get(this);
+        if (dp != null) return createDependency(dp);
+
+        // Get class specific parameters
+        dp = pmap.get(getClass());
+        return createDependency(dp);
+    }
 
     /**
      * Defines how printing should be done

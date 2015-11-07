@@ -26,4 +26,5 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Deprecated {
+    String value() default "";
 }

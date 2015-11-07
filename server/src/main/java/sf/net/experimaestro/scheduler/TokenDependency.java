@@ -69,8 +69,9 @@ public class TokenDependency extends Dependency {
         LOGGER.debug("TokenDependency %s - updated rows = %d", this, updated);
     }
 
-    public TokenDependency(Resource from) {
+    public TokenDependency(Resource from, int tokens) {
         super(from);
+        this.tokens = tokens;
     }
 
     @Override
