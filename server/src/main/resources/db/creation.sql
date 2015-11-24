@@ -100,7 +100,8 @@ CREATE TABLE Dependencies (
   toId   BIGINT   NOT NULL,
   type   BIGINT   NOT NULL,
   status SMALLINT NOT NULL,
-  data   BLOB     NOT NULL, -- The data
+  -- The data
+  data   BLOB     NOT NULL,
   lock   BIGINT,
 
   -- Primary key
@@ -120,7 +121,7 @@ CREATE TABLE Dependencies (
 CREATE TABLE TokenDependencies (
   fromId  BIGINT   NOT NULL,
   toId    BIGINT   NOT NULL,
-  tokens  INT      NOT NULL DEFAULT 1,
+  tokens  INT      DEFAULT 1 NOT NULL,
 
   PRIMARY KEY (fromId, toId),
   FOREIGN KEY (fromId, toId) REFERENCES Dependencies ON DELETE CASCADE
