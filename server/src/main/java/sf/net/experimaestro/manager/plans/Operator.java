@@ -937,7 +937,7 @@ public abstract class Operator {
 
     @Expose
     @Help("Set a specific set of parameters for an operator")
-    void parameters(Parameters... parameters) {
+    public void parameters(Parameters... parameters) {
         for (Parameters parameter : parameters) {
             this.parameters.put(parameter.getKey(), parameter);
         }

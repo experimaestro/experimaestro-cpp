@@ -148,7 +148,7 @@ public class TokenResource extends Resource {
     }
 
     @Expose
-    TokenParameters parameters() {
+    public TokenParameters parameters() {
         return new TokenParameters(this);
     }
 

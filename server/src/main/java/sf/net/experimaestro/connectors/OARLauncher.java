@@ -553,7 +553,7 @@ public class OARLauncher extends Launcher {
     }
 
     @Expose
-    OARParameters parameters() {
+    public OARParameters parameters() {
         return new OARParameters(this);
     }
 }
