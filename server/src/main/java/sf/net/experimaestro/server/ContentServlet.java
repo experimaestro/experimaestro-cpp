@@ -49,6 +49,21 @@ public class ContentServlet extends XPMServlet {
                 request.getRequestURI()));
 
         if (url != null) {
+            Path file;
+            try {
+                file = Paths.get(url.toURI());
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+
+            LOGGER.debug("Web content: looking at %s", file);
+            if (Files.isDirectory(file)) {
+                response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
+                response.setHeader("Location",
+                        format("%sindex.html", request.getRequestURI()));
+                return;
+            }
+
             String filename = url.getFile();
             if (filename.endsWith(".html"))
                 response.setContentType("text/html");
@@ -58,21 +73,6 @@ public class ContentServlet extends XPMServlet {
                 response.setContentType("text/css");
             response.setStatus(HttpServletResponse.SC_OK);
 
-//            Path file;
-//            try {
-//                file = Paths.get(url.toURI());
-//            } catch (URISyntaxException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            LOGGER.info("Web content: looking at %s", file);
-//            if (Files.isDirectory(file)) {
-//                response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
-//                response.setHeader("Location",
-//                        format("%sindex.html", request.getRequestURI()));
-//                return;
-//            }
-//
 
             final ServletOutputStream out = response.getOutputStream();
             InputStream in = url.openStream();
