@@ -144,12 +144,18 @@ CREATE TABLE LockShares (
 -- Process
 --
 
+
 CREATE TABLE Processes (
   resource  BIGINT NOT NULL,
+  -- Type of the resource
   type      BIGINT NOT NULL,
   connector BIGINT,
   pid       VARCHAR(255),
   data      BLOB   NOT NULL,
+
+  -- One process per resource
+  PRIMARY KEY (resource),
+
   FOREIGN KEY (resource) REFERENCES Resources
     ON DELETE RESTRICT
     ON UPDATE CASCADE,
@@ -158,12 +164,13 @@ CREATE TABLE Processes (
     ON UPDATE CASCADE
 );
 
+-- Locks taken by processes
 CREATE TABLE ProcessLocks (
   process BIGINT NOT NULL,
   lock    BIGINT NOT NULL,
 
   -- Ensures that no locks are left behind
-  CONSTRAINT ProcessLocks_process FOREIGN KEY (process) REFERENCES Resources
+  CONSTRAINT ProcessLocks_process FOREIGN KEY (process) REFERENCES Processes
     ON DELETE RESTRICT,
 
   -- Removing a lock will remove the process lock

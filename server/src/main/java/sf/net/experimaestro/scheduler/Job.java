@@ -28,10 +28,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.FileLock;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.FileNameTransformer;
-import sf.net.experimaestro.utils.Holder;
-import sf.net.experimaestro.utils.ProcessUtils;
-import sf.net.experimaestro.utils.Time;
+import sf.net.experimaestro.utils.*;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.IOException;
@@ -61,6 +58,12 @@ abstract public class Job extends Resource {
 
     transient private JobData jobData;
 
+    /**
+     * The process.
+     * The holder is used to distinguish between the fact that the process was not
+     * loaded (null holder) or that there is no process (null held value).
+     */
+    @GsonSerialization(serialize = false)
     private Holder<XPMProcess> process;
 
 //    /**
@@ -101,6 +104,17 @@ abstract public class Job extends Resource {
         }
     }
 
+    @Override
+    public synchronized void delete(boolean recursive) throws SQLException {
+        if (this.getState() != ResourceState.RUNNING) {
+            final XPMProcess process = getProcess();
+            if (process != null) {
+                LOGGER.error("Removing stale process");
+                process.delete();
+            }
+        }
+        super.delete(recursive);
+    }
 
     /**
      * Restart the job
