@@ -26,9 +26,9 @@ import java.sql.SQLException;
  * A reference to a resource
  */
 public class ResourceReference {
-    Long id;
+    private Long id;
 
-    Resource resource;
+    private Resource resource;
 
     public ResourceReference(Resource resource) {
         this.resource = resource;

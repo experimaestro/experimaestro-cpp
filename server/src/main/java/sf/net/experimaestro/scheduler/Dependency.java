@@ -23,6 +23,7 @@ import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.GsonSerialization;
 import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.log.Logger;
 
@@ -57,18 +58,22 @@ abstract public class Dependency implements Serializable {
 
     final static private Logger LOGGER = Logger.getLogger();
 
+    @GsonSerialization(serialize = false)
     ResourceReference from;
 
+    @GsonSerialization(serialize = false)
     ResourceReference to;
 
     /**
      * The state of this dependency
      */
+    @GsonSerialization(serialize = false)
     DependencyStatus status;
 
     /**
      * The lock (or null if no lock taken)
      */
+    @GsonSerialization(serialize = false)
     private Lock lock;
 
     protected Dependency() {
