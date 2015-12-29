@@ -209,7 +209,7 @@ public abstract class XPMProcess {
     /**
      * Dispose of this job monitor
      */
-    public void dispose() throws LockException {
+    synchronized public void dispose() throws LockException {
         close();
         try {
             if (locks != null) {
@@ -296,7 +296,7 @@ public abstract class XPMProcess {
      * Asynchronous check the state of the job monitor
      * @param checkFiles Whether files should be checked rather than the process
      */
-    public void check(boolean checkFiles) throws Exception {
+    synchronized public void check(boolean checkFiles) throws Exception {
         if (!isRunning(checkFiles)) {
             // We are not running: send a message
             LOGGER.info("End of job [%s]", job);
