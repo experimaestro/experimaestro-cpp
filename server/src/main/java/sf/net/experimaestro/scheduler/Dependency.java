@@ -22,6 +22,8 @@ import sf.net.experimaestro.exceptions.LockException;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.locks.Lock;
 import sf.net.experimaestro.manager.scripting.Exposed;
+import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.JsonSerializationInputStream;
 import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.Serializable;
@@ -41,7 +43,7 @@ abstract public class Dependency implements Serializable {
             new Class[]{Long.TYPE, Long.TYPE, Lock.class, DependencyStatus.class}
     ).add(ExclusiveDependency.class, ReadWriteDependency.class, TokenDependency.class);
 
-    public static final String _SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status, lock FROM Dependencies";
+    public static final String _SELECT_DEPENDENCIES = "SELECT fromId, toId, type, status, lock, data FROM Dependencies";
 
     public static final String SELECT_OUTGOING_DEPENDENCIES = _SELECT_DEPENDENCIES + " WHERE fromId=?";
 
@@ -49,9 +51,9 @@ abstract public class Dependency implements Serializable {
 
     public static final String SELECT_OUTGOING_ACTIVE_DEPENDENCIES = SELECT_OUTGOING_DEPENDENCIES + " AND status != " + DependencyStatus.UNACTIVE.getId();
 
-    public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=?, status=?, lock=? WHERE fromId=? and toId=?";
+    public static final String UPDATE_DEPENDENCY = "UPDATE Dependencies SET type=?, status=?, lock=?, data=? WHERE fromId=? and toId=?";
 
-    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, lock, fromId, toId) VALUES(?,?,?,?,?)";
+    public static final String INSERT_DEPENDENCY = "INSERT INTO Dependencies(type, status, lock, data, fromId, toId) VALUES(?,?,?,?,?,?)";
 
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -225,8 +227,9 @@ abstract public class Dependency implements Serializable {
                 .setLong(1, DatabaseObjects.getTypeValue(this.getClass()))
                 .setInt(2, status.getId())
                 .setLong(3, lock == null ? null : lock.getId())
-                .setLong(4, from.id())
-                .setLong(5, to.id());
+                .setBlob(4, JsonSerializationInputStream.of(this, GsonConverter.defaultBuilder))
+                .setLong(5, from.id())
+                .setLong(6, to.id());
 
         int updated =  st.executeUpdate();
 
@@ -250,7 +253,9 @@ abstract public class Dependency implements Serializable {
         Long lockId = rs.getLong(5);
         Lock lock = rs.wasNull() ? null : Lock.findById(lockId);
         long fromId = rs.getLong(1);
-        return REGISTRY.newInstance(type, fromId, rs.getLong(2), lock, dependencyStatus);
+        final Dependency dependency = REGISTRY.newInstance(type, fromId, rs.getLong(2), lock, dependencyStatus);
+        DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, dependency, rs.getBinaryStream(6));
+        return dependency;
     }
 
     public long getFromId() {

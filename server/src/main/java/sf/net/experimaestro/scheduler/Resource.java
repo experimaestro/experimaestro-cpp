@@ -530,7 +530,10 @@ public class Resource implements Identifiable {
         try {
             save(scheduler.resources(), null);
             success = true;
-        } finally {
+        } catch(Exception e) {
+            LOGGER.error(e, "Error while saving job %s", 1);
+        }
+        finally {
             if (success) {
                 connection.commit();
             } else {
