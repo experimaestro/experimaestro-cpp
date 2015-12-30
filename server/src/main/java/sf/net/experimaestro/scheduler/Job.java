@@ -286,7 +286,6 @@ abstract public class Job extends Resource {
 
                 // Now, starts the job
                 startJob(locks, false);
-                getProcess().save();
                 getProcess().adopt(locks);
                 locks = null;
 
