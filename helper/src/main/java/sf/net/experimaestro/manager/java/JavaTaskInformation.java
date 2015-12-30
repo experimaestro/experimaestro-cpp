@@ -18,6 +18,7 @@ import static java.lang.String.format;
  * All the information about a Java Task
  */
 public class JavaTaskInformation {
+
     /**
      * Task id
      */
@@ -59,23 +60,28 @@ public class JavaTaskInformation {
         this.id = QName.parse(description.id(), namespaces);
         this.output = QName.parse(description.output(), namespaces);
 
-        for (FieldInfo field : classInfo.getDeclaredFields()) {
-            //final Object jsonArgument = field.getAnnotation(jsonArgumentClass.class);
-            final JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
+        try {
+            for (FieldInfo field : classInfo.getDeclaredFields()) {
+                //final Object jsonArgument = field.getAnnotation(jsonArgumentClass.class);
+                final JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
 
-            // TODO: add default values, etc.
-            String fieldName = field.getName();
-            if (jsonArgument != null) {
-                String name = getString(jsonArgument.name(), fieldName);
-                inputs.put(name, new InputInformation(field));
-            }
+                // TODO: add default values, etc.
+                String fieldName = field.getName();
+                if (jsonArgument != null) {
+                    String name = getString(jsonArgument.name(), fieldName);
+                    inputs.put(name, new InputInformation(namespaces, field));
+                }
 
-            final Path path = field.getAnnotation(Path.class);
-            if (path != null) {
-                String copy = getString(path.copy(), fieldName);
-                String relativePath = getString(path.value(), fieldName);
-                pathArguments.add(new PathArgument(copy, relativePath));
+                final Path path = field.getAnnotation(Path.class);
+                if (path != null) {
+                    String copy = getString(path.copy(), fieldName);
+                    String relativePath = getString(path.value(), fieldName);
+                    pathArguments.add(new PathArgument(copy, relativePath));
+                }
             }
+        } catch(RuntimeException e) {
+            System.err.format("Error while analyzing class %s%n", taskClassname);
+            throw e;
         }
 
     }

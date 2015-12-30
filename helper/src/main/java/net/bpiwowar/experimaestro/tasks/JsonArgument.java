@@ -18,6 +18,8 @@ package net.bpiwowar.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import sf.net.experimaestro.manager.Constants;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -37,6 +39,12 @@ public @interface JsonArgument {
      * @return The description string
      */
     String help() default "";
+
+    /**
+     * Type of the JSON argument
+     * @return the qualified type
+     */
+    String type() default "{" + Constants.EXPERIMAESTRO_NS + "}any";
 
     /**
      * Whether the argument is required

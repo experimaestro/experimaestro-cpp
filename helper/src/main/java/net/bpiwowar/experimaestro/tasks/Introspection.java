@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package net.bpiwowar.experimaestro.tasks;
 
@@ -43,33 +43,29 @@ import static java.lang.String.format;
 
 /**
  * Methods used for introspection
- * 
+ *
  * @author B. Piwowarski
- * 
  */
 public class Introspection {
     public static final String CLASS = ".class";
     final static private Logger LOGGER = Logger.getLogger(Introspection.class.getName());
 
     /**
-	 * Get the list of class which implement a given class
-	 * 
-	 * @param which
-	 *            The base class
-	 * @param packageName
-	 *            the package where classes are searched
-	 * @param levels
-	 *            number of levels to be explored (-1 for infinity)
-	 * @return an object of objects of the given class
-	 */
-	static public Class<?>[] getImplementors(final Class<?> which,
-			final String packageName, final int levels) {
-		final ArrayList<Class<?>> list = new ArrayList<Class<?>>();
-		Introspection.addImplementors(list, which, packageName, levels);
-		final Class<?>[] objects = (Class<?>[]) java.lang.reflect.Array
-				.newInstance(Class.class, list.size());
-		return list.toArray(objects);
-	}
+     * Get the list of class which implement a given class
+     *
+     * @param which       The base class
+     * @param packageName the package where classes are searched
+     * @param levels      number of levels to be explored (-1 for infinity)
+     * @return an object of objects of the given class
+     */
+    static public Class<?>[] getImplementors(final Class<?> which,
+                                             final String packageName, final int levels) {
+        final ArrayList<Class<?>> list = new ArrayList<Class<?>>();
+        Introspection.addImplementors(list, which, packageName, levels);
+        final Class<?>[] objects = (Class<?>[]) java.lang.reflect.Array
+                .newInstance(Class.class, list.size());
+        return list.toArray(objects);
+    }
 
     /**
      * Get the list of class which implement a given class
@@ -78,6 +74,7 @@ public class Introspection {
      * @param which       The base class
      * @param packageName the package where classes are searched
      * @param levels      number of levels to be explored (-1 for infinity)
+     * @param <T>         The base class
      * @return an array of objects of the given class
      */
     static public <T> Class<? extends T>[] getImplementors(final ClassLoader cl, final Class<T> which,
@@ -117,11 +114,13 @@ public class Introspection {
     /**
      * Add classes to the list
      *
+     * @param cl          The class loader
      * @param checker     Used to filter the classes
      * @param list        The list to fill
      * @param packageName The package to be analyzed
      * @param levels      The maximum number of recursion within the structure (or -1 if
      *                    infinite)
+     * @param <T>         The base class
      */
     public static <T> void addClasses(final ClassLoader cl, final Checker checker,
                                       final ArrayList<Class<?>> list, final String packageName,
@@ -267,55 +266,51 @@ public class Introspection {
     }
 
     /**
-	 * A checker class
-	 * 
-	 * @author bpiwowar
-	 */
-	public interface Checker {
-		boolean accepts(Class<?> aClass);
-	}
+     * A checker class
+     *
+     * @author bpiwowar
+     */
+    public interface Checker {
+        boolean accepts(Class<?> aClass);
+    }
 
-	public static void addImplementors(final ArrayList<Class<?>> list,
-			final Class<?> which, final String packageName, final int levels) {
-		addClasses(aClass -> which.isAssignableFrom(aClass), list, packageName, levels);
-	}
+    public static void addImplementors(final ArrayList<Class<?>> list,
+                                       final Class<?> which, final String packageName, final int levels) {
+        addClasses(aClass -> which.isAssignableFrom(aClass), list, packageName, levels);
+    }
 
-	static public ArrayList<Class<?>> getClasses(final Checker checker,
-			final String packageName, final int levels) {
-		final ArrayList<Class<?>> list = new ArrayList<>();
-		Introspection.addClasses(checker, list, packageName, levels);
-		return list;
-	}
+    static public ArrayList<Class<?>> getClasses(final Checker checker,
+                                                 final String packageName, final int levels) {
+        final ArrayList<Class<?>> list = new ArrayList<>();
+        Introspection.addClasses(checker, list, packageName, levels);
+        return list;
+    }
 
-	/**
-	 * Add classes to the list
-	 * 
-	 * @param checker
-	 *            Used to filter the classes
-	 * @param list
-	 *            The list to fill
-	 * @param packageName
-	 *            The package to be analyzed
-	 * @param levels
-	 *            The maximum number of recursion within the structure (or -1 if
-	 *            infinite)
-	 */
-	public static void addClasses(final Checker checker,
-			final ArrayList<Class<?>> list, final String packageName,
-			final int levels) {
-		final String name = "/" + packageName.replace('.', '/');
+    /**
+     * Add classes to the list
+     *
+     * @param checker     Used to filter the classes
+     * @param list        The list to fill
+     * @param packageName The package to be analyzed
+     * @param levels      The maximum number of recursion within the structure (or -1 if
+     *                    infinite)
+     */
+    public static void addClasses(final Checker checker,
+                                  final ArrayList<Class<?>> list, final String packageName,
+                                  final int levels) {
+        final String name = "/" + packageName.replace('.', '/');
 
-		// Get a File object for the package
-		final URL url = Introspection.class.getResource(name);
-		if (url == null)
-			return;
+        // Get a File object for the package
+        final URL url = Introspection.class.getResource(name);
+        if (url == null)
+            return;
 
-		addClasses(checker, list, packageName, levels, url);
-	}
+        addClasses(checker, list, packageName, levels, url);
+    }
 
-	public static void addClasses(final Checker checker,
-			final ArrayList<Class<?>> list, final String packageName,
-			final int levels, final URL url) {
+    public static void addClasses(final Checker checker,
+                                  final ArrayList<Class<?>> list, final String packageName,
+                                  final int levels, final URL url) {
 
         String path;
         try {
@@ -325,8 +320,8 @@ public class Introspection {
         }
         final File directory = new File(path);
 
-		// File directory
-		if (directory.exists()) {
+        // File directory
+        if (directory.exists()) {
             addClasses(checker, list, packageName, levels, directory);
         } else {
             try {
@@ -340,54 +335,54 @@ public class Introspection {
                 LOGGER.info(format("Exception while introspecting: %s", ioex));
             }
         }
-	}
+    }
 
-	public static void addClasses(final Checker checker,
-			final ArrayList<Class<?>> list, final int levels,
-			final JarURLConnection conn, final String prefix)
-			throws IOException {
-		final JarFile jfile = conn.getJarFile();
+    public static void addClasses(final Checker checker,
+                                  final ArrayList<Class<?>> list, final int levels,
+                                  final JarURLConnection conn, final String prefix)
+            throws IOException {
+        final JarFile jfile = conn.getJarFile();
 
-		final Enumeration<?> e = jfile.entries();
-		while (e.hasMoreElements()) {
-			final ZipEntry entry = (ZipEntry) e.nextElement();
-			final String entryname = entry.getName();
+        final Enumeration<?> e = jfile.entries();
+        while (e.hasMoreElements()) {
+            final ZipEntry entry = (ZipEntry) e.nextElement();
+            final String entryname = entry.getName();
 
-			if (entryname.startsWith(prefix) && entryname.endsWith(".class")) {
-				// Check the number of levels
-				if (levels >= 0) {
-					int n = 0;
-					for (int i = prefix.length() + 1; i < entryname.length()
-							&& n <= levels; i++)
-						if (entryname.charAt(i) == '/')
-							n++;
-					if (n > levels)
-						continue;
-				}
+            if (entryname.startsWith(prefix) && entryname.endsWith(".class")) {
+                // Check the number of levels
+                if (levels >= 0) {
+                    int n = 0;
+                    for (int i = prefix.length() + 1; i < entryname.length()
+                            && n <= levels; i++)
+                        if (entryname.charAt(i) == '/')
+                            n++;
+                    if (n > levels)
+                        continue;
+                }
 
-				String classname = entryname.substring(0,
-						entryname.length() - 6);
-				if (classname.startsWith("/"))
-					classname = classname.substring(1);
-				classname = classname.replace('/', '.');
-				try {
-					LOGGER.fine("Testing class " + classname);
-					final Class<?> oclass = Class.forName(classname);
-					if (checker.accepts(oclass))
-						list.add(oclass);
-				} catch (final Exception ex) {
-					LOGGER.warning("Caught exception " + ex);
-				}
-			}
-		}
-	}
+                String classname = entryname.substring(0,
+                        entryname.length() - 6);
+                if (classname.startsWith("/"))
+                    classname = classname.substring(1);
+                classname = classname.replace('/', '.');
+                try {
+                    LOGGER.fine("Testing class " + classname);
+                    final Class<?> oclass = Class.forName(classname);
+                    if (checker.accepts(oclass))
+                        list.add(oclass);
+                } catch (final Exception ex) {
+                    LOGGER.warning("Caught exception " + ex);
+                }
+            }
+        }
+    }
 
-	public static void addClasses(final Checker checker,
-			final ArrayList<Class<?>> list, final String packageName,
-			final int levels, final File directory) {
-		// Get the list of the files contained in the package
-		final File[] files = directory.listFiles();
-		if (files != null) {
+    public static void addClasses(final Checker checker,
+                                  final ArrayList<Class<?>> list, final String packageName,
+                                  final int levels, final File directory) {
+        // Get the list of the files contained in the package
+        final File[] files = directory.listFiles();
+        if (files != null) {
             for (File file : files) {
                 // we are only interested in .class files
                 if (levels != 0 && file.isDirectory())
@@ -407,8 +402,8 @@ public class Introspection {
                     }
                 }
             }
-		}
-	}
+        }
+    }
 
     static public class ClassFile {
         public Path file;
