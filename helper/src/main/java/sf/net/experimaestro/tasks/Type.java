@@ -18,11 +18,23 @@ package sf.net.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
- * Created by bpiwowar on 7/10/14.
+ * Defines the JSON type of an object
  */
+@Retention(value = RetentionPolicy.RUNTIME)
 public @interface Type {
+    /**
+     * JSON type
+     * @return The JSON type
+     */
     String type();
 
+    /**
+     * Is this a resource to be locked?
+     * @return True if this is a resource, false otherwise
+     */
     boolean resource() default false;
 }

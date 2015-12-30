@@ -3,6 +3,8 @@ package sf.net.experimaestro.manager.java;
 import net.bpiwowar.experimaestro.tasks.JsonArgument;
 import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.QName;
+import sf.net.experimaestro.tasks.Type;
+import sf.net.experimaestro.utils.introspection.AnnotationInfo;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.FieldInfo;
 
@@ -38,6 +40,12 @@ public class InputInformation {
 
         if (type.belongs(String.class))
             return Constants.XP_STRING;
+
+        // Get from class
+        final Type typeInfo = type.getAnnotation(Type.class);
+        if (typeInfo != null) {
+            return parse(typeInfo.type(), namespaces);
+        }
 
         // Check the type
         if (!jsonArgument.type().isEmpty()) {
