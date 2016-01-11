@@ -44,8 +44,8 @@ public class TokenDependency extends Dependency {
 
     // The SQL queries
     final private String SELECT_QUERY = "SELECT tokens FROM TokenDependencies WHERE fromId = ? AND toId = ?";
-    final private String INSERT_QUERY = "INSERT INTO tokens(tokens, fromId, toId) VALUES(?,?,?)";
-    final private String UPDATE_QUERY = "UPDATE tokens = ? WHERE fromId=? AND toId=?";
+    final private String INSERT_QUERY = "INSERT INTO TokenDependencies(tokens, fromId, toId) VALUES(?,?,?)";
+    final private String UPDATE_QUERY = "UPDATE TokenDependencies SET tokens = ? WHERE fromId=? AND toId=?";
 
     protected TokenDependency(long fromId, long toId, Lock lock, DependencyStatus status) throws SQLException {
         super(fromId, toId, lock, status);
