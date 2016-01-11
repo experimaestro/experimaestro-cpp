@@ -35,6 +35,7 @@ import sf.net.experimaestro.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -100,6 +101,8 @@ public class JavaTask extends Task {
 
                 CommandLineTask job = new CommandLineTask(path);
                 job.setCommands(commands);
+                job.environment = new HashMap<>();
+                javaFactory.setEnvironment(json, job.environment);
 
                 commands.dependencies().forEach(job::addDependency);
 

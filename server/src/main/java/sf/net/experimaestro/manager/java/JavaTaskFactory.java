@@ -18,19 +18,16 @@ package sf.net.experimaestro.manager.java;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.experimaestro.tasks.Runner;
 import sf.net.experimaestro.connectors.NetworkShare;
 import sf.net.experimaestro.exceptions.XPMRuntimeException;
 import sf.net.experimaestro.manager.*;
 import sf.net.experimaestro.manager.json.Json;
 import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonString;
 import sf.net.experimaestro.manager.scripting.Exposed;
 import sf.net.experimaestro.scheduler.*;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,12 +36,10 @@ import java.util.Map;
  */
 @Exposed
 public class JavaTaskFactory extends TaskFactory {
-
-
     ArrayList<PathArgument> pathArguments;
 
     Map<String, String> prefixes;
-    transient java.nio.file.Path[] classpath;
+    transient JavaCommandBuilder javaCommandBuilder;
 
     public static final String JVM_OPTIONS = "$jvm";
 
@@ -62,14 +57,13 @@ public class JavaTaskFactory extends TaskFactory {
     /**
      * Initialise a task
      *
-     * @param classpath   The class path
+     * @param javaCommandBuilder   The class path
      * @param repository  The repository
      * @param information Java task information
      */
-    public JavaTaskFactory(java.nio.file.Path[] classpath, Repository repository, JavaTaskInformation information) {
+    public JavaTaskFactory(JavaCommandBuilder javaCommandBuilder, Repository repository, JavaTaskInformation information) {
         super(repository);
-        this.classpath = classpath;
-//         = new JavaTaskInformation(classInfo, namespaces);
+        this.javaCommandBuilder = javaCommandBuilder;
         this.id = information.id;
         taskClassname = information.taskClassname;
         this.prefixes = information.prefixes;
@@ -88,7 +82,7 @@ public class JavaTaskFactory extends TaskFactory {
         }
 
 
-        // Adds JVM
+        // Adds JVM specific arguments
         JsonInput input = new JsonInput(new Type(Constants.XP_OBJECT));
         input.setOptional(true);
         this.inputs.put(JVM_OPTIONS, input);
@@ -117,40 +111,8 @@ public class JavaTaskFactory extends TaskFactory {
 
     @Override
     public Commands commands(JsonObject json, boolean simulate) {
-        final Command command = new Command();
+        Commands commands = javaCommandBuilder.build(taskClassname, json);
 
-        Command classpath = new Command();
-        final Commands commands = new Commands(command);
-
-        Arrays.asList(this.classpath).stream().forEach(f -> {
-            classpath.add(new Command.Path(f));
-            classpath.add(new Command.String(":"));
-        });
-
-        command.add("java", "-cp");
-        command.add(classpath);
-
-        // Sets JVM options
-        final Json jvm = json.get(JVM_OPTIONS);
-        if (jvm != null && jvm instanceof JsonObject) {
-            final Json memory = ((JsonObject) jvm).get("memory");
-            if (memory instanceof JsonString) {
-                final Object s = memory.get();
-                command.add("-Xmx" + s);
-            }
-        }
-
-        // Runner class name
-        command.add(Runner.class.getName());
-
-        // TaskReference class name
-        command.add(taskClassname);
-
-        // Working directory
-        command.add(Command.WorkingDirectory.INSTANCE);
-
-        // Parameter file
-        command.add(new Command.JsonParameterFile("json", json));
 
         // Check dependencies
         if (!simulate) {
@@ -185,7 +147,11 @@ public class JavaTaskFactory extends TaskFactory {
         return commands;
     }
 
-    public void setClasspath(java.nio.file.Path[] classpath) {
-        this.classpath = classpath;
+    public void setJavaCommandBuilder(JavaCommandBuilder builder) {
+        this.javaCommandBuilder = builder;
+    }
+
+    public void setEnvironment(JsonObject json, Map<String, String> environment) {
+        javaCommandBuilder.setEnvironment(json, environment);
     }
 }

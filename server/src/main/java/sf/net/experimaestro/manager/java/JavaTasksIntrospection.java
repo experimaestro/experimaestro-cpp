@@ -28,6 +28,7 @@ import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.manager.Repository;
 import sf.net.experimaestro.manager.scripting.ScriptContext;
 import sf.net.experimaestro.utils.GsonConverter;
+import sf.net.experimaestro.utils.gson.JsonPathAdapter;
 import sf.net.experimaestro.utils.introspection.ClassInfo;
 import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
 import sf.net.experimaestro.utils.log.Logger;
@@ -36,7 +37,12 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,6 +53,7 @@ import java.util.function.BiFunction;
  */
 public class JavaTasksIntrospection {
     final static Logger LOGGER = Logger.getLogger();
+    public static final String XPM_JSON_FILENAME = "xpm.json";
     Path[] classpath;
 
     public JavaTasksIntrospection(Path[] classpath) {
@@ -81,7 +88,7 @@ public class JavaTasksIntrospection {
                     JavaTaskFactories factories = gson.fromJson(in, JavaTaskFactories.class);
                     factories.factories.forEach(f -> {
                         repository.addFactory(f);
-                        f.setClasspath(factories.classpath);
+                        f.setJavaCommandBuilder(new JavaCommand(factories.classpath));
                     });
                     return;
                 } catch (Throwable t) {
@@ -110,7 +117,7 @@ public class JavaTasksIntrospection {
         BiFunction<ClassInfo, Analyze.Description, ?> f = (classInfo, description) -> {
             // Creates the task factory
             JavaTaskInformation information = new JavaTaskInformation(classInfo, description.namespaces);
-            JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, information);
+            JavaTaskFactory factory = new JavaTaskFactory(new JavaCommand(classpath), repository, information);
             repository.addFactory(factory);
             factories.add(factory);
             return true;
@@ -120,9 +127,7 @@ public class JavaTasksIntrospection {
         return factories;
     }
 
-
-    public static void addJarToRepository(Repository repository, Path jarPath) throws IOException {
-        Path [] classpath = new Path[] { jarPath };
+    private static void addJarToRepository(Repository repository, Path jarPath, JavaCommandBuilder builder) throws IOException {
         URI uri = URI.create("jar:" + jarPath.toUri() + "!/");
         try (FileSystem fs = FileSystems.newFileSystem(uri, ImmutableMap.of())) {
             final Path path = Paths.get(uri);
@@ -131,15 +136,52 @@ public class JavaTasksIntrospection {
                 throw new XPMScriptRuntimeException("Could not find file %s", path);
             }
             final Gson gson = new GsonBuilder().create();
-            try(final BufferedReader reader = Files.newBufferedReader(taskPath)) {
+            try (final BufferedReader reader = Files.newBufferedReader(taskPath)) {
                 final ArrayList<JavaTaskInformation> list = gson.fromJson(reader, Analyze.INFORMATION_TYPE);
                 for (JavaTaskInformation information : list) {
                     // Creates the task factory
-                    JavaTaskFactory factory = new JavaTaskFactory(classpath, repository, information);
+                    JavaTaskFactory factory = new JavaTaskFactory(builder, repository, information);
                     repository.addFactory(factory);
                 }
             }
         }
-
     }
+
+    public static void addJarToRepository(Repository repository, Path jarPath) throws IOException {
+        Path[] classpath = new Path[]{jarPath};
+        addJarToRepository(repository, jarPath, new JavaCommand(classpath));
+    }
+
+    /**
+     * Load either a java task repository from a JAR file or a directory containing a xpm.json file
+     *
+     * @param repository
+     * @param jarPath
+     * @throws IOException
+     */
+    public static void scanRepository(Repository repository, Path jarPath) throws IOException {
+        if (Files.isRegularFile(jarPath)) {
+            // If this is a file, we suppose it is a JAR file
+            addJarToRepository(repository, jarPath);
+        } else {
+            // Find the xpm.json file
+            Path jsonPath = jarPath.resolve(XPM_JSON_FILENAME);
+            final GsonBuilder builder = new GsonBuilder();
+            builder.registerTypeAdapter(Path.class, new JsonPathAdapter(jarPath));
+            final Gson gson = builder.create();
+
+            try (final BufferedReader reader = Files.newBufferedReader(jsonPath)) {
+                final JavaSpecification spec = gson.fromJson(reader, JavaSpecification.class);
+                for (Path path : spec.jars) {
+                    path = jarPath.resolve(path);
+                    if (spec.binaries == null) {
+                        throw new IOException("No binaries in JSON " + jsonPath);
+                    }
+                    addJarToRepository(repository, path, new JavaCommandLauncher(spec.binaries));
+                }
+
+            }
+        }
+    }
+
 }

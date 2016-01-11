@@ -33,6 +33,16 @@ import java.nio.file.Paths;
  * A JSON adapter
  */
 public class JsonPathAdapter extends TypeAdapter<Path> {
+    // Base path for relative paths
+    Path basepath;
+
+    public JsonPathAdapter(Path basepath) {
+        this.basepath = basepath;
+    }
+
+    public JsonPathAdapter() {
+    }
+
     @Override
     public void write(JsonWriter out, Path value) throws IOException {
         if (value == null) {
@@ -51,6 +61,10 @@ public class JsonPathAdapter extends TypeAdapter<Path> {
             path = new URI(str);
         } catch (URISyntaxException e) {
             throw new IOException("Could not decode " + str + " as URI", e);
+        }
+
+        if (path.getScheme() == null && basepath != null) {
+            return basepath.resolve(str);
         }
         return Paths.get(path);
     }

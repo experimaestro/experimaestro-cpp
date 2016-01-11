@@ -301,7 +301,7 @@ public class Functions {
     @Expose(value = "load_java_repository")
     @Help("Include a repository from introspection of a JAR file")
     static public void includeJavaRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        JavaTasksIntrospection.addJarToRepository(context().getRepository(), jarPath);
+        JavaTasksIntrospection.scanRepository(context().getRepository(), jarPath);
     }
 
     @Deprecated("Use get_locks(json, parameters...)")
