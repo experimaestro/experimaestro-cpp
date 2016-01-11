@@ -531,15 +531,19 @@ public class Resource implements Identifiable {
             save(scheduler.resources(), null);
             success = true;
         } catch(Exception e) {
-            LOGGER.error(e, "Error while saving job %s", 1);
+            throw new SQLException(e);
         }
         finally {
             if (success) {
                 connection.commit();
             } else {
-                connection.rollback();
+                if (!connection.isClosed()) {
+                    connection.rollback();
+                }
             }
-            connection.setAutoCommit(true);
+            if (!connection.isClosed()) {
+                connection.setAutoCommit(true);
+            }
         }
     }
 
