@@ -74,7 +74,7 @@ public class Analyze {
     }
 
     private static void analyze(Path output, String classpathstring) throws IOException {
-        LOGGER.info(format("Classpath is %s", classpathstring));
+        LOGGER.fine(format("Classpath is %s", classpathstring));
         String[] classpathEntries = classpathstring.split(File.pathSeparator);
         Path[] classpath = new Path[classpathEntries.length];
         for (int i = 0; i < classpathEntries.length; i++) {
@@ -90,7 +90,7 @@ public class Analyze {
             return true;
         };
 
-        forEachClass(classInfoLoader, classpath, f, true);
+        forEachClass(classInfoLoader, classInfoLoader.getClasspath(), f, true);
 
         final Gson gson = new GsonBuilder().create();
 
@@ -110,8 +110,8 @@ public class Analyze {
     }
 
     public static void forEachClass(ClassInfoLoader cl, Path[] classpath, BiFunction<ClassInfo, Description, ?> f, boolean searchAll) throws IOException {
-
         for (Path base : classpath) {
+            LOGGER.fine("Looking at " + base.resolve(Constants.JAVATASK_INTROSPECTION_PATH).toUri() + " in " + base.toUri());
             final Path infoFile = base.resolve(Constants.JAVATASK_INTROSPECTION_PATH);
             if (!Files.exists(infoFile)) {
                 continue;

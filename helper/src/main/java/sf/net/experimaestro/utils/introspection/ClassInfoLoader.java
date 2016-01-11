@@ -26,13 +26,17 @@ import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * A lightweight class info loader
  */
 public class ClassInfoLoader {
+    final static private Logger LOGGER = Logger.getLogger("ClassInfoLoader");
+
     final ClassLoader classLoader;
 
     private final Path[] classpath;
@@ -40,28 +44,36 @@ public class ClassInfoLoader {
     private final HashMap<String, ClassInfo> classes = new HashMap<>();
 
     public ClassInfoLoader(Path[] classpath, ClassLoader classLoader) throws IOException {
-        this.classpath = classpath.clone();
+        ArrayList<Path> _classpath = new ArrayList<>();
         for (int i = 0; i < classpath.length; i++) {
+            Path aClasspath = classpath[i];
             // Transform files so as to use the JAR FileSystem on top of it
-            if (Files.isRegularFile(this.classpath[i])) {
+            if (Files.isRegularFile(aClasspath)) {
                 final URI uri;
                 try {
-                    uri = new URI("jar:" + this.classpath[i].toUri().toString());
+                    uri = new URI("jar:" + aClasspath.toUri().toString());
                 } catch (URISyntaxException e) {
                     throw new RuntimeException(e);
                 }
                 try {
-                    this.classpath[i] = FileSystems.getFileSystem(uri).getPath("/");
+                    aClasspath = FileSystems.getFileSystem(uri).getPath("/");
+                    _classpath.add(aClasspath);
                 } catch (FileSystemNotFoundException e) {
                     try {
                         Map<String, ?> env = new HashMap<>();
-                        this.classpath[i] = FileSystems.newFileSystem(uri, env, null).getPath("/");
+                        aClasspath = FileSystems.newFileSystem(uri, env, null).getPath("/");
+                        LOGGER.fine("Created a ZIP filesystem with " + aClasspath.toUri());
+                        _classpath.add(aClasspath);
+                    } catch(UnsupportedOperationException e3) {
+                        LOGGER.warning("Could not create ZIP filesystem with " + uri + ": " + e3);
                     } catch(Throwable e2) {
                         throw new IOException("Could not create ZIP filesystem with " + uri + ": " + e2);
                     }
                 }
             }
         }
+
+        this.classpath = _classpath.toArray(new Path[_classpath.size()]);
         this.classLoader = classLoader;
     }
 
@@ -83,6 +95,7 @@ public class ClassInfoLoader {
         final String path = name.replace(".", "/") + ".class";
 
         for (Path basepath : classpath) {
+            if (basepath == null) continue;
             try {
                 Path file = basepath.resolve(path);
                 if (Files.exists(file)) {
@@ -94,5 +107,9 @@ public class ClassInfoLoader {
         }
 
         return null;
+    }
+
+    public Path[] getClasspath() {
+        return classpath;
     }
 }
