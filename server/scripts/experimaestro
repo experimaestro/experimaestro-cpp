@@ -362,11 +362,14 @@ def command_run_python(args):
         else:
             files.append([filepath, open(filepath).read()])
 
+    # Get absolute python path
+    pythonpath = ":".join([os.path.abspath(path) for path in args.pythonpath.split(":")])
+
     if args.post:
         files.append(["<post>", args.post])
 
     logging.debug("Running python scripts %s" % [s[0] for s in files])
-    params = {"files": files, "environment": dict(os.environ), "pythonpath": args.pythonpath}
+    params = {"files": files, "environment": dict(os.environ), "pythonpath": pythonpath}
 
     run_server_command(client, "run-python", params)
 
