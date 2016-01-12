@@ -41,6 +41,12 @@ public @interface JsonArgument {
     String help() default "";
 
     /**
+     * The default value in JSON
+     * @return The default value string
+     */
+    String value() default "";
+
+    /**
      * Type of the JSON argument
      * @return the qualified type
      */
