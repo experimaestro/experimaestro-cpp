@@ -70,6 +70,10 @@ public class ClassInfoLoader {
                         throw new IOException("Could not create ZIP filesystem with " + uri + ": " + e2);
                     }
                 }
+            } else if (Files.isDirectory(aClasspath)) {
+                _classpath.add(aClasspath);
+            } else {
+                LOGGER.warning("Ignoring classpath " + aClasspath + ": not a directory or a file");
             }
         }
 
