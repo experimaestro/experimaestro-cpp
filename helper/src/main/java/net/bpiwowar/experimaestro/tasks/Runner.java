@@ -27,6 +27,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.tasks.Path;
 
 import java.io.File;
@@ -234,7 +235,8 @@ public class Runner {
             }
 
             try {
-                task.execute(json);
+                ProgressListener progressListener = new ProgressListener(System.getenv(Constants.XPM_NOTIFICATION_URL));
+                task.execute(json, progressListener);
             } catch (Throwable e) {
                 System.err.format("An error occurred while running the task: %s%n", e);
                 e.printStackTrace(System.err);

@@ -33,10 +33,11 @@ public abstract class AbstractTask {
     /**
      * Execute the task
      * @param r The returned object pre-filled with values
+     * @param progressListener Allows to report progress on a task
      * @return A json object corresponding to the task
      * @throws Throwable Any error that occurs should be reported through exceptions
      */
-    public abstract JsonElement execute(JsonObject r) throws Throwable;
+    public abstract JsonElement execute(JsonObject r, ProgressListener progressListener) throws Throwable;
 
     public void setWorkingDirectory(File workingDirectory) {
         this.workingDirectory = workingDirectory;

@@ -117,7 +117,7 @@ public class Analyze {
                 continue;
             }
 
-            LOGGER.info(format("Found introspection file: %s", infoFile));
+            LOGGER.info(format("Found introspection file: %s", infoFile.toUri()));
             load(cl, f, searchAll ? classpath : new Path[]{base}, infoFile);
         }
     }

@@ -30,6 +30,7 @@ import java.util.TreeMap;
  * Constants (namespaces and others) used by experimaestro
  */
 public class Constants {
+    public static final String XPM_NOTIFICATION_URL = "XPM_NOTIFICATION_URL";
     // Set of all atomic types
     public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
 

@@ -21,6 +21,7 @@ package sf.net.experimaestro.connectors;
 
 import com.google.common.collect.Iterables;
 import sf.net.experimaestro.exceptions.LaunchException;
+import sf.net.experimaestro.manager.Constants;
 import sf.net.experimaestro.scheduler.AbstractCommand;
 import sf.net.experimaestro.scheduler.Command;
 import sf.net.experimaestro.scheduler.CommandComponent;
@@ -158,7 +159,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             // Adds notification URL to script
             if (notificationURL != null) {
                 final URL url = new URL(notificationURL, format("%d", job.getId()));
-                writer.format("export XPM_NOTIFICATION_URL=\"%s\"%n", protect(url.toString(), QUOTED_SPECIAL));
+                writer.format("export %s=\"%s\"%n", Constants.XPM_NOTIFICATION_URL, protect(url.toString(), QUOTED_SPECIAL));
             }
 
             if (directory() != null) {
@@ -194,7 +195,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Notify if possible
             if (notificationURL != null) {
-                writer.format(" wget --tries=1 --connect-timeout=1 --read-timeout=1 --quiet -O /dev/null \"$XPM_NOTIFICATION_URL/eoj\"%n");
+                writer.format(" wget --tries=1 --connect-timeout=1 --read-timeout=1 --quiet -O /dev/null \"$" + Constants.XPM_NOTIFICATION_URL + "/eoj\"%n");
             }
 
             // Kills remaining processes
