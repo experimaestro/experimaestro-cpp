@@ -25,7 +25,7 @@ import java.lang.annotation.RetentionPolicy;
  * Defines the JSON type of an object
  */
 @Retention(value = RetentionPolicy.RUNTIME)
-public @interface Type {
+public @interface JsonType {
     /**
      * JSON type
      * @return The JSON type

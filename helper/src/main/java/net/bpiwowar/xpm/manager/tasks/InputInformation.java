@@ -39,9 +39,9 @@ public class InputInformation {
             return Constants.XP_STRING;
 
         // Get from class
-        final Type typeInfo = type.getAnnotation(Type.class);
-        if (typeInfo != null) {
-            return parse(typeInfo.type(), namespaces);
+        final JsonType jsonTypeInfo = type.getAnnotation(JsonType.class);
+        if (jsonTypeInfo != null) {
+            return parse(jsonTypeInfo.type(), namespaces);
         }
 
         // Check the type
