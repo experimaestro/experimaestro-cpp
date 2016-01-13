@@ -70,12 +70,11 @@ public abstract class ExternalTaskFactory extends TaskFactory {
 
     @Override
     public Task create() {
-        final JavaTask task = new JavaTask(this);
+        final ExternalTask task = new ExternalTask(this);
         task.init();
         return task;
     }
 
-    @Override
     public Commands commands(JsonObject json, boolean simulate) {
         Commands commands = build(json);
 

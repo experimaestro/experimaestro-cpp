@@ -76,16 +76,17 @@ public class ClassDescription {
                 CLASS_DESCRIPTION.put(aClass, description);
 
                 map = description.methods;
-                for (Method method : aClass.getDeclaredMethods()) {
-                    // Add fields
-                    for (Field field : aClass.getFields()) {
-                        Property annotation = field.getAnnotation(Property.class);
-                        if (annotation != null) {
-                            final String name = annotation.value().equals("") ? field.getName() : annotation.value();
-                            description.fields.put(name, new PropertyAccess.FieldAccess(field));
-                        }
+                // Add fields
+                for (Field field : aClass.getDeclaredFields()) {
+                    Property annotation = field.getAnnotation(Property.class);
+                    if (annotation != null) {
+                        final String name = annotation.value().equals("") ? field.getName() : annotation.value();
+                        description.fields.put(name, new PropertyAccess.FieldAccess(field));
                     }
+                }
 
+
+                for (Method method : aClass.getDeclaredMethods()) {
                     // Exposed case
                     final Expose expose = method.getAnnotation(Expose.class);
                     if (expose != null) {

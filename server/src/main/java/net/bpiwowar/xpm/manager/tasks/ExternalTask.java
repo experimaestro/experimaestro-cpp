@@ -18,6 +18,8 @@ package net.bpiwowar.xpm.manager.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.NoSuchParameter;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import org.apache.log4j.Level;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -30,35 +32,40 @@ import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.mozilla.javascript.Script;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
  * A task which is backed up main a Java class
  */
-public class JavaTask extends Task {
+public class ExternalTask extends Task {
 //    final static private Logger LOGGER = Logger.getLogger();
 
-    private final ExternalTaskFactory javaFactory;
+    private final ExternalTaskFactory externalFactory;
 
-    public JavaTask(ExternalTaskFactory factory) {
+    public ExternalTask(ExternalTaskFactory factory) {
         super(factory);
-        this.javaFactory = factory;
+        this.externalFactory = factory;
     }
 
 
     @Override
+    public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+        final ScriptContext sc = ScriptContext.get();
+        processInputs(sc);
+        JsonObject json = getInputsAsJson();
+        return externalFactory.commands(json, false);
+    }
+
+    @Override
     public Json doRun(ScriptContext taskContext) {
-        // Copy the parameters
-        JsonObject json = new JsonObject();
-        for (Map.Entry<String, Value> entry : values.entrySet()) {
-            if (entry.getValue().isSet()) {
-                json.put(entry.getKey(), entry.getValue().get());
-            }
-        }
+        // Get the parameters
+        JsonObject json = getInputsAsJson();
 
         // Computes the running directory
         Path uniqueDir;
@@ -70,7 +77,7 @@ public class JavaTask extends Task {
             }
 
             String dirPrefix = factory.getId().getLocalPart();
-            final String prefix = javaFactory.prefixes.get(factory.getId().getNamespaceURI());
+            final String prefix = externalFactory.prefixes.get(factory.getId().getNamespaceURI());
             if (prefix != null) {
                 dirPrefix = prefix + "." + dirPrefix;
             }
@@ -93,14 +100,14 @@ public class JavaTask extends Task {
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
-                Commands commands = javaFactory.commands(json, RunningContext.get().simulate());
+                Commands commands = externalFactory.commands(json, RunningContext.get().simulate());
 
                 // --- Build the command
 
                 CommandLineTask job = new CommandLineTask(path);
                 job.setCommands(commands);
                 job.environment = new HashMap<>();
-                javaFactory.setEnvironment(json, job.environment);
+                externalFactory.setEnvironment(json, job.environment);
 
                 commands.dependencies().forEach(job::addDependency);
 
@@ -145,10 +152,10 @@ public class JavaTask extends Task {
 
         // --- Fill some fields in returned json
 
-        json.put(Constants.XP_TYPE.toString(), javaFactory.getOutput().toString());
+        json.put(Constants.XP_TYPE.toString(), externalFactory.getOutput().toString());
         json.put(Constants.XP_RESOURCE.toString(), path.toString());
 
-        for (PathArgument __path : javaFactory.pathArguments) {
+        for (PathArgument __path : externalFactory.pathArguments) {
             Path relativePath = uniqueDir.resolve(__path.relativePath);
             json.put(__path.jsonName, new JsonPath(relativePath));
         }

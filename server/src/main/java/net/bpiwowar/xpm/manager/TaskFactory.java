@@ -19,15 +19,23 @@ package net.bpiwowar.xpm.manager;
  */
 
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.NoSuchParameter;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.plans.Plan;
 import net.bpiwowar.xpm.manager.plans.PlanInputs;
-import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Help;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.Options;
+import net.bpiwowar.xpm.manager.scripting.RunningContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.Commands;
 
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -59,16 +67,15 @@ public abstract class TaskFactory {
 
     /**
      * The module
-     *
+     * <p>
      * Avoids serializing this
      */
     transient Module module;
 
     /**
      * The repository
-     *
+     * <p>
      * Avoids serializing this
-     *
      */
     transient private Repository repository;
 
@@ -88,7 +95,8 @@ public abstract class TaskFactory {
         this.group = group;
     }
 
-    protected TaskFactory() {}
+    protected TaskFactory() {
+    }
 
     protected TaskFactory(Repository repository) {
         this(repository, null, null, null);
@@ -155,15 +163,6 @@ public abstract class TaskFactory {
         module.addFactory(this);
     }
 
-    public Commands commands(JsonObject json, boolean simulate) {
-        throw new IllegalAccessError(format("This task factory [%s] cannot generate a command", this.getClass()));
-    }
-
-    @Expose(context = true, value = "commands")
-    public Commands commands(LanguageContext cx, JsonObject json) {
-        return commands(json, RunningContext.get().simulate());
-    }
-
     @Help("Runs")
     @Expose(value = "run", context = true)
     public Json[] run(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite {
@@ -177,8 +176,8 @@ public abstract class TaskFactory {
 
     @Help("Runs and asserts that there was a single output")
     @Expose(value = "run_", context = true)
-    public Json runOnce(LanguageContext cx, @Options Map map,  Parameters... parameters) throws ExperimaestroCannotOverwrite {
-        final Json [] v = run(cx, map, parameters);
+    public Json runOnce(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite {
+        final Json[] v = run(cx, map, parameters);
         if (v.length != 1) {
             throw new XPMScriptRuntimeException("Requested only one output, got %d", v.length);
         }
@@ -195,7 +194,7 @@ public abstract class TaskFactory {
     @Expose(value = "plan", context = true)
     public Object plan(LanguageContext cx, @Options Map map) {
         final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
-        PlanInputs inputs= Plan.getMappings(map, cx);
+        PlanInputs inputs = Plan.getMappings(map, cx);
         plan.add(inputs);
         return plan;
     }
@@ -204,5 +203,33 @@ public abstract class TaskFactory {
     public Object simulate(LanguageContext cx, Map parameters) throws Exception {
         final Plan plan = new Plan(cx, this, parameters);
         return plan.simulate();
+    }
+
+    @Expose(context = true, value = "commands")
+    public Commands commands(LanguageContext cx, JsonObject json, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+        Map<String, Object> map = new HashMap<>();
+        json.entrySet().forEach(e -> map.put(e.getKey(), e.getValue()));
+        final RunnableTask configure = configure(cx, map);
+        return configure.commands;
+    }
+
+    @Expose(context = true)
+    public RunnableTask configure(LanguageContext cx, @Options Map<String, Object> map, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+        // Set tasks input for validation
+        final Task task = create();
+        map.entrySet().parallelStream().forEach(e -> {
+            try {
+                task.setParameter(DotName.parse(e.getKey()), cx.toJSON(e.getValue()));
+            } catch (NoSuchParameter noSuchParameter) {
+                throw  new XPMScriptRuntimeException(noSuchParameter);
+            }
+        });
+
+        // Get parameters
+        IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
+        Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
+        final Commands commands = task.commands(pmap);
+
+        return new RunnableTask(task, commands);
     }
 }

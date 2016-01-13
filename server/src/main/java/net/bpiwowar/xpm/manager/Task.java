@@ -23,10 +23,12 @@ import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.RunningContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.scheduler.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -135,7 +137,15 @@ public abstract class Task {
      */
     final public Json run(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
         LOGGER.debug("Running task [%s]", factory == null ? "n/a" : factory.id);
+        processInputs(taskContext);
 
+        // Do the real-run
+        Json json = doRun(taskContext);
+        return json;
+
+    }
+
+    protected void processInputs(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
         // (1) Get the inputs so that dependent ones are evaluated latter
         ArrayList<String> list = getOrderedInputs();
 
@@ -183,11 +193,6 @@ public abstract class Task {
             }
 
         }
-
-        // Do the real-run
-        Json json = doRun(taskContext);
-        return json;
-
     }
 
     /**
@@ -365,4 +370,13 @@ public abstract class Task {
         return run(false);
     }
 
+    public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+        throw new UnsupportedOperationException("Cannot return commands for a task of type " + this.getClass());
+    }
+
+    protected JsonObject getInputsAsJson() {
+        JsonObject json = new JsonObject();
+        values.forEach((key, value) -> json.put(key, value.get()));
+        return json;
+    }
 }

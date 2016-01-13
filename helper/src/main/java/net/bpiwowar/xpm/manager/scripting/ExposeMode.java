@@ -24,8 +24,10 @@ package net.bpiwowar.xpm.manager.scripting;
 public enum ExposeMode {
     /** Standard method with a name */
     METHOD,
+
     /** Use a direct call */
     CALL,
+
     /** Property access */
     PROPERTY,
 
