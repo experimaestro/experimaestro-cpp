@@ -5,8 +5,6 @@ import net.bpiwowar.xpm.manager.QName;
 import net.bpiwowar.xpm.utils.introspection.ClassInfo;
 import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -14,34 +12,12 @@ import static java.lang.String.format;
 /**
  * All the information about a Java Task
  */
-public class JavaTaskInformation {
-
-    /**
-     * Task id
-     */
-    final QName id;
+public class JavaTaskInformation extends TaskInformation {
 
     /**
      * Full class name
      */
     String taskClassname;
-
-    /**
-     * The arguments that should be considered as paths
-     */
-    final ArrayList<PathArgument> pathArguments = new ArrayList<>();
-
-    /**
-     * Output type
-     */
-    QName output;
-
-    Map<String, InputInformation> inputs = new HashMap<>();
-
-    /**
-     * Prefixes for namespaces - used for unique directory naming
-     */
-    Map<String, String> prefixes = new HashMap<>();
 
     public JavaTaskInformation(ClassInfo classInfo, Map<String, String> namespaces) {
         taskClassname = classInfo.getName();
@@ -69,7 +45,7 @@ public class JavaTaskInformation {
                     inputs.put(name, new InputInformation(namespaces, field));
                 }
 
-                final Path path = field.getAnnotation(Path.class);
+                final JsonPath path = field.getAnnotation(JsonPath.class);
                 if (path != null) {
                     String copy = getString(path.copy(), fieldName);
                     String relativePath = getString(path.value(), fieldName);

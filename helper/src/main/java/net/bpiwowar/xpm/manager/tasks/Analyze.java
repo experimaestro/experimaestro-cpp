@@ -27,7 +27,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.tasks.JavaTaskInformation;
 import net.bpiwowar.xpm.utils.introspection.ClassInfo;
 import net.bpiwowar.xpm.utils.introspection.ClassInfoLoader;
 
@@ -54,7 +53,9 @@ import static java.lang.String.format;
  */
 public class Analyze {
     final static private Logger LOGGER = Logger.getLogger("Analyze");
-    public static final Type INFORMATION_TYPE = new TypeToken<ArrayList<JavaTaskInformation>>() {
+    public static final Type JAVA_INFORMATION_TYPE = new TypeToken<ArrayList<JavaTaskInformation>>() {
+    }.getType();
+    public static final Type SCRIPT_INFORMATION_TYPE = new TypeToken<ArrayList<ScriptTaskInformation>>() {
     }.getType();
 
     public static void main(String[] args) throws IOException {
@@ -82,10 +83,10 @@ public class Analyze {
         }
 
         final ClassInfoLoader classInfoLoader = new ClassInfoLoader(classpath, ClassLoader.getSystemClassLoader());
-        ArrayList<JavaTaskInformation> informations = new ArrayList<>();
+        ArrayList<TaskInformation> informations = new ArrayList<>();
         BiFunction<ClassInfo, Description, ?> f = (classInfo, description) -> {
             // Creates the task factory
-            JavaTaskInformation information = new JavaTaskInformation(classInfo, description.namespaces);
+            TaskInformation information = new JavaTaskInformation(classInfo, description.namespaces);
             informations.add(information);
             return true;
         };
@@ -96,7 +97,7 @@ public class Analyze {
 
         try (final BufferedWriter writer = Files.newBufferedWriter(output);
              final JsonWriter jsonWriter = new JsonWriter(writer)) {
-            gson.toJson(informations, INFORMATION_TYPE, jsonWriter);
+            gson.toJson(informations, JAVA_INFORMATION_TYPE, jsonWriter);
         }
     }
 
@@ -109,6 +110,14 @@ public class Analyze {
         ArrayList<String> classes;
     }
 
+    /**
+     * Introspection of a list of jars
+     * @param cl Class information loader
+     * @param classpath The classpath
+     * @param f The callback function
+     * @param searchAll If false, the class information will not be looked at when crossing jar boundaries
+     * @throws IOException If something goes wrong
+     */
     public static void forEachClass(ClassInfoLoader cl, Path[] classpath, BiFunction<ClassInfo, Description, ?> f, boolean searchAll) throws IOException {
         for (Path base : classpath) {
             LOGGER.fine("Looking at " + base.resolve(Constants.JAVATASK_INTROSPECTION_PATH).toUri() + " in " + base.toUri());
@@ -122,6 +131,15 @@ public class Analyze {
         }
     }
 
+    /**
+     * Introspection of a given jar file
+     *
+     * @param cl The class information loader
+     * @param f The function that will be called each time a Java task is found
+     * @param searched List of jars to be inspected
+     * @param infoFile The introspection JSON file giving the list of packages / classes to inspect in the jars
+     * @throws IOException
+     */
     private static void load(ClassInfoLoader cl, BiFunction<ClassInfo, Description, ?> f, Path[] searched, Path infoFile) throws IOException {
         Type collectionType = new TypeToken<Description>() {
         }.getType();

@@ -18,7 +18,11 @@ package net.bpiwowar.xpm.manager.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.*;
+import com.google.gson.AnnotatedTypeAdapterFactory;
+import com.google.gson.FieldAttributes;
+import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAttributes;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
@@ -40,7 +44,7 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
             return (TypeAdapter<T>) new FileAdapter();
 
         // Look at registry to find a proxy for annotations
-        for(Factory factory: registry) {
+        for (Factory factory : registry) {
             if (type.getRawType().isAssignableFrom(factory.field.getType())) {
                 // Found one factory, take the annotations from this field instead
                 // of the original one
@@ -49,11 +53,14 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
             }
         }
 
-        final ClassChooser annotation = attributes.getAnnotation(ClassChooser.class);
+        ClassChooser annotation = attributes.getAnnotation(ClassChooser.class);
+        if (annotation == null) {
+            annotation = type.getRawType().getAnnotation(ClassChooser.class);
+        }
         if (annotation != null) {
             try {
                 return new ClassChooserAdapter(gson, annotation);
-            } catch(RuntimeException e) {
+            } catch (RuntimeException e) {
                 throw new RuntimeException("Error while creating class chooser adapter for " + type);
             }
         }
@@ -62,11 +69,13 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
     }
 
 
-    /** Explores the fields of the registry class
+    /**
+     * Explores the fields of the registry class
+     *
      * @param registryClass The registry class
      */
     public void addClass(Class<?> registryClass) {
-        for(Field field: registryClass.getDeclaredFields()) {
+        for (Field field : registryClass.getDeclaredFields()) {
             if (hasAnnotation(field, ClassChooser.class)) {
                 registry.add(new Factory(field));
             }
@@ -75,12 +84,13 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
 
     /**
      * Returns true if the annotated element has one of the annotations
+     *
      * @param ae
      * @param classes
      * @return
      */
     private boolean hasAnnotation(AnnotatedElement ae, Class<? extends Annotation>... classes) {
-        for(Class<? extends Annotation> aClass: classes) {
+        for (Class<? extends Annotation> aClass : classes) {
             if (ae.getAnnotation(aClass) != null) {
                 return true;
             }

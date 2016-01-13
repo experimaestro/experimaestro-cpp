@@ -18,7 +18,13 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.Input;
+import net.bpiwowar.xpm.manager.Module;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.TaskFactory;
+import net.bpiwowar.xpm.manager.Type;
+import net.bpiwowar.xpm.manager.ValueType;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -60,82 +66,86 @@ public class TasksServlet extends XPMServlet {
 
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response) throws ServletException, IOException {
+        try {
+            Map<String, String> query = new TreeMap<>();
+            String localPath = request.getRequestURI().substring(
+                    request.getServletPath().length());
 
-        Map<String, String> query = new TreeMap<>();
-        String localPath = request.getRequestURI().substring(
-                request.getServletPath().length());
-
-        String repositoryId = request.getParameter("repository");
-        Repository repository = repositoryId != null ?
-                repositories.get(repositoryId) : defaultRepository;
-        if (repositoryId != null) {
-            query.put("repository", repositoryId);
-        }
-        Status status = new Status(request, query);
-
-        String moduleName = request.getParameter("module");
-        Module module = moduleName == null ? repository
-                .getDefaultModule() : repository
-                .getModule(QName.parse(moduleName));
-        if (moduleName != null) {
-            query.put("module", moduleName);
-        }
-
-        if (localPath.equals("")) {
-            final PrintWriter out = startHTMLResponse(response);
-
-            header(out, "Task browser");
-
-            printRepositories(request, out);
-
-            printModules(status, out, module.getSubmodules());
-            printTasks(status, out, module.getFactories());
-
-            out.println("</body></html>");
-            return;
-        }
-
-        if (localPath.equals("/type")) {
-            final PrintWriter out = startHTMLResponse(response);
-            String type = request.getParameter("type");
-
-            header(out, String.format("browser (type 7%s)", moduleName));
-            out.format("<h1>Type %s</h1>", type);
-
-            out.println("<div style='text-color: red'>Unknown type</div>");
-            out.println("</body></html>");
-
-            return;
-        }
-
-        if (localPath.equals("/show")) {
-            final PrintWriter out = startHTMLResponse(response);
-
-            String name = request.getParameter("name");
-            String ns = request.getParameter("ns");
-            TaskFactory factory = repository.getFactory(new QName(ns, name));
-            header(out, String.format("Task browser (task {%s}%s)", ns, name));
-            out.format("<h1> Task %s (%s)</h1>", name, ns);
-            if (factory == null) {
-                out.println("<div style='text-color: red'>Unknown task</div>");
-            } else {
-                out.println("<h2>Informations</h2>");
-                out.format("<div><b>Version:</b> %s</div>%n",
-                        factory.getVersion());
-                out.println("<h2>Input</h2>");
-                printParameters(status, out, factory, repository);
-
-                out.println("<h2>Output</h2>");
-                out.println("<h2>Documentation</h2>");
-                out.println(factory.getDocumentation());
+            String repositoryId = request.getParameter("repository");
+            Repository repository = repositoryId != null ?
+                    repositories.get(repositoryId) : defaultRepository;
+            if (repositoryId != null) {
+                query.put("repository", repositoryId);
             }
-            out.println("</body></html>");
+            Status status = new Status(request, query);
 
-            return;
+            String moduleName = request.getParameter("module");
+            Module module = moduleName == null ? repository
+                    .getDefaultModule() : repository
+                    .getModule(QName.parse(moduleName));
+            if (moduleName != null) {
+                query.put("module", moduleName);
+            }
+
+            if (localPath.equals("")) {
+                final PrintWriter out = startHTMLResponse(response);
+
+                header(out, "Task browser");
+
+                printRepositories(request, out);
+
+                printModules(status, out, module.getSubmodules());
+                printTasks(status, out, module.getFactories());
+
+                out.println("</body></html>");
+                return;
+            }
+
+            if (localPath.equals("/type")) {
+                final PrintWriter out = startHTMLResponse(response);
+                String type = request.getParameter("type");
+
+                header(out, String.format("browser (type 7%s)", moduleName));
+                out.format("<h1>Type %s</h1>", type);
+
+                out.println("<div style='text-color: red'>Unknown type</div>");
+                out.println("</body></html>");
+
+                return;
+            }
+
+            if (localPath.equals("/show")) {
+                final PrintWriter out = startHTMLResponse(response);
+
+                String name = request.getParameter("name");
+                String ns = request.getParameter("ns");
+                TaskFactory factory = repository.getFactory(new QName(ns, name));
+                header(out, String.format("Task browser (task {%s}%s)", ns, name));
+                out.format("<h1> Task %s (%s)</h1>", name, ns);
+                if (factory == null) {
+                    out.println("<div style='text-color: red'>Unknown task</div>");
+                } else {
+                    out.println("<h2>Informations</h2>");
+                    out.format("<div><b>Version:</b> %s</div>%n",
+                            factory.getVersion());
+                    out.println("<h2>Input</h2>");
+                    printParameters(status, out, factory, repository);
+
+                    out.println("<h2>Output</h2>");
+                    out.println("<h2>Documentation</h2>");
+                    out.println(factory.getDocumentation());
+                }
+                out.println("</body></html>");
+
+                return;
+            }
+
+
+            error404(request, response);
+        } catch(RuntimeException e) {
+            LOGGER.error(e, "Error while retrieving repository information");
+            throw e;
         }
-
-
-        error404(request, response);
     }
 
 

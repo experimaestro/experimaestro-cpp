@@ -42,9 +42,9 @@ import java.util.Map;
 public class JavaTask extends Task {
 //    final static private Logger LOGGER = Logger.getLogger();
 
-    private final JavaTaskFactory javaFactory;
+    private final ExternalTaskFactory javaFactory;
 
-    public JavaTask(JavaTaskFactory factory) {
+    public JavaTask(ExternalTaskFactory factory) {
         super(factory);
         this.javaFactory = factory;
     }

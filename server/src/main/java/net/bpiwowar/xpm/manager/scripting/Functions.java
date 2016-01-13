@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.manager.tasks.TasksLoader;
 import org.apache.log4j.Hierarchy;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
@@ -299,9 +300,16 @@ public class Functions {
     }
 
     @Expose(value = "load_java_repository")
+    @Deprecated("Use load_repository")
     @Help("Include a repository from introspection of a JAR file")
     static public void includeJavaRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
-        JavaTasksIntrospection.scanRepository(context().getRepository(), jarPath);
+        loadRepository(jarPath);
+    }
+
+    @Expose(value = "load_repository")
+    @Help("Include a repository from introspection of a JAR file")
+    static public void loadRepository(Path jarPath) throws IOException, ExperimaestroException, ClassNotFoundException {
+        TasksLoader.loadRepository(context().getRepository(), jarPath);
     }
 
     @Deprecated("Use get_locks(json, parameters...)")

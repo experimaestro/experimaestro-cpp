@@ -10,9 +10,9 @@ import java.util.List;
  */
 public class JavaTaskFactories {
     Path[] classpath;
-    List<JavaTaskFactory> factories;
+    List<ExternalTaskFactory> factories;
 
-    public JavaTaskFactories(Path[] classpath, Collection<JavaTaskFactory> factories) {
+    public JavaTaskFactories(Path[] classpath, Collection<ExternalTaskFactory> factories) {
         this.classpath = classpath;
         this.factories = new ArrayList<>(factories);
     }

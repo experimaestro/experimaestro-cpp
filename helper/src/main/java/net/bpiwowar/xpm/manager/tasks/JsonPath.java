@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface Path {
+public @interface JsonPath {
     /**
      * Relative path from the output directory. By default, get to the field name.
      * @return A string with "/" separated components or empty

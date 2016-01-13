@@ -220,7 +220,7 @@ public class Runner {
 
             // Set the @Path annotated fields
             for (Field field : task.getClass().getDeclaredFields()) {
-                Path path = field.getAnnotation(Path.class);
+                JsonPath path = field.getAnnotation(JsonPath.class);
                 if (path != null) {
                     String name = getString(path.value(), field.getName());
                     boolean accessible = field.isAccessible();
