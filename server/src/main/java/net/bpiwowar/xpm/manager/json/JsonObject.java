@@ -123,7 +123,11 @@ public class JsonObject extends Json {
         if (sealed) {
             throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
         }
-        map.put(key, new JsonString(string));
+        if (string == null) {
+            map.put(key, JsonNull.getSingleton());
+        } else {
+            map.put(key, new JsonString(string));
+        }
     }
 
     @Expose
@@ -136,7 +140,11 @@ public class JsonObject extends Json {
         if (sealed) {
             throw new UnsupportedOperationException("Cannot add entries to a sealed JSON object");
         }
-        map.put(key, json);
+        if (json == null) {
+            map.put(key, JsonNull.getSingleton());
+        } else {
+            map.put(key, json);
+        }
     }
 
     @Override
