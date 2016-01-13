@@ -101,8 +101,8 @@ public class Experiment implements Identifiable {
     }
 
     public void save() throws SQLException {
-        DatabaseObjects<Experiment> shares = Scheduler.get().experiments();
-        shares.save(this, "INSERT INTO Experiments(name, timestamp) VALUES(?, ?)", st -> {
+        DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        experiments.save(this, "INSERT INTO Experiments(name, timestamp) VALUES(?, ?)", st -> {
             st.setString(1, identifier);
             st.setTimestamp(2, new Timestamp(timestamp));
         });
