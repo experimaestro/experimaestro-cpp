@@ -73,4 +73,9 @@ public class JsonNull extends Json {
     public void write(JsonWriter out) throws IOException {
         out.nullValue();
     }
+
+    @Override
+    public String toString() {
+        return "null";
+    }
 }
