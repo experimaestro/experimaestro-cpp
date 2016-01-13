@@ -26,7 +26,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
- * Access to a property
+ * Access to a property for a given class
  */
 public class PropertyAccess {
     Function<Object, Object> getter;
@@ -43,17 +43,7 @@ public class PropertyAccess {
     }
 
     public ScriptingReference get(final Object object) {
-        return new ScriptingReference() {
-            @Override
-            public Object get(LanguageContext cx) {
-                return getter.apply(object);
-            }
-
-            @Override
-            public void set(LanguageContext cx, Object value) {
-                setter.accept(object, value);
-            }
-        };
+        return new ObjectPropertyReference(getter, setter, object);
     }
 
     public void set(Object object, Object value) {
@@ -68,4 +58,5 @@ public class PropertyAccess {
             );
         }
     }
+
 }

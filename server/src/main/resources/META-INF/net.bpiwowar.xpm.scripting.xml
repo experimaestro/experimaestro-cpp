@@ -31,13 +31,12 @@
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
         <class>net.bpiwowar.xpm.scheduler.ReadWriteDependency</class>
 
-
         <!-- Manager -->
         <class>net.bpiwowar.xpm.manager.Module</class>
         <class>net.bpiwowar.xpm.manager.Task</class>
+        <class>net.bpiwowar.xpm.manager.RunnableTask</class>
         <class>net.bpiwowar.xpm.manager.Namespace</class>
         <class>net.bpiwowar.xpm.manager.tasks.JavaTaskFactory</class>
-
 
         <!-- Plans -->
         <class>net.bpiwowar.xpm.manager.plans.Operator</class>
@@ -72,6 +71,7 @@
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingList</class>
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingMap</class>
         <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
+        <class>net.bpiwowar.xpm.manager.scripting.PropertyAccess$FieldAccess</class>
 
         <!-- Json -->
         <class>net.bpiwowar.xpm.manager.json.Json</class>
