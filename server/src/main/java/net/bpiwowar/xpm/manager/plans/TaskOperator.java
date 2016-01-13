@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -21,14 +21,14 @@ package sf.net.experimaestro.manager.plans;
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.exceptions.NoSuchParameter;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.DotName;
+import net.bpiwowar.xpm.manager.Task;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 
 import java.util.Iterator;
 import java.util.Map;

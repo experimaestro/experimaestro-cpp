@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -21,17 +21,16 @@ package sf.net.experimaestro.manager.java;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.bpiwowar.experimaestro.tasks.Analyze;
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.gson.JsonPathAdapter;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
-import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.ExperimaestroException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.GsonConverter;
+import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
+import net.bpiwowar.xpm.utils.introspection.ClassInfo;
+import net.bpiwowar.xpm.utils.introspection.ClassInfoLoader;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

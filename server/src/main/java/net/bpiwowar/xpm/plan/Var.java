@@ -1,4 +1,4 @@
-package sf.net.experimaestro.plan;
+package net.bpiwowar.xpm.plan;
 
 /*
  * This file is part of experimaestro.
@@ -20,7 +20,7 @@ package sf.net.experimaestro.plan;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableMap;
-import sf.net.experimaestro.utils.Output;
+import net.bpiwowar.xpm.utils.Output;
 
 import java.util.ArrayList;
 import java.util.Iterator;

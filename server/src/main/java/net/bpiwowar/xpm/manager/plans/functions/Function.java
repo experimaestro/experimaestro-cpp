@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans.functions;
+package net.bpiwowar.xpm.manager.plans.functions;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager.plans.functions;
  */
 
 
-import sf.net.experimaestro.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.Json;
 
 import java.util.Iterator;
 

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
 import java.nio.file.Path;
 

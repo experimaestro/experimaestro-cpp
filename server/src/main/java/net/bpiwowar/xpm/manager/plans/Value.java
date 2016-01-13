@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -18,7 +18,7 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.Json;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

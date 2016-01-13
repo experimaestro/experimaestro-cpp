@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,28 +18,27 @@ package net.bpiwowar.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
-import java.io.File;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * A task
+ * Annotation to mark file
  */
-public abstract class AbstractTask {
-    /** The working directory */
-    protected File workingDirectory;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface Path {
+    /**
+     * Relative path from the output directory. By default, get to the field name.
+     * @return A string with "/" separated components or empty
+     */
+    String value() default "";
 
     /**
-     * Execute the task
-     * @param r The returned object pre-filled with values
-     * @param progressListener Allows to report progress on a task
-     * @return A json object corresponding to the task
-     * @throws Throwable Any error that occurs should be reported through exceptions
+     * Specify which JSON value should be get according to this path. By default,
+     * get to the field name.
+     * @return A valid json name or empty
      */
-    public abstract JsonElement execute(JsonObject r, ProgressListener progressListener) throws Throwable;
-
-    public void setWorkingDirectory(File workingDirectory) {
-        this.workingDirectory = workingDirectory;
-    }
+    String copy() default "";
 }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -20,10 +20,10 @@ package sf.net.experimaestro.connectors;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.TypeIdentifier;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.InputStream;
 import java.io.OutputStream;

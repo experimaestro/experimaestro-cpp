@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -20,16 +20,16 @@ package sf.net.experimaestro.scheduler;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.*;
-import sf.net.experimaestro.utils.db.SQLInsert;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.*;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -44,7 +44,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.utils.GsonConverter.defaultBuilder;
+import static net.bpiwowar.xpm.utils.GsonConverter.defaultBuilder;
 
 /**
  * The most general type of object manipulated by the server (can be a server, a

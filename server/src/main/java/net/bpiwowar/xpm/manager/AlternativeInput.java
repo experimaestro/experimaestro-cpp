@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 
 /*
@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 public class AlternativeInput extends Input {
     final static Logger LOGGER = Logger.getLogger();

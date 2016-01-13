@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -19,12 +19,12 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.db.DbUtils;
-import sf.net.experimaestro.utils.db.SQLInsert;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.db.DbUtils;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;

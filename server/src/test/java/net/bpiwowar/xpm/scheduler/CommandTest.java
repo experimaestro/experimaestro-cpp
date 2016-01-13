@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -20,9 +20,9 @@ package sf.net.experimaestro.scheduler;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.utils.TemporaryDirectory;
+import net.bpiwowar.xpm.connectors.*;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.utils.TemporaryDirectory;
 
 import java.io.BufferedReader;
 import java.io.File;

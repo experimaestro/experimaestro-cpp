@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -20,14 +20,14 @@ package sf.net.experimaestro.utils;
 
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
 import org.apache.commons.lang.RandomStringUtils;
-import sf.net.experimaestro.tasks.ServerTask;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.tasks.ServerTask;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.manager.js.SSHServer.findFreeLocalPort;
+import static net.bpiwowar.xpm.manager.js.SSHServer.findFreeLocalPort;
 
 /**
  * Ensures that only one scheduler is opened throughout the tests

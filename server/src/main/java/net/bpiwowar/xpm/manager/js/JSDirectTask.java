@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -19,15 +19,15 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;

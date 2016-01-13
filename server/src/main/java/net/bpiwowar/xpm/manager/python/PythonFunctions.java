@@ -1,14 +1,14 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 import org.python.core.*;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 
-import static sf.net.experimaestro.manager.python.PythonType.getPyClass;
+import static net.bpiwowar.xpm.manager.python.PythonType.getPyClass;
 
 /**
  * Python specific functions

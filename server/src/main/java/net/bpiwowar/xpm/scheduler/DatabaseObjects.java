@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -28,13 +28,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.ExceptionalConsumer;
-import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.db.SQLInsert;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.ExceptionalConsumer;
+import net.bpiwowar.xpm.utils.GsonConverter;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.scheduler.Scheduler.prepareStatement;
+import static net.bpiwowar.xpm.scheduler.Scheduler.prepareStatement;
 
 /**
  * A set of objects stored in database

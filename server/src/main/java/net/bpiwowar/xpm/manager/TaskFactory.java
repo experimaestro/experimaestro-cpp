@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -18,14 +18,14 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.plans.Plan;
-import sf.net.experimaestro.manager.plans.PlanInputs;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Commands;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.plans.Plan;
+import net.bpiwowar.xpm.manager.plans.PlanInputs;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Commands;
 
 import java.util.Arrays;
 import java.util.IdentityHashMap;

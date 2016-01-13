@@ -1,4 +1,4 @@
-package sf.net.experimaestro.tasks;
+package net.bpiwowar.xpm.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -23,9 +23,9 @@ import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
 import org.apache.xmlrpc.client.XmlRpcClient;
-import sf.net.experimaestro.scheduler.LockMode;
-import sf.net.experimaestro.tasks.config.XMLRPCClientConfig;
-import sf.net.experimaestro.utils.GenericHelper;
+import net.bpiwowar.xpm.scheduler.LockMode;
+import net.bpiwowar.xpm.tasks.config.XMLRPCClientConfig;
+import net.bpiwowar.xpm.utils.GenericHelper;
 
 import java.io.File;
 import java.util.ArrayList;

@@ -1,14 +1,14 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 import org.python.core.PyBoolean;
 import org.python.core.PyClass;
 import org.python.core.PyDictionary;
 import org.python.core.PyString;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import java.util.*;
 import java.util.Map.Entry;

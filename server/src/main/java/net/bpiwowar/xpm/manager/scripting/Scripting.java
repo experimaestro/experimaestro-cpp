@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -22,10 +22,10 @@ import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.scheduler.Command;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -72,7 +72,7 @@ public class Scripting {
     public static void forEachType(Consumer<Class> f) {
 
         String classname = null;
-        try (InputStream in = Scripting.class.getResource("/META-INF/sf.net.experimaestro.scripting.xml").openStream()) {
+        try (InputStream in = Scripting.class.getResource("/META-INF/net.bpiwowar.xpm.scripting.xml").openStream()) {
             DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = builderFactory.newDocumentBuilder();
             Document document = builder.parse(in);

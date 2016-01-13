@@ -1,4 +1,4 @@
-package sf.net.experimaestro.locks;
+package net.bpiwowar.xpm.locks;
 
 /*
  * This file is part of experimaestro.
@@ -18,21 +18,21 @@ package sf.net.experimaestro.locks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.fs.XPMPath;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.ConstructorRegistry;
-import sf.net.experimaestro.scheduler.DatabaseObjects;
-import sf.net.experimaestro.scheduler.Identifiable;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.StatusLock;
-import sf.net.experimaestro.scheduler.TokenLock;
-import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.JsonAbstract;
-import sf.net.experimaestro.utils.JsonSerializationInputStream;
-import sf.net.experimaestro.utils.db.SQLInsert;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.fs.XPMPath;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.StatusLock;
+import net.bpiwowar.xpm.scheduler.TokenLock;
+import net.bpiwowar.xpm.utils.GsonConverter;
+import net.bpiwowar.xpm.utils.JsonAbstract;
+import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
 
 import java.nio.file.Path;
 import java.sql.ResultSet;

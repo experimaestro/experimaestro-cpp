@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

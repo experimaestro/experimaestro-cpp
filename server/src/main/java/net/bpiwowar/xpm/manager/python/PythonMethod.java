@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -20,7 +20,7 @@ package sf.net.experimaestro.manager.python;
 
 import org.python.core.PyFunction;
 import org.python.core.PyObject;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 
 import java.util.Arrays;
 import java.util.HashMap;

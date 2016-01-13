@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -18,18 +18,18 @@ package sf.net.experimaestro.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.ExperimaestroException;
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.RunningContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.Graph;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.ExperimaestroException;
+import net.bpiwowar.xpm.exceptions.NoSuchParameter;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.RunningContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.Graph;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
 import java.util.*;

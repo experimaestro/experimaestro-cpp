@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -19,12 +19,12 @@ package sf.net.experimaestro.manager.plans;
  */
 
 import com.google.common.collect.ImmutableList;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 
 import java.util.ArrayList;
 import java.util.BitSet;
 
-import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
+import static net.bpiwowar.xpm.manager.plans.LatticeNode.MergeResult;
 
 /**
  * Created by bpiwowar on 9/10/14.

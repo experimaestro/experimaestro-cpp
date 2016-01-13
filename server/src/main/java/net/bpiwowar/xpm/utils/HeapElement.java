@@ -16,7 +16,7 @@
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /**
  * @author bpiwowar

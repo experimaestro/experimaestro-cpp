@@ -19,10 +19,10 @@
  *
  */
 
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.LauncherParameters;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
 
 /**
  * OAR specific parameters

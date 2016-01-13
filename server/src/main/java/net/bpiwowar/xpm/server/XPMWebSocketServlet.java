@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -21,8 +21,8 @@ package sf.net.experimaestro.server;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.scheduler.Scheduler;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.scheduler.Scheduler;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

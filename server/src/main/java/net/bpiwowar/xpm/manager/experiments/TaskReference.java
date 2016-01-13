@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.experiments;
+package net.bpiwowar.xpm.manager.experiments;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.experiments;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.scheduler.Resource;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.scheduler.Resource;
 
 import java.util.ArrayList;
 import java.util.Collection;

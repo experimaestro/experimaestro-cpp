@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,9 +18,9 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.db.SQLInsert;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.exceptions;
+package net.bpiwowar.xpm.exceptions;
 
 /*
  * This file is part of experimaestro.

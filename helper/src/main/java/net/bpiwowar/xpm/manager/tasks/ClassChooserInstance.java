@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,18 +18,27 @@ package net.bpiwowar.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonWriter;
-
-import java.io.File;
-import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * Created by bpiwowar on 7/10/14.
+ * Marks object where the type can be selected through the $type attributes
  */
-abstract public class ReaderTypeAdapter<T> extends TypeAdapter<T> {
-    @Override
-    public void write(JsonWriter out, T value) throws IOException {
-        throw new AssertionError("Cannot be used for serializing");
-    }
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ClassChooserInstance {
+    /** Name of the option
+     * @return A string, if empty =&gt; name = qualified class name
+     */
+    String name() default "";
+
+    /** Give the class of the instances
+     * @return Object.class when using the annotated class
+     */
+    Class<?> instance() default Object.class;
+
+    /**
+     * Documentation
+     * @return A description string
+     */
+    String description() default "";
 }

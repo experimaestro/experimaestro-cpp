@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,12 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.TypeIdentifier;
-import sf.net.experimaestro.utils.ProcessUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.utils.ProcessUtils;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;

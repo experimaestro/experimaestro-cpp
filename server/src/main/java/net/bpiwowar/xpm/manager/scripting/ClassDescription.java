@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,9 +18,9 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.utils.Functional;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.js.JSBaseObject;
+import net.bpiwowar.xpm.utils.Functional;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -24,16 +24,16 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import com.pastdev.jsch.nio.file.UnixSshSftpHybridFileSystemProvider;
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.locks.FileLock;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.CommandLineTask;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.TypeIdentifier;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.locks.FileLock;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.CommandLineTask;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -48,8 +48,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * SSH connector backed up by jsch-nio

@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,7 +18,7 @@ package net.bpiwowar.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.Constants;
+import net.bpiwowar.xpm.manager.Constants;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

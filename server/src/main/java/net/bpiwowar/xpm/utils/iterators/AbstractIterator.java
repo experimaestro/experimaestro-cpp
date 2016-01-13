@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.iterators;
+package net.bpiwowar.xpm.utils.iterators;
 
 /*
  * This file is part of experimaestro.

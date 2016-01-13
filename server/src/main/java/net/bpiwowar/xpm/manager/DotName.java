@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager;
  */
 
 import bpiwowar.argparser.utils.Output;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 
 import java.util.AbstractList;
 import java.util.Arrays;

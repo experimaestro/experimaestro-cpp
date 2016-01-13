@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -22,14 +22,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.locks.FileLock;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.*;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.XPMProcess;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.locks.FileLock;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.*;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;

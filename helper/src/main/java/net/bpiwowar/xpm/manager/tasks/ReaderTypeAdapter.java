@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,18 @@ package sf.net.experimaestro.manager.java;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonWriter;
+
+import java.io.File;
+import java.io.IOException;
+
 /**
  * Created by bpiwowar on 7/10/14.
  */
-public class PathArgument {
-    final String jsonName;
-    final String relativePath;
-
-    public PathArgument(String jsonName, String relativePath) {
-        this.jsonName = jsonName;
-        this.relativePath = relativePath;
+abstract public class ReaderTypeAdapter<T> extends TypeAdapter<T> {
+    @Override
+    public void write(JsonWriter out, T value) throws IOException {
+        throw new AssertionError("Cannot be used for serializing");
     }
 }

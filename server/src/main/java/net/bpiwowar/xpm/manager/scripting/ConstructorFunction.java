@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.

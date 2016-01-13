@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -22,17 +22,17 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.JsonAdapter;
 import org.mozilla.javascript.NativeArray;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.js.JSParameterFile;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.json.JsonWriterOptions;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptingPath;
-import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.js.JSParameterFile;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonPath;
+import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
+import net.bpiwowar.xpm.utils.Functional;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -81,7 +81,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
      * Transform an array of JS objects into a command line argument object
      *
      * @param array The input array
-     * @return a valid {@linkplain sf.net.experimaestro.scheduler.Command} object
+     * @return a valid {@linkplain net.bpiwowar.xpm.scheduler.Command} object
      */
     @Expose
     public static Command getCommand(List array) {

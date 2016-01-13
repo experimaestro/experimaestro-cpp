@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.log;
+package net.bpiwowar.xpm.utils.log;
 
 import org.apache.log4j.Layout;
 import org.apache.log4j.WriterAppender;

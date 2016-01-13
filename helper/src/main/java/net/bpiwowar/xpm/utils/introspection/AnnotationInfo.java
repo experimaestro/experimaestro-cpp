@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.introspection;
+package net.bpiwowar.xpm.utils.introspection;
 
 /*
  * This file is part of experimaestro.

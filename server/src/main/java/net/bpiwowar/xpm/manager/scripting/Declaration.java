@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 import org.apache.commons.lang.ClassUtils;
 

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -19,10 +19,10 @@ package sf.net.experimaestro.scheduler;
  */
 
 import org.json.simple.JSONObject;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.*;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line task (executed with the default shell)

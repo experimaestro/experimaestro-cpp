@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -19,9 +19,9 @@ package sf.net.experimaestro.connectors;
  */
 
 import com.jcraft.jsch.ChannelExec;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 
 import java.io.IOException;
 import java.io.InputStream;

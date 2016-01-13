@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.json;
+package net.bpiwowar.xpm.manager.json;
 
 /*
  * This file is part of experimaestro.
@@ -20,12 +20,12 @@ package sf.net.experimaestro.manager.json;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.scheduler.Resource;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Command;
+import net.bpiwowar.xpm.scheduler.Resource;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -181,8 +181,8 @@ abstract public class Json {
      * @return
      */
     public static Json toJSON(LanguageContext lcx, Object value) {
-        if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
-            value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();
+        if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
+            value = ((net.bpiwowar.xpm.manager.scripting.Wrapper) value).unwrap();
         }
 
         if (value instanceof Json)

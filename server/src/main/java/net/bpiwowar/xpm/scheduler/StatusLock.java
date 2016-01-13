@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -19,12 +19,12 @@ package sf.net.experimaestro.scheduler;
  */
 
 import bpiwowar.argparser.utils.ReadLineIterator;
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.locks.FileLock;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.FileNameTransformer;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.locks.FileLock;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.FileNameTransformer;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,8 +35,8 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static sf.net.experimaestro.scheduler.Resource.LOCK_EXTENSION;
-import static sf.net.experimaestro.scheduler.Resource.STATUS_EXTENSION;
+import static net.bpiwowar.xpm.scheduler.Resource.LOCK_EXTENSION;
+import static net.bpiwowar.xpm.scheduler.Resource.STATUS_EXTENSION;
 
 /**
  * A lock managed by a file that records the reader and writers

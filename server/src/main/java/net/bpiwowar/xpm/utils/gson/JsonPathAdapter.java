@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.gson;
+package net.bpiwowar.xpm.utils.gson;
 
 /*
  * This file is part of experimaestro.

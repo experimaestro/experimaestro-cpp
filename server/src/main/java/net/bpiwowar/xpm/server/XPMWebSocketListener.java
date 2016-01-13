@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -22,9 +22,9 @@ import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 

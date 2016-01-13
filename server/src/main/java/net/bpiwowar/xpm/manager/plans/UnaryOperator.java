@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -18,8 +18,8 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 
 import java.util.AbstractList;
 import java.util.List;

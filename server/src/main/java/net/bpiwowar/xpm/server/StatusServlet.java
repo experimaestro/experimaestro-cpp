@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -19,16 +19,16 @@ package sf.net.experimaestro.server;
  */
 
 import bpiwowar.experiments.Run;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Resource.PrintConfig;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.XPMInformation;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.Resource.PrintConfig;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.XPMInformation;
+import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -18,7 +18,7 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.manager.scripting.Wrapper;
 
 /**
  * A wrapper for exposed java objects

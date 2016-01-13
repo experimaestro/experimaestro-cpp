@@ -1,4 +1,4 @@
-package sf.net.experimaestro.tasks;
+package net.bpiwowar.xpm.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -22,7 +22,7 @@ import bpiwowar.argparser.Argument;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.FileReader;

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -20,16 +20,16 @@ package sf.net.experimaestro.connectors;
 
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.ConstructorRegistry;
-import sf.net.experimaestro.scheduler.DatabaseObjects;
-import sf.net.experimaestro.scheduler.Identifiable;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.GsonSerialization;
-import sf.net.experimaestro.utils.JsonSerializationInputStream;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.GsonConverter;
+import net.bpiwowar.xpm.utils.GsonSerialization;
+import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,8 +42,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * This class represents any layer that can get between a host where files can be stored

@@ -1,10 +1,10 @@
-package sf.net.experimaestro.utils.gson;
+package net.bpiwowar.xpm.utils.gson;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.connectors.Connector;
+import net.bpiwowar.xpm.connectors.Connector;
 
 import java.io.IOException;
 import java.sql.SQLException;

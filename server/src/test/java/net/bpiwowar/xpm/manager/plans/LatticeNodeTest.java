@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -22,15 +22,15 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.testng.Assert;
 import org.testng.annotations.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.scripting.RunningContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.StaticContext;
-import sf.net.experimaestro.utils.IdentityHashSet;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.XPMEnvironment;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.manager.scripting.RunningContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.StaticContext;
+import net.bpiwowar.xpm.utils.IdentityHashSet;
+import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
@@ -39,8 +39,8 @@ import java.io.PrintStream;
 import java.util.*;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.manager.plans.LatticeNode.Edge;
-import static sf.net.experimaestro.manager.plans.LatticeNode.MergeResult;
+import static net.bpiwowar.xpm.manager.plans.LatticeNode.Edge;
+import static net.bpiwowar.xpm.manager.plans.LatticeNode.MergeResult;
 
 /**
  * Tests for the Lattice

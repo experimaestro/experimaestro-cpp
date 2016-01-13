@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.json;
+package net.bpiwowar.xpm.manager.json;
 
 /*
  * This file is part of experimaestro.
@@ -18,8 +18,8 @@ package sf.net.experimaestro.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.ScriptingReference;
-import sf.net.experimaestro.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.manager.scripting.ScriptingReference;
+import net.bpiwowar.xpm.manager.scripting.Wrapper;
 
 import static java.lang.String.format;
 

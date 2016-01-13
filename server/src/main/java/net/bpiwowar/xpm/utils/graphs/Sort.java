@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.graphs;
+package net.bpiwowar.xpm.utils.graphs;
 
 /*
  * This file is part of experimaestro.
@@ -20,8 +20,8 @@ package sf.net.experimaestro.utils.graphs;
 
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang.mutable.MutableInt;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.*;
 

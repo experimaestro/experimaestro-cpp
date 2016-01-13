@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -23,28 +23,28 @@ import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.*;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.Manager;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.manager.java.JavaTasksIntrospection;
-import sf.net.experimaestro.manager.js.JSTransform;
-import sf.net.experimaestro.manager.js.JavaScriptContext;
-import sf.net.experimaestro.manager.js.JavaScriptRunner;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.ProductReference;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.DependencyParameters;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.*;
+import net.bpiwowar.xpm.exceptions.*;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.Manager;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
+import net.bpiwowar.xpm.manager.js.JSTransform;
+import net.bpiwowar.xpm.manager.js.JavaScriptContext;
+import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.manager.plans.FunctionOperator;
+import net.bpiwowar.xpm.manager.plans.Operator;
+import net.bpiwowar.xpm.manager.plans.ProductReference;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.DependencyParameters;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -60,7 +60,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.*;
 
-import static sf.net.experimaestro.utils.JSUtils.unwrap;
+import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
 /**
  * General functions available to all scripting languages

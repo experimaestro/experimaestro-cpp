@@ -1,4 +1,4 @@
-package sf.net.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,27 +18,15 @@ package sf.net.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Annotation to mark file
+ * Created by bpiwowar on 7/10/14.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-public @interface Path {
-    /**
-     * Relative path from the output directory. By default, get to the field name.
-     * @return A string with "/" separated components or empty
-     */
-    String value() default "";
+public class PathArgument {
+    final String jsonName;
+    final String relativePath;
 
-    /**
-     * Specify which JSON value should be get according to this path. By default,
-     * get to the field name.
-     * @return A valid json name or empty
-     */
-    String copy() default "";
+    public PathArgument(String jsonName, String relativePath) {
+        this.jsonName = jsonName;
+        this.relativePath = relativePath;
+    }
 }

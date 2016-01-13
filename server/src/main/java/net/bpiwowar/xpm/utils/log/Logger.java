@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.log;
+package net.bpiwowar.xpm.utils.log;
 
 /*
  * This file is part of experimaestro.
@@ -21,7 +21,7 @@ package sf.net.experimaestro.utils.log;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggerFactory;
-import sf.net.experimaestro.utils.io.LoggerPrintStream;
+import net.bpiwowar.xpm.utils.io.LoggerPrintStream;
 
 public final class Logger extends org.apache.log4j.Logger {
 

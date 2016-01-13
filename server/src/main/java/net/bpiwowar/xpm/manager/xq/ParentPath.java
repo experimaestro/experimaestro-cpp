@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.xq;
+package net.bpiwowar.xpm.manager.xq;
 
 /*
  * This file is part of experimaestro.
@@ -26,7 +26,7 @@ import net.sf.saxon.om.StructuredQName;
 import net.sf.saxon.trans.XPathException;
 import net.sf.saxon.value.SequenceType;
 import net.sf.saxon.value.SingletonItem;
-import sf.net.experimaestro.manager.Constants;
+import net.bpiwowar.xpm.manager.Constants;
 
 import java.io.File;
 

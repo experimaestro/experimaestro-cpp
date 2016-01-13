@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -22,7 +22,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.python.core.Py;
 import org.python.core.PyObject;
 import org.python.core.ThreadState;
-import sf.net.experimaestro.manager.Namespace;
+import net.bpiwowar.xpm.manager.Namespace;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;

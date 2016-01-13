@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -18,24 +18,24 @@ package sf.net.experimaestro.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.DirectLauncher;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.plans.TaskOperator;
-import sf.net.experimaestro.manager.plans.Value;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.CachedIterable;
-import sf.net.experimaestro.utils.MapStack;
-import sf.net.experimaestro.utils.Mutable;
-import sf.net.experimaestro.utils.Updatable;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.Connector;
+import net.bpiwowar.xpm.connectors.DirectLauncher;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.Task;
+import net.bpiwowar.xpm.manager.TaskFactory;
+import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
+import net.bpiwowar.xpm.manager.plans.TaskOperator;
+import net.bpiwowar.xpm.manager.plans.Value;
+import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.utils.CachedIterable;
+import net.bpiwowar.xpm.utils.MapStack;
+import net.bpiwowar.xpm.utils.Mutable;
+import net.bpiwowar.xpm.utils.Updatable;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.Closeable;
 import java.nio.file.Path;

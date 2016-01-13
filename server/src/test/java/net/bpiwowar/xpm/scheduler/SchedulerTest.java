@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -23,12 +23,12 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.utils.RandomSampler;
-import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.XPMEnvironment;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.utils.RandomSampler;
+import net.bpiwowar.xpm.utils.ThreadCount;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +43,7 @@ import java.util.TreeSet;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
-import static sf.net.experimaestro.scheduler.WaitingJobProcess.Action;
+import static net.bpiwowar.xpm.scheduler.WaitingJobProcess.Action;
 
 public class SchedulerTest extends XPMEnvironment {
     // Time to  process a job

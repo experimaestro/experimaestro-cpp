@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -20,14 +20,14 @@ package sf.net.experimaestro.connectors;
 
 
 import com.google.common.collect.Iterables;
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.scheduler.AbstractCommand;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.scheduler.CommandComponent;
-import sf.net.experimaestro.scheduler.CommandContext;
-import sf.net.experimaestro.scheduler.Commands;
-import sf.net.experimaestro.utils.Functional;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.scheduler.AbstractCommand;
+import net.bpiwowar.xpm.scheduler.Command;
+import net.bpiwowar.xpm.scheduler.CommandComponent;
+import net.bpiwowar.xpm.scheduler.CommandContext;
+import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.utils.Functional;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.scheduler.Command.SubCommand;
+import static net.bpiwowar.xpm.scheduler.Command.SubCommand;
 
 /**
  * Class that knows how to build UNIX scripts to run commands

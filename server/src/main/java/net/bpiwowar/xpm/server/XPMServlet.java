@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.

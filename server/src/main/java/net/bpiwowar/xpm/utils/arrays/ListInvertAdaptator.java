@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.arrays;
+package net.bpiwowar.xpm.utils.arrays;
 
 /*
  * This file is part of experimaestro.

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -18,15 +18,15 @@ package sf.net.experimaestro.manager.plans;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.Value;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.Expose;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.Value;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.Expose;
 
 import java.util.HashMap;
 import java.util.Map;

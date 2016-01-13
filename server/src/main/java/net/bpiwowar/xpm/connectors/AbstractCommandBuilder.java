@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -20,10 +20,10 @@ package sf.net.experimaestro.connectors;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,7 +31,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.Map;
 
-import static sf.net.experimaestro.utils.JSUtils.unwrap;
+import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
 /**
  * Created by bpiwowar on 26/9/14.
@@ -93,7 +93,7 @@ public abstract class AbstractCommandBuilder {
     /**
      * Start the process and return an Experimaestro process
      *
-     * @return A valid {@linkplain sf.net.experimaestro.connectors.XPMProcess} or null if fake is true
+     * @return A valid {@linkplain net.bpiwowar.xpm.connectors.XPMProcess} or null if fake is true
      * @param fake True if the process should not be started (but all files should be generated)
      */
     abstract public XPMProcess start(boolean fake) throws LaunchException, IOException;

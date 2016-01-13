@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.experiments;
+package net.bpiwowar.xpm.manager.experiments;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,12 @@ package sf.net.experimaestro.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.DatabaseObjects;
-import sf.net.experimaestro.scheduler.Identifiable;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.CloseableIterable;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.CloseableIterable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

@@ -1,7 +1,7 @@
 /**
  *
  */
-package sf.net.experimaestro.tasks;
+package net.bpiwowar.xpm.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -37,11 +37,11 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Password;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JavaScriptRunner;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.server.*;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.server.*;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.net.URL;

@@ -1,7 +1,7 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 
 /**
  *

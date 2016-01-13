@@ -1,4 +1,4 @@
-package sf.net.experimaestro.fs;
+package net.bpiwowar.xpm.fs;
 
 /*
  * This file is part of experimaestro.
@@ -21,9 +21,9 @@ package sf.net.experimaestro.fs;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.Output;
+import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.Output;
 
 import java.io.File;
 import java.io.IOException;

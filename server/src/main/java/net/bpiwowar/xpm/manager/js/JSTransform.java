@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -23,19 +23,19 @@ import com.google.common.collect.ImmutableList;
 import org.mozilla.javascript.Callable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
-import sf.net.experimaestro.manager.plans.NAryOperator;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.ProductReference;
-import sf.net.experimaestro.manager.plans.UnaryOperator;
-import sf.net.experimaestro.manager.plans.functions.Function;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.plans.FunctionOperator;
+import net.bpiwowar.xpm.manager.plans.NAryOperator;
+import net.bpiwowar.xpm.manager.plans.Operator;
+import net.bpiwowar.xpm.manager.plans.ProductReference;
+import net.bpiwowar.xpm.manager.plans.UnaryOperator;
+import net.bpiwowar.xpm.manager.plans.functions.Function;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import java.util.Iterator;
 import java.util.Map;

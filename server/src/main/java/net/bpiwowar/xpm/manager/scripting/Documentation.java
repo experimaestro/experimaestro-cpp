@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager.scripting;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import sf.net.experimaestro.manager.js.JSBaseObject;
+import net.bpiwowar.xpm.manager.js.JSBaseObject;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -35,20 +35,20 @@ import java.util.ArrayList;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Documentation {
-    static void documentMethod(sf.net.experimaestro.utils.Documentation.DefinitionList methods, Method method) {
-        final sf.net.experimaestro.utils.Documentation.Text text = methodDeclaration(method);
+    static void documentMethod(net.bpiwowar.xpm.utils.Documentation.DefinitionList methods, Method method) {
+        final net.bpiwowar.xpm.utils.Documentation.Text text = methodDeclaration(method);
 
         // Get the help
-        sf.net.experimaestro.utils.Documentation.Container help = new sf.net.experimaestro.utils.Documentation.Container();
+        net.bpiwowar.xpm.utils.Documentation.Container help = new net.bpiwowar.xpm.utils.Documentation.Container();
         final Help jsHelp = method.getAnnotation(Help.class);
 
         if (jsHelp != null)
-            help.add(new sf.net.experimaestro.utils.Documentation.Text(jsHelp.value()));
+            help.add(new net.bpiwowar.xpm.utils.Documentation.Text(jsHelp.value()));
 
         methods.add(text, help);
     }
 
-    public static sf.net.experimaestro.utils.Documentation.Text methodDeclaration(Method method) {
+    public static net.bpiwowar.xpm.utils.Documentation.Text methodDeclaration(Method method) {
         String name = null;
 
         Expose xpmjsfunction = method.getAnnotation(Expose.class);
@@ -75,11 +75,11 @@ public class Documentation {
         }
 
 
-        final sf.net.experimaestro.utils.Documentation.DefinitionList pHelp = new sf.net.experimaestro.utils.Documentation.DefinitionList();
+        final net.bpiwowar.xpm.utils.Documentation.DefinitionList pHelp = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
 
         // We have the arguments() in the JSHelp() object
         // No JSHelp
-        final sf.net.experimaestro.utils.Documentation.Text text = new sf.net.experimaestro.utils.Documentation.Text();
+        final net.bpiwowar.xpm.utils.Documentation.Text text = new net.bpiwowar.xpm.utils.Documentation.Text();
         final Argument returnAnnotation = method.getAnnotation(Argument.class);
         String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
@@ -101,7 +101,7 @@ public class Documentation {
                     argName = jsArg.equals("") ? argName : jsArg.name();
                     argType = jsArg.type();
                     if (jsArg.help() != null)
-                        pHelp.add(new sf.net.experimaestro.utils.Documentation.Text(jsArg.name()), new sf.net.experimaestro.utils.Documentation.Text(jsArg.help()));
+                        pHelp.add(new net.bpiwowar.xpm.utils.Documentation.Text(jsArg.name()), new net.bpiwowar.xpm.utils.Documentation.Text(jsArg.help()));
                 }
             }
             if (!first)
@@ -149,13 +149,13 @@ public class Documentation {
      *
      * @param printer
      */
-    static public void printJSHelp(sf.net.experimaestro.utils.Documentation.Printer printer) {
+    static public void printJSHelp(net.bpiwowar.xpm.utils.Documentation.Printer printer) {
 
         // --- Document functions
 
-        printer.append(new sf.net.experimaestro.utils.Documentation.Title(1, new sf.net.experimaestro.utils.Documentation.Text("Functions")));
+        printer.append(new net.bpiwowar.xpm.utils.Documentation.Title(1, new net.bpiwowar.xpm.utils.Documentation.Text("Functions")));
 
-        final sf.net.experimaestro.utils.Documentation.DefinitionList functions = new sf.net.experimaestro.utils.Documentation.DefinitionList();
+        final net.bpiwowar.xpm.utils.Documentation.DefinitionList functions = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
 
 //        for (JSUtils.FunctionDefinition d : JavaScriptRunner.definitions) {
 //            final Documentation.Text text = new Documentation.Text(d.getName());
@@ -171,13 +171,13 @@ public class Documentation {
 
 
         // --- Objects
-        printer.append(new sf.net.experimaestro.utils.Documentation.Title(1, new sf.net.experimaestro.utils.Documentation.Text("Objects")));
+        printer.append(new net.bpiwowar.xpm.utils.Documentation.Title(1, new net.bpiwowar.xpm.utils.Documentation.Text("Objects")));
         ArrayList<Class<?>> list = new ArrayList<>();
 
-        final sf.net.experimaestro.utils.Documentation.DefinitionList classes = new sf.net.experimaestro.utils.Documentation.DefinitionList();
+        final net.bpiwowar.xpm.utils.Documentation.DefinitionList classes = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
 
         for (Class<?> clazz : list) {
-            final sf.net.experimaestro.utils.Documentation.DefinitionList methods = new sf.net.experimaestro.utils.Documentation.DefinitionList();
+            final net.bpiwowar.xpm.utils.Documentation.DefinitionList methods = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
 
             for (Method method : clazz.getDeclaredMethods()) {
                 String name = null;
@@ -206,7 +206,7 @@ public class Documentation {
 
                 documentMethod(methods, method);
             }
-            classes.add(new sf.net.experimaestro.utils.Documentation.Text(ClassDescription.getClassName(clazz)), methods);
+            classes.add(new net.bpiwowar.xpm.utils.Documentation.Text(ClassDescription.getClassName(clazz)), methods);
 
         }
 

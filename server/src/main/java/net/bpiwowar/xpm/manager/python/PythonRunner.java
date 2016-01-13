@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -23,14 +23,14 @@ import com.google.common.reflect.TypeToken;
 import org.apache.log4j.Hierarchy;
 import org.python.core.*;
 import org.python.util.PythonInterpreter;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.LocalhostConnector;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.Functional;
+import net.bpiwowar.xpm.utils.iterators.AbstractIterator;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedWriter;
 import java.io.FileReader;

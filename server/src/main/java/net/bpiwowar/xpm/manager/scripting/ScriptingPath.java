@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -20,10 +20,10 @@ package sf.net.experimaestro.manager.scripting;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.json.JsonPath;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.*;
 import java.nio.file.*;

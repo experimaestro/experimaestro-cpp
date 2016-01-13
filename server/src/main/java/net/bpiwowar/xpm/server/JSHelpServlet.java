@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -18,7 +18,7 @@ package sf.net.experimaestro.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.Documentation;
+import net.bpiwowar.xpm.manager.scripting.Documentation;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -49,7 +49,7 @@ public class JSHelpServlet extends XPMServlet {
             header(out, "JavaScript Help");
 
             out.println("<div id='jsdocumentation'>");
-            final sf.net.experimaestro.utils.Documentation.Printer printer = new sf.net.experimaestro.utils.Documentation.HTMLPrinter(out);
+            final net.bpiwowar.xpm.utils.Documentation.Printer printer = new net.bpiwowar.xpm.utils.Documentation.HTMLPrinter(out);
             Documentation.printJSHelp(printer);
             out.println("</div>");
             out.println("</body></html>");

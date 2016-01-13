@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -20,10 +20,10 @@ package sf.net.experimaestro.manager.plans;
 
 import bpiwowar.argparser.utils.Output;
 import com.google.common.collect.ImmutableList;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.Heap;
-import sf.net.experimaestro.utils.HeapElement;
-import sf.net.experimaestro.utils.IdentityHashSet;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.Heap;
+import net.bpiwowar.xpm.utils.HeapElement;
+import net.bpiwowar.xpm.utils.IdentityHashSet;
 
 import java.io.PrintStream;
 import java.util.*;

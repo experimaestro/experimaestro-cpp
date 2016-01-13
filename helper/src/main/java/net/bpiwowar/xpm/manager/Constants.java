@@ -19,7 +19,7 @@
  *
  */
 
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 import java.nio.charset.Charset;
 import java.util.HashSet;

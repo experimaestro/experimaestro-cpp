@@ -1,12 +1,9 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
-import net.bpiwowar.experimaestro.tasks.JsonArgument;
-import net.bpiwowar.experimaestro.tasks.TaskDescription;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.tasks.Path;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
-import sf.net.experimaestro.utils.introspection.FieldInfo;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.utils.introspection.ClassInfo;
+import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 
 import java.util.ArrayList;
 import java.util.HashMap;

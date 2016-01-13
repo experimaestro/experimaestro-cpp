@@ -1,4 +1,4 @@
 /**
  * Manage experiment level assembly of tasks
  */
-package sf.net.experimaestro.manager.experiments;
+package net.bpiwowar.xpm.manager.experiments;

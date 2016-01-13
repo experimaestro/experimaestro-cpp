@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -18,11 +18,11 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.fs.XPMPath;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.JsonAbstract;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.fs.XPMPath;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;

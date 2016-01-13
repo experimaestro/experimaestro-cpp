@@ -1,16 +1,16 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyDictionary;
 import org.python.core.PyList;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.manager.scripting.ScriptingPath;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.json.*;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import java.lang.reflect.Array;
 import java.util.List;
@@ -21,8 +21,8 @@ import java.util.Map;
  */
 public class PythonUtils {
     public static Json toJSON(Object value) {
-        if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
-            value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();
+        if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
+            value = ((net.bpiwowar.xpm.manager.scripting.Wrapper) value).unwrap();
         }
 
         if (value instanceof PythonObject) {

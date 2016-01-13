@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager;
  */
 
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;

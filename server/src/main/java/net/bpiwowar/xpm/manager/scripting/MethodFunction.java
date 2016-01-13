@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,9 +19,9 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import com.google.common.collect.Iterables;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.ExitException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

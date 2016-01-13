@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -18,12 +18,12 @@ package sf.net.experimaestro.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.plans.functions.Function;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.plans.functions.Function;
 
 import java.util.Iterator;
 

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -20,9 +20,9 @@ package sf.net.experimaestro.scheduler;
 
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.locks.FileLock;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.XPMEnvironment;
+import net.bpiwowar.xpm.locks.FileLock;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
 
 import java.io.File;
 

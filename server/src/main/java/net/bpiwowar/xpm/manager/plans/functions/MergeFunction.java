@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans.functions;
+package net.bpiwowar.xpm.manager.plans.functions;
 
 /*
  * This file is part of experimaestro.
@@ -20,11 +20,11 @@ package sf.net.experimaestro.manager.plans.functions;
 
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
 
 import java.util.Iterator;
 import java.util.Map;

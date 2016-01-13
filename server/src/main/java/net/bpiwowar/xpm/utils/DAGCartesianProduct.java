@@ -1,7 +1,7 @@
 /**
  *
  */
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -27,9 +27,9 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.utils.graphs.Node;
-import sf.net.experimaestro.utils.graphs.Sort;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.utils.graphs.Node;
+import net.bpiwowar.xpm.utils.graphs.Sort;
 
 import java.util.ArrayList;
 import java.util.Arrays;

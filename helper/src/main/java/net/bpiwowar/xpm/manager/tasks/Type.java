@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -22,23 +22,19 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Marks object where the type can be selected through the $type attributes
+ * Defines the JSON type of an object
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ClassChooserInstance {
-    /** Name of the option
-     * @return A string, if empty =&gt; name = qualified class name
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface Type {
+    /**
+     * JSON type
+     * @return The JSON type
      */
-    String name() default "";
-
-    /** Give the class of the instances
-     * @return Object.class when using the annotated class
-     */
-    Class<?> instance() default Object.class;
+    String type();
 
     /**
-     * Documentation
-     * @return A description string
+     * Is this a resource to be locked?
+     * @return True if this is a resource, false otherwise
      */
-    String description() default "";
+    boolean resource() default false;
 }

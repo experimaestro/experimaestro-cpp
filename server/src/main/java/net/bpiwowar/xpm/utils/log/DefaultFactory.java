@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.log;
+package net.bpiwowar.xpm.utils.log;
 
 /**
  * Our own logger factory

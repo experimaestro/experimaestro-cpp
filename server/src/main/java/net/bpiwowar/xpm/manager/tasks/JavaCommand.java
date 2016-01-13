@@ -1,11 +1,10 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
-import net.bpiwowar.experimaestro.tasks.Runner;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.scheduler.Command;
-import sf.net.experimaestro.scheduler.Commands;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.scheduler.Command;
+import net.bpiwowar.xpm.scheduler.Commands;
 
 import java.nio.file.Path;
 import java.util.Arrays;

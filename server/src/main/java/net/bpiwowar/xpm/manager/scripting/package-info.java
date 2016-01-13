@@ -6,4 +6,4 @@
  * <li>General methods defined for scripting</li>
  * </ul>
  */
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;

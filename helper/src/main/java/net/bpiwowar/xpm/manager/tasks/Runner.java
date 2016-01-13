@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -27,8 +27,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.tasks.Path;
+import net.bpiwowar.xpm.manager.Constants;
 
 import java.io.File;
 import java.io.FileNotFoundException;

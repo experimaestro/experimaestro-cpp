@@ -19,17 +19,17 @@
  *
  */
 
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.java.JavaTaskInformation;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
-import sf.net.experimaestro.utils.introspection.ClassInfoLoader;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.tasks.JavaTaskInformation;
+import net.bpiwowar.xpm.utils.introspection.ClassInfo;
+import net.bpiwowar.xpm.utils.introspection.ClassInfoLoader;
 
 import java.io.BufferedWriter;
 import java.io.File;

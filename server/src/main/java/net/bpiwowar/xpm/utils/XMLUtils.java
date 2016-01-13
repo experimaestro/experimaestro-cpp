@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -26,10 +26,10 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.utils.iterators.AbstractIterator;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;

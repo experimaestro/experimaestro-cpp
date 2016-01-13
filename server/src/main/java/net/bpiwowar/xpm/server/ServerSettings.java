@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -20,7 +20,7 @@ package sf.net.experimaestro.server;
 
 import bpiwowar.argparser.utils.Output;
 import org.apache.commons.configuration.Configuration;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

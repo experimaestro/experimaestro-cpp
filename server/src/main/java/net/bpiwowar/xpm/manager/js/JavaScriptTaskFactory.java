@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -21,21 +21,21 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.Function;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.exceptions.XPMRuntimeException.SHOULD_NOT_BE_HERE;
+import static net.bpiwowar.xpm.exceptions.XPMRuntimeException.SHOULD_NOT_BE_HERE;
 
 /**
  * A task factory defined by a javascript object

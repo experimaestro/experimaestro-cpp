@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -21,9 +21,9 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaClass;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.ConstructorFunction;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.ConstructorFunction;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

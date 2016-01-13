@@ -1,7 +1,7 @@
 /**
  *
  */
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -21,7 +21,7 @@ package sf.net.experimaestro.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.utils.iterators.AbstractIterator;
+import net.bpiwowar.xpm.utils.iterators.AbstractIterator;
 
 import java.lang.reflect.Array;
 import java.util.Iterator;

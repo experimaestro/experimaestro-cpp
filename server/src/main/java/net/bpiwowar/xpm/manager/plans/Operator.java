@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 
 /*
@@ -27,22 +27,22 @@ import com.google.common.collect.Multimap;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
-import sf.net.experimaestro.connectors.Launcher;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.Parameters;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.experiments.Experiment;
-import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.js.JsonPathFunction;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.plans.functions.ArrayWrap;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.utils.CachedIterable;
-import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.WrappedResult;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.Parameters;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
+import net.bpiwowar.xpm.manager.js.JsonPathFunction;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.plans.functions.ArrayWrap;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.utils.CachedIterable;
+import net.bpiwowar.xpm.utils.Functional;
+import net.bpiwowar.xpm.utils.WrappedResult;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -636,7 +636,7 @@ public abstract class Operator {
      * @param experiment
      * @param map        The current map
      * @param descendant The current descendant
-     * @see #getTaskOperatorMap(sf.net.experimaestro.manager.experiments.Experiment)
+     * @see #getTaskOperatorMap(net.bpiwowar.xpm.manager.experiments.Experiment)
      */
     private void getTaskOperatorMap(Experiment experiment, IdentityHashMap<TaskOperator, TaskReference> map, TaskReference descendant) {
         if (this instanceof TaskOperator) {

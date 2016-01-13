@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

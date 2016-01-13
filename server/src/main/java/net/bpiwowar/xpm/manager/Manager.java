@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -20,13 +20,13 @@ package sf.net.experimaestro.manager;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Element;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.MessageDigestWriter;
-import sf.net.experimaestro.utils.XMLUtils;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.MessageDigestWriter;
+import net.bpiwowar.xpm.utils.XMLUtils;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.utils;
  */
 
 import com.google.common.collect.AbstractIterator;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.scheduler.Resource;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.scheduler.Resource;
 
 import java.util.Iterator;
 

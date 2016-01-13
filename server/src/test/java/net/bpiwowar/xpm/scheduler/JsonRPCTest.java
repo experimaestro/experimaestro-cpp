@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -27,8 +27,8 @@ import junit.framework.Assert;
 import org.apache.ws.commons.util.Base64;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import sf.net.experimaestro.tasks.ServerTask;
-import sf.net.experimaestro.utils.XPMEnvironment;
+import net.bpiwowar.xpm.tasks.ServerTask;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
 
 import java.io.File;
 import java.io.IOException;

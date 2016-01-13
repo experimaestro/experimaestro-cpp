@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -27,27 +27,27 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.NativeObject;
-import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.ValueType;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
-import sf.net.experimaestro.manager.json.JsonNull;
-import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.json.JsonString;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.ExposeMode;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.RunningContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.io.LoggerPrintStream;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.DotName;
+import net.bpiwowar.xpm.manager.Task;
+import net.bpiwowar.xpm.manager.TaskFactory;
+import net.bpiwowar.xpm.manager.ValueType;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.json.JsonNull;
+import net.bpiwowar.xpm.manager.json.JsonPath;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.ExposeMode;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.RunningContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.io.LoggerPrintStream;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.xpath.XPathExpressionException;
 import java.nio.file.Path;
@@ -380,7 +380,7 @@ public class Plan extends Operator {
 
 
     /**
-     * Build a operators from a {@linkplain sf.net.experimaestro.manager.TaskFactory} and a JSON object
+     * Build a operators from a {@linkplain net.bpiwowar.xpm.manager.TaskFactory} and a JSON object
      *
      * @param factory
      * @param object

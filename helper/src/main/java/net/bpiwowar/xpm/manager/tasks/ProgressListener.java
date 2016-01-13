@@ -19,7 +19,7 @@
  *
  */
 
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 import java.io.IOException;
 import java.net.URL;

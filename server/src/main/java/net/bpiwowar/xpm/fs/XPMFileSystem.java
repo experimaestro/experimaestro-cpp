@@ -1,4 +1,4 @@
-package sf.net.experimaestro.fs;
+package net.bpiwowar.xpm.fs;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.fs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
 
 import java.io.IOException;
 import java.net.URI;

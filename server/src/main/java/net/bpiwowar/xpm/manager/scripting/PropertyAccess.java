@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 
-import sf.net.experimaestro.utils.Functional;
+import net.bpiwowar.xpm.utils.Functional;
 
 import java.lang.reflect.Field;
 import java.util.function.BiConsumer;

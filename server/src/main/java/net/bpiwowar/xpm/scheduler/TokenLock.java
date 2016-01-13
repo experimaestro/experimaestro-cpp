@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,8 +18,8 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.locks.Lock;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.locks.Lock;
 
 import java.sql.SQLException;
 

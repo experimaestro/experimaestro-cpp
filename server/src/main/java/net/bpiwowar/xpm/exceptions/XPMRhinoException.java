@@ -1,4 +1,4 @@
-package sf.net.experimaestro.exceptions;
+package net.bpiwowar.xpm.exceptions;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.exceptions;
  */
 
 import org.mozilla.javascript.EvaluatorException;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.util.ArrayList;
 import java.util.List;

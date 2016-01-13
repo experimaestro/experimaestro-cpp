@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -21,13 +21,13 @@ package sf.net.experimaestro.manager.js;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.scripting.LanguageContext;
-import sf.net.experimaestro.manager.scripting.ScriptLocation;
-import sf.net.experimaestro.manager.scripting.ScriptingReference;
-import sf.net.experimaestro.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptLocation;
+import net.bpiwowar.xpm.manager.scripting.ScriptingReference;
+import net.bpiwowar.xpm.manager.scripting.Wrapper;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.function.BiFunction;
@@ -62,8 +62,8 @@ public class JavaScriptContext extends LanguageContext {
                 value = ((ScriptingReference) value).get(jcx);
             }
 
-            if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
-                return ((sf.net.experimaestro.manager.scripting.Wrapper)value).unwrap();
+            if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
+                return ((net.bpiwowar.xpm.manager.scripting.Wrapper)value).unwrap();
             }
 
             if (value instanceof Ref) {

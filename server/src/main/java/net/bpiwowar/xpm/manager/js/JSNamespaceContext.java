@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -21,9 +21,9 @@ package sf.net.experimaestro.manager.js;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
-import sf.net.experimaestro.manager.Namespace;
-import sf.net.experimaestro.manager.scripting.Wrapper;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.manager.Namespace;
+import net.bpiwowar.xpm.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import javax.xml.namespace.NamespaceContext;
 import java.util.Iterator;

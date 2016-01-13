@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -21,12 +21,12 @@ package sf.net.experimaestro.manager.js;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.exceptions.NoSuchParameter;
-import sf.net.experimaestro.manager.Connection;
-import sf.net.experimaestro.manager.DotName;
-import sf.net.experimaestro.manager.Task;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.exceptions.NoSuchParameter;
+import net.bpiwowar.xpm.manager.Connection;
+import net.bpiwowar.xpm.manager.DotName;
+import net.bpiwowar.xpm.manager.Task;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import java.util.Arrays;
 

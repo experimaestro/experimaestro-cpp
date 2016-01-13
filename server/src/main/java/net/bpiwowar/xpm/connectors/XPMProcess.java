@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -18,19 +18,19 @@ package sf.net.experimaestro.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.ConstructorRegistry;
-import sf.net.experimaestro.scheduler.DatabaseObjects;
-import sf.net.experimaestro.scheduler.EndOfJobMessage;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.GsonConverter;
-import sf.net.experimaestro.utils.JsonAbstract;
-import sf.net.experimaestro.utils.JsonSerializationInputStream;
-import sf.net.experimaestro.utils.db.SQLInsert;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.EndOfJobMessage;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.GsonConverter;
+import net.bpiwowar.xpm.utils.JsonAbstract;
+import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
+import net.bpiwowar.xpm.utils.db.SQLInsert;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -118,7 +118,7 @@ public abstract class XPMProcess {
     /**
      * Used for serialization
      *
-     * @see {@linkplain #init(sf.net.experimaestro.scheduler.Job)}
+     * @see {@linkplain #init(net.bpiwowar.xpm.scheduler.Job)}
      */
     protected XPMProcess() {
     }

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -37,29 +37,29 @@ import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
-import sf.net.experimaestro.connectors.LocalhostConnector;
-import sf.net.experimaestro.exceptions.CloseException;
-import sf.net.experimaestro.exceptions.ContextualException;
-import sf.net.experimaestro.exceptions.ExitException;
-import sf.net.experimaestro.exceptions.XPMCommandException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.js.JavaScriptRunner;
-import sf.net.experimaestro.manager.python.PythonRunner;
-import sf.net.experimaestro.scheduler.Dependency;
-import sf.net.experimaestro.scheduler.Job;
-import sf.net.experimaestro.scheduler.Listener;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.scheduler.ResourceState;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.scheduler.SimpleMessage;
-import sf.net.experimaestro.utils.CloseableIterable;
-import sf.net.experimaestro.utils.CloseableIterator;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.XPMInformation;
-import sf.net.experimaestro.utils.log.DefaultFactory;
-import sf.net.experimaestro.utils.log.Logger;
-import sf.net.experimaestro.utils.log.Router;
+import net.bpiwowar.xpm.connectors.LocalhostConnector;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ContextualException;
+import net.bpiwowar.xpm.exceptions.ExitException;
+import net.bpiwowar.xpm.exceptions.XPMCommandException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
+import net.bpiwowar.xpm.manager.python.PythonRunner;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Listener;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.SimpleMessage;
+import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.CloseableIterator;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.XPMInformation;
+import net.bpiwowar.xpm.utils.log.DefaultFactory;
+import net.bpiwowar.xpm.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Router;
 
 import javax.servlet.http.HttpServlet;
 import java.io.BufferedWriter;

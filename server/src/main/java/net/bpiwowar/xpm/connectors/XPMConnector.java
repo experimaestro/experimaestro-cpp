@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -19,9 +19,9 @@ package sf.net.experimaestro.connectors;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.exceptions.LockException;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.scheduler.TypeIdentifier;
+import net.bpiwowar.xpm.exceptions.LockException;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;

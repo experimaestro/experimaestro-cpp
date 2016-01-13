@@ -1,4 +1,4 @@
 /**
  * The scheduler manage resources and jobs
  */
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;

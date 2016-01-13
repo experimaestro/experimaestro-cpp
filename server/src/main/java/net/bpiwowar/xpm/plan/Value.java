@@ -1,4 +1,4 @@
-package sf.net.experimaestro.plan;
+package net.bpiwowar.xpm.plan;
 
 /*
  * This file is part of experimaestro.

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -20,18 +20,18 @@ package sf.net.experimaestro.manager.scripting;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.TaskFactory;
-import sf.net.experimaestro.manager.js.JavaScriptContext;
-import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
-import sf.net.experimaestro.manager.plans.Copy;
-import sf.net.experimaestro.manager.plans.FunctionOperator;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.manager.plans.ProductReference;
-import sf.net.experimaestro.manager.plans.functions.MergeFunction;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TaskFactory;
+import net.bpiwowar.xpm.manager.js.JavaScriptContext;
+import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
+import net.bpiwowar.xpm.manager.plans.Copy;
+import net.bpiwowar.xpm.manager.plans.FunctionOperator;
+import net.bpiwowar.xpm.manager.plans.Operator;
+import net.bpiwowar.xpm.manager.plans.ProductReference;
+import net.bpiwowar.xpm.manager.plans.functions.MergeFunction;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 import java.util.Map;
 

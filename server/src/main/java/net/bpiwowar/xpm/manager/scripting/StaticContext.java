@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,10 +19,10 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.log4j.spi.LoggerRepository;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.Cleaner;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.Cleaner;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.Closeable;
 

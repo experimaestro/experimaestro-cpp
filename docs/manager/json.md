@@ -11,7 +11,7 @@ We will make use of an example of a message
 ```js
 {
     alpha: 3,
-    "{sf.net.experimaestro}type": "{sf.net.experimaestro}:integer",
+    "{net.bpiwowar.xpm}type": "{net.bpiwowar.xpm}:integer",
 }
 ```
 

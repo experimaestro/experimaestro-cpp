@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.db;
+package net.bpiwowar.xpm.utils.db;
 
 /*
  * This file is part of experimaestro.
@@ -18,7 +18,7 @@ package sf.net.experimaestro.utils.db;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.utils.ExceptionalConsumer;
+import net.bpiwowar.xpm.utils.ExceptionalConsumer;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

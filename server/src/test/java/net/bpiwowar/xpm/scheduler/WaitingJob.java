@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,11 +18,11 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.connectors.XPMProcess;
-import sf.net.experimaestro.locks.Lock;
-import sf.net.experimaestro.utils.ThreadCount;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.Connector;
+import net.bpiwowar.xpm.connectors.XPMProcess;
+import net.bpiwowar.xpm.locks.Lock;
+import net.bpiwowar.xpm.utils.ThreadCount;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.nio.file.FileSystemException;
@@ -32,8 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-import static sf.net.experimaestro.scheduler.ResourceState.WAITING;
-import static sf.net.experimaestro.utils.Functional.shouldNotThrow;
+import static net.bpiwowar.xpm.scheduler.ResourceState.WAITING;
+import static net.bpiwowar.xpm.utils.Functional.shouldNotThrow;
 
 /**
  * Extends Job status collect some information for testing purposes

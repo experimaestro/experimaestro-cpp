@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans.functions;
+package net.bpiwowar.xpm.manager.plans.functions;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.plans.functions;
  */
 
 import com.google.common.collect.ImmutableList;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonArray;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
 
 import java.util.Iterator;
 

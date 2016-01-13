@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.manager;
  */
 
 import org.w3c.dom.Document;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.util.ArrayList;
 import java.util.Map;

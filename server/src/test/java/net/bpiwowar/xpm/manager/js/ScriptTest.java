@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -19,9 +19,9 @@ package sf.net.experimaestro.manager.js;
  */
 
 import org.testng.annotations.Factory;
-import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.XPMEnvironment;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.Functional;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.net.URL;
@@ -40,7 +40,7 @@ public class ScriptTest  {
     private static final String JS_SCRIPT_PATH = "/js";
 
     /** If set, we will only use the specified file for testing */
-    public static final String JS_TEST_FILE_KEY = "sf.net.experimaestro.manager.js.test.file";
+    public static final String JS_TEST_FILE_KEY = "net.bpiwowar.xpm.manager.js.test.file";
 
 
     /**

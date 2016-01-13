@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -25,9 +25,9 @@ import org.json.simple.JSONValue;
 import org.json.simple.parser.ContentHandler;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;

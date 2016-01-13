@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -25,15 +25,15 @@ import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.*;
 import org.w3c.dom.Node;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.QName;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.manager.js.JSNamespaceContext;
-import sf.net.experimaestro.manager.json.*;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.js.JSBaseObject;
+import net.bpiwowar.xpm.manager.js.JSNamespaceContext;
+import net.bpiwowar.xpm.manager.json.*;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
@@ -208,8 +208,8 @@ public class JSUtils {
      * @return
      */
     public static Json toJSON(Scriptable scope, Object value) {
-        if (value instanceof sf.net.experimaestro.manager.scripting.Wrapper) {
-            value = ((sf.net.experimaestro.manager.scripting.Wrapper) value).unwrap();
+        if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
+            value = ((net.bpiwowar.xpm.manager.scripting.Wrapper) value).unwrap();
         }
 
         if (value instanceof Json)

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.fs;
+package net.bpiwowar.xpm.fs;
 
 /*
  * This file is part of experimaestro.
@@ -19,11 +19,11 @@ package sf.net.experimaestro.fs;
  */
 
 import org.apache.commons.lang.NotImplementedException;
-import sf.net.experimaestro.connectors.NetworkShare;
-import sf.net.experimaestro.connectors.NetworkShareAccess;
-import sf.net.experimaestro.connectors.SingleHostConnector;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.connectors.NetworkShareAccess;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.net.URI;

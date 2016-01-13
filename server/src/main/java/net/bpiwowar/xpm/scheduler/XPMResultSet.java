@@ -19,7 +19,7 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 import java.io.InputStream;
 import java.sql.ResultSet;

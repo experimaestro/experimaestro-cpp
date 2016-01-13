@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.java;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -19,19 +19,17 @@ package sf.net.experimaestro.manager.java;
  */
 
 import org.apache.log4j.Level;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonPath;
-import sf.net.experimaestro.manager.scripting.RunningContext;
-import sf.net.experimaestro.manager.scripting.ScriptContext;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.utils.introspection.ClassInfo;
-import sf.net.experimaestro.utils.introspection.FieldInfo;
-import sf.net.experimaestro.utils.io.LoggerPrintWriter;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonPath;
+import net.bpiwowar.xpm.manager.scripting.RunningContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;

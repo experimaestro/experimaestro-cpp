@@ -1,4 +1,4 @@
-package sf.net.experimaestro.plan;
+package net.bpiwowar.xpm.plan;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.plan;
  */
 
 import com.google.common.collect.AbstractIterator;
-import sf.net.experimaestro.utils.CartesianProduct;
-import sf.net.experimaestro.utils.IteratorSequence;
+import net.bpiwowar.xpm.utils.CartesianProduct;
+import net.bpiwowar.xpm.utils.IteratorSequence;
 
 import java.util.Iterator;
 import java.util.Map;

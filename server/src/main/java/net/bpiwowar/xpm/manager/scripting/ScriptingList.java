@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.mozilla.javascript.NativeFunction;
-import sf.net.experimaestro.manager.js.JavaScriptContext;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.js.JavaScriptContext;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.nio.file.Path;
 import java.util.Collections;

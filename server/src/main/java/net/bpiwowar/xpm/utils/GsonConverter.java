@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils;
+package net.bpiwowar.xpm.utils;
 
 /*
  * This file is part of experimaestro.
@@ -26,13 +26,13 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.connectors.Connector;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.utils.gson.ByteArrayAdapter;
-import sf.net.experimaestro.utils.gson.ConnectorAdapter;
-import sf.net.experimaestro.utils.gson.JsonAdapter;
-import sf.net.experimaestro.utils.gson.JsonPathAdapter;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.Connector;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.utils.gson.ByteArrayAdapter;
+import net.bpiwowar.xpm.utils.gson.ConnectorAdapter;
+import net.bpiwowar.xpm.utils.gson.JsonAdapter;
+import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Modifier;
@@ -95,7 +95,7 @@ public class GsonConverter {
             }
 
             if (!rawType.isArray() && !rawType.isPrimitive() && (rawType.isInterface() || Modifier.isAbstract(rawType.getModifiers()))) {
-                if (rawType.getCanonicalName().startsWith("sf.net.experimaestro")) {
+                if (rawType.getCanonicalName().startsWith("net.bpiwowar.xpm")) {
                     LOGGER.warn("Not using Abstract Object Adapter for %s", rawType);
                 }
             }

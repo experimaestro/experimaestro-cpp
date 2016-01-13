@@ -1,9 +1,9 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 import org.apache.commons.lang.ClassUtils;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.arrays.ListAdaptator;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Executable;

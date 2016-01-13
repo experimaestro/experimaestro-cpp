@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 import org.python.core.PyObject;
 

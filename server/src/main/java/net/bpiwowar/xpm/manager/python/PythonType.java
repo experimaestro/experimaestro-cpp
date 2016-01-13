@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 /*
  * This file is part of experimaestro.
@@ -19,10 +19,10 @@ package sf.net.experimaestro.manager.python;
  */
 
 import org.python.core.*;
-import sf.net.experimaestro.manager.scripting.ClassDescription;
-import sf.net.experimaestro.manager.scripting.ConstructorFunction;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.ConstructorFunction;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

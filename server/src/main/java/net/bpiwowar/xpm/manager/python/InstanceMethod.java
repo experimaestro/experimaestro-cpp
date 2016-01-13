@@ -1,7 +1,7 @@
-package sf.net.experimaestro.manager.python;
+package net.bpiwowar.xpm.manager.python;
 
 import org.python.core.*;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 
 import java.util.function.Function;
 

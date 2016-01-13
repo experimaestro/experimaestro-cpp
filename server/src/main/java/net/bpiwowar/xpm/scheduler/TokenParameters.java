@@ -19,10 +19,10 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 /**
  * Token specific parameters

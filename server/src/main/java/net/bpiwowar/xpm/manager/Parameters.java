@@ -19,7 +19,7 @@
  *
  */
 
-package sf.net.experimaestro.manager;
+package net.bpiwowar.xpm.manager;
 
 /**
  * Parameters that can be given to operators

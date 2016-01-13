@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.db;
+package net.bpiwowar.xpm.utils.db;
 
 /*
  * This file is part of experimaestro.
@@ -19,7 +19,7 @@ package sf.net.experimaestro.utils.db;
  */
 
 
-import sf.net.experimaestro.exceptions.XPMIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMIllegalArgumentException;
 
 import java.io.InputStream;
 import java.sql.Connection;

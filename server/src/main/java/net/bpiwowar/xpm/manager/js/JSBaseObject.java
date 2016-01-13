@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -20,8 +20,8 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.scripting.*;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.scripting.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -49,8 +49,8 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
     /**
      * Defines a new class.
      * <p/>
-     * Used in order to plug our class constructor {@linkplain sf.net.experimaestro.manager.js.JSBaseObject.MyNativeJavaClass}
-     * if the object is a {@linkplain sf.net.experimaestro.manager.js.JSBaseObject}
+     * Used in order to plug our class constructor {@linkplain net.bpiwowar.xpm.manager.js.JSBaseObject.MyNativeJavaClass}
+     * if the object is a {@linkplain net.bpiwowar.xpm.manager.js.JSBaseObject}
      *
      * @param scope The scope
      * @param aClass The class

@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,11 +19,11 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.mozilla.javascript.ScriptRuntime;
-import sf.net.experimaestro.exceptions.WrappedException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.js.JSBaseObject;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.WrappedException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.js.JSBaseObject;
+import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;

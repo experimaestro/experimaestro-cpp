@@ -1,4 +1,4 @@
-package sf.net.experimaestro.server;
+package net.bpiwowar.xpm.server;
 
 /*
  * This file is part of experimaestro.
@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>{@link UnixSelectorManager} manages a number of {@link ManagedSelector}s that
  * simplify the non-blocking primitives provided by the JVM via the {@code java.nio} package.</p>
  * <p>{@link UnixSelectorManager} subclasses implement methods to return protocol-specific
- * {@link org.eclipse.jetty.io.EndPoint}s and {@link sf.net.experimaestro.manager.Connection}s.</p>
+ * {@link org.eclipse.jetty.io.EndPoint}s and {@link net.bpiwowar.xpm.manager.Connection}s.</p>
  */
 public abstract class UnixSelectorManager extends AbstractLifeCycle implements Dumpable {
     /**
@@ -264,7 +264,7 @@ public abstract class UnixSelectorManager extends AbstractLifeCycle implements D
      * @param attachment the attachment
      * @return a new connection
      * @throws IOException
-     * @see #newEndPoint(jnr.unixsocket.UnixSocketChannel, sf.net.experimaestro.server.UnixSelectorManager.ManagedSelector, java.nio.channels.SelectionKey)
+     * @see #newEndPoint(jnr.unixsocket.UnixSocketChannel, net.bpiwowar.xpm.server.UnixSelectorManager.ManagedSelector, java.nio.channels.SelectionKey)
      */
     public abstract Connection newConnection(UnixSocketChannel channel, EndPoint endpoint, Object attachment) throws IOException;
 

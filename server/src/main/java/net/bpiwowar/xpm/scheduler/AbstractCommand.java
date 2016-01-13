@@ -1,4 +1,4 @@
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
 /*
  * This file is part of experimaestro.
@@ -18,10 +18,10 @@ package sf.net.experimaestro.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.connectors.AbstractCommandBuilder;
-import sf.net.experimaestro.utils.JsonAbstract;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
+import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.util.function.Consumer;
 import java.util.stream.Stream;

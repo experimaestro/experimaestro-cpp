@@ -19,10 +19,10 @@
  *
  */
 
-package sf.net.experimaestro.scheduler;
+package net.bpiwowar.xpm.scheduler;
 
-import sf.net.experimaestro.manager.Parameters;
-import sf.net.experimaestro.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.Parameters;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 /**
  * Parameters for launchers

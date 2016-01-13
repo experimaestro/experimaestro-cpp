@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -31,12 +31,12 @@ import org.mozilla.javascript.Ref;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
-import sf.net.experimaestro.manager.Repositories;
-import sf.net.experimaestro.manager.Repository;
-import sf.net.experimaestro.manager.scripting.*;
-import sf.net.experimaestro.scheduler.Scheduler;
-import sf.net.experimaestro.utils.Functional;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.Functional;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.Reader;

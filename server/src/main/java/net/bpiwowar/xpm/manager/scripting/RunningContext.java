@@ -1,10 +1,10 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 import org.apache.commons.lang.mutable.MutableInt;
-import sf.net.experimaestro.exceptions.XPMAssertionError;
-import sf.net.experimaestro.manager.plans.Operator;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.Updatable;
+import net.bpiwowar.xpm.exceptions.XPMAssertionError;
+import net.bpiwowar.xpm.manager.plans.Operator;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.Updatable;
 
 import java.util.HashMap;
 import java.util.Map;

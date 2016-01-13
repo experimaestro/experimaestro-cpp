@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.io;
+package net.bpiwowar.xpm.utils.io;
 /*
  * This file is part of experimaestro.
  * Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>

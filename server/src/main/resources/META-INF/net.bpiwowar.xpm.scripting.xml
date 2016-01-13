@@ -1,0 +1,89 @@
+<!--
+  ~ This file is part of experimaestro.
+  ~ Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
+  ~
+  ~ experimaestro is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ experimaestro is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<scripting>
+    <classes>
+        <!-- Scheduler -->
+        <class>net.bpiwowar.xpm.scheduler.Resource</class>
+        <class>net.bpiwowar.xpm.scheduler.TokenResource</class>
+        <class>net.bpiwowar.xpm.scheduler.Dependency</class>
+        <class>net.bpiwowar.xpm.scheduler.Command</class>
+        <class>net.bpiwowar.xpm.scheduler.Command$Pipe</class>
+        <class>net.bpiwowar.xpm.scheduler.Command$CommandOutput</class>
+        <class>net.bpiwowar.xpm.scheduler.Command$SubCommand</class>
+        <class>net.bpiwowar.xpm.scheduler.Job</class>
+
+        <class>net.bpiwowar.xpm.scheduler.Dependency</class>
+        <class>net.bpiwowar.xpm.scheduler.ReadWriteDependency</class>
+
+
+        <!-- Manager -->
+        <class>net.bpiwowar.xpm.manager.Module</class>
+        <class>net.bpiwowar.xpm.manager.Task</class>
+        <class>net.bpiwowar.xpm.manager.Namespace</class>
+        <class>net.bpiwowar.xpm.manager.tasks.JavaTaskFactory</class>
+
+
+        <!-- Plans -->
+        <class>net.bpiwowar.xpm.manager.plans.Operator</class>
+        <class>net.bpiwowar.xpm.manager.plans.Constant</class>
+        <class>net.bpiwowar.xpm.manager.plans.FunctionOperator</class>
+        <class>net.bpiwowar.xpm.manager.plans.GroupBy</class>
+        <class>net.bpiwowar.xpm.manager.plans.ReorderNodes</class>
+        <class>net.bpiwowar.xpm.manager.plans.OrderBy</class>
+        <class>net.bpiwowar.xpm.manager.plans.NAryOperator</class>
+        <class>net.bpiwowar.xpm.manager.plans.Plan</class>
+        <class>net.bpiwowar.xpm.manager.plans.Product</class>
+        <class>net.bpiwowar.xpm.manager.plans.ProductReference</class>
+        <class>net.bpiwowar.xpm.manager.plans.TaskOperator</class>
+        <class>net.bpiwowar.xpm.manager.plans.Union</class>
+
+        <!-- Connectors -->
+        <class>net.bpiwowar.xpm.connectors.ConnectorOptions</class>
+        <class>net.bpiwowar.xpm.connectors.SSHOptions</class>
+        <class>net.bpiwowar.xpm.connectors.ConnectorOptions</class>
+        <class>net.bpiwowar.xpm.connectors.Connector</class>
+        <class>net.bpiwowar.xpm.connectors.SSHConnector</class>
+        <class>net.bpiwowar.xpm.connectors.LocalhostConnector</class>
+
+        <class>net.bpiwowar.xpm.connectors.OARLauncher</class>
+        <class>net.bpiwowar.xpm.connectors.DirectLauncher</class>
+
+        <!-- Scripting -->
+        <class>net.bpiwowar.xpm.manager.scripting.XPM</class>
+        <class>net.bpiwowar.xpm.manager.scripting.Tasks</class>
+        <class>net.bpiwowar.xpm.manager.scripting.ScriptingPath</class>
+        <class>net.bpiwowar.xpm.manager.scripting.ScriptingLogger</class>
+        <class>net.bpiwowar.xpm.manager.scripting.ScriptingList</class>
+        <class>net.bpiwowar.xpm.manager.scripting.ScriptingMap</class>
+        <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
+
+        <!-- Json -->
+        <class>net.bpiwowar.xpm.manager.json.Json</class>
+
+        <class>net.bpiwowar.xpm.manager.json.JsonArray</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonBoolean</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonString</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonNull</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonObject</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonPath</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonReal</class>
+        <class>net.bpiwowar.xpm.manager.json.JsonResource</class>
+
+    </classes>
+</scripting>

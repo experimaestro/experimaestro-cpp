@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -19,9 +19,9 @@ package sf.net.experimaestro.manager.scripting;
  */
 
 import org.apache.log4j.Level;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Lazy;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.Lazy;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>

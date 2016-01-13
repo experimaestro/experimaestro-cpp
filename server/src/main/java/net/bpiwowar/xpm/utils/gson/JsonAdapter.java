@@ -1,4 +1,4 @@
-package sf.net.experimaestro.utils.gson;
+package net.bpiwowar.xpm.utils.gson;
 
 /*
  * This file is part of experimaestro.
@@ -22,7 +22,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
-import sf.net.experimaestro.manager.json.*;
+import net.bpiwowar.xpm.manager.json.*;
 
 import java.io.IOException;
 

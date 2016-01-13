@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.js;
+package net.bpiwowar.xpm.manager.js;
 
 /*
  * This file is part of experimaestro.
@@ -20,9 +20,9 @@ package sf.net.experimaestro.manager.js;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.manager.scripting.MethodFunction;
-import sf.net.experimaestro.utils.JSUtils;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.utils.JSUtils;
 
 /**
  * Wrapper for a function in javascript

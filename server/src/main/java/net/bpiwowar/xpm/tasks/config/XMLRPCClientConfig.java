@@ -1,4 +1,4 @@
-package sf.net.experimaestro.tasks.config;
+package net.bpiwowar.xpm.tasks.config;
 
 /*
  * This file is part of experimaestro.
@@ -22,7 +22,7 @@ import bpiwowar.argparser.Argument;
 import bpiwowar.argparser.ArgumentPostProcessor;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;

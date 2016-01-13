@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.json;
+package net.bpiwowar.xpm.manager.json;
 
 /*
  * This file is part of experimaestro.
@@ -19,8 +19,8 @@ package sf.net.experimaestro.manager.json;
  */
 
 import com.google.common.collect.ImmutableSet;
-import sf.net.experimaestro.manager.Constants;
-import sf.net.experimaestro.manager.QName;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.QName;
 
 import java.nio.file.Path;
 import java.util.Set;

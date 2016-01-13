@@ -1,4 +1,4 @@
-package sf.net.experimaestro.tasks;
+package net.bpiwowar.xpm.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -38,7 +38,7 @@ import net.sf.saxon.value.SingletonItem;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.Arrays;
 import java.util.List;

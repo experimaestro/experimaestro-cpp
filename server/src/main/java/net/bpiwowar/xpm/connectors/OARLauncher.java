@@ -1,4 +1,4 @@
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 /*
  * This file is part of experimaestro.
@@ -19,16 +19,16 @@ package sf.net.experimaestro.connectors;
  */
 
 import org.w3c.dom.Document;
-import sf.net.experimaestro.exceptions.LaunchException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.exceptions.XPMScriptRuntimeException;
-import sf.net.experimaestro.manager.scripting.Expose;
-import sf.net.experimaestro.manager.scripting.Exposed;
-import sf.net.experimaestro.scheduler.Commands;
-import sf.net.experimaestro.scheduler.LauncherParameters;
-import sf.net.experimaestro.scheduler.Resource;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.scheduler.LauncherParameters;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -46,8 +46,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static sf.net.experimaestro.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line launcher with OAR

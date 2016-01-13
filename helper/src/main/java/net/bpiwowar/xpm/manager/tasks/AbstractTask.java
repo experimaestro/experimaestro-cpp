@@ -1,4 +1,4 @@
-package net.bpiwowar.experimaestro.tasks;
+package net.bpiwowar.xpm.manager.tasks;
 
 /*
  * This file is part of experimaestro.
@@ -18,30 +18,28 @@ package net.bpiwowar.experimaestro.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import java.io.File;
 
 /**
- * Marks object where the type can be selected through the $type attributes
+ * A task
  */
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ClassChooser {
-    /**
-     * The classes
-     * @return The candidate classes
-     */
-    Class<?>[] classes() default {};
+public abstract class AbstractTask {
+    /** The working directory */
+    protected File workingDirectory;
 
     /**
-     * The packages (containing the classes)
-     * @return Look all classes within the package of this class
+     * Execute the task
+     * @param r The returned object pre-filled with values
+     * @param progressListener Allows to report progress on a task
+     * @return A json object corresponding to the task
+     * @throws Throwable Any error that occurs should be reported through exceptions
      */
-    Class<?>[] classesOfPackage() default {};
+    public abstract JsonElement execute(JsonObject r, ProgressListener progressListener) throws Throwable;
 
-    /**
-     * Given instances
-     * @return Class chooser instance annotation
-     */
-    ClassChooserInstance[] instances() default {};
-
+    public void setWorkingDirectory(File workingDirectory) {
+        this.workingDirectory = workingDirectory;
+    }
 }

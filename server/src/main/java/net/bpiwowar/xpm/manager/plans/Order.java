@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.plans;
+package net.bpiwowar.xpm.manager.plans;
 
 /*
  * This file is part of experimaestro.
@@ -21,7 +21,7 @@ package sf.net.experimaestro.manager.plans;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
-import sf.net.experimaestro.utils.WrappedResult;
+import net.bpiwowar.xpm.utils.WrappedResult;
 
 import java.util.*;
 

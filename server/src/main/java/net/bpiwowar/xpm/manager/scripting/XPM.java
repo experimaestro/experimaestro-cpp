@@ -1,4 +1,4 @@
-package sf.net.experimaestro.manager.scripting;
+package net.bpiwowar.xpm.manager.scripting;
 
 /*
  * This file is part of experimaestro.
@@ -30,25 +30,25 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
-import sf.net.experimaestro.connectors.*;
-import sf.net.experimaestro.exceptions.ExperimaestroCannotOverwrite;
-import sf.net.experimaestro.exceptions.ValueMismatchException;
-import sf.net.experimaestro.exceptions.XPMRhinoException;
-import sf.net.experimaestro.exceptions.XPMRhinoIllegalArgumentException;
-import sf.net.experimaestro.exceptions.XPMRuntimeException;
-import sf.net.experimaestro.manager.*;
-import sf.net.experimaestro.manager.experiments.TaskReference;
-import sf.net.experimaestro.manager.js.JavaScriptContext;
-import sf.net.experimaestro.manager.js.JavaScriptTaskFactory;
-import sf.net.experimaestro.manager.json.Json;
-import sf.net.experimaestro.manager.json.JsonObject;
-import sf.net.experimaestro.manager.json.JsonResource;
-import sf.net.experimaestro.scheduler.*;
-import sf.net.experimaestro.server.TasksServlet;
-import sf.net.experimaestro.utils.JSUtils;
-import sf.net.experimaestro.utils.Output;
-import sf.net.experimaestro.utils.io.LoggerPrintWriter;
-import sf.net.experimaestro.utils.log.Logger;
+import net.bpiwowar.xpm.connectors.*;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
+import net.bpiwowar.xpm.manager.js.JavaScriptContext;
+import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonResource;
+import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.server.TasksServlet;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -63,7 +63,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static sf.net.experimaestro.utils.JSUtils.unwrap;
+import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
 /**
  * XPM Object in scripting languages

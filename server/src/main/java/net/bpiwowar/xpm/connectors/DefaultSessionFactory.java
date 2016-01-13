@@ -3,7 +3,7 @@
 // (powered by Fernflower decompiler)
 //
 
-package sf.net.experimaestro.connectors;
+package net.bpiwowar.xpm.connectors;
 
 import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSch;
