@@ -34,6 +34,7 @@ import net.bpiwowar.xpm.manager.scripting.Options;
 import net.bpiwowar.xpm.manager.scripting.RunningContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.Commands;
+import org.apache.commons.lang.NotImplementedException;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -207,10 +208,11 @@ public abstract class TaskFactory {
 
     @Expose(context = true, value = "commands")
     public Commands commands(LanguageContext cx, JsonObject json, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+        if (parameters.length > 0) throw new NotImplementedException();
         Map<String, Object> map = new HashMap<>();
         json.entrySet().forEach(e -> map.put(e.getKey(), e.getValue()));
         final RunnableTask configure = configure(cx, map);
-        return configure.commands;
+        return configure.getCommands();
     }
 
     @Expose(context = true)

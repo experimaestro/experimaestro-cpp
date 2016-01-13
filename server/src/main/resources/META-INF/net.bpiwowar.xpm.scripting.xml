@@ -71,7 +71,7 @@
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingList</class>
         <class>net.bpiwowar.xpm.manager.scripting.ScriptingMap</class>
         <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
-        <class>net.bpiwowar.xpm.manager.scripting.PropertyAccess$FieldAccess</class>
+        <class>net.bpiwowar.xpm.manager.scripting.ObjectPropertyReference</class>
 
         <!-- Json -->
         <class>net.bpiwowar.xpm.manager.json.Json</class>

@@ -50,6 +50,10 @@ public class PropertyAccess {
         setter.accept(object, value);
     }
 
+    public boolean canSet() {
+        return setter != null;
+    }
+
     static public class FieldAccess extends PropertyAccess {
         public FieldAccess(Field field) {
             super(

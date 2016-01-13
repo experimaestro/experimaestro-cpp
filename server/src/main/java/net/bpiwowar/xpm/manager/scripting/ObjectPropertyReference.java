@@ -18,7 +18,7 @@ public class ObjectPropertyReference implements ScriptingReference {
         this.setter = setter;
     }
 
-    @Expose(mode = ExposeMode.PROPERTY)
+//    @Expose(mode = ExposeMode.PROPERTY)
     public Object get(LanguageContext cx) {
         return getter.apply(object);
     }

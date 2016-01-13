@@ -18,12 +18,13 @@ package net.bpiwowar.xpm.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.python.core.PyObject;
-import org.python.core.PyString;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.ClassDescription;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import net.bpiwowar.xpm.manager.scripting.PropertyAccess;
+import org.python.core.PyObject;
+import org.python.core.PyString;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ class PythonObject extends PyObject {
         // Search for a property
         final PropertyAccess propertyAccess = description.getFields().get(name);
         if (propertyAccess != null) {
-            return PythonRunner.wrap(propertyAccess.get(object));
+            return PythonRunner.wrap(propertyAccess.get(object).get(null));
         }
 
         // Search for property accessor
@@ -83,6 +84,7 @@ class PythonObject extends PyObject {
         noAttributeError(name);
         return null;
     }
+
 
     @Override
     public Object __tojava__(Class<?> c) {
@@ -108,8 +110,19 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            PythonRunner.wrap(function.call(pcx, object, null, name, value));
+            function.call(pcx, object, null, name, value);
         } else {
+            // Search for a property
+            final PropertyAccess propertyAccess = description.getFields().get(name);
+            if (propertyAccess != null) {
+                if (!propertyAccess.canSet()) {
+                    throw new XPMScriptRuntimeException("Cannot set field " + name + " in " + fastGetClass());
+                }
+                final PythonContext pcx = new PythonContext();
+                propertyAccess.set(object, pcx.toJava(value));
+                return;
+            }
+
             super.__setattr__(name, value);
         }
     }
