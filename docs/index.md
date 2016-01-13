@@ -48,7 +48,7 @@ You need a working `python3` interpreter on your system along with `pip3`.
 To install required python's modules type:
 
 ```sh
-pip3 install -r requirements.txt
+pip3 install -r server/scripts/requirements.txt
 ```
 
 ## Java (≥ 8)
