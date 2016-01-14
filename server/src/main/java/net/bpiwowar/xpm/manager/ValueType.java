@@ -123,7 +123,7 @@ public class ValueType extends Type {
 
     @Override
     public void validate(Json element) throws ValueMismatchException {
-        if (qname().equals(Constants.XP_ANY))
+        if (qname() == null || qname().equals(Constants.XP_ANY))
             return;
 
         QName type = element.type();
