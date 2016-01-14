@@ -2,15 +2,7 @@ package net.bpiwowar.xpm.manager.tasks;
 
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.Input;
-import net.bpiwowar.xpm.manager.InputStreamType;
-import net.bpiwowar.xpm.manager.JsonInput;
-import net.bpiwowar.xpm.manager.Repository;
-import net.bpiwowar.xpm.manager.Task;
-import net.bpiwowar.xpm.manager.TaskFactory;
-import net.bpiwowar.xpm.manager.Type;
-import net.bpiwowar.xpm.manager.ValueType;
+import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -87,13 +79,13 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return task;
     }
 
-    public Commands commands(JsonObject json, boolean simulate) {
-        Commands commands = build(json);
-
+    public Commands commands(Task task, boolean simulate) {
+        Commands commands = build(task);
 
         // Check dependencies
         if (!simulate) {
-            for (Json element : json.values()) {
+            for (Value value : task.getValues().values()) {
+                Json element = value.get();
                 if (element instanceof JsonObject) {
                     JsonObject object = (JsonObject) element;
                     final Json r = object.get(Constants.XP_RESOURCE.toString());
@@ -124,7 +116,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return commands;
     }
 
-    protected abstract Commands build(JsonObject json);
+    protected abstract Commands build(Task task);
 
     public abstract void setEnvironment(JsonObject json, Map<String, String> environment);
 }

@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.JsonAdapter;
+import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import org.mozilla.javascript.NativeArray;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;

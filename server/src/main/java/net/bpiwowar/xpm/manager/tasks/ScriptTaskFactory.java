@@ -1,6 +1,7 @@
 package net.bpiwowar.xpm.manager.tasks;
 
 import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Commands;
@@ -28,8 +29,8 @@ public class ScriptTaskFactory extends ExternalTaskFactory {
     }
 
     @Override
-    protected Commands build(JsonObject json) {
-        return builder.build(scriptPath, json);
+    protected Commands build(Task task) {
+        return builder.build(scriptPath, task);
     }
 
     @Override

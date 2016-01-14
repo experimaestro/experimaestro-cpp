@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.scheduler.Command;
 import net.bpiwowar.xpm.scheduler.Commands;
@@ -18,11 +19,11 @@ public class ScriptCommandBuilder {
         this.arguments = informations.command;
     }
 
-    public Commands build(Path scriptPath, JsonObject json) {
+    public Commands build(Path scriptPath, Task task) {
         final Command command = new Command();
 
         final Commands commands = new Commands(command);
-        final Command.JsonParameterFile jsonParameter = new Command.JsonParameterFile("json", json);
+        final Command.JsonParameterFile jsonParameter = new Command.JsonParameterFile("json", task.getInputsAsJson());
 
         arguments.forEach(a -> a.process(this, command, scriptPath, jsonParameter));
 //        for (CommandArgument argument : arguments) {

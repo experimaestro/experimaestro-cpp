@@ -31,7 +31,6 @@ import net.bpiwowar.xpm.scheduler.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.mozilla.javascript.Script;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -378,7 +377,7 @@ public abstract class Task {
         throw new UnsupportedOperationException("Cannot return commands for a task of type " + this.getClass());
     }
 
-    protected JsonObject getInputsAsJson() {
+    public JsonObject getInputsAsJson() {
         JsonObject json = new JsonObject();
         values.forEach((key, value) -> json.put(key, value.get()));
         return json;
@@ -393,5 +392,9 @@ public abstract class Task {
             json.put(key, value.get());
         });
         return json;
+    }
+
+    public Value getValue(String key) {
+        return getValues().get(key);
     }
 }

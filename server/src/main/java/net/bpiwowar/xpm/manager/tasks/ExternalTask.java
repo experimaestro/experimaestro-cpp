@@ -55,8 +55,7 @@ public class ExternalTask extends Task {
     public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         final ScriptContext sc = ScriptContext.get();
         processInputs(sc);
-        JsonObject json = getInputsAsJson();
-        return externalFactory.commands(json, false);
+        return externalFactory.commands(this, false);
     }
 
     @Override
@@ -97,7 +96,7 @@ public class ExternalTask extends Task {
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
-                Commands commands = externalFactory.commands(json, ScriptContext.get().simulate());
+                Commands commands = externalFactory.commands(this, ScriptContext.get().simulate());
 
                 // --- Build the command
 

@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonString;
@@ -21,7 +22,7 @@ public class JavaCommand implements JavaCommandBuilder {
     }
 
     @Override
-    public Commands build(String taskClassname, JsonObject json) {
+    public Commands build(String taskClassname, Task task) {
         final Command command = new Command();
 
         Command classpath = new Command();
@@ -36,7 +37,7 @@ public class JavaCommand implements JavaCommandBuilder {
         command.add(classpath);
 
         // Sets JVM options
-        final Json jvm = json.get(JavaTaskFactory.JVM_OPTIONS);
+        final Json jvm = task.getValue(JavaTaskFactory.JVM_OPTIONS).get();
         if (jvm != null && jvm instanceof JsonObject) {
             final Json memory = ((JsonObject) jvm).get("memory");
             if (memory instanceof JsonString) {
@@ -55,7 +56,7 @@ public class JavaCommand implements JavaCommandBuilder {
         command.add(Command.WorkingDirectory.INSTANCE);
 
         // Parameter file
-        command.add(new Command.JsonParameterFile("json", json));
+        command.add(new Command.JsonParameterFile("json", task.getInputsAsJson()));
 
         return commands;
     }

@@ -44,8 +44,8 @@ public class JavaTaskFactory extends ExternalTaskFactory {
     }
 
     @Override
-    protected Commands build(JsonObject json) {
-        return javaCommandBuilder.build(taskClassname, json);
+    protected Commands build(Task task) {
+        return javaCommandBuilder.build(taskClassname, task);
     }
 
     /**
