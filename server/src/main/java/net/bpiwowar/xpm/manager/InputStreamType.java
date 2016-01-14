@@ -19,39 +19,26 @@ package net.bpiwowar.xpm.manager;
  */
 
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
-import net.bpiwowar.xpm.manager.json.JsonArray;
 
 /**
+ * A type that is corresponds to an input stream
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Constants.EXPERIMAESTRO_NS, "array");
-    private final Type innerType;
+public class InputStreamType extends Type {
+    final private static QName QNAME = new QName(Constants.EXPERIMAESTRO_NS, "input-stream");
+    private final QName innerType;
 
-    public ArrayType(Type innerType) {
+    public InputStreamType(QName innerType) {
         super(QNAME);
         this.innerType = innerType;
     }
 
     @Override
     public void validate(Json element) throws ValueMismatchException {
-        // Check if this is an array
-        if (!(element instanceof JsonArray))
-            throw new XPMRuntimeException("Expected an array and got " + element.getClass());
-
-        // Check every element
-        JsonArray array = (JsonArray)element;
-        int i = 0;
-        for(Json json: array) {
-            try {
-                innerType.validate(json);
-                ++i;
-            } catch(ValueMismatchException e) {
-                e.addContext("While validating element %d of array of type %s", i, innerType);
-                throw e;
-            }
+        if (!(element instanceof RunnableTask)) {
+            throw new ValueMismatchException("Expected a runnable task argument");
         }
     }
 

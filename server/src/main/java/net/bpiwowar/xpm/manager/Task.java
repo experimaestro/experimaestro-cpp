@@ -389,7 +389,7 @@ public abstract class Task {
         values.forEach((key, value) -> {
             final Input input = factory.getInputs().get(key);
             final String copyTo = input.getCopyTo();
-            if (copyTo != null) key = copyTo;
+            if (copyTo != null && !copyTo.isEmpty()) key = copyTo;
             json.put(key, value.get());
         });
         return json;

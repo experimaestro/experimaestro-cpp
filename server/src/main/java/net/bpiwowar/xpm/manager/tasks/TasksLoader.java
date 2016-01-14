@@ -8,7 +8,7 @@ import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,9 +36,10 @@ public class TasksLoader {
             // Find the xpm.json file
             java.nio.file.Path jsonPath = path.resolve(JavaTasksIntrospection.XPM_JSON_FILENAME);
 
-            final GsonBuilder gsonBuilder = new GsonBuilder()
+            final GsonBuilder gsonBuilder =  new GsonBuilder()
                     .registerTypeAdapterFactory(new XPMTypeAdapterFactory());
             gsonBuilder.registerTypeAdapter(java.nio.file.Path.class, new JsonPathAdapter(path));
+            gsonBuilder.registerTypeAdapter(CommandArgument.class, new CommandArgument.TypeAdapter());
             final Gson gson = gsonBuilder.create();
 
             try (final BufferedReader reader = Files.newBufferedReader(jsonPath)) {
@@ -47,8 +48,8 @@ public class TasksLoader {
                 for (TasksInformation informations : list) {
                     if (informations instanceof JavaTasksInformation) {
                         loadJava(repository, path, jsonPath, (JavaTasksInformation) informations);
-                    } else if (informations instanceof ExternalTasksInformation) {
-                        loadExternal(repository, gson, (ExternalTasksInformation) informations);
+                    } else if (informations instanceof ScriptsTaskInformation) {
+                        loadExternal(repository, gson, (ScriptsTaskInformation) informations);
                     }
                 }
             }
@@ -66,18 +67,26 @@ public class TasksLoader {
         }
     }
 
-    private static void loadExternal(Repository repository, Gson gson, ExternalTasksInformation informations) throws IOException {
-        final ExternalTasksInformation externalTasksInformation = informations;
-        for (Map.Entry<Path, Path> entry : externalTasksInformation.tasks_file.entrySet()) {
-            Path pyJsonPath = entry.getKey();
-            Path pyPath = entry.getValue();
+    /**
+     * Load scripts task information
+     *
+     * @param repository   The repository
+     * @param gson         The gson
+     * @param informations
+     * @throws IOException
+     */
+    private static void loadExternal(Repository repository, Gson gson, ScriptsTaskInformation informations) throws IOException {
+        final ScriptCommandBuilder scriptCommandBuilder = new ScriptCommandBuilder(informations);
 
-            final ScriptCommandBuilder scriptCommandBuilder = new ScriptCommandBuilder(pyPath);
-            try (final BufferedReader pyReader = Files.newBufferedReader(pyJsonPath)) {
+        for (Map.Entry<Path, Path> entry : informations.tasks_file.entrySet()) {
+            Path scriptJsonPath = entry.getKey();
+            Path scriptPath = entry.getValue();
+
+            try (final BufferedReader pyReader = Files.newBufferedReader(scriptJsonPath)) {
                 final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
                 for (ScriptTaskInformation information : taskList) {
                     // Creates the task factory
-                    ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, pyPath);
+                    ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, scriptPath);
                     repository.addFactory(factory);
                 }
             }

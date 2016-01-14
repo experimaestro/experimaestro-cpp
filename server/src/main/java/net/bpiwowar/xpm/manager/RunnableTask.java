@@ -3,6 +3,8 @@ package net.bpiwowar.xpm.manager;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonString;
+import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
@@ -62,6 +64,11 @@ public class RunnableTask extends Json {
 
     @Override
     public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        json.writeDescriptorString(writer, options);
+        if (options.mode != JsonWriterMode.PARAMETER_FILE) {
+            json.writeDescriptorString(writer, options);
+        } else {
+            // Write the command instead
+            new JsonString("hello").write(writer);
+        }
     }
 }

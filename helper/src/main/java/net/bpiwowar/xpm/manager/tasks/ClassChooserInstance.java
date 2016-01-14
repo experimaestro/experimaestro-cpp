@@ -41,4 +41,11 @@ public @interface ClassChooserInstance {
      * @return A description string
      */
     String description() default "";
+
+    /**
+     * Mode for choosing the right instance (can be overridden by instances)
+     * @return A default mode
+     */
+    ClassChooserMode mode() default ClassChooserMode.DEFAULT;
+
 }

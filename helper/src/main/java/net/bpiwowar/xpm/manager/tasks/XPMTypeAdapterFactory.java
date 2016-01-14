@@ -43,12 +43,15 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
         if (type.getRawType() == File.class)
             return (TypeAdapter<T>) new FileAdapter();
 
+        Class<?> baseclass = type.getRawType();
+
         // Look at registry to find a proxy for annotations
         for (Factory factory : registry) {
             if (type.getRawType().isAssignableFrom(factory.field.getType())) {
                 // Found one factory, take the annotations from this field instead
                 // of the original one
                 attributes = new FieldAttributes(factory.field);
+                baseclass = attributes.getDeclaredClass();
                 break;
             }
         }
@@ -59,7 +62,7 @@ public class XPMTypeAdapterFactory implements AnnotatedTypeAdapterFactory {
         }
         if (annotation != null) {
             try {
-                return new ClassChooserAdapter(gson, annotation);
+                return new ClassChooserAdapter(gson, baseclass, annotation);
             } catch (RuntimeException e) {
                 throw new RuntimeException("Error while creating class chooser adapter for " + type);
             }

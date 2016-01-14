@@ -27,6 +27,12 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ClassChooser {
     /**
+     * Look at inner classes
+     * @return True if we should look at inner classes
+     */
+    boolean inner() default false;
+
+    /**
      * The classes
      * @return The candidate classes
      */
@@ -44,4 +50,9 @@ public @interface ClassChooser {
      */
     ClassChooserInstance[] instances() default {};
 
+    /**
+     * Mode for choosing the right instance (can be overridden by instances)
+     * @return A default mode
+     */
+    ClassChooserMode mode() default ClassChooserMode.DEFAULT;
 }

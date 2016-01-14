@@ -40,6 +40,7 @@ public class JsonWriterOptions {
     public boolean ignore$ = true;
     public boolean ignoreNull = true;
     Function<Path, String> resolver = f -> f.toString();
+    public JsonWriterMode mode = JsonWriterMode.DEFAULT;
 
     public JsonWriterOptions(Set<QName> ignore) {
         this.ignore = ignore;
@@ -66,6 +67,11 @@ public class JsonWriterOptions {
 
     public JsonWriterOptions resolveFile(Function<Path, String> resolver) {
         this.resolver = resolver;
+        return this;
+    }
+
+    public JsonWriterOptions mode(JsonWriterMode mode) {
+        this.mode = mode;
         return this;
     }
 }

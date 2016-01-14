@@ -4,6 +4,7 @@ import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.Input;
+import net.bpiwowar.xpm.manager.InputStreamType;
 import net.bpiwowar.xpm.manager.JsonInput;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
@@ -47,6 +48,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         for (Map.Entry<String, InputInformation> entry : information.inputs.entrySet()) {
             String name = entry.getKey();
             final InputInformation field = entry.getValue();
+
             Input input = new JsonInput(getType(field));
             input.setDocumentation(field.help);
             input.setOptional(!field.required);
@@ -56,7 +58,16 @@ public abstract class ExternalTaskFactory extends TaskFactory {
     }
 
     static private Type getType(InputInformation field) {
-        return new ValueType(field.getValueType());
+        final TaskInputType type = field.getType();
+        if (type == null) {
+            return new ValueType(Constants.XP_ANY);
+        } else if (type instanceof TaskInputType.Json) {
+            return new ValueType(((TaskInputType.Json) type).value);
+        } else if (type instanceof TaskInputType.InputStream) {
+            return new InputStreamType(((TaskInputType.InputStream) type).inputstream);
+        }
+
+        throw new AssertionError("Unhandled type: " + type);
     }
 
     @Override
@@ -104,7 +115,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
                                     o.toString(), getId());
                         }
                     }
-                    final Dependency lock = resource.createDependency((DependencyParameters)null);
+                    final Dependency lock = resource.createDependency((DependencyParameters) null);
                     commands.addDependency(lock);
                 }
             }

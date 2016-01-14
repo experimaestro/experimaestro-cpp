@@ -133,7 +133,9 @@ public class JavaTasksIntrospection {
             if (!Files.isRegularFile(taskPath)) {
                 throw new XPMScriptRuntimeException("Could not find file %s", path);
             }
-            final Gson gson = new GsonBuilder().create();
+            final Gson gson = new GsonBuilder()
+                    .registerTypeAdapterFactory(new XPMTypeAdapterFactory())
+                    .create();
             try (final BufferedReader reader = Files.newBufferedReader(taskPath)) {
                 final ArrayList<JavaTaskInformation> list = gson.fromJson(reader, Analyze.JAVA_INFORMATION_TYPE);
                 for (JavaTaskInformation information : list) {

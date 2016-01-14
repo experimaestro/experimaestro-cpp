@@ -34,7 +34,7 @@ public class Constants {
     // Set of all atomic types
     public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
 
-    public static final String EXPERIMAESTRO_NS = "http://experimaestro.lip6.fr";
+    public static final String EXPERIMAESTRO_NS = "net.bpiwowar.xpm";
     public static final QName XP_XML = registerAtomicType(EXPERIMAESTRO_NS, "xml");
     /** Corresponds to a directory on disk */
     public static final QName XP_DIRECTORY = registerAtomicType(EXPERIMAESTRO_NS, "directory");

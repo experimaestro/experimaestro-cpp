@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.JsonAdapter;
+import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import org.mozilla.javascript.NativeArray;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.js.JSParameterFile;
@@ -502,6 +503,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
                 final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
                         .ignore$(false)
                         .ignoreNull(false)
+                        .mode(JsonWriterMode.PARAMETER_FILE)
                         .simplifyValues(true)
                         .resolveFile(f -> {
                             try {
