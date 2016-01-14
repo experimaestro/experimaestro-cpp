@@ -37,6 +37,7 @@ public class PythonNamespaceContext implements NamespaceContext {
 
     public PythonNamespaceContext() {
         threadState = Py.getThreadState();
+        System.err.format("XXX Thread state is %s%n", threadState);
     }
 
     @Override

@@ -208,7 +208,7 @@ public abstract class TaskFactory {
     protected Task setParameters(LanguageContext cx, @Options Map<String, Object> map) {
         // Set tasks input for validation
         final Task task = create();
-        map.entrySet().parallelStream().forEach(e -> {
+        map.entrySet().stream().forEach(e -> {
             try {
                 task.setParameter(DotName.parse(e.getKey()), cx.toJSON(e.getValue()));
             } catch (NoSuchParameter noSuchParameter) {
