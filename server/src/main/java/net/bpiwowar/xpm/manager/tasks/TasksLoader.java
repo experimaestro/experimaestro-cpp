@@ -46,34 +46,42 @@ public class TasksLoader {
                 }.getType());
                 for (TasksInformation informations : list) {
                     if (informations instanceof JavaTasksInformation) {
-                        final JavaTasksInformation javaInformations = (JavaTasksInformation) informations;
-                        for (java.nio.file.Path jarPath : javaInformations.jars) {
-                            jarPath = path.resolve(jarPath);
-                            if (javaInformations.binaries == null) {
-                                throw new IOException("No binaries in JSON " + jsonPath);
-                            }
-                            JavaTasksIntrospection.addJarToRepository(repository, jarPath, new JavaCommandLauncher(javaInformations.binaries));
-                        }
+                        loadJava(repository, path, jsonPath, (JavaTasksInformation) informations);
                     } else if (informations instanceof ExternalTasksInformation) {
-                        final ExternalTasksInformation externalTasksInformation = (ExternalTasksInformation) informations;
-                        for (Map.Entry<Path, Path> entry : externalTasksInformation.tasks_file.entrySet()) {
-                            Path pyJsonPath = entry.getKey();
-                            Path pyPath = entry.getValue();
-
-                            final ScriptCommandBuilder scriptCommandBuilder = new ScriptCommandBuilder(pyPath);
-                            try (final BufferedReader pyReader = Files.newBufferedReader(pyJsonPath)) {
-                                final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
-                                for (ScriptTaskInformation information : taskList) {
-                                    // Creates the task factory
-                                    ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, pyPath);
-                                    repository.addFactory(factory);
-                                }
-                            }
-
-                        }
+                        loadExternal(repository, gson, (ExternalTasksInformation) informations);
                     }
                 }
             }
+        }
+    }
+
+    private static void loadJava(Repository repository, Path path, Path jsonPath, JavaTasksInformation informations) throws IOException {
+        final JavaTasksInformation javaInformations = informations;
+        for (Path jarPath : javaInformations.jars) {
+            jarPath = path.resolve(jarPath);
+            if (javaInformations.binaries == null) {
+                throw new IOException("No binaries in JSON " + jsonPath);
+            }
+            JavaTasksIntrospection.addJarToRepository(repository, jarPath, new JavaCommandLauncher(javaInformations.binaries));
+        }
+    }
+
+    private static void loadExternal(Repository repository, Gson gson, ExternalTasksInformation informations) throws IOException {
+        final ExternalTasksInformation externalTasksInformation = informations;
+        for (Map.Entry<Path, Path> entry : externalTasksInformation.tasks_file.entrySet()) {
+            Path pyJsonPath = entry.getKey();
+            Path pyPath = entry.getValue();
+
+            final ScriptCommandBuilder scriptCommandBuilder = new ScriptCommandBuilder(pyPath);
+            try (final BufferedReader pyReader = Files.newBufferedReader(pyJsonPath)) {
+                final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
+                for (ScriptTaskInformation information : taskList) {
+                    // Creates the task factory
+                    ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, pyPath);
+                    repository.addFactory(factory);
+                }
+            }
+
         }
     }
 }

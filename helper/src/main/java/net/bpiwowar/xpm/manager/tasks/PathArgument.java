@@ -19,7 +19,7 @@ package net.bpiwowar.xpm.manager.tasks;
  */
 
 /**
- * Created by bpiwowar on 7/10/14.
+ * A Path argument
  */
 public class PathArgument {
     final String jsonName;

@@ -48,7 +48,7 @@ public @interface JsonArgument {
 
     /**
      * Type of the JSON argument
-     * @return the qualified type
+     * @return the structured qualified type
      */
     String type() default "{" + Constants.EXPERIMAESTRO_NS + "}any";
 
@@ -57,4 +57,10 @@ public @interface JsonArgument {
      * @return true if required, false otherwise
      */
     boolean required() default false;
+
+    /**
+     * Name of the argument in the output structure
+     * @return The name
+     */
+    String copyTo() default "";
 }

@@ -15,6 +15,7 @@ import static net.bpiwowar.xpm.manager.QName.parse;
 public class InputInformation {
     private final QName valueType;
     final String help;
+    final String copyTo;
     final boolean required;
 
     public InputInformation(Map<String, String> namespaces, FieldInfo field) {
@@ -22,6 +23,7 @@ public class InputInformation {
         this.valueType = getType(jsonArgument, field.getType(), namespaces);
         help = jsonArgument.help();
         required = jsonArgument.required();
+        copyTo = jsonArgument.copyTo();
     }
 
     private QName getType(JsonArgument jsonArgument, ClassInfo type, Map<String, String> namespaces) {

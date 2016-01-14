@@ -379,4 +379,15 @@ public abstract class Task {
         values.forEach((key, value) -> json.put(key, value.get()));
         return json;
     }
+
+    public JsonObject getOutputJson() {
+        JsonObject json = new JsonObject();
+        values.forEach((key, value) -> {
+            final Input input = factory.getInputs().get(key);
+            final String copyTo = input.getCopyTo();
+            if (copyTo != null) key = copyTo;
+            json.put(key, value.get());
+        });
+        return json;
+    }
 }

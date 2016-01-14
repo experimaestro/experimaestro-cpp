@@ -50,6 +50,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             Input input = new JsonInput(getType(field));
             input.setDocumentation(field.help);
             input.setOptional(!field.required);
+            input.setCopyTo(field.copyTo);
             inputs.put(name, input);
         }
     }

@@ -49,6 +49,7 @@ public class Constants {
     static final public QName XP_STRING = registerAtomicType(EXPERIMAESTRO_NS, "string");
     public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
     public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
+    public static final QName XP_INPUT_STREAM = new QName(EXPERIMAESTRO_NS, "input-stream");
     public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
     public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
     public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
