@@ -259,13 +259,13 @@ $().ready(function () {
                     } else {
                         var list = $("#state-" + r.state).children("ul");
                         var link = $e("a");
-                        link.attr("href", "javascript:void(0)").append($t(r.locator));
+                        link.attr("href", "javascript:void(0)").append($t(r.locator + " [" + r.resource + "]"));
                         link.on("click", resource_link_callback);
 
                         var restart_img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
                         restart_img.on("click", resource_action_callback);
 
-                        var remove_img = $("<img class='link' name='restart' alt='restart' src='/images/delete.png'/>");
+                        var remove_img = $("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
                         remove_img.on("click", resource_action_callback);
 
                         var item = $e("li")
