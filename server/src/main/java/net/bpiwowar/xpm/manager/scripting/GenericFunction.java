@@ -118,7 +118,7 @@ public abstract class GenericFunction {
             if (deprecated != null) {
                 final Logger logger = ScriptContext.get().getMainLogger();
                 logger.warn("In %s", lcx.getScriptLocation());
-                logger.warn("Method %s is deprecated", argmax);
+                logger.warn("Method %s is deprecated", argmax.declaration);
                 if (!deprecated.value().isEmpty()) {
                     logger.warn(deprecated.value());
                 }
