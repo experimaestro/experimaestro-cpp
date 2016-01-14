@@ -18,19 +18,17 @@ package net.bpiwowar.xpm.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.Sets;
 import com.google.common.reflect.TypeToken;
-import org.apache.log4j.Hierarchy;
-import org.python.core.*;
-import org.python.util.PythonInterpreter;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.Functional;
-import net.bpiwowar.xpm.utils.iterators.AbstractIterator;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Hierarchy;
+import org.python.core.*;
+import org.python.util.PythonInterpreter;
 
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -78,14 +76,16 @@ public class PythonRunner implements AutoCloseable {
                 .repository(repositories);
         this.environment = environment;
 
-        PySystemState interpreterState = new PySystemState();
+        interpreter = PythonInterpreter.threadLocalStateInterpreter(null);
+        PySystemState interpreterState = interpreter.getSystemState();
         for (String path : pythonPath.split(":")) {
             interpreterState.path.add(new PyString(path));
         }
-        interpreter = new PythonInterpreter(null, interpreterState);
         interpreter.setOut(out);
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
+
+        LOGGER.info("Identity = %s", Py.getSystemState() == interpreterState);
 
         // XPM module
         final PyModule xpmModule = imp.addModule("xpm");
