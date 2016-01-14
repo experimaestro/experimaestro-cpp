@@ -25,10 +25,10 @@ public class JavaCommandLauncher implements JavaCommandBuilder {
     }
 
     @Override
-    public Commands build(String taskClassname, Task task) {
+    public Commands build(Commands commands, String taskClassname, Task task) {
         final Command command = new Command();
 
-        final Commands commands = new Commands(command);
+        commands.add(command);
 
         // Add command
         command.add(specification.path);

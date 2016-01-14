@@ -81,4 +81,8 @@ public class JsonValue extends Value {
         return value != null;
     }
 
+    @Override
+    public Json getAsInput() {
+        return super.getAsInput();
+    }
 }

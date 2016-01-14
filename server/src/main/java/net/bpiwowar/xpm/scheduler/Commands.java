@@ -69,13 +69,10 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         command.allComponents().forEach(argument -> {
             if (argument instanceof Command.CommandOutput) {
                 final AbstractCommand subCommand = ((Command.CommandOutput) argument).getCommand();
-                add(backwards_edges, command, subCommand);
-                add(forward_edges, subCommand, command);
-
-                graph.add(subCommand);
-                fillEdges(graph, forward_edges, backwards_edges, subCommand);
+                addDependency(graph, forward_edges, backwards_edges, command, subCommand);
             }
         });
+
     }
 
     static private void add(Map<AbstractCommand, Set<AbstractCommand>> map, AbstractCommand key, AbstractCommand value) {
@@ -90,7 +87,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     /**
      * Re-order the commands so that the dependencies are fulfilled
      */
-    public ArrayList<AbstractCommand> reorder() {
+    public List<AbstractCommand> reorder() {
         final IdentityHashSet<AbstractCommand> graph = new IdentityHashSet<>();
         Map<AbstractCommand, Set<AbstractCommand>> forward_edges = new IdentityHashMap<>();
         Map<AbstractCommand, Set<AbstractCommand>> backwards_edges = new IdentityHashMap<>();
@@ -114,16 +111,28 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
             if (command.inputRedirect == null)
                 command.inputRedirect = AbstractCommandBuilder.Redirect.INHERIT;
 
+            // Add all edges
             fillEdges(graph, forward_edges, backwards_edges, command);
+            final AbstractCommand standardInput = getStandardInput();
+            if (standardInput != null) {
+                addDependency(graph, forward_edges, backwards_edges, command, standardInput);
+            }
         }
         final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
         if (graph.iterator().hasNext()) {
             final String s = Output.toString(", ", graph);
             LOGGER.error("Loop in command: %s", s);
-            throw new IllegalArgumentException("Command has a loop [%s]");
+            throw new IllegalArgumentException("Command has a loop");
         }
 
         return ordered_objects;
+    }
+
+    protected static void addDependency(IdentityHashSet<AbstractCommand> graph, Map<AbstractCommand, Set<AbstractCommand>> forward_edges, Map<AbstractCommand, Set<AbstractCommand>> backwards_edges, AbstractCommand to, AbstractCommand from) {
+        add(backwards_edges, to, from);
+        add(forward_edges, from, to);
+        graph.add(from);
+        fillEdges(graph, forward_edges, backwards_edges, from);
     }
 
     @Expose("add_dependency")
@@ -202,4 +211,5 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     public int hashCode() {
         return Objects.hash(commands, dependencies);
     }
+
 }

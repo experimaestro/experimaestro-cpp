@@ -23,6 +23,7 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -50,6 +51,10 @@ public abstract class AbstractCommand {
      * Null indicates that the output should be discarded
      */
     AbstractCommandBuilder.Redirect errorRedirect = null;
+    /**
+     * Standard input
+     */
+    AbstractCommand standardInput;
 
     /**
      * Process each dependency contained in a command or subcommand
@@ -83,4 +88,14 @@ public abstract class AbstractCommand {
     abstract public Stream<? extends CommandComponent> allComponents();
 
     public abstract Stream<? extends Dependency> dependencies();
+
+    public void setStandardInput(AbstractCommand standardInput) {
+        this.standardInput = standardInput;
+    }
+
+    public AbstractCommand getStandardInput() {
+        return standardInput;
+    }
+
+    abstract public List<AbstractCommand> reorder();
 }

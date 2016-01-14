@@ -27,14 +27,21 @@ import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.scheduler.Command;
 import net.bpiwowar.xpm.scheduler.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
@@ -373,13 +380,51 @@ public abstract class Task {
         return run(false, parameters);
     }
 
-    public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    final public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+        Commands commands = new Commands();
+
+        // Add streams and dependencies
+        final HashMap<Object, Command.CommandOutput> streams = new HashMap<>();
+
+        final Commands finalCommands = commands;
+        getValues().values().stream()
+                .map(e -> e.get()).filter(e -> e instanceof JsonTask)
+                .forEach(e -> {
+                    final JsonTask jsonTask = (JsonTask) e;
+                    // Add dependencies for these commands
+                    final Commands subcommands = jsonTask.getCommands();
+                    subcommands.dependencies().forEach(finalCommands::addDependency);
+
+                    // Add the command
+                    streams.put(null, subcommands.output());
+                });
+
+
+        commands = _commands(commands, streams, parameters);
+
+        final Command.CommandOutput standardInput = streams.get(null);
+        if (standardInput != null) {
+            commands.setStandardInput(standardInput.getCommand());
+        }
+
+        return commands;
+    }
+
+    protected Commands _commands(Commands commands, HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         throw new UnsupportedOperationException("Cannot return commands for a task of type " + this.getClass());
     }
 
+    /**
+     * Returns a JSON that correspond to the parameters to be transmitted to
+     * an external task
+     *
+     * @return A JSON object
+     */
     public JsonObject getInputsAsJson() {
         JsonObject json = new JsonObject();
-        values.forEach((key, value) -> json.put(key, value.get()));
+        values.forEach((key, value) -> {
+            json.put(key, value.getAsInput());
+        });
         return json;
     }
 

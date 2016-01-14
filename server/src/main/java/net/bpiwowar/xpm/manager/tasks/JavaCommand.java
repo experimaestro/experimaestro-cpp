@@ -22,11 +22,12 @@ public class JavaCommand implements JavaCommandBuilder {
     }
 
     @Override
-    public Commands build(String taskClassname, Task task) {
+    public Commands build(Commands commands, String taskClassname, Task task) {
         final Command command = new Command();
 
+        commands.add(command);
+
         Command classpath = new Command();
-        final Commands commands = new Commands(command);
 
         Arrays.asList(this.classpath).stream().forEach(f -> {
             classpath.add(new Command.Path(f));

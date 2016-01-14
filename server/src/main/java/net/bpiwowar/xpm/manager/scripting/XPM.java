@@ -380,7 +380,7 @@ public class XPM {
         SingleHostConnector commandConnector = launcher.getMainConnector();
         try (CommandContext commandEnv = new CommandContext.Temporary(launcher)) {
             // Transform the list
-            builder.command(Lists.newArrayList(Iterables.transform(command.list(), argument -> {
+            builder.command(Lists.newArrayList(Iterables.transform(command.components(), argument -> {
                 try {
                     return argument.toString(commandEnv);
                 } catch (IOException e) {

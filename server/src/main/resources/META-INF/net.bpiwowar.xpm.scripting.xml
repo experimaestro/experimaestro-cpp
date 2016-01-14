@@ -34,7 +34,7 @@
         <!-- Manager -->
         <class>net.bpiwowar.xpm.manager.Module</class>
         <class>net.bpiwowar.xpm.manager.Task</class>
-        <class>net.bpiwowar.xpm.manager.RunnableTask</class>
+        <class>net.bpiwowar.xpm.manager.JsonTask</class>
         <class>net.bpiwowar.xpm.manager.Namespace</class>
         <class>net.bpiwowar.xpm.manager.tasks.JavaTaskFactory</class>
 

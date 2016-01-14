@@ -303,13 +303,21 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         }
     }
 
-    private void writeCommands(CommandContext env, PrintWriter writer, Commands commands) throws IOException {
-        final ArrayList<AbstractCommand> list = commands.reorder();
+    private void writeCommands(CommandContext env, PrintWriter writer, AbstractCommand commands) throws IOException {
+        final List<AbstractCommand> list = commands.reorder();
 
         int detached = 0;
+        final AbstractCommand standardInput = commands.getStandardInput();
+        if (standardInput != null) {
+            writeCommands(env, writer, standardInput);
+            writer.print(" | ");
+        }
+
         for (AbstractCommand command : list) {
             // Write files
             final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(command, false);
+
+            // Write named pipes
             for (Path file : Iterables.concat(namedRedirections.outputRedirections, namedRedirections.errorRedirections)) {
                 writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
@@ -319,7 +327,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writeCommands(env, writer, (Commands) command);
                 writer.print(") ");
             } else {
-                for (CommandComponent argument : ((Command) command).list()) {
+                for (CommandComponent argument : ((Command) command).components()) {
                     if (argument instanceof Command.Unprotected) {
                         writer.print(argument.toString(env));
                     }

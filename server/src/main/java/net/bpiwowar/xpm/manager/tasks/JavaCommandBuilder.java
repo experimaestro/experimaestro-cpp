@@ -10,7 +10,7 @@ import java.util.Map;
  * Abstraction of the command
  */
 public interface JavaCommandBuilder {
-    Commands build(String taskClassname, Task task);
+    Commands build(Commands commands, String taskClassname, Task task);
 
     void setEnvironment(JsonObject json, Map<String, String> environment);
 }

@@ -29,8 +29,8 @@ public class ScriptTaskFactory extends ExternalTaskFactory {
     }
 
     @Override
-    protected Commands build(Task task) {
-        return builder.build(scriptPath, task);
+    protected Commands build(Commands commands, Task task) {
+        return builder.build(commands, scriptPath, task);
     }
 
     @Override

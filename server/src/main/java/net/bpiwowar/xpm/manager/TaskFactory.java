@@ -30,7 +30,6 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.manager.scripting.Options;
-import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.Commands;
 import org.apache.commons.lang.NotImplementedException;
 
@@ -197,12 +196,12 @@ public abstract class TaskFactory {
         if (parameters.length > 0) throw new NotImplementedException();
         Map<String, Object> map = new HashMap<>();
         json.entrySet().forEach(e -> map.put(e.getKey(), e.getValue()));
-        final RunnableTask configure = configure(cx, map);
+        final JsonTask configure = configure(cx, map);
         return configure.getCommands();
     }
 
     @Expose(context = true)
-    public RunnableTask configure(LanguageContext cx, @Options Map<String, Object> map, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+    public JsonTask configure(LanguageContext cx, @Options Map<String, Object> map, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
         final Task task = setParameters(cx, map);
 
         // Get parameters
@@ -210,7 +209,7 @@ public abstract class TaskFactory {
         Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
         final Commands commands = task.commands(pmap);
 
-        return new RunnableTask(task, commands);
+        return new JsonTask(task, commands);
     }
 
     protected Task setParameters(LanguageContext cx, @Options Map<String, Object> map) {

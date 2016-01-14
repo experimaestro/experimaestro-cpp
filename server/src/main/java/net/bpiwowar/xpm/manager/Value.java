@@ -137,4 +137,12 @@ public abstract class Value {
     public Input getInput() {
         return input;
     }
+
+    /**
+     * Computes the JSON that will be used as an external task input
+     * @return
+     */
+    public Json getAsInput() {
+        return get();
+    }
 }

@@ -11,23 +11,26 @@ import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Property;
 import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Something that can be run similarly to factories
  */
 @Exposed
-public class RunnableTask extends Json {
+public class JsonTask extends Json {
     /** The task */
     private final JsonObject json;
 
     /** The commands */
     private final Commands commands;
 
-    public RunnableTask(Task json, Commands commands) {
+    public JsonTask(Task json, Commands commands) {
         this.json = json.getOutputJson();
         this.commands = commands;
     }
@@ -71,4 +74,10 @@ public class RunnableTask extends Json {
             new JsonString("hello").write(writer);
         }
     }
+
+    public Stream<Dependency> dependencies() {
+        return commands.dependencies();
+    }
+
+
 }

@@ -19,29 +19,16 @@ public class ScriptCommandBuilder {
         this.arguments = informations.command;
     }
 
-    public Commands build(Path scriptPath, Task task) {
+    public Commands build(Commands commands, Path scriptPath, Task task) {
         final Command command = new Command();
 
-        final Commands commands = new Commands(command);
         final Command.JsonParameterFile jsonParameter = new Command.JsonParameterFile("json", task.getInputsAsJson());
 
         arguments.forEach(a -> a.process(this, command, scriptPath, jsonParameter));
-//        for (CommandArgument argument : arguments) {
-//
-//            if (argument instanceof CommandArgument.CommandString) {
-//                command.add(((CommandArgument.CommandString) argument).string);
-//            } else if (argument instanceof )
-//        }
-//
-//        // Add command
-//        command.add(interpreter);
-//
-//        // TaskReference class name
-//        command.add(scriptPath);
-//
-//        // Parameter file
+
         command.add(jsonParameter);
 
+        commands.add(command);
         return commands;
     }
 }

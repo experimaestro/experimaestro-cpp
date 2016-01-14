@@ -37,7 +37,7 @@ public class InputStreamType extends Type {
 
     @Override
     public void validate(Json element) throws ValueMismatchException {
-        if (!(element instanceof RunnableTask)) {
+        if (!(element instanceof JsonTask)) {
             throw new ValueMismatchException("Expected a runnable task argument");
         }
     }

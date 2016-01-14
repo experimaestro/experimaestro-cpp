@@ -18,10 +18,10 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.JsonAdapter;
-import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import org.mozilla.javascript.NativeArray;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -156,6 +156,15 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> c.dependencies());
     }
 
+    public ArrayList<CommandComponent> components() {
+        return list;
+    }
+
+    @Override
+    public List<AbstractCommand> reorder() {
+        return ImmutableList.of(this);
+    }
+
     public void forEachDependency(Consumer<Dependency> consumer) {
         for (CommandComponent c : list) {
             if (c instanceof SubCommand) {
@@ -231,10 +240,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         for (CommandComponent component : list)
             sb.append(component.toString(environment));
         return sb.toString();
-    }
-
-    public ArrayList<CommandComponent> list() {
-        return this.list;
     }
 
 
