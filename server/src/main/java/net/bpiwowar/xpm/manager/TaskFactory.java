@@ -24,6 +24,7 @@ import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.scripting.Deprecated;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
@@ -170,6 +171,13 @@ public abstract class TaskFactory {
 
     @Help("Runs and asserts that there was a single output")
     @Expose(value = "run_", context = true)
+    @Deprecated
+    public Json run_(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite, ValueMismatchException, NoSuchParameter {
+        return runOnce(cx, map, parameters);
+    }
+
+    @Help("Runs and asserts that there was a single output")
+    @Expose(value = "evaluate", context = true)
     public Json runOnce(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite, ValueMismatchException, NoSuchParameter {
         final Json[] v = run(cx, map, parameters);
         if (v.length != 1) {
