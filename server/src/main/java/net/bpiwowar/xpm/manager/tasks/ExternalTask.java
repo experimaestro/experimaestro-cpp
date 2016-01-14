@@ -27,18 +27,15 @@ import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonPath;
-import net.bpiwowar.xpm.manager.scripting.RunningContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.mozilla.javascript.Script;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.Map;
 
 /**
  * A task which is backed up main a Java class
@@ -100,7 +97,7 @@ public class ExternalTask extends Task {
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
-                Commands commands = externalFactory.commands(json, RunningContext.get().simulate());
+                Commands commands = externalFactory.commands(json, ScriptContext.get().simulate());
 
                 // --- Build the command
 
@@ -112,7 +109,7 @@ public class ExternalTask extends Task {
                 commands.dependencies().forEach(job::addDependency);
 
                 taskContext.prepare(job);
-                if (RunningContext.get().simulate()) {
+                if (ScriptContext.get().simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", job.toString());
                     pw.format("Command: %s%n", job.getCommands().toString());
@@ -135,7 +132,7 @@ public class ExternalTask extends Task {
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 
-                RunningContext.get().getSubmittedJobs().put(job.getLocator().toString(), job);
+                ScriptContext.get().getSubmittedJobs().put(job.getLocator().toString(), job);
             }
         } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);

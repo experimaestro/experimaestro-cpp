@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.utils.JSUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.mozilla.javascript.*;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
@@ -85,7 +86,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         }
         JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        return JavaScriptRunner.wrap(jcx, function.call(jcx, thisObj, null, args));
+        return JavaScriptRunner.wrap(jcx, function.call(jcx, JSUtils.unwrap(thisObj), null, args));
     }
 
     @Override
@@ -119,7 +120,7 @@ abstract public class JSBaseObject implements Scriptable, JSConstructable, Calla
         return NOT_FOUND;
     }
 
-    private MethodFunction getMethodFunction(Object key) {
+    protected MethodFunction getMethodFunction(Object key) {
         MethodFunction function = new MethodFunction(key);
 
         ArrayList<Method> methods = this.classDescription.getMethods().get(key);

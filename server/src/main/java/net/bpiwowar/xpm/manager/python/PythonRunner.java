@@ -68,9 +68,6 @@ public class PythonRunner implements AutoCloseable {
 
     private final ScriptContext scriptContext;
 
-    private final RunningContext runningContext;
-
-
     public PythonRunner(Map<String, String> environment, Repositories repositories, Scheduler scheduler,
                         Hierarchy loggerRepository, String pythonPath,
                         BufferedWriter out, BufferedWriter err) throws Exception {
@@ -89,7 +86,6 @@ public class PythonRunner implements AutoCloseable {
         interpreter.setOut(out);
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
-        runningContext = new RunningContext();
 
         // XPM module
         final PyModule xpmModule = imp.addModule("xpm");
@@ -260,7 +256,6 @@ public class PythonRunner implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        runningContext.close();
         scriptContext.close();
         staticContext.close();
     }

@@ -338,14 +338,14 @@ public class XPM {
     @Expose
     @Help("Set the simulate flag: When true, the jobs are not submitted but just output")
     public boolean simulate(boolean simulate) {
-        final boolean old = RunningContext.get().simulate();
-        RunningContext.get().simulate(simulate);
+        final boolean old = ScriptContext.get().simulate();
+        ScriptContext.get().simulate(simulate);
         return old;
     }
 
     @Expose
     public boolean simulate() {
-        return RunningContext.get().simulate();
+        return ScriptContext.get().simulate();
     }
 
     @Expose(context = true)
@@ -427,8 +427,7 @@ public class XPM {
         job = new CommandLineTask((java.nio.file.Path) path);
 
         job.setCommands(commands);
-        RunningContext rc = RunningContext.get();
-        if (rc.getSubmittedJobs().containsKey(path)) {
+        if (scriptContext.getSubmittedJobs().containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
             if (simulate()) {
                 return job;
@@ -510,7 +509,7 @@ public class XPM {
                             resource = Resource.getByLocator(rsrcPath);
                             if (resource == null)
                                 if (simulate()) {
-                                    if (!rc.getSubmittedJobs().containsKey(rsrcPath))
+                                    if (!scriptContext.getSubmittedJobs().containsKey(rsrcPath))
                                         LOGGER.error("The dependency [%s] cannot be found", rsrcPath);
                                 } else {
                                     throw new XPMRuntimeException("Resource [%s] was not found", rsrcPath);
@@ -578,7 +577,7 @@ public class XPM {
 
         }
 
-        rc.getSubmittedJobs().put(job.getLocator().toString(), job);
+        scriptContext.getSubmittedJobs().put(job.getLocator().toString(), job);
 
         return job;
     }

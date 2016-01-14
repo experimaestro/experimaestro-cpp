@@ -72,7 +72,6 @@ public class JavaScriptRunner implements AutoCloseable {
 
     final private Context context;
     private final StaticContext staticContext;
-    private final RunningContext runningContext;
 
     public JavaScriptRunner(Repository repository, Scheduler scheduler, Hierarchy loggerRepository, Integer debugPort) throws Exception {
         this(repository, scheduler, loggerRepository, debugPort, null);
@@ -95,7 +94,6 @@ public class JavaScriptRunner implements AutoCloseable {
 
         context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
         this.scriptContext = scriptContext == null ? staticContext.scriptContext() : scriptContext;
-        runningContext = new RunningContext();
 
         // Create scope
         scope = Context.getCurrentContext().newObject(init());
@@ -265,7 +263,6 @@ public class JavaScriptRunner implements AutoCloseable {
             }
 
         // Close script contexts
-        runningContext.close();
         scriptContext.close();
         staticContext.close();
 

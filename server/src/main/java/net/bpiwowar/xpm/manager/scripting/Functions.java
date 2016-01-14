@@ -18,34 +18,39 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.manager.tasks.TasksLoader;
-import org.apache.log4j.Hierarchy;
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.Scriptable;
-import net.bpiwowar.xpm.connectors.*;
-import net.bpiwowar.xpm.exceptions.*;
+import net.bpiwowar.xpm.connectors.Connector;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.LocalhostConnector;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
+import net.bpiwowar.xpm.exceptions.ExitException;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.ExperimaestroException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.Manager;
 import net.bpiwowar.xpm.manager.QName;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
-import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
-import net.bpiwowar.xpm.manager.js.JSTransform;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonArray;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonString;
-import net.bpiwowar.xpm.manager.plans.FunctionOperator;
-import net.bpiwowar.xpm.manager.plans.Operator;
-import net.bpiwowar.xpm.manager.plans.ProductReference;
+import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
+import net.bpiwowar.xpm.manager.tasks.ScriptCommandBuilder;
+import net.bpiwowar.xpm.manager.tasks.TasksLoader;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Hierarchy;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
+import org.mozilla.javascript.Scriptable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -59,7 +64,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
@@ -74,7 +83,7 @@ public class Functions {
     static public Map merge(LanguageContext cx,
                             @Argument(name = "objects", types = {Map.class, Json.class})
                             Object... objects) {
-        Map returned = new HashMap<>();
+        Map<String, Object> returned = new HashMap<>();
 
         for (Object object : objects) {
             if (object instanceof Map) {
@@ -110,27 +119,6 @@ public class Functions {
     public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
         Json json = cx.toJSON(jsons);
         return Manager.getDescriptor(json);
-    }
-
-    @Expose(context = true)
-    @Help(value = "Transform plans outputs with a function")
-    public static Operator transform(JavaScriptContext cx, @NoJavaization Callable f, Operator... operators) throws FileSystemException {
-        final JSTransform transform = new JSTransform(cx, f, operators);
-        FunctionOperator transformOperator = new FunctionOperator(ScriptContext.get(), transform);
-
-        Operator inputOperator;
-        if (operators.length == 1)
-            inputOperator = operators[0];
-        else {
-            ProductReference pr = new ProductReference(ScriptContext.get());
-            for (Operator operator : operators) {
-                pr.addParent(operator);
-            }
-            inputOperator = pr;
-        }
-        transformOperator.addParent(inputOperator);
-
-        return transformOperator;
     }
 
     // Used in scripting languages which cannot use $ as first character
@@ -386,8 +374,8 @@ public class Functions {
             } else {
                 final String uri = o instanceof JsonString ? o.toString() : (String) o;
                 Path path = NetworkShare.uriToPath(uri);
-                if (RunningContext.get().simulate()) {
-                    final Resource resource = RunningContext.get().getSubmittedJobs().get(uri);
+                if (ScriptContext.get().simulate()) {
+                    final Resource resource = ScriptContext.get().getSubmittedJobs().get(uri);
                     if (resource == null) {
                         return Resource.getByLocator(path);
                     }
@@ -404,7 +392,7 @@ public class Functions {
     @Expose()
     @Help("Set the experiment for all future commands")
     static public void set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
-        if (!RunningContext.get().simulate()) {
+        if (!ScriptContext.get().simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis());
             experiment.save();
         }

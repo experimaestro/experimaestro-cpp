@@ -30,7 +30,9 @@ tasks.add("abc:task", {
 /** Run and check */
 
 // START SNIPPET: run
-var r = tasks("abc:task").run({x: 10})[0];
+var r = tasks("abc:task");
+logger.info(r);
+r = r.run({x: 10})[0];
 // END SNIPPET: run
 
 function test_directtask() {

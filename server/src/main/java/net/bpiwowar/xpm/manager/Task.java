@@ -26,16 +26,17 @@ import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.RunningContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.mozilla.javascript.Script;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 /**
  * The abstract TaskReference object
@@ -135,7 +136,7 @@ public abstract class Task {
      *
      * @param taskContext
      */
-    final public Json run(ScriptContext taskContext) throws NoSuchParameter, ValueMismatchException {
+    final public Json run(ScriptContext taskContext, Parameters... parameters) throws NoSuchParameter, ValueMismatchException {
         LOGGER.debug("Running task [%s]", factory == null ? "n/a" : factory.id);
         processInputs(taskContext);
 
@@ -358,16 +359,19 @@ public abstract class Task {
     }
 
     @Expose("run")
-    public Json run(boolean simulate) throws ValueMismatchException, NoSuchParameter {
+    public Json run(boolean simulate, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
         try (final ScriptContext scriptContext = ScriptContext.get().copy()) {
-            RunningContext.get().simulate(simulate);
+            IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
+            Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
+
+            ScriptContext.get().simulate(simulate);
             return run(scriptContext);
         }
     }
 
     @Expose("run")
-    public Json run() throws ValueMismatchException, NoSuchParameter {
-        return run(false);
+    public Json run(Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+        return run(false, parameters);
     }
 
     public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {

@@ -28,20 +28,21 @@ import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import net.bpiwowar.xpm.manager.plans.TaskOperator;
-import net.bpiwowar.xpm.manager.plans.Value;
-import net.bpiwowar.xpm.scheduler.*;
-import net.bpiwowar.xpm.utils.CachedIterable;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.DependencyParameters;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.MapStack;
 import net.bpiwowar.xpm.utils.Mutable;
 import net.bpiwowar.xpm.utils.Updatable;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.mozilla.javascript.Script;
 
 import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -112,16 +113,6 @@ final public class ScriptContext implements AutoCloseable {
     private Updatable<Path> currentScriptPath;
 
     /**
-     * Cached iterators
-     */
-    private IdentityHashMap<Object, CachedIterable<Value>> cachedIterables = new IdentityHashMap<>();
-
-    /**
-     * The task operator maps between
-     */
-    private IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap = new IdentityHashMap<>();
-
-    /**
      * Parameters
      */
     MapStack<String, String> parameters;
@@ -130,6 +121,17 @@ final public class ScriptContext implements AutoCloseable {
      * Properties set by the script that will be returned
      */
     Map<String, Object> properties;
+
+    /**
+     * Submitted jobs
+     */
+    private Map<String, Resource> submittedJobs;
+
+    /**
+     * Whether we are simulating
+     */
+    Updatable<Boolean> simulate;
+
 
     public ScriptContext(StaticContext staticContext) {
         if (threadContext.get() != null) {
@@ -149,6 +151,11 @@ final public class ScriptContext implements AutoCloseable {
         currentScriptPath = Updatable.create(null);
         properties = new HashMap<>();
         parameters = new MapStack<>();
+
+        simulate = new Updatable<>(false);
+        submittedJobs = new HashMap<>();
+
+
     }
 
     @Override
@@ -156,27 +163,31 @@ final public class ScriptContext implements AutoCloseable {
         return format("ScriptContext@%X", System.identityHashCode(this));
     }
 
-    private ScriptContext(ScriptContext other, boolean newRepository, boolean setThreadContext) {
-        LOGGER.debug("Creating script context [%s] from context [%s]", this, other);
+    private ScriptContext(ScriptContext parent, boolean newRepository, boolean setThreadContext) {
+        LOGGER.debug("Creating script context [%s] from context [%s]", this, parent);
 
-        staticContext = other.staticContext;
-        experiment = other.experiment.reference();
-        priority = other.priority.reference();
-        currentScriptPath = other.currentScriptPath.reference();
+        staticContext = parent.staticContext;
+        experiment = parent.experiment.reference();
+        priority = parent.priority.reference();
+        currentScriptPath = parent.currentScriptPath.reference();
 
         // Initialise shared values
         if (newRepository) {
             properties = new HashMap<>();
-            workingDirectory = new Mutable<>(other.workingDirectory.getValue());
-            defaultLauncher = other.defaultLauncher.reference();
-            defaultLocks = other.defaultLocks.reference();
-            parameters = new MapStack<>(other.parameters);
+            workingDirectory = new Mutable<>(parent.workingDirectory.getValue());
+            defaultLauncher = parent.defaultLauncher.reference();
+            defaultLocks = parent.defaultLocks.reference();
+            parameters = new MapStack<>(parent.parameters);
         } else {
-            properties = other.properties;
-            workingDirectory = other.workingDirectory;
-            defaultLauncher = other.defaultLauncher;
-            defaultLocks = other.defaultLocks;
+            properties = parent.properties;
+            workingDirectory = parent.workingDirectory;
+            defaultLauncher = parent.defaultLauncher;
+            defaultLocks = parent.defaultLocks;
         }
+
+
+        simulate = parent.simulate.reference();
+        submittedJobs = parent.submittedJobs;
 
         if (setThreadContext) {
             // Sets the current thread context
@@ -190,28 +201,6 @@ final public class ScriptContext implements AutoCloseable {
         return threadContext.get();
     }
 
-    public void setCachedIterable(Object key, CachedIterable<Value> cachedIterable) {
-
-        cachedIterables.put(key, cachedIterable);
-    }
-
-    public CachedIterable<Value> getCachedIterable(Object key) {
-
-        return cachedIterables.get(key);
-    }
-
-    public void setTaskOperatorMap(IdentityHashMap<TaskOperator, TaskReference> taskOperatorMap) {
-
-        this.taskOperatorMap = taskOperatorMap;
-    }
-
-    /**
-     * Set the current task operator
-     */
-    public void setTaskOperator(TaskOperator taskOperator) {
-
-        setTask(taskOperator == null ? null : taskOperatorMap.get(taskOperator));
-    }
 
     public ScriptContext defaultLocks(Map<Resource, DependencyParameters> defaultLocks) {
         this.defaultLocks.set(defaultLocks);
@@ -416,4 +405,20 @@ final public class ScriptContext implements AutoCloseable {
             threadContext.set(old);
         }
     }
+
+    /**
+     * Submitted jobs
+     */
+    public Map<String, Resource> getSubmittedJobs() {
+        return submittedJobs;
+    }
+    public boolean simulate() {
+        return simulate.get();
+    }
+
+    public ScriptContext simulate(boolean simulate) {
+        this.simulate.set(simulate);
+        return this;
+    }
+
 }

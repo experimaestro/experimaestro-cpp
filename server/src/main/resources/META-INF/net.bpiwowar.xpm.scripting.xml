@@ -38,20 +38,6 @@
         <class>net.bpiwowar.xpm.manager.Namespace</class>
         <class>net.bpiwowar.xpm.manager.tasks.JavaTaskFactory</class>
 
-        <!-- Plans -->
-        <class>net.bpiwowar.xpm.manager.plans.Operator</class>
-        <class>net.bpiwowar.xpm.manager.plans.Constant</class>
-        <class>net.bpiwowar.xpm.manager.plans.FunctionOperator</class>
-        <class>net.bpiwowar.xpm.manager.plans.GroupBy</class>
-        <class>net.bpiwowar.xpm.manager.plans.ReorderNodes</class>
-        <class>net.bpiwowar.xpm.manager.plans.OrderBy</class>
-        <class>net.bpiwowar.xpm.manager.plans.NAryOperator</class>
-        <class>net.bpiwowar.xpm.manager.plans.Plan</class>
-        <class>net.bpiwowar.xpm.manager.plans.Product</class>
-        <class>net.bpiwowar.xpm.manager.plans.ProductReference</class>
-        <class>net.bpiwowar.xpm.manager.plans.TaskOperator</class>
-        <class>net.bpiwowar.xpm.manager.plans.Union</class>
-
         <!-- Connectors -->
         <class>net.bpiwowar.xpm.connectors.ConnectorOptions</class>
         <class>net.bpiwowar.xpm.connectors.SSHOptions</class>

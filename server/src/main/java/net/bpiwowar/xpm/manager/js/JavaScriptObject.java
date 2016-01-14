@@ -18,7 +18,13 @@ package net.bpiwowar.xpm.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.manager.scripting.ExposeMode;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import net.bpiwowar.xpm.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.utils.JSUtils;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 
 /**
  * A wrapper for exposed java objects
@@ -29,6 +35,16 @@ public class JavaScriptObject extends JSBaseObject implements Wrapper {
     public JavaScriptObject(Object object) {
         super(object.getClass());
         this.object = object;
+    }
+
+    @Override
+    public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+        MethodFunction function = getMethodFunction(ExposeMode.CALL);
+        if (function.isEmpty()) {
+            throw new XPMRhinoException("Cannot call object of type %s", getClassName());
+        }
+        JavaScriptContext jcx = new JavaScriptContext(cx, scope);
+        return JavaScriptRunner.wrap(jcx, function.call(jcx, object, null, args));
     }
 
     @Override

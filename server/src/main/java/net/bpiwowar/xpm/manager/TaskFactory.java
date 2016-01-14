@@ -24,14 +24,11 @@ import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
-import net.bpiwowar.xpm.manager.plans.Plan;
-import net.bpiwowar.xpm.manager.plans.PlanInputs;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.manager.scripting.Options;
-import net.bpiwowar.xpm.manager.scripting.RunningContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.Commands;
 import org.apache.commons.lang.NotImplementedException;
@@ -166,18 +163,14 @@ public abstract class TaskFactory {
 
     @Help("Runs")
     @Expose(value = "run", context = true)
-    public Json[] run(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite {
-        final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
-        PlanInputs inputs = Plan.getMappings(map, cx);
-        plan.add(inputs);
-        IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
-        Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
-        return plan.run(pmap);
+    public Json[] run(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite, ValueMismatchException, NoSuchParameter {
+        final Task task = setParameters(cx, map);
+        return new Json[] { task.run(parameters) };
     }
 
     @Help("Runs and asserts that there was a single output")
     @Expose(value = "run_", context = true)
-    public Json runOnce(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite {
+    public Json runOnce(LanguageContext cx, @Options Map map, Parameters... parameters) throws ExperimaestroCannotOverwrite, ValueMismatchException, NoSuchParameter {
         final Json[] v = run(cx, map, parameters);
         if (v.length != 1) {
             throw new XPMScriptRuntimeException("Requested only one output, got %d", v.length);
@@ -185,25 +178,10 @@ public abstract class TaskFactory {
         return v[0];
     }
 
-    @Help("Creates a plan from this task")
-    @Expose(value = "plan", context = true)
-    public Plan plan() {
-        return new Plan(ScriptContext.get().copy(true, false), this);
-    }
-
-    @Help("Creates a plan from this task")
-    @Expose(value = "plan", context = true)
-    public Object plan(LanguageContext cx, @Options Map map) {
-        final Plan plan = new Plan(ScriptContext.get().copy(true, false), this);
-        PlanInputs inputs = Plan.getMappings(map, cx);
-        plan.add(inputs);
-        return plan;
-    }
-
     @Expose(value = "simulate", context = true)
-    public Object simulate(LanguageContext cx, Map parameters) throws Exception {
-        final Plan plan = new Plan(cx, this, parameters);
-        return plan.simulate();
+    public Object simulate(LanguageContext cx, @Options Map map, Parameters... parameters) throws Exception {
+        final Task task = setParameters(cx, map);
+        return task.run(true, parameters);
     }
 
     @Expose(context = true, value = "commands")
@@ -217,15 +195,7 @@ public abstract class TaskFactory {
 
     @Expose(context = true)
     public RunnableTask configure(LanguageContext cx, @Options Map<String, Object> map, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
-        // Set tasks input for validation
-        final Task task = create();
-        map.entrySet().parallelStream().forEach(e -> {
-            try {
-                task.setParameter(DotName.parse(e.getKey()), cx.toJSON(e.getValue()));
-            } catch (NoSuchParameter noSuchParameter) {
-                throw  new XPMScriptRuntimeException(noSuchParameter);
-            }
-        });
+        final Task task = setParameters(cx, map);
 
         // Get parameters
         IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
@@ -233,5 +203,18 @@ public abstract class TaskFactory {
         final Commands commands = task.commands(pmap);
 
         return new RunnableTask(task, commands);
+    }
+
+    protected Task setParameters(LanguageContext cx, @Options Map<String, Object> map) {
+        // Set tasks input for validation
+        final Task task = create();
+        map.entrySet().parallelStream().forEach(e -> {
+            try {
+                task.setParameter(DotName.parse(e.getKey()), cx.toJSON(e.getValue()));
+            } catch (NoSuchParameter noSuchParameter) {
+                throw new XPMScriptRuntimeException(noSuchParameter);
+            }
+        });
+        return task;
     }
 }
