@@ -272,7 +272,7 @@ $().ready(function () {
                             .append(restart_img)
                             .append(remove_img)
                             .append(link);
-                        item.attr("name", r.locator).attr("id", "R" + r.resource);
+                        item.attr("name", r.resource).attr("id", "R" + r.resource);
 
                         list.append(item);
 
