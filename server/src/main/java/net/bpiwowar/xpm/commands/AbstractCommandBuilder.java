@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.connectors;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.scheduler.Job;
@@ -27,18 +28,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Created by bpiwowar on 26/9/14.
+ * Base class for command builders
  */
 public abstract class AbstractCommandBuilder {
     /**
      * The different input/output
      */
-    protected AbstractProcessBuilder.Redirect input;
-    protected AbstractProcessBuilder.Redirect output;
-    protected AbstractProcessBuilder.Redirect error;
+    protected Redirect input;
+    protected Redirect output;
+    protected Redirect error;
 
     /**
      * The associated job
@@ -53,7 +55,7 @@ public abstract class AbstractCommandBuilder {
     /**
      * Whether this process should be bound to the Java process
      */
-    boolean detach;
+    protected boolean detach;
 
     /**
      * The environment
@@ -98,14 +100,14 @@ public abstract class AbstractCommandBuilder {
         return start(false);
     }
 
-    public AbstractCommandBuilder redirectError(AbstractProcessBuilder.Redirect destination) {
+    public AbstractCommandBuilder redirectError(Redirect destination) {
         if (!destination.isWriter())
             throw new IllegalArgumentException();
         this.error = destination;
         return this;
     }
 
-    public AbstractCommandBuilder redirectInput(AbstractProcessBuilder.Redirect source) {
+    public AbstractCommandBuilder redirectInput(Redirect source) {
         if (!source.type.isReader())
             throw new IllegalArgumentException();
         this.input = source;
@@ -135,7 +137,7 @@ public abstract class AbstractCommandBuilder {
         XPMProcess p = start();
 
         if (errLogger != null) {
-            redirectError(AbstractCommandBuilder.Redirect.PIPE);
+            redirectError(Redirect.PIPE);
             BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
             new Thread("stderr") {
@@ -163,68 +165,4 @@ public abstract class AbstractCommandBuilder {
         return sb.toString();
     }
 
-    /**
-     * Represents a process source of input or output
-     */
-    static public class Redirect {
-        public static final Redirect PIPE = new Redirect(Type.PIPE, null);
-        /**
-         * Indicates that subprocess I/O source or destination will be the
-         * same as those of the current process.  This is the normal
-         * behavior of most operating system command interpreters (shells).
-         */
-        public static final Redirect INHERIT = new Redirect(Type.INHERIT, null);
-        private Path file;
-        private String string;
-        private Type type;
-
-        private Redirect() {
-            this.type = Type.INHERIT;
-        }
-
-        private Redirect(Type type, Path file) {
-            this.type = type;
-            this.file = file;
-        }
-
-        static public Redirect from(Path file) {
-            return new Redirect(Type.READ, file);
-        }
-
-        static public Redirect append(Path file) {
-            return new Redirect(Type.APPEND, file);
-        }
-
-        static public Redirect to(Path file) {
-            return new Redirect(Type.WRITE, file);
-        }
-
-        public boolean isWriter() {
-            return type.isWriter();
-        }
-
-        public Path file() {
-            return file;
-        }
-
-        public String string() {
-            return string;
-        }
-
-        public Type type() {
-            return type;
-        }
-
-        public enum Type {
-            READ, APPEND, WRITE, PIPE, INHERIT;
-
-            public boolean isReader() {
-                return this == READ || this == INHERIT || this == PIPE;
-            }
-
-            public boolean isWriter() {
-                return this == APPEND || this == WRITE || this == PIPE || this == INHERIT;
-            }
-        }
-    }
 }

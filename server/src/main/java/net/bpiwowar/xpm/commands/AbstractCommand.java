@@ -21,11 +21,11 @@ package net.bpiwowar.xpm.commands;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -35,42 +35,48 @@ import java.util.stream.Stream;
  */
 @Exposed
 @JsonAbstract
-public abstract class AbstractCommand {
+public abstract class AbstractCommand implements Iterable<AbstractCommand> {
+    /**
+     * List of dependencies attached to this command
+     * <p>
+     * The dependencies are not saved during serialization since this will be handled
+     * by the resource
+     */
+    protected transient ArrayList<Dependency> dependencies = new ArrayList<>();
+
     /**
      * The input redirect
      * <p>
      * Null indicates that the input should be the null device
      */
-    AbstractCommandBuilder.Redirect inputRedirect = null;
+    Redirect inputRedirect = Redirect.INHERIT;
+
     /**
      * The output stream redirect.
      * <p>
      * Null indicates that the output should be discarded
      */
-    AbstractCommandBuilder.Redirect outputRedirect = null;
+    Redirect outputRedirect = null;
+
     /**
      * The error stream redirect.
      * <p>
      * Null indicates that the output should be discarded
      */
-    AbstractCommandBuilder.Redirect errorRedirect = null;
+    Redirect errorRedirect = Redirect.INHERIT;
 
     /**
      * Standard input
      */
-    Command.CommandOutput standardInput;
+    CommandOutput standardInput;
 
     /**
      * Process each dependency contained in a command or subcommand
      * @param consumer The consumer to be fed
      */
-    abstract public void forEachDependency(Consumer<Dependency> consumer);
-
-    /**
-     * Process each command
-     * @param consumer The consumer to be fed
-     */
-    public abstract void forEachCommand(Consumer<? super AbstractCommand> consumer);
+    final public void forEachDependency(Consumer<Dependency> consumer) {
+        dependencies().forEach(consumer::accept);
+    }
 
     void prepare(CommandContext env) {
         if (standardInput != null) {
@@ -84,30 +90,74 @@ public abstract class AbstractCommand {
 
     protected AbstractCommand() {}
 
-    public AbstractCommandBuilder.Redirect getOutputRedirect() {
+    public Redirect getOutputRedirect() {
         return outputRedirect;
     }
 
-    public AbstractCommandBuilder.Redirect getErrorRedirect() {
+    public Redirect getErrorRedirect() {
         return errorRedirect;
     }
 
     @Expose
-    public Command.CommandOutput output() {
-        return new Command.CommandOutput(this);
+    public CommandOutput output() {
+        return new CommandOutput(this);
     }
 
     abstract public Stream<? extends CommandComponent> allComponents();
 
-    public abstract Stream<? extends Dependency> dependencies();
+    @Expose("add_dependency")
+    public void addDependency(Dependency dependency) {
+        dependencies.add(dependency);
+    }
 
-    public void setStandardInput(Command.CommandOutput standardInput) {
+    public Stream<? extends Dependency> dependencies() {
+        return dependencies.stream();
+    }
+
+    public void setStandardInput(CommandOutput standardInput) {
         this.standardInput = standardInput;
     }
 
-    public Command.CommandOutput getStandardInput() {
+    public CommandOutput getStandardInput() {
         return standardInput;
     }
 
     abstract public List<AbstractCommand> reorder();
+
+    public boolean needsProtection() {
+        return false;
+    }
+
+    /**
+     * Return a streams of all command
+     * @return A stream of all the command contained in this command (this command included)
+     */
+    abstract public Stream<AbstractCommand> commands();
+
+    /**
+     * Simplify the command
+     * @return A simplified command
+     */
+    public AbstractCommand simplify() {
+        return this;
+    }
+
+    /**
+     * Copy our settings to a new command
+     * @param command The command
+     */
+    protected void copyToCommand(AbstractCommand command) {
+        dependencies().forEach(command::addDependency);
+        if (command.getStandardInput() == null) {
+            command.setStandardInput(getStandardInput());
+        }
+    }
+
+    public void setErrorRedirect(Redirect errorRedirect) {
+        this.errorRedirect = errorRedirect;
+    }
+
+    public void setOutputRedirect(Redirect outputRedirect) {
+        this.outputRedirect = outputRedirect;
+    }
 }

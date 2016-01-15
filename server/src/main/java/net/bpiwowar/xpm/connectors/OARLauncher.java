@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.w3c.dom.Document;

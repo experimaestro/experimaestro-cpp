@@ -184,6 +184,9 @@ public abstract class CommandContext implements Closeable {
          */
         Path folder;
 
+        /**
+         * Counts for avoiding name clashes
+         */
         HashMap<String, MutableInt> counts = new HashMap<>();
 
         public FolderContext(Launcher launcher, Path basepath, String name) throws FileSystemException {

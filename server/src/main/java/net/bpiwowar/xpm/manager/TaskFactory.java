@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
@@ -30,7 +31,6 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.manager.scripting.Options;
-import net.bpiwowar.xpm.commands.Commands;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.util.HashMap;
@@ -191,13 +191,13 @@ public abstract class TaskFactory {
         return task.run(true, parameters);
     }
 
-    @Expose(context = true, value = "commands")
-    public Commands commands(LanguageContext cx, JsonObject json, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
+    @Expose(context = true, value = "command")
+    public AbstractCommand commands(LanguageContext cx, JsonObject json, Parameters... parameters) throws ValueMismatchException, NoSuchParameter {
         if (parameters.length > 0) throw new NotImplementedException();
         Map<String, Object> map = new HashMap<>();
         json.entrySet().forEach(e -> map.put(e.getKey(), e.getValue()));
         final JsonTask configure = configure(cx, map);
-        return configure.getCommands();
+        return configure.getCommand();
     }
 
     @Expose(context = true)
@@ -207,9 +207,9 @@ public abstract class TaskFactory {
         // Get parameters
         IdentityHashMap<Object, Parameters> pmap = new IdentityHashMap<>();
         Stream.of(parameters).forEach(p -> pmap.put(p.getKey(), p));
-        final Commands commands = task.commands(pmap);
+        final AbstractCommand command = task.commands(pmap);
 
-        return new JsonTask(task, commands);
+        return new JsonTask(task, command);
     }
 
     protected Task setParameters(LanguageContext cx, @Options Map<String, Object> map) {

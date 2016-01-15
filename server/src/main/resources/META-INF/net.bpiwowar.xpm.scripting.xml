@@ -24,7 +24,7 @@
         <class>net.bpiwowar.xpm.scheduler.Dependency</class>
         <class>net.bpiwowar.xpm.commands.Command</class>
         <class>net.bpiwowar.xpm.commands.Pipe</class>
-        <class>net.bpiwowar.xpm.commands.Command$CommandOutput</class>
+        <class>net.bpiwowar.xpm.commands.CommandOutput</class>
         <class>net.bpiwowar.xpm.commands.SubCommand</class>
         <class>net.bpiwowar.xpm.scheduler.Job</class>
 

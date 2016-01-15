@@ -56,6 +56,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
     private Long id;
     public static final String SELECT_QUERY = "SELECT id, type, data FROM Locks";
+    public static final String PROCESS_SELECT_QUERY = "SELECT id, type, data FROM Locks, ProcessLocks WHERE id = lock AND process=?";
 
     public Lock() {}
 

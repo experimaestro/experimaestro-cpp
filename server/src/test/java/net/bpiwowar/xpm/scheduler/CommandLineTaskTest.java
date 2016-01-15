@@ -45,7 +45,7 @@ public class CommandLineTaskTest extends XPMEnvironment {
         commands.addUnprotected("hello world");
         final Path locator = new File(testDir, "commandlinetask").toPath();
         final CommandLineTask commandLineTask = new CommandLineTask(locator);
-        commandLineTask.setCommands(commands);
+        commandLineTask.setCommand(commands);
         commandLineTask.setState(ResourceState.ON_HOLD);
 
         commandLineTask.save();
@@ -55,7 +55,7 @@ public class CommandLineTaskTest extends XPMEnvironment {
         Scheduler.get().resources().forget(id);
         final CommandLineTask retrieved = (CommandLineTask) Resource.getById(id);
 
-        Assert.assertTrue(retrieved.getCommands().equals(commands));
+        Assert.assertTrue(retrieved.getCommand().equals(commands));
     }
 
 }

@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.AbstractCommandBuilder;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.utils.arrays.ListAdaptator;
 

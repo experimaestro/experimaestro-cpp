@@ -18,9 +18,7 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
@@ -28,7 +26,6 @@ import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -36,22 +33,14 @@ import java.util.stream.Stream;
  * <p>
  */
 @Exposed
-public class Commands extends AbstractCommand implements Iterable<AbstractCommand> {
+public class Commands extends AbstractCommand  {
     final static private Logger LOGGER = Logger.getLogger();
     /**
-     * The list of commands status be executed
+     * The list of command status be executed
      * <p/>
-     * The commands can refer status each other
+     * The command can refer status each other
      */
     ArrayList<AbstractCommand> commands = new ArrayList<>();
-
-    /**
-     * List of dependencies attached to this command
-     * <p>
-     * The dependencies are not saved during serialization since this will be handled
-     * by the resource
-     */
-    transient private ArrayList<Dependency> dependencies = new ArrayList<>();
 
     /**
      * Default constructor (for DB serialization)
@@ -60,7 +49,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     }
 
     /**
-     * Construct with a set of commands
+     * Construct with a set of command
      */
     public Commands(AbstractCommand... commands) {
         this.commands = new ArrayList<>(Arrays.asList(commands));
@@ -68,8 +57,8 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
 
     static private void fillEdges(IdentityHashSet<AbstractCommand> graph, Map<AbstractCommand, Set<AbstractCommand>> forward_edges, Map<AbstractCommand, Set<AbstractCommand>> backwards_edges, AbstractCommand command) {
         command.allComponents().forEach(argument -> {
-            if (argument instanceof Command.CommandOutput) {
-                final AbstractCommand subCommand = ((Command.CommandOutput) argument).getCommand();
+            if (argument instanceof CommandOutput) {
+                final AbstractCommand subCommand = ((CommandOutput) argument).getCommand();
                 addDependency(graph, forward_edges, backwards_edges, command, subCommand);
             }
         });
@@ -86,7 +75,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     }
 
     /**
-     * Re-order the commands so that the dependencies are fulfilled
+     * Re-order the command so that the dependencies are fulfilled
      */
     public List<AbstractCommand> reorder() {
         final IdentityHashSet<AbstractCommand> graph = new IdentityHashSet<>();
@@ -96,22 +85,14 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         AbstractCommand previousCommand = null;
 
         for (AbstractCommand command : commands) {
-            // Adds constraints on the graph: the order of the commands should be respected
+            // Adds constraints on the graph: the order of the command should be respected
             if (previousCommand != null) {
                 add(forward_edges, previousCommand, command);
                 add(backwards_edges, command, previousCommand);
             }
             graph.add(command);
             previousCommand = command;
-
-            // Add the command to
-            if (command.outputRedirect == null)
-                command.outputRedirect = AbstractCommandBuilder.Redirect.INHERIT;
-            if (command.errorRedirect == null)
-                command.errorRedirect = AbstractCommandBuilder.Redirect.INHERIT;
-            if (command.inputRedirect == null)
-                command.inputRedirect = AbstractCommandBuilder.Redirect.INHERIT;
-
+            
             // Add all edges
             fillEdges(graph, forward_edges, backwards_edges, command);
         }
@@ -135,25 +116,10 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         fillEdges(graph, forward_edges, backwards_edges, from);
     }
 
-    @Expose("add_dependency")
-    public void addDependency(Dependency dependency) {
-        dependencies.add(dependency);
-    }
-
     public Stream<Dependency> dependencies() {
         // Process our dependencies
-        return Stream.concat(dependencies.stream(), commands.stream().flatMap(c -> c.dependencies()));
+        return Stream.concat(super.dependencies(), commands.stream().flatMap(AbstractCommand::dependencies));
     }
-
-    public void forEachDependency(Consumer<Dependency> consumer) {
-        // Process our dependencies
-        for (Dependency dependency : dependencies) {
-            consumer.accept(dependency);
-        }
-
-        commands.stream().forEach(c -> c.forEachDependency(consumer));
-    }
-
     @Override
     public Iterator<AbstractCommand> iterator() {
         return commands.iterator();
@@ -166,7 +132,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     @Override
     public String toString() {
         return "Commands{" +
-                "commands=" + commands +
+                "command=" + commands +
                 '}';
     }
 
@@ -184,12 +150,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
         return commands.stream().flatMap(AbstractCommand::allComponents);
     }
 
-    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-        for(AbstractCommand command: commands) {
-            consumer.accept(command);
-            command.forEachCommand(consumer);
-        }
-    }
+
 
     public void addUnprotected(String command) {
         add(new Command(new Unprotected(command)));
@@ -212,6 +173,34 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     @Override
     public int hashCode() {
         return Objects.hash(commands, dependencies);
+    }
+
+    @Override
+    public boolean needsProtection() {
+        return commands.size() > 1;
+    }
+
+    @Override
+    public Stream<AbstractCommand> commands() {
+        return Stream.concat(Stream.of(this), commands.stream().flatMap(AbstractCommand::commands));
+    }
+
+    /**
+     * Simplify the command
+     * @return A simplified command
+     */
+    public AbstractCommand simplify() {
+        for (int i = 0; i < commands.size(); i++) {
+            commands.set(i, commands.get(i).simplify());
+        }
+
+        if (commands.size() == 1) {
+            // Copy dependencies
+            final AbstractCommand command = commands.get(0);
+            copyToCommand(command);
+            return command;
+        }
+        return this;
     }
 
 }

@@ -24,6 +24,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.pastdev.jsch.nio.file.UnixSshFileSystem;
 import com.pastdev.jsch.nio.file.UnixSshSftpHybridFileSystemProvider;
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.FileLock;

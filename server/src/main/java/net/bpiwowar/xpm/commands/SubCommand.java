@@ -3,8 +3,8 @@ package net.bpiwowar.xpm.commands;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 
-import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * A sub-command whose output / input can be globally set
@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 @Exposed
 public class SubCommand implements CommandComponent {
     /**
-     * The commands
+     * The command
      */
     Commands commands;
 
@@ -38,20 +38,12 @@ public class SubCommand implements CommandComponent {
         return commands.dependencies();
     }
 
-    public void forEachDependency(Consumer<Dependency> consumer) {
-        commands.forEachDependency(consumer);
-    }
-
-    @Override
-    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-        for (AbstractCommand command : commands) {
-            consumer.accept(command);
-            command.forEachCommand(consumer);
-        }
-    }
-
-    public Commands commands() {
+    public Commands get() {
         return commands;
+    }
+
+    public Stream<AbstractCommand> commands() {
+        return StreamSupport.stream(commands.spliterator(), false);
     }
 
     @Override

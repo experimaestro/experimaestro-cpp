@@ -1,12 +1,12 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
@@ -80,8 +80,8 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return task;
     }
 
-    public Commands commands(HashMap<Object, Command.CommandOutput> streams, Task task, boolean simulate) {
-        // Add our commands
+    public Commands commands(HashMap<Object, CommandOutput> streams, Task task, boolean simulate) {
+        // Add our command
         Commands commands = build(task);
 
         // Check dependencies

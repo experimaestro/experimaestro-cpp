@@ -85,7 +85,7 @@ public class PythonRunner implements AutoCloseable {
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
 
-        LOGGER.info("Identity = %s", Py.getSystemState() == interpreterState);
+        LOGGER.trace("Identity = %s", Py.getSystemState() == interpreterState);
 
         // XPM module
         final PyModule xpmModule = imp.addModule("xpm");

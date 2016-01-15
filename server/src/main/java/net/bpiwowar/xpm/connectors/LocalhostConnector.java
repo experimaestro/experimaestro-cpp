@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.FileLock;
@@ -29,7 +30,6 @@ import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystems;

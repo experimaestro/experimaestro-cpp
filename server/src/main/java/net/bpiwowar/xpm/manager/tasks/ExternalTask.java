@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.manager.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
@@ -54,7 +55,7 @@ public class ExternalTask extends Task {
 
 
     @Override
-    public Commands _commands(HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    public Commands _commands(HashMap<Object, CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         final ScriptContext sc = ScriptContext.get();
         processInputs(sc);
         return externalFactory.commands(streams, this, false);
@@ -92,27 +93,29 @@ public class ExternalTask extends Task {
 
         try {
             final Resource old = Resource.getByLocator(path);
+            if (old != null) {
+                old.updateStatus();
+            }
             if (old != null && !old.canBeReplaced()) {
-
                 taskLogger.log(old.getState() == ResourceState.DONE ?
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
             } else {
                 // --- Build the command
-                Commands commands = commands(null);
+                AbstractCommand command = commands(null);
 
                 // --- Build the command
                 CommandLineTask job = new CommandLineTask(path);
-                job.setCommands(commands);
+                job.setCommand(command);
                 job.environment = new HashMap<>();
                 externalFactory.setEnvironment(json, job.environment);
 
-                commands.dependencies().forEach(job::addDependency);
+                command.dependencies().forEach(job::addDependency);
 
                 taskContext.prepare(job);
                 if (ScriptContext.get().simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", job.toString());
-                    pw.format("Command: %s%n", job.getCommands().toString());
+                    pw.format("Command: %s%n", job.getCommand().toString());
                     pw.format("Path: %s", path);
                     pw.flush();
                 } else {

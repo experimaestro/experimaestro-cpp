@@ -29,6 +29,9 @@ public class JsonParameterFile implements CommandComponent {
 
     @Override
     public void prepare(CommandContext environment) throws IOException {
+        if (environment.getData(this) != null) {
+            return;
+        }
         environment.setData(this, environment.getAuxiliaryFile(key, ".json"));
     }
 

@@ -20,19 +20,11 @@ package net.bpiwowar.xpm.commands;
 
 
 import com.google.common.collect.Iterables;
-import net.bpiwowar.xpm.commands.Pipe;
-import net.bpiwowar.xpm.commands.Unprotected;
-import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.commands.AbstractCommand;
-import net.bpiwowar.xpm.commands.Command;
-import net.bpiwowar.xpm.commands.CommandComponent;
-import net.bpiwowar.xpm.commands.CommandContext;
-import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.utils.Functional;
 
 import java.io.IOException;
@@ -48,10 +40,8 @@ import java.util.Map;
 
 import static java.lang.String.format;
 
-import net.bpiwowar.xpm.commands.SubCommand;
-
 /**
- * Class that knows how to build UNIX scripts to run commands
+ * Class that knows how to build UNIX scripts to run command
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -88,7 +78,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     private boolean doCleanup = true;
 
     /**
-     * Pre-process commands
+     * Pre-process command
      */
     private Commands preprocessCommands = null;
 
@@ -129,7 +119,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     }
 
     /**
-     * Sets end of job commands
+     * Sets end of job command
      */
     public void endOfJobCommands(Commands commands) {
         this.endOfJobCommands = commands;
@@ -142,8 +132,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final String baseName = runFile.getFileName().toString();
 
         try (CommandContext env = new CommandContext.FolderContext(launcher, basepath, baseName)) {
-            // Prepare the commands
-            commands().prepare(env);
+            // Prepare the command
+            command().prepare(env);
 
             // First generate the run file
             PrintWriter writer = new PrintWriter(Files.newOutputStream(runFile));
@@ -153,7 +143,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.format("# Experimaestro generated task: %s%n", path);
             writer.println();
 
-            // A command fails if any of the piped commands fail
+            // A command fails if any of the piped command fail
             writer.println("set -o pipefail");
             writer.println();
 
@@ -173,7 +163,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
             }
 
-            // Write some commands
+            // Write some command
             if (preprocessCommands != null) {
                 writeCommands(env, writer, preprocessCommands);
             }
@@ -192,7 +182,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             // Remove temporary files
-            commands().forEachCommand(Functional.propagate(c -> {
+            command().commands().forEach(Functional.propagate(c -> {
                 final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
                 for (Path file : Iterables.concat(namedRedirections.outputRedirections,
                         namedRedirections.errorRedirections)) {
@@ -250,8 +240,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             writer.println("(");
 
-            // The prepare all the commands
-            writeCommands(env, writer, commands());
+            // The prepare all the command
+            writeCommands(env, writer, command());
 
             writer.print(") ");
 
@@ -321,12 +311,12 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Write named pipes
             for (Path file : Iterables.concat(namedRedirections.outputRedirections, namedRedirections.errorRedirections)) {
-                writer.format("mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
+                writer.format(" mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
             if (command instanceof Commands) {
                 writer.println("(");
-                writeCommands(env, writer, (Commands) command);
+                writeCommands(env, writer, command);
                 writer.print(") ");
             } else {
                 for (CommandComponent argument : ((Command) command).components()) {
@@ -339,7 +329,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                         writer.print(" | ");
                     } else if (argument instanceof SubCommand) {
                         writer.println(" (");
-                        writeCommands(env, writer, ((SubCommand) argument).commands());
+                        writeCommands(env, writer, ((SubCommand) argument).get());
                         writer.println();
                         writer.print(" )");
                     } else {
@@ -369,12 +359,18 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     private void printRedirections(CommandContext env, int stream, PrintWriter writer, Redirect outputRedirect, List<Path> outputRedirects) throws IOException {
         if (!outputRedirects.isEmpty()) {
-            writer.format(" %d> >(tee", stream);
-            for (Path file : outputRedirects) {
-                writer.format(" \"%s\"", protect(env.resolve(file), QUOTED_SPECIAL));
+
+            // Special case : just one redirection
+            if (outputRedirects.size() == 1 && outputRedirect == null) {
+                writeRedirection(writer, Redirect.to(outputRedirects.get(0)), stream);
+            } else {
+                writer.format(" %d> >(tee", stream);
+                for (Path file : outputRedirects) {
+                    writer.format(" \"%s\"", protect(env.resolve(file), QUOTED_SPECIAL));
+                }
+                writeRedirection(writer, outputRedirect, stream);
+                writer.write(")");
             }
-            writeRedirection(writer, outputRedirect, stream);
-            writer.write(")");
         } else {
             // Finally, write the main redirection
             writeRedirection(writer, outputRedirect, stream);

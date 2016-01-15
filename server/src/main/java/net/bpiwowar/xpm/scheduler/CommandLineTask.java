@@ -18,7 +18,8 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.json.simple.JSONObject;
@@ -71,7 +72,7 @@ public class CommandLineTask extends Job {
     /**
      * The command status execute
      */
-    private Commands commands;
+    private AbstractCommand command;
 
     /**
      * The input source, if any (path from the main from)
@@ -126,7 +127,7 @@ public class CommandLineTask extends Job {
 
 
         // Write the input if needed
-        AbstractProcessBuilder.Redirect jobInput = AbstractCommandBuilder.Redirect.INHERIT;
+        Redirect jobInput = Redirect.INHERIT;
 
         Path jobInputPath = this.jobInputPath;
         if (jobInputString != null) {
@@ -138,19 +139,19 @@ public class CommandLineTask extends Job {
         }
 
         if (jobInputPath != null) {
-            jobInput = AbstractCommandBuilder.Redirect.from(jobInputPath);
+            jobInput = Redirect.from(jobInputPath);
         }
 
         if (jobOutputPath != null)
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(jobOutputPath));
+            builder.redirectOutput(Redirect.to(jobOutputPath));
         else
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(Resource.OUT_EXTENSION.transform(getLocator())));
+            builder.redirectOutput(Redirect.to(Resource.OUT_EXTENSION.transform(getLocator())));
 
         // Redirect output & error streams into corresponding files
         if (jobErrorPath != null)
-            builder.redirectError(AbstractCommandBuilder.Redirect.to(jobErrorPath));
+            builder.redirectError(Redirect.to(jobErrorPath));
         else
-            builder.redirectError(AbstractCommandBuilder.Redirect.to(Resource.ERR_EXTENSION.transform(getLocator())));
+            builder.redirectError(Redirect.to(Resource.ERR_EXTENSION.transform(getLocator())));
 
         builder.redirectInput(jobInput);
 
@@ -159,8 +160,8 @@ public class CommandLineTask extends Job {
         if (environment != null)
             builder.environment(environment);
 
-        // Add commands
-        builder.commands(commands);
+        // Add command
+        builder.command(command);
 
         builder.exitCodeFile(Resource.CODE_EXTENSION.transform(getLocator()));
         builder.doneFile(Resource.DONE_EXTENSION.transform(getLocator()));
@@ -173,7 +174,7 @@ public class CommandLineTask extends Job {
     public JSONObject toJSON() throws IOException {
         loadData();
         JSONObject info = super.toJSON();
-        info.put("command", commands.toString());
+        info.put("command", command.toString());
         info.put("working-directory", workingDirectory);
         info.put("environment", environment);
         return info;
@@ -207,9 +208,9 @@ public class CommandLineTask extends Job {
         this.jobErrorPath = errorPath;
     }
 
-    public Commands getCommands() {
+    public AbstractCommand getCommand() {
         loadData();
-        return commands;
+        return command;
     }
 
 
@@ -222,8 +223,8 @@ public class CommandLineTask extends Job {
     }
 
     @Override
-    public Stream<Dependency> dependencies() {
-        return commands.dependencies();
+    public Stream<? extends Dependency> dependencies() {
+        return command.dependencies();
     }
 
     @Override
@@ -231,7 +232,7 @@ public class CommandLineTask extends Job {
         return launcher.getNotificationURL() == null;
     }
 
-    public void setCommands(Commands commands) {
-        this.commands = commands;
+    public void setCommand(AbstractCommand command) {
+        this.command = command;
     }
 }

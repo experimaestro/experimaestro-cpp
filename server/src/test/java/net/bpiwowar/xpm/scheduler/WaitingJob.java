@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.utils.ThreadCount;
@@ -202,7 +201,7 @@ public class WaitingJob extends Job {
     }
 
     @Override
-    public Stream<Dependency> dependencies() {
+    public Stream<? extends Dependency> dependencies() {
         return Stream.of();
     }
 

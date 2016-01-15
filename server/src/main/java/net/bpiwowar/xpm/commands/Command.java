@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.commands;
  */
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import org.mozilla.javascript.NativeArray;
@@ -36,10 +37,12 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * A command line argument (or argument part)
@@ -130,6 +133,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public void prepare(CommandContext environment) {
+        super.prepare(environment);
         list.forEach(Functional.propagate(c -> c.prepare(environment)));
     }
 
@@ -157,20 +161,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return ImmutableList.of(this);
     }
 
-    public void forEachDependency(Consumer<Dependency> consumer) {
-        for (CommandComponent c : list) {
-            if (c instanceof SubCommand) {
-                ((SubCommand) c).forEachDependency(consumer);
-            }
-        }
-    }
-
-    @Override
-    public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-        for (CommandComponent component : list) {
-            component.forEachCommand(consumer);
-        }
-    }
 
     @Override
     public java.lang.String toString() {
@@ -234,51 +224,10 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return sb.toString();
     }
 
-
-    /**
-     * Used when the argument should be replaced by a pipe
-     */
-    @Exposed
-    public static class CommandOutput implements CommandComponent, Serializable {
-        /**
-         * The output
-         */
-        AbstractCommand command;
-
-        protected CommandOutput() {
-        }
-
-        public CommandOutput(AbstractCommand command) {
-            this.command = command;
-        }
-
-
-        @Override
-        public void prepare(CommandContext environment) throws IOException {
-            final java.nio.file.Path file = environment.getUniqueFile("command", ".pipe");
-            final Object o = environment.setData(this, file);
-            if (o != null) throw new RuntimeException("CommandOutput data should be null");
-            environment.getNamedRedirections(command, true).outputRedirections.add(file);
-            environment.detached(command, true);
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) throws IOException {
-            final Object data = environment.getData(this);
-            return environment.resolve((java.nio.file.Path) data);
-        }
-
-        @Override
-        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-            consumer.accept(command);
-            command.forEachCommand(consumer);
-        }
-
-        public AbstractCommand getCommand() {
-            return command;
-        }
+    @Override
+    public Iterator<AbstractCommand> iterator() {
+        return Iterators.singletonIterator(this);
     }
-
 
     @Override
     public boolean equals(Object o) {
@@ -293,5 +242,8 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return Objects.hash(list);
     }
 
-
+    @Override
+    public Stream<AbstractCommand> commands() {
+        return Stream.concat(Stream.of(this), components().stream().flatMap(CommandComponent::commands));
+    }
 }

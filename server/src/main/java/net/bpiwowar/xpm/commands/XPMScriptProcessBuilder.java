@@ -18,8 +18,6 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.commands.Commands;
-import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
 import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 
@@ -61,7 +59,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     /**
      * Commands
      */
-    private Commands commands;
+    private AbstractCommand command;
 
     /**
      * The notification URL if any
@@ -83,14 +81,14 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     }
 
     /**
-     * Sets the commands
+     * Sets the command
      */
-    public void commands(Commands commands) {
-        this.commands = commands;
+    public void command(AbstractCommand command) {
+        this.command = command;
     }
 
-    public Commands commands() {
-        return commands;
+    public AbstractCommand command() {
+        return this.command;
     }
 
     public abstract void removeLock(Path lockFile) throws IOException;

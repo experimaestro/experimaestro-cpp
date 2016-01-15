@@ -18,6 +18,9 @@ package net.bpiwowar.xpm.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.CommandOutput;
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.exceptions.ExperimaestroException;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
@@ -27,7 +30,6 @@ import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -380,40 +382,41 @@ public abstract class Task {
         return run(false, parameters);
     }
 
-    final public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    final public AbstractCommand commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         final Commands commands = new Commands();
 
         // Add streams and dependencies
-        final HashMap<Object, Command.CommandOutput> streams = new HashMap<>();
+        final HashMap<Object, CommandOutput> streams = new HashMap<>();
 
         getValues().values().stream()
                 .map(e -> e.get()).filter(e -> e instanceof JsonTask)
                 .forEach(e -> {
                     final JsonTask jsonTask = (JsonTask) e;
-                    // Add dependencies for these commands
-                    final Commands subcommands = jsonTask.getCommands();
+                    // Add dependencies for these command
+                    final AbstractCommand subcommand = jsonTask.getCommand();
                     commands.dependencies().forEach(commands::addDependency);
 
                     // Add the command
-                    commands.add(subcommands);
-//                    streams.put(null, subcommands.output());
+                    commands.add(subcommand);
+                    streams.put(null, subcommand.output());
                 });
 
 
         final Commands taskCommands = _commands(streams, parameters);
+        taskCommands.setOutputRedirect(Redirect.INHERIT);
 
         commands.add(taskCommands);
 
-        final Command.CommandOutput standardInput = streams.get(null);
+        final CommandOutput standardInput = streams.get(null);
         if (standardInput != null) {
             commands.setStandardInput(standardInput);
         }
 
-        return commands;
+        return commands.simplify();
     }
 
-    protected Commands _commands(HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
-        throw new UnsupportedOperationException("Cannot return commands for a task of type " + this.getClass());
+    protected Commands _commands(HashMap<Object, CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+        throw new UnsupportedOperationException("Cannot return command for a task of type " + this.getClass());
     }
 
     /**

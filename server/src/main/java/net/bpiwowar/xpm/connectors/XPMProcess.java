@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
@@ -45,6 +46,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -214,22 +216,21 @@ public abstract class XPMProcess {
         close();
 
         try {
-            if (locks != null) {
-                LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
-                while (!locks.isEmpty()) {
-                    final Lock lock = locks.get(locks.size() - 1);
-                    lock.close();
-                    locks.remove(locks.size() - 1);
-                }
-                locks = null;
+            locks = loadLocks();
+            LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
+            while (!locks.isEmpty()) {
+                final Lock lock = locks.get(locks.size() - 1);
+                lock.close();
+                locks.remove(locks.size() - 1);
             }
+            locks = null;
 
             if (inDatabase) {
                 Scheduler.statement("DELETE FROM Processes WHERE resource=?")
                         .setLong(1, job.getId())
                         .execute();
             }
-        } catch (SQLException e) {
+        } catch (SQLException | CloseException e) {
             throw new LockException(e);
         }
 
@@ -253,9 +254,9 @@ public abstract class XPMProcess {
     /**
      * Check if the job is running
      *
+     * @param checkFiles
      * @return True if the job is running
      * @throws Exception
-     * @param checkFiles
      */
     public boolean isRunning(boolean checkFiles) throws Exception {
         // We have no process, check
@@ -266,6 +267,7 @@ public abstract class XPMProcess {
 
     /**
      * Returns the error code
+     *
      * @param checkFile Whether to ask the process (if available) or look at the file
      */
     public int exitValue(boolean checkFile) {
@@ -296,6 +298,7 @@ public abstract class XPMProcess {
 
     /**
      * Asynchronous check the state of the job monitor
+     *
      * @param checkFiles Whether files should be checked rather than the process
      */
     synchronized public void check(boolean checkFiles) throws Exception {
@@ -305,7 +308,6 @@ public abstract class XPMProcess {
             final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
             Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(checkFiles), time));
-            dispose();
         }
     }
 
@@ -399,7 +401,7 @@ public abstract class XPMProcess {
     }
 
     public static XPMProcess load(Job job) throws SQLException {
-        try(PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT type, connector, pid, data FROM Processes WHERE resource=?")) {
             st.setLong(1, job.getId());
             st.execute();
             final ResultSet rs = st.getResultSet();
@@ -411,12 +413,24 @@ public abstract class XPMProcess {
 
 
             final XPMProcess process = REGISTRY.newInstance(type);
-            process.connector = (SingleHostConnector)Connector.findById(rs.getLong(2));
+            process.connector = (SingleHostConnector) Connector.findById(rs.getLong(2));
             process.pid = rs.getString(3);
             process.job = job;
+            process.inDatabase = true;
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));
             return process;
         }
+    }
+
+    private List<Lock> loadLocks() throws SQLException, CloseException {
+        if (locks == null) {
+            List<Lock> locks = new ArrayList<>();
+            try (final CloseableIterable<Lock> it = Scheduler.get().locks().find(Lock.PROCESS_SELECT_QUERY, st -> st.setLong(1, job.getId()))) {
+                it.forEach(locks::add);
+            }
+            return locks;
+        }
+        return locks;
     }
 
     public long exitTime() {

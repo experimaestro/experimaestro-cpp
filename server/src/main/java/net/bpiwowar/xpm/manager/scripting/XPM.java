@@ -27,6 +27,7 @@ import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandContext;
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.commands.Redirect;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
@@ -394,9 +395,9 @@ public class XPM {
 
             if (options.containsKey("stdout")) {
                 java.nio.file.Path stdout = getPath(commandConnector, unwrap(options.get("stdout")));
-                builder.redirectOutput(AbstractCommandBuilder.Redirect.to(stdout));
+                builder.redirectOutput(Redirect.to(stdout));
             } else {
-                builder.redirectOutput(AbstractCommandBuilder.Redirect.PIPE);
+                builder.redirectOutput(Redirect.PIPE);
             }
 
             return builder.execute(sc.getMainLogger());
@@ -430,7 +431,7 @@ public class XPM {
 
         job = new CommandLineTask((java.nio.file.Path) path);
 
-        job.setCommands(commands);
+        job.setCommand(commands);
         if (scriptContext.getSubmittedJobs().containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
             if (simulate()) {
@@ -546,7 +547,7 @@ public class XPM {
         if (simulate()) {
             PrintWriter pw = new LoggerPrintWriter(rootLogger, Level.INFO);
             pw.format("[SIMULATE] Starting job: %s%n", job.toString());
-            pw.format("Command: %s%n", job.getCommands().toString());
+            pw.format("Command: %s%n", job.getCommand().toString());
             pw.format("Locator: %s", path.toString());
             pw.flush();
         } else {

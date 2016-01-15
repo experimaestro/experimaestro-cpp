@@ -19,8 +19,10 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.CommandPath;
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -36,7 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Tests on commands
+ * Tests on command
  */
 public class CommandTest  {
 
@@ -60,7 +62,7 @@ public class CommandTest  {
 
             final Command subCommand = new Command();
             subCommand.add("/bin/cat", new CommandPath(dataPath));
-            final Command.CommandOutput output = subCommand.output();
+            final CommandOutput output = subCommand.output();
 
             command.add("/usr/bin/paste", output, output);
             commands.add(command);
@@ -73,13 +75,13 @@ public class CommandTest  {
             XPMScriptProcessBuilder builder = launcher.scriptProcessBuilder(runFile, null);
             builder.directory(directory.getFile().toPath());
 
-            // Add commands
-            builder.commands(commands);
+            // Add command
+            builder.command(commands);
 
-            builder.redirectInput(AbstractCommandBuilder.Redirect.INHERIT);
+            builder.redirectInput(Redirect.INHERIT);
             final Path out = connector.resolveFile(new File(directory.getFile(), "output").getAbsolutePath());
-            builder.redirectOutput(AbstractCommandBuilder.Redirect.to(out));
-            builder.redirectError(AbstractCommandBuilder.Redirect.INHERIT);
+            builder.redirectOutput(Redirect.to(out));
+            builder.redirectError(Redirect.INHERIT);
 
             final XPMProcess process = builder.start();
             int code = process.waitFor();
