@@ -41,6 +41,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -492,7 +493,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         private java.lang.String key;
 
         private Json json;
-
         private JsonParameterFile() {
         }
 
@@ -502,8 +502,13 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         }
 
         @Override
+        public void prepare(CommandContext environment) throws IOException {
+            environment.setData(this, environment.getAuxiliaryFile(key, ".json"));
+        }
+
+        @Override
         public java.lang.String toString(CommandContext environment) throws IOException {
-            java.nio.file.Path file = environment.getAuxiliaryFile(key, ".json");
+            java.nio.file.Path file = (java.nio.file.Path) environment.getData(this);
             try (OutputStream out = Files.newOutputStream(file);
                  OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
                 final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())

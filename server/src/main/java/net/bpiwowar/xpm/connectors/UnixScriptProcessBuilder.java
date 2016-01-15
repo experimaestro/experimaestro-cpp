@@ -307,11 +307,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
         final List<AbstractCommand> list = commands.reorder();
 
         int detached = 0;
-        final AbstractCommand standardInput = commands.getStandardInput();
-        if (standardInput != null) {
-            writeCommands(env, writer, standardInput);
-            writer.print(" | ");
-        }
 
         for (AbstractCommand command : list) {
             // Write files

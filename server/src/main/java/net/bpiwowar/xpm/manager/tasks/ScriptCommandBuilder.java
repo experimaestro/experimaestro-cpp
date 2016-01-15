@@ -22,7 +22,7 @@ public class ScriptCommandBuilder {
     public Commands build(Commands commands, Path scriptPath, Task task) {
         final Command command = new Command();
 
-        final Command.JsonParameterFile jsonParameter = new Command.JsonParameterFile("json", task.getInputsAsJson());
+        final Command.JsonParameterFile jsonParameter = new Command.JsonParameterFile("arg", task.getInputsAsJson());
 
         arguments.forEach(a -> a.process(this, command, scriptPath, jsonParameter));
 

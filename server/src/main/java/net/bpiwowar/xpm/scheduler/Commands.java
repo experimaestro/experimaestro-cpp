@@ -113,9 +113,8 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
 
             // Add all edges
             fillEdges(graph, forward_edges, backwards_edges, command);
-            final AbstractCommand standardInput = getStandardInput();
-            if (standardInput != null) {
-                addDependency(graph, forward_edges, backwards_edges, command, standardInput);
+            if (getStandardInput() != null) {
+                addDependency(graph, forward_edges, backwards_edges, command, getStandardInput().command);
             }
         }
         final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
@@ -175,6 +174,7 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     }
 
     public void prepare(CommandContext env) {
+        super.prepare(env);
         commands.forEach(c -> c.prepare(env));
     }
 

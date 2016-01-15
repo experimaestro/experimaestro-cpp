@@ -40,7 +40,7 @@ public class JavaCommandLauncher implements JavaCommandBuilder {
         command.add(Command.WorkingDirectory.INSTANCE);
 
         // Parameter file
-        command.add(new Command.JsonParameterFile("json", task.getInputsAsJson()));
+        command.add(new Command.JsonParameterFile("arg", task.getInputsAsJson()));
 
         return commands;
     }

@@ -396,6 +396,7 @@ public abstract class Task {
                     subcommands.dependencies().forEach(finalCommands::addDependency);
 
                     // Add the command
+                    finalCommands.add(subcommands);
                     streams.put(null, subcommands.output());
                 });
 
@@ -404,7 +405,7 @@ public abstract class Task {
 
         final Command.CommandOutput standardInput = streams.get(null);
         if (standardInput != null) {
-            commands.setStandardInput(standardInput.getCommand());
+            commands.setStandardInput(standardInput);
         }
 
         return commands;

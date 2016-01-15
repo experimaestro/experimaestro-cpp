@@ -19,10 +19,10 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import net.bpiwowar.xpm.connectors.Launcher;
-import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.commons.lang.mutable.MutableInt;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -30,6 +30,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 
 import static java.lang.String.format;
@@ -42,6 +43,7 @@ public abstract class CommandContext implements Closeable {
         public ArrayList<Path> outputRedirections = new ArrayList<>();
         public ArrayList<Path> errorRedirections = new ArrayList<>();
     }
+
     static private final NamedPipeRedirections EMPTY_REDIRECTIONS = new NamedPipeRedirections();
 
     private IdentityHashMap<AbstractCommand, NamedPipeRedirections> namedPipeRedirectionsMap
@@ -91,7 +93,6 @@ public abstract class CommandContext implements Closeable {
     abstract public String getWorkingDirectory() throws IOException;
 
 
-
     public Object getData(Object key) {
         return data.get(key);
     }
@@ -103,6 +104,7 @@ public abstract class CommandContext implements Closeable {
 
     /**
      * Get a unique file name using a counter
+     *
      * @param prefix The prefix
      * @param suffix The suffix
      * @return The file object
@@ -168,7 +170,7 @@ public abstract class CommandContext implements Closeable {
 
     /**
      * A folder-based environment.
-     *
+     * <p>
      * Will persist after the command has run.
      */
     static public class FolderContext extends CommandContext {
@@ -176,10 +178,13 @@ public abstract class CommandContext implements Closeable {
          * The base name for generated files
          */
         private final String name;
+
         /**
          * The base folder for this process
          */
         Path folder;
+
+        HashMap<String, MutableInt> counts = new HashMap<>();
 
         public FolderContext(Launcher launcher, Path basepath, String name) throws FileSystemException {
             super(launcher);
@@ -189,7 +194,15 @@ public abstract class CommandContext implements Closeable {
 
         @Override
         Path getAuxiliaryFile(String prefix, String suffix) throws FileSystemException {
-            return folder.resolve(format("%s.%s%s", name, prefix, suffix));
+            final String reference = format("%s.%s%s", name, prefix, suffix);
+            MutableInt count = counts.get(reference);
+            if (count == null) {
+                count = new MutableInt();
+                counts.put(reference, count);
+            } else {
+                count.increment();
+            }
+            return folder.resolve(format("%s_%02d.%s%s", name, count.intValue(), prefix, suffix));
         }
 
         @Override

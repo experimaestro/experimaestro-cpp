@@ -1007,6 +1007,7 @@ public class JsonRPCMethods extends HttpServlet {
                 map.put("type", resource.getClass().getCanonicalName());
                 map.put("state", resource.getState().toString());
                 map.put("name", resource.getLocator().toString());
+                map.put("id", resource.getId().toString());
                 list.add(map);
             }
         } catch (Exception e) {

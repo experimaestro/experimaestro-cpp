@@ -18,11 +18,13 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -51,10 +53,11 @@ public abstract class AbstractCommand {
      * Null indicates that the output should be discarded
      */
     AbstractCommandBuilder.Redirect errorRedirect = null;
+
     /**
      * Standard input
      */
-    AbstractCommand standardInput;
+    Command.CommandOutput standardInput;
 
     /**
      * Process each dependency contained in a command or subcommand
@@ -68,7 +71,15 @@ public abstract class AbstractCommand {
      */
     public abstract void forEachCommand(Consumer<? super AbstractCommand> consumer);
 
-    public abstract void prepare(CommandContext env);
+    void prepare(CommandContext env) {
+        if (standardInput != null) {
+            try {
+                standardInput.prepare(env);
+            } catch (IOException e) {
+                throw new XPMRuntimeException(e);
+            }
+        }
+    }
 
     protected AbstractCommand() {}
 
@@ -89,11 +100,11 @@ public abstract class AbstractCommand {
 
     public abstract Stream<? extends Dependency> dependencies();
 
-    public void setStandardInput(AbstractCommand standardInput) {
+    public void setStandardInput(Command.CommandOutput standardInput) {
         this.standardInput = standardInput;
     }
 
-    public AbstractCommand getStandardInput() {
+    public Command.CommandOutput getStandardInput() {
         return standardInput;
     }
 
