@@ -26,6 +26,7 @@ import net.bpiwowar.xpm.scheduler.EndOfJobMessage;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
@@ -211,6 +212,7 @@ public abstract class XPMProcess {
      */
     synchronized public void dispose() throws LockException {
         close();
+
         try {
             if (locks != null) {
                 LOGGER.info("Disposing of %d locks for %s", locks.size(), this);
@@ -415,11 +417,6 @@ public abstract class XPMProcess {
             DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, process, rs.getBinaryStream(4));
             return process;
         }
-    }
-
-
-    public void delete() throws SQLException {
-        Scheduler.statement("DELETE FROM Processes WHERE resource=?").setLong(1, job.getId()).execute();
     }
 
     public long exitTime() {

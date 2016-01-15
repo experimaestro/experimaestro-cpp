@@ -20,16 +20,20 @@ package net.bpiwowar.xpm.scheduler;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.FileLock;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.utils.*;
+import net.bpiwowar.xpm.utils.FileNameTransformer;
+import net.bpiwowar.xpm.utils.GsonSerialization;
+import net.bpiwowar.xpm.utils.Holder;
+import net.bpiwowar.xpm.utils.ProcessUtils;
+import net.bpiwowar.xpm.utils.Time;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -81,7 +85,6 @@ abstract public class Job extends Resource {
     public Job(Path path) {
         super(path);
         jobData = new JobData(this);
-        process = new Holder<>();
     }
 
     /**
@@ -110,7 +113,11 @@ abstract public class Job extends Resource {
             final XPMProcess process = getProcess();
             if (process != null) {
                 LOGGER.error("Removing stale process");
-                process.delete();
+                try {
+                    process.dispose();
+                } catch (LockException e) {
+                    throw new SQLException(e);
+                }
             }
         }
         super.delete(recursive);
@@ -180,7 +187,11 @@ abstract public class Job extends Resource {
         if (process != null) {
             process.save();
         } else {
-            this.process.get().delete();
+            try {
+                this.process.get().dispose();
+            } catch (LockException e) {
+                throw new SQLException(e);
+            }
         }
         this.process.set(process);
     }
@@ -191,7 +202,7 @@ abstract public class Job extends Resource {
 
     /**
      * Checks that no process is currently running, and update the job state accordingly.
-     *
+     * <p>
      * This is mostly used when the database was corrupted.
      *
      * @return true if a no process is running, false
@@ -595,6 +606,7 @@ abstract public class Job extends Resource {
         // Check the done file
         final Path path = getLocator();
         final Path doneFile = DONE_EXTENSION.transform(path);
+        final XPMProcess process = getProcess();
 
         if (Files.exists(doneFile)) {
             if (getState() != ResourceState.DONE) {
@@ -609,7 +621,6 @@ abstract public class Job extends Resource {
                 changes = true;
                 this.setState(ResourceState.WAITING);
             } else if (getState() == ResourceState.RUNNING) {
-                final XPMProcess process = getProcess();
                 if (process != null) {
                     if (!process.isRunning(true)) {
                         Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
@@ -617,6 +628,19 @@ abstract public class Job extends Resource {
                 }
             }
         }
+
+        // If DONE or ERROR, check that process is removed
+        if (process != null && (getState() == ResourceState.DONE || getState() == ResourceState.ERROR)) {
+            if (process.isRunning(true)) {
+                LOGGER.error("Incoherency: process is running but resource is DONE/ERROR");
+                setState(ResourceState.RUNNING);
+                return true;
+            }
+
+            LOGGER.warn("Removing dandling process for %s", this);
+            setProcess(null);
+        }
+
 
         // Check dependencies if we are in waiting or ready
         if (getState() == ResourceState.WAITING || getState() == ResourceState.READY || getState() == ResourceState.ON_HOLD) {
@@ -726,6 +750,10 @@ abstract public class Job extends Resource {
     }
 
     public XPMProcess getProcess() {
+        if (getId() == null) {
+            return null;
+        }
+
         if (process == null) {
             try {
                 process = new Holder(XPMProcess.load(this));
@@ -779,7 +807,7 @@ abstract public class Job extends Resource {
         return start(locks, false);
     }
 
-    public abstract Stream<Dependency> dependencies();
+    public abstract Stream<? extends Dependency> dependencies();
 
     public int getNbUnsatisfied() {
         return jobData().getNbUnsatisfied();

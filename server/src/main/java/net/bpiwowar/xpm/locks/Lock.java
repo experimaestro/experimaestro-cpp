@@ -55,6 +55,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
             = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
 
     private Long id;
+    public static final String SELECT_QUERY = "SELECT id, type, data FROM Locks";
 
     public Lock() {}
 
@@ -116,8 +117,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
     }
 
     public static Lock findById(long id) throws SQLException {
-        final String query = format("SELECT id, type, data FROM Locks  WHERE id=?");
-        return Scheduler.get().locks().findUnique(query, st -> st.setLong(1, id));
+        return Scheduler.get().locks().findUnique(SELECT_QUERY + " WHERE id=?", st -> st.setLong(1, id));
     }
 
     public static Lock create(DatabaseObjects<Lock> db, ResultSet rs) {
