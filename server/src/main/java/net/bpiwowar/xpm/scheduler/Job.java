@@ -35,6 +35,7 @@ import net.bpiwowar.xpm.utils.log.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
@@ -457,7 +458,6 @@ abstract public class Job extends Resource {
         try {
             if (getProcess() != null) {
                 LOGGER.debug("Disposing of old XPM process [%s]", getProcess());
-                getProcess().dispose();
                 setProcess(null);
             } else {
                 LOGGER.warn("There was no XPM process attached...");
@@ -606,18 +606,23 @@ abstract public class Job extends Resource {
         // Check the done file
         final Path path = getLocator();
         final Path doneFile = DONE_EXTENSION.transform(path);
+        final Path codeFile = CODE_EXTENSION.transform(path);
         final XPMProcess process = getProcess();
 
-        if (Files.exists(doneFile)) {
-            if (getState() != ResourceState.DONE) {
+        if (Files.exists(codeFile)) {
+            final ResourceState newState;
+            try (final BufferedReader bufferedReader = Files.newBufferedReader(codeFile)) {
+                int code = Integer.parseInt(bufferedReader.readLine());
+                newState = code == 0 ? ResourceState.DONE : ResourceState.ERROR;
+            }
+            if (setState(newState)) {
                 changes = true;
                 if (this instanceof Job) {
-                    jobData().setEndTimestamp(Files.getLastModifiedTime(doneFile).toMillis());
+                    jobData().setEndTimestamp(Files.getLastModifiedTime(codeFile).toMillis());
                 }
-                this.setState(ResourceState.DONE);
             }
         } else {
-            if (getState() == ResourceState.DONE) {
+            if (getState().isFinished()) {
                 changes = true;
                 this.setState(ResourceState.WAITING);
             } else if (getState() == ResourceState.RUNNING) {

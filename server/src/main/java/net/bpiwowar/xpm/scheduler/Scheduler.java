@@ -261,6 +261,9 @@ final public class Scheduler {
             // Add a shutdown hook
             Runtime.getRuntime().addShutdownHook(new Thread(Scheduler.this::close));
 
+            // Cleanup dandling processes
+
+
             // Start the thread that notify dependencies
             LOGGER.info("Starting the notifier thread");
             notifier = new Notifier();

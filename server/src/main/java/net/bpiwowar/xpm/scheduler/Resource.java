@@ -515,6 +515,12 @@ public class Resource implements Identifiable {
             throw new ExperimaestroCannotOverwrite("Path %s and %s differ", resource.getLocator(), getLocator());
         }
 
+        updateStatus(); // Update before
+        if (!canBeReplaced()) {
+            throw new ExperimaestroCannotOverwrite("Cannot replace %s", this);
+        }
+
+        this.clean();
         resource.save(Scheduler.get().resources(), this);
 
         // Not in DB anymore
@@ -616,7 +622,6 @@ public class Resource implements Identifiable {
             Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
         }
 
-        // Notify scheduler if job is ready
         if (getState() == ResourceState.READY) {
             LOGGER.debug("Job is READY, notifying");
             Scheduler.notifyRunners();
