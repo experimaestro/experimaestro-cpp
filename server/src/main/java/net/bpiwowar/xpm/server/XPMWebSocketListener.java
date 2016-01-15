@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.server;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import net.bpiwowar.xpm.manager.Repositories;
@@ -44,7 +45,12 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
             @Override
             public void sendJSONString(String message) throws IOException {
                 try {
-                    getRemote().sendString(message);
+                    final RemoteEndpoint remote = getRemote();
+                    if (remote != null) {
+                        remote.sendString(message);
+                    } else {
+                        LOGGER.info("Could not send message: %s", message);
+                    }
                 } catch(IllegalStateException e) {
                     // Ignore: remote can be blocking
                 }
