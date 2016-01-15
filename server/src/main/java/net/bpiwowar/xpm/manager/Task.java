@@ -398,6 +398,7 @@ public abstract class Task {
 
                     // Add the command
                     commands.add(subcommand);
+                    subcommand.setOutputRedirect(null);
                     streams.put(null, subcommand.output());
                 });
 

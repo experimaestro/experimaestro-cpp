@@ -151,6 +151,13 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
         if (command.getStandardInput() == null) {
             command.setStandardInput(getStandardInput());
         }
+
+        if (command.outputRedirect == null) {
+            command.outputRedirect = outputRedirect;
+        }
+        if (command.errorRedirect == null) {
+            command.errorRedirect = errorRedirect;
+        }
     }
 
     public void setErrorRedirect(Redirect errorRedirect) {
