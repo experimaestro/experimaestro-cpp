@@ -314,6 +314,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.format(" mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
             }
 
+            if (command.inputRedirect != null && command.inputRedirect.type() == Redirect.Type.READ) {
+                writer.format("cat \"%s\" | ", protect(env.resolve(command.inputRedirect.file()), QUOTED_SPECIAL));
+            }
+
             if (command instanceof Commands) {
                 writer.println("(");
                 writeCommands(env, writer, command);

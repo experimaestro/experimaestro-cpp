@@ -4,6 +4,7 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -36,8 +37,12 @@ public class CommandOutput implements CommandComponent, Serializable {
 
     @Override
     public String toString(CommandContext environment) throws IOException {
-        final Object data = environment.getData(this);
-        return environment.resolve((java.nio.file.Path) data);
+        final Path path = getFile(environment);
+        return environment.resolve(path);
+    }
+
+    public Path getFile(CommandContext environment) {
+        return (Path) environment.getData(this);
     }
 
     @Override

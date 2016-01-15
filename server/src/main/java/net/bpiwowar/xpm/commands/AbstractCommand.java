@@ -82,6 +82,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
         if (standardInput != null) {
             try {
                 standardInput.prepare(env);
+                inputRedirect = Redirect.from(standardInput.getFile(env));
             } catch (IOException e) {
                 throw new XPMRuntimeException(e);
             }

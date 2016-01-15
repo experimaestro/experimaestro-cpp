@@ -394,11 +394,10 @@ public abstract class Task {
                     final JsonTask jsonTask = (JsonTask) e;
                     // Add dependencies for these command
                     final AbstractCommand subcommand = jsonTask.getCommand();
-                    commands.dependencies().forEach(commands::addDependency);
 
-                    // Add the command
-                    commands.add(subcommand);
+                    subcommand.dependencies().forEach(commands::addDependency);
                     subcommand.setOutputRedirect(null);
+                    commands.add(subcommand);
                     streams.put(null, subcommand.output());
                 });
 
@@ -410,7 +409,7 @@ public abstract class Task {
 
         final CommandOutput standardInput = streams.get(null);
         if (standardInput != null) {
-            commands.setStandardInput(standardInput);
+            taskCommands.setStandardInput(standardInput);
         }
 
         return commands.simplify();
