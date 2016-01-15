@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.connectors;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -19,6 +19,9 @@ package net.bpiwowar.xpm.connectors;
  */
 
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
+import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
+import net.bpiwowar.xpm.connectors.Launcher;
 
 import java.io.IOException;
 import java.net.URL;

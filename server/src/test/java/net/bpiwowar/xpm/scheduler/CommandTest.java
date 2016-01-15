@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.scheduler;
 import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandPath;
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import net.bpiwowar.xpm.connectors.*;

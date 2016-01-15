@@ -48,8 +48,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
 
 /**
  * SSH connector backed up by jsch-nio

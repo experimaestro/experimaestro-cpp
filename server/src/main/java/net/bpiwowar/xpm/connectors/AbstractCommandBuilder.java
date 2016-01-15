@@ -43,7 +43,7 @@ public abstract class AbstractCommandBuilder {
     /**
      * The associated job
      */
-    Job job;
+    protected Job job;
 
     /**
      * Working directory

@@ -18,6 +18,8 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
+import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.w3c.dom.Document;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -46,8 +48,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line launcher with OAR

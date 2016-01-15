@@ -42,8 +42,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
 
 /**
  * This class represents any layer that can get between a host where files can be stored

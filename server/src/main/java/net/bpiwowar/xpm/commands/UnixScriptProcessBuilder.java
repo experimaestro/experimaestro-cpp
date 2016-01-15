@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.connectors;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -22,6 +22,10 @@ package net.bpiwowar.xpm.connectors;
 import com.google.common.collect.Iterables;
 import net.bpiwowar.xpm.commands.Pipe;
 import net.bpiwowar.xpm.commands.Unprotected;
+import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
+import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.commands.AbstractCommand;

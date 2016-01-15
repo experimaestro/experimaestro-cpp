@@ -19,6 +19,8 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
+import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import org.json.simple.JSONObject;
 import net.bpiwowar.xpm.connectors.*;
 import net.bpiwowar.xpm.locks.Lock;
@@ -35,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static net.bpiwowar.xpm.connectors.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
 
 /**
  * A command line task (executed with the default shell)
