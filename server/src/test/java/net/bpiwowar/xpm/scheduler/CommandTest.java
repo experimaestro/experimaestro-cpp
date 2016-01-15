@@ -18,6 +18,9 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.CommandPath;
+import net.bpiwowar.xpm.commands.Commands;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import net.bpiwowar.xpm.connectors.*;
@@ -55,7 +58,7 @@ public class CommandTest  {
 
 
             final Command subCommand = new Command();
-            subCommand.add("/bin/cat", new Command.Path(dataPath));
+            subCommand.add("/bin/cat", new CommandPath(dataPath));
             final Command.CommandOutput output = subCommand.output();
 
             command.add("/usr/bin/paste", output, output);

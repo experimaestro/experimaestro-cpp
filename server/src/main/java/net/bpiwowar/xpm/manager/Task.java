@@ -27,8 +27,8 @@ import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.scheduler.Command;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -381,27 +381,28 @@ public abstract class Task {
     }
 
     final public Commands commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
-        Commands commands = new Commands();
+        final Commands commands = new Commands();
 
         // Add streams and dependencies
         final HashMap<Object, Command.CommandOutput> streams = new HashMap<>();
 
-        final Commands finalCommands = commands;
         getValues().values().stream()
                 .map(e -> e.get()).filter(e -> e instanceof JsonTask)
                 .forEach(e -> {
                     final JsonTask jsonTask = (JsonTask) e;
                     // Add dependencies for these commands
                     final Commands subcommands = jsonTask.getCommands();
-                    subcommands.dependencies().forEach(finalCommands::addDependency);
+                    commands.dependencies().forEach(commands::addDependency);
 
                     // Add the command
-                    finalCommands.add(subcommands);
-                    streams.put(null, subcommands.output());
+                    commands.add(subcommands);
+//                    streams.put(null, subcommands.output());
                 });
 
 
-        commands = _commands(commands, streams, parameters);
+        final Commands taskCommands = _commands(streams, parameters);
+
+        commands.add(taskCommands);
 
         final Command.CommandOutput standardInput = streams.get(null);
         if (standardInput != null) {
@@ -411,7 +412,7 @@ public abstract class Task {
         return commands;
     }
 
-    protected Commands _commands(Commands commands, HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    protected Commands _commands(HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         throw new UnsupportedOperationException("Cannot return commands for a task of type " + this.getClass());
     }
 

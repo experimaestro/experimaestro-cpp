@@ -6,8 +6,8 @@ import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.scheduler.Command;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -80,9 +80,9 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return task;
     }
 
-    public Commands commands(Commands commands, HashMap<Object, Command.CommandOutput> streams, Task task, boolean simulate) {
+    public Commands commands(HashMap<Object, Command.CommandOutput> streams, Task task, boolean simulate) {
         // Add our commands
-        build(commands, task);
+        Commands commands = build(task);
 
         // Check dependencies
         if (!simulate) {
@@ -118,7 +118,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return commands;
     }
 
-    protected abstract Commands build(Commands commands, Task task);
+    protected abstract Commands build(Task task);
 
     public abstract void setEnvironment(JsonObject json, Map<String, String> environment);
 }

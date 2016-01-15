@@ -1,12 +1,14 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import net.bpiwowar.xpm.commands.JsonParameterFile;
+import net.bpiwowar.xpm.commands.WorkingDirectory;
 import net.bpiwowar.xpm.manager.Task;
 import org.apache.commons.lang.SystemUtils;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonString;
-import net.bpiwowar.xpm.scheduler.Command;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.Commands;
 
 import java.util.Map;
 
@@ -25,8 +27,9 @@ public class JavaCommandLauncher implements JavaCommandBuilder {
     }
 
     @Override
-    public Commands build(Commands commands, String taskClassname, Task task) {
+    public Commands build(String taskClassname, Task task) {
         final Command command = new Command();
+        final Commands commands = new Commands();
 
         commands.add(command);
 
@@ -37,10 +40,10 @@ public class JavaCommandLauncher implements JavaCommandBuilder {
         command.add(taskClassname);
 
         // Working directory
-        command.add(Command.WorkingDirectory.INSTANCE);
+        command.add(WorkingDirectory.INSTANCE);
 
         // Parameter file
-        command.add(new Command.JsonParameterFile("arg", task.getInputsAsJson()));
+        command.add(new JsonParameterFile("arg", task.getInputsAsJson()));
 
         return commands;
     }

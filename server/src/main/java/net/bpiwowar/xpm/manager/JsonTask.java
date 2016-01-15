@@ -9,14 +9,11 @@ import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.manager.scripting.Property;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.scheduler.Dependency;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Map;
 import java.util.stream.Stream;
 
 /**

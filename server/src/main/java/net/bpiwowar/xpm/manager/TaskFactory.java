@@ -30,7 +30,7 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.manager.scripting.Options;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Commands;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.util.HashMap;

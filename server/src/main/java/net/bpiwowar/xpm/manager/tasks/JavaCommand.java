@@ -1,11 +1,15 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import net.bpiwowar.xpm.commands.CommandPath;
+import net.bpiwowar.xpm.commands.CommandString;
+import net.bpiwowar.xpm.commands.JsonParameterFile;
+import net.bpiwowar.xpm.commands.WorkingDirectory;
 import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonString;
-import net.bpiwowar.xpm.scheduler.Command;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.Commands;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -22,16 +26,17 @@ public class JavaCommand implements JavaCommandBuilder {
     }
 
     @Override
-    public Commands build(Commands commands, String taskClassname, Task task) {
-        final Command command = new Command();
+    public Commands build(String taskClassname, Task task) {
+        final Commands commands = new Commands();
 
+        final Command command = new Command();
         commands.add(command);
 
         Command classpath = new Command();
 
         Arrays.asList(this.classpath).stream().forEach(f -> {
-            classpath.add(new Command.Path(f));
-            classpath.add(new Command.String(":"));
+            classpath.add(new CommandPath(f));
+            classpath.add(new CommandString(":"));
         });
 
         command.add("java", "-cp");
@@ -54,10 +59,10 @@ public class JavaCommand implements JavaCommandBuilder {
         command.add(Runner.class.getName());
 
         // Working directory
-        command.add(Command.WorkingDirectory.INSTANCE);
+        command.add(WorkingDirectory.INSTANCE);
 
         // Parameter file
-        command.add(new Command.JsonParameterFile("arg", task.getInputsAsJson()));
+        command.add(new JsonParameterFile("arg", task.getInputsAsJson()));
 
         return commands;
     }

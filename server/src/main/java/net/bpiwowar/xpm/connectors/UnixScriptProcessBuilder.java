@@ -20,13 +20,15 @@ package net.bpiwowar.xpm.connectors;
 
 
 import com.google.common.collect.Iterables;
+import net.bpiwowar.xpm.commands.Pipe;
+import net.bpiwowar.xpm.commands.Unprotected;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.scheduler.AbstractCommand;
-import net.bpiwowar.xpm.scheduler.Command;
-import net.bpiwowar.xpm.scheduler.CommandComponent;
-import net.bpiwowar.xpm.scheduler.CommandContext;
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.AbstractCommand;
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.CommandComponent;
+import net.bpiwowar.xpm.commands.CommandContext;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.utils.Functional;
 
 import java.io.IOException;
@@ -41,7 +43,8 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.scheduler.Command.SubCommand;
+
+import net.bpiwowar.xpm.commands.SubCommand;
 
 /**
  * Class that knows how to build UNIX scripts to run commands
@@ -323,12 +326,12 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writer.print(") ");
             } else {
                 for (CommandComponent argument : ((Command) command).components()) {
-                    if (argument instanceof Command.Unprotected) {
+                    if (argument instanceof Unprotected) {
                         writer.print(argument.toString(env));
                     }
 
                     writer.print(' ');
-                    if (argument instanceof Command.Pipe) {
+                    if (argument instanceof Pipe) {
                         writer.print(" | ");
                     } else if (argument instanceof SubCommand) {
                         writer.println(" (");

@@ -6,8 +6,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
+import net.bpiwowar.xpm.commands.JsonParameterFile;
 import net.bpiwowar.xpm.exceptions.XPMAssertionError;
-import net.bpiwowar.xpm.scheduler.Command;
+import net.bpiwowar.xpm.commands.Command;
 
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -16,7 +17,7 @@ import java.nio.file.Path;
  * Represents a command line argument
  */
 public interface CommandArgument {
-    void process(ScriptCommandBuilder builder, Command command, Path scriptPath, Command.JsonParameterFile jsonParameter);
+    void process(ScriptCommandBuilder builder, Command command, Path scriptPath, JsonParameterFile jsonParameter);
 
     class CommandString implements CommandArgument {
         String string;
@@ -26,7 +27,7 @@ public interface CommandArgument {
         }
 
         @Override
-        public void process(ScriptCommandBuilder builder, Command command, Path scriptPath, Command.JsonParameterFile jsonParameter) {
+        public void process(ScriptCommandBuilder builder, Command command, Path scriptPath, JsonParameterFile jsonParameter) {
             command.add(string);
         }
     }
@@ -43,7 +44,7 @@ public interface CommandArgument {
         }
 
         @Override
-        public void process(ScriptCommandBuilder builder, Command command, Path scriptPath, Command.JsonParameterFile jsonParameter) {
+        public void process(ScriptCommandBuilder builder, Command command, Path scriptPath, JsonParameterFile jsonParameter) {
             switch (variable) {
                 case script:
                     command.add(scriptPath);

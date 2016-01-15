@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.scheduler;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.io.IOException;

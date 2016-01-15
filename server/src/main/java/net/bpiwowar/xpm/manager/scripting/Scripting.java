@@ -18,13 +18,13 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Pipe;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.scheduler.Command;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -98,7 +98,7 @@ public class Scripting {
     }
 
     public static void forEachConstant(BiConsumer<String, Object> f) {
-        f.accept("PIPE", Command.Pipe.getInstance());
+        f.accept("PIPE", Pipe.getInstance());
         f.accept("xp", Constants.EXPERIMAESTRO_NS_OBJECT);
     }
 

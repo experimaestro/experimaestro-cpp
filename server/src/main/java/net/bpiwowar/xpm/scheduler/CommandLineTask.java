@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Commands;
 import org.json.simple.JSONObject;
 import net.bpiwowar.xpm.connectors.*;
 import net.bpiwowar.xpm.locks.Lock;

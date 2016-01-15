@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.scheduler;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.

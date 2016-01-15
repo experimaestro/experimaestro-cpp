@@ -18,7 +18,7 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.scheduler.Commands;
+import net.bpiwowar.xpm.commands.Commands;
 
 import java.io.IOException;
 import java.net.URL;

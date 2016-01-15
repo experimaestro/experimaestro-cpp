@@ -20,11 +20,11 @@ package net.bpiwowar.xpm.manager.json;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.manager.QName;
 import net.bpiwowar.xpm.manager.scripting.*;
-import net.bpiwowar.xpm.scheduler.Command;
 import net.bpiwowar.xpm.scheduler.Resource;
 
 import java.io.*;
@@ -134,7 +134,7 @@ abstract public class Json {
 
     @Expose(value = "as_parameter_file", optional = 1)
     @Help("Creates a parameter file from this JSON")
-    public Command.ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
+    public ParameterFile asParameterFile(String id, SingleHostConnector connector) throws IOException {
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         if (connector == null) {
             connector = ScriptContext.get().getConnector().getMainConnector();
@@ -154,7 +154,7 @@ abstract public class Json {
                 });
         writeDescriptorString(writer, options);
         writer.flush();
-        return new Command.ParameterFile(id, bytes.toByteArray());
+        return new ParameterFile(id, bytes.toByteArray());
     }
 
     /**

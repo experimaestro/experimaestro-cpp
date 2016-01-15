@@ -18,6 +18,8 @@ package net.bpiwowar.xpm.manager.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Command;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import org.apache.log4j.Level;
@@ -52,10 +54,10 @@ public class ExternalTask extends Task {
 
 
     @Override
-    public Commands _commands(Commands commands, HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    public Commands _commands(HashMap<Object, Command.CommandOutput> streams, IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         final ScriptContext sc = ScriptContext.get();
         processInputs(sc);
-        return externalFactory.commands(commands, streams, this, false);
+        return externalFactory.commands(streams, this, false);
     }
 
     @Override

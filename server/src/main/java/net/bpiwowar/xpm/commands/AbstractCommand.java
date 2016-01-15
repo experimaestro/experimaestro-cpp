@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.scheduler;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -22,6 +22,7 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.io.IOException;

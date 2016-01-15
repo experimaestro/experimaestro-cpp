@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.scheduler;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.scheduler;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.connectors.AbstractCommandBuilder;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
 import net.bpiwowar.xpm.utils.Output;
@@ -113,9 +114,9 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
 
             // Add all edges
             fillEdges(graph, forward_edges, backwards_edges, command);
-            if (getStandardInput() != null) {
-                addDependency(graph, forward_edges, backwards_edges, command, getStandardInput().command);
-            }
+        }
+        if (getStandardInput() != null) {
+            addDependency(graph, forward_edges, backwards_edges, this, getStandardInput().command);
         }
         final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
         if (graph.iterator().hasNext()) {
@@ -191,12 +192,13 @@ public class Commands extends AbstractCommand implements Iterable<AbstractComman
     }
 
     public void addUnprotected(String command) {
-        add(new Command(new Command.Unprotected(command)));
+        add(new Command(new Unprotected(command)));
     }
 
     public AbstractCommand get(int i) {
         return commands.get(i);
     }
+
 
     @Override
     public boolean equals(Object o) {

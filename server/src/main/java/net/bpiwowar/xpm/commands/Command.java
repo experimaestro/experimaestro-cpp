@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.scheduler;
+package net.bpiwowar.xpm.commands;
 
 /*
  * This file is part of experimaestro.
@@ -19,16 +19,11 @@ package net.bpiwowar.xpm.scheduler;
  */
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.gson.annotations.JsonAdapter;
-import net.bpiwowar.xpm.manager.json.JsonWriterMode;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import org.mozilla.javascript.NativeArray;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.js.JSParameterFile;
-import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonPath;
-import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
@@ -37,11 +32,7 @@ import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -73,7 +64,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         list = new ArrayList<>(Arrays.asList(c));
     }
     public Command(java.lang.String... c) {
-        list = new ArrayList<>(Lists.transform(Arrays.asList(c), s -> new String(s)));
+        list = new ArrayList<>(Lists.transform(Arrays.asList(c), s -> new CommandString(s)));
     }
 
     public Command(Collection<? extends CommandComponent> c) {
@@ -84,7 +75,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
      * Transform an array of JS objects into a command line argument object
      *
      * @param array The input array
-     * @return a valid {@linkplain net.bpiwowar.xpm.scheduler.Command} object
+     * @return a valid {@linkplain Command} object
      */
     @Expose
     public static Command getCommand(List array) {
@@ -125,13 +116,13 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
                 command.add(sb.toString());
                 sb.delete(0, sb.length());
             }
-            command.add(new Command.Path((java.nio.file.Path) object));
+            command.add(new CommandPath((java.nio.file.Path) object));
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
                 argumentWalkThrough(sb, command, JSUtils.unwrap(child));
         } else if (object instanceof JSParameterFile) {
             final JSParameterFile pFile = (JSParameterFile) object;
-            command.add(new Command.ParameterFile(pFile.getKey(), pFile.getValue()));
+            command.add(new ParameterFile(pFile.getKey(), pFile.getValue()));
         } else {
             sb.append(JSUtils.toString(object));
         }
@@ -215,7 +206,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Expose
     public void add(java.lang.String... arguments) {
-        Arrays.asList(arguments).forEach(t -> add(new String(t)));
+        Arrays.asList(arguments).forEach(t -> add(new CommandString(t)));
     }
 
     @Expose
@@ -227,11 +218,11 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             } else if (t instanceof CommandComponent) {
                 list.add((CommandComponent) t);
             } else if (t instanceof java.nio.file.Path) {
-                list.add(new Path((java.nio.file.Path) t));
+                list.add(new CommandPath((java.nio.file.Path) t));
             } else if (t instanceof JsonPath) {
-                list.add(new Path(((JsonPath) t).get()));
+                list.add(new CommandPath(((JsonPath) t).get()));
             } else {
-                list.add(new String(t.toString()));
+                list.add(new CommandString(t.toString()));
             }
         });
     }
@@ -288,123 +279,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         }
     }
 
-    public static class String implements CommandComponent, Serializable {
-        java.lang.String string;
-
-        private String() {
-        }
-
-        public String(java.lang.String string) {
-            this.string = string;
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) {
-            return string;
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return string;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            String string1 = (String) o;
-            return Objects.equals(string, string1.string);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(string);
-        }
-    }
-
-    public static class Path implements CommandComponent, Serializable {
-        @JsonAdapter(JsonPathConverter.class)
-        private java.nio.file.Path file;
-
-        private Path() {
-        }
-
-        public Path(java.nio.file.Path file) {
-            this.file = file;
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) throws IOException {
-            return environment.resolve(file);
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return java.lang.String.format("Path{%s}", file.toUri());
-        }
-    }
-
-    @Exposed
-    public static class ParameterFile implements CommandComponent, Serializable {
-        java.lang.String key;
-
-        byte[] content;
-
-        private ParameterFile() {
-        }
-
-        public ParameterFile(java.lang.String key, byte[] content) {
-            this.key = key;
-            this.content = content;
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) throws IOException {
-            java.nio.file.Path file = environment.getAuxiliaryFile(key, ".input");
-            OutputStream out = Files.newOutputStream(file);
-            out.write(content);
-            out.close();
-
-            return environment.resolve(file);
-        }
-
-        @Override
-        public java.lang.String toString() {
-            return java.lang.String.format("ParameterFile(%s)", key);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ParameterFile that = (ParameterFile) o;
-            return Objects.equals(key, that.key) &&
-                    Objects.equals(content, that.content);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(key, content);
-        }
-    }
-
-
-    public static class WorkingDirectory implements CommandComponent {
-        static final public WorkingDirectory INSTANCE = new WorkingDirectory();
-
-        private WorkingDirectory() {
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) throws IOException {
-            return environment.getWorkingDirectory();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj instanceof WorkingDirectory;
-        }
-    }
 
     @Override
     public boolean equals(Object o) {
@@ -419,125 +293,5 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return Objects.hash(list);
     }
 
-    /**
-     * A pipe
-     */
-    @Exposed
-    static public class Pipe implements CommandComponent {
-        static private Pipe PIPE = new Pipe();
 
-        private Pipe() {
-        }
-
-        public static Pipe getInstance() {
-            return PIPE;
-        }
-    }
-
-    /**
-     * A sub-command whose output / input can be globally set
-     */
-    @Exposed
-    static public class SubCommand implements CommandComponent {
-        /**
-         * The commands
-         */
-        Commands commands;
-
-        // Just for serialization
-        private SubCommand() {
-        }
-
-        SubCommand(Commands commands) {
-            this.commands = commands;
-        }
-
-        Commands getCommands() {
-            return commands;
-        }
-
-        @Override
-        public Stream<? extends CommandComponent> allComponents() {
-            return commands.commands.parallelStream().flatMap(AbstractCommand::allComponents);
-        }
-
-        @Override
-        public Stream<Dependency> dependencies() {
-            return commands.dependencies();
-        }
-
-        public void forEachDependency(Consumer<Dependency> consumer) {
-            commands.forEachDependency(consumer);
-        }
-
-        @Override
-        public void forEachCommand(Consumer<? super AbstractCommand> consumer) {
-            for (AbstractCommand command : commands) {
-                consumer.accept(command);
-                command.forEachCommand(consumer);
-            }
-        }
-
-        public Commands commands() {
-            return commands;
-        }
-
-        @Override
-        public void prepare(CommandContext environment) {
-            commands.prepare(environment);
-        }
-    }
-
-
-    static public class JsonParameterFile implements CommandComponent {
-        private java.lang.String key;
-
-        private Json json;
-        private JsonParameterFile() {
-        }
-
-        public JsonParameterFile(java.lang.String key, Json json) {
-            this.key = key;
-            this.json = json;
-        }
-
-        @Override
-        public void prepare(CommandContext environment) throws IOException {
-            environment.setData(this, environment.getAuxiliaryFile(key, ".json"));
-        }
-
-        @Override
-        public java.lang.String toString(CommandContext environment) throws IOException {
-            java.nio.file.Path file = (java.nio.file.Path) environment.getData(this);
-            try (OutputStream out = Files.newOutputStream(file);
-                 OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
-                final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
-                        .ignore$(false)
-                        .ignoreNull(false)
-                        .mode(JsonWriterMode.PARAMETER_FILE)
-                        .simplifyValues(true)
-                        .resolveFile(f -> {
-                            try {
-                                return environment.resolve(f);
-                            } catch (IOException e) {
-                                throw new XPMRuntimeException(e);
-                            }
-                        });
-                json.writeDescriptorString(jsonWriter, options);
-            } catch (IOException e) {
-                throw new XPMRuntimeException(e, "Could not write JSON string for java task");
-            }
-
-            return environment.resolve(file);
-        }
-    }
-
-    static public class Unprotected extends String {
-        public Unprotected() {
-        }
-
-        public Unprotected(java.lang.String string) {
-            super(string);
-        }
-    }
 }

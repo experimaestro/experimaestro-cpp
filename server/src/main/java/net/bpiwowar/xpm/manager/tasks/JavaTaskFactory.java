@@ -18,10 +18,10 @@ package net.bpiwowar.xpm.manager.tasks;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.scheduler.*;
 
 import java.util.Map;
 
@@ -44,8 +44,8 @@ public class JavaTaskFactory extends ExternalTaskFactory {
     }
 
     @Override
-    protected Commands build(Commands commands, Task task) {
-        return javaCommandBuilder.build(commands, taskClassname, task);
+    protected Commands build(Task task) {
+        return javaCommandBuilder.build(taskClassname, task);
     }
 
     /**
