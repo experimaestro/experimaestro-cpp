@@ -27,8 +27,6 @@ public class ScriptCommandBuilder {
 
         arguments.forEach(a -> a.process(this, command, scriptPath, jsonParameter));
 
-        command.add(jsonParameter);
-
         commands.add(command);
         return commands;
     }
