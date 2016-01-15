@@ -36,6 +36,8 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         this.pathArguments = information.pathArguments;
         this.prefixes = information.prefixes;
         this.id = information.id;
+        if (information.id == null)
+            throw new AssertionError("Task ID is not defined");
 
         // Add inputs
         for (Map.Entry<String, InputInformation> entry : information.inputs.entrySet()) {
@@ -48,6 +50,14 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             input.setCopyTo(field.copyTo);
             inputs.put(name, input);
         }
+
+        // Add paths
+        for (PathArgument pathArgument : information.pathArguments) {
+            Input input = new JsonInput(Type.XP_PATH);
+            input.setOptional(true); // We are lying -- we will set it!
+            inputs.put(pathArgument.jsonName, input);
+        }
+
     }
 
     static private Type getType(InputInformation field) {

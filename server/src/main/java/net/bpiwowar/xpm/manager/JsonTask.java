@@ -68,7 +68,7 @@ public class JsonTask extends Json {
             json.writeDescriptorString(writer, options);
         } else {
             // Write the command instead
-            new JsonString("hello").write(writer);
+            new JsonString("<standard input>").write(writer);
         }
     }
 

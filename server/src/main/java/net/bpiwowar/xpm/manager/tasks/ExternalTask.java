@@ -23,6 +23,7 @@ import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMAssertionError;
 import org.apache.log4j.Level;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -85,6 +86,17 @@ public class ExternalTask extends Task {
             path = uniqueDir.resolve(factory.getId().getLocalPart());
         } catch (Throwable e) {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");
+        }
+
+        for (PathArgument __path : externalFactory.pathArguments) {
+            Path relativePath = uniqueDir.resolve(__path.relativePath);
+            try {
+                final JsonPath value = new JsonPath(relativePath);
+                set(__path.jsonName, value);
+                json.put(__path.jsonName, value);
+            } catch (NoSuchParameter noSuchParameter) {
+                throw new XPMAssertionError(noSuchParameter, "We should not have this problem...");
+            }
         }
 
 
@@ -154,11 +166,6 @@ public class ExternalTask extends Task {
 
         json.put(Constants.XP_TYPE.toString(), externalFactory.getOutput().toString());
         json.put(Constants.XP_RESOURCE.toString(), path.toString());
-
-        for (PathArgument __path : externalFactory.pathArguments) {
-            Path relativePath = uniqueDir.resolve(__path.relativePath);
-            json.put(__path.jsonName, new JsonPath(relativePath));
-        }
 
         return json;
     }

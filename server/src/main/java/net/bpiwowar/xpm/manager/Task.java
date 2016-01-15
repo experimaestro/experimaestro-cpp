@@ -382,7 +382,7 @@ public abstract class Task {
         return run(false, parameters);
     }
 
-    final public AbstractCommand commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
+    public AbstractCommand commands(IdentityHashMap<Object, Parameters> parameters) throws ValueMismatchException, NoSuchParameter {
         final Commands commands = new Commands();
 
         // Add streams and dependencies

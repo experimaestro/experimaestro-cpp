@@ -26,6 +26,9 @@ import net.bpiwowar.xpm.manager.json.Json;
  * An XML type defined by a qualified name
  */
 public class Type {
+    final static public Type XP_PATH = new Type(Constants.XP_PATH);
+    final static public Type XP_STRING = new Type(Constants.XP_STRING);
+
     private static final long serialVersionUID = 1L;
 
     /**
