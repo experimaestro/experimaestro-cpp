@@ -149,7 +149,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public Stream<Dependency> dependencies() {
-        return list.stream().filter(c -> c instanceof SubCommand).flatMap(c -> c.dependencies());
+        return Stream.concat(super.dependencies(), list.stream().flatMap(c -> c.dependencies()));
     }
 
     public ArrayList<CommandComponent> components() {

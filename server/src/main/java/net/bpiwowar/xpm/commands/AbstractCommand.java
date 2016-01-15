@@ -148,7 +148,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
      * @param command The command
      */
     protected void copyToCommand(AbstractCommand command) {
-        dependencies().forEach(command::addDependency);
+        dependencies.forEach(command::addDependency);
         if (command.getStandardInput() == null) {
             command.setStandardInput(getStandardInput());
         }
