@@ -18,8 +18,6 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.scheduler.Job;
@@ -30,8 +28,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.Map;
-
-import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
 
 /**
  * Created by bpiwowar on 26/9/14.
@@ -93,12 +89,14 @@ public abstract class AbstractCommandBuilder {
     /**
      * Start the process and return an Experimaestro process
      *
-     * @return A valid {@linkplain net.bpiwowar.xpm.connectors.XPMProcess} or null if fake is true
      * @param fake True if the process should not be started (but all files should be generated)
+     * @return A valid {@linkplain net.bpiwowar.xpm.connectors.XPMProcess} or null if fake is true
      */
     abstract public XPMProcess start(boolean fake) throws LaunchException, IOException;
 
-    final public XPMProcess start() throws IOException, LaunchException { return start(false); }
+    final public XPMProcess start() throws IOException, LaunchException {
+        return start(false);
+    }
 
     public AbstractCommandBuilder redirectError(AbstractProcessBuilder.Redirect destination) {
         if (!destination.isWriter())
@@ -138,14 +136,12 @@ public abstract class AbstractCommandBuilder {
 
         if (errLogger != null) {
             redirectError(AbstractCommandBuilder.Redirect.PIPE);
-            new Thread("stderr") {
-                BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+            BufferedReader errorStream = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
+            new Thread("stderr") {
                 @Override
                 public void run() {
-                    errorStream.lines().forEach(line -> {
-                        errLogger.info(line);
-                    });
+                    errorStream.lines().forEach(errLogger::info);
                 }
             }.start();
         }
