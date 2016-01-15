@@ -615,6 +615,12 @@ public class Resource implements Identifiable {
         } else if (!update) {
             Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
         }
+
+        // Notify scheduler if job is ready
+        if (getState() == ResourceState.READY) {
+            LOGGER.debug("Job is READY, notifying");
+            Scheduler.notifyRunners();
+        }
     }
 
     /**

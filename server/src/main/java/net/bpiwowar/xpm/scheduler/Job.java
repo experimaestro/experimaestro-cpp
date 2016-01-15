@@ -709,12 +709,6 @@ abstract public class Job extends Resource {
     public void save() throws SQLException {
         // Save
         super.save();
-
-
-        if (getState() == ResourceState.READY) {
-            LOGGER.debug("Job is READY, notifying");
-            Scheduler.notifyRunners();
-        }
     }
 
     @Override
