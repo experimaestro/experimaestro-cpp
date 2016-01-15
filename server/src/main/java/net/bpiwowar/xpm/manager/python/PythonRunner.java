@@ -205,13 +205,13 @@ public class PythonRunner implements AutoCloseable {
 
         // Map entry as tuple
         if (object instanceof Map.Entry) {
-            Map.Entry entry = (Map.Entry)object;
+            Map.Entry entry = (Map.Entry) object;
             return new PyTuple(wrap(entry.getKey()), wrap(entry.getValue()));
         }
 
         // Entry set
         if (object instanceof Set) {
-            Set set = (Set)object;
+            Set set = (Set) object;
 
             final AbstractSet wrappedSet = new AbstractSet() {
                 @Override
@@ -256,6 +256,7 @@ public class PythonRunner implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        interpreter.close();
         scriptContext.close();
         staticContext.close();
     }
@@ -267,7 +268,6 @@ public class PythonRunner implements AutoCloseable {
     }
 
     public Object evaluateString(LocalhostConnector connector, Path locator, String content, String name, int lineno, Object security) throws Exception {
-
         final PyCode code = interpreter.compile(content, name);
         return interpreter.eval(code);
     }
