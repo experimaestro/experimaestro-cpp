@@ -236,6 +236,7 @@ public class Runner {
             try {
                 ProgressListener progressListener = new ProgressListener(System.getenv(Constants.XPM_NOTIFICATION_URL));
                 task.execute(json, progressListener);
+                System.exit(0);
             } catch (Throwable e) {
                 System.err.format("An error occurred while running the task: %s%n", e);
                 e.printStackTrace(System.err);
