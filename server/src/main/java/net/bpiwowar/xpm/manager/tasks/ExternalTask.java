@@ -21,9 +21,11 @@ package net.bpiwowar.xpm.manager.tasks;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMAssertionError;
+import net.bpiwowar.xpm.utils.FileSystem;
 import org.apache.log4j.Level;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -37,7 +39,11 @@ import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 
@@ -45,7 +51,7 @@ import java.util.IdentityHashMap;
  * A task which is backed up main a Java class
  */
 public class ExternalTask extends Task {
-//    final static private Logger LOGGER = Logger.getLogger();
+    final static private Logger LOGGER = Logger.getLogger();
 
     private final ExternalTaskFactory externalFactory;
 
@@ -144,6 +150,15 @@ public class ExternalTask extends Task {
                     } else {
                         job.save();
                     }
+
+                    try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ResourcePaths(id, path) VALUES(?,?)")) {
+                        st.setLong(1, job.getId());
+                        st.setString(2, uniqueDir.toUri().toString());
+                        st.execute();
+                    } catch (SQLException e) {
+                        LOGGER.error(e, "while storing path for resource %s", this);
+                    }
+
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 

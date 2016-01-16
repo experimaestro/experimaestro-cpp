@@ -18,8 +18,6 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
-import org.json.simple.JSONObject;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
@@ -30,12 +28,15 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.*;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.commons.lang.NotImplementedException;
+import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystemException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -427,7 +428,41 @@ public class Resource implements Identifiable {
         return object;
     }
 
+    /**
+     * Removes files related to this resource
+     */
     public void clean() {
+        try (PreparedStatement st = Scheduler.prepareStatement("SELECT path FROM ResourcePaths WHERE id=?")) {
+            st.setLong(1, resourceID);
+            st.execute();
+            try (ResultSet rs = st.executeQuery()) {
+                while (rs.next()) {
+                    final String uri = rs.getString(1);
+                    try {
+                        final Path path = NetworkShare.uriToPath(uri);
+                        if (Files.isRegularFile(path)) {
+                            Files.delete(path);
+                        } else if (Files.isDirectory(path)) {
+                            FileSystem.recursiveDelete(path);
+                        } else {
+                            LOGGER.error("Could not delete %s while cleaning resource %s: unknown file type", uri, this);
+                        }
+                    } catch (Throwable e) {
+                        LOGGER.error(e, "Could not delete %s while cleaning resource %s", uri, this);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error(e, "while cleaning resource %s", this);
+        }
+
+        // Clean DB
+        try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ResourcePaths WHERE id=?")) {
+            st.setLong(1, resourceID);
+            st.execute();
+        } catch (SQLException e) {
+            LOGGER.error(e, "while removing associated path in DB for resource %s", this);
+        }
     }
 
     synchronized protected Dependency addIngoingDependency(Dependency dependency) {
@@ -500,6 +535,7 @@ public class Resource implements Identifiable {
 
         // Remove
         final SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
+        clean();
         Scheduler.get().resources().delete(this);
 
         // Notify
@@ -536,10 +572,9 @@ public class Resource implements Identifiable {
         try {
             save(scheduler.resources(), null);
             success = true;
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new SQLException(e);
-        }
-        finally {
+        } finally {
             if (success) {
                 connection.commit();
             } else {
@@ -785,8 +820,11 @@ public class Resource implements Identifiable {
         }
     }
 
-    /** Does nothing for a resource */
-    public void setLauncher(Launcher launcher) {}
+    /**
+     * Does nothing for a resource
+     */
+    public void setLauncher(Launcher launcher) {
+    }
 
     public Dependency createDependency() {
         return this.createDependency((DependencyParameters) null);
@@ -794,6 +832,7 @@ public class Resource implements Identifiable {
 
     /**
      * Create a dependency
+     *
      * @param pmap The dependency parameters map
      * @return The dependency
      */

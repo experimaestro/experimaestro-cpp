@@ -18,7 +18,7 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.log4j.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +30,7 @@ import java.io.IOException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class TemporaryDirectory implements AutoCloseable {
-    private static final Logger logger = Logger
-            .getLogger(TemporaryDirectory.class);
+    private static final Logger logger = Logger.getLogger();
 
     Thread deleteThread = null;
     File directory;
@@ -68,7 +67,11 @@ public class TemporaryDirectory implements AutoCloseable {
             public void run() {
                 logger.info("Deleting temporary directory " + directory);
                 if (directory.exists()) {
-                    FileSystem.recursiveDelete(directory);
+                    try {
+                        FileSystem.recursiveDelete(directory);
+                    } catch (IOException e) {
+                        logger.error("Could not remove directory %s", directory);
+                    }
                 }
             }
         };

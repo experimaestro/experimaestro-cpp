@@ -18,10 +18,14 @@ package net.bpiwowar.xpm.utils;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.log4j.Logger;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 /**
@@ -39,7 +43,7 @@ public class FileSystem {
      * A filter for files
      */
     final public static FileFilter FILE_FILTER = pathname -> pathname.isFile();
-    private static final Logger logger = Logger.getLogger(FileSystem.class);
+    private static final Logger logger = Logger.getLogger();
 
     /**
      * Get a file filter
@@ -89,31 +93,35 @@ public class FileSystem {
     /**
      * Delete everything recursively
      *
+     * @param directory The directory to delete
+     */
+    static public void recursiveDelete(File directory) throws IOException {
+        recursiveDelete(directory.toPath());
+    }
+
+    /**
+     * Delete everything recursively
+     *
      * @param path
      */
-    static public void recursiveDelete(File path) {
+    static public void recursiveDelete(Path path) throws IOException {
+        logger.debug("Deleting %s", path);
+        final Iterator<Path> it = Files.list(path).iterator();
+        while (it.hasNext()) {
+            final Path entry = it.next();
 
-        logger.debug("Deleting " + path);
-        for (File entry : path.listFiles()) {
             logger.debug("Considering " + entry);
 
-            if (entry.isDirectory())
+            if (Files.isDirectory(entry)) {
                 recursiveDelete(entry);
-            else {
-                if (!entry.delete())
-                    logger.warn("Could not delete file " + entry);
-                else
-                    logger.debug("Deleted file " + entry);
+            } else {
+                Files.delete(entry);
             }
 
         }
 
         // Deleting self
-        if (!path.delete())
-            logger.warn("Could not delete " + path);
-        else
-            logger.debug("Deleted " + path);
-
+        Files.delete(path);
     }
 
 

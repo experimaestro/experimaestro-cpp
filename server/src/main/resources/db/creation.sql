@@ -79,6 +79,17 @@ CREATE TABLE Jobs (
     ON DELETE CASCADE
 );
 
+-- Directories and/or files associated to resources
+-- Used for cleanup
+CREATE TABLE ResourcePaths (
+  id    BIGINT NOT NULL PRIMARY KEY,
+  path      VARCHAR(4096) NOT NULL,
+
+  FOREIGN KEY (id) REFERENCES Resources
+    ON DELETE CASCADE
+);
+
+
 --
 -- Other
 --
