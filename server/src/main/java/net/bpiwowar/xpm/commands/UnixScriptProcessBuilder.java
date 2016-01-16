@@ -143,7 +143,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.format("# Experimaestro generated task: %s%n", path);
             writer.println();
 
-            // A command fails if any of the piped command fail
+            // Use pipefail for fine grained analysis of errors in commands
             writer.println("set -o pipefail");
             writer.println();
 
@@ -218,7 +218,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             // Write the command
             final StringWriter sw = new StringWriter();
             PrintWriter exitWriter = new PrintWriter(sw);
-            exitWriter.format("code=$?; if test $code -ne 0; then%n");
+            exitWriter.format("code=$?%n");
+            exitWriter.format("if test $code -ne 0; then%n");
             if (exitCodePath != null)
                 exitWriter.format(" echo $code > \"%s\"%n", protect(exitCodePath, QUOTED_SPECIAL));
             exitWriter.format(" exit $code%n");
@@ -238,6 +239,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                     throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
             }
 
+            writer.format("%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && [[ \"$e\" != 141 ]] && exit $e; done; exit 0; }%n%n");
             writer.println("(");
 
             // The prepare all the command
@@ -344,6 +346,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             printRedirections(env, 1, writer, command.getOutputRedirect(), namedRedirections.outputRedirections);
             printRedirections(env, 2, writer, command.getErrorRedirect(), namedRedirections.errorRedirections);
+            writer.print(" || checkerror \"${PIPESTATUS[@]}\" ");
 
             if (env.detached(command)) {
                 // Just keep a pointer
