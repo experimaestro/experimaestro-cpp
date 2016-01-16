@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -12,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -77,6 +79,8 @@ public class TasksLoader {
      */
     private static void loadExternal(Repository repository, Gson gson, ScriptsTaskInformation informations) throws IOException {
         final ScriptCommandBuilder scriptCommandBuilder = new ScriptCommandBuilder(informations);
+        Map<String, String> prefixes = new HashMap<>();
+        informations.namespaces.forEach((k, v) -> prefixes.put(v, k));
 
         for (Map.Entry<Path, Path> entry : informations.tasks_file.entrySet()) {
             Path scriptJsonPath = entry.getKey();
@@ -86,6 +90,7 @@ public class TasksLoader {
                 final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
                 for (ScriptTaskInformation information : taskList) {
                     // Creates the task factory
+                    information.prefixes = prefixes;
                     ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, scriptPath);
                     repository.addFactory(factory);
                 }

@@ -16,5 +16,6 @@ public class ScriptsTaskInformation extends TasksInformation {
     /** The command */
     List<CommandArgument> command;
 
-    String[] version = new String[2];
+    /** Namespace prefixes */
+    Map<String, String> namespaces;
 }
