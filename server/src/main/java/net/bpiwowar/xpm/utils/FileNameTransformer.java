@@ -33,7 +33,7 @@ final public class FileNameTransformer {
         this.suffix = suffix;
     }
 
-    public Path transform(Path path) throws FileSystemException {
+    public Path transform(Path path)  {
         final String baseName = prefix + path.getFileName().toString() + suffix;
         return path.getParent().resolve(baseName);
     }

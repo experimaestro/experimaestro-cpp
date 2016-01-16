@@ -48,26 +48,16 @@ public class ExclusiveDependency extends Dependency {
     synchronized protected DependencyStatus _accept() {
         Resource from = getFrom();
         final Path file;
-        try {
-            file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
-            return Files.exists(file) ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
-        } catch (IOException e) {
-            LOGGER.error(e, "Error while checking the presence of lock file for [%s]", from);
-            return DependencyStatus.ERROR;
-
-        }
+        file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
+        return Files.exists(file) ? DependencyStatus.WAIT : DependencyStatus.OK_LOCK;
 
     }
 
     @Override
     synchronized protected Lock _lock(String pid) throws LockException {
         Resource from = getFrom();
-        try {
-            Path file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
-            final Lock lockFile = new FileLock(file, true);
-            return lockFile;
-        } catch (IOException e) {
-            throw new LockException(e);
-        }
+        Path file = from.getFileWithExtension(Resource.LOCK_EXTENSION);
+        final Lock lockFile = new FileLock(file, true);
+        return lockFile;
     }
 }

@@ -542,7 +542,7 @@ public class Resource implements Identifiable {
         Scheduler.get().notify(message);
     }
 
-    public Path getFileWithExtension(FileNameTransformer extension) throws IOException {
+    public Path getFileWithExtension(FileNameTransformer extension)  {
         return extension.transform(locator);
     }
 
@@ -553,7 +553,7 @@ public class Resource implements Identifiable {
 
         updateStatus(); // Update before
         if (!canBeReplaced()) {
-            throw new ExperimaestroCannotOverwrite("Cannot replace %s", this);
+            throw new ExperimaestroCannotOverwrite("Cannot replace %s [state is %s]", this, getState());
         }
 
         this.clean();

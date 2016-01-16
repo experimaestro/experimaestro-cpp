@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import net.bpiwowar.xpm.connectors.XPMProcess;
@@ -36,6 +37,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
@@ -60,6 +62,7 @@ abstract public class Job extends Resource {
     final static DateFormat longDateFormat = DateFormat.getDateTimeInstance();
 
     final static private Logger LOGGER = Logger.getLogger();
+    public static final ImmutableList<String> KILLED_ERROR_LINE = ImmutableList.of("1");
 
     transient private JobData jobData;
 
@@ -252,7 +255,7 @@ abstract public class Job extends Resource {
                 // Try status lock - discard if something goes wrong
                 try {
                     locks.add(FileLock.of(LOCK_EXTENSION.transform(getLocator()), false));
-                } catch (LockException | IOException e) {
+                } catch (LockException e) {
                     LOGGER.info(e, "Could not lock job [%s]: %s", this, e);
                     throw e;
                 }
@@ -686,6 +689,11 @@ abstract public class Job extends Resource {
         if (getProcess() != null) {
             try {
                 getProcess().destroy();
+                try {
+                    Files.write(getFileWithExtension(CODE_EXTENSION), KILLED_ERROR_LINE);
+                } catch (IOException e) {
+                    LOGGER.error("Could not create error file");
+                }
             } catch (FileSystemException e) {
                 LOGGER.error(e, "The process could not be stopped");
                 return false;
