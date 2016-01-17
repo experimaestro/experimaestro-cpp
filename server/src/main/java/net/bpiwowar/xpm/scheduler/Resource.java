@@ -430,8 +430,10 @@ public class Resource implements Identifiable {
 
     /**
      * Removes files related to this resource
+     * @param removeFile If true, all files should be removed. If false, only job execution related
+     *                   files are removed (error, done, etc.)
      */
-    public void clean() {
+    public void clean(boolean removeFile) {
         try (PreparedStatement st = Scheduler.prepareStatement("SELECT path FROM ResourcePaths WHERE id=?")) {
             st.setLong(1, resourceID);
             st.execute();
@@ -535,7 +537,7 @@ public class Resource implements Identifiable {
 
         // Remove
         final SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
-        clean();
+        clean(true);
         Scheduler.get().resources().delete(this);
 
         // Notify
@@ -556,7 +558,7 @@ public class Resource implements Identifiable {
             throw new ExperimaestroCannotOverwrite("Cannot replace %s [state is %s]", this, getState());
         }
 
-        this.clean();
+        this.clean(false);
         resource.save(Scheduler.get().resources(), this);
 
         // Not in DB anymore

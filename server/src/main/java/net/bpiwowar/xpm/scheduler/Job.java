@@ -37,7 +37,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
@@ -137,7 +136,7 @@ abstract public class Job extends Resource {
         if (!getState().isActive()) {
             // Set state status waiting
             setState(ResourceState.WAITING);
-            clean();
+            clean(false);
 
             // Update status
             updateStatus();
@@ -361,7 +360,6 @@ abstract public class Job extends Resource {
 
         switch (message.getType()) {
             case RESOURCE_REMOVED:
-                clean();
                 break;
 
             case END_OF_JOB:
@@ -713,8 +711,9 @@ abstract public class Job extends Resource {
         return false;
     }
 
-    public void clean() {
-        super.clean();
+    @Override
+    public void clean(boolean removeFile) {
+        super.clean(removeFile);
         LOGGER.info("Cleaning job %s", this);
         removeJobFile(DONE_EXTENSION);
         removeJobFile(CODE_EXTENSION);
