@@ -254,6 +254,8 @@ abstract public class Job extends Resource {
 
                 // Try status lock - discard if something goes wrong
                 try {
+                    // Create the directory if it does not exist
+                    Files.createDirectories(getLocator());
                     locks.add(FileLock.of(LOCK_EXTENSION.transform(getLocator()), false));
                 } catch (LockException e) {
                     LOGGER.info(e, "Could not lock job [%s]: %s", this, e);

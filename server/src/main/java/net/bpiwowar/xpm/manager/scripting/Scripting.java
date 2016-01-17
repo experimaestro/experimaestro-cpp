@@ -19,13 +19,13 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import net.bpiwowar.xpm.commands.Pipe;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -38,6 +38,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -69,28 +71,38 @@ public class Scripting {
         return methodFunctions;
     }
 
+    static List<Class<?>> TYPES;
+
+    /**
+     * List all types
+     * @param f The callback function
+     */
     public static void forEachType(Consumer<Class> f) {
+        if (TYPES == null) {
+            TYPES = new ArrayList<>();
+            String classname = null;
+            try (InputStream in = Scripting.class.getResource("/META-INF/net.bpiwowar.xpm.scripting.xml").openStream()) {
+                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+                Document document = builder.parse(in);
+                XPath xPath = XPathFactory.newInstance().newXPath();
 
-        String classname = null;
-        try (InputStream in = Scripting.class.getResource("/META-INF/net.bpiwowar.xpm.scripting.xml").openStream()) {
-            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = builderFactory.newDocumentBuilder();
-            Document document = builder.parse(in);
-            XPath xPath = XPathFactory.newInstance().newXPath();
-
-            NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
-            for (int i = 0; i < classes.getLength(); ++i) {
-                classname = classes.item(i).getTextContent();
-                final Class<?> aClass = ScriptContext.class.getClassLoader().loadClass(classname);
-                f.accept(aClass);
+                NodeList classes = (NodeList) xPath.compile("/scripting/classes/class").evaluate(document, XPathConstants.NODESET);
+                for (int i = 0; i < classes.getLength(); ++i) {
+                    classname = classes.item(i).getTextContent();
+                    final Class<?> aClass = ScriptContext.class.getClassLoader().loadClass(classname);
+                    TYPES.add(aClass);
+                }
+            } catch (IOException e) {
+                throw new XPMRuntimeException("Cannot find scripting file");
+            } catch (ParserConfigurationException | SAXException | XPathExpressionException e) {
+                throw new XPMRuntimeException(e, "Error with XML processing");
+            } catch (ClassNotFoundException e) {
+                throw new XPMRuntimeException(e, "Could not find class %s", classname);
             }
-        } catch (IOException e) {
-            throw new XPMRuntimeException("Cannot find scripting file");
-        } catch (ParserConfigurationException | SAXException | XPathExpressionException e) {
-            throw new XPMRuntimeException(e, "Error with XML processing");
-        } catch (ClassNotFoundException e) {
-            throw new XPMRuntimeException(e, "Could not find class %s", classname);
         }
+
+        TYPES.forEach(f);
     }
 
     public static void forEachFunction(Consumer<MethodFunction> f) {

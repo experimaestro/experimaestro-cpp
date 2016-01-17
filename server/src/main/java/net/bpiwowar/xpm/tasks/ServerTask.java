@@ -195,7 +195,7 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the JS Help servlet
 
-        context.addServlet(new ServletHolder(new JSHelpServlet(serverSettings)), "/jshelp/*");
+        context.addServlet(new ServletHolder(new HelpServlet(serverSettings)), "/help/*");
 
         // --- Add the default servlet
 

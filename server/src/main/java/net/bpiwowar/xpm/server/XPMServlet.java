@@ -89,7 +89,7 @@ public abstract class XPMServlet extends HttpServlet {
         out.format("</head>%n");
         out.format("<body>%n");
         out.format("<div id=\"header\"><div class='title'>Experimaestro - %s</div>", serverSettings.name);
-        out.format("<div class='links'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/jshelp'>JS Help</a></div></div>");
+        out.format("<div class='links'><a href=\"/status\">Status</a> <a href='/tasks'>Tasks</a> <a href='/help'>JS Help</a></div></div>");
 
     }
 

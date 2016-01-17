@@ -31,10 +31,10 @@ import java.io.PrintWriter;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class JSHelpServlet extends XPMServlet {
+public class HelpServlet extends XPMServlet {
     private static final long serialVersionUID = 1L;
 
-    public JSHelpServlet(ServerSettings serverSettings) {
+    public HelpServlet(ServerSettings serverSettings) {
         super(serverSettings);
     }
 
@@ -49,8 +49,8 @@ public class JSHelpServlet extends XPMServlet {
             header(out, "JavaScript Help");
 
             out.println("<div id='jsdocumentation'>");
-            final net.bpiwowar.xpm.utils.Documentation.Printer printer = new net.bpiwowar.xpm.utils.Documentation.HTMLPrinter(out);
-            Documentation.printJSHelp(printer);
+            final net.bpiwowar.xpm.documentation.Documentation.Printer printer = new net.bpiwowar.xpm.documentation.Documentation.HTMLPrinter(out);
+            Documentation.printHelp(printer);
             out.println("</div>");
             out.println("</body></html>");
             return;

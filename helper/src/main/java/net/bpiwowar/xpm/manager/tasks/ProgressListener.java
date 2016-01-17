@@ -27,6 +27,8 @@ import java.net.URLConnection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static java.lang.String.format;
+
 /**
  * Listens to progress on a given task
  */
@@ -50,14 +52,14 @@ public class ProgressListener {
     /**
      * Update the progress of the task
      *
-     * @param progress
+     * @param progress A progress value between 0 and 1
      */
-    void progress(float progress) {
+    public void progress(float progress) {
         if (baseURL != null) {
             // Asynchronous call
             pool.submit(() -> {
                 try {
-                    URL progressURL = new URL(baseURL + "/" + progress);
+                    URL progressURL = new URL(format("%s/progress/%.f", baseURL, progress));
                     final URLConnection connection = progressURL.openConnection();
                     connection.connect();
                 } catch (IOException e) {
@@ -65,4 +67,6 @@ public class ProgressListener {
             });
         }
     }
+
+
 }

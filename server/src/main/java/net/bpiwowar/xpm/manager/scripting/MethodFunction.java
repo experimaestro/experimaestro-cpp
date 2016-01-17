@@ -46,7 +46,7 @@ public class MethodFunction extends GenericFunction {
     }
 
     public boolean isEmpty() {
-        return groups.stream().allMatch(g -> g.methods.isEmpty());
+        return groups.stream().allMatch(g -> g.getMethods().isEmpty());
     }
 
     @Override
@@ -60,7 +60,7 @@ public class MethodFunction extends GenericFunction {
             @Override
             public Iterable<MethodDeclaration> get(final int index) {
                 Group group = groups.get(index);
-                return Iterables.transform(group.methods,
+                return Iterables.transform(group.getMethods(),
                         m -> new MethodDeclaration(m));
             }
 
@@ -79,10 +79,14 @@ public class MethodFunction extends GenericFunction {
      * Represent all the methods from a given ancestor (or self)
      */
     static class Group {
-        List<Method> methods = new ArrayList<>();
+        private List<Method> methods = new ArrayList<>();
 
         Group(List<Method> methods) {
             this.methods = methods;
+        }
+
+        public List<Method> getMethods() {
+            return methods;
         }
     }
 

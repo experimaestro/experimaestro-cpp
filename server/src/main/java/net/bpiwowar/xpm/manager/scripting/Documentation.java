@@ -18,16 +18,16 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.documentation.*;
+import net.bpiwowar.xpm.documentation.Documentation.Printer;
+import net.bpiwowar.xpm.manager.js.JSBaseObject;
+import net.bpiwowar.xpm.utils.log.Logger;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import net.bpiwowar.xpm.manager.js.JSBaseObject;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 
 /**
  * Automated javascript documentation
@@ -35,20 +35,22 @@ import java.util.ArrayList;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class Documentation {
-    static void documentMethod(net.bpiwowar.xpm.utils.Documentation.DefinitionList methods, Method method) {
-        final net.bpiwowar.xpm.utils.Documentation.Text text = methodDeclaration(method);
+    final static Logger LOGGER = Logger.getLogger();
+
+    static void documentMethod(DefinitionList methods, Method method) {
+        final Text text = methodDeclaration(method);
 
         // Get the help
-        net.bpiwowar.xpm.utils.Documentation.Container help = new net.bpiwowar.xpm.utils.Documentation.Container();
+        Container help = new Container();
         final Help jsHelp = method.getAnnotation(Help.class);
 
         if (jsHelp != null)
-            help.add(new net.bpiwowar.xpm.utils.Documentation.Text(jsHelp.value()));
+            help.add(new Text(jsHelp.value()));
 
         methods.add(text, help);
     }
 
-    public static net.bpiwowar.xpm.utils.Documentation.Text methodDeclaration(Method method) {
+    public static Text methodDeclaration(Method method) {
         String name = null;
 
         Expose xpmjsfunction = method.getAnnotation(Expose.class);
@@ -75,11 +77,11 @@ public class Documentation {
         }
 
 
-        final net.bpiwowar.xpm.utils.Documentation.DefinitionList pHelp = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
+        final DefinitionList pHelp = new DefinitionList();
 
         // We have the arguments() in the JSHelp() object
         // No JSHelp
-        final net.bpiwowar.xpm.utils.Documentation.Text text = new net.bpiwowar.xpm.utils.Documentation.Text();
+        final Text text = new Text();
         final Argument returnAnnotation = method.getAnnotation(Argument.class);
         String returnType = returnAnnotation != null ? returnAnnotation.type() : javascriptName(method.getReturnType());
 
@@ -101,7 +103,7 @@ public class Documentation {
                     argName = jsArg.equals("") ? argName : jsArg.name();
                     argType = jsArg.type();
                     if (jsArg.help() != null)
-                        pHelp.add(new net.bpiwowar.xpm.utils.Documentation.Text(jsArg.name()), new net.bpiwowar.xpm.utils.Documentation.Text(jsArg.help()));
+                        pHelp.add(new Text(jsArg.name()), new Text(jsArg.help()));
                 }
             }
             if (!first)
@@ -149,68 +151,53 @@ public class Documentation {
      *
      * @param printer
      */
-    static public void printJSHelp(net.bpiwowar.xpm.utils.Documentation.Printer printer) {
+    static public void printHelp(Printer printer) {
+        try {
+            // --- Document functions
 
-        // --- Document functions
+            // Add constants
 
-        printer.append(new net.bpiwowar.xpm.utils.Documentation.Title(1, new net.bpiwowar.xpm.utils.Documentation.Text("Functions")));
+            printer.write(new Title(1, new Text("Constants")));
 
-        final net.bpiwowar.xpm.utils.Documentation.DefinitionList functions = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
+            Scripting.forEachConstant((name, value) -> {
+                printer.write(new Division().add(new Text(name)));
+            });
 
-//        for (JSUtils.FunctionDefinition d : JavaScriptRunner.definitions) {
-//            final Documentation.Text text = new Documentation.Text(d.getName());
-//            try {
-//                final Method method = d.getClazz().getDeclaredMethod("js_" + d.getName(), d.getArguments());
-//                documentMethod(functions, method, d.getName());
-//            } catch (NoSuchMethodException e) {
-//                text.format("Method not found... %s in [%s] with %s", d.getName(), d.getClazz().toString(), Arrays.toString(d.getArguments()));
-//            }
-//        }
-
-        printer.append(functions);
-
-
-        // --- Objects
-        printer.append(new net.bpiwowar.xpm.utils.Documentation.Title(1, new net.bpiwowar.xpm.utils.Documentation.Text("Objects")));
-        ArrayList<Class<?>> list = new ArrayList<>();
-
-        final net.bpiwowar.xpm.utils.Documentation.DefinitionList classes = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
-
-        for (Class<?> clazz : list) {
-            final net.bpiwowar.xpm.utils.Documentation.DefinitionList methods = new net.bpiwowar.xpm.utils.Documentation.DefinitionList();
-
-            for (Method method : clazz.getDeclaredMethods()) {
-                String name = null;
-
-                // A javascript object based on JSBaseObject
-                if (JSBaseObject.class.isAssignableFrom(clazz)) {
-                    Expose annotation = method.getAnnotation(Expose.class);
-                    if (annotation != null)
-                        documentMethod(methods, method);
-                    continue;
-                }
-
-                if (ScriptableObject.class.isAssignableFrom(clazz)) {
-                    if (method.getAnnotation(Expose.class) != null) {
-                        if (method.getName().startsWith("js_")) {
-                            name = method.getName();
-                        } else {
-                            continue;
-                        }
+            Scripting.forEachObject((name, value) -> {
+                        printer.write(new Division().add(new Text(name)));
                     }
-                } else {
-                    if (!Modifier.isPublic(method.getModifiers()))
-                        continue;
-                    name = method.getName();
-                }
+            );
 
-                documentMethod(methods, method);
-            }
-            classes.add(new net.bpiwowar.xpm.utils.Documentation.Text(ClassDescription.getClassName(clazz)), methods);
 
+            // Add functions
+            printer.write(new Title(1, new Text("Functions")));
+            DefinitionList functions = new DefinitionList();
+            Scripting.forEachFunction(list -> {
+                list.groups.stream()
+                        .flatMap(g -> g.getMethods().stream())
+                        .forEach(method -> documentMethod(functions, method));
+            });
+            printer.write(functions);
+
+
+            // --- Objects
+            printer.write(new Title(1, new Text("Classes")));
+
+            DefinitionList classes = new DefinitionList();
+
+            Scripting.forEachType(aClass -> {
+                ClassDescription type = ClassDescription.analyzeClass(aClass);
+                DefinitionList list = new DefinitionList();
+                classes.add(new Text(type.getClassName()), list);
+                type.getMethods().forEach((name, methods) -> {
+                    methods.forEach(method -> documentMethod(list, method));
+                });
+            });
+            printer.write(classes);
+
+        } catch (Throwable e) {
+            LOGGER.error(e, "Error while generating help");
+            throw e;
         }
-
-        printer.append(classes);
-
     }
 }

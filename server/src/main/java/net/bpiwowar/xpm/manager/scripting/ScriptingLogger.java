@@ -34,7 +34,8 @@ public class ScriptingLogger extends WrapperObject<Logger> {
 
     @Expose
     public ScriptingLogger(String name) {
-        super(ScriptContext.get().getLogger(name));
+        // When generating documentation, the script context is not defined
+        super(ScriptContext.get() == null ? null : ScriptContext.get().getLogger(name));
     }
 
 //    private void log(Level level, Scriptable thisObj, Object[] args, Function funObj) {
