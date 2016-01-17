@@ -178,6 +178,13 @@ public class ExternalTask extends Task {
         json.put(Constants.XP_TYPE.toString(), externalFactory.getOutput().toString());
         json.put(Constants.XP_RESOURCE.toString(), path.toString());
 
+        // Add constants
+        if (externalFactory.constants != null) {
+            externalFactory.constants.forEach((name, value) -> {
+                json.put(name, Json.toJSON(value));
+            });
+        }
+
         return json;
     }
 

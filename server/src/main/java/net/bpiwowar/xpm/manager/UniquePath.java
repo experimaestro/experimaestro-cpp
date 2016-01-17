@@ -21,15 +21,16 @@
 
 package net.bpiwowar.xpm.manager;
 
-import com.google.common.collect.ImmutableList;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.utils.FileNameTransformer;
 import net.bpiwowar.xpm.utils.MessageDigestWriter;
 
 import javax.xml.bind.DatatypeConverter;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
@@ -46,7 +47,8 @@ import static java.lang.String.format;
 public class UniquePath {
     private final Path uniquePath;
     private final String descriptor;
-    private final boolean directory;
+    private final boolean directoryMode;
+    private final Path signaturePath;
 
     private static String getDigest(String string) throws NoSuchAlgorithmException, IOException {
         MessageDigestWriter writer = new MessageDigestWriter(Charset.forName("UTF-8"), "MD5");
@@ -75,9 +77,10 @@ public class UniquePath {
     }
 
     public UniquePath create() throws IOException {
-        Path signature = directory ? uniquePath.resolve(Constants.XPM_SIGNATURE) : uniquePath;
-        Files.createDirectories(uniquePath);
-        Files.write(signature, ImmutableList.of(this.descriptor));
+        Files.createDirectories(directoryMode ? uniquePath : uniquePath.getParent());
+        try (BufferedWriter out = Files.newBufferedWriter(this.signaturePath)) {
+            out.write(this.descriptor);
+        }
         return this;
     }
 
@@ -85,7 +88,20 @@ public class UniquePath {
         return uniquePath;
     }
 
-    public UniquePath(Path basedir, String prefix, QName id, Json jsonValues, boolean directory) throws IOException, NoSuchAlgorithmException {
+    final static private FileNameTransformer SIGNATURE_FILE_TRANSFORMER = new FileNameTransformer("", ".signature.xpm");
+
+    /**
+     * Creates a new unique path
+     *
+     * @param basedir       The base directory or null (uses working directory in this case)
+     * @param prefix        The prefix for the task
+     * @param id            The task ID
+     * @param jsonValues    The JSON parameters
+     * @param directoryMode A boolean indicating whether the file should be a directory or a file
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
+    public UniquePath(Path basedir, String prefix, QName id, Json jsonValues, boolean directoryMode) throws IOException, NoSuchAlgorithmException {
         // Create JSON object, get the description JSON and digest
         JsonObject json = new JsonObject();
         json.put("task", id.toString());
@@ -98,30 +114,30 @@ public class UniquePath {
             basedir = ScriptContext.get().getWorkingDirectory();
         }
         uniquePath = basedir.resolve(format("%s/%s", prefix, digest));
-        this.directory = directory;
+        this.directoryMode = directoryMode;
+        this.signaturePath = directoryMode ? uniquePath.resolve(Constants.XPM_SIGNATURE) : SIGNATURE_FILE_TRANSFORMER.transform(uniquePath);
 
         // Verify the signature if the directory exists
 
-        Path signature = directory ? uniquePath.resolve(Constants.XPM_SIGNATURE) : uniquePath;
-        if (Files.exists(signature)) {
-            if (!Files.isRegularFile(signature)) {
-                throw new XPMRhinoException("Path %s exists and is not a file", signature);
+        if (Files.exists(signaturePath)) {
+            if (!Files.isRegularFile(signaturePath)) {
+                throw new XPMRhinoException("Path %s exists and is not a file", signaturePath);
             }
             // Check that the signature is the same
-            // @TODO more efficient comparison by avoiding to compute the whole signature
             char buffer[] = new char[1024];
             int offset = 0;
-            try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(signature))) {
+            try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(signaturePath))) {
                 int read;
                 while ((read = reader.read(buffer)) > 0) {
                     if (offset + read > descriptor.length()) {
-                        throw new RuntimeException("Signature JSON do not match in " + signature.toString());
+                        throw new XPMRuntimeException("Signature JSON do not match in %s: length differ - length is %d and read %d so far",
+                                signaturePath.toString(), descriptor.length(), offset + read);
                     }
 
                     for (int i = 0; i < read; ++i) {
                         if (buffer[i] != descriptor.charAt(offset + i)) {
                             throw new XPMRuntimeException("Signature JSON do not match in %s: at offset %d, %s <> %s",
-                                    signature.toString(), i + offset, buffer[i], descriptor.charAt(i + offset));
+                                    signaturePath.toString(), i + offset, buffer[i], descriptor.charAt(i + offset));
                         }
                     }
 

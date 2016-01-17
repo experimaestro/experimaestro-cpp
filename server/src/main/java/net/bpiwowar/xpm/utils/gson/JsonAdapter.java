@@ -71,7 +71,7 @@ public class JsonAdapter extends TypeAdapter<Json> {
                 return object;
 
             case BOOLEAN:
-                return new JsonBoolean(in.nextBoolean());
+                return JsonBoolean.of(in.nextBoolean());
 
             case NUMBER:
                 final double value = in.nextDouble();

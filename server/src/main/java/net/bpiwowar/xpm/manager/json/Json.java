@@ -19,6 +19,8 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.common.collect.ImmutableSet;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
@@ -36,7 +38,7 @@ import java.util.Map;
 
 /**
  * Base class for all JSON objects
- *
+ * <p>
  * Objects can be sealed to avoid unnecessary copies
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -159,23 +161,29 @@ abstract public class Json {
 
     /**
      * Perform a copy of the JSON object so that it can be modified.
-     *
+     * <p>
      * This method has to be overwritten by classes that are not immutable,
      * since by default it returns the object itself.
      *
      * @return A new JSON object
      */
-    public Json copy() { return this; }
+    public Json copy() {
+        return this;
+    }
 
-    /** Seal the object
-     *
+    /**
+     * Seal the object
+     * <p>
      * This method has to be overwritten by classes that are not immutable
      * since this method does nothing by default.
      */
-    public Json seal() { return this; }
+    public Json seal() {
+        return this;
+    }
 
     /**
      * Convert an object to a  JSON
+     *
      * @param lcx
      * @param value
      * @return
@@ -183,6 +191,10 @@ abstract public class Json {
     public static Json toJSON(LanguageContext lcx, Object value) {
         if (value instanceof net.bpiwowar.xpm.manager.scripting.Wrapper) {
             value = ((net.bpiwowar.xpm.manager.scripting.Wrapper) value).unwrap();
+        }
+
+        if (value instanceof JsonElement) {
+            return toJSON((JsonElement) value);
         }
 
         if (value instanceof Json)
@@ -216,7 +228,7 @@ abstract public class Json {
             return new JsonInteger((Long) value);
 
         if (value instanceof Boolean)
-            return new JsonBoolean((Boolean) value);
+            return JsonBoolean.of((Boolean) value);
 
         // -- An array
         if (value.getClass().isArray()) {
@@ -228,16 +240,16 @@ abstract public class Json {
         }
 
         if (value instanceof List) {
-            final List list = (List)value;
+            final List list = (List) value;
             JsonArray json = new JsonArray();
-            for (Object element: list)
+            for (Object element : list)
                 json.add(toJSON(lcx, element));
             return json;
         }
 
         // Maps
         if (value instanceof Map) {
-            return JsonObject.toJSON(lcx, (Map)value);
+            return JsonObject.toJSON(lcx, (Map) value);
         }
 
         if (value instanceof java.nio.file.Path)
@@ -255,5 +267,32 @@ abstract public class Json {
 
         return new JsonString(value.toString());
 
+    }
+
+    public static Json toJSON(JsonElement element) {
+        if (element.isJsonNull()) {
+            return JsonNull.getSingleton();
+        }
+
+        if (element.isJsonPrimitive()) {
+            final JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isBoolean()) return JsonBoolean.of(primitive.getAsBoolean());
+            if (primitive.isNumber()) return new JsonReal(primitive.getAsFloat());
+            if (primitive.isString()) return new JsonString(primitive.getAsString());
+            throw new AssertionError("Unknown JSON primitive type " + primitive);
+        }
+
+        if (element.isJsonArray()) {
+            final JsonArray array = new JsonArray();
+            element.getAsJsonArray().forEach(m -> array.add(toJSON(null, m)));
+            return array;
+        }
+
+        if (element.isJsonObject()) {
+            final JsonObject object = new JsonObject();
+            element.getAsJsonObject().entrySet().stream().forEach(e -> object.put(e.getKey(), toJSON(e.getValue())));
+            return object;
+        }
+        throw new AssertionError("Unknown JSON type " + element);
     }
 }

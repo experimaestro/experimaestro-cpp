@@ -34,9 +34,15 @@ import java.io.Writer;
 @Exposed
 public class JsonBoolean extends Json {
     private final boolean value;
+    public final static JsonBoolean TRUE = new JsonBoolean(true);
+    public final static JsonBoolean FALSE = new JsonBoolean(false);
 
-    public JsonBoolean(boolean value) {
+    private JsonBoolean(boolean value) {
         this.value = value;
+    }
+
+    public static JsonBoolean of(boolean value) {
+        return value ? TRUE : FALSE;
     }
 
     @Override

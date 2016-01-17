@@ -71,7 +71,7 @@ public class ValueType extends Type {
     }
 
     static public Json wrap(Boolean value) {
-        return new JsonBoolean(value);
+        return JsonBoolean.of(value);
     }
 
     static public Json wrap(Path value) {

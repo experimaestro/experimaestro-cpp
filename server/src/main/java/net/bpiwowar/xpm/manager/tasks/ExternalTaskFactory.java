@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import com.google.gson.JsonElement;
 import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -23,6 +24,7 @@ import java.util.Map;
 @Exposed
 public abstract class ExternalTaskFactory extends TaskFactory {
     protected final Map<String, Input> inputs = new HashMap<>();
+    Map<String, JsonElement> constants;
     protected Type output;
     ArrayList<PathArgument> pathArguments;
     Map<String, String> prefixes;
@@ -35,6 +37,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         this.output = new ValueType(information.output);
         this.pathArguments = information.pathArguments;
         this.prefixes = information.prefixes;
+        this.constants = information.constants;
         this.id = information.id;
         if (information.id == null)
             throw new AssertionError("Task ID is not defined");

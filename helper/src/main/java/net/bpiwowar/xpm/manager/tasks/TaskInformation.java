@@ -1,5 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import com.google.gson.JsonElement;
 import net.bpiwowar.xpm.manager.QName;
 
 import java.util.ArrayList;
@@ -34,4 +35,9 @@ public class TaskInformation {
      * Prefixes for namespaces - used for unique directory naming
      */
     Map<String, String> prefixes = new HashMap<>();
+
+    /**
+     * Constants to be added to the JSON
+     */
+    Map<String, JsonElement> constants = new HashMap<>();
 }

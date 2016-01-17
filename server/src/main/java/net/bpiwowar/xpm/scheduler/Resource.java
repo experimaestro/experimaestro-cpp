@@ -154,8 +154,9 @@ public class Resource implements Identifiable {
      */
     public Resource(long id, Path locator) throws SQLException {
         this.locator = locator;
-        ingoingDependencies = null;
         this.resourceID = id;
+
+        ingoingDependencies = null;
         dataLoaded = false;
     }
 
@@ -615,7 +616,7 @@ public class Resource implements Identifiable {
                 getState(), getState().value());
 
         try (final JsonSerializationInputStream jsonInputStream = JsonSerializationInputStream.of(this, defaultBuilder)) {
-            resources.save(this, SQL_INSERT, update, typeValue, getLocator().toUri().toString(), getState().value(),
+            resources.save(this, SQL_INSERT, update, typeValue, PathUtils.normalizedString(this.locator), getState().value(),
                     update ? old.getState().value() : getState().value(),
                     jsonInputStream);
         } catch (IOException e) {
@@ -672,7 +673,7 @@ public class Resource implements Identifiable {
      * @return The resource or null if there is no such resource
      */
     static public Resource getByLocator(Path path) throws SQLException {
-        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path.toUri().toString()));
+        return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, PathUtils.normalizedString(path)));
     }
 
     static public Resource getByLocator(String path) throws SQLException {

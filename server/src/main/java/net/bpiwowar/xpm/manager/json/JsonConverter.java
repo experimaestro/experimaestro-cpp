@@ -87,7 +87,7 @@ public class JsonConverter {
             }
 
             case BOOLEAN:
-                return new JsonBoolean(jsonReader.nextBoolean());
+                return JsonBoolean.of(jsonReader.nextBoolean());
 
             case STRING:
                 return new JsonString(jsonReader.nextString());

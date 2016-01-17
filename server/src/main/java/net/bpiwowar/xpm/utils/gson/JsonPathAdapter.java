@@ -22,6 +22,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,7 +49,8 @@ public class JsonPathAdapter extends TypeAdapter<Path> {
         if (value == null) {
             out.nullValue();
         } else {
-            out.value(value.toAbsolutePath().toUri().toString());
+            String string = PathUtils.normalizedString(value);
+            out.value(string);
         }
     }
 

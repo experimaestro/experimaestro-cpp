@@ -60,7 +60,7 @@ public class PythonUtils {
             return new JsonInteger((Long) value);
 
         if (value instanceof Boolean)
-            return new JsonBoolean((Boolean) value);
+            return JsonBoolean.of((Boolean) value);
 
         // --- A map
         if (value instanceof Map) {

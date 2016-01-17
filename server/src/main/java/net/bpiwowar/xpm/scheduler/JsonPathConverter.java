@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -34,7 +35,7 @@ import java.nio.file.Paths;
 public class JsonPathConverter extends TypeAdapter<Path> {
     @Override
     public void write(JsonWriter out, Path value) throws IOException {
-        final String stringPath = value.toUri().toString();
+        final String stringPath = PathUtils.normalizedString(value);
         out.value(stringPath);
     }
 
