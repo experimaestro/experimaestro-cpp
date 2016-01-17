@@ -21,11 +21,9 @@ package net.bpiwowar.xpm.manager.tasks;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
-import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMAssertionError;
-import net.bpiwowar.xpm.utils.FileSystem;
 import org.apache.log4j.Level;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -39,10 +37,8 @@ import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -88,7 +84,7 @@ public class ExternalTask extends Task {
                 dirPrefix = prefix + "." + dirPrefix;
             }
 
-            uniqueDir = Manager.uniquePath(file, dirPrefix, factory.getId(), json, true);
+            uniqueDir = new UniquePath(file, dirPrefix, factory.getId(), json, true).create().getUniquePath();
             path = uniqueDir.resolve(factory.getId().getLocalPart());
         } catch (Throwable e) {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");

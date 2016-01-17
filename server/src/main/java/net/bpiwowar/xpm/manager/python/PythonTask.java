@@ -149,7 +149,7 @@ public class PythonTask extends Task {
         if (prefix == null) {
             prefix = taskId.getLocalPart();
         }
-        return Manager.uniquePath(basedir, prefix, taskId, cx.toJSON(json), directory);
+        return new UniquePath(basedir, prefix, taskId, cx.toJSON(json), directory).create().getUniquePath();
     }
 
     @Expose()

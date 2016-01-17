@@ -30,8 +30,8 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.Manager;
 import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.UniquePath;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
@@ -40,7 +40,6 @@ import net.bpiwowar.xpm.manager.json.JsonArray;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonString;
 import net.bpiwowar.xpm.manager.tasks.JavaTasksIntrospection;
-import net.bpiwowar.xpm.manager.tasks.ScriptCommandBuilder;
 import net.bpiwowar.xpm.manager.tasks.TasksLoader;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
@@ -112,13 +111,13 @@ public class Functions {
     @Expose(context = true)
     public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
         Json json = cx.toJSON(jsons);
-        return Manager.getDigest(json);
+        return UniquePath.getDigest(json);
     }
 
     @Expose(context = true)
     public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
         Json json = cx.toJSON(jsons);
-        return Manager.getDescriptor(json);
+        return UniquePath.getDescriptor(json);
     }
 
     // Used in scripting languages which cannot use $ as first character

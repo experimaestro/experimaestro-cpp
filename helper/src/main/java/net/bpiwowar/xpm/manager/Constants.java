@@ -66,7 +66,6 @@ public class Constants {
     /// Ignored value
     public static final QName XP_IGNORE = new QName(null, "$ignore");
     public static final String XPM_SIGNATURE = "signature.xpm";
-    public static final String OLD_XPM_SIGNATURE = ".xpm-signature";
     public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
     public static final String JAVATASK_INTROSPECTION_PATH = "META-INF/net.bpiwowar.experimaestro/introspection.json";

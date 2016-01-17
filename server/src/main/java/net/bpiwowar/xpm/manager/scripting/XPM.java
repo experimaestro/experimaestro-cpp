@@ -634,7 +634,7 @@ public class XPM {
             }
         }
         final Json json = JSUtils.toJSON(scope, jsonValues);
-        return Manager.uniquePath(basedir, prefix, id, json, true);
+        return new UniquePath(basedir, prefix, id, json, true).create().getUniquePath();
     }
 
 
