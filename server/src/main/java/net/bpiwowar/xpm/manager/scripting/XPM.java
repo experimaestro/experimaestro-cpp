@@ -28,6 +28,7 @@ import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandContext;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
@@ -250,28 +251,28 @@ public class XPM {
     }
 
     @Expose("get_task")
-    public Task getTask(QName name) {
+    public Task getTask(@NotNull QName name) {
         return ScriptContext.get().getTask(name);
     }
 
     @Expose("get_task")
     public Task getTask(
-            String namespaceURI,
-            String localName) {
+            @NotNull String namespaceURI,
+            @NotNull String localName) {
         return ScriptContext.get().getTask(new QName(namespaceURI, localName));
     }
 
     @Expose("file")
     @Help(value = "Returns a file relative to the current connector")
-    public Path file(@Argument(name = "filepath") String filepath) throws FileSystemException {
+    public Path file(@Argument(name = "filepath") @NotNull String filepath) throws FileSystemException {
         return context().getCurrentScriptPath().resolve(filepath);
     }
 
 
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(@Argument(name = "jobId") Object path,
-                                   @Argument(type = "Array", name = "command") List<?> jsargs,
+    public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
+                                   @Argument(type = "Array", name = "command") @NotNull List<?> jsargs,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
 
         Commands commands = new Commands(Command.getCommand(jsargs));
@@ -281,8 +282,8 @@ public class XPM {
 
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(@Argument(name = "jobId") Object path,
-                                   @Argument(type = "Array", name = "command") AbstractCommand command,
+    public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
+                                   @Argument(type = "Array", name = "command") @NotNull AbstractCommand command,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
 
         Commands commands = new Commands(command);
@@ -413,6 +414,9 @@ public class XPM {
         final ScriptContext scriptContext = context();
         final Logger rootLogger = scriptContext.getLogger("xpm");
 
+        if (path == null) {
+            throw new XPMScriptRuntimeException("Locator was null for command line job");
+        }
 
         CommandLineTask job = null;
         // --- XPMProcess arguments: convert the javascript array into a Java array
