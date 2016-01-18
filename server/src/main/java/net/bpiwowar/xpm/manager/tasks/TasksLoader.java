@@ -4,6 +4,8 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.utils.gson.JsonPathAdapter;
 
@@ -87,12 +89,18 @@ public class TasksLoader {
             Path scriptPath = entry.getValue();
 
             try (final BufferedReader pyReader = Files.newBufferedReader(scriptJsonPath)) {
-                final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
-                for (ScriptTaskInformation information : taskList) {
-                    // Creates the task factory
-                    information.prefixes = prefixes;
-                    ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, scriptPath);
-                    repository.addFactory(factory);
+                try {
+                    final ArrayList<ScriptTaskInformation> taskList = gson.fromJson(pyReader, Analyze.SCRIPT_INFORMATION_TYPE);
+                    for (ScriptTaskInformation information : taskList) {
+                        // Creates the task factory
+                        information.prefixes = prefixes;
+                        ScriptTaskFactory factory = new ScriptTaskFactory(repository, information, scriptCommandBuilder, scriptPath);
+                        repository.addFactory(factory);
+                    }
+                } catch(RuntimeException e) {
+                    final XPMScriptRuntimeException e2 = new XPMScriptRuntimeException(e, "Error while reading " + scriptJsonPath);
+                    e2.addContext("while reading %s", scriptJsonPath);
+                    throw e2;
                 }
             }
 
