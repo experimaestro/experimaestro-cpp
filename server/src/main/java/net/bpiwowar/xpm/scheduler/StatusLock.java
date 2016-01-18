@@ -121,7 +121,7 @@ public class StatusLock extends Lock {
     public void updateStatusFile(String pidFrom, String pidTo, boolean writeAccess)
             throws LockException {
         // --- Lock the resource
-        try (Lock ignored = new FileLock(LOCK_EXTENSION.transform(path), true)) {
+        try (Lock ignored = new FileLock(LOCK_EXTENSION.transform(path), false)) {
             Path statusPath = STATUS_EXTENSION.transform(path);
 
             // --- Read the resource state
