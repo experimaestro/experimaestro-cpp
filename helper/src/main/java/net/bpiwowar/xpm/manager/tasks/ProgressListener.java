@@ -38,7 +38,7 @@ public class ProgressListener {
 
     public ProgressListener(String baseURL) {
         this.baseURL = baseURL;
-        this.pool = Executors.newSingleThreadScheduledExecutor();
+        this.pool = Executors.newFixedThreadPool(1);
     }
 
     public ProgressListener() {
