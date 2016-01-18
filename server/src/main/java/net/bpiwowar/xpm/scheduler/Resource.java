@@ -25,7 +25,13 @@ import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.utils.*;
+import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.CloseableIterator;
+import net.bpiwowar.xpm.utils.FileNameTransformer;
+import net.bpiwowar.xpm.utils.FileSystem;
+import net.bpiwowar.xpm.utils.GsonSerialization;
+import net.bpiwowar.xpm.utils.JsonSerializationInputStream;
+import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.commons.lang.NotImplementedException;
@@ -42,7 +48,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static net.bpiwowar.xpm.utils.GsonConverter.defaultBuilder;
@@ -431,40 +441,42 @@ public class Resource implements Identifiable {
 
     /**
      * Removes files related to this resource
+     *
      * @param removeFile If true, all files should be removed. If false, only job execution related
      *                   files are removed (error, done, etc.)
      */
     public void clean(boolean removeFile) {
-        try (PreparedStatement st = Scheduler.prepareStatement("SELECT path FROM ResourcePaths WHERE id=?")) {
-            st.setLong(1, resourceID);
-            st.execute();
-            try (ResultSet rs = st.executeQuery()) {
-                while (rs.next()) {
-                    final String uri = rs.getString(1);
-                    try {
-                        final Path path = NetworkShare.uriToPath(uri);
-                        if (Files.isRegularFile(path)) {
-                            Files.delete(path);
-                        } else if (Files.isDirectory(path)) {
-                            FileSystem.recursiveDelete(path);
-                        } else {
-                            LOGGER.error("Could not delete %s while cleaning resource %s: unknown file type", uri, this);
+        if (removeFile) {
+            try (PreparedStatement st = Scheduler.prepareStatement("SELECT path FROM ResourcePaths WHERE id=?")) {
+                st.setLong(1, resourceID);
+                st.execute();
+                try (ResultSet rs = st.executeQuery()) {
+                    while (rs.next()) {
+                        final String uri = rs.getString(1);
+                        try {
+                            final Path path = NetworkShare.uriToPath(uri);
+                            if (Files.isRegularFile(path)) {
+                                Files.delete(path);
+                            } else if (Files.isDirectory(path)) {
+                                FileSystem.recursiveDelete(path);
+                            } else {
+                                LOGGER.error("Could not delete %s while cleaning resource %s: unknown file type", uri, this);
+                            }
+                        } catch (Throwable e) {
+                            LOGGER.error(e, "Could not delete %s while cleaning resource %s", uri, this);
                         }
-                    } catch (Throwable e) {
-                        LOGGER.error(e, "Could not delete %s while cleaning resource %s", uri, this);
                     }
                 }
+            } catch (SQLException e) {
+                LOGGER.error(e, "while cleaning resource %s", this);
             }
-        } catch (SQLException e) {
-            LOGGER.error(e, "while cleaning resource %s", this);
-        }
-
-        // Clean DB
-        try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ResourcePaths WHERE id=?")) {
-            st.setLong(1, resourceID);
-            st.execute();
-        } catch (SQLException e) {
-            LOGGER.error(e, "while removing associated path in DB for resource %s", this);
+            // Clean DB
+            try (PreparedStatement st = Scheduler.prepareStatement("DELETE FROM ResourcePaths WHERE id=?")) {
+                st.setLong(1, resourceID);
+                st.execute();
+            } catch (SQLException e) {
+                LOGGER.error(e, "while removing associated path in DB for resource %s", this);
+            }
         }
     }
 
@@ -545,7 +557,7 @@ public class Resource implements Identifiable {
         Scheduler.get().notify(message);
     }
 
-    public Path getFileWithExtension(FileNameTransformer extension)  {
+    public Path getFileWithExtension(FileNameTransformer extension) {
         return extension.transform(locator);
     }
 
