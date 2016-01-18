@@ -5,6 +5,8 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonWriterMode;
 import net.bpiwowar.xpm.manager.json.JsonWriterOptions;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,6 +16,7 @@ import java.nio.file.Files;
 /**
  * A Json parameter file
  */
+@Exposed
 public class JsonParameterFile implements CommandComponent {
     private String key;
 
@@ -22,6 +25,7 @@ public class JsonParameterFile implements CommandComponent {
     private JsonParameterFile() {
     }
 
+    @Expose
     public JsonParameterFile(String key, Json json) {
         this.key = key;
         this.json = json;

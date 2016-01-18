@@ -21,16 +21,15 @@ package net.bpiwowar.xpm.commands;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import net.bpiwowar.xpm.scheduler.Dependency;
-import org.mozilla.javascript.NativeArray;
-import net.bpiwowar.xpm.manager.js.JSParameterFile;
 import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
+import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Functional;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.mozilla.javascript.NativeArray;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -40,9 +39,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * A command line argument (or argument part)
@@ -123,9 +120,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         } else if (object instanceof NativeArray) {
             for (Object child : (NativeArray) object)
                 argumentWalkThrough(sb, command, JSUtils.unwrap(child));
-        } else if (object instanceof JSParameterFile) {
-            final JSParameterFile pFile = (JSParameterFile) object;
-            command.add(new ParameterFile(pFile.getKey(), pFile.getValue()));
         } else {
             sb.append(JSUtils.toString(object));
         }

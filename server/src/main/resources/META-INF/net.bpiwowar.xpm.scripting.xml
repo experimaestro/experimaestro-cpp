@@ -59,6 +59,10 @@
         <!--<class>net.bpiwowar.xpm.manager.scripting.ScriptingReference</class>-->
         <class>net.bpiwowar.xpm.manager.scripting.ObjectPropertyReference</class>
 
+        <!-- Commands -->
+        <class>net.bpiwowar.xpm.commands.ParameterFile</class>
+        <class>net.bpiwowar.xpm.commands.JsonParameterFile</class>
+
         <!-- Json -->
         <class>net.bpiwowar.xpm.manager.json.Json</class>
 
