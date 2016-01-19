@@ -207,7 +207,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             exitWriter.format("code=$?%n");
             exitWriter.format("if test $code -ne 0; then%n");
             if (exitCodePath != null)
-                exitWriter.format(" echo $code > \"%s\"%n", protect(exitCodePath, QUOTED_SPECIAL));
+                exitWriter.format(" echo $code > \"%s\"%n", protect(env.resolve(exitCodePath_, basepath), QUOTED_SPECIAL));
             exitWriter.format(" exit $code%n");
             exitWriter.format("fi%n");
 
