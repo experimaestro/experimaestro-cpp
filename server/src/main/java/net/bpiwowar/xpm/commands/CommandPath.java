@@ -22,7 +22,7 @@ public class CommandPath implements CommandComponent, Serializable {
 
     @Override
     public String toString(CommandContext environment) throws IOException {
-        return environment.resolve(file);
+        return environment.resolve(file, null);
     }
 
     @Override

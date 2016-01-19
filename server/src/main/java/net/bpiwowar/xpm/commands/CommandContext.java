@@ -80,8 +80,9 @@ public abstract class CommandContext implements Closeable {
         this.launcher = launcher;
     }
 
-    public String resolve(Path file) throws IOException {
-        String resolve = launcher.getConnector().resolve(file);
+
+    public String resolve(Path file, Path reference) throws IOException {
+        String resolve = launcher.getConnector().resolve(file, reference);
         if (resolve == null) {
             throw new XPMRuntimeException("Could not resolve path %s with launcher %s", file, launcher);
         }
@@ -90,7 +91,7 @@ public abstract class CommandContext implements Closeable {
 
     abstract Path getAuxiliaryFile(String prefix, String suffix) throws IOException;
 
-    abstract public String getWorkingDirectory() throws IOException;
+    abstract public Path getWorkingDirectory() throws IOException;
 
 
     public Object getData(Object key) {
@@ -152,7 +153,7 @@ public abstract class CommandContext implements Closeable {
         }
 
         @Override
-        public String getWorkingDirectory() {
+        public Path getWorkingDirectory() {
             return null;
         }
 
@@ -209,8 +210,8 @@ public abstract class CommandContext implements Closeable {
         }
 
         @Override
-        public String getWorkingDirectory() throws IOException {
-            return launcher.getConnector().resolve(folder);
+        public Path getWorkingDirectory() throws IOException {
+            return folder;
         }
 
         @Override

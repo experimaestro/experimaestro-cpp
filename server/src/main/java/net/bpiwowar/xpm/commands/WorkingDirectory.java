@@ -13,7 +13,7 @@ public class WorkingDirectory implements CommandComponent {
 
     @Override
     public String toString(CommandContext environment) throws IOException {
-        return environment.getWorkingDirectory();
+        return environment.resolve(environment.getWorkingDirectory(), null);
     }
 
     @Override

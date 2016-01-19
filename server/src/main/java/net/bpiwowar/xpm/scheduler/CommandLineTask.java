@@ -20,13 +20,14 @@ package net.bpiwowar.xpm.scheduler;
 
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Redirect;
-import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
+
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
-import org.json.simple.JSONObject;
-import net.bpiwowar.xpm.connectors.*;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -38,7 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.protect;
 
 /**
  * A command line task (executed with the default shell)
@@ -107,7 +109,7 @@ public class CommandLineTask extends Job {
      * Get a full command line from an array of arguments
      */
     public static String getCommandLine(List<String> args) {
-        return bpiwowar.argparser.utils.Output.toString(" ", args, t -> protect(t, UnixScriptProcessBuilder.SHELL_SPECIAL));
+        return bpiwowar.argparser.utils.Output.toString(" ", args, t -> protect(t, SHELL_SPECIAL));
     }
 
 

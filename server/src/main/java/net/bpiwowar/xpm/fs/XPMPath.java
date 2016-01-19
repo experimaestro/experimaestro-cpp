@@ -373,7 +373,7 @@ public class XPMPath implements Path {
     /**
      * Returns the contextualized path
      *
-     * @param path The base path (has to be absolute)
+     * @param path The normalized base path
      * @return The full path
      */
     public String getLocalStringPath(String path) {

@@ -31,7 +31,7 @@ import static java.lang.String.format;
 /**
  * An access to a network share
  */
-public class NetworkShareAccess implements Serializable {
+final public class NetworkShareAccess implements Serializable {
     /**
      * The host that allows us to access the data
      */
@@ -94,8 +94,8 @@ public class NetworkShareAccess implements Serializable {
         this.priority = priority;
         if (share != null) {
             try (PreparedStatement st = Scheduler.getConnection()
-                    .prepareStatement("UPDATE NetworkShareAccess SET path=? WHERE share=? AND connector=?")) {
-                st.setString(1, path);
+                    .prepareStatement("UPDATE NetworkShareAccess SET priority=? WHERE share=? AND connector=?")) {
+                st.setInt(1, priority);
                 st.setLong(2, share.getId());
                 st.setLong(3, connector.getId());
             }
@@ -123,10 +123,26 @@ public class NetworkShareAccess implements Serializable {
     }
 
     public String resolve(XPMPath path) throws IOException {
+        return resolve(path, null);
+    }
+
+    public String resolve(XPMPath path, XPMPath reference) throws IOException {
+        if (reference != null) {
+            return reference.relativize(path).toString();
+        }
+        return path.getLocalStringPath(getLocalPath(path));
+    }
+
+    /**
+     * Checks that the path belongs to the share, and returns the path on the host
+     * @param path The path to check
+     * @return A string representing the path on the host
+     */
+    protected String getLocalPath(XPMPath path) {
         if (!path.getHostName().equals(share.host) || !path.getShareName().equals(share.name)) {
             throw new IllegalArgumentException(format("Cannot resolve %s for share %s", path, share));
         }
-        return path.getLocalStringPath(this.path);
+        return this.path;
     }
 
     /**

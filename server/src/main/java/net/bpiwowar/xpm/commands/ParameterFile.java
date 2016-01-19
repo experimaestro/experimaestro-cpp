@@ -32,7 +32,7 @@ public class ParameterFile implements CommandComponent, Serializable {
         out.write(content);
         out.close();
 
-        return environment.resolve(file);
+        return environment.resolve(file, null);
     }
 
     @Override

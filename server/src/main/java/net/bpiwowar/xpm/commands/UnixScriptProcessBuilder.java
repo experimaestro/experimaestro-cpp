@@ -39,6 +39,9 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static net.bpiwowar.xpm.utils.PathUtils.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.protect;
 
 /**
  * Class that knows how to build UNIX scripts to run command
@@ -46,9 +49,6 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
-    public static final String SHELL_SPECIAL = " \\;\"'<>\n$()";
-
-    public static final String QUOTED_SPECIAL = "\"$";
 
     /**
      * Lock files to delete
@@ -60,6 +60,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      */
     Commands endOfJobCommands;
 
+    /**
+     * Path to /bin/sh
+     */
     private String shPath = "/bin/bash";
 
     /**
@@ -99,26 +102,6 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     }
 
     /**
-     * XPMProcess one argument, adding backslash if necessary to protect special
-     * characters.
-     *
-     * @param string The string to protect
-     * @return The protected string
-     */
-    static public String protect(String string, String special) {
-        if (string.equals(""))
-            return "\"\"";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < string.length(); i++) {
-            final char c = string.charAt(i);
-            if (special.indexOf(c) != -1)
-                sb.append("\\");
-            sb.append(c);
-        }
-        return sb.toString();
-    }
-
-    /**
      * Sets end of job command
      */
     public void endOfJobCommands(Commands commands) {
@@ -128,6 +111,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     final public XPMProcess start(boolean fake) throws LaunchException, IOException {
         final Path runFile = launcher.getMainConnector().resolveFile(path);
+        final Path donePath_ = launcher.getMainConnector().resolveFile(donePath);
+        final Path exitCodePath_ = launcher.getMainConnector().resolveFile(exitCodePath);
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
@@ -160,7 +145,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             }
 
             if (directory() != null) {
-                writer.format("cd \"%s\"%n", protect(env.resolve(directory()), QUOTED_SPECIAL));
+                writer.format("cd \"%s\"%n", protect(env.resolve(directory(), null), QUOTED_SPECIAL));
             }
 
             // Write some command
@@ -186,7 +171,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 final CommandContext.NamedPipeRedirections namedRedirections = env.getNamedRedirections(c, false);
                 for (Path file : Iterables.concat(namedRedirections.outputRedirections,
                         namedRedirections.errorRedirections)) {
-                    writer.format(" rm -f %s;%n", env.resolve(file));
+                    writer.format(" rm -f %s;%n", env.resolve(file, basepath));
                 }
             }));
 
@@ -204,14 +189,15 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
 
             if (!lockFiles.isEmpty()) {
-                writer.format("%n# Checks that the locks are set%n");
+                writer.format("# Checks that the locks are set%n");
                 for (String lockFile : lockFiles) {
                     writer.format("test -f %s || exit 017%n", lockFile);
                 }
             }
+            writer.println();
 
             if (doCleanup) {
-                writer.format("%n%n# Set trap to cleanup when exiting%n");
+                writer.format("# Set trap to cleanup when exiting%n");
                 writer.format("trap cleanup 0%n");
             }
 
@@ -227,13 +213,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             String exitScript = sw.toString();
 
-            writer.format("%n%n");
-
             switch (input.type()) {
                 case INHERIT:
                     break;
                 case READ:
-                    writer.format("cat \"%s\" | ", launcher.resolve(input.file()));
+                    writer.format("cat \"%s\" | ", env.resolve(input.file(), basepath));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
@@ -247,8 +231,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             writer.print(") ");
 
-            writeRedirection(writer, output, 1);
-            writeRedirection(writer, error, 2);
+            writeRedirection(env, writer, output, 1);
+            writeRedirection(env, writer, error, 2);
 
             // Retrieve PID
             writer.println(" & ");
@@ -258,9 +242,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.print(exitScript);
 
             if (exitCodePath != null)
-                writer.format("echo 0 > \"%s\"%n", protect(exitCodePath, QUOTED_SPECIAL));
+                writer.format("echo 0 > \"%s\"%n", protect(env.resolve(exitCodePath_, basepath), QUOTED_SPECIAL));
             if (donePath != null)
-                writer.format("touch \"%s\"%n", protect(donePath, QUOTED_SPECIAL));
+                writer.format("touch \"%s\"%n", protect(env.resolve(donePath_, basepath), QUOTED_SPECIAL));
 
             writer.close();
 
@@ -282,7 +266,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     }
 
-    private void writeRedirection(PrintWriter writer, Redirect redirect, int stream) throws IOException {
+    private void writeRedirection(CommandContext env, PrintWriter writer, Redirect redirect, int stream) throws IOException {
         if (redirect == null) {
             writer.format(" %d> /dev/null", stream);
         } else {
@@ -290,10 +274,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 case INHERIT:
                     break;
                 case APPEND:
-                    writer.format(" %d>> %s", stream, protect(launcher.resolve(redirect.file()), QUOTED_SPECIAL));
+                    writer.format(" %d>> %s", stream, protect(env.resolve(redirect.file(), env.getWorkingDirectory()), QUOTED_SPECIAL));
                     break;
                 case WRITE:
-                    writer.format(" %d> %s", stream, protect(launcher.resolve(redirect.file()), QUOTED_SPECIAL));
+                    writer.format(" %d> %s", stream, protect(env.resolve(redirect.file(), env.getWorkingDirectory()), QUOTED_SPECIAL));
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported output redirection type: " + input.type());
@@ -313,11 +297,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Write named pipes
             for (Path file : Iterables.concat(namedRedirections.outputRedirections, namedRedirections.errorRedirections)) {
-                writer.format(" mkfifo \"%s\"%n", protect(env.resolve(file), QUOTED_SPECIAL));
+                writer.format(" mkfifo \"%s\"%n", protect(env.resolve(file, env.getWorkingDirectory()), QUOTED_SPECIAL));
             }
 
             if (command.inputRedirect != null && command.inputRedirect.type() == Redirect.Type.READ) {
-                writer.format("cat \"%s\" | ", protect(env.resolve(command.inputRedirect.file()), QUOTED_SPECIAL));
+                writer.format("cat \"%s\" | ", protect(env.resolve(command.inputRedirect.file(), env.getWorkingDirectory()), QUOTED_SPECIAL));
             }
 
             if (command instanceof Commands) {
@@ -369,18 +353,18 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
             // Special case : just one redirection
             if (outputRedirects.size() == 1 && outputRedirect == null) {
-                writeRedirection(writer, Redirect.to(outputRedirects.get(0)), stream);
+                writeRedirection(env, writer, Redirect.to(outputRedirects.get(0)), stream);
             } else {
                 writer.format(" %d> >(tee", stream);
                 for (Path file : outputRedirects) {
-                    writer.format(" \"%s\"", protect(env.resolve(file), QUOTED_SPECIAL));
+                    writer.format(" \"%s\"", protect(env.resolve(file, env.getWorkingDirectory()), QUOTED_SPECIAL));
                 }
-                writeRedirection(writer, outputRedirect, stream);
+                writeRedirection(env, writer, outputRedirect, stream);
                 writer.write(")");
             }
         } else {
             // Finally, write the main redirection
-            writeRedirection(writer, outputRedirect, stream);
+            writeRedirection(env, writer, outputRedirect, stream);
         }
     }
 

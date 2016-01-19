@@ -51,7 +51,7 @@ public class JsonParameterFile implements CommandComponent {
                     .simplifyValues(true)
                     .resolveFile(f -> {
                         try {
-                            return environment.resolve(f);
+                            return environment.resolve(f, null);
                         } catch (IOException e) {
                             throw new XPMRuntimeException(e);
                         }
@@ -61,6 +61,6 @@ public class JsonParameterFile implements CommandComponent {
             throw new XPMRuntimeException(e, "Could not write JSON string for java task");
         }
 
-        return environment.resolve(file);
+        return environment.resolve(file, environment.getWorkingDirectory());
     }
 }

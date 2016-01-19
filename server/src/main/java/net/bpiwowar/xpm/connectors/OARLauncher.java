@@ -49,8 +49,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.utils.PathUtils.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.protect;
 
 /**
  * A command line launcher with OAR
@@ -303,7 +304,7 @@ public class OARLauncher extends Launcher {
                 // Use a full OAR process
 
                 final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getLocator()));
-                final String runpath = protect(path, UnixScriptProcessBuilder.SHELL_SPECIAL);
+                final String runpath = protect(path, SHELL_SPECIAL);
 
                 ArrayList<String> command = new ArrayList<>();
 

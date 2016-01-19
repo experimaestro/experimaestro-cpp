@@ -106,9 +106,16 @@ abstract public class SingleHostConnector extends Connector {
      * Throws an exception when the file name cannot be resolved, i.e. when
      * the file object is not
      */
-    public String resolve(Path file) throws IOException {
-        if (file instanceof XPMPath) {
-            XPMPath xpmPath = (XPMPath) file;
+    public String resolve(Path path, Path reference) throws IOException {
+        if (reference != null) {
+            return reference.relativize(path).toString();
+        }
+
+        if (path instanceof XPMPath) {
+            XPMPath xpmPath = (XPMPath) path;
+            if (!(reference instanceof XPMPath)) {
+                throw new IOException();
+            }
             NetworkShareAccess access = null;
             try {
                 access = NetworkShare.find(this, xpmPath);
@@ -121,11 +128,11 @@ abstract public class SingleHostConnector extends Connector {
             return null;
         }
 
-        if (!contains(file.getFileSystem())) {
-            throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", file, this));
+        if (!contains(path.getFileSystem())) {
+            throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", path, this));
         }
 
-        return file.toAbsolutePath().toString();
+        return path.toAbsolutePath().toString();
     }
 
     /**

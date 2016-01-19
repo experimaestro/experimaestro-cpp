@@ -42,8 +42,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.commands.UnixScriptProcessBuilder.protect;
+import static net.bpiwowar.xpm.utils.PathUtils.QUOTED_SPECIAL;
+import static net.bpiwowar.xpm.utils.PathUtils.protect;
 
 /**
  * This class represents any layer that can get between a host where files can be stored
@@ -184,7 +184,11 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
 
     public abstract Path resolve(String path) throws IOException;
 
-    public String resolve(Path path) throws IOException {
+    final public String resolve(Path path) throws IOException {
+        return resolve(path, null);
+    }
+
+    public String resolve(Path path, Path reference) throws IOException {
         return getMainConnector().resolve(path);
     }
 

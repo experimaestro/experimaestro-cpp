@@ -27,6 +27,9 @@ import java.nio.file.Path;
  * java.nio related utils
  */
 public class PathUtils {
+    public static final String QUOTED_SPECIAL = "\"$";
+    public static final String SHELL_SPECIAL = " \\;\"'<>\n$()";
+
     /**
      * Returns a string that uniquely represents a given path
      * @param value The path to transform
@@ -38,5 +41,18 @@ public class PathUtils {
             string = string.substring(0, string.length() - 1);
         }
         return string;
+    }
+
+    static public String protect(String string, String special) {
+        if (string.equals(""))
+            return "\"\"";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < string.length(); i++) {
+            final char c = string.charAt(i);
+            if (special.indexOf(c) != -1)
+                sb.append("\\");
+            sb.append(c);
+        }
+        return sb.toString();
     }
 }
