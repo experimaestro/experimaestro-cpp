@@ -15,10 +15,12 @@ import base64
 import websocket
 import json
 import argcomplete
+from argcomplete.completers import ChoicesCompleter
 import socket
 import requests
 import signal
 import errno
+
 
 # --- Set some variables
 
@@ -29,6 +31,91 @@ xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file
 
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
+
+
+# --- Create the argument parser
+
+# create the top-level parser
+
+parser = argparse.ArgumentParser(description='experimaestro script.')
+subparsers = parser.add_subparsers(help='Command', dest='command')
+parser.set_defaults(dir=xpmdir)
+parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
+                    choices=("debug", "info", "warn"), default="info")
+
+parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
+parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
+parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
+                    help="Experimaestro configuration file")
+parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
+
+p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
+p_start.add_argument("--gradle", dest="gradle", action="store_true", help="Force starts using gradle")
+p_start.add_argument("--timeout", action="store", default=30, type=int, help="Timeout (in second) to ping server")
+
+subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
+
+# --- Scripting
+p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
+p_run_python = subparsers.add_parser("run-python", help="Run Python script in server")
+p_run_python.add_argument("--python-path", dest="pythonpath", default="", type=str, help="Python PATH")
+p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
+for p in [p_run_js, p_run_python]:
+    p.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
+    p.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
+    p.add_argument("--post", dest="post", help="Execute this javascript after the files")
+    p.add_argument('files', nargs='*', help='')
+
+
+
+job_specification = argparse.ArgumentParser(add_help=False)
+job_specification.add_argument('--states', dest="states", help="States")
+job_specification.add_argument('group', nargs='?', help="The group to list", default="")
+job_specification.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be included?")
+
+subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
+
+p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification])
+p_ls.add_argument("--color", action="store_true", default=False, help="Whether to color the output")
+
+subparsers.add_parser("list-methods", help="List Json RPC methods")
+
+p_restart = subparsers.add_parser("restart", help="Restart a job")
+p_restart.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be restarted?")
+p_restart.add_argument('--restart-done', dest="restart_done", action="store_true", default=False, help="Should done jobs be restarted?")
+p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
+
+p_information = subparsers.add_parser("information", help="Get information on a resource")
+p_information.add_argument('resourceId', nargs=1, help='The resource URI')
+
+p_rm = subparsers.add_parser("rm", help="Remove a resource")
+p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
+p_rm.add_argument('--states', dest="states", help="States")
+p_rm.add_argument('--group', dest="group")
+p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be removed?")
+p_rm.add_argument('jobid', nargs="*", help="The job ids")
+
+p_kill = subparsers.add_parser("kill", help="Kill a job")
+p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
+p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
+p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
+
+p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
+p_log_level.add_argument('id', nargs=1, help='The logger ID')
+p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
+
+subparsers.add_parser("ping", help="Ping the server")
+
+subparsers.add_parser("build-information", help="Returns experimaestro build information")
+
+# Parse arguments
+argcomplete.autocomplete(parser)
+args = parser.parse_args()
+
+
+# --- Utiliy classes and methods
 
 def mkdir_p(path):
     """Similar to ``mkdir -p path``.
@@ -527,83 +614,6 @@ def get_states(states):
 
 # --- Run command
 
-
-# create the top-level parser
-parser = argparse.ArgumentParser(description='experimaestro script.')
-subparsers = parser.add_subparsers(help='Command', dest='command')
-parser.set_defaults(dir=xpmdir)
-parser.add_argument("--log", dest="loglevel", action="store", help="Log level",
-                    choices=["debug", "info", "warn"], default="info")
-parser.add_argument("--debug", dest="debug", action="store_true", help="Debug script")
-parser.add_argument("--verbose", dest="verbose", action="store_true", help="Use verbose mode for XML-RPC server")
-parser.add_argument("--config", dest="config", default="~/.experimaestro/settings.ini", action="store",
-                    help="Experimaestro configuration file")
-parser.add_argument("--server", dest="server", action="store", help="The experimaestro server to use")
-
-p_start = subparsers.add_parser("start-server", help="Start the experimaestro server")
-p_start.add_argument("--gradle", dest="gradle", action="store_true", help="Force starts using gradle")
-p_start.add_argument("--timeout", action="store", default=30, type=int, help="Timeout (in second) to ping server")
-
-subparser = subparsers.add_parser("stop-server", help="Stop the experimaestro server")
-
-# --- Scripting
-p_run_js = subparsers.add_parser("run-js", help="Run JavaScript script in server")
-p_run_python = subparsers.add_parser("run-python", help="Run Python script in server")
-p_run_python.add_argument("--python-path", dest="pythonpath", default="", type=str, help="Python PATH")
-p_run_js.add_argument("--debug-port", dest="debug_port", default=-1, type=int, help="Port for remote JS debugging")
-for p in [p_run_js, p_run_python]:
-    p.add_argument("--remote", dest="remote", action="store_true", help="For the remote mode (files should be transmitted)")
-    p.add_argument("--pre", dest="pre", help="Execute this javascript before the files")
-    p.add_argument("--post", dest="post", help="Execute this javascript after the files")
-    p.add_argument('files', nargs='*', help='')
-
-
-
-job_specification = argparse.ArgumentParser(add_help=False)
-job_specification.add_argument('--states', dest="states", help="States")
-job_specification.add_argument('group', nargs='?', help="The group to list", default="")
-job_specification.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be included?")
-
-subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
-
-p_ls = subparsers.add_parser("ls", help="List jobs", parents=[job_specification])
-p_ls.add_argument("--color", action="store_true", default=False, help="Whether to color the output")
-
-subparsers.add_parser("list-methods", help="List Json RPC methods")
-
-p_restart = subparsers.add_parser("restart", help="Restart a job")
-p_restart.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be restarted?")
-p_restart.add_argument('--restart-done', dest="restart_done", action="store_true", default=False, help="Should done jobs be restarted?")
-p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
-
-p_information = subparsers.add_parser("information", help="Get information on a resource")
-p_information.add_argument('resourceId', nargs=1, help='The resource URI')
-
-p_rm = subparsers.add_parser("rm", help="Remove a resource")
-p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
-p_rm.add_argument('--states', dest="states", help="States")
-p_rm.add_argument('--group', dest="group")
-p_rm.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be removed?")
-p_rm.add_argument('jobid', nargs="*", help="The job ids")
-
-p_kill = subparsers.add_parser("kill", help="Kill a job")
-p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
-
-p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
-p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
-
-
-p_log_level = subparsers.add_parser("log-level", help="Set the logger level")
-p_log_level.add_argument('id', nargs=1, help='The logger ID')
-p_log_level.add_argument('level', nargs=1, choices=["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"], help='The level')
-
-subparsers.add_parser("ping", help="Ping the server")
-
-subparsers.add_parser("build-information", help="Returns experimaestro build information")
-
-# Parse arguments
-args = parser.parse_args()
-argcomplete.autocomplete(args)
 
 numeric_level = getattr(logging, args.loglevel.upper(), None)
 if not isinstance(numeric_level, int):
