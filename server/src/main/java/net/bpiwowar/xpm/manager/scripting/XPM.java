@@ -559,12 +559,6 @@ public class XPM {
             // Add dependencies
             dependencies.forEach(job::addDependency);
 
-            // Register within an experimentId
-            if (scriptContext.getExperiment() != null) {
-                TaskReference reference = scriptContext.getTaskReference();
-                reference.add(job);
-            }
-
             final Resource old = Resource.getByLocator(job.getLocator());
 
             job.updateStatus();
@@ -586,7 +580,7 @@ public class XPM {
 
         }
 
-        scriptContext.getSubmittedJobs().put(job.getLocator().toString(), job);
+        scriptContext.postProcess(null, job);
 
         return job;
     }

@@ -22,6 +22,7 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
 import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 
@@ -30,6 +31,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static java.lang.String.format;
 
 /**
  * An experiment
@@ -131,5 +134,26 @@ public class Experiment implements Identifiable {
         final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
         return experiments.find(SELECT_BEGIN, st -> {
         });
+    }
+
+    /**
+     * Add a new resource to this experiment
+     * @param resource The resource to add
+     */
+    public void add(Resource resource) throws SQLException {
+        DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        experiments.save(this, "INSERT INTO ExperimentTasks(id, identifier, experiment, parent) VALUES(?, ?, ?, ?)", st -> {
+            st.setLong(1, id);
+        });
+    }
+
+    public static Experiment findById(long id) throws SQLException {
+        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final Experiment fromCache = experiments.getFromCache(id);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        final String query = format("%s WHERE id=?", SELECT_BEGIN);
+        return experiments.findUnique(query, st -> st.setLong(1, id));
     }
 }

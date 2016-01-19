@@ -27,20 +27,18 @@ import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.SubmittedJob;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import net.bpiwowar.xpm.scheduler.Dependency;
-import net.bpiwowar.xpm.scheduler.DependencyParameters;
-import net.bpiwowar.xpm.scheduler.Job;
-import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.utils.IdentityHashSet;
 import net.bpiwowar.xpm.utils.MapStack;
 import net.bpiwowar.xpm.utils.Mutable;
 import net.bpiwowar.xpm.utils.Updatable;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.mozilla.javascript.Script;
 
 import java.io.Closeable;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,11 +101,6 @@ final public class ScriptContext implements AutoCloseable {
     private Updatable<Experiment> experiment;
 
     /**
-     * The current task
-     */
-    private TaskReference task;
-
-    /**
      * The current script path
      */
     private Updatable<Path> currentScriptPath;
@@ -125,12 +118,17 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Submitted jobs
      */
-    private Map<String, Resource> submittedJobs;
+    private Map<String, SubmittedJob> submittedJobs;
 
     /**
      * Whether we are simulating
      */
     Updatable<Boolean> simulate;
+
+    /**
+     * Current task
+     */
+    private Updatable<Task> task;
 
 
     public ScriptContext(StaticContext staticContext) {
@@ -142,7 +140,8 @@ final public class ScriptContext implements AutoCloseable {
 
         this.staticContext = staticContext;
 
-        defaultLocks = new Updatable<>(new HashMap<>(), x -> new HashMap(x));
+        defaultLocks = new Updatable<>(new HashMap<>(), HashMap::new);
+        task = Updatable.create(null);
         experiment = Updatable.create(null);
         priority = Updatable.create(0);
         workingDirectory = new Mutable<>();
@@ -188,6 +187,7 @@ final public class ScriptContext implements AutoCloseable {
 
         simulate = parent.simulate.reference();
         submittedJobs = parent.submittedJobs;
+        task = parent.task.reference();
 
         if (setThreadContext) {
             // Sets the current thread context
@@ -217,16 +217,6 @@ final public class ScriptContext implements AutoCloseable {
         return staticContext.scheduler;
     }
 
-    public void setTask(TaskReference task) {
-
-        this.task = task;
-    }
-
-    public TaskReference getTaskReference() {
-
-        return task;
-    }
-
     public Logger getMainLogger() {
         return staticContext.getMainLogger();
     }
@@ -238,7 +228,7 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Prepares the task with the current task context
      *
-     * @param resource
+     * @param resource The resource to prepare
      */
     public void prepare(Resource resource) {
         // -- Adds default locks
@@ -253,7 +243,6 @@ final public class ScriptContext implements AutoCloseable {
     }
 
     public ScriptContext addNewTaskListener(Consumer<Job> listener) {
-
         newTaskListeners.add(listener);
         return this;
     }
@@ -389,6 +378,73 @@ final public class ScriptContext implements AutoCloseable {
         return new Swap();
     }
 
+    /**
+     * Post processing of a saved resource
+     *
+     * @param task
+     * @param resource The saved resource
+     */
+    public void postProcess(Task task, Resource resource) {
+        if (task == null) task = this.task.get();
+        TaskReference taskReference = null;
+
+        try {
+            if (task != null) {
+                // Find the task reference with the same ID that has the same parents,
+                // otherwise create a new task reference
+
+                final QName taskId = task.getFactory().getId();
+                IdentityHashSet<TaskReference> set = null;
+                ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
+                for (Dependency dependency : resource.getDependencies()) {
+                    final SubmittedJob dep = submittedJobs.get(dependency.getFrom().getLocator().toString());
+                    parentTaskReferences.add(dep.taskReference);
+
+                    if (set == null) {
+                        set = new IdentityHashSet<>();
+                        dep.taskReference.children().stream()
+                                .filter(tr -> tr.getTaskId().equals(taskId))
+                                .forEach(set::add);
+                    } else {
+                        IdentityHashSet<TaskReference> newSet = new IdentityHashSet<>();
+                        dep.taskReference.children().stream()
+                                .filter(set::contains)
+                                .filter(tr -> tr.getTaskId().equals(taskId))
+                                .forEach(newSet::add);
+                        set = newSet;
+                    }
+
+                    if (set == null) break;
+                }
+
+                if (set.size() > 1) {
+                    throw new AssertionError("More than one task reference configuration");
+                }
+
+                if (set.isEmpty()) {
+                    taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
+                    taskReference.save();
+                } else {
+                    taskReference = set.iterator().next();
+                }
+
+                // Add resource
+                taskReference.add(resource);
+            }
+        } catch (SQLException e) {
+            // FIXME: do something better?
+            LOGGER.error(e, "Error while registering experiment");
+        }
+
+        final SubmittedJob submittedJob = new SubmittedJob(resource, taskReference);
+        getSubmittedJobs().put(resource.getLocator().toString(), submittedJob);
+
+    }
+
+    public void setTask(Task task) {
+        this.task.set(task);
+    }
+
     public class Swap implements Closeable {
         private final ScriptContext old;
 
@@ -409,9 +465,10 @@ final public class ScriptContext implements AutoCloseable {
     /**
      * Submitted jobs
      */
-    public Map<String, Resource> getSubmittedJobs() {
+    public Map<String, SubmittedJob> getSubmittedJobs() {
         return submittedJobs;
     }
+
     public boolean simulate() {
         return simulate.get();
     }

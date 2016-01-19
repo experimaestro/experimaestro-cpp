@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
 import org.apache.commons.dbcp2.PoolableConnection;
 import org.apache.commons.dbcp2.PoolableConnectionFactory;
@@ -164,6 +165,7 @@ final public class Scheduler {
      */
     private DatabaseObjects<NetworkShare> networkShares;
     private DatabaseObjects<Experiment> experiments;
+    private DatabaseObjects<TaskReference> taskReferences;
 
     private DatabaseObjects<Connector> connectors;
 
@@ -240,6 +242,7 @@ final public class Scheduler {
             resources = new DatabaseObjects<>("Resources", Resource::create);
             networkShares = new DatabaseObjects<>("NetworkShare", NetworkShare::create);
             experiments = new DatabaseObjects<>("Experiments", Experiment::create);
+            taskReferences = new DatabaseObjects<>("TaskReferences", TaskReference::create);
             connectors = new DatabaseObjects<>("Connectors", Connector::create);
             locks = new DatabaseObjects<>("Locks", Lock::create);
 
@@ -614,6 +617,10 @@ final public class Scheduler {
 
     public DatabaseObjects<Experiment> experiments() {
         return experiments;
+    }
+
+    public DatabaseObjects<TaskReference> taskReferences() {
+        return taskReferences;
     }
 
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {

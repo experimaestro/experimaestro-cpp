@@ -10,7 +10,7 @@ CREATE TABLE Connectors (
   data BLOB          NOT NULL
 );
 
-CREATE UNIQUE INDEX ConnectorURI ON Connectors(uri);
+CREATE UNIQUE INDEX ConnectorURI ON Connectors (uri);
 
 CREATE TABLE NetworkShares (
   id IDENTITY,
@@ -30,7 +30,6 @@ CREATE TABLE NetworkShareAccess (
   FOREIGN KEY (connector) REFERENCES Connectors
     ON DELETE CASCADE
 );
-
 
 --
 -- Resources
@@ -82,13 +81,12 @@ CREATE TABLE Jobs (
 -- Directories and/or files associated to resources
 -- Used for cleanup
 CREATE TABLE ResourcePaths (
-  id    BIGINT NOT NULL PRIMARY KEY,
-  path      VARCHAR(4096) NOT NULL,
+  id   BIGINT        NOT NULL PRIMARY KEY,
+  path VARCHAR(4096) NOT NULL,
 
   FOREIGN KEY (id) REFERENCES Resources
     ON DELETE CASCADE
 );
-
 
 --
 -- Other
@@ -130,18 +128,19 @@ CREATE TABLE Dependencies (
 --- Token dependencies
 
 CREATE TABLE TokenDependencies (
-  fromId  BIGINT   NOT NULL,
-  toId    BIGINT   NOT NULL,
-  tokens  INT      DEFAULT 1 NOT NULL,
+  fromId BIGINT        NOT NULL,
+  toId   BIGINT        NOT NULL,
+  tokens INT DEFAULT 1 NOT NULL,
 
   PRIMARY KEY (fromId, toId),
-  FOREIGN KEY (fromId, toId) REFERENCES Dependencies ON DELETE CASCADE
+  FOREIGN KEY (fromId, toId) REFERENCES Dependencies
+    ON DELETE CASCADE
 );
 
 -- Ensures that shares are not removed if a lock references it
 CREATE TABLE LockShares (
-  lock  BIGINT        NOT NULL,
-  share BIGINT        NOT NULL,
+  lock  BIGINT NOT NULL,
+  share BIGINT NOT NULL,
 
   -- do not delete a share if it is referenced
   FOREIGN KEY (lock) REFERENCES Locks
@@ -149,7 +148,6 @@ CREATE TABLE LockShares (
   FOREIGN KEY (share) REFERENCES NetworkShares
     ON DELETE RESTRICT
 );
-
 
 --
 -- Process
@@ -189,11 +187,11 @@ CREATE TABLE ProcessLocks (
     ON DELETE CASCADE
 );
 
-
 --
 -- Experiments
 --
 
+-- Table containing the list of experiments with their timestamps
 CREATE TABLE Experiments (
   id IDENTITY,
   name      VARCHAR(256)                        NOT NULL,
@@ -202,17 +200,29 @@ CREATE TABLE Experiments (
 
 CREATE UNIQUE INDEX experiment_name ON Experiments (name, timestamp);
 
+
+-- Table containing the list of tasks together with their
+-- dependencies
 CREATE TABLE ExperimentTasks (
   id IDENTITY,
   identifier VARCHAR(256) NOT NULL,
   experiment BIGINT       NOT NULL,
-  parent     BIGINT       NOT NULL,
 
   FOREIGN KEY (experiment) REFERENCES Experiments
     ON DELETE CASCADE,
   FOREIGN KEY (parent) REFERENCES ExperimentTasks
     ON DELETE CASCADE
 );
+
+CREATE TABLE ExperimentHierarchy (
+  parent BIGINT NOT NULL,
+  child  BIGINT NOT NULL,
+  FOREIGN KEY (parent) REFERENCES ExperimentTask
+    ON DELETE CASCADE,
+  FOREIGN KEY (child) REFERENCES ExperimentTasks
+    ON DELETE CASCADE
+);
+
 
 CREATE TABLE ExperimentResources (
   task     BIGINT NOT NULL,

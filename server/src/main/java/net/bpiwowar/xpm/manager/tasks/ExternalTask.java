@@ -126,7 +126,8 @@ public class ExternalTask extends Task {
                 command.dependencies().forEach(job::addDependency);
 
                 taskContext.prepare(job);
-                if (ScriptContext.get().simulate()) {
+                final ScriptContext scriptContext = ScriptContext.get();
+                if (scriptContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", job.toString());
                     pw.format("Command: %s%n", job.getCommand().toString());
@@ -158,7 +159,8 @@ public class ExternalTask extends Task {
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
 
-                ScriptContext.get().getSubmittedJobs().put(job.getLocator().toString(), job);
+
+                scriptContext.postProcess(this, job);
             }
         } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);

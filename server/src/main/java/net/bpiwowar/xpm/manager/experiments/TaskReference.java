@@ -18,18 +18,23 @@ package net.bpiwowar.xpm.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Identifiable;
 import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.Scheduler;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 
 /**
  * A task contains resources and is linked to other dependent tasks
  */
-public class TaskReference {
-    long id;
+public class TaskReference implements Identifiable {
+    private long id;
 
     /**
      * The parents
@@ -42,7 +47,7 @@ public class TaskReference {
     private final Collection<TaskReference> children = new ArrayList<>();
 
     /**
-     * The ID
+     * The ID of the task
      */
     QName taskId;
 
@@ -59,10 +64,17 @@ public class TaskReference {
     public TaskReference() {
     }
 
-    public TaskReference(Experiment experiment, QName taskId) {
-        this.experiment = experiment;
+    public TaskReference(QName taskId, Experiment experiment, ArrayList<TaskReference> parentTaskReferences) {
         this.taskId = taskId;
+        this.experiment = experiment;
+        parentTaskReferences.forEach(this::addParent);
     }
+
+    public TaskReference(QName taskId, Experiment experiment) {
+        this.taskId = taskId;
+        this.experiment = experiment;
+    }
+
 
     /**
      * Add a parent
@@ -87,7 +99,42 @@ public class TaskReference {
     /**
      * Save in database
      */
-    public void persists() {
-        throw new NotImplementedException();
+    public void save() throws SQLException {
+        DatabaseObjects<TaskReference> references = Scheduler.get().taskReferences();
+        references.save(this, "INSERT INTO ExperimentTasks(identifier, experiment) VALUES(?, ?, ?)", st -> {
+            st.setString(1, taskId.toString());
+            st.setLong(1, experiment.getId());
+        });
+
+    }
+
+    public Collection<TaskReference> children() {
+        return children;
+    }
+
+    public QName getTaskId() {
+        return taskId;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public static TaskReference create(DatabaseObjects<TaskReference> db, ResultSet result) {
+        try {
+            String identifier = result.getString(1);
+            long experimentId = result.getLong(2);
+            Experiment experiment = Experiment.findById(experimentId);
+            final TaskReference reference = new TaskReference(QName.parse(identifier), experiment);
+            return reference;
+        } catch (SQLException e) {
+            throw new XPMRuntimeException(e, "Could not construct network share");
+        }
     }
 }

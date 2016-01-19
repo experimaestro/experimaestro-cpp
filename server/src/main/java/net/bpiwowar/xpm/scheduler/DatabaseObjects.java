@@ -27,6 +27,7 @@ import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 import com.google.gson.stream.JsonReader;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMSQLException;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.ExceptionalConsumer;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
@@ -290,10 +291,8 @@ final public class DatabaseObjects<T extends Identifiable> {
             synchronized (map) {
                 map.put(object.getId(), object);
             }
-        } catch (SQLException e) {
-            throw e;
         } catch (Exception e) {
-            throw new SQLException(e);
+            throw new XPMSQLException(e);
         }
     }
 

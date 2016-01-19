@@ -149,8 +149,12 @@ public abstract class Task {
         processInputs(taskContext);
 
         // Do the real-run
-        Json json = doRun(taskContext);
-        return json;
+
+        try(final ScriptContext newContext = taskContext.copy()) {
+            newContext.setTask(this);
+            Json json = doRun(taskContext);
+            return json;
+        }
 
     }
 

@@ -374,7 +374,7 @@ public class Functions {
                 final String uri = o instanceof JsonString ? o.toString() : (String) o;
                 Path path = NetworkShare.uriToPath(uri);
                 if (ScriptContext.get().simulate()) {
-                    final Resource resource = ScriptContext.get().getSubmittedJobs().get(uri);
+                    final Resource resource = ScriptContext.get().getSubmittedJobs().get(uri).resource;
                     if (resource == null) {
                         return Resource.getByLocator(path);
                     }
@@ -391,9 +391,11 @@ public class Functions {
     @Expose()
     @Help("Set the experiment for all future commands")
     static public void set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
-        if (!ScriptContext.get().simulate()) {
+        final ScriptContext scriptContext = ScriptContext.get();
+        if (!scriptContext.simulate()) {
             Experiment experiment = new Experiment(dotname, System.currentTimeMillis());
             experiment.save();
+            scriptContext.setExperiment(experiment);
         }
     }
 
