@@ -98,9 +98,9 @@ public class StatusServlet extends XPMServlet {
                             if (resource.getState() == state) {
                                 out.format("<li name=\"%s\" id=\"R%s\">", resource.getId(), resource.getId());
                                 try {
-                                    out.format("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-                                    out.format("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                                    out.format("<a href=\"javascript:void(0)\">%s [%d]</a></li>", resource.getLocator(), resource.getId());
+                                    out.format("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>");
+                                    out.format("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>");
+                                    out.format("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>");
                                 } catch (Throwable t) {
                                     out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                                 }

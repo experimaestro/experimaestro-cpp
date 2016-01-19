@@ -64,3 +64,16 @@ dd { padding-bottom: .5em; }
 #jsdocumentation dt {
     font-size: large;
 }
+
+/* Icons with an action */
+.fa.link {
+    padding: 3pt;
+    cursor: pointer;
+}
+
+.fa.link:hover {
+    background: black;
+    color: red;
+    padding: 3pt;
+    cursor: pointer;
+}

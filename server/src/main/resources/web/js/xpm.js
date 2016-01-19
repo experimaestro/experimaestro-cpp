@@ -88,7 +88,14 @@ function jsonrpc_error(r) {
 // --- actions on jobs: restart, remove
 // TODO: invalidate a job (potentially recursively)
 var resource_action_callback = function () {
-    if (this.name == "restart") {
+    var name = this.name ? this.name : this.getAttribute("name");
+    if (!name) {
+        alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this)  + "]");
+        return;
+    }
+
+
+    if (name == "restart") {
         $.jsonRPC.request('restart', {
             params: {"id": $(this).parent().attr("name"), "restart-done": true, "recursive": true},
             success: function (r) {
@@ -96,7 +103,7 @@ var resource_action_callback = function () {
             },
             error: jsonrpc_error
         });
-    } else if (this.name == "delete") {
+    } else if (name == "delete") {
         var rsrcid = $(this).parent().attr("name");
 
         $("#delete-confirm").dialog({
@@ -157,8 +164,13 @@ var resource_link_callback = function () {
 
 
 $().ready(function () {
+
+    function makelinks(e) {
+        e.find(".link").on("click", resource_action_callback);
+    }
+
     // Links
-    $(".xpm-resource-list img.link").on("click", resource_action_callback);
+    $(".xpm-resource-list .link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
 
@@ -262,19 +274,15 @@ $().ready(function () {
                         link.attr("href", "javascript:void(0)").append($t(r.locator + " [" + r.resource + "]"));
                         link.on("click", resource_link_callback);
 
-                        var restart_img = $("<img class='link' name='restart' alt='restart' src='/images/restart.png'/>");
-                        restart_img.on("click", resource_action_callback);
-
-                        var remove_img = $("<img class='link' name='delete' alt='delete' src='/images/delete.png'/>");
-                        remove_img.on("click", resource_action_callback);
-
                         var item = $e("li")
-                            .append(restart_img)
-                            .append(remove_img)
-                            .append(link);
+                            .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
+                            .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                            .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"));
+
                         item.attr("name", r.resource).attr("id", "R" + r.resource);
 
                         list.append(item);
+                        makelinks(item);
 
                         var c = $("#state-" + r.state + "-count");
                         c.text(Number(c.text()) + 1);

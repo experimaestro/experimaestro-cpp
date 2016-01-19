@@ -72,6 +72,8 @@ public abstract class XPMServlet extends HttpServlet {
                 serverSettings.style.toString().toLowerCase()
         );
 
+        out.format("<link rel=\"stylesheet\" href=\"/fa/css/font-awesome.min.css\">\n");
+
         out.format("<link type=\"text/css\" href=\"/js/jstree/themes/default/style.min.css\" rel=\"stylesheet\"></link>%n");
 
         out.format("<link rel=\"stylesheet\" type=\"text/css\" charset=\"utf-8\" media=\"all\" href=\"/css/style.css\">\n");
