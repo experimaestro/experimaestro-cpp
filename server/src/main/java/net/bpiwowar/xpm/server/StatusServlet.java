@@ -101,6 +101,7 @@ public class StatusServlet extends XPMServlet {
                                     out.format("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>");
                                     out.format("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>");
                                     out.format("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>");
+                                    out.format("<a href=\"javascript:void(0)\"><span class='locator'>%s</span> [%d]</a></li>", resource.getLocator(), resource.getId());
                                 } catch (Throwable t) {
                                     out.format("<b>Resource ID %s</b> without locator</li>", resource.getId());
                                 }

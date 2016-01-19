@@ -128,6 +128,18 @@ var resource_action_callback = function () {
                 }
             }
         });
+    } else if (name == "copyfolderpath") {
+        var range = document.createRange();
+        var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
+        range.setStart(node, 0);
+        range.setEnd(node, node.textContent.lastIndexOf("/"));
+        window.getSelection().addRange(range);
+        if (document.execCommand('copy')) {
+            noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
+        } else {
+            noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+        }
+        window.getSelection().removeAllRanges();
     }
 };
 
@@ -222,6 +234,9 @@ $().ready(function () {
                         alert("Resource is in more than one state !");
                     }
                     if (e.length > 0) {
+                        // Remove progress bars
+                        e.find("div.progressbar").remove();
+
                         // Decrement old
                         decrement(e);
 
@@ -271,7 +286,7 @@ $().ready(function () {
                     } else {
                         var list = $("#state-" + r.state).children("ul");
                         var link = $e("a");
-                        link.attr("href", "javascript:void(0)").append($t(r.locator + " [" + r.resource + "]"));
+                        link.attr("href", "javascript:void(0)").append($("<span class='locator'>" + r.locator + "</span> [" + r.resource + "]"));
                         link.on("click", resource_link_callback);
 
                         var item = $e("li")
