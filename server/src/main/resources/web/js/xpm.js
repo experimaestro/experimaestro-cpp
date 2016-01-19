@@ -139,10 +139,10 @@ var resource_action_callback = function () {
                 resizable: false,
                 height: 140,
                 modal: true,
+                open: function() {
+                    $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+                },
                 buttons: {
-                    open: function() {
-                        $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
-                    },
                     "Yes, I understand": function () {
                         $(this).dialog("close");
                         $.jsonRPC.request('remove', {

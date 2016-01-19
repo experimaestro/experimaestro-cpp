@@ -31,26 +31,6 @@ dd { padding-bottom: .5em; }
     display: none;
 }
 
-/* Restart */
-.xpm-resource-list img[name="restart"] {
-    display: none;
-}
-
-.xpm-resource-list#state-error img[name="restart"] {
-    display: inline;
-    margin-right: 5px;
-}
-
-/* Delete */
-.xpm-resource-list img[name="delete"] {
-    display: inline;
-    margin-right: 5px;
-}
-
-.xpm-resource-list#state-running img[name="delete"] {
-    display: none;
-}
-
 #connection {
     right: 0;
     top: 0;
@@ -77,4 +57,31 @@ dd { padding-bottom: .5em; }
     color: red;
     padding: 3pt;
     cursor: pointer;
+}
+
+
+/*
+
+  Controls the display of icons depending on the state
+
+*/
+
+/* Restart */
+.xpm-resource-list i[name="restart"] {
+    display: none;
+}
+
+.xpm-resource-list#state-error i[name="restart"] {
+    display: inline;
+    margin-right: 5px;
+}
+
+/* Delete */
+.xpm-resource-list img[name="delete"] {
+    display: inline;
+    margin-right: 5px;
+}
+
+.xpm-resource-list#state-running i[name="delete"] {
+    display: none;
 }
