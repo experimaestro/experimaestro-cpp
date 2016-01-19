@@ -147,7 +147,7 @@ public class Commands extends AbstractCommand  {
 
     @Override
     public Stream<? extends CommandComponent> allComponents() {
-        return commands.stream().flatMap(AbstractCommand::allComponents);
+        return Stream.concat(super.allComponents(), commands.stream().flatMap(AbstractCommand::allComponents));
     }
 
 

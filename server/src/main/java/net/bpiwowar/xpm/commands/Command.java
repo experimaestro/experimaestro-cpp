@@ -138,7 +138,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
      */
     @Override
     public Stream<? extends CommandComponent> allComponents() {
-        return list.parallelStream().flatMap(CommandComponent::allComponents);
+        return Stream.concat(super.allComponents(), list.parallelStream().flatMap(CommandComponent::allComponents));
     }
 
     @Override

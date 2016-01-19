@@ -23,10 +23,12 @@ import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
+import net.bpiwowar.xpm.utils.UUIDObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -35,7 +37,7 @@ import java.util.stream.Stream;
  */
 @Exposed
 @JsonAbstract
-public abstract class AbstractCommand implements Iterable<AbstractCommand> {
+public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUIDObject {
     /**
      * List of dependencies attached to this command
      * <p>
@@ -43,6 +45,11 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
      * by the resource
      */
     protected transient ArrayList<Dependency> dependencies = new ArrayList<>();
+
+    /**
+     * Command UUID
+     */
+    private String uuid = UUID.randomUUID().toString();
 
     /**
      * The input redirect
@@ -104,7 +111,12 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
         return new CommandOutput(this);
     }
 
-    abstract public Stream<? extends CommandComponent> allComponents();
+    public Stream<? extends CommandComponent> allComponents() {
+        if (standardInput != null) {
+            return Stream.of(standardInput);
+        }
+        return Stream.empty();
+    }
 
     @Expose("add_dependency")
     public void addDependency(Dependency dependency) {
@@ -167,5 +179,10 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand> {
 
     public void setOutputRedirect(Redirect outputRedirect) {
         this.outputRedirect = outputRedirect;
+    }
+
+    @Override
+    public String getUUID() {
+        return uuid;
     }
 }

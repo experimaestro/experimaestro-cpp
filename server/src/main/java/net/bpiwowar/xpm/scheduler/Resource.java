@@ -756,13 +756,14 @@ public class Resource implements Identifiable {
     /**
      * Load data from database
      */
-    protected void loadData() {
+    protected boolean loadData() {
         if (dataLoaded) {
-            return;
+            return false;
         }
 
         Scheduler.get().resources().loadData(defaultBuilder, this, "data");
         dataLoaded = true;
+        return true;
     }
 
     @Expose("output")

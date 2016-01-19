@@ -20,9 +20,6 @@ package net.bpiwowar.xpm.scheduler;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.AbstractIterator;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -32,7 +29,6 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.ExceptionalConsumer;
-import net.bpiwowar.xpm.utils.GsonConverter;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -41,14 +37,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.sql.CallableStatement;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
-import java.util.WeakHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 import static java.lang.String.format;

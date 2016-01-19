@@ -22,6 +22,7 @@ import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -66,4 +67,6 @@ public interface CommandComponent {
     default void prepare(CommandContext environment) throws IOException {}
 
     default Stream<? extends AbstractCommand> commands() { return Stream.empty(); }
+
+    default void init(HashMap<String, Object> uuidMap) {}
 }

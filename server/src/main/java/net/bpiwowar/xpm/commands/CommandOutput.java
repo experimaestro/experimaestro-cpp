@@ -1,10 +1,12 @@
 package net.bpiwowar.xpm.commands;
 
+import com.google.gson.annotations.JsonAdapter;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 /**
@@ -15,13 +17,20 @@ public class CommandOutput implements CommandComponent, Serializable {
     /**
      * The output
      */
-    AbstractCommand command;
+    transient AbstractCommand command;
+
+    /**
+     * command UUID
+     */
+    String commandUUID;
+
 
     protected CommandOutput() {
     }
 
     public CommandOutput(AbstractCommand command) {
         this.command = command;
+        this.commandUUID = command.getUUID();
     }
 
 
@@ -51,5 +60,10 @@ public class CommandOutput implements CommandComponent, Serializable {
 
     public AbstractCommand getCommand() {
         return command;
+    }
+
+    @Override
+    public void init(HashMap<String, Object> uuidMap) {
+        command = (AbstractCommand) uuidMap.get(commandUUID);
     }
 }

@@ -20,12 +20,12 @@ package net.bpiwowar.xpm.scheduler;
 
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Redirect;
-
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.UUIDObject;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.json.simple.JSONObject;
 
@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -236,5 +237,25 @@ public class CommandLineTask extends Job {
 
     public void setCommand(AbstractCommand command) {
         this.command = command;
+    }
+
+    @Override
+    protected boolean loadData() {
+        if (super.loadData()) {
+            // Fill the UUID map
+            final HashMap<String, Object> uuidMap = new HashMap<>();
+            command.commands().forEach(c -> {
+                if (c instanceof UUIDObject) {
+                    uuidMap.put(c.getUUID(), c);
+                }
+            });
+
+            // resolve
+            command.allComponents().forEach(c -> c.init(uuidMap));
+
+            return true;
+        }
+
+        return false;
     }
 }
