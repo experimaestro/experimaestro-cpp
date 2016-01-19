@@ -18,44 +18,44 @@ package net.bpiwowar.xpm.exceptions;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.lang.String.format;
 
-public class ExperimaestroException extends Exception implements ContextualException<ExperimaestroException> {
-    private static final long serialVersionUID = 1L;
-    ArrayList<String> context = new ArrayList<>();
-
-    public ExperimaestroException() {
+/**
+ * An illegal exception
+ */
+public class XPMIOException extends IOException implements ContextualException<XPMIOException> {
+    public XPMIOException() {
         super();
     }
 
-    public ExperimaestroException(String message, Throwable t) {
+    public XPMIOException(String message, Throwable t) {
         super(message, t);
     }
 
-    public ExperimaestroException(Throwable t, String format, Object... values) {
-        super(String.format(format, values), t);
+    public XPMIOException(Throwable t, String format, Object... values) {
+        super(format(format, values), t);
     }
 
-    public ExperimaestroException(String message) {
+    public XPMIOException(String message) {
         super(message);
     }
 
-    public ExperimaestroException(String format, Object... values) {
-        super(String.format(format, values));
+    public XPMIOException(String format, Object... values) {
+        super(format(format, values));
     }
 
-    public ExperimaestroException(Throwable t) {
+    public XPMIOException(Throwable t) {
         super(t);
     }
 
-    public ExperimaestroException addContext(String format, Object... values) {
-        context.add(format(format, values));
-        return this;
-    }
+    List<String> context = new ArrayList<>();
 
+    @Override
     public List<String> getContext() {
         return context;
     }

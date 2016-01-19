@@ -20,12 +20,30 @@ package net.bpiwowar.xpm.exceptions;
 
 import java.util.List;
 
+import static java.lang.String.format;
+
 /**
+ * Exceptions that can be contextualized
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/3/13
  */
 public interface ContextualException<T> {
-    T addContext(String string, Object... values);
+    /**
+     * Add a new context
+     *
+     * @see java.lang.String#format(String, Object...)
+     * @param format A format string
+     * @param values
+     * @return
+     */
+    default T addContext(String format, Object... values) {
+        getContext().add(format(format, values));
+        return (T) this;
+    }
 
+    /**
+     * Get the contexts
+     * @return The list of contexts (the first one being the innermost)
+     */
     List<String> getContext();
 }

@@ -52,8 +52,8 @@ public class XPMRuntimeException extends RuntimeException implements ContextualE
         super(t);
     }
 
-    public XPMRuntimeException addContext(String string, Object... values) {
-        context.add(format(string, values));
+    public XPMRuntimeException addContext(String format, Object... values) {
+        context.add(format(format, values));
         return this;
     }
 

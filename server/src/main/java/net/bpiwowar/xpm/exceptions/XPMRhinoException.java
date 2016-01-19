@@ -63,8 +63,8 @@ public class XPMRhinoException extends EvaluatorException implements ContextualE
 
 
     @Override
-    public XPMRhinoException addContext(String string, Object... values) {
-        context.add(format(string, values));
+    public XPMRhinoException addContext(String format, Object... values) {
+        context.add(format(format, values));
         return this;
     }
 
