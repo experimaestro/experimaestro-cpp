@@ -88,60 +88,95 @@ function jsonrpc_error(r) {
 // --- actions on jobs: restart, remove
 // TODO: invalidate a job (potentially recursively)
 var resource_action_callback = function () {
-    var name = this.name ? this.name : this.getAttribute("name");
-    if (!name) {
-        alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this)  + "]");
-        return;
-    }
-
-
-    if (name == "restart") {
-        $.jsonRPC.request('restart', {
-            params: {"id": $(this).parent().attr("name"), "restart-done": true, "recursive": true},
-            success: function (r) {
-                noty({text: "Succesful restart", type: 'success', timeout: 5000});
-            },
-            error: jsonrpc_error
-        });
-    } else if (name == "delete") {
-        var rsrcid = $(this).parent().attr("name");
-
-        $("#delete-confirm").dialog({
-            resizable: false,
-            height: 140,
-            modal: true,
-            buttons: {
-                "Yes, I understand": function () {
-                    $(this).dialog("close");
-                    $.jsonRPC.request('remove', {
-                        params: {"id": rsrcid, "recursive": false},
-                        success: function (r) {
-                            // We just notify - but wait for the server notification to
-                            // remove the job from the interface
-                            noty({text: "Successful delete", type: 'success', timeout: 5000});
-                        },
-                        error: jsonrpc_error,
-                    });
-                },
-                "Cancel": function () {
-                    $(this).dialog("close");
-                }
-            }
-        });
-    } else if (name == "copyfolderpath") {
-        var range = document.createRange();
-        var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
-        range.setStart(node, 0);
-        range.setEnd(node, node.textContent.lastIndexOf("/"));
-        window.getSelection().addRange(range);
-        if (document.execCommand('copy')) {
-            noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
-        } else {
-            noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+        var name = this.name ? this.name : this.getAttribute("name");
+        if (!name) {
+            alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this) + "]");
+            return;
         }
-        window.getSelection().removeAllRanges();
+
+
+        if (name == "restart") {
+            var rsrcid = $(this).parent().attr("name");
+
+            var request = function (restartDone) {
+                $.jsonRPC.request('restart', {
+                    params: {"id": rsrcid, "restart-done": restartDone, "recursive": true},
+                    success: function (r) {
+                        noty({text: "Succesful restart (" + r.result + " jobs restarted)", type: 'success', timeout: 5000});
+                    },
+                    error: jsonrpc_error
+                });
+            };
+
+            var rlist =$(this).parentsUntil("div.xpm-resource-list");
+            rlist = rlist[rlist.length - 1].parentNode;
+
+            if (rlist.id == "state-done") {
+                $("#restart-confirm").dialog({
+                    resizable: false,
+                    height: 140,
+                    modal: true,
+                    open: function() {
+                        $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+                    },
+                    buttons: {
+                        "Yes, I understand": function () {
+                            $(this).dialog("close");
+                            request(true);
+                        },
+                        "Cancel": function () {
+                            $(this).dialog("close");
+                        }
+                    }
+                });
+            } else {
+                request(false);
+            }
+        }
+
+        else if (name == "delete") {
+            $("#delete-confirm").dialog({
+                resizable: false,
+                height: 140,
+                modal: true,
+                buttons: {
+                    open: function() {
+                        $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+                    },
+                    "Yes, I understand": function () {
+                        $(this).dialog("close");
+                        $.jsonRPC.request('remove', {
+                            params: {"id": rsrcid, "recursive": false},
+                            success: function (r) {
+                                // We just notify - but wait for the server notification to
+                                // remove the job from the interface
+                                noty({text: "Successful delete", type: 'success', timeout: 5000});
+                            },
+                            error: jsonrpc_error,
+                        });
+                    },
+                    "Cancel": function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
+        else if (name == "copyfolderpath") {
+            var range = document.createRange();
+            var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
+            range.setStart(node, 0);
+            range.setEnd(node, node.textContent.lastIndexOf("/"));
+            window.getSelection().addRange(range);
+            if (document.execCommand('copy')) {
+                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
+            } else {
+                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+            }
+            window.getSelection().removeAllRanges();
+        }
     }
-};
+    ;
 
 // --- action: Get the details of a resource
 var resource_link_callback = function () {
@@ -159,8 +194,8 @@ var resource_link_callback = function () {
             $("#resource-detail-content").empty().append(json2html(r.result));
             $("#resource-detail-content").jstree();
 
-            $(function() {
-                $( "#resource-detail" ).dialog({
+            $(function () {
+                $("#resource-detail").dialog({
                     "maxWidth": "600ch",
                     "width": "70%",
                 });
@@ -268,11 +303,11 @@ $().ready(function () {
                         if (pb.length == 0) {
                             pb = $e("div");
                             pb.addClass("progressbar");
-                            pb.progressbar({ value: r.progress * 100. });
+                            pb.progressbar({value: r.progress * 100.});
                             pb.progressbar("option", "max", 100);
                             e.append(pb);
                         } else {
-                            pb.progressbar( "option", "value", r.progress * 100 );
+                            pb.progressbar("option", "value", r.progress * 100);
                         }
                     }
                     break;

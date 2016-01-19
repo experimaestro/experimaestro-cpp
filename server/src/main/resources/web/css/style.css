@@ -26,7 +26,8 @@ dd { padding-bottom: .5em; }
     margin: 1em;
 }
 
-#delete-confirm {
+/* Dialogs are hidden by default */
+.dialog {
     display: none;
 }
 

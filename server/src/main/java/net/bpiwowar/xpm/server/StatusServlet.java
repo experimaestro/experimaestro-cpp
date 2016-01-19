@@ -75,8 +75,13 @@ public class StatusServlet extends XPMServlet {
                         ListAdaptator.create(ResourceState.values()));
                 out.println("<img id='connection' src='/images/disconnect.png' alt='[c]'>");
 
-                out.println("<div id=\"delete-confirm\" title=\"Delete this job?\">\n" +
+                out.println("<div class='dialog' id=\"delete-confirm\" title=\"Delete this job?\">\n" +
                         "<p><span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"></span>These items will be permanently deleted and cannot be recovered. Are you sure?</p>\n" +
+                        "</div>\n");
+
+
+                out.println("<div class='dialog' id=\"restart-confirm\" title=\"Restart this job?\">\n" +
+                        "<p><span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"></span>This completed job will be restarted</p>\n" +
                         "</div>\n");
 
                 out.println("<div id='tab-main' class='tab'>");
