@@ -18,9 +18,10 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import bpiwowar.experiments.Run;
 import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Resource.PrintConfig;
 import net.bpiwowar.xpm.scheduler.ResourceState;
@@ -116,7 +117,7 @@ public class StatusServlet extends XPMServlet {
                         LOGGER.warn(e, "Error while closing the iterator");
                     } catch (SQLException e) {
                         LOGGER.warn(e, "Error while retrieving resources");
-                    } catch(RuntimeException e) {
+                    } catch (RuntimeException e) {
                         LOGGER.warn(e, "Error while retrieving resources");
                     }
                     out.println("</ul></div>");
@@ -151,19 +152,30 @@ public class StatusServlet extends XPMServlet {
             if (localPath.equals(EXPERIMENTS_PATH)) {
                 final PrintWriter out = startHTMLResponse(response);
 
-                try(final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
-                    for(Experiment experiment: experiments) {
-                        out.format("<div>Experiment: %s</div>", experiment.getName());
+                out.println("<dl>");
+                try (final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
+                    for (Experiment experiment : experiments) {
+                        out.format("<dt>%s</dt><dd><ul>%n", experiment.getName(), new Date(experiment.getTimestamp() * 1000));
+                        for (TaskReference taskReference : experiment.getTasks()) {
+                            out.format("<li>[%d] %s (", taskReference.getId(), taskReference.getTaskId());
+                            for (TaskReference reference : taskReference.getChildren()) {
+                                out.format(" %s", reference.getTaskId());
+                            }
+                            out.println(")");
+                            out.println("<ul>");
+                            for (Resource resource : taskReference.getResources()) {
+                                out.format("<li>%s</li>", resource.getLocator());
+                            }
+
+                            out.println("</ul></li>");
+                        }
+                        out.format("</ul></dd>%n");
                     }
-                } catch(SQLException | CloseException e) {
-                    error(out, e.toString());
+                    out.println("</dl>");
+                } catch (SQLException | CloseException e) {
+                    throw new XPMRuntimeException(e);
                 }
 
-//                Experiment.
-//                for(Experiment o: experiments) {
-//                    out.format("<div>%s (%d)</div>", o.getName(), o.getTimestamp());
-//                }
-                out.print("<div>Not implemented</div>");
                 return;
             }
 

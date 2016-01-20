@@ -398,6 +398,9 @@ final public class ScriptContext implements AutoCloseable {
                 ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
                 for (Dependency dependency : resource.getDependencies()) {
                     final SubmittedJob dep = submittedJobs.get(dependency.getFrom().getLocator().toString());
+                    if (dep == null) {
+                        continue; // Might be a task without any experiment
+                    }
                     parentTaskReferences.add(dep.taskReference);
 
                     if (set == null) {
@@ -417,11 +420,11 @@ final public class ScriptContext implements AutoCloseable {
                     if (set == null) break;
                 }
 
-                if (set.size() > 1) {
+                if (set != null && set.size() > 1) {
                     throw new AssertionError("More than one task reference configuration");
                 }
 
-                if (set.isEmpty()) {
+                if (set == null || set.isEmpty()) {
                     taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
                     taskReference.save();
                 } else {
@@ -433,7 +436,7 @@ final public class ScriptContext implements AutoCloseable {
             }
         } catch (SQLException e) {
             // FIXME: do something better?
-            LOGGER.error(e, "Error while registering experiment");
+            getMainLogger().error(e, "Error while registering experiment");
         }
 
         final SubmittedJob submittedJob = new SubmittedJob(resource, taskReference);

@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
@@ -25,12 +26,13 @@ import net.bpiwowar.xpm.scheduler.Identifiable;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 
 import static java.lang.String.format;
 
@@ -39,6 +41,9 @@ import static java.lang.String.format;
  */
 @Exposed
 public class Experiment implements Identifiable {
+    static private final Logger LOGGER = Logger.getLogger();
+    static private final String SELECT_BEGIN = "SELECT id, name, timestamp FROM Experiments";
+
     /**
      * Experiment unique identifier
      */
@@ -47,7 +52,7 @@ public class Experiment implements Identifiable {
     /**
      * Tasks
      */
-    Collection<TaskReference> tasks = new ArrayList<>();
+    List<TaskReference> tasks;
 
     /**
      * Timestamp
@@ -59,12 +64,10 @@ public class Experiment implements Identifiable {
      */
     String identifier;
 
-    /**
-     * Scheduler
-     */
-    transient private Scheduler scheduler;
-
-    protected Experiment() {
+    private Experiment(long id, String identifier, long timestamp) {
+        this.id = id;
+        this.identifier = identifier;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -75,10 +78,7 @@ public class Experiment implements Identifiable {
     public Experiment(String identifier, long timestamp) {
         this.identifier = identifier;
         this.timestamp = timestamp;
-    }
-
-    public void init(Scheduler scheduler) {
-        this.scheduler = scheduler;
+        this.tasks = new ArrayList<>();
     }
 
     @Override
@@ -115,35 +115,37 @@ public class Experiment implements Identifiable {
     public static Experiment create(DatabaseObjects<Experiment> db, ResultSet result) {
 
         try {
-            String identifier = result.getString(1);
-            long timestamp = result.getTimestamp(2).getTime();
+            long id = result.getLong(1);
+            String identifier = result.getString(2);
+            long timestamp = result.getTimestamp(3).getTime();
 
-            final Experiment experiment = new Experiment(identifier, timestamp);
+            final Experiment experiment = new Experiment(id, identifier, timestamp);
             return experiment;
         } catch (SQLException e) {
-            throw new XPMRuntimeException(e, "Could not construct network share");
+            throw new XPMRuntimeException(e, "Could not load experiment from DB");
         }
     }
 
-    static private final String SELECT_BEGIN = "SELECT id, name, timestamp FROM Experiments";
 
     /**
      * Iterator on experiments
      */
     static public CloseableIterable<Experiment> experiments() throws SQLException {
         final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
-        return experiments.find(SELECT_BEGIN, st -> {
+        return experiments.find(SELECT_BEGIN + " ORDER BY timestamp DESC", st -> {
         });
     }
 
     /**
      * Add a new resource to this experiment
+     *
      * @param resource The resource to add
      */
     public void add(Resource resource) throws SQLException {
         DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
         experiments.save(this, "INSERT INTO ExperimentTasks(id, identifier, experiment, parent) VALUES(?, ?, ?, ?)", st -> {
             st.setLong(1, id);
+
         });
     }
 
@@ -155,5 +157,25 @@ public class Experiment implements Identifiable {
         }
         final String query = format("%s WHERE id=?", SELECT_BEGIN);
         return experiments.findUnique(query, st -> st.setLong(1, id));
+    }
+
+    public List<TaskReference> getTasks() {
+        if (tasks == null) {
+            final ArrayList<TaskReference> _tasks = new ArrayList<>();
+
+            try (CloseableIterable<TaskReference> list = TaskReference.find(this)) {
+                list.forEach(_tasks::add);
+            } catch (SQLException e) {
+                throw new XPMRuntimeException(e);
+            } catch (CloseException e) {
+                LOGGER.error(e, "Error while closing the iterator");
+            }
+            tasks = _tasks;
+        }
+        return tasks;
+    }
+
+    public void add(TaskReference taskReference) {
+        tasks.add(taskReference);
     }
 }

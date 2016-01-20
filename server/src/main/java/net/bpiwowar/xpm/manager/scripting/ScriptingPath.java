@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-@Exposed
+@Exposed(value = "Path")
 public class ScriptingPath extends WrapperObject<Path> {
     final static Logger LOGGER = Logger.getLogger();
 

@@ -19,6 +19,9 @@ package net.bpiwowar.xpm.utils;
  */
 
 import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+
+import java.util.function.Consumer;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -26,4 +29,17 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 public interface CloseableIterable<T> extends Iterable<T>, AutoCloseable {
     @Override
     void close() throws CloseException;
+
+    @Override
+    default void forEach(Consumer<? super T> action) {
+        try {
+            Iterable.super.forEach(action);
+        } finally {
+            try {
+                close();
+            } catch (CloseException e) {
+                throw new XPMRuntimeException(e);
+            }
+        }
+    }
 }

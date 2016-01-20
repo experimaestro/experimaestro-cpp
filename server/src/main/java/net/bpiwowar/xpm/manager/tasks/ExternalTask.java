@@ -40,6 +40,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 
@@ -110,9 +111,11 @@ public class ExternalTask extends Task {
             if (old != null) {
                 old.updateStatus();
             }
+            ScriptContext scriptContext = ScriptContext.get();;
             if (old != null && !old.canBeReplaced()) {
                 taskLogger.log(old.getState() == ResourceState.DONE ?
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                scriptContext.postProcess(this, old);
             } else {
                 // --- Build the command
                 AbstractCommand command = commands(null);
@@ -126,7 +129,6 @@ public class ExternalTask extends Task {
                 command.dependencies().forEach(job::addDependency);
 
                 taskContext.prepare(job);
-                final ScriptContext scriptContext = ScriptContext.get();
                 if (scriptContext.simulate()) {
                     PrintWriter pw = new LoggerPrintWriter(taskLogger, Level.INFO);
                     pw.format("[SIMULATE] Starting job: %s%n", job.toString());
@@ -152,16 +154,17 @@ public class ExternalTask extends Task {
                         st.setLong(1, job.getId());
                         st.setString(2, uniqueDir.toUri().toString());
                         st.execute();
+                    } catch(SQLIntegrityConstraintViolationException e) {
+                        LOGGER.debug(e, "constraint violation while storing path for %s", this);
                     } catch (SQLException e) {
                         LOGGER.error(e, "while storing path for resource %s", this);
                     }
 
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
                 }
-
-
                 scriptContext.postProcess(this, job);
             }
+
         } catch (XPMRuntimeException e) {
             e.addContext("while storing task %s", path);
             throw e;

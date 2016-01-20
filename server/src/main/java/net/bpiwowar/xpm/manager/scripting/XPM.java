@@ -568,6 +568,7 @@ public class XPM {
                 if (!old.canBeReplaced()) {
                     rootLogger.log(old.getState() == ResourceState.DONE ? Level.DEBUG : Level.INFO,
                             "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
+                    scriptContext.postProcess(null, old);
                     return old;
                 } else {
                     rootLogger.info("Replacing resource %s [%d]", old.getLocator(), old.getId());
