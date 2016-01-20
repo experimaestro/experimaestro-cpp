@@ -178,7 +178,11 @@ abstract public class Job extends Resource {
      *                   return the process
      */
     protected XPMProcess startJob(ArrayList<Lock> locks, boolean fake) throws Throwable {
-        setProcess(start(locks, fake));
+        if (fake) {
+            start(locks, true);
+        } else {
+            setProcess(start(locks, fake));
+        }
         return getProcess();
     }
 

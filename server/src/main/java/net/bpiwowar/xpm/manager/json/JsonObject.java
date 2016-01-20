@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
+import net.bpiwowar.xpm.utils.PathUtils;
 import org.json.simple.JSONValue;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
@@ -28,7 +29,6 @@ import net.bpiwowar.xpm.utils.Output;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -73,8 +73,8 @@ public class JsonObject extends Json {
         return Constants.ATOMIC_TYPES.contains(type());
     }
 
-    @Override
-    public Object get() {
+
+    Json getAsJSON() {
         QName parsedType = type();
 
         Json value = map.get(Constants.XP_VALUE.toString());
@@ -88,28 +88,33 @@ public class JsonObject extends Json {
                     case "string":
                         if (!(value instanceof JsonString))
                             throw new AssertionError("json value is not a string but" + value.getClass());
-                        return value.get();
+                        return value;
 
                     case "real":
                         if (!(value instanceof JsonReal))
                             throw new AssertionError("json value is not a real number but" + value.getClass());
-                        return value.get();
+                        return value;
 
                     case "integer":
                         if (!(value instanceof JsonInteger))
                             throw new AssertionError("json value is not an integer but " + value.getClass());
-                        return value.get();
+                        return value;
 
                     case "boolean":
                         if (!(value instanceof JsonBoolean))
                             throw new AssertionError("json value is not a boolean but" + value.getClass());
-                        return value.get();
+                        return value;
 
                     // TODO: do checks
                     case "directory":
                     case "file":
                     case "path":
-                        return Paths.get(value.get().toString());
+                        final String uri = value.get().toString();
+                        try {
+                            return new JsonPath(PathUtils.toPath(uri));
+                        } catch (IOException e) {
+                            throw new XPMRuntimeException("Could not convert path %s", uri);
+                        }
                     default:
                         throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
                 }
@@ -117,6 +122,11 @@ public class JsonObject extends Json {
             default:
                 throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
         }
+    }
+
+    @Override
+    public Object get() {
+        return getAsJSON().get();
     }
 
     public void put(String key, String string) {
@@ -231,7 +241,7 @@ public class JsonObject extends Json {
         }
 
         if (isSimple() && options.simplifyValues) {
-            map.get(Constants.XP_VALUE.toString()).writeDescriptorString(out, options);
+            this.getAsJSON().writeDescriptorString(out, options);
             return;
         }
 

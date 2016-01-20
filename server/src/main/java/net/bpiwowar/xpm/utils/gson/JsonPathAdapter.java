@@ -25,10 +25,7 @@ import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * A JSON adapter
@@ -58,16 +55,7 @@ public class JsonPathAdapter extends TypeAdapter<Path> {
     public Path read(JsonReader in) throws IOException {
         if (in.peek() == JsonToken.NULL) return null;
         final String str = in.nextString();
-        final URI path;
-        try {
-            path = new URI(str);
-        } catch (URISyntaxException e) {
-            throw new IOException("Could not decode " + str + " as URI", e);
-        }
-
-        if (path.getScheme() == null && basepath != null) {
-            return basepath.resolve(str);
-        }
-        return Paths.get(path);
+        return PathUtils.toPath(str, basepath);
     }
+
 }

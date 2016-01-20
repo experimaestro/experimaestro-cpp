@@ -21,7 +21,10 @@
 
 package net.bpiwowar.xpm.utils;
 
-import java.nio.file.Path;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.*;
 
 /**
  * java.nio related utils
@@ -54,5 +57,35 @@ public class PathUtils {
             sb.append(c);
         }
         return sb.toString();
+    }
+
+    public static Path toPath(String path) throws IOException {
+        return toPath(path, null);
+    }
+
+    /**
+     * Converts a sring to a path
+     * @param path A path that can be either relative or an URI
+     * @param basepath The basepath (in case of relative values)
+     * @return A path
+     * @throws IOException If the URI is wrong
+     */
+    public static Path toPath(String path, Path basepath) throws IOException {
+        // Case of an absolute local path
+        if (path.startsWith("/")) {
+            return Paths.get(path);
+        }
+
+        final URI uri;
+        try {
+            uri = new URI(path);
+        } catch (URISyntaxException e) {
+            throw new IOException("Could not decode " + path + " as URI", e);
+        }
+
+        if (uri.getScheme() == null && basepath != null) {
+            return basepath.resolve(path);
+        }
+        return Paths.get(uri);
     }
 }
