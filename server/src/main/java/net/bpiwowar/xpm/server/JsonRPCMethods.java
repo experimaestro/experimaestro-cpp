@@ -927,7 +927,7 @@ public class JsonRPCMethods extends HttpServlet {
                     ((Job) resource).generateFiles();
                 }
             } catch (Throwable throwable) {
-                logger.error(throwable, "Could not generate files for resource [%s]: %s", id);
+                logger.error(throwable, "Could not generate files for resource [%s]", id);
             }
         }
     }
