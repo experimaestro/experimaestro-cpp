@@ -22,21 +22,10 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.GsonBuilder;
-import org.apache.commons.lang.ClassUtils;
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.log4j.Hierarchy;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
-import org.eclipse.jetty.server.Server;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptStackElement;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.Undefined;
-import org.python.core.PyException;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ContextualException;
@@ -44,6 +33,8 @@ import net.bpiwowar.xpm.exceptions.ExitException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Repositories;
+import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
 import net.bpiwowar.xpm.scheduler.Dependency;
@@ -60,6 +51,21 @@ import net.bpiwowar.xpm.utils.XPMInformation;
 import net.bpiwowar.xpm.utils.log.DefaultFactory;
 import net.bpiwowar.xpm.utils.log.Logger;
 import net.bpiwowar.xpm.utils.log.Router;
+import org.apache.commons.lang.ClassUtils;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.log4j.Hierarchy;
+import org.apache.log4j.Level;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.WriterAppender;
+import org.eclipse.jetty.server.Server;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptStackElement;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
+import org.python.core.PyException;
 
 import javax.servlet.http.HttpServlet;
 import java.io.BufferedWriter;
@@ -1115,6 +1121,57 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
+    @RPCMethod(help = "Get list of experiments")
+    public JsonElement experiments() throws SQLException, CloseException {
+        try (final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
+            JsonObject response = new JsonObject();
+            final JsonArray nodes = new JsonArray();
+            final JsonArray links = new JsonArray();
+            response.add("nodes", nodes);
+            response.add("links", links);
+
+
+            for (Experiment experiment : experiments) {
+                // Add the nodes
+                IdentityHashMap<Object, Integer> map = new IdentityHashMap<>();
+                List<TaskReference> tasks = experiment.getTasks();
+                for (TaskReference taskReference : tasks) {
+                    addNode(nodes, map, taskReference, taskReference.getTaskId().toString());
+                    for (Resource resource : taskReference.getResources()) {
+                        addNode(nodes, map, resource, resource.getIdentifier());
+                    }
+                }
+
+                // Add the links
+                for (TaskReference taskReference : tasks) {
+                    for (TaskReference reference : taskReference.getChildren()) {
+                        addLink(links, map, taskReference, reference);
+                    }
+                    for (Resource resource : taskReference.getResources()) {
+                        addLink(links, map, taskReference, resource);
+                    }
+                }
+                break;
+            }
+            return response;
+        }
+
+    }
+
+    private static void addLink(JsonArray links, IdentityHashMap<Object, Integer> map, Object value, Object value2) {
+        final JsonObject link = new JsonObject();
+        links.add(link);
+        link.add("source", new JsonPrimitive(map.get(value)));
+        link.add("target", new JsonPrimitive(map.get(value2)));
+    }
+
+    private static void addNode(JsonArray nodes, IdentityHashMap<Object, Integer> map, Object object, String string) {
+        map.put(object, nodes.size());
+        final JsonObject element = new JsonObject();
+        nodes.add(element);
+        element.add("name", new JsonPrimitive(string));
+        element.add("group", new JsonPrimitive(1));
+    }
 
 //    /**
 //     * Add a command line job
@@ -1193,31 +1250,6 @@ public class JsonRPCMethods extends HttpServlet {
         public Class<? extends Annotation> annotationType() {
             return RPCArgument.class;
         }
-    }
-
-    /**
-     * A class that is used to control the environment in scripts
-     *
-     * @author B. Piwowarski <benjamin@bpiwowar.net>
-     */
-    static public class JSGetEnv {
-        private final Map<String, String> environment;
-
-        public JSGetEnv(Map<String, String> environment) {
-            this.environment = environment;
-        }
-
-        public String get(String key) {
-            return environment.get(key);
-        }
-
-        public String get(String key, String defaultValue) {
-            String value = environment.get(key);
-            if (value == null)
-                return defaultValue;
-            return value;
-        }
-
     }
 
 }

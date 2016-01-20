@@ -108,7 +108,7 @@ var resource_action_callback = function () {
                 });
             };
 
-            var rlist =$(this).parentsUntil("div.xpm-resource-list");
+            var rlist = $(this).parentsUntil("div.xpm-resource-list");
             rlist = rlist[rlist.length - 1].parentNode;
 
             if (rlist.id == "state-done") {
@@ -116,7 +116,7 @@ var resource_action_callback = function () {
                     resizable: false,
                     height: 140,
                     modal: true,
-                    open: function() {
+                    open: function () {
                         $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
                     },
                     buttons: {
@@ -139,7 +139,7 @@ var resource_action_callback = function () {
                 resizable: false,
                 height: 140,
                 modal: true,
-                open: function() {
+                open: function () {
                     $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
                 },
                 buttons: {
@@ -212,6 +212,86 @@ var resource_link_callback = function () {
 
 $().ready(function () {
 
+    function showexperiments(element) {
+        var width = 960,
+            height = 500;
+
+
+        var svg = d3.select(element.find("svg").get(0))
+            .attr("width", width)
+            .attr("height", height);
+
+        var force = d3.layout.force()
+            .gravity(.05)
+            .distance(100)
+            .charge(-100)
+            .size([width, height]);
+
+        var rpcData = {
+            "method": "experiments",
+            "params": {},
+            "jsonrpc": "2.0",
+            "id": 1,
+        }
+        d3.xhr("/json-rpc")
+            .responseType("json")
+            .header("Content-Type", "application/json")
+            .post(JSON.stringify(rpcData),
+                function (error, data) {
+                    if (error) throw error;
+
+                    var json = data.response.result;
+                    force
+                        .nodes(json.nodes)
+                        .links(json.links)
+                        .start();
+
+                    var link = svg.selectAll(".link")
+                        .data(json.links)
+                        .enter().append("line")
+                        .attr("class", "link");
+
+                    var node = svg.selectAll(".node")
+                        .data(json.nodes)
+                        .enter().append("g")
+                        .attr("class", "node")
+                        .call(force.drag);
+
+                    node.append("image")
+                        .attr("xlink:href", "https://github.com/favicon.ico")
+                        .attr("x", -8)
+                        .attr("y", -8)
+                        .attr("width", 16)
+                        .attr("height", 16);
+
+                    node.append("text")
+                        .attr("dx", 12)
+                        .attr("dy", ".35em")
+                        .text(function (d) {
+                            return d.name
+                        });
+
+                    force.on("tick", function () {
+                        link.attr("x1", function (d) {
+                                return d.source.x;
+                            })
+                            .attr("y1", function (d) {
+                                return d.source.y;
+                            })
+                            .attr("x2", function (d) {
+                                return d.target.x;
+                            })
+                            .attr("y2", function (d) {
+                                return d.target.y;
+                            });
+
+                        node.attr("transform", function (d) {
+                            return "translate(" + d.x + "," + d.y + ")";
+                        });
+                    });
+                });
+    }
+
     function makelinks(e) {
         e.find(".link").on("click", resource_action_callback);
     }
@@ -228,7 +308,14 @@ $().ready(function () {
     $("#resource-detail-content").jstree();
 
     // Tabs
-    $(".tab").tabs();
+    $(".tab").tabs({
+        beforeActivate: function (event, ui) {
+            if (ui.newPanel.attr("id") == "experiments") {
+                showexperiments(ui.newPanel);
+            }
+        }
+    });
+
 
     // Resource counts
     $("#resources").children("div").each(function () {
@@ -392,3 +479,5 @@ $().ready(function () {
     });
 
 });
+
+

@@ -86,14 +86,18 @@ public class StatusServlet extends XPMServlet {
                         "</div>\n");
 
                 out.println("<div id='tab-main' class='tab'>");
-                out.println("<ul><li><a href='#resources'>Resources</a></li><li><a href='/status/experiments'>Experiments</a></li>" +
+                out.println("<ul><li><a href='#resources'>Resources</a></li><li><a href='#experiments'>Experiments</a></li>" +
                         "<li><a href='#xpm-info'>XPM info</a></li>" +
                         "</ul>");
+
+                out.println("<div id='experiments'><svg></svg></div>");
+
                 out.println("<div id=\"resources\" class=\"tab\"><ul>");
                 for (ResourceState state : values) {
                     out.format("<li><a href=\"#state-%s\"><span>%s</span> (<span id=\"state-%s-count\">0</span>)</a></li>", state, state, state);
                 }
                 out.println("</ul>");
+
 
                 for (ResourceState state : values) {
 
