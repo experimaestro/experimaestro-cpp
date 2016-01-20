@@ -28,6 +28,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 xpmdir = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
+xpminidir = os.path.join(os.path.expanduser("~/.experimaestro"))
 
 version = "0.0.1-SNAPSHOT"
 jarname = "experimaestro-%s.jar" % version
@@ -451,7 +452,11 @@ def command_run_python(args):
 
     # Get absolute python path
     pythonpath = ":".join([os.path.abspath(path) for path in args.pythonpath.split(":")])
+    xpmpy = os.path.join(xpminidir, "py")
+    if os.path.exists(xpmpy):
+        pythonpath += ":" + xpmpy
 
+    print(pythonpath)
     if args.post:
         files.append(["<post>", args.post])
 
