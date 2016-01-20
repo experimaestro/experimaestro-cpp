@@ -209,15 +209,13 @@ CREATE TABLE ExperimentTasks (
   experiment BIGINT       NOT NULL,
 
   FOREIGN KEY (experiment) REFERENCES Experiments
-    ON DELETE CASCADE,
-  FOREIGN KEY (parent) REFERENCES ExperimentTasks
     ON DELETE CASCADE
 );
 
 CREATE TABLE ExperimentHierarchy (
   parent BIGINT NOT NULL,
   child  BIGINT NOT NULL,
-  FOREIGN KEY (parent) REFERENCES ExperimentTask
+  FOREIGN KEY (parent) REFERENCES ExperimentTasks
     ON DELETE CASCADE,
   FOREIGN KEY (child) REFERENCES ExperimentTasks
     ON DELETE CASCADE

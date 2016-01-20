@@ -113,9 +113,6 @@ abstract public class SingleHostConnector extends Connector {
 
         if (path instanceof XPMPath) {
             XPMPath xpmPath = (XPMPath) path;
-            if (!(reference instanceof XPMPath)) {
-                throw new IOException();
-            }
             NetworkShareAccess access = null;
             try {
                 access = NetworkShare.find(this, xpmPath);
