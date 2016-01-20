@@ -76,19 +76,18 @@ public class PythonRunner implements AutoCloseable {
                 .repository(repositories);
         this.environment = environment;
 
-        interpreter = PythonInterpreter.threadLocalStateInterpreter(null);
-        PySystemState interpreterState = interpreter.getSystemState();
+        final PySystemState systemState = new PySystemState();
+        interpreter = new PythonInterpreter(null, systemState);
         for (String path : pythonPath.split(":")) {
-            interpreterState.path.add(new PyString(path));
+            systemState.path.add(new PyString(path));
         }
         interpreter.setOut(out);
         interpreter.setErr(err);
         scriptContext = staticContext.scriptContext();
 
-        LOGGER.trace("Identity = %s", Py.getSystemState() == interpreterState);
-
         // XPM module
-        final PyModule xpmModule = imp.addModule("xpm");
+        final PyModule xpmModule = new PyModule("xpm", (PyObject)null);
+        systemState.modules.__setitem__("xpm", xpmModule);
 
         // Add classes
         for (PyType type : TYPES.values()) {

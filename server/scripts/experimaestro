@@ -456,7 +456,7 @@ def command_run_python(args):
     if os.path.exists(xpmpy):
         pythonpath += ":" + xpmpy
 
-    print(pythonpath)
+    logging.debug("Pyton PATH is %s", pythonpath)
     if args.post:
         files.append(["<post>", args.post])
 
