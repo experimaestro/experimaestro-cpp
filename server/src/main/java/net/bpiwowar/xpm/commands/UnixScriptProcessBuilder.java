@@ -111,8 +111,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     final public XPMProcess start(boolean fake) throws LaunchException, IOException {
         final Path runFile = launcher.getMainConnector().resolveFile(path);
-        final Path donePath_ = launcher.getMainConnector().resolveFile(donePath);
-        final Path exitCodePath_ = launcher.getMainConnector().resolveFile(exitCodePath);
+        final Path donePath_ = donePath != null ? launcher.getMainConnector().resolveFile(donePath) : null;
+        final Path exitCodePath_ = exitCodePath != null ? launcher.getMainConnector().resolveFile(exitCodePath) : null;
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
@@ -223,7 +223,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                     throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
             }
 
-            writer.format("%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && [[ \"$e\" != 141 ]] && exit $e; done; exit 0; }%n%n");
+            writer.format("%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && [[ \"$e\" != 141 ]] && exit $e; done; }%n%n");
             writer.println("(");
 
             // The prepare all the command

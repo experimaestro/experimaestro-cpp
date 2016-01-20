@@ -24,7 +24,9 @@ import net.bpiwowar.xpm.commands.CommandPath;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
+import net.bpiwowar.xpm.utils.XPMEnvironment;
 import org.testng.Assert;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 import net.bpiwowar.xpm.connectors.*;
 import net.bpiwowar.xpm.exceptions.LaunchException;
@@ -40,7 +42,11 @@ import java.nio.file.Path;
 /**
  * Tests on command
  */
-public class CommandTest  {
+public class CommandTest extends XPMEnvironment {
+    @BeforeSuite
+    public static void setup() throws Throwable {
+        prepare();
+    }
 
     @Test(description = "CommandOutput handling")
     public void commandOutputTest() throws IOException, InterruptedException, LaunchException {
@@ -60,11 +66,16 @@ public class CommandTest  {
             final Path dataPath = connector.resolve(dataFile.getAbsolutePath());
 
 
-            final Command subCommand = new Command();
-            subCommand.add("/bin/cat", new CommandPath(dataPath));
-            final CommandOutput output = subCommand.output();
+            final Command subCommand1 = new Command();
+            subCommand1.add("/bin/cat", new CommandPath(dataPath));
+            final CommandOutput output1 = subCommand1.output();
 
-            command.add("/usr/bin/paste", output, output);
+            final Command subCommand2 = new Command();
+            subCommand2.add("/bin/cat", new CommandPath(dataPath));
+            final CommandOutput output2 = subCommand2.output();
+
+            command.add("/usr/bin/paste", output1, output2);
+            command.setOutputRedirect(Redirect.INHERIT);
             commands.add(command);
 
 
