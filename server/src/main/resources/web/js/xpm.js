@@ -232,19 +232,20 @@ function makelinks(e) {
 }
 
 resource_progress = function (r) {
-    if (r.state != "running" || !r.progress) return;
+    if (!r.progress) return;
 
-    var e = $("#R" + r.id + " div.resource-link");
+    var e = $("#R" + r.id);
     if (e.length < 1) {
         console.warn("Resource " + r.id + " does not exist (progress reported)!");
     } else {
         var pb = e.find("div.progressbar");
         if (pb.length == 0) {
-            pb = $e("div");
+            pb = $e("div").append($e("div").append($t("Running")).addClass("progress-label"));
             pb.addClass("progressbar");
             pb.progressbar({value: r.progress * 100.});
             pb.progressbar("option", "max", 100);
-            e.append(pb);
+            e.prepend(pb);
+            e.addClass("with-progressbar");
         } else {
             pb.progressbar("option", "value", r.progress * 100);
         }
@@ -287,16 +288,18 @@ add_resource = function (r) {
         makelinks(item);
 
         change_counter(r.state, +1);
-        resource_progress(r);
+        if (r.state == "running" && r.progress > 0) {
+            resource_progress(r);
+        }
     }
 }
 
 var resource_link_callback = function () {
     var resourcePath = $(this).text();
-    var resourceID = $(this).parent().attr("name");
+    var resourceID = $(this).parent().parent().attr("name");
 
     $.jsonRPC.request('getResourceInformation', {
-        params: [resourceID],
+        params: {id: resourceID},
         success: function (r) {
             $("#resource-detail-title").text("Resource #" + resourceID);
             $("#resource-detail-path").text(resourcePath);
