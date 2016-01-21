@@ -21,6 +21,8 @@
 
 package net.bpiwowar.xpm.scheduler;
 
+import net.bpiwowar.xpm.exceptions.WrappedSQLException;
+
 import java.io.InputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -49,5 +51,18 @@ public class XPMResultSet implements AutoCloseable {
 
     public InputStream getBinaryStream(int index) throws SQLException {
         return resultSet.getBinaryStream(index);
+    }
+
+    /**
+     * Get the string for a given column
+     * @see ResultSet#getString(int)
+     * @throws WrappedSQLException
+     */
+    public String getString(int columnIndex) throws WrappedSQLException {
+        try {
+            return resultSet.getString(columnIndex);
+        } catch (SQLException e) {
+            throw new WrappedSQLException(e);
+        }
     }
 }

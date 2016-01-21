@@ -21,6 +21,11 @@ package net.bpiwowar.xpm.utils.iterators;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * @deprecated Use Guava {@link com.google.common.collect.AbstractIterator}
+ * @param <E> The iterator value
+ */
+@Deprecated
 abstract public class AbstractIterator<E> implements Iterator<E> {
     protected E value;
     byte status = -1;

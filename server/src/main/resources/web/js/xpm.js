@@ -92,6 +92,7 @@ var resource_action_callback = function () {
         return;
     }
 
+    var state = this.parentNode.state;
 
     if (name == "restart") {
         var rsrcid = $(this).parent().attr("name");
@@ -106,10 +107,8 @@ var resource_action_callback = function () {
             });
         };
 
-        var rlist = $(this).parentsUntil("div.xpm-resource-list");
-        rlist = rlist[rlist.length - 1].parentNode;
 
-        if (rlist.id == "state-done") {
+        if (state == "done") {
             $("#restart-confirm").dialog({
                 resizable: false,
                 height: 140,
@@ -193,16 +192,15 @@ function get_tasks() {
  * Load tasks
  */
 function load_tasks() {
-    $.jsonRPC.request('get-resources', {
-        params: {},
+    var select = $("#experiment-chooser");
+    var experiment = select.find("option:selected").text();
+    $.jsonRPC.request('resources-from-experiment', {
+        params: [experiment],
         error: jsonrpc_error,
         success: function (r) {
-            var select = $("#experiment-chooser");
-            select.children().remove();
             $.each(r.result, function (e) {
-                select.append($e("option").append($t(r.result[e])));
+                add_resource(r.result[e]);
             });
-            load_tasks();
         }
     });
 }
@@ -211,14 +209,15 @@ function load_tasks() {
  * Get the experiments
  */
 function get_experiments() {
-    $.jsonRPC.request('experiment-list', {
+    $.jsonRPC.request('experiment-names', {
         params: {},
         error: jsonrpc_error,
         success: function (r) {
             var select = $("#experiment-chooser");
             select.children().remove();
             $.each(r.result, function (e) {
-                select.append($e("option").append($t(r.result[e])));
+                var name = r.result[e];
+                select.append($e("option").append($t(name)));
             });
             load_tasks();
         }
@@ -227,6 +226,66 @@ function get_experiments() {
 
 
 // --- action: Get the details of a resource
+
+function makelinks(e) {
+    e.find(".link").on("click", resource_action_callback);
+}
+
+resource_progress = function (r) {
+    if (r.state != "running" || !r.progress) return;
+
+    var e = $("#R" + r.id + " div.resource-link");
+    if (e.length < 1) {
+        console.warn("Resource " + r.id + " does not exist (progress reported)!");
+    } else {
+        var pb = e.find("div.progressbar");
+        if (pb.length == 0) {
+            pb = $e("div");
+            pb.addClass("progressbar");
+            pb.progressbar({value: r.progress * 100.});
+            pb.progressbar("option", "max", 100);
+            e.append(pb);
+        } else {
+            pb.progressbar("option", "value", r.progress * 100);
+        }
+    }
+}
+
+add_resource = function (r) {
+    var e = $("#R" + r.id);
+
+    if (e.length > 0) {
+        console.warn("Resource " + r.id + " already exists!");
+    } else {
+        var link = $e("a")
+            .attr("href", "javascript:void(0)")
+            .append($("<span class='locator'>" + r.locator + "</span>"))
+            .on("click", resource_link_callback);
+
+        var item = $e("li")
+            .addClass("state-" + r.state)
+            .attr("name", r.id)
+            .attr("id", "R" + r.id)
+            .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
+            .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+            .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
+            .append(
+                $e("div")
+                    .addClass("resource-link")
+                    .append($("<span class='resource-id'>" + r.id + "</span>"))
+                    .append(link)
+            );
+
+        item.get().state = r.state;
+
+        $("#resources").append(item);
+        makelinks(item);
+
+        var c = $("#state-" + r.state + "-count");
+        c.text(Number(c.text()) + 1);
+        resource_progress(r);
+    }
+}
 
 var resource_link_callback = function () {
     var resourcePath = $(this).text();
@@ -345,15 +404,24 @@ $().ready(function () {
                 });
     }
 
-    function makelinks(e) {
-        e.find(".link").on("click", resource_action_callback);
-    }
-
     // Links
     $(".xpm-resource-list .link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
-    $("#state-chooser li a").button();
+
+    click_state = function (e) {
+        var checked = $(this).is(':checked');
+        console.log("State " + this.id + " is " + checked);
+        if (checked) {
+            $("#resources").addClass(this.id);
+        } else {
+            $("#resources").removeClass(this.id);
+        }
+    }
+
+    var statefilters = $("#state-chooser li input");
+    statefilters.button().on("click", click_state);
+    statefilters.each(click_state);
 
     // Transform resource detailed view in tree
     $("#resource-detail-content").jstree();
@@ -385,12 +453,6 @@ $().ready(function () {
 
         var websocket = new WebSocket(websocket_url);
         websocket.onmessage = function (e) {
-            var decrement = function (e) {
-                var old_counter_id = e.parents(".xpm-resource-list").attr("id") + "-count";
-                var c = $("#" + old_counter_id);
-                c.text(Number(c.text()) - 1);
-            };
-
             //console.debug("Received: " + e.data);
             var r = $.parseJSON(e.data);
             if (r.error) {
@@ -403,31 +465,30 @@ $().ready(function () {
             if (r.event) switch (r.event) {
                 case "STATE_CHANGED":
                     // Get the resource
-                    var e = $("#R" + r.resource);
+                    var e = $("#R" + r.id);
 
-                    if (e.length > 1) {
-                        alert("Resource is in more than one state !");
-                    }
                     if (e.length > 0) {
+                        var oldstate = e.get().state;
+
                         // Remove progress bars
                         e.find("div.progressbar").remove();
 
                         // Decrement old
-                        decrement(e);
-
-                        // Increment new state
-                        var c = $("#state-" + r.state + "-count");
+                        var c = $("#" + "state-" + oldstate + "-count");
+                        c.text(Number(c.text()) - 1);
+                        c = $("#" + "state-" + r.state + "-count");
                         c.text(Number(c.text()) + 1);
 
                         // Put the item in the list
-                        $("#state-" + r.state).children("ul").append(e);
+                        e.removeClass("state-" + e.state).addClass("state-" + r.state);
+                        e.get().state = r.state;
                     }
 
                     break;
 
                 case "RESOURCE_REMOVED":
                     // Get the resource
-                    var e = $("#R" + r.resource);
+                    var e = $("#R" + r.id);
                     if (e.length > 0) {
                         decrement(e);
                         e.remove();
@@ -435,48 +496,12 @@ $().ready(function () {
                     break;
 
                 case "PROGRESS":
-                    var e = $("#R" + r.resource);
-                    if (e.length < 1) {
-                        console.warn("Resource " + r.resource + " does not exist (progress reported)!");
-                    } else {
-                        var pb = e.find("div.progressbar");
-                        if (pb.length == 0) {
-                            pb = $e("div");
-                            pb.addClass("progressbar");
-                            pb.progressbar({value: r.progress * 100.});
-                            pb.progressbar("option", "max", 100);
-                            e.append(pb);
-                        } else {
-                            pb.progressbar("option", "value", r.progress * 100);
-                        }
-                    }
+                    resource_progress(r);
                     break;
 
 
                 case "RESOURCE_ADDED":
-                    var e = $("#R" + r.resource);
-
-                    if (e.length > 0) {
-                        console.warn("Resource " + r.resource + " already exists!");
-                    } else {
-                        var list = $("#state-" + r.state).children("ul");
-                        var link = $e("a");
-                        link.attr("href", "javascript:void(0)").append($("<span class='locator'>" + r.locator + "</span> [" + r.resource + "]"));
-                        link.on("click", resource_link_callback);
-
-                        var item = $e("li")
-                            .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
-                            .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
-                            .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"));
-
-                        item.attr("name", r.resource).attr("id", "R" + r.resource);
-
-                        list.append(item);
-                        makelinks(item);
-
-                        var c = $("#state-" + r.state + "-count");
-                        c.text(Number(c.text()) + 1);
-                    }
+                    add_resource(r);
                     break;
 
                 default:

@@ -2,13 +2,18 @@ body {
     font-size: 12px;
 }
 
-dt { color: blue; }
-dd { padding-bottom: .5em; }
+dt {
+    color: blue;
+}
+
+dd {
+    padding-bottom: .5em;
+}
 
 #header {
     margin-left: auto;
     margin-right: auto;
-    text-align:center;
+    text-align: center;
     margin-bottom: 1em;
 }
 
@@ -59,37 +64,11 @@ dd { padding-bottom: .5em; }
     cursor: pointer;
 }
 
-
-/*
-
-  Controls the display of icons depending on the state
-
-*/
-
-/* Restart */
-.xpm-resource-list i[name="restart"] {
-    display: none;
-}
-
-.xpm-resource-list#state-error i[name="restart"] {
-    display: inline;
-    margin-right: 5px;
-}
-
-/* Delete */
-.xpm-resource-list img[name="delete"] {
-    display: inline;
-    margin-right: 5px;
-}
-
-.xpm-resource-list#state-running i[name="delete"] {
-    display: none;
-}
-
 /** Button lists */
 ul.buttons {
     padding: 0;
 }
+
 .buttons > li {
     display: inline-block;
 }
@@ -97,7 +76,6 @@ ul.buttons {
 #experiments svg {
     display: none;
 }
-
 
 /** SVG graph */
 
@@ -108,5 +86,125 @@ ul.buttons {
 .node text {
     pointer-events: none;
     font: 10px sans-serif;
+}
+
+/*
+
+  Display of resources
+
+*/
+
+.resources {
+    padding: 1ex;
+}
+
+#resources {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#resources .resource-id {
+    padding: 3px;
+    margin-left: 0em;
+    margin-right: 0.5em;
+    background: #777;
+    color: white;
+    font-weight: bold;
+    border-radius: 3px;
+}
+
+#resources li::before {
+    vertical-align: top;
+    display: inline-block;
+    font-variant-caps: all-small-caps;
+    padding: 2pt;
+    font-size: 1.7ex;
+    width: 60px;
+    white-space: nowrap;
+    font-stretch: condensed;
+    margin-right: 0.5ex;
+}
+
+#resources li {
+    padding-bottom: 1mm;
+    display: none;
+}
+
+#resources.checkbox-state-waiting li.state-waiting {  display: block; }
+#resources.checkbox-state-ready li.state-ready {  display: block; }
+#resources.checkbox-state-running li.state-running {  display: block; }
+#resources.checkbox-state-on_hold li.state-on_hold {  display: block; }
+#resources.checkbox-state-error li.state-error {  display: block; }
+#resources.checkbox-state-done li.state-done {  display: block; }
+
+#resources li div.resource-link {
+    display: inline-block;
+}
+
+#resources .progressbar {
+    /*margin-left: 65px;*/
+}
+
+#resources li.state-waiting::before {
+    content: "waiting";
+    background: orange;
+    color: white;
+}
+
+#resources li.state-ready::before {
+    content: "ready";
+    background: green;
+    color: white;
+}
+
+#resources li.state-on_hold::before {
+    content: "on hold";
+    background: orangered;
+    color: white;
+}
+
+#resources li.state-running::before {
+    content: "running";
+    background: green;
+    color: white;
+}
+
+#resources li.state-done::before {
+    content: "done";
+    background: darkgreen;
+    color: white;
+}
+
+#resources li.state-error::before {
+    content: "error";
+    background: red;
+    color: white;
+}
+
+
+
+/* Restart */
+
+#resources i {
+    margin-right: 2px;
+    display: inline;
+    visibility: inherit;
+    vertical-align: top;
+}
+
+#resources i[name="restart"] {
+    /*display: none;*/
+    visibility: inherit;
+}
+
+#resources li.state-error i[name="restart"] {
+    display: inline;
+}
+
+/* Delete */
+
+#resource .state-running i[name="delete"] {
+    /*display: none;*/
+    visibility: hidden;
 }
 

@@ -21,15 +21,29 @@ package net.bpiwowar.xpm.server;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import com.google.gson.*;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.exceptions.*;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ContextualException;
+import net.bpiwowar.xpm.exceptions.ExitException;
+import net.bpiwowar.xpm.exceptions.XPMCommandException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
-import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Listener;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.SimpleMessage;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -54,7 +68,12 @@ import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
 import javax.servlet.http.HttpServlet;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -64,6 +83,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -261,7 +281,7 @@ public class JsonRPCMethods extends HttpServlet {
             }
 
             if (argmax == null)
-                throw new XPMCommandException("Cannot find a matching method");
+                throw new XPMCommandException("Cannot find a matching method for " + command.toString());
 
             Object[] args = new Object[argmax.arguments.length];
             for (int i = 0; i < args.length; i++) {
@@ -301,6 +321,12 @@ public class JsonRPCMethods extends HttpServlet {
                 mos.error(requestID, 1, t.getMessage());
             } catch (IOException e2) {
                 LOGGER.error(e2, "Could not send the return code");
+            }
+        } catch (XPMCommandException t) {
+            try {
+                mos.error(requestID, 1, "Error while running request: " + t.toString());
+            } catch (IOException e) {
+                LOGGER.error("Could not send the return code");
             }
         } catch (Throwable t) {
             LOGGER.info(t, "Internal error while handling JSON request");
@@ -839,7 +865,7 @@ public class JsonRPCMethods extends HttpServlet {
                         return;
                     }
 
-                    map.put("resource", resourceID);
+                    map.put("id", resourceID);
                     Path locator = resource.getLocator();
                     if (locator != null)
                         map.put("locator", locator.toString());
@@ -977,20 +1003,29 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     @RPCMethod(help = "Find resources by experiment", name = "resources-from-experiment")
-    public JsonArray findResourceFromExperiment(String identifier) throws SQLException {
-        Experiment experiment = Experiment.findByIdentifier(identifier);
+    public JsonArray findResourceFromExperiment(
+            @RPCArgument(name = "identifier") String identifier
+    ) throws SQLException {
         JsonArray resources = new JsonArray();
-        experiment.resources().forEach(
-                r -> resources.add(toJson(r))
-        );
+        final Experiment experiment = Experiment.findByIdentifier(identifier);
+        if (experiment != null) {
+            experiment.resources().forEach(
+                    r -> resources.add(toJson(r))
+            );
+        } else {
+            throw new XPMCommandException("No experiment with identifier [" + identifier + "] found");
+        }
         return resources;
     }
 
     private JsonElement toJson(Resource r) {
         JsonObject o = new JsonObject();
         o.add("id", new JsonPrimitive(r.getId()));
-        o.add("locator", new JsonPrimitive(r.getLocator()));
-        o.add("state", new JsonPrimitive(r.getState()));
+        o.add("locator", new JsonPrimitive(r.getLocator().toString()));
+        o.add("state", new JsonPrimitive(r.getState().toString()));
+        if (r instanceof Job) {
+            o.add("progress", new JsonPrimitive(((Job) r).getProgress()));
+        }
         return o;
     }
 
@@ -1120,15 +1155,28 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     @RPCMethod(name = "experiment-list", help = "Get list of experiments")
-    public ArrayList<String> experimentList() throws SQLException, CloseException {
-        ArrayList<String> names = new ArrayList<>();
-        Experiment.experiments().forEach(e -> names.add(e.getName()));
-        return names;
+    public JsonArray experimentList(
+            @RPCArgument(name = "latest", help = "Only display latest experiment") boolean latest
+    ) throws SQLException, CloseException {
+        JsonArray experiments = new JsonArray();
+        Experiment.experiments(latest).forEach(e -> {
+            final JsonObject experiment = new JsonObject();
+            experiment.add("id", new JsonPrimitive(e.getId()));
+            experiment.add("name", new JsonPrimitive(e.getName()));
+            experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
+            experiments.add(experiment);
+        });
+        return experiments;
+    }
+
+    @RPCMethod(name = "experiment-names", help = "Get list of experiment names")
+    public Stream<String> experimentNames() {
+        return Experiment.experimentNames();
     }
 
     @RPCMethod(help = "Get list of experiments")
     public JsonElement experiments() throws SQLException, CloseException {
-        try (final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
+        try (final CloseableIterable<Experiment> experiments = Experiment.experiments(false)) {
             JsonObject response = new JsonObject();
             final JsonArray nodes = new JsonArray();
             final JsonArray links = new JsonArray();

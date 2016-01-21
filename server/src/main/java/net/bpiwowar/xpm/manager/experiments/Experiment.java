@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager.experiments;
  */
 
 import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
@@ -32,7 +33,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -129,10 +132,14 @@ public class Experiment implements Identifiable {
 
     /**
      * Iterator on experiments
+     *
+     * @param latest
      */
-    static public CloseableIterable<Experiment> experiments() throws SQLException {
+    static public CloseableIterable<Experiment> experiments(boolean latest) throws SQLException {
         final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
-        return experiments.find(SELECT_BEGIN + " ORDER BY timestamp DESC", st -> {
+        String query = latest ? "SELECT max(id), name, max(timestamp) FROM Experiments GROUP BY name "
+                : "SELECT id, name, timestamp FROM Experiments ORDER BY timestamp DESC";
+        return experiments.find(query, st -> {
         });
     }
 
@@ -180,14 +187,31 @@ public class Experiment implements Identifiable {
     }
 
     public static Experiment findByIdentifier(String name) throws SQLException {
-        final String query = format("%s WHERE identifier=?", SELECT_BEGIN);
+        final String query = format("%s WHERE name=? ORDER BY timestamp DESC LIMIT 1", SELECT_BEGIN);
         final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
         return experiments.findUnique(query, st -> st.setString(1, name));
     }
 
+    /**
+     * Returns all resources associated with this experiment
+     * @return The resources as an iterable
+     * @throws SQLException
+     */
     public CloseableIterable<Resource> resources() throws SQLException {
         final DatabaseObjects<Resource> resources = Scheduler.get().resources();
-        return resources.find(Resource.SELECT_BEGIN + ", ExperimentResources WHERE id=resource AND experiment=?",
+        return resources.find("SELECT r.id, r.type, r.path, r.status FROM Resources r, ExperimentTasks et, ExperimentResources er " +
+                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?",
                 st -> st.setLong(1, this.getId()));
+    }
+
+    public static Stream<String> experimentNames() throws WrappedSQLException {
+        try {
+            return Scheduler.get()
+                    .statement("SELECT name FROM Experiments GROUP BY name ORDER BY max(timestamp) DESC")
+                    .stream()
+                    .map(rs -> rs.getString(1));
+        } catch (SQLException e) {
+            throw new WrappedSQLException(e);
+        }
     }
 }

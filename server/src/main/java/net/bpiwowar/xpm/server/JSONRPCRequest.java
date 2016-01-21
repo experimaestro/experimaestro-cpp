@@ -21,18 +21,30 @@ package net.bpiwowar.xpm.server;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 28/3/13
  */
 public abstract class JSONRPCRequest {
     abstract protected void sendJSONString(String message) throws IOException;
 
-    public void endMessage(String requestID, Object message) throws IOException {
+    public void endMessage(String requestID, Object result) throws IOException {
         JSONObject answer = getJSONPartialAnswer(requestID);
-//        answer.put("error", null);
-        answer.put("result", message);
+
+        if (result instanceof Iterable) {
+            List<Object> list = new ArrayList<>();
+            ((Iterable) result).forEach(list::add);
+            result = list;
+        } else if (result instanceof Stream) {
+            List<Object> list = new ArrayList<>();
+            ((Stream) result).forEach(list::add);
+            result = list;
+        }
+
+        answer.put("result", result);
 
         sendJSONString(answer.toJSONString());
 

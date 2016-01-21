@@ -18,10 +18,19 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.AbstractIterator;
+import net.bpiwowar.xpm.exceptions.WrappedException;
+import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import net.bpiwowar.xpm.utils.ExceptionalRunnable;
+import net.bpiwowar.xpm.utils.StreamUtils;
 
 import java.io.InputStream;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.stream.Stream;
 
 /**
  * Utility class to execute statements
@@ -55,8 +64,8 @@ public class XPMStatement {
     private XPMStatement protect(ExceptionalRunnable r) throws SQLException {
         try {
             r.apply();
-        } catch(SQLException e) {
-          throw e;
+        } catch (SQLException e) {
+            throw e;
         } catch (RuntimeException e) {
             st.close();
             throw new SQLException(e);
@@ -108,5 +117,39 @@ public class XPMStatement {
         if (!rs.next()) throw new SQLException("Expected one result only (got 0)");
         if (!rs.isLast()) throw new SQLException("Expected one result only (got > 1)");
         return new XPMResultSet(this, rs);
+    }
+
+    public Stream<XPMResultSet> stream() throws WrappedSQLException {
+        try {
+            st.execute();
+            final XPMResultSet set = resultSet();
+
+            return StreamUtils.stream(new AbstractIterator<XPMResultSet>() {
+                @Override
+                protected XPMResultSet computeNext() {
+                    try {
+                        if (set.next()) return set;
+                        if (!st.isClosed()) {
+                            set.close();
+                        }
+                        return endOfData();
+                    } catch (SQLException e) {
+                        throw new WrappedException(e);
+                    }
+                }
+            }).onClose(() -> {
+                try {
+                    if (!st.isClosed()) {
+                        set.close();
+                    }
+                } catch (SQLException e) {
+                    throw new WrappedSQLException(e);
+                }
+            });
+
+        } catch (SQLException e) {
+            throw new WrappedSQLException(e);
+        }
+
     }
 }

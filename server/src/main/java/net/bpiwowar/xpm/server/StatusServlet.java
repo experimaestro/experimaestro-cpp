@@ -157,7 +157,7 @@ public class StatusServlet extends XPMServlet {
                 final PrintWriter out = startHTMLResponse(response);
 
                 out.println("<dl>");
-                try (final CloseableIterable<Experiment> experiments = Experiment.experiments()) {
+                try (final CloseableIterable<Experiment> experiments = Experiment.experiments(false)) {
                     for (Experiment experiment : experiments) {
                         out.format("<dt>%s</dt><dd><ul>%n", experiment.getName(), new Date(experiment.getTimestamp() * 1000));
                         for (TaskReference taskReference : experiment.getTasks()) {

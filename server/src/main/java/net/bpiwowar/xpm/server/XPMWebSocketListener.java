@@ -33,7 +33,6 @@ import java.io.IOException;
  * Web socket service
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/3/13
  */
 public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketListener {
     final static private Logger LOGGER = Logger.getLogger();

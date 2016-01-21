@@ -19,9 +19,11 @@
 <html>
 <head>
     <title>XPM</title>
+    <meta charset="UTF-8">
+
     <link type="text/css" href="/css/smoothness/jquery-ui-1.10.2.custom.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/fa/css/font-awesome.min.css">
     <link type="text/css" href="/js/jstree/themes/default/style.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/fa/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" charset="utf-8" media="all" href="/css/style.css">
 
     <script type="text/javascript" src="/js/jquery-1.9.1.min.js"></script>
@@ -57,8 +59,8 @@
 
 <div id='tab-main' class='tab'>
     <ul>
-        <li><a href='#resources'>Resources</a></li>
-        <li><a href='/tasks'>Task</a></li>
+        <li><a href='#resources-pane'>Resources</a></li>
+        <!--<li><a href='/tasks'>Task</a></li>-->
         <li><a href='/help'>Help</a></li>
         <li><a href='#xpm-info'>XPM info</a></li>
     </ul>
@@ -67,20 +69,22 @@
         <svg></svg>
     </div>
 
-    <div id="resources">
+    <div id="resources-pane">
         <select id='experiment-chooser' name="experiment"></select>
+        <div id="experiment-timestamp"></div>
+
         <ul id="state-chooser" class="buttons">
-            <li><a href="#state-waiting"><span>waiting</span> (<span id="state-waiting-count">0</span>)</a></li>
-            <li><a href="#state-ready"><span>ready</span> (<span id="state-ready-count">0</span>)</a></li>
-            <li><a href="#state-running"><span>running</span> (<span id="state-running-count">0</span>)</a></li>
-            <li><a href="#state-on_hold"><span>on_hold</span> (<span id="state-on_hold-count">0</span>)</a></li>
-            <li><a href="#state-error"><span>error</span> (<span id="state-error-count">0</span>)</a></li>
-            <li><a href="#state-done"><span>done</span> (<span id="state-done-count">0</span>)</a></li>
+            <li><input type="checkbox" id="checkbox-state-waiting" checked><label for="checkbox-state-waiting">waiting (<span id="state-waiting-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-ready" checked><label for="checkbox-state-ready">ready (<span id="state-ready-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-running" checked><label for="checkbox-state-running">running (<span id="state-running-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-on_hold" checked><label for="checkbox-state-on_hold">hold (<span id="state-on_hold-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-error" checked><label for="checkbox-state-error">error (<span id="state-error-count">0</span>)</label></li>
+            <li><input type="checkbox" id="checkbox-state-done" checked><label for="checkbox-state-done">done (<span id="state-done-count">0</span>)</label></li>
         </ul>
 
-        <div class="resources">
+        <ul id="resources">
 
-        </div>
+        </ul>
     </div>
     <div id='resource-detail'><h2 id="resource-detail-title"></h2>
         <div id="resource-detail-path"></div>
