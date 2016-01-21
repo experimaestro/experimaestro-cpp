@@ -94,7 +94,8 @@ public class PythonTask extends Task {
             }
 
             // Switch to our context
-            try (ScriptContext.Swap ignored = taskContext.swap()) {
+            try (ScriptContext ignored = taskContext.copy()) {
+                ignored.setTask(this);
                 final Object returned = runFunction.__call__(new PyObject[]{
                         PythonRunner.wrap(jsoninput), PythonRunner.wrap(resultObject)
                 });

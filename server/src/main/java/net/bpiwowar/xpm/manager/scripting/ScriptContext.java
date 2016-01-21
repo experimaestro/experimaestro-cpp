@@ -367,16 +367,6 @@ final public class ScriptContext implements AutoCloseable {
         return parameters.get(key);
     }
 
-    /**
-     * Swap the thread-local script context with this one
-     * <p>
-     * Useful for a try-resource block where we want the old context to be set back.
-     *
-     * @return A closeable object that will put back the context
-     */
-    public Swap swap() {
-        return new Swap();
-    }
 
     /**
      * Post processing of a saved resource
@@ -446,23 +436,6 @@ final public class ScriptContext implements AutoCloseable {
 
     public void setTask(Task task) {
         this.task.set(task);
-    }
-
-    public class Swap implements Closeable {
-        private final ScriptContext old;
-
-        Swap() {
-            old = threadContext.get();
-            threadContext.set(ScriptContext.this);
-        }
-
-        @Override
-        public void close() {
-            if (threadContext.get() != ScriptContext.this) {
-                LOGGER.error("Current thread context [%s] is not ourselves [%s]", threadContext.get(), ScriptContext.this);
-            }
-            threadContext.set(old);
-        }
     }
 
     /**

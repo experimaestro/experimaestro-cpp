@@ -100,7 +100,8 @@ public class JSDirectTask extends Task {
                 }
 
                 // Switch to our context
-                try (ScriptContext.Swap ignored = taskContext.swap()) {
+                try (ScriptContext ignored = taskContext.copy()) {
+                    ignored.setTask(this);
                     final Object returned = runFunction.call(cx, jsScope, jsObject,
                             new Object[]{jsoninput, resultObject});
 
