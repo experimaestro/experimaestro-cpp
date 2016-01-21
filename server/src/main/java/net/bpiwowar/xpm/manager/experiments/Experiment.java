@@ -178,4 +178,16 @@ public class Experiment implements Identifiable {
     public void add(TaskReference taskReference) {
         tasks.add(taskReference);
     }
+
+    public static Experiment findByIdentifier(String name) throws SQLException {
+        final String query = format("%s WHERE identifier=?", SELECT_BEGIN);
+        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        return experiments.findUnique(query, st -> st.setString(1, name));
+    }
+
+    public CloseableIterable<Resource> resources() throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        return resources.find(Resource.SELECT_BEGIN + ", ExperimentResources WHERE id=resource AND experiment=?",
+                st -> st.setLong(1, this.getId()));
+    }
 }

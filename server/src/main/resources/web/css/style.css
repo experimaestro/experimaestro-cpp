@@ -86,6 +86,17 @@ dd { padding-bottom: .5em; }
     display: none;
 }
 
+/** Button lists */
+ul.buttons {
+    padding: 0;
+}
+.buttons > li {
+    display: inline-block;
+}
+
+#experiments svg {
+    display: none;
+}
 
 
 /** SVG graph */

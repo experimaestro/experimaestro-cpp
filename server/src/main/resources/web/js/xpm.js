@@ -21,7 +21,6 @@ $.jsonRPC.setup({
     endPoint: '/json-rpc',
 });
 
-
 // custom css expression for a case-insensitive contains()
 $.expr[':'].Contains = function (a, i, m) {
     return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
@@ -86,56 +85,32 @@ function jsonrpc_error(r) {
 
 
 // --- actions on jobs: restart, remove
-// TODO: invalidate a job (potentially recursively)
 var resource_action_callback = function () {
-        var name = this.name ? this.name : this.getAttribute("name");
-        if (!name) {
-            alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this) + "]");
-            return;
-        }
+    var name = this.name ? this.name : this.getAttribute("name");
+    if (!name) {
+        alert("internal error: no name given for action in [" + this.tagName + "/" + typeof(this) + "]");
+        return;
+    }
 
 
-        if (name == "restart") {
-            var rsrcid = $(this).parent().attr("name");
+    if (name == "restart") {
+        var rsrcid = $(this).parent().attr("name");
 
-            var request = function (restartDone) {
-                $.jsonRPC.request('restart', {
-                    params: {"id": rsrcid, "restart-done": restartDone, "recursive": true},
-                    success: function (r) {
-                        noty({text: "Succesful restart (" + r.result + " jobs restarted)", type: 'success', timeout: 5000});
-                    },
-                    error: jsonrpc_error
-                });
-            };
+        var request = function (restartDone) {
+            $.jsonRPC.request('restart', {
+                params: {"id": rsrcid, "restart-done": restartDone, "recursive": true},
+                success: function (r) {
+                    noty({text: "Succesful restart (" + r.result + " jobs restarted)", type: 'success', timeout: 5000});
+                },
+                error: jsonrpc_error
+            });
+        };
 
-            var rlist = $(this).parentsUntil("div.xpm-resource-list");
-            rlist = rlist[rlist.length - 1].parentNode;
+        var rlist = $(this).parentsUntil("div.xpm-resource-list");
+        rlist = rlist[rlist.length - 1].parentNode;
 
-            if (rlist.id == "state-done") {
-                $("#restart-confirm").dialog({
-                    resizable: false,
-                    height: 140,
-                    modal: true,
-                    open: function () {
-                        $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
-                    },
-                    buttons: {
-                        "Yes, I understand": function () {
-                            $(this).dialog("close");
-                            request(true);
-                        },
-                        "Cancel": function () {
-                            $(this).dialog("close");
-                        }
-                    }
-                });
-            } else {
-                request(false);
-            }
-        }
-
-        else if (name == "delete") {
-            $("#delete-confirm").dialog({
+        if (rlist.id == "state-done") {
+            $("#restart-confirm").dialog({
                 resizable: false,
                 height: 140,
                 modal: true,
@@ -145,40 +120,114 @@ var resource_action_callback = function () {
                 buttons: {
                     "Yes, I understand": function () {
                         $(this).dialog("close");
-                        $.jsonRPC.request('remove', {
-                            params: {"id": rsrcid, "recursive": false},
-                            success: function (r) {
-                                // We just notify - but wait for the server notification to
-                                // remove the job from the interface
-                                noty({text: "Successful delete", type: 'success', timeout: 5000});
-                            },
-                            error: jsonrpc_error,
-                        });
+                        request(true);
                     },
                     "Cancel": function () {
                         $(this).dialog("close");
                     }
                 }
             });
-        }
-
-        else if (name == "copyfolderpath") {
-            var range = document.createRange();
-            var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
-            range.setStart(node, 0);
-            range.setEnd(node, node.textContent.lastIndexOf("/"));
-            window.getSelection().addRange(range);
-            if (document.execCommand('copy')) {
-                noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
-            } else {
-                noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
-            }
-            window.getSelection().removeAllRanges();
+        } else {
+            request(false);
         }
     }
-    ;
+
+    else if (name == "delete") {
+        $("#delete-confirm").dialog({
+            resizable: false,
+            height: 140,
+            modal: true,
+            open: function () {
+                $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+            },
+            buttons: {
+                "Yes, I understand": function () {
+                    $(this).dialog("close");
+                    $.jsonRPC.request('remove', {
+                        params: {"id": rsrcid, "recursive": false},
+                        success: function (r) {
+                            // We just notify - but wait for the server notification to
+                            // remove the job from the interface
+                            noty({text: "Successful delete", type: 'success', timeout: 5000});
+                        },
+                        error: jsonrpc_error,
+                    });
+                },
+                "Cancel": function () {
+                    $(this).dialog("close");
+                }
+            }
+        });
+    }
+
+    else if (name == "copyfolderpath") {
+        var range = document.createRange();
+        var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
+        range.setStart(node, 0);
+        range.setEnd(node, node.textContent.lastIndexOf("/"));
+        window.getSelection().addRange(range);
+        if (document.execCommand('copy')) {
+            noty({text: "Path " + range.toString() + " copied to clipboard", type: 'info', timeout: 5000});
+        } else {
+            noty({text: "Error: could not copy to clipboard", type: 'error', timeout: 5000});
+        }
+        window.getSelection().removeAllRanges();
+    }
+}
+
+
+/**
+ * Get all the tasks
+ */
+function get_tasks() {
+    $.jsonRPC.request('taks', {
+        params: {},
+        success: function (r) {
+            noty({text: "Succesful restart (" + r.result + " jobs restarted)", type: 'success', timeout: 5000});
+        },
+        error: jsonrpc_error
+    });
+}
+
+/**
+ * Load tasks
+ */
+function load_tasks() {
+    $.jsonRPC.request('get-resources', {
+        params: {},
+        error: jsonrpc_error,
+        success: function (r) {
+            var select = $("#experiment-chooser");
+            select.children().remove();
+            $.each(r.result, function (e) {
+                select.append($e("option").append($t(r.result[e])));
+            });
+            load_tasks();
+        }
+    });
+}
+
+/**
+ * Get the experiments
+ */
+function get_experiments() {
+    $.jsonRPC.request('experiment-list', {
+        params: {},
+        error: jsonrpc_error,
+        success: function (r) {
+            var select = $("#experiment-chooser");
+            select.children().remove();
+            $.each(r.result, function (e) {
+                select.append($e("option").append($t(r.result[e])));
+            });
+            load_tasks();
+        }
+    });
+}
+
 
 // --- action: Get the details of a resource
+
 var resource_link_callback = function () {
     var resourcePath = $(this).text();
     var resourceID = $(this).parent().attr("name");
@@ -201,8 +250,6 @@ var resource_link_callback = function () {
                 });
             });
 
-            //history.pushState();
-
         },
         error: jsonrpc_error
     });
@@ -211,6 +258,11 @@ var resource_link_callback = function () {
 
 
 $().ready(function () {
+    $("#experiment-chooser").change(load_tasks);
+
+    // Fill experiment selection
+    get_experiments();
+
 
     function showexperiments(element) {
         var width = 960,
@@ -233,6 +285,7 @@ $().ready(function () {
             "jsonrpc": "2.0",
             "id": 1,
         }
+
         d3.xhr("/json-rpc")
             .responseType("json")
             .header("Content-Type", "application/json")
@@ -246,23 +299,23 @@ $().ready(function () {
                         .links(json.links)
                         .start();
 
-                    var link = svg.selectAll(".link")
+                    var link = svg.selectall(".link")
                         .data(json.links)
                         .enter().append("line")
                         .attr("class", "link");
 
-                    var node = svg.selectAll(".node")
+                    var node = svg.selectall(".node")
                         .data(json.nodes)
                         .enter().append("g")
                         .attr("class", "node")
                         .call(force.drag);
 
-                    node.append("image")
-                        .attr("xlink:href", "https://github.com/favicon.ico")
-                        .attr("x", -8)
-                        .attr("y", -8)
-                        .attr("width", 16)
-                        .attr("height", 16);
+                    //node.append("image")
+                    //    .attr("xlink:href", "https://github.com/favicon.ico")
+                    //    .attr("x", -8)
+                    //    .attr("y", -8)
+                    //    .attr("width", 16)
+                    //    .attr("height", 16);
 
                     node.append("text")
                         .attr("dx", 12)
@@ -300,11 +353,9 @@ $().ready(function () {
     $(".xpm-resource-list .link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
+    $("#state-chooser li a").button();
 
-    // Filter resource lists
-    $(".xpm-resource-list").each(function () {
-        listFilter($(this));
-    });
+    // Transform resource detailed view in tree
     $("#resource-detail-content").jstree();
 
     // Tabs
@@ -316,7 +367,6 @@ $().ready(function () {
         }
     });
 
-
     // Resource counts
     $("#resources").children("div").each(function () {
         var n = $(this).children("ul").children("li").size();
@@ -324,12 +374,15 @@ $().ready(function () {
         $("#" + tabid + "-count").text(n);
     });
 
+
     // --- Now, listen to XPM events with a web socket
+
     websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
     websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
 
     function create_websocket() {
         console.debug("WebSocket: Connecting to " + websocket_url);
+
         var websocket = new WebSocket(websocket_url);
         websocket.onmessage = function (e) {
             var decrement = function (e) {

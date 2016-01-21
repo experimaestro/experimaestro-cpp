@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <!--
   ~ This file is part of experimaestro.
   ~ Copyright (c) 2014 B. Piwowarski <benjamin@bpiwowar.net>
@@ -15,17 +16,78 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
   -->
-
 <html>
-<head><title>Experimaestro - Home</title></head>
+<head>
+    <title>XPM</title>
+    <link type="text/css" href="/css/smoothness/jquery-ui-1.10.2.custom.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/fa/css/font-awesome.min.css">
+    <link type="text/css" href="/js/jstree/themes/default/style.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" charset="utf-8" media="all" href="/css/style.css">
+
+    <script type="text/javascript" src="/js/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript" src="/js/jquery-ui-1.10.2.custom.min.js"></script>
+    <script type="text/javascript" src="/js/jquery.jsonrpc.js"></script>
+    <script type="text/javascript" src="/js/jstree/jstree.min.js"></script>
+    <script type="text/javascript" src="/js/d3.min.js"></script>
+
+    <script type="text/javascript" src="/js/jquery.ba-hashchange.min.js"></script>
+    <script type="text/javascript" src='/js/noty/jquery.noty.js'></script>
+    <script type="text/javascript" src='/js/noty/layouts/top.js'></script>
+    <script type="text/javascript" src='/js/noty/themes/default.js'></script>
+    <script type="text/javascript" src="/js/xpm.js"></script>
+</head>
 <body>
 
-<h1>Experimaestro home page</h1>
+<div id="header">
+    <div class='title'>Experimaestro</div>
+</div>
 
-<div><a href="/tasks">List of available tasks</a></div>
-<div><a href="/status">Status of jobs</a></div>
-<div><a href="/help">JavaScript reference</a></div>
-<div><a href="/doc/">Experimaestro documentation</a></div>
 
+<img id='connection' src='/images/disconnect.png' alt='[c]'>
+
+<div class='dialog' id="delete-confirm" title="Delete this job?">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>These items will be
+        permanently deleted and cannot be recovered. Are you sure?</p>
+</div>
+
+<div class='dialog' id="restart-confirm" title="Restart this job?">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>This completed job will be
+        restarted</p>
+</div>
+
+<div id='tab-main' class='tab'>
+    <ul>
+        <li><a href='#resources'>Resources</a></li>
+        <li><a href='/tasks'>Task</a></li>
+        <li><a href='/help'>Help</a></li>
+        <li><a href='#xpm-info'>XPM info</a></li>
+    </ul>
+
+    <div id='experiments'>
+        <svg></svg>
+    </div>
+
+    <div id="resources">
+        <select id='experiment-chooser' name="experiment"></select>
+        <ul id="state-chooser" class="buttons">
+            <li><a href="#state-waiting"><span>waiting</span> (<span id="state-waiting-count">0</span>)</a></li>
+            <li><a href="#state-ready"><span>ready</span> (<span id="state-ready-count">0</span>)</a></li>
+            <li><a href="#state-running"><span>running</span> (<span id="state-running-count">0</span>)</a></li>
+            <li><a href="#state-on_hold"><span>on_hold</span> (<span id="state-on_hold-count">0</span>)</a></li>
+            <li><a href="#state-error"><span>error</span> (<span id="state-error-count">0</span>)</a></li>
+            <li><a href="#state-done"><span>done</span> (<span id="state-done-count">0</span>)</a></li>
+        </ul>
+
+        <div class="resources">
+
+        </div>
+    </div>
+    <div id='resource-detail'><h2 id="resource-detail-title"></h2>
+        <div id="resource-detail-path"></div>
+        <div id="resource-detail-content"></div>
+    </div>
+    <div id='xpm-info'>
+        </dl></div>
+</div>
 </body>
 </html>
