@@ -251,6 +251,11 @@ resource_progress = function (r) {
     }
 }
 
+function change_counter(state, delta) {
+    var c = $("#state-" + state + "-count");
+    c.text(Number(c.text()) + delta);
+}
+
 add_resource = function (r) {
     var e = $("#R" + r.id);
 
@@ -276,13 +281,12 @@ add_resource = function (r) {
                     .append(link)
             );
 
-        item.get().state = r.state;
+        item.get(0).state = r.state;
 
         $("#resources").append(item);
         makelinks(item);
 
-        var c = $("#state-" + r.state + "-count");
-        c.text(Number(c.text()) + 1);
+        change_counter(r.state, +1);
         resource_progress(r);
     }
 }
@@ -468,20 +472,18 @@ $().ready(function () {
                     var e = $("#R" + r.id);
 
                     if (e.length > 0) {
-                        var oldstate = e.get().state;
-
                         // Remove progress bars
                         e.find("div.progressbar").remove();
 
-                        // Decrement old
-                        var c = $("#" + "state-" + oldstate + "-count");
-                        c.text(Number(c.text()) - 1);
-                        c = $("#" + "state-" + r.state + "-count");
-                        c.text(Number(c.text()) + 1);
+                        // Update counters
+                        var oldstate = e.get(0).state;
+                        change_counter(oldstate, -1);
+                        change_counter(r.state, +1);
 
                         // Put the item in the list
-                        e.removeClass("state-" + e.state).addClass("state-" + r.state);
-                        e.get().state = r.state;
+                        e.removeClass("state-" + oldstate)
+                            .addClass("state-" + r.state);
+                        e.get(0).state = r.state;
                     }
 
                     break;
@@ -511,7 +513,7 @@ $().ready(function () {
         };
 
         websocket.onopen = function () {
-            noty({text: "Web socket opened", type: 'information', timeout: 2000});
+            //noty({text: "Web socket opened", type: 'information', timeout: 2000});
             $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
             var p = {id: 1, method: "listen", params: []};
             this.send(JSON.stringify(p));
