@@ -223,7 +223,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                     throw new UnsupportedOperationException("Unsupported input redirection type: " + input.type());
             }
 
-            writer.format("%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && [[ \"$e\" != 141 ]] && exit $e; done; }%n%n");
+            writer.format("%ncheckerror()  { local e; for e in \"$@\"; do [[ \"$e\" != 0 ]] && [[ \"$e\" != 141 ]] && exit $e; done; return 0; }%n%n");
             writer.println("(");
 
             // The prepare all the command
