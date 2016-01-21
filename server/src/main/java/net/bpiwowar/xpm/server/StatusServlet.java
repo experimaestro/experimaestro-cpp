@@ -133,22 +133,6 @@ public class StatusServlet extends XPMServlet {
                         "<div id=\"resource-detail-content\"></div></div>");
 
                 // XPM information
-                out.println("<div id='xpm-info'>");
-                final XPMInformation xpmInformation = XPMInformation.get();
-                out.println("<h2>Experimaestro build information</h2><dl>");
-                out.format("<dt>%s</dt><dd>%s</dd>%n", "Branch", xpmInformation.branch);
-                out.format("<dt>%s</dt><dd>%s</dd>%n", "Commit hash", xpmInformation.commitID);
-                if (xpmInformation.commitTime != null) {
-                    final Date commitDate = new Date(Long.parseLong(xpmInformation.commitTime));
-                    out.format("<dt>%s</dt><dd>%s [%s]</dd>%n", "Commit time", commitDate.toString(), xpmInformation.commitTime);
-                }
-                out.format("<dt>%s</dt><dd>%b</dd>%n", "Dirty flag", xpmInformation.dirty);
-                out.format("<dt>%s</dt><dd>%s</dd>%n", "Origin", xpmInformation.remoteURL);
-                out.format("<dt>%s</dt><dd>%s</dd>%n", "Tags", xpmInformation.tags);
-                out.println("</dl></div>");
-                out.println("</div>");
-
-                out.println("</body></html>");
                 return;
             }
 

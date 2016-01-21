@@ -20,7 +20,7 @@ dd {
 .progressbar {
     width: 25%;
     height: 3mm;
-    margin-top: 1mm;
+    margin-top: 2mm;
 }
 
 #header .title {
@@ -139,10 +139,6 @@ ul.buttons {
 
 #resources li div.resource-link {
     display: inline-block;
-}
-
-#resources .progressbar {
-    /*margin-left: 65px;*/
 }
 
 #resources li.state-waiting::before {

@@ -415,7 +415,6 @@ $().ready(function () {
 
     click_state = function (e) {
         var checked = $(this).is(':checked');
-        console.log("State " + this.id + " is " + checked);
         if (checked) {
             $("#resources").addClass(this.id);
         } else {
@@ -433,8 +432,34 @@ $().ready(function () {
     // Tabs
     $(".tab").tabs({
         beforeActivate: function (event, ui) {
-            if (ui.newPanel.attr("id") == "experiments") {
+            var tabid = ui.newPanel.attr("id");
+            if (tabid == "experiments") {
                 showexperiments(ui.newPanel);
+            } else if (tabid == "xpm-info") {
+                var e = $("#xpm-info");
+                if (e.get(0).loaded) return true;
+
+                $.jsonRPC.request('buildInformation', {
+                    params: {},
+                    error: jsonrpc_error,
+                    success: function (r) {
+                        e.get(0).loaded = true;
+                        e.append($e("h2")
+                            .append($t("Build information")))
+                            .append($e("dl").append(
+                                $e("dt").append($t("Branch")),
+                                $e("dd").append(r.result.branch),
+                                $e("dt").append($t("Commit hash")),
+                                $e("dd").append(r.result.commitID),
+                                $e("dt").append($t("Dirty")),
+                                $e("dd").append(r.result.dirty ? "True" : "False"),
+                                $e("dt").append($t("Commit ID")),
+                                $e("dd").append(r.result.commitID),
+                                $e("dt").append($t("Tags")),
+                                $e("dd").append(r.result.tags)
+                            ));
+                    }
+                });
             }
         }
     });
