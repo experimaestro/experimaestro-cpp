@@ -28,7 +28,7 @@
 
     <script type="text/javascript" src="/js/jquery-1.9.1.min.js"></script>
     <script type="text/javascript" src="/js/jquery-ui-1.10.2.custom.min.js"></script>
-    <script type="text/javascript" src="/js/jquery.jsonrpc.js"></script>
+    <script type="text/javascript" src="/js/jquery.jsonrpcclient.js"></script>
     <script type="text/javascript" src="/js/jstree/jstree.min.js"></script>
     <script type="text/javascript" src="/js/d3.min.js"></script>
 
@@ -60,8 +60,8 @@
 <div id='tab-main' class='tab'>
     <ul>
         <li><a href='#resources-pane'>Resources</a></li>
-        <!--<li><a href='/tasks'>Task</a></li>-->
-        <li><a href='/help'>Help</a></li>
+        <li><a href='/tasks'>Task</a></li>
+        <li><a href='#xpm-help'>Help</a></li>
         <li><a href='#xpm-info'>XPM info</a></li>
     </ul>
 
@@ -91,6 +91,9 @@
         <div id="resource-detail-content"></div>
     </div>
     <div id='xpm-info'></div>
+    <div id='xpm-help'>
+        <select id='help-class-chooser'></select>
+    </div>
 </div>
 </body>
 </html>

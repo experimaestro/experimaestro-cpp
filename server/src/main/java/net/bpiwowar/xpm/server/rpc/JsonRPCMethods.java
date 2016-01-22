@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.server;
+package net.bpiwowar.xpm.server.rpc;
 
 /*
  * This file is part of experimaestro.
@@ -92,14 +92,11 @@ import static java.lang.String.format;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
+@JsonRPCMethodsHolder("")
 public class JsonRPCMethods extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
 
     private static Multimap<String, MethodDescription> methods;
-
-    static {
-        initMethods();
-    }
 
     private final Scheduler scheduler;
 
@@ -116,21 +113,34 @@ public class JsonRPCMethods extends HttpServlet {
      */
     private Server server;
 
-    public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) {
+    public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) throws IOException {
+        initMethods();
         this.server = server;
         this.scheduler = scheduler;
         this.repository = repository;
         this.mos = mos;
     }
 
-    public static void initMethods() {
+    public static void initMethods() throws IOException {
         if (methods == null) {
             methods = HashMultimap.create();
-            for (Method method : JsonRPCMethods.class.getDeclaredMethods()) {
-                final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
-                if (rpcMethod != null) {
-                    methods.put("".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name(), new MethodDescription(method));
-                }
+
+            // Add methods from other classes
+            addMethods(JsonRPCMethods.class);
+            addMethods(DocumentationMethods.class);
+        }
+    }
+
+    public static void addMethods(Class<?> jsonRPCMethodsClass) {
+        final JsonRPCMethodsHolder def = jsonRPCMethodsClass.getAnnotation(JsonRPCMethodsHolder.class);
+
+        for (Method method : jsonRPCMethodsClass.getDeclaredMethods()) {
+            final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
+            if (rpcMethod != null) {
+                String name = "".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name();
+                if (!def.value().isEmpty())
+                    name = def.value() + "." + name;
+                methods.put(name, new MethodDescription(method));
             }
         }
     }
@@ -851,7 +861,7 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     @RPCMethod(help = "Listen to XPM events")
-    public void listen() {
+    public boolean listen() {
         Listener listener = message -> {
             try {
                 HashMap<String, Object> map = new HashMap<>();
@@ -897,6 +907,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         listeners.add(listener);
         scheduler.addListener(listener);
+        return true;
     }
 
     public void close() {
@@ -1225,83 +1236,5 @@ public class JsonRPCMethods extends HttpServlet {
         element.add("group", new JsonPrimitive(1));
     }
 
-//    /**
-//     * Add a command line job
-//     *
-//     * @throws DatabaseException
-//     */
-//    public boolean runCommand(String name, int priority, Object[] command,
-//                              Object[] envArray, String workingDirectory, Object[] depends,
-//                              Object[] readLocks, Object[] writeLocks) throws DatabaseException, ExperimaestroCannotOverwrite {
-//        Map<String, String> env = arrayToMap(envArray);
-//        LOGGER.info(
-//                "Running command %s [%s] (priority %d); read=%s, write=%s; environment={%s}",
-//                name, Arrays.toString(command), priority,
-//                Arrays.toString(readLocks), Arrays.toString(writeLocks),
-//                Output.toString(", ", env.entrySet()));
-//
-//        CommandArguments commandArgs = new CommandArguments();
-//        for (int i = command.length; --i >= 0; )
-//            commandArgs.add(new CommandArgument(command[i].toString()));
-//
-//        Connector connector = Scheduler.get().getLocalhostConnector();
-//        CommandLineTask job = new CommandLineTask(scheduler, connector, name, commandArgs,
-//                env, new File(workingDirectory).getAbsolutePath());
-//
-//        // XPMProcess locks
-//        for (Object depend : depends) {
-//
-//            Resource resource = scheduler.getResource(toResourceLocator(depend));
-//            if (resource == null)
-//                throw new RuntimeException("Resource " + depend
-//                        + " was not found");
-//            job.addDependency(resource, LockType.GENERATED);
-//        }
-//
-//        // We have to wait for read lock resources to be generated
-//        for (Object sharedLock : readLocks) {
-//            Resource resource = scheduler.getResource(toResourceLocator(sharedLock));
-//            if (resource == null)
-//                throw new RuntimeException("Resource " + sharedLock
-//                        + " was not found");
-//            job.addDependency(resource, LockType.READ_ACCESS);
-//        }
-//
-//        // Write locks
-//        for (Object writeLock : writeLocks) {
-//            final ResourceLocator id = toResourceLocator(writeLock);
-//            Resource resource = scheduler.getResource(id);
-//            if (resource == null) {
-//                resource = new SimpleData(scheduler, id,
-//                        LockMode.EXCLUSIVE_WRITER, false);
-//            }
-//            job.addDependency(resource, LockType.WRITE_ACCESS);
-//        }
-//
-//        scheduler.store(job, null);
-//        return true;
-//    }
-
-    static public class RPCArrayArgument implements RPCArgument {
-        @Override
-        public String name() {
-            return null;
-        }
-
-        @Override
-        public boolean required() {
-            return true;
-        }
-
-        @Override
-        public String help() {
-            return "Array element";
-        }
-
-        @Override
-        public Class<? extends Annotation> annotationType() {
-            return RPCArgument.class;
-        }
-    }
 
 }

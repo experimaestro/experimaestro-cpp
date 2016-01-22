@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.server;
+package net.bpiwowar.xpm.server.rpc;
 
 /*
  * This file is part of experimaestro.
@@ -59,7 +59,7 @@ public abstract class JSONRPCRequest {
 
     void error(String requestID, int code, String message) throws IOException {
         JSONObject answer = getJSONPartialAnswer(requestID);
-        answer.put("result", null);
+//        answer.put("result", null);
 
         JSONObject errorMessage = new JSONObject();
         errorMessage.put("code", code);

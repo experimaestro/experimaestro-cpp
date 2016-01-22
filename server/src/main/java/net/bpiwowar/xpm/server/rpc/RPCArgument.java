@@ -1,4 +1,4 @@
-package net.bpiwowar.xpm.server;
+package net.bpiwowar.xpm.server.rpc;
 
 /*
  * This file is part of experimaestro.
