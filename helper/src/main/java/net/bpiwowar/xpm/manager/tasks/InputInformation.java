@@ -6,7 +6,7 @@ import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 
 import java.util.Map;
 
-import static net.bpiwowar.xpm.manager.QName.parse;
+import static net.bpiwowar.xpm.manager.TypeName.parse;
 
 /**
  * Information about an input value

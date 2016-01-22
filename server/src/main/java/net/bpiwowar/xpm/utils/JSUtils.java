@@ -27,7 +27,7 @@ import org.w3c.dom.*;
 import org.w3c.dom.Node;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.js.JSBaseObject;
 import net.bpiwowar.xpm.manager.js.JSNamespaceContext;
 import net.bpiwowar.xpm.manager.json.*;
@@ -253,11 +253,11 @@ public class JSUtils {
             JsonObject json = new JsonObject();
             for (Map.Entry<Object, Object> entry : JSUtils.iterable(((NativeObject) value))) {
                 JSNamespaceContext nsContext = new JSNamespaceContext(scope);
-                QName qname = QName.parse(JSUtils.toString(entry.getKey()), nsContext);
+                TypeName qname = TypeName.parse(JSUtils.toString(entry.getKey()), nsContext);
                 Object pValue = entry.getValue();
 
                 if (qname.equals(Constants.XP_TYPE))
-                    pValue = QName.parse(JSUtils.toString(pValue), nsContext).toString();
+                    pValue = TypeName.parse(JSUtils.toString(pValue), nsContext).toString();
 
                 String key = qname.toString();
                 final Json key_value = toJSON(scope, pValue);
@@ -422,7 +422,7 @@ public class JSUtils {
                         list.add(document.cloneAndAdopt(node));
                     }
                 } else if (jsQName.charAt(0) == '@') {
-                    final QName qname = QName.parse(jsQName.substring(1), new JSNamespaceContext(scope));
+                    final TypeName qname = TypeName.parse(jsQName.substring(1), new JSNamespaceContext(scope));
                     Attr attribute = document.get().createAttributeNS(qname.getNamespaceURI(), qname.getLocalPart());
                     StringBuilder sb = new StringBuilder();
                     for (Node node : XMLUtils.iterable(toDOM(scope, json.get(jsQName, json), document))) {
@@ -432,7 +432,7 @@ public class JSUtils {
                     attribute.setTextContent(sb.toString());
                     list.add(attribute);
                 } else {
-                    final QName qname = QName.parse(jsQName, new JSNamespaceContext(scope));
+                    final TypeName qname = TypeName.parse(jsQName, new JSNamespaceContext(scope));
                     Element element = qname.hasNamespace() ?
                             document.get().createElementNS(qname.getNamespaceURI(), qname.getLocalPart())
                             : document.get().createElement(qname.getLocalPart());

@@ -20,7 +20,7 @@ package net.bpiwowar.xpm.manager.json;
 
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 import java.io.IOException;
@@ -75,7 +75,7 @@ public class JsonBoolean extends Json {
     }
 
     @Override
-    public QName type() {
+    public TypeName type() {
         return Constants.XP_BOOLEAN;
     }
 

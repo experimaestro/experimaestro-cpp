@@ -1,6 +1,5 @@
 package net.bpiwowar.xpm.manager.python;
 
-import org.python.core.PyBoolean;
 import org.python.core.PyClass;
 import org.python.core.PyDictionary;
 import org.python.core.PyString;
@@ -33,7 +32,7 @@ class PythonTaskFactory extends TaskFactory {
         return selected;
     }
 
-    public PythonTaskFactory(Repository repository, QName id, String version, String group, PyClass pyClass) throws ValueMismatchException {
+    public PythonTaskFactory(Repository repository, TypeName id, String version, String group, PyClass pyClass) throws ValueMismatchException {
         super(repository, id, version, group);
         this.pyClass = pyClass;
 
@@ -42,7 +41,7 @@ class PythonTaskFactory extends TaskFactory {
         // Get output
         PyString outputType = (PyString) pyClass.__findattr__("output");
         if (outputType != null) {
-            output = new Type(QName.parse(outputType.toString(), pythonNamespaceContext));
+            output = new Type(TypeName.parse(outputType.toString(), pythonNamespaceContext));
         }
 
         // Analyze class
@@ -66,7 +65,7 @@ class PythonTaskFactory extends TaskFactory {
 
 
             Input input;
-            final QName inputType = QName.parse(toString(definition.get(type)), pythonNamespaceContext);
+            final TypeName inputType = TypeName.parse(toString(definition.get(type)), pythonNamespaceContext);
 
             switch (type) {
                 case "array":
@@ -99,7 +98,7 @@ class PythonTaskFactory extends TaskFactory {
                     // The type of this input is either specified (inputType)
                     // or it is set to the declared output of the task
                     Type xmlType = fields.contains("type") ?
-                            new Type(QName.parse(toString(definition.get("type")), pythonNamespaceContext))
+                            new Type(TypeName.parse(toString(definition.get("type")), pythonNamespaceContext))
                             : factory.getOutput();
 
                     input = new TaskInput(factory, xmlType);

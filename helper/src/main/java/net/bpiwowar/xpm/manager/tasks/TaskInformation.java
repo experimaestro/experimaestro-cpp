@@ -1,7 +1,7 @@
 package net.bpiwowar.xpm.manager.tasks;
 
 import com.google.gson.JsonElement;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,7 +14,7 @@ public class TaskInformation {
     /**
      * Task id
      */
-    QName id;
+    TypeName id;
 
     /**
      * The arguments that should be considered as paths
@@ -24,7 +24,7 @@ public class TaskInformation {
     /**
      * Output type
      */
-    QName output;
+    TypeName output;
 
     /**
      * Inputs

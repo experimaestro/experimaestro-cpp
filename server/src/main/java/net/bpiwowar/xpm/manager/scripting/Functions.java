@@ -30,7 +30,7 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.UniquePath;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
@@ -156,7 +156,7 @@ public class Functions {
      */
     @Expose
     static public Object qname(String ns, String localName) {
-        return new QName(ns, localName);
+        return new TypeName(ns, localName);
     }
 
     @Expose(context = true)

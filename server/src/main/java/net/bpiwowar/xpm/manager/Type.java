@@ -34,17 +34,17 @@ public class Type {
     /**
      * The qualified name of this type
      */
-    private final QName qname;
+    private final TypeName qname;
 
-    public Type(QName qname) {
+    public Type(TypeName qname) {
         this.qname = qname;
     }
 
-    public QName getId() {
+    public TypeName getId() {
         return qname;
     }
 
-    public QName qname() {
+    public TypeName qname() {
         return qname;
     }
 
@@ -81,14 +81,14 @@ public class Type {
         if (qname().equals(Constants.XP_ANY))
             return;
 
-        QName type = element.type();
+        TypeName type = element.type();
         if (!type.equals(qname))
             throw new ValueMismatchException("Parameter was set to a value with a wrong type [%s] - expected [%s]",
                     type, this);
 
     }
 
-    public boolean matches(QName type) {
+    public boolean matches(TypeName type) {
         return matches(type.getNamespaceURI(), type.getLocalPart());
     }
 }

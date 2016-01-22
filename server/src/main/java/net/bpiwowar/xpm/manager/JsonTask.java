@@ -48,7 +48,7 @@ public class JsonTask extends Json {
     }
 
     @Override
-    public QName type() {
+    public TypeName type() {
         return Constants.XP_INPUT_STREAM;
     }
 

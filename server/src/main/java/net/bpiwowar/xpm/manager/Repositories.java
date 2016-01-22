@@ -52,7 +52,7 @@ public class Repositories extends Repository {
      * @param name The qualified name of the factory
      * @return A TaskFactory object or null if not found
      */
-    public TaskFactory getFactory(QName name) {
+    public TaskFactory getFactory(TypeName name) {
         TaskFactory factory = super.getFactory(name);
         if (factory != null)
             return factory;

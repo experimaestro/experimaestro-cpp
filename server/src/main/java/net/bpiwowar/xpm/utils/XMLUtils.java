@@ -27,11 +27,10 @@ import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.utils.iterators.AbstractIterator;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -39,9 +38,6 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.StringReader;
@@ -138,14 +134,14 @@ public class XMLUtils {
      * Finds a child with a given qualified name
      *
      * @param element
-     * @param qName
+     * @param typeName
      * @return
      */
-    public static Node getChild(Element element, QName qName) {
+    public static Node getChild(Element element, TypeName typeName) {
         NodeList list = element.getChildNodes();
         Element candidate = null;
-        String ns = qName.getNamespaceURI();
-        String name = qName.getLocalPart();
+        String ns = typeName.getNamespaceURI();
+        String name = typeName.getLocalPart();
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
             String nodeNS = node.getNamespaceURI();
@@ -153,7 +149,7 @@ public class XMLUtils {
                     && ((ns == null && nodeNS == null) || (ns.equals(nodeNS)))) {
                 if (candidate != null)
                     throw new XPMRuntimeException(
-                            "Two children with the same name [%s]", qName);
+                            "Two children with the same name [%s]", typeName);
                 candidate = (Element) node;
             }
         }
@@ -164,14 +160,14 @@ public class XMLUtils {
      * Finds a child with a given qualified name
      *
      * @param element
-     * @param qName
+     * @param typeName
      * @return An iterator
      */
-    public static Iterable<Element> childIterator(Element element, QName qName) {
+    public static Iterable<Element> childIterator(Element element, TypeName typeName) {
         ArrayList<Element> x = new ArrayList<>();
         NodeList list = element.getChildNodes();
-        String ns = qName.getNamespaceURI();
-        String name = qName.getLocalPart();
+        String ns = typeName.getNamespaceURI();
+        String name = typeName.getLocalPart();
         for (int i = 0; i < list.getLength(); i++) {
             Node node = list.item(i);
             String nodeNS = node.getNamespaceURI();
@@ -255,8 +251,8 @@ public class XMLUtils {
         return map.entrySet();
     }
 
-    public static boolean is(QName qname, Element element) {
-        return qname.equals(new QName(element.getNamespaceURI(), element.getLocalName()));
+    public static boolean is(TypeName qname, Element element) {
+        return qname.equals(new TypeName(element.getNamespaceURI(), element.getLocalName()));
     }
 
     public static Iterable<? extends Node> iterable(final NodeList list) {

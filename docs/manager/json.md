@@ -11,7 +11,7 @@ We will make use of an example of a message
 ```json
 {
     "alpha": 3,
-    "$type": "{net.bpiwowar.xpm}:integer",
+    "$type": "integer",
 }
 ```
 
@@ -38,11 +38,11 @@ Some keys have a special meaning in experimaestro:
 
 # Predefined types
 
-- `{net.bpiwowar.xpm}path` for strings
-- `{net.bpiwowar.xpm}integer` for boolean
-- `{net.bpiwowar.xpm}integer` for integers
-- `{net.bpiwowar.xpm}real` for reals
-- `{net.bpiwowar.xpm}path` for anything corresponding to a file or a directory (even on the network)
+- `string` for strings
+- `integer` for boolean
+- `integer` for integers
+- `real` for reals
+- `path` for anything corresponding to a file or a directory (even on the network)
 
 
 # Signature
@@ -56,11 +56,11 @@ of variation of the outcome of an experiment.
 
 ```json
 {
-  "x": { "$type": "{net.bpiwowar.xpm}integer", "$value": 13 },
+  "x": { "$type": "integer", "$value": 13 },
   "y": {
     "k": 1
   }
-  "path": { "$type": "{net.bpiwowar.xpm}path", "$value": "/path/to/a/file" },
+  "path": { "$type": "path", "$value": "/path/to/a/file" },
   "$resource": "/uri/of/resource",
 }
 ```

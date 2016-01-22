@@ -24,7 +24,6 @@ import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Represents an atomic value
@@ -35,7 +34,7 @@ import java.util.Set;
 public class ValueType extends Type {
     final static private Logger LOGGER = Logger.getLogger();
 
-    public ValueType(QName type) {
+    public ValueType(TypeName type) {
         super(type);
     }
 
@@ -47,7 +46,7 @@ public class ValueType extends Type {
      * @param type   XML type of the element
      * @return An XML document representing the value
      */
-    static public Json wrapString(String string, QName type) {
+    static public Json wrapString(String string, TypeName type) {
         JsonObject json = new JsonObject();
         json.put(Constants.XP_VALUE.toString(), string);
         json.put(Constants.XP_TYPE.toString(), type.toString());
@@ -126,7 +125,7 @@ public class ValueType extends Type {
         if (qname() == null || qname().equals(Constants.XP_ANY))
             return;
 
-        QName type = element.type();
+        TypeName type = element.type();
 
         if (type.equals(qname()))
             return;

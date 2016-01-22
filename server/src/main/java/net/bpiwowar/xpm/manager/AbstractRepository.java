@@ -39,10 +39,10 @@ abstract public class AbstractRepository {
     /**
      * Get a task factory given a qualified name
      */
-    public abstract TaskFactory getFactory(QName name);
+    public abstract TaskFactory getFactory(TypeName name);
 
     /**
      * Get a type definition given a qualified name
      */
-    public abstract Type getType(QName name);
+    public abstract Type getType(TypeName name);
 }

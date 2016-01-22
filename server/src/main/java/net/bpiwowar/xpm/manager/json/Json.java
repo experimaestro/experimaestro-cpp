@@ -25,10 +25,9 @@ import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.scheduler.Resource;
 
@@ -68,7 +67,7 @@ abstract public class Json {
     /**
      * Get the XPM type
      */
-    public abstract QName type();
+    public abstract TypeName type();
 
     public boolean canIgnore(JsonWriterOptions options) {
         return false;

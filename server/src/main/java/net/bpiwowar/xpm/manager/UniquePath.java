@@ -101,7 +101,7 @@ public class UniquePath {
      * @throws IOException
      * @throws NoSuchAlgorithmException
      */
-    public UniquePath(Path basedir, String prefix, QName id, Json jsonValues, boolean directoryMode) throws IOException, NoSuchAlgorithmException {
+    public UniquePath(Path basedir, String prefix, TypeName id, Json jsonValues, boolean directoryMode) throws IOException, NoSuchAlgorithmException {
         // Create JSON object, get the description JSON and digest
         JsonObject json = new JsonObject();
         json.put("task", id.toString());

@@ -18,11 +18,10 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.Json;
 
 import javax.xml.namespace.NamespaceContext;
-import java.nio.file.Path;
 
 /**
  * Language specific context when executing a script
@@ -52,7 +51,7 @@ abstract public class LanguageContext {
      * @param value
      * @return
      */
-    public abstract QName qname(Object value);
+    public abstract TypeName qname(Object value);
 
     /**
      * Wrap values so that they can be accessed as a java object.

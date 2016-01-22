@@ -22,7 +22,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.mozilla.javascript.*;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptLocation;
@@ -113,16 +113,16 @@ public class JavaScriptContext extends LanguageContext {
     }
 
     @Override
-    public QName qname(Object value) {
+    public TypeName qname(Object value) {
         if (value instanceof Wrapper) {
             value = ((Wrapper) value).unwrap();
         }
 
-        if (value instanceof QName) {
-            return (QName) value;
+        if (value instanceof TypeName) {
+            return (TypeName) value;
         }
 
-        return QName.parse(value.toString(), getNamespaceContext());
+        return TypeName.parse(value.toString(), getNamespaceContext());
     }
 
     @Override

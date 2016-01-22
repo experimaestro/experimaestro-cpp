@@ -20,7 +20,7 @@ package net.bpiwowar.xpm.manager.scripting;
 
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
@@ -41,14 +41,14 @@ public class Tasks {
 
     @Expose(value = "set", context = true)
     public void set(LanguageContext cx, String qname, NativeObject definition) {
-        QName id = QName.parse(qname, cx.getNamespaceContext());
+        TypeName id = TypeName.parse(qname, cx.getNamespaceContext());
         final TaskRef taskRef = new TaskRef(id);
         taskRef.set(cx, definition);
     }
 
     @Expose(context = true, mode = ExposeMode.CALL)
     public Object get(LanguageContext cx, String qname) {
-        QName id = cx.qname(qname);
+        TypeName id = cx.qname(qname);
         return new TaskRef(id).get(cx);
     }
 
@@ -77,20 +77,20 @@ public class Tasks {
 
     @Expose(mode = ExposeMode.CALL, context = true)
     public TaskFactory call(LanguageContext cx, String qname) {
-        QName id = cx.qname(qname);
+        TypeName id = cx.qname(qname);
         return ScriptContext.get().getRepository().getFactory(id);
     }
 
     @Expose(context = true)
     public void add(LanguageContext cx, String qname, @NoJavaization NativeObject taskDescription) {
-        QName id = QName.parse(JSUtils.toString(qname), cx.getNamespaceContext());
+        TypeName id = TypeName.parse(JSUtils.toString(qname), cx.getNamespaceContext());
         new TaskRef(id).set(cx, taskDescription);
     }
 
     class TaskRef implements ScriptingReference<Object> {
-        private final QName id;
+        private final TypeName id;
 
-        public TaskRef(QName id) {
+        public TaskRef(TypeName id) {
             this.id = id;
         }
 

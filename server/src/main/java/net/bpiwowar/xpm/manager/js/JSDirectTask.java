@@ -175,7 +175,7 @@ public class JSDirectTask extends Task {
 
 
         private Path uniquePath(LanguageContext cx, Path basedir, String prefix, Object json, boolean directory) throws IOException, NoSuchAlgorithmException {
-            QName taskId = JSDirectTask.this.getFactory().getId();
+            TypeName taskId = JSDirectTask.this.getFactory().getId();
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }

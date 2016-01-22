@@ -27,15 +27,15 @@ public class AlternativeType extends Type {
     /**
      * The task factories that handles the values
      */
-    Map<QName, TaskFactory> factories = new HashMap<QName, TaskFactory>();
+    Map<TypeName, TaskFactory> factories = new HashMap<TypeName, TaskFactory>();
 
     /**
      * Create a new type with alternatives
      *
-     * @param qName
+     * @param typeName
      */
-    public AlternativeType(QName qName) {
-        super(qName);
+    public AlternativeType(TypeName typeName) {
+        super(typeName);
     }
 
     /**
@@ -44,7 +44,7 @@ public class AlternativeType extends Type {
      * @param name
      * @param factory
      */
-    public void add(QName name, TaskFactory factory) {
+    public void add(TypeName name, TaskFactory factory) {
         factories.put(name, factory);
     }
 

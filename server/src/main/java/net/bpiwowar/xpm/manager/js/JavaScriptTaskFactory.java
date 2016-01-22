@@ -31,7 +31,6 @@ import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.util.*;
-import java.util.function.*;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -71,7 +70,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
      * @param scope    The scope
      * @param jsObject The object
      */
-    public JavaScriptTaskFactory(QName qname, Scriptable scope, NativeObject jsObject,
+    public JavaScriptTaskFactory(TypeName qname, Scriptable scope, NativeObject jsObject,
                                  Repository repository) throws ValueMismatchException {
         super(repository, qname, JSUtils.get(scope,
                 "version", jsObject, "1.0"), null);
@@ -94,9 +93,9 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
 
         // --- Get the task outputs
-        QName outQName = getQName(scope, jsObject, "output", true);
-        if (outQName != null) {
-            output = new Type(outQName);
+        TypeName outTypeName = getQName(scope, jsObject, "output", true);
+        if (outTypeName != null) {
+            output = new Type(outTypeName);
         }
 
 
@@ -104,13 +103,13 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
         Object altObject = JSUtils.get(jsScope, "alternative", jsObject, null);
         if (altObject != null) {
-            QName altId;
+            TypeName altId;
             if (altObject instanceof Boolean) {
                 if (output == null)
                     throw new XPMRuntimeException("No output has been defined for an alternative");
                 altId = output.getId();
-            } else if (altObject instanceof QName) {
-                altId = (QName) altObject;
+            } else if (altObject instanceof TypeName) {
+                altId = (TypeName) altObject;
             } else
                 throw new NotImplementedException("Cannot handle alternative of type " + altObject.getClass());
 
@@ -118,8 +117,8 @@ public class JavaScriptTaskFactory extends TaskFactory {
             Type type = repository.getType(altId);
             if (type == null || !(type instanceof AlternativeType))
                 throw new XPMRuntimeException(
-                        "Type %s is not an alternative", outQName == null ? "null"
-                        : outQName.toString());
+                        "Type %s is not an alternative", outTypeName == null ? "null"
+                        : outTypeName.toString());
 
             ((AlternativeType) type).add(id, this);
             output = type;
@@ -130,15 +129,15 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
     }
 
-    static QName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
+    static TypeName getQName(Scriptable scope, NativeObject jsObject, String key, boolean allowNull) {
         Object o = JSUtils.get(scope, key, jsObject, allowNull);
         if (o == null)
             return null;
 
-        if (o instanceof QName)
-            return (QName) o;
+        if (o instanceof TypeName)
+            return (TypeName) o;
         else if (o instanceof String) {
-            return QName.parse(o.toString(), new JSNamespaceContext(scope));
+            return TypeName.parse(o.toString(), new JSNamespaceContext(scope));
         }
 
         throw new XPMRhinoException("Cannot transform type %s into QName", o.getClass());
@@ -202,7 +201,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
 
             Input input;
-            final QName inputType = QName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
+            final TypeName inputType = TypeName.parse(JSUtils.toString(definition.get(type, jsObject)), null, prefixes);
 
             switch (type) {
                 case "array":
@@ -235,7 +234,7 @@ public class JavaScriptTaskFactory extends TaskFactory {
                     // The type of this input is either specified (inputType)
                     // or it is set to the declared output of the task
                     Type xmlType = fields.contains("type") ?
-                            new Type(QName.parse(JSUtils.toString(definition.get("type", jsObject)), null, prefixes))
+                            new Type(TypeName.parse(JSUtils.toString(definition.get("type", jsObject)), null, prefixes))
                             : factory.getOutput();
 
                     input = new TaskInput(factory, xmlType);

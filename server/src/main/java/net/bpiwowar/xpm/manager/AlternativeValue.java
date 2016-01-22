@@ -85,7 +85,7 @@ public class AlternativeValue extends Value {
 
     @Override
     public void set(Json value) {
-        QName type = value.type();
+        TypeName type = value.type();
         if (!type.equals(Constants.XP_STRING)) {
             if (alternativeInput.getType().qname().equals(type)) {
                 // Nothing to do
@@ -96,8 +96,8 @@ public class AlternativeValue extends Value {
             throw new XPMRuntimeException("Not matching: %s and %s", alternativeInput.getType(), type);
         } else {
             String key = value.get().toString();
-            final Map<QName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
-            QName qname = QName.parse(key, null, Constants.PREDEFINED_PREFIXES);
+            final Map<TypeName, TaskFactory> factories = ((AlternativeType) this.alternativeInput.type).factories;
+            TypeName qname = TypeName.parse(key, null, Constants.PREDEFINED_PREFIXES);
             TaskFactory subFactory = factories.get(qname);
             if (subFactory == null)
                 throw new XPMRuntimeException(

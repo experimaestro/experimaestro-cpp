@@ -27,7 +27,7 @@ import net.bpiwowar.xpm.manager.json.JsonArray;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class ArrayType extends Type {
-    final private static QName QNAME = new QName(Constants.EXPERIMAESTRO_NS, "array");
+    final private static TypeName QNAME = new TypeName(Constants.EXPERIMAESTRO_NS, "array");
     private final Type innerType;
 
     public ArrayType(Type innerType) {

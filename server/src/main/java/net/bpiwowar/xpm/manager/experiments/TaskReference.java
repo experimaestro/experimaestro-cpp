@@ -21,7 +21,7 @@ package net.bpiwowar.xpm.manager.experiments;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
 import net.bpiwowar.xpm.scheduler.Identifiable;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -56,7 +56,7 @@ public class TaskReference implements Identifiable {
     /**
      * The ID of the task
      */
-    QName taskId;
+    TypeName taskId;
 
     /**
      * The experiment ID
@@ -71,7 +71,7 @@ public class TaskReference implements Identifiable {
     public TaskReference() {
     }
 
-    public TaskReference(QName taskId, Experiment experiment, ArrayList<TaskReference> parentTaskReferences) {
+    public TaskReference(TypeName taskId, Experiment experiment, ArrayList<TaskReference> parentTaskReferences) {
         this.taskId = taskId;
         this.experiment = experiment;
         if (parentTaskReferences != null) {
@@ -85,7 +85,7 @@ public class TaskReference implements Identifiable {
     /**
      * Construct from DB
      */
-    public TaskReference(QName taskId, Experiment experiment) {
+    public TaskReference(TypeName taskId, Experiment experiment) {
         this(taskId, experiment, null);
     }
 
@@ -149,7 +149,7 @@ public class TaskReference implements Identifiable {
         return children;
     }
 
-    public QName getTaskId() {
+    public TypeName getTaskId() {
         return taskId;
     }
 
@@ -169,7 +169,7 @@ public class TaskReference implements Identifiable {
             String identifier = result.getString(2);
             long experimentId = result.getLong(3);
             Experiment experiment = Experiment.findById(experimentId);
-            final TaskReference reference = new TaskReference(QName.parse(identifier), experiment);
+            final TaskReference reference = new TaskReference(TypeName.parse(identifier), experiment);
             reference.setId(id);
             return reference;
         } catch (SQLException e) {

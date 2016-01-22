@@ -51,7 +51,7 @@ public abstract class TaskFactory {
     /**
      * The identifier of this experiment
      */
-    protected QName id;
+    protected TypeName id;
 
     /**
      * The version
@@ -85,7 +85,7 @@ public abstract class TaskFactory {
      * @param version
      * @param group
      */
-    public TaskFactory(Repository repository, QName id, String version,
+    public TaskFactory(Repository repository, TypeName id, String version,
                        String group) {
         this.repository = repository;
         this.id = id;
@@ -133,7 +133,7 @@ public abstract class TaskFactory {
     /**
      * Returns the qualified name for this task
      */
-    public QName getId() {
+    public TypeName getId() {
         return id;
     }
 

@@ -43,7 +43,6 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.*;
-import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
 import net.bpiwowar.xpm.manager.json.Json;
@@ -207,7 +206,7 @@ public class XPM {
      * Add a module
      */
     @Expose("add_module")
-    public Module addModule(QName qname) {
+    public Module addModule(TypeName qname) {
         final ScriptContext scriptContext = context();
         Module module = new Module(qname);
         LOGGER.debug("Adding module [%s]", module.getId());
@@ -225,7 +224,7 @@ public class XPM {
         // Set the parent
         final Object parentString = description.get("parent");
         if (parentString != null) {
-            QName parent = cx.qname(parentString);
+            TypeName parent = cx.qname(parentString);
             final Module parentModule = scriptContext.getRepository().getModules().get(parent);
             if (parentModule != null) {
                 module.setParent(parentModule);
@@ -247,14 +246,14 @@ public class XPM {
     public JavaScriptTaskFactory add_task_factory(JavaScriptContext jcx, @NoJavaization NativeObject object) throws ValueMismatchException {
         ScriptContext scx = context();
 
-        final QName id = jcx.qname(JSUtils.get(jcx.scope(), "id", object));
+        final TypeName id = jcx.qname(JSUtils.get(jcx.scope(), "id", object));
         final JavaScriptTaskFactory factory = new JavaScriptTaskFactory(id, jcx.scope(), object, scx.getRepository());
         scx.getRepository().addFactory(factory);
         return factory;
     }
 
     @Expose("get_task")
-    public Task getTask(@NotNull QName name) {
+    public Task getTask(@NotNull TypeName name) {
         return ScriptContext.get().getTask(name);
     }
 
@@ -262,7 +261,7 @@ public class XPM {
     public Task getTask(
             @NotNull String namespaceURI,
             @NotNull String localName) {
-        return ScriptContext.get().getTask(new QName(namespaceURI, localName));
+        return ScriptContext.get().getTask(new TypeName(namespaceURI, localName));
     }
 
     @Expose("file")
@@ -330,7 +329,7 @@ public class XPM {
     @Help(value = "Declare a qualified name as an alternative input")
     public void declareAlternative(Object qname) {
 
-        AlternativeType type = new AlternativeType((QName) qname);
+        AlternativeType type = new AlternativeType((TypeName) qname);
         getRepository().addType(type);
     }
 
@@ -597,7 +596,7 @@ public class XPM {
      * @return
      */
     public TaskFactory getTaskFactory(String namespace, String id) {
-        return ScriptContext.get().getFactory(new QName(namespace, id));
+        return ScriptContext.get().getFactory(new TypeName(namespace, id));
     }
 
 
@@ -628,7 +627,7 @@ public class XPM {
      * @param jsonValues the JSON object from which the hash is computed
      * @return A unique directory
      */
-    public Path uniqueDirectory(Scriptable scope, java.nio.file.Path basedir, String prefix, QName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
+    public Path uniqueDirectory(Scriptable scope, java.nio.file.Path basedir, String prefix, TypeName id, Object jsonValues) throws IOException, NoSuchAlgorithmException {
 
         if (basedir == null) {
             if ((basedir = ScriptContext.get().getWorkingDirectory()) == null) {

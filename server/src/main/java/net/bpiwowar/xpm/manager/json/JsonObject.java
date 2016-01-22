@@ -21,7 +21,7 @@ package net.bpiwowar.xpm.manager.json;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -83,53 +83,50 @@ public class JsonObject extends Json {
 
 
     Json getAsJSON() {
-        QName parsedType = type();
+        TypeName parsedType = type();
 
         Json value = map.get(Constants.XP_VALUE.toString());
         if (value == null)
             throw new IllegalArgumentException("No value in the Json object");
 
-        switch (parsedType.getNamespaceURI()) {
+        if (parsedType.getNamespaceURI().equals("")) {
+            switch (parsedType.getLocalPart()) {
+                case "string":
+                    if (!(value instanceof JsonString))
+                        throw new AssertionError("json value is not a string but" + value.getClass());
+                    return value;
 
-            case Constants.EXPERIMAESTRO_NS:
-                switch (parsedType.getLocalPart()) {
-                    case "string":
-                        if (!(value instanceof JsonString))
-                            throw new AssertionError("json value is not a string but" + value.getClass());
-                        return value;
+                case "real":
+                    if (!(value instanceof JsonReal))
+                        throw new AssertionError("json value is not a real number but" + value.getClass());
+                    return value;
 
-                    case "real":
-                        if (!(value instanceof JsonReal))
-                            throw new AssertionError("json value is not a real number but" + value.getClass());
-                        return value;
+                case "integer":
+                    if (!(value instanceof JsonInteger))
+                        throw new AssertionError("json value is not an integer but " + value.getClass());
+                    return value;
 
-                    case "integer":
-                        if (!(value instanceof JsonInteger))
-                            throw new AssertionError("json value is not an integer but " + value.getClass());
-                        return value;
+                case "boolean":
+                    if (!(value instanceof JsonBoolean))
+                        throw new AssertionError("json value is not a boolean but" + value.getClass());
+                    return value;
 
-                    case "boolean":
-                        if (!(value instanceof JsonBoolean))
-                            throw new AssertionError("json value is not a boolean but" + value.getClass());
-                        return value;
-
-                    // TODO: do checks
-                    case "directory":
-                    case "file":
-                    case "path":
-                        final String uri = value.get().toString();
-                        try {
-                            return new JsonPath(PathUtils.toPath(uri));
-                        } catch (IOException e) {
-                            throw new XPMRuntimeException("Could not convert path %s", uri);
-                        }
-                    default:
-                        throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
-                }
-
-            default:
-                throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
+                // TODO: do checks
+                case "directory":
+                case "file":
+                case "path":
+                    final String uri = value.get().toString();
+                    try {
+                        return new JsonPath(PathUtils.toPath(uri));
+                    } catch (IOException e) {
+                        throw new XPMRuntimeException("Could not convert path %s", uri);
+                    }
+                default:
+                    throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
+            }
         }
+
+        throw new XPMRuntimeException("Un-handled type [%s]", parsedType);
     }
 
     @Override
@@ -166,7 +163,7 @@ public class JsonObject extends Json {
     }
 
     @Override
-    public QName type() {
+    public TypeName type() {
         Json type = map.get(Constants.XP_TYPE.toString());
         if (type == null)
             return Constants.XP_OBJECT;
@@ -174,7 +171,7 @@ public class JsonObject extends Json {
         if (!(type instanceof JsonString))
             throw new IllegalArgumentException("No type in the Json object");
 
-        return QName.parse(type.toString());
+        return TypeName.parse(type.toString());
     }
 
     @Override
@@ -325,7 +322,7 @@ public class JsonObject extends Json {
     public static JsonObject toJSON(LanguageContext lcx, Map<?, ?> map) {
         JsonObject json = new JsonObject();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
-            QName qname = lcx.qname(entry.getKey());
+            TypeName qname = lcx.qname(entry.getKey());
             Object pValue = entry.getValue();
 
             if (qname.equals(Constants.XP_TYPE)) {

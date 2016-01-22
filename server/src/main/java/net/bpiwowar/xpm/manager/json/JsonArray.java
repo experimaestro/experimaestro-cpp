@@ -21,7 +21,7 @@ package net.bpiwowar.xpm.manager.json;
 import com.google.common.base.Joiner;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -110,7 +110,7 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
-    public QName type() {
+    public TypeName type() {
         return Constants.XP_ARRAY;
     }
 

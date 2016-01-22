@@ -27,10 +27,10 @@ import net.bpiwowar.xpm.manager.json.Json;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class InputStreamType extends Type {
-    final private static QName QNAME = new QName(Constants.EXPERIMAESTRO_NS, "input-stream");
-    private final QName innerType;
+    final private static TypeName QNAME = new TypeName(Constants.EXPERIMAESTRO_NS, "input-stream");
+    private final TypeName innerType;
 
-    public InputStreamType(QName innerType) {
+    public InputStreamType(TypeName innerType) {
         super(QNAME);
         this.innerType = innerType;
     }

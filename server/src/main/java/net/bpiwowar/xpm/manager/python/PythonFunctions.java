@@ -49,7 +49,7 @@ public class PythonFunctions  {
             String version = null;
             String group = null;
 
-            final QName qid = QName.parse(id, new PythonNamespaceContext());
+            final TypeName qid = TypeName.parse(id, new PythonNamespaceContext());
             try {
                 sc.getRepository().addFactory(new PythonTaskFactory(sc.getRepository(), qid, version, group, pyClass));
             } catch (ValueMismatchException e) {

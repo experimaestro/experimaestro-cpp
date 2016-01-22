@@ -1,6 +1,6 @@
 package net.bpiwowar.xpm.manager.tasks;
 
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 
 /**
  * Value type for task inputs
@@ -11,9 +11,9 @@ public interface TaskInputType {
     /** Input stream type */
     @ClassChooserInstance
     class InputStream implements TaskInputType {
-        public final QName inputstream;
+        public final TypeName inputstream;
 
-        public InputStream(QName inputstream) {
+        public InputStream(TypeName inputstream) {
             this.inputstream = inputstream;
         }
     }
@@ -21,9 +21,9 @@ public interface TaskInputType {
     /** Simple JSON type */
     @ClassChooserInstance
     class Json implements TaskInputType {
-        public final QName value;
+        public final TypeName value;
 
-        public Json(QName value) {
+        public Json(TypeName value) {
             this.value = value;
         }
     }

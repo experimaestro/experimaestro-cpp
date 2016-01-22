@@ -22,7 +22,7 @@ import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.DirectLauncher;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.TaskFactory;
@@ -36,7 +36,6 @@ import net.bpiwowar.xpm.utils.Mutable;
 import net.bpiwowar.xpm.utils.Updatable;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import java.io.Closeable;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -260,9 +259,9 @@ final public class ScriptContext implements AutoCloseable {
         return new ScriptContext(this, newRepository, setThreadContext);
     }
 
-    public TaskFactory getFactory(QName qName) {
+    public TaskFactory getFactory(TypeName typeName) {
 
-        return staticContext.repository.getFactory(qName);
+        return staticContext.repository.getFactory(typeName);
     }
 
     public Repository getRepository() {
@@ -341,7 +340,7 @@ final public class ScriptContext implements AutoCloseable {
         return currentScriptPath.get();
     }
 
-    public Task getTask(QName qname) {
+    public Task getTask(TypeName qname) {
         TaskFactory factory = getFactory(qname);
         if (factory == null) {
             throw new XPMRuntimeException("Could not find a task with name [%s]", qname);
@@ -383,7 +382,7 @@ final public class ScriptContext implements AutoCloseable {
                 // Find the task reference with the same ID that has the same parents,
                 // otherwise create a new task reference
 
-                final QName taskId = task.getFactory().getId();
+                final TypeName taskId = task.getFactory().getId();
                 IdentityHashSet<TaskReference> set = null;
                 ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
                 for (Dependency dependency : resource.getDependencies()) {

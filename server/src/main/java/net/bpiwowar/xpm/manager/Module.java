@@ -35,7 +35,7 @@ public class Module implements Comparable<Module> {
     /**
      * Module unique identifier
      */
-    protected QName id;
+    protected TypeName id;
 
     /**
      * The module human readable name
@@ -70,7 +70,7 @@ public class Module implements Comparable<Module> {
     public Module() {
     }
 
-    public Module(QName id) {
+    public Module(TypeName id) {
         this.id = id;
     }
 
@@ -83,7 +83,7 @@ public class Module implements Comparable<Module> {
         parent.submodules.add(this);
     }
 
-    public QName getId() {
+    public TypeName getId() {
         return id;
     }
 

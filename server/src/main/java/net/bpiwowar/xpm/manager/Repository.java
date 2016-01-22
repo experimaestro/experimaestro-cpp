@@ -41,19 +41,19 @@ public class Repository extends AbstractRepository {
     /**
      * The list of of input types
      */
-    Map<QName, Type> types = new HashMap<>();
+    Map<TypeName, Type> types = new HashMap<>();
     /**
      * The list of of input types
      */
-    Map<QName, Module> modules = new HashMap<>();
+    Map<TypeName, Module> modules = new HashMap<>();
     /**
      * The Experimaestro default module
      */
-    Module defaultModule = new Module(new QName(Constants.EXPERIMAESTRO_NS, "main"));
+    Module defaultModule = new Module(new TypeName(Constants.EXPERIMAESTRO_NS, "main"));
     /**
      * The list of available task factories
      */
-    private Map<QName, TaskFactory> factories = new TreeMap<>();
+    private Map<TypeName, TaskFactory> factories = new TreeMap<>();
 
     public Repository(Path identifier) {
         super(identifier);
@@ -74,12 +74,12 @@ public class Repository extends AbstractRepository {
      * @return A TaskFactory object or null if not found
      */
     @Override
-    public TaskFactory getFactory(QName name) {
+    public TaskFactory getFactory(TypeName name) {
         return factories.get(name);
     }
 
     @Override
-    public Type getType(QName name) {
+    public Type getType(TypeName name) {
         return types.get(name);
     }
 
@@ -108,7 +108,7 @@ public class Repository extends AbstractRepository {
 
     }
 
-    public Map<QName, Module> getModules() {
+    public Map<TypeName, Module> getModules() {
         return modules;
     }
 
@@ -123,10 +123,10 @@ public class Repository extends AbstractRepository {
     }
 
 
-    public Module getModule(QName qName) {
-        if (qName == null)
+    public Module getModule(TypeName typeName) {
+        if (typeName == null)
             return defaultModule;
-        return modules.get(qName);
+        return modules.get(typeName);
     }
 
     public Module getDefaultModule() {

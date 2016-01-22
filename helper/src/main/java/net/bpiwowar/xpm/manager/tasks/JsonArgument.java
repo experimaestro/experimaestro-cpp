@@ -50,7 +50,7 @@ public @interface JsonArgument {
      * Type of the JSON argument
      * @return the structured qualified type
      */
-    String type() default "{" + Constants.EXPERIMAESTRO_NS + "}any";
+    String type() default "any";
 
     /**
      * Whether the argument is required

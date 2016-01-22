@@ -20,7 +20,7 @@ package net.bpiwowar.xpm.manager.json;
 
 import com.google.common.collect.ImmutableSet;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 
 import java.nio.file.Path;
 import java.util.Set;
@@ -33,8 +33,8 @@ public class JsonWriterOptions {
     /**
      * Default set of ignored options
      */
-    public static final Set<QName> DEFAULT_IGNORE = ImmutableSet.of(Constants.XP_RESOURCE_TYPE, Constants.XP_PATH, Constants.XP_FILE, Constants.XP_DIRECTORY);
-    public Set<QName> ignore = DEFAULT_IGNORE;
+    public static final Set<TypeName> DEFAULT_IGNORE = ImmutableSet.of(Constants.XP_RESOURCE_TYPE, Constants.XP_PATH, Constants.XP_FILE, Constants.XP_DIRECTORY);
+    public Set<TypeName> ignore = DEFAULT_IGNORE;
     public static final JsonWriterOptions DEFAULT_OPTIONS = new JsonWriterOptions();
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
@@ -42,7 +42,7 @@ public class JsonWriterOptions {
     Function<Path, String> resolver = f -> f.toString();
     public JsonWriterMode mode = JsonWriterMode.DEFAULT;
 
-    public JsonWriterOptions(Set<QName> ignore) {
+    public JsonWriterOptions(Set<TypeName> ignore) {
         this.ignore = ignore;
     }
 

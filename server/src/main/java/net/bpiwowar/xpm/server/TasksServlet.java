@@ -20,7 +20,7 @@ package net.bpiwowar.xpm.server;
 
 import net.bpiwowar.xpm.manager.Input;
 import net.bpiwowar.xpm.manager.Module;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.TaskFactory;
 import net.bpiwowar.xpm.manager.Type;
@@ -82,7 +82,7 @@ public class TasksServlet extends XPMServlet {
             String moduleName = request.getParameter("module");
             Module module = moduleName == null ? repository
                     .getDefaultModule() : repository
-                    .getModule(QName.parse(moduleName));
+                    .getModule(TypeName.parse(moduleName));
             if (moduleName != null) {
                 query.put("module", moduleName);
             }
@@ -119,7 +119,7 @@ public class TasksServlet extends XPMServlet {
 
                 String name = request.getParameter("name");
                 String ns = request.getParameter("ns");
-                TaskFactory factory = repository.getFactory(new QName(ns, name));
+                TaskFactory factory = repository.getFactory(new TypeName(ns, name));
                 header(out, String.format("Task browser (task {%s}%s)", ns, name));
                 out.format("<h1> Task %s (%s)</h1>", name, ns);
                 if (factory == null) {
@@ -166,7 +166,7 @@ public class TasksServlet extends XPMServlet {
         out.println("<ul>");
 
         for (TaskFactory task : tasks) {
-            QName id = task.getId();
+            TypeName id = task.getId();
             out.format("<li><a href=\"%s\">%s</a></li>",
                     status.makeURI("/show", "ns", id.getNamespaceURI(), "name", id.getLocalPart()),
                     id);
@@ -178,7 +178,7 @@ public class TasksServlet extends XPMServlet {
         out.println("<h1>Modules</h1><ul>");
         for (Module module : modules) {
             if (module.getParent() != null) {
-                QName id = module.getId();
+                TypeName id = module.getId();
                 out.format("<li><a href=\"%s\">%s</a></li>",
                         status.makeURI("", "module", id.toString()),
                         id
@@ -212,7 +212,7 @@ public class TasksServlet extends XPMServlet {
             } else {
 
                 if (type instanceof ValueType) {
-                    final QName valueType = type.qname();
+                    final TypeName valueType = type.qname();
                     out.format("<dt class='%s'><u>%s</u> <b>value</b> (%s)</dt><dd>",
                             optString, entry.getKey(), valueType);
                 }

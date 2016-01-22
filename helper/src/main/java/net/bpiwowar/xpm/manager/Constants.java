@@ -32,39 +32,38 @@ import java.util.TreeMap;
 public class Constants {
     public static final String XPM_NOTIFICATION_URL = "XPM_NOTIFICATION_URL";
     // Set of all atomic types
-    public static HashSet<QName> ATOMIC_TYPES = new HashSet<>();
+    public static HashSet<TypeName> ATOMIC_TYPES = new HashSet<>();
 
     public static final String EXPERIMAESTRO_NS = "xpm";
-    public static final QName XP_XML = registerAtomicType(EXPERIMAESTRO_NS, "xml");
     /** Corresponds to a directory on disk */
-    public static final QName XP_DIRECTORY = registerAtomicType(EXPERIMAESTRO_NS, "directory");
+    public static final TypeName XP_DIRECTORY = registerAtomicType(null, "directory");
     /** Corresponds to a file on disk */
-    public static final QName XP_FILE = registerAtomicType(EXPERIMAESTRO_NS, "file");
+    public static final TypeName XP_FILE = registerAtomicType(null, "file");
     /** Type path is generic (file or directory) */
-    public static final QName XP_PATH = registerAtomicType(EXPERIMAESTRO_NS, "path");
-    static final public QName XP_RESOURCE_TYPE = registerAtomicType(EXPERIMAESTRO_NS, "resource");
-    static final public QName XP_BOOLEAN = registerAtomicType(EXPERIMAESTRO_NS, "boolean");
-    static final public QName XP_INTEGER = registerAtomicType(EXPERIMAESTRO_NS, "integer");
-    static final public QName XP_REAL = registerAtomicType(EXPERIMAESTRO_NS, "real");
-    static final public QName XP_STRING = registerAtomicType(EXPERIMAESTRO_NS, "string");
-    public static final QName XP_ANY = new QName(EXPERIMAESTRO_NS, "any");
-    public static final QName XP_OBJECT = new QName(EXPERIMAESTRO_NS, "object");
-    public static final QName XP_INPUT_STREAM = new QName(EXPERIMAESTRO_NS, "input-stream");
-    public static final QName XP_ARRAY = new QName(EXPERIMAESTRO_NS, "array");
+    public static final TypeName XP_PATH = registerAtomicType(null, "path");
+    static final public TypeName XP_RESOURCE_TYPE = registerAtomicType(null, "resource");
+    static final public TypeName XP_BOOLEAN = registerAtomicType(null, "boolean");
+    static final public TypeName XP_INTEGER = registerAtomicType(null, "integer");
+    static final public TypeName XP_REAL = registerAtomicType(null, "real");
+    static final public TypeName XP_STRING = registerAtomicType(null, "string");
+    public static final TypeName XP_ANY = new TypeName(null, "any");
+    public static final TypeName XP_OBJECT = new TypeName(null, "object");
+    public static final TypeName XP_INPUT_STREAM = new TypeName(null, "input-stream");
+    public static final TypeName XP_ARRAY = new TypeName(null, "array");
     public static final Namespace EXPERIMAESTRO_NS_OBJECT = new Namespace(EXPERIMAESTRO_NS, "xp");
     public static final Map<String, String> PREDEFINED_PREFIXES = new TreeMap<>();
     public static final String EXPERIMAESTRO_PREFIX = "xp";
-    public static final QName XP_TYPE = new QName(null, "$type");
+    public static final TypeName XP_TYPE = new TypeName(null, "$type");
     /**
      * The simple value of the object
      */
-    public static final QName XP_VALUE = new QName(null, "$value");
+    public static final TypeName XP_VALUE = new TypeName(null, "$value");
     /**
      * The resource associated with the object
      */
-    public static final QName XP_RESOURCE = new QName(null, "$resource");
+    public static final TypeName XP_RESOURCE = new TypeName(null, "$resource");
     /// Ignored value
-    public static final QName XP_IGNORE = new QName(null, "$ignore");
+    public static final TypeName XP_IGNORE = new TypeName(null, "$ignore");
     public static final String JSON_TAG_NAME = "$tag";
 
     public static final String XPM_SIGNATURE = "signature.xpm";
@@ -77,9 +76,9 @@ public class Constants {
         PREDEFINED_PREFIXES.put("xp", EXPERIMAESTRO_NS);
     }
 
-    private static QName registerAtomicType(String ns, String local) {
-        QName qName = new QName(ns, local);
-        ATOMIC_TYPES.add(qName);
-        return qName;
+    private static TypeName registerAtomicType(String ns, String local) {
+        TypeName typeName = new TypeName(ns, local);
+        ATOMIC_TYPES.add(typeName);
+        return typeName;
     }
 }

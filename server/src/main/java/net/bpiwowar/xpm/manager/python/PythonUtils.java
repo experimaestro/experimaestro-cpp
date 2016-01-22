@@ -1,11 +1,7 @@
 package net.bpiwowar.xpm.manager.python;
 
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.Undefined;
-import org.python.core.PyDictionary;
-import org.python.core.PyList;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.QName;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.*;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
@@ -70,11 +66,11 @@ public class PythonUtils {
             PythonNamespaceContext nsContext = new PythonNamespaceContext();
             for (Object o : ((Map) value).entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
-                QName qname = QName.parse(toString(entry.getKey()), nsContext);
+                TypeName qname = TypeName.parse(toString(entry.getKey()), nsContext);
                 Object pValue = entry.getValue();
 
                 if (qname.equals(Constants.XP_TYPE))
-                    pValue = QName.parse(JSUtils.toString(pValue), nsContext).toString();
+                    pValue = TypeName.parse(JSUtils.toString(pValue), nsContext).toString();
 
                 String key = qname.toString();
                 final Json key_value = toJSON(pValue);
