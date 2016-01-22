@@ -18,11 +18,14 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.WrappedException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
+
+import java.io.IOException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
@@ -41,6 +44,12 @@ public class XPMWebSocketServlet extends WebSocketServlet {
 
     @Override
     public void configure(WebSocketServletFactory factory) {
-        factory.setCreator((req, resp) -> new XPMWebSocketListener(server, scheduler, repositories));
+        factory.setCreator((req, resp) -> {
+            try {
+                return new XPMWebSocketListener(server, scheduler, repositories);
+            } catch (IOException e) {
+                throw new WrappedException(e);
+            }
+        });
     }
 }

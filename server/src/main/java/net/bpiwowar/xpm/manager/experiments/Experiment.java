@@ -199,8 +199,9 @@ public class Experiment implements Identifiable {
      */
     public CloseableIterable<Resource> resources() throws SQLException {
         final DatabaseObjects<Resource> resources = Scheduler.get().resources();
-        return resources.find("SELECT r.id, r.type, r.path, r.status FROM Resources r, ExperimentTasks et, ExperimentResources er " +
-                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?",
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status FROM Resources r, ExperimentTasks et, ExperimentResources er " +
+                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?";
+        return resources.find(query,
                 st -> st.setLong(1, this.getId()));
     }
 

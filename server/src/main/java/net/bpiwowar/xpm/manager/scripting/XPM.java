@@ -174,9 +174,12 @@ public class XPM {
         context().addDefaultLock(resource, parameters);
     }
 
-    @Expose("logger")
-    public ScriptingLogger getLogger(String name) {
-
+    @Expose(value = "logger", languages = Languages.JAVASCRIPT)
+    public ScriptingLogger getLoggerJS(String name) {
+        return new ScriptingLogger(name);
+    }
+    @Expose(value = "get_logger", languages = Languages.PYTHON)
+    public ScriptingLogger getLoggerPython(String name) {
         return new ScriptingLogger(name);
     }
 

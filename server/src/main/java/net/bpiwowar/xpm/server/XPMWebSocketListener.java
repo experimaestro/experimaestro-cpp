@@ -18,6 +18,8 @@ package net.bpiwowar.xpm.server;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.server.rpc.JSONRPCRequest;
+import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
@@ -39,7 +41,7 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     private final JsonRPCMethods methods;
 
 
-    public XPMWebSocketListener(Server server, Scheduler scheduler, Repositories repositories) {
+    public XPMWebSocketListener(Server server, Scheduler scheduler, Repositories repositories) throws IOException {
         this.methods = new JsonRPCMethods(server, scheduler, repositories, new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {

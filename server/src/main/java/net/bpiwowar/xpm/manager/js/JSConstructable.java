@@ -23,7 +23,6 @@ package net.bpiwowar.xpm.manager.js;
  * has to be used.
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 7/2/13
  */
 public interface JSConstructable {
 }

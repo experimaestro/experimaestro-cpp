@@ -237,6 +237,10 @@ public class ClassDescription {
         return wrappedClass;
     }
 
+    /**
+     * Returns the class name for a script
+     * @return A string representing the class
+     */
     public String getClassName() {
         return classname;
     }

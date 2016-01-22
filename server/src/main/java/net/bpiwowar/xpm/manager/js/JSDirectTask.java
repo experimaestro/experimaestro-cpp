@@ -147,15 +147,10 @@ public class JSDirectTask extends Task {
     }
 
     public class JSTask extends JSBaseObject {
-        /**
-         * The object?
-         */
-        private NativeObject jsFactory;
 
         @Expose
         public JSTask(NativeObject jsFactory) {
 
-            this.jsFactory = jsFactory;
         }
 
         @Expose(context = true, optionalsAtStart = true, optional = 2)

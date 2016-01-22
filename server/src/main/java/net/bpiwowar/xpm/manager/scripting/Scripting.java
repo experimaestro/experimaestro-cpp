@@ -78,6 +78,10 @@ public class Scripting {
      * @param f The callback function
      */
     public static void forEachType(Consumer<Class> f) {
+        getTypes().forEach(f);
+    }
+
+    public static List<Class<?>> getTypes() {
         if (TYPES == null) {
             TYPES = new ArrayList<>();
             String classname = null;
@@ -101,8 +105,7 @@ public class Scripting {
                 throw new XPMRuntimeException(e, "Could not find class %s", classname);
             }
         }
-
-        TYPES.forEach(f);
+        return TYPES;
     }
 
     public static void forEachFunction(Consumer<MethodFunction> f) {
