@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.server;
  */
 
 import jnr.unixsocket.UnixSocketChannel;
+import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.util.log.Log;
@@ -172,6 +173,21 @@ public class UnixChannelEndPoint extends UnixAbstractEndPoint //implements Socke
     @Override
     public Object getTransport() {
         return _channel;
+    }
+
+    @Override
+    public boolean isFillInterested() {
+        return false;
+    }
+
+    @Override
+    public boolean isOptimizedForDirectBuffers() {
+        return false;
+    }
+
+    @Override
+    public void upgrade(Connection newConnection) {
+
     }
 
     //    @Override

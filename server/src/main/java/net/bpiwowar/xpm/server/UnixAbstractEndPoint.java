@@ -37,13 +37,14 @@ public abstract class UnixAbstractEndPoint extends IdleTimeout implements EndPoi
     private final UnixSocketAddress _remote;
     private final FillInterest _fillInterest = new FillInterest() {
         @Override
-        protected boolean needsFill() throws IOException {
-            return UnixAbstractEndPoint.this.needsFill();
+        protected void needsFillInterest() throws IOException {
+            UnixAbstractEndPoint.this.needsFill();
         }
+
     };
     private final WriteFlusher _writeFlusher = new WriteFlusher(this) {
         @Override
-        protected void onIncompleteFlushed() {
+        protected void onIncompleteFlush() {
             UnixAbstractEndPoint.this.onIncompleteFlush();
         }
     };
