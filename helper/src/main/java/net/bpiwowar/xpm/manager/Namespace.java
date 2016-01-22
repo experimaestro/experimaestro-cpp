@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager;
  */
 
 import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 
 /**
@@ -36,6 +37,8 @@ public class Namespace {
         this.uri = uri;
     }
 
+
+    @Expose(value = "uri", mode = ExposeMode.PROPERTY)
     public String getURI() {
         return uri;
     }
