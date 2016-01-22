@@ -400,14 +400,11 @@ public abstract class Task {
                     final AbstractCommand subcommand = jsonTask.getCommand();
 
                     subcommand.dependencies().forEach(commands::addDependency);
-                    subcommand.setOutputRedirect(null);
-                    commands.add(subcommand);
                     streams.put(null, subcommand.output());
                 });
 
 
         final Commands taskCommands = _commands(streams, parameters);
-        taskCommands.setOutputRedirect(Redirect.INHERIT);
 
         commands.add(taskCommands);
 

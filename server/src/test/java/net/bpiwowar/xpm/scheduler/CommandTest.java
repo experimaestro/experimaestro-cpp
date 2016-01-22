@@ -75,7 +75,6 @@ public class CommandTest extends XPMEnvironment {
             final CommandOutput output2 = subCommand2.output();
 
             command.add("/usr/bin/paste", output1, output2);
-            command.setOutputRedirect(Redirect.INHERIT);
             commands.add(command);
 
 

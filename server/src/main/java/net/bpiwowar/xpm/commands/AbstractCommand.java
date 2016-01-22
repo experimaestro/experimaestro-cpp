@@ -74,6 +74,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
 
     /**
      * Standard input
+     * TODO: Should be in inputRedirect?
      */
     CommandOutput standardInput;
 
@@ -85,6 +86,10 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
         dependencies().forEach(consumer::accept);
     }
 
+    /**
+     * Prepare the command before the execution
+     * @param env
+     */
     void prepare(CommandContext env) {
         if (standardInput != null) {
             try {

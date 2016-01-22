@@ -137,6 +137,9 @@ public class Commands extends AbstractCommand  {
     }
 
     public void add(AbstractCommand command) {
+        if (command.outputRedirect == null) {
+            command.outputRedirect = Redirect.INHERIT;
+        }
         commands.add(command);
     }
 
