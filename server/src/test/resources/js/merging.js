@@ -24,7 +24,7 @@ var abc = new Namespace("a.b.c");
 
 // First task
 tasks.add("abc:sub-task", {
-	inputs: { x: { value: "xp:integer" } }
+	inputs: { x: { value: "integer" } }
 });
 
 // Third task

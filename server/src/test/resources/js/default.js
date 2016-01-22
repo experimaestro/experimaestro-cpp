@@ -23,7 +23,7 @@ var abc = new Namespace("a.b.c");
 
 tasks.add("abc:default", {
 	inputs: {
-        a: { value: "xp:integer", default: 10 },
+        a: { value: "integer", default: 10 },
 	}
 });
 

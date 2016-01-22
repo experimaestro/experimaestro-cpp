@@ -30,7 +30,7 @@ var tests = new Namespace("xpm.tests");
 // Add the task to the list of available factories
 tasks.add("tests:task", {
     inputs: {
-        x: { value: "xp:integer", default: 3 }      
+        x: { value: "integer", default: 3 }
     },
     run: function(p) {
         return p.x

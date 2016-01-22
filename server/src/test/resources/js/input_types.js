@@ -23,7 +23,7 @@ var test = new Namespace("xpm.tests");
 tasks.add("inputs", {
      inputs: {
          // Values
-         x_integer: { value: "xp:integer", optional: true },
+         x_integer: { value: "integer", optional: true },
          
          // XML types
          x_xml: { json: "a", optional: true },
@@ -69,7 +69,7 @@ function test_integer() {
 }
 
 function test_wrapped_integer() {
-    assert_ok({x_integer: {"$type": "xp:integer", "$value": 1}});
+    assert_ok({x_integer: {"$type": "integer", "$value": 1}});
 }
 
 function test_wrong_double() {

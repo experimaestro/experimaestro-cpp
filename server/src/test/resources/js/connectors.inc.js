@@ -22,8 +22,8 @@ var task = {
     // The id of the task is an XML qualified name 
     id: qname("a.b.c", "task"),
     
-    // One input of type xp:integer
-    inputs: { x: { value: "xp:integer" }},
+    // One input of type integer
+    inputs: { x: { value: "integer" }},
     
     // The function that will be called when the task is run
 	run: function(inputs) {

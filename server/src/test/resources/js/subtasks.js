@@ -24,7 +24,7 @@ var abc = new Namespace("a.b.c");
 
 var task_1 = {
 	id: qname("a.b.c", "task-1"),
-	inputs: { p: { value: "xp:integer" } },
+	inputs: { p: { value: "integer" } },
 	
 	run: function(inputs) {
 		return inputs.p;

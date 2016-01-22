@@ -21,8 +21,8 @@
 // START SNIPPET: task
 var abc = Namespace("a.b.c");
 tasks.add("abc:task", {
-    // One input of type xp:integer
-    inputs: { x: { value: "xp:integer" } }
+    // One input of type integer
+    inputs: { x: { value: "integer" } }
 });
 // END SNIPPET: task
 

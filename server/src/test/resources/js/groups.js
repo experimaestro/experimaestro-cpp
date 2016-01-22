@@ -4,8 +4,8 @@
 
 tasks.add("groups", {
    inputs: {
-       a: { value: "xp:integer", groups: ["1", "2"] },
-       b: { value: "xp:integer", groups: ["1"] }
+       a: { value: "integer", groups: ["1", "2"] },
+       b: { value: "integer", groups: ["1"] }
    },
 
    run: function(p) {
