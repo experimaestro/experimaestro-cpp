@@ -151,12 +151,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     }
 
     @Override
-    public List<AbstractCommand> reorder() {
-        return ImmutableList.of(this);
-    }
-
-
-    @Override
     public java.lang.String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[");

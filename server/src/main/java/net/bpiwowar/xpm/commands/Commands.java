@@ -55,66 +55,6 @@ public class Commands extends AbstractCommand  {
         this.commands = new ArrayList<>(Arrays.asList(commands));
     }
 
-    static private void fillEdges(IdentityHashSet<AbstractCommand> graph, Map<AbstractCommand, Set<AbstractCommand>> forward_edges, Map<AbstractCommand, Set<AbstractCommand>> backwards_edges, AbstractCommand command) {
-        command.allComponents().forEach(argument -> {
-            if (argument instanceof CommandOutput) {
-                final AbstractCommand subCommand = ((CommandOutput) argument).getCommand();
-                addDependency(graph, forward_edges, backwards_edges, command, subCommand);
-            }
-        });
-
-    }
-
-    static private void add(Map<AbstractCommand, Set<AbstractCommand>> map, AbstractCommand key, AbstractCommand value) {
-        Set<AbstractCommand> set = map.get(key);
-        if (set == null) {
-            set = new IdentityHashSet<>();
-            map.put(key, set);
-        }
-        set.add(value);
-    }
-
-    /**
-     * Re-order the command so that the dependencies are fulfilled
-     */
-    public List<AbstractCommand> reorder() {
-        final IdentityHashSet<AbstractCommand> graph = new IdentityHashSet<>();
-        Map<AbstractCommand, Set<AbstractCommand>> forward_edges = new IdentityHashMap<>();
-        Map<AbstractCommand, Set<AbstractCommand>> backwards_edges = new IdentityHashMap<>();
-
-        AbstractCommand previousCommand = null;
-
-        for (AbstractCommand command : commands) {
-            // Adds constraints on the graph: the order of the command should be respected
-            if (previousCommand != null) {
-                add(forward_edges, previousCommand, command);
-                add(backwards_edges, command, previousCommand);
-            }
-            graph.add(command);
-            previousCommand = command;
-            
-            // Add all edges
-            fillEdges(graph, forward_edges, backwards_edges, command);
-        }
-        if (getStandardInput() != null) {
-            addDependency(graph, forward_edges, backwards_edges, this, getStandardInput().command);
-        }
-        final ArrayList<AbstractCommand> ordered_objects = Graph.topologicalSort(graph, forward_edges, backwards_edges);
-        if (graph.iterator().hasNext()) {
-            final String s = Output.toString(", ", graph);
-            LOGGER.error("Loop in command: %s", s);
-            throw new IllegalArgumentException("Command has a loop");
-        }
-
-        return ordered_objects;
-    }
-
-    protected static void addDependency(IdentityHashSet<AbstractCommand> graph, Map<AbstractCommand, Set<AbstractCommand>> forward_edges, Map<AbstractCommand, Set<AbstractCommand>> backwards_edges, AbstractCommand to, AbstractCommand from) {
-        add(backwards_edges, to, from);
-        add(forward_edges, from, to);
-        graph.add(from);
-        fillEdges(graph, forward_edges, backwards_edges, from);
-    }
 
     public Stream<Dependency> dependencies() {
         // Process our dependencies

@@ -36,6 +36,7 @@ public class CommandOutput implements CommandComponent, Serializable {
 
     @Override
     public void prepare(CommandContext environment) throws IOException {
+        command.prepare(environment);
         final java.nio.file.Path file = environment.getUniqueFile("command", ".pipe");
         final Object o = environment.setData(this, file);
         if (o != null) throw new RuntimeException("CommandOutput data should be null");
