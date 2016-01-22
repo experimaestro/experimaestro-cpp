@@ -309,7 +309,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
                 writeCommands(env, writer, command);
                 writer.print(") ");
             } else {
-                for (CommandComponent argument : ((Command) command).components()) {
+                for (AbstractCommandComponent argument : ((Command) command).components()) {
                     if (argument instanceof Unprotected) {
                         writer.print(argument.toString(env));
                     }

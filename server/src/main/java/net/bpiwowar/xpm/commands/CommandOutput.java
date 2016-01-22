@@ -1,28 +1,27 @@
 package net.bpiwowar.xpm.commands;
 
-import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.utils.UUIDObject;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
  * Used when the argument should be replaced by a pipe
  */
 @Exposed
-public class CommandOutput implements CommandComponent, Serializable {
+public class CommandOutput extends CommandComponent implements  Serializable {
     /**
      * The output
      */
     transient AbstractCommand command;
 
-    /**
-     * command UUID
-     */
-    String commandUUID;
 
 
     protected CommandOutput() {
@@ -30,7 +29,6 @@ public class CommandOutput implements CommandComponent, Serializable {
 
     public CommandOutput(AbstractCommand command) {
         this.command = command;
-        this.commandUUID = command.getUUID();
     }
 
 
@@ -64,7 +62,22 @@ public class CommandOutput implements CommandComponent, Serializable {
     }
 
     @Override
-    public void init(HashMap<String, Object> uuidMap) {
-        command = (AbstractCommand) uuidMap.get(commandUUID);
+    public void postJSONSave(JsonWriter out) throws IOException {
+        super.postJSONSave(out);
+        out.name("command");
+        out.value(command.getUUID());
+    }
+
+    @Override
+    public void postJSONLoad(Map<String, UUIDObject> map, JsonReader in, String name) throws IOException {
+        switch (name) {
+            case "command":
+                final String key = in.nextString();
+                command = (AbstractCommand) map.get(key);
+                assert command != null;
+                break;
+            default:
+                super.postJSONLoad(map, in, name);
+        }
     }
 }

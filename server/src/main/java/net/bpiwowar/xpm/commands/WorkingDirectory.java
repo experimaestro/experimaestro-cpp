@@ -5,7 +5,7 @@ import java.io.IOException;
 /**
  *
  */
-public class WorkingDirectory implements CommandComponent {
+public class WorkingDirectory extends CommandComponent {
     static final public WorkingDirectory INSTANCE = new WorkingDirectory();
 
     private WorkingDirectory() {

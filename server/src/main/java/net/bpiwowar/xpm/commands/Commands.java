@@ -18,14 +18,20 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
-import net.bpiwowar.xpm.utils.Graph;
-import net.bpiwowar.xpm.utils.IdentityHashSet;
-import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.UUIDObject;
 import net.bpiwowar.xpm.utils.log.Logger;
 
-import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -33,14 +39,14 @@ import java.util.stream.Stream;
  * <p>
  */
 @Exposed
-public class Commands extends AbstractCommand  {
+public class Commands extends AbstractCommand {
     final static private Logger LOGGER = Logger.getLogger();
     /**
      * The list of command status be executed
-     * <p/>
+     * <p>
      * The command can refer status each other
      */
-    ArrayList<AbstractCommand> commands = new ArrayList<>();
+    transient ArrayList<AbstractCommand> commands = new ArrayList<>();
 
     /**
      * Default constructor (for DB serialization)
@@ -60,6 +66,7 @@ public class Commands extends AbstractCommand  {
         // Process our dependencies
         return Stream.concat(super.dependencies(), commands.stream().flatMap(AbstractCommand::dependencies));
     }
+
     @Override
     public Iterator<AbstractCommand> iterator() {
         return commands.iterator();
@@ -89,10 +96,9 @@ public class Commands extends AbstractCommand  {
     }
 
     @Override
-    public Stream<? extends CommandComponent> allComponents() {
+    public Stream<? extends AbstractCommandComponent> allComponents() {
         return Stream.concat(super.allComponents(), commands.stream().flatMap(AbstractCommand::allComponents));
     }
-
 
 
     public void addUnprotected(String command) {
@@ -125,11 +131,12 @@ public class Commands extends AbstractCommand  {
 
     @Override
     public Stream<AbstractCommand> commands() {
-        return Stream.concat(Stream.of(this), commands.stream().flatMap(AbstractCommand::commands));
+        return Stream.concat(Stream.concat(super.commands(), Stream.of(this)), commands.stream().flatMap(AbstractCommand::commands));
     }
 
     /**
      * Simplify the command
+     *
      * @return A simplified command
      */
     public AbstractCommand simplify() {
@@ -146,4 +153,31 @@ public class Commands extends AbstractCommand  {
         return this;
     }
 
+    @Override
+    public void postJSONSave(JsonWriter out) throws IOException {
+        super.postJSONSave(out);
+        out.name("commands");
+        out.beginArray();
+        for (AbstractCommand command : commands) {
+            out.value(command.getUUID());
+        }
+
+        out.endArray();
+    }
+
+    @Override
+    public void postJSONLoad(Map<String, UUIDObject> map, JsonReader in, String name) throws IOException {
+        switch (name) {
+            case "commands":
+                in.beginArray();
+                while (in.peek() != JsonToken.END_ARRAY) {
+                    commands.add((AbstractCommand) map.get(in.nextString()));
+                }
+                in.endArray();
+                break;
+            default:
+                super.postJSONLoad(map, in, name);
+
+        }
+    }
 }

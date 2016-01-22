@@ -9,7 +9,7 @@ import java.io.Serializable;
 /**
  *
  */
-public class CommandPath implements CommandComponent, Serializable {
+public class CommandPath extends CommandComponent implements Serializable {
     @JsonAdapter(JsonPathConverter.class)
     private java.nio.file.Path file;
 

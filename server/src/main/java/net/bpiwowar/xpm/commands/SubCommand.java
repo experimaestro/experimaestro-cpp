@@ -1,8 +1,13 @@
 package net.bpiwowar.xpm.commands;
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.utils.UUIDObject;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -10,11 +15,11 @@ import java.util.stream.StreamSupport;
  * A sub-command whose output / input can be globally set
  */
 @Exposed
-public class SubCommand implements CommandComponent {
+public class SubCommand extends CommandComponent {
     /**
      * The command
      */
-    Commands commands;
+    transient Commands commands;
 
     // Just for serialization
     private SubCommand() {
@@ -29,7 +34,7 @@ public class SubCommand implements CommandComponent {
     }
 
     @Override
-    public Stream<? extends CommandComponent> allComponents() {
+    public Stream<? extends AbstractCommandComponent> allComponents() {
         return commands.commands.parallelStream().flatMap(AbstractCommand::allComponents);
     }
 
@@ -49,5 +54,23 @@ public class SubCommand implements CommandComponent {
     @Override
     public void prepare(CommandContext environment) {
         commands.prepare(environment);
+    }
+
+    @Override
+    public void postJSONSave(JsonWriter out) throws IOException {
+        super.postJSONSave(out);
+        out.name("commands");
+        out.value(commands.getUUID());
+    }
+
+    @Override
+    public void postJSONLoad(Map<String, UUIDObject> map, JsonReader in, String name) throws IOException {
+        switch (name) {
+            case "commands":
+                commands = (Commands) map.get(in.nextString());
+                break;
+            default:
+                super.postJSONLoad(map, in, name);
+        }
     }
 }

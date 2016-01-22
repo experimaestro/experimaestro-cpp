@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  */
 @Exposed
-public class ParameterFile implements CommandComponent, Serializable {
+public class ParameterFile extends CommandComponent implements Serializable {
     String key;
 
     byte[] content;

@@ -18,13 +18,14 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.utils.Graph;
 import net.bpiwowar.xpm.utils.IdentityHashSet;
-import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.UUIDObject;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -43,7 +44,6 @@ import java.util.stream.Stream;
  * An abstract command
  */
 @Exposed
-@JsonAbstract
 public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUIDObject {
     final static private Logger LOGGER = Logger.getLogger();
 
@@ -58,7 +58,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
     /**
      * Command UUID
      */
-    private String uuid = UUID.randomUUID().toString();
+    transient private String uuid = UUID.randomUUID().toString();
 
     /**
      * The input redirect
@@ -85,7 +85,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
      * Standard input
      * TODO: Should be in inputRedirect?
      */
-    CommandOutput standardInput;
+    transient CommandOutput standardInput;
 
     /**
      * Process each dependency contained in a command or subcommand
@@ -110,7 +110,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
         }
     }
 
-    protected AbstractCommand() {}
+    public AbstractCommand() {}
 
     public Redirect getOutputRedirect() {
         return outputRedirect;
@@ -125,7 +125,7 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
         return new CommandOutput(this);
     }
 
-    public Stream<? extends CommandComponent> allComponents() {
+    public Stream<? extends AbstractCommandComponent> allComponents() {
         if (standardInput != null) {
             return Stream.of(standardInput);
         }
@@ -219,7 +219,12 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
      * Return a streams of all command
      * @return A stream of all the command contained in this command (this command included)
      */
-    abstract public Stream<AbstractCommand> commands();
+    public Stream<AbstractCommand> commands() {
+        if (standardInput != null) {
+            return Stream.of(standardInput.command);
+        }
+        return Stream.empty();
+    }
 
     /**
      * Simplify the command
@@ -258,5 +263,27 @@ public abstract class AbstractCommand implements Iterable<AbstractCommand>, UUID
     @Override
     public String getUUID() {
         return uuid;
+    }
+
+    @Override
+    public void setUUID(String uuid) {
+        this.uuid = uuid;
+    }
+
+    @Override
+    public void postJSONSave(JsonWriter out) throws IOException {
+        if (standardInput != null) {
+            out.name("standardInput");
+            out.value(standardInput.getUUID());
+        }
+    }
+
+    @Override
+    public void postJSONLoad(Map<String, UUIDObject> map, JsonReader in, String name) throws IOException {
+        switch(name) {
+            case "standardInput":
+                standardInput = (CommandOutput) map.get(in.nextString());
+                break;
+        }
     }
 }

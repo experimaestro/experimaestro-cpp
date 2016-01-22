@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.commands;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import net.bpiwowar.xpm.manager.json.JsonPath;
@@ -47,27 +46,27 @@ import java.util.stream.Stream;
  * @author B. Piwowarski
  */
 @Exposed
-public class Command extends AbstractCommand implements CommandComponent, Serializable {
+public class Command extends AbstractCommand implements AbstractCommandComponent, Serializable {
     public final static Logger LOGGER = Logger.getLogger();
 
     /**
      * The list of components in this command
      */
-    ArrayList<CommandComponent> list;
+    ArrayList<AbstractCommandComponent> list;
 
     @Expose
     public Command() {
         list = new ArrayList<>();
     }
 
-    public Command(CommandComponent... c) {
+    public Command(AbstractCommandComponent... c) {
         list = new ArrayList<>(Arrays.asList(c));
     }
     public Command(java.lang.String... c) {
         list = new ArrayList<>(Lists.transform(Arrays.asList(c), s -> new CommandString(s)));
     }
 
-    public Command(Collection<? extends CommandComponent> c) {
+    public Command(Collection<? extends AbstractCommandComponent> c) {
         list = new ArrayList<>(c);
     }
 
@@ -85,7 +84,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             final Command argument = new Command();
             StringBuilder sb = new StringBuilder();
 
-            if (object instanceof CommandComponent) {
+            if (object instanceof AbstractCommandComponent) {
                 command.add(object);
             } else {
                 argumentWalkThrough(sb, argument, object);
@@ -137,8 +136,8 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
      * @return An iterable
      */
     @Override
-    public Stream<? extends CommandComponent> allComponents() {
-        return Stream.concat(super.allComponents(), list.parallelStream().flatMap(CommandComponent::allComponents));
+    public Stream<? extends AbstractCommandComponent> allComponents() {
+        return Stream.concat(super.allComponents(), list.parallelStream().flatMap(AbstractCommandComponent::allComponents));
     }
 
     @Override
@@ -146,7 +145,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         return Stream.concat(super.dependencies(), list.stream().flatMap(c -> c.dependencies()));
     }
 
-    public ArrayList<CommandComponent> components() {
+    public ArrayList<AbstractCommandComponent> components() {
         return list;
     }
 
@@ -155,7 +154,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
         StringBuilder sb = new StringBuilder();
         sb.append("[");
         boolean first = true;
-        for (CommandComponent argument : list) {
+        for (AbstractCommandComponent argument : list) {
             sb.append('\'');
             sb.append(argument.toString());
             sb.append('\'');
@@ -173,7 +172,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
     }
 
     @Expose
-    public void add(CommandComponent... arguments) {
+    public void add(AbstractCommandComponent... arguments) {
         list.addAll(Arrays.asList(arguments));
     }
 
@@ -193,8 +192,8 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
             if (t instanceof CommandOutput) {
                 // Creates a new command output to ensure we have a copy of the stream
                 list.add(new CommandOutput(((CommandOutput) t).getCommand()));
-            } else if (t instanceof CommandComponent) {
-                list.add((CommandComponent) t);
+            } else if (t instanceof AbstractCommandComponent) {
+                list.add((AbstractCommandComponent) t);
             } else if (t instanceof java.nio.file.Path) {
                 list.add(new CommandPath((java.nio.file.Path) t));
             } else if (t instanceof JsonPath) {
@@ -207,7 +206,7 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     public java.lang.String toString(CommandContext environment) throws IOException {
         StringBuilder sb = new StringBuilder();
-        for (CommandComponent component : list)
+        for (AbstractCommandComponent component : list)
             sb.append(component.toString(environment));
         return sb.toString();
     }
@@ -232,6 +231,6 @@ public class Command extends AbstractCommand implements CommandComponent, Serial
 
     @Override
     public Stream<AbstractCommand> commands() {
-        return Stream.concat(Stream.of(this), components().stream().flatMap(CommandComponent::commands));
+        return Stream.concat(Stream.concat(super.commands(), Stream.of(this)), components().stream().flatMap(AbstractCommandComponent::commands));
     }
 }

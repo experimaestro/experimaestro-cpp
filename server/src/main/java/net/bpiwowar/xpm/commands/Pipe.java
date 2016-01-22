@@ -6,7 +6,7 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
  * A pipe
  */
 @Exposed
-public class Pipe implements CommandComponent {
+public class Pipe extends CommandComponent {
     static private Pipe PIPE = new Pipe();
 
     private Pipe() {

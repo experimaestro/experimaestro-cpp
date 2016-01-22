@@ -6,7 +6,7 @@ import java.util.Objects;
 /**
  *
  */
-public class CommandString implements CommandComponent, Serializable {
+public class CommandString extends CommandComponent implements Serializable {
     String string;
 
     protected CommandString() {

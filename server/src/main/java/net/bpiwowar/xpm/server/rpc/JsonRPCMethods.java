@@ -263,18 +263,21 @@ public class JsonRPCMethods extends HttpServlet {
         String requestID = null;
 
         try {
-            requestID = object.get("id").toString();
-            if (requestID == null)
-                throw new RuntimeException("No id in JSON request");
+            final Object id = object.get("id");
+            requestID = id == null ? null : id.toString();
 
 
             Object command = object.get("method");
             if (command == null)
                 throw new RuntimeException("No method in JSON");
 
-            if (!object.containsKey("params"))
-                throw new RuntimeException("No params in JSON");
-            Object p = object.get("params");
+            final Object p;
+            if (!object.containsKey("params")) {
+                p  = new ArrayList<>();
+            } else {
+                p = object.get("params");
+            }
+
 
             Collection<MethodDescription> candidates = methods.get(command.toString());
             int max = Integer.MIN_VALUE;

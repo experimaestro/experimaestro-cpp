@@ -18,8 +18,10 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.annotations.JsonAdapter;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Redirect;
+import net.bpiwowar.xpm.commands.RootAbstractCommandAdapter;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
@@ -75,6 +77,7 @@ public class CommandLineTask extends Job {
     /**
      * The command status execute
      */
+    @JsonAdapter(RootAbstractCommandAdapter.class)
     private AbstractCommand command;
 
     /**
@@ -239,23 +242,4 @@ public class CommandLineTask extends Job {
         this.command = command;
     }
 
-    @Override
-    protected boolean loadData() {
-        if (super.loadData()) {
-            // Fill the UUID map
-            final HashMap<String, Object> uuidMap = new HashMap<>();
-            command.commands().forEach(c -> {
-                if (c instanceof UUIDObject) {
-                    uuidMap.put(c.getUUID(), c);
-                }
-            });
-
-            // resolve
-            command.allComponents().forEach(c -> c.init(uuidMap));
-
-            return true;
-        }
-
-        return false;
-    }
 }

@@ -33,7 +33,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -192,6 +191,12 @@ public class Experiment implements Identifiable {
         return experiments.findUnique(query, st -> st.setString(1, name));
     }
 
+    public static CloseableIterable<Experiment> findAllByIdentifier(String name) throws SQLException {
+        final String query = format("%s WHERE name=? ORDER BY timestamp DESC", SELECT_BEGIN);
+        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        return experiments.find(query, st -> st.setString(1, name));
+    }
+
     /**
      * Returns all resources associated with this experiment
      * @return The resources as an iterable
@@ -203,6 +208,7 @@ public class Experiment implements Identifiable {
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?";
         return resources.find(query,
                 st -> st.setLong(1, this.getId()));
+
     }
 
     public static Stream<String> experimentNames() throws WrappedSQLException {

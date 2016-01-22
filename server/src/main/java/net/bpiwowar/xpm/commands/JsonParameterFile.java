@@ -17,7 +17,7 @@ import java.nio.file.Files;
  * A Json parameter file
  */
 @Exposed
-public class JsonParameterFile implements CommandComponent {
+public class JsonParameterFile extends CommandComponent {
     private String key;
 
     private Json json;
