@@ -95,7 +95,7 @@ var resource_action_callback = function () {
     var state = this.parentNode.state;
 
     if (name == "restart") {
-        var rsrcid = $(this).parent().attr("name");
+        var rsrcid = $(this).parent().parent().attr("name");
 
         var request = function (restartDone) {
             $.jsonRPC.request('restart', {
@@ -161,7 +161,7 @@ var resource_action_callback = function () {
 
     else if (name == "copyfolderpath") {
         var range = document.createRange();
-        var node = $(this.parentNode).find("a span.locator").get()[0].childNodes[0];
+        var node = $(this.parentNode.parentNode).find("a span.locator").get()[0].childNodes[0];
         range.setStart(node, 0);
         range.setEnd(node, node.textContent.lastIndexOf("/"));
         window.getSelection().addRange(range);
@@ -272,13 +272,14 @@ add_resource = function (r) {
             .addClass("state-" + r.state)
             .attr("name", r.id)
             .attr("id", "R" + r.id)
-            .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
-            .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
-            .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
-            .append(
+            .append($e("span").addClass("resource-actions")
+                .append($("<span class='resource-id'>" + r.id + "</span>"))
+                .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
+                .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
+            ).append(
                 $e("div")
                     .addClass("resource-link")
-                    .append($("<span class='resource-id'>" + r.id + "</span>"))
                     .append(link)
             );
 

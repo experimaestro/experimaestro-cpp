@@ -99,6 +99,7 @@ ul.buttons {
     padding-left: 0;
 }
 
+
 #resources .resource-id {
     padding: 3px;
     margin-left: 0em;
@@ -218,25 +219,33 @@ ul.buttons {
 
 /* Restart */
 
-#resources i {
-    margin-right: 2px;
+#resources .resource-actions i.fa {
+    display: none;
+    transition: width 1s ease-out;
+    width: 0;
+    padding: 2px;
+}
+
+#resources .resource-actions:hover i.fa {
+    display:  inline;
+    transition: width 1s ease-out;
+    width: auto;
+}
+
+#resources .resource-actions:hover i.fa[name="restart"] {
+    display: none;
+}
+
+#resources li.state-error .resource-actions:hover i.fa[name="restart"] {
     display: inline;
-    visibility: inherit;
 }
-
-#resources i[name="restart"] {
-    /*display: none;*/
-    visibility: inherit;
-}
-
-#resources li.state-error i[name="restart"] {
+#resources li.state-done .resource-actions:hover i.fa[name="restart"] {
     display: inline;
 }
 
 /* Delete */
 
-#resource .state-running i[name="delete"] {
-    /*display: none;*/
-    visibility: hidden;
+#resources li.state-done .resource-actions:hover i.fa[name="delete"] {
+    display: none;
 }
 
