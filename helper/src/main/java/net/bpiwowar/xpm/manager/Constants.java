@@ -65,6 +65,8 @@ public class Constants {
     public static final QName XP_RESOURCE = new QName(null, "$resource");
     /// Ignored value
     public static final QName XP_IGNORE = new QName(null, "$ignore");
+    public static final String JSON_TAG_NAME = "$tag";
+
     public static final String XPM_SIGNATURE = "signature.xpm";
     public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 

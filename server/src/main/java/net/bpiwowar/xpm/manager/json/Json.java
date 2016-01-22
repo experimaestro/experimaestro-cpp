@@ -25,6 +25,9 @@ import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.QName;
 import net.bpiwowar.xpm.manager.scripting.*;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -133,6 +136,16 @@ abstract public class Json {
         return this instanceof JsonObject;
     }
 
+    @Expose("as_object")
+    public JsonObject asObject() {
+        if (isSimple()) {
+            final JsonObject jsonObject = new JsonObject();
+            jsonObject.put(Constants.XP_VALUE.toString(), this);
+            jsonObject.put(Constants.XP_TYPE.toString(), type().toString());
+            return jsonObject;
+        }
+        throw new XPMScriptRuntimeException("Cannot transform into a JSON object");
+    }
 
     @Expose(value = "as_parameter_file", optional = 1)
     @Help("Creates a parameter file from this JSON")

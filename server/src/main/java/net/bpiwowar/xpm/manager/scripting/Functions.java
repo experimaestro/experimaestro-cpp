@@ -447,4 +447,38 @@ public class Functions {
     static public String parameters(String key) {
         return ScriptContext.get().getParameter(key);
     }
+
+    @Expose(context = true)
+    @Help("Annotate a value with a tag, marked by " + Constants.JSON_TAG_NAME + " in the JSON")
+    static public Json tag(LanguageContext cx, String tagvalue, Object element) {
+        final JsonObject jsonObject = toJson(cx, element).asObject();
+        jsonObject.put(Constants.JSON_TAG_NAME, tagvalue);
+        return jsonObject;
+    }
+
+    @Expose
+    static public Map<String, Object> find_tags(Json json) {
+        HashMap<String, Object> tags = new HashMap<>();
+        find_tags(json, tags);
+        return tags;
+    }
+
+    private static void find_tags(Json json, HashMap<String, Object> tags) {
+        if (json.is_object()) {
+            final JsonObject object = (JsonObject) json;
+            if (object.containsKey(Constants.JSON_TAG_NAME)) {
+                tags.put(object.get(Constants.JSON_TAG_NAME).get().toString(), object.get());
+            }
+
+            for (Json v : object.values()) {
+                find_tags(v, tags);
+            }
+
+        } else if (json.is_array()) {
+            for (Json v : ((JsonArray) json)) {
+                find_tags(v, tags);
+            }
+        }
+    }
+
 }

@@ -155,17 +155,9 @@ class PythonObject extends PyObject {
         MethodFunction function = getMethodFunction(ExposeMode.ITERATOR);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
-            return new PyObject() {
-                final Iterator iterator = (Iterator) function.call(pcx, object, null);
+            final Iterator iterator = (Iterator) function.call(pcx, object, null);
 
-                @Override
-                public PyObject __iternext__() {
-                    if (iterator.hasNext()) {
-                        return PythonRunner.wrap(iterator.next());
-                    }
-                    return null;
-                }
-            };
+            return PythonUtils.wrapIterator(iterator);
         }
 
         return super.__iter__();

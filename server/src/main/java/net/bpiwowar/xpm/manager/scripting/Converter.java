@@ -34,16 +34,16 @@ public class Converter {
      *
      * @param lcx      The scripting language context
      * @param object   The object to convert
-     * @param type     The type of the target argument
+     * @param targetType     The type of the target argument
      * @param nullable Whether the value can be null
      * @return
      */
-    Function<Object, Object> converter(LanguageContext lcx, Object object, Class<?> type, boolean nullable) {
+    Function<Object, Object> converter(LanguageContext lcx, Object object, Class<?> targetType, boolean nullable) {
         if (object == null) {
             if (!nullable) {
                 return nonMatching();
             }
-            if (type.isPrimitive()) {
+            if (targetType.isPrimitive()) {
                 return nonMatching();
             }
             score--;
@@ -51,16 +51,16 @@ public class Converter {
         }
 
         // Assignable: OK
-        type = ClassUtils.primitiveToWrapper(type);
-        if (type.isAssignableFrom(object.getClass())) {
-            if (object.getClass() != type)
+        targetType = ClassUtils.primitiveToWrapper(targetType);
+        if (targetType.isAssignableFrom(object.getClass())) {
+            if (object.getClass() != targetType)
                 score--;
             return IDENTITY;
         }
 
         // Arrays
-        if (type.isArray()) {
-            Class<?> innerType = type.getComponentType();
+        if (targetType.isArray()) {
+            Class<?> innerType = targetType.getComponentType();
 
             if (object.getClass().isArray())
                 object = ListAdaptator.create((Object[]) object);
@@ -84,7 +84,7 @@ public class Converter {
 
         // Case of string: anything can be converted, but with different
         // scores
-        if (type == String.class) {
+        if (targetType == String.class) {
             if (object instanceof CharSequence) {
                 score--;
             } else {
@@ -94,23 +94,24 @@ public class Converter {
         }
 
         // Cast to integer
-        if (type == Integer.class && object instanceof Number) {
+        if (targetType == Integer.class && object instanceof Number) {
             if ((((Number) object).intValue()) == ((Number) object).doubleValue()) {
                 return input -> ((Number) input).intValue();
             }
         }
 
         // JSON inputs
-        if (Json.class.isAssignableFrom(type)) {
+        if (Json.class.isAssignableFrom(targetType)) {
             if (object instanceof Map
                     || object instanceof List || object instanceof Double || object instanceof Float
                     || object instanceof Integer || object instanceof Long
                     || object instanceof Path || object instanceof Boolean
                     || object instanceof Resource || object instanceof ScriptingPath
-                    || object instanceof BigInteger) {
+                    || object instanceof BigInteger || object instanceof String) {
                 score -= 10;
                 return x -> Json.toJSON(lcx, x);
             }
+
         }
 
         return nonMatching();

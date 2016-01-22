@@ -19,21 +19,24 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
-import org.json.simple.JSONValue;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.QName;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
+import org.json.simple.JSONValue;
 
 import java.io.IOException;
 import java.io.Writer;
 
 /**
  * An immutable real value
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
 public class JsonReal extends Json {
-    /** The wrapped value */
+    /**
+     * The wrapped value
+     */
     private double value;
 
     public JsonReal(double value) {

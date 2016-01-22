@@ -238,6 +238,10 @@ public class PythonRunner implements AutoCloseable {
             return new PySet(wrappedSet, null);
         }
 
+        if (object instanceof Iterator) {
+            return PythonUtils.wrapIterator((Iterator) object);
+        }
+
         throw new IllegalArgumentException(format("Cannot wrap class %s into python object", objectClass));
     }
 

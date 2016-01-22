@@ -19,20 +19,25 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
-import net.bpiwowar.xpm.utils.PathUtils;
-import org.json.simple.JSONValue;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.QName;
-import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.ExposeMode;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.PathUtils;
+import org.json.simple.JSONValue;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 
 import static java.lang.String.format;
 
@@ -43,7 +48,9 @@ import static java.lang.String.format;
  */
 @Exposed
 public class JsonObject extends Json {
-    /** True if the object is sealed */
+    /**
+     * True if the object is sealed
+     */
     private boolean sealed = false;
 
     private TreeMap<String, Json> map = new TreeMap<>(); /* Warning: we depend on the map being sorted (for hash string) */
@@ -51,7 +58,8 @@ public class JsonObject extends Json {
     public static final String XP_TYPE_STRING = Constants.XP_TYPE.toString();
     public static final String XP_VALUE_STRING = Constants.XP_VALUE.toString();
 
-    public JsonObject() {}
+    public JsonObject() {
+    }
 
     public JsonObject(TreeMap<String, Json> map) {
         this.map.putAll(map);
@@ -200,6 +208,11 @@ public class JsonObject extends Json {
     }
 
     @Override
+    public JsonObject asObject() {
+        return this;
+    }
+
+    @Override
     public Json copy() {
         final JsonObject copy = new JsonObject();
         this.map.forEach((x, y) -> copy.put(x, y.copy()));
@@ -325,4 +338,12 @@ public class JsonObject extends Json {
         }
         return json;
     }
+
+    public void forEach(BiConsumer<? super String, ? super Json> action) {
+        Objects.requireNonNull(action);
+        for (Map.Entry<? super String, ? super Json> entry : entrySet()) {
+            action.accept((String) entry.getKey(), (Json) entry.getValue());
+        }
+    }
+
 }

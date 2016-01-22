@@ -21,6 +21,7 @@ package net.bpiwowar.xpm.manager.scripting;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -44,6 +45,11 @@ public class ScriptingMap extends WrapperObject<Map> {
     @Expose(mode = ExposeMode.FIELDS)
     public void put(Object key, Object value) {
         object.put(key, value);
+    }
+
+    @Expose()
+    public Iterable<Map.Entry> items() {
+        return unwrap().entrySet();
     }
 
 }

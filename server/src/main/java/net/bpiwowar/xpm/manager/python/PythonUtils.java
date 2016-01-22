@@ -11,8 +11,10 @@ import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.JSUtils;
+import org.python.core.PyObject;
 
 import java.lang.reflect.Array;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -115,5 +117,23 @@ public class PythonUtils {
 
     private static String toString(Object key) {
         return key.toString();
+    }
+
+    /**
+     * Wrap an iterator as Python Object
+     * @param iterator
+     * @return A Python object
+     */
+    public static PyObject wrapIterator(final Iterator iterator) {
+        return new PyObject() {
+
+            @Override
+            public PyObject __iternext__() {
+                if (iterator.hasNext()) {
+                    return PythonRunner.wrap(iterator.next());
+                }
+                return null;
+            }
+        };
     }
 }
