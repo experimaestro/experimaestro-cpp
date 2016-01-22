@@ -438,41 +438,20 @@ $().ready(function () {
     // Transform resource detailed view in tree
     $("#resource-detail-content").jstree();
 
-    // --- Now, listen to XPM events with a web socket
-
-
-    function create_websocket() {
-        console.debug("WebSocket: Connecting to " + websocket_url);
-
-
-        websocket.onopen = function () {
-            $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
-            this.send(JSON.stringify(p));
-
-        };
-
-        websocket.onerror = function (e) {
-            noty({text: "Web socket error: " + e, type: 'information', timeout: 5000})
-        };
-        websocket.onclose = function (e) {
-            noty({text: "Web socket closed", type: 'information', timeout: 2000});
-            $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
-            clearInterval(this.ping);
-        };
-
-        websocket.request = function (s) {
-            this.send(JSON.stringify(s.params));
-        }
-
-        return websocket;
-    }
-
 
     // Create websocket
     var websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
     var websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
 
     xpm.handle_ws_open = function (event) {
+        $("#connection").attr("src", "/images/connect.png").attr("alt", "[connected]");
+
+        // Set some pinging...
+        xpm.ping = setInterval(function () {
+            xpm.server.notify("ping");
+            console.debug("Sent ping");
+        }, 120000);
+
         xpm.server.call("listen", [], noop, jsonrpc_error);
         get_experiments(xpm.server);
     }
@@ -494,6 +473,7 @@ $().ready(function () {
 
                 if (e.length > 0) {
                     // Remove progress bars
+                    e.removeClass("with-progressbar");
                     e.find("div.progressbar").remove();
 
                     // Update counters
@@ -533,24 +513,20 @@ $().ready(function () {
         }
     }
 
+
     xpm.server = new $.JsonRpcClient({
         ajaxUrl: '/json-rpc',
         socketUrl: websocket_url,
         onmessage: xpm.handle_message,
-        onopen: xpm.handle_ws_open
+        onopen: xpm.handle_ws_open,
+        onclose: function () {
+            noty({text: "Web socket closed", type: 'information', timeout: 2000});
+            $("#connection").attr("src", "/images/disconnect.png").attr("alt", "[disconnected]");
+            clearInterval(xpm.ping);
+        }
     });
 
     xpm.server.notify("ping");
-
-    //this.ping = setInterval(function () {
-    //    if (websocket.readyState == WebSocket.OPEN) {
-    //        websocket.send(JSON.stringify({id: 2, method: "ping", params: []}));
-    //        console.debug("Sent ping");
-    //    } else {
-    //        // If not open, remove ourselves
-    //        clearInterval(websocket.ping);
-    //    }
-    //}, 120000);
 
 
     //var websocket = create_websocket();
@@ -606,7 +582,9 @@ $().ready(function () {
                 xpm.server.call("documentation.classes", [],
                     function (r) {
                         var select = $("#help-class-chooser");
-                        $.each(r, function(ix, e) { select.append($e("option").text(e)); })
+                        $.each(r, function (ix, e) {
+                            select.append($e("option").text(e));
+                        })
                     },
                     jsonrpc_error
                 );
