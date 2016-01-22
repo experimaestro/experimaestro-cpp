@@ -8,10 +8,10 @@ JSON is used to describe resources. Special names are reserved by experimaestro 
 
 We will make use of an example of a message
 
-```js
+```json
 {
-    alpha: 3,
-    "{net.bpiwowar.xpm}type": "{net.bpiwowar.xpm}:integer",
+    "alpha": 3,
+    "$type": "{net.bpiwowar.xpm}:integer",
 }
 ```
 
@@ -19,20 +19,58 @@ We will make use of an example of a message
   key facts:
 
   1. Any Json type is a valid message
-  1. Predefined datatypes are defined in Experimaestro (integers, strings, etc.)
+  1. Predefined datatypes are defined in Experimaestro (integers, strings, etc.). Types
+     are given by the `$type` tag, or by the type of the value when using
+     JSON primitives.
   1. Messages can be compared. This is useful when comparing two resources
   1. Special tags and/or attributes allows to
       * Define resources
       * Define the parameters and their values that were used to generate an output
 
+# Reserved names
+
+Some keys have a special meaning in experimaestro:
+
+- `$value` correspond to the simple value of the JSON
+- `$type` correspond to the type of the JSON
+- `$tag` correspond to a tag - those can be used to mark special values (e.g. parameters under study)
+- `$resource` corresponds to an experimaestro resource
+
+# Predefined types
+
+- `{net.bpiwowar.xpm}path` for strings
+- `{net.bpiwowar.xpm}integer` for boolean
+- `{net.bpiwowar.xpm}integer` for integers
+- `{net.bpiwowar.xpm}real` for reals
+- `{net.bpiwowar.xpm}path` for anything corresponding to a file or a directory (even on the network)
+
 
 # Signature
 
-A signature is computed by:
+Each JSON can be reduced to a signature that corresponds to the JSON describing the factor
+of variation of the outcome of an experiment.
 
+1. Replacing simple values by their value
 1. Stripping paths
+1. Stripping all keys beginning by `$` except `$type`
 
+```json
+{
+  "x": { "$type": "{net.bpiwowar.xpm}integer", "$value": 13 },
+  "y": {
+    "k": 1
+  }
+  "path": { "$type": "{net.bpiwowar.xpm}path", "$value": "/path/to/a/file" },
+  "$resource": "/uri/of/resource",
+}
+```
 
-## Datatypes
+The signature will be
 
-  schema types: `xp:string`, `xp:integer`, etc.
+```json
+{
+  "x": 13,
+  "y": { "k": 1 }
+}
+```
+
