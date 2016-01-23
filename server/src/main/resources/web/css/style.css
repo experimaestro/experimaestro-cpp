@@ -90,6 +90,11 @@ ul.buttons {
 
 */
 
+#experiment-timestamp {
+    display: inline-block;
+    color: #555;
+}
+
 .resources {
     padding: 1ex;
 }

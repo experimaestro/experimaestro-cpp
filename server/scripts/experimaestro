@@ -512,7 +512,7 @@ def run_server_command(client, command, params):
         message = client.recv()
         o = json.loads(message)
         if type(o) == dict:
-            if o["id"]:
+            if "id" in o:
                 if o.get("error", 0) != 0:
                     code = o["error"]["code"]
                     sys.stderr.write("%s\n" % o["error"]["message"])
@@ -599,7 +599,7 @@ def command_generate_files(args):
 
 def command_cleanup(args):
     server = Configuration(args).getJsonServer()
-    server["experiments.cleanup"]({})
+    print(server["experiments.cleanup"]({"simulate": not args.run}))
 
 def command_rm(args):
     server = Configuration(args).getJsonServer()

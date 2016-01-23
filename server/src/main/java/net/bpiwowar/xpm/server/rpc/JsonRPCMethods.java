@@ -22,6 +22,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.exceptions.*;
 import net.bpiwowar.xpm.manager.Repositories;
@@ -35,7 +36,6 @@ import net.bpiwowar.xpm.utils.XPMInformation;
 import net.bpiwowar.xpm.utils.log.DefaultFactory;
 import net.bpiwowar.xpm.utils.log.Logger;
 import net.bpiwowar.xpm.utils.log.Router;
-import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
@@ -51,15 +51,13 @@ import org.python.core.PyException;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
@@ -73,7 +71,7 @@ import static java.lang.String.format;
 public class JsonRPCMethods extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
 
-    private static Multimap<String, MethodDescription> methods;
+    private static Multimap<String, Arguments> methods;
 
     private final Scheduler scheduler;
 
@@ -103,9 +101,7 @@ public class JsonRPCMethods extends HttpServlet {
     public void addObjects(Object... objects) {
         for (Object object : objects) {
             this.objects.put(object.getClass(), object);
-
         }
-
     }
 
     public static void initMethods() throws IOException {
@@ -121,7 +117,6 @@ public class JsonRPCMethods extends HttpServlet {
 
     public static void addMethods(Class<?> jsonRPCMethodsClass) {
         final JsonRPCMethodsHolder def = jsonRPCMethodsClass.getAnnotation(JsonRPCMethodsHolder.class);
-
         for (Method method : jsonRPCMethodsClass.getDeclaredMethods()) {
             final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
             if (rpcMethod != null) {
@@ -133,115 +128,6 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
-    private int convert(JsonElement p, Arguments description, int score, List args, int index) {
-        BiConsumer<Integer, Supplier> setArguments = (i, v) -> {
-            if (args != null) {
-                args.set(index, v.get());
-            }
-        };
-
-        JsonElement o;
-        if (p instanceof JsonObject)
-            // If p is a map, then use the json name of the argument
-            o = ((JsonObject) p).get(description.getArgument(index).name());
-        else if (p instanceof JsonArray)
-            // if it is an array, then map it
-            o = ((JsonArray) p).get(index);
-        else {
-            // otherwise, suppose it is a one value array
-            if (index > 0)
-                return Integer.MIN_VALUE;
-            o = p;
-        }
-
-        final Class aType = description.getType(index);
-
-        if (o == null) {
-            if (description.getArgument(index).required())
-                return Integer.MIN_VALUE;
-
-            return score - 10;
-        }
-
-
-        if (aType.isArray()) {
-            if (o instanceof JsonArray) {
-                final JsonArray array = (JsonArray) o;
-
-
-                final ArrayList arrayObjects;
-                if (args != null) {
-                    arrayObjects = new ArrayList(array.size());
-                    for (int i = 0; i < array.size(); i++) {
-                        arrayObjects.add(null);
-                    }
-                } else {
-                    arrayObjects = null;
-                }
-
-
-                Arguments arguments = new Arguments() {
-                    @Override
-                    public RPCArgument getArgument(int i) {
-                        return new RPCArrayArgument();
-                    }
-
-                    @Override
-                    public Class<?> getType(int i) {
-                        return aType.getComponentType();
-                    }
-
-                    @Override
-                    public int size() {
-                        return array.size();
-                    }
-                };
-
-
-                for (int i = 0; i < array.size() && score > Integer.MIN_VALUE; i++) {
-                    score = convert(array.get(i), arguments, score, arrayObjects, i);
-                }
-
-                if (args != null && score > Integer.MIN_VALUE) {
-                    final Object a1 = Array.newInstance(aType.getComponentType(), array.size());
-                    for (int i = 0; i < array.size(); i++) {
-                        Array.set(a1, i, arrayObjects.get(i));
-                    }
-                    args.set(index, a1);
-                }
-                return score;
-            }
-            return Integer.MIN_VALUE;
-        }
-
-
-        if (o.isJsonPrimitive()) {
-            final JsonPrimitive x = o.getAsJsonPrimitive();
-            if (x.isString()) {
-                if (CharSequence.class.isAssignableFrom(aType)) {
-                    setArguments.accept(index, () -> x.getAsString());
-                    return score;
-                }
-            } else if (x.isNumber()) {
-                if (Number.class.isAssignableFrom(aType)) {
-                    setArguments.accept(index, () -> x.getAsNumber());
-                    return score;
-                }
-            } else if (x.isBoolean()) {
-                if (Boolean.class.isAssignableFrom(aType)) {
-                    setArguments.accept(index, () -> x.getAsNumber());
-                    return score;
-                }
-            } else throw new AssertionError();
-
-
-            if (aType.isAssignableFrom(o.getClass())) {
-                setArguments.accept(index, () -> o);
-                return score;
-            }
-        }
-        return Integer.MIN_VALUE;
-    }
 
     public void handle(String message) {
         try {
@@ -275,26 +161,37 @@ public class JsonRPCMethods extends HttpServlet {
             requestID = id == null ? null : id.getAsString();
 
 
-            Object command = object.get("method").getAsString();
+            String command = object.get("method").getAsString();
             if (command == null)
                 throw new RuntimeException("No method in JSON");
 
-            final JsonElement p;
+            final JsonObject p;
             if (!object.has("params")) {
-                p = new JsonArray();
+                p = new JsonObject();
             } else {
-                p = object.get("params");
+                final JsonElement params = object.get("params");
+                if (!params.isJsonObject()) {
+                    throw new XPMCommandException("Parameters are not an object for %s", command);
+                }
+                p = params.getAsJsonObject();
             }
 
 
-            Collection<MethodDescription> candidates = methods.get(command.toString());
+            Collection<Arguments> candidates = methods.get(command);
             int max = Integer.MIN_VALUE;
-            MethodDescription argmax = null;
-            for (MethodDescription candidate : candidates) {
+            Arguments argmax = null;
+
+            candidateLoop:
+            for (Arguments candidate : candidates) {
                 int score = Integer.MAX_VALUE;
-                for (int i = 0; i < candidate.types.length && score > max; i++) {
-                    score = convert(p, candidate, score, null, i);
+                for (RPCArgument argument : candidate.arguments.values()) {
+                    final boolean has = p.has(argument.name());
+                    if (argument.required() && !has) {
+                        continue candidateLoop;
+                    }
+                    if (!has) --score;
                 }
+
                 if (score > max) {
                     max = score;
                     argmax = candidate;
@@ -303,14 +200,9 @@ public class JsonRPCMethods extends HttpServlet {
 
             if (argmax == null)
                 throw new XPMCommandException("Cannot find a matching method for " + command.toString());
+            final Class<?> declaringClass = argmax.getDeclaringClass();
 
-            Object[] args = new Object[argmax.arguments.length];
-            for (int i = 0; i < args.length; i++) {
-                int score = convert(p, argmax, 0, Arrays.asList(args), i);
-                assert score > Integer.MIN_VALUE;
-            }
-            final Class<?> declaringClass = argmax.method.getDeclaringClass();
-            Object result = argmax.method.invoke(objects.get(declaringClass), args);
+            Object result = argmax.call(objects.get(declaringClass), p);
             mos.endMessage(requestID, result);
         } catch (InvocationTargetException e) {
             try {
@@ -397,7 +289,7 @@ public class JsonRPCMethods extends HttpServlet {
      * @param resourceId The resource ID or locator
      * @return
      */
-    private Resource getResource(String resourceId) throws SQLException {
+    static private Resource getResource(String resourceId) throws SQLException {
         Resource resource;
         try {
             long rid = Long.parseLong(resourceId);
@@ -450,9 +342,9 @@ public class JsonRPCMethods extends HttpServlet {
             ) {
                 Object result = null;
                 for (JsonArray filePointer : files) {
-                    boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
-                    final String content = isFile ? null : filePointer.get(1).toString();
-                    final String filename = filePointer.get(0).toString();
+                    boolean isFile = filePointer.size() < 2 || filePointer.get(1).isJsonNull();
+                    final String content = isFile ? null : filePointer.get(1).getAsString();
+                    final String filename = filePointer.get(0).getAsString();
 
                     final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
                     Path locator = connector.resolve(filename);
@@ -727,7 +619,7 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     // Restart all the job (recursion)
-    private int invalidate(Resource resource) throws Exception {
+    static private int invalidate(Resource resource) throws Exception {
         int nbUpdated = 0;
         try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies(false)) {
 
@@ -755,37 +647,45 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
     @RPCMethod(help = "Puts back a job into the waiting queue")
-    public int restart(
-            @RPCArgument(name = "id", help = "The id of the job (string or integer)") String id,
-            @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
-            @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
-    ) throws Exception {
-        int nbUpdated = 0;
-        Resource resource = getResource(id);
-        if (resource == null)
-            throw new XPMRuntimeException("Job not found [%s]", id);
+    static public class Restart implements JsonCallable {
+        @RPCArgument(name = "id", help = "The id of the job (string or integer)")
+        String id;
 
-        final ResourceState rsrcState = resource.getState();
+        @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated")
+        boolean restartDone;
 
-        if (rsrcState == ResourceState.RUNNING)
-            throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+        @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done")
+        boolean recursive;
 
-        // The job is active, so we have nothing to do
-        if (rsrcState.isActive())
-            return 0;
+        @Override
+        public Object call() throws Throwable {
+            int nbUpdated = 0;
+            Resource resource = getResource(id);
+            if (resource == null)
+                throw new XPMRuntimeException("Job not found [%s]", id);
 
-        if (!restartDone && rsrcState == ResourceState.DONE)
-            return 0;
+            final ResourceState rsrcState = resource.getState();
 
-        ((Job) resource).restart();
-        nbUpdated++;
+            if (rsrcState == ResourceState.RUNNING)
+                throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
-        // If the job was done, we need to restart the dependences
-        if (recursive && rsrcState == ResourceState.DONE) {
-            nbUpdated += invalidate(resource);
+            // The job is active, so we have nothing to do
+            if (rsrcState.isActive())
+                return 0;
+
+            if (!restartDone && rsrcState == ResourceState.DONE)
+                return 0;
+
+            ((Job) resource).restart();
+            nbUpdated++;
+
+            // If the job was done, we need to restart the dependences
+            if (recursive && rsrcState == ResourceState.DONE) {
+                nbUpdated += invalidate(resource);
+            }
+
+            return nbUpdated;
         }
-
-        return nbUpdated;
     }
 
     /**
@@ -1079,75 +979,76 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    public interface Arguments {
-        RPCArgument getArgument(int i);
+    public abstract static class Arguments {
+        public abstract Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException;
 
-        Class<?> getType(int i);
+        public abstract Class<?> getDeclaringClass();
 
-        int size();
+        /**
+         * Arguments
+         */
+        HashMap<String, RPCArgument> arguments = new HashMap<>();
+
     }
 
 
-//	/**
-//	 * Add a data resource
-//	 *
-//	 * @param id
-//	 *            The data ID
-//	 * @param mode
-//	 *            The locking mode
-//	 * @param exists
-//	 * @return
-//	 * @throws DatabaseException
-//	 */
-//	public boolean addData(String id, String mode, boolean exists)
-//			throws DatabaseException {
-//		LOGGER.info("Addind data %s [%s/%b]", id, mode, exists);
-//
-//
-//        ResourceLocator identifier = ResourceLocator.decode(id);
-//		scheduler.append(new SimpleData(scheduler, identifier, LockMode.valueOf(mode),
-//				exists));
-//		return true;
-//	}
-
-    static public class MethodDescription implements Arguments {
+    static public class MethodDescription extends Arguments {
+        /**
+         * Method
+         */
         Method method;
 
-        private RPCArgument[] arguments;
+        /**
+         * Arguments
+         */
+        RPCArgument list[];
 
-        private Class<?>[] types;
 
         public MethodDescription(Method method) {
             this.method = method;
-            types = method.getParameterTypes();
+            final Type[] types = method.getGenericParameterTypes();
             Annotation[][] annotations = method.getParameterAnnotations();
-            arguments = new RPCArgument[annotations.length];
+            list = new RPCArgument[types.length];
+            mainLoop:
             for (int i = 0; i < annotations.length; i++) {
-                types[i] = ClassUtils.primitiveToWrapper(types[i]);
-                for (int j = 0; j < annotations[i].length && arguments[i] == null; j++) {
-                    if (annotations[i][j] instanceof RPCArgument)
-                        arguments[i] = (RPCArgument) annotations[i][j];
+                for (int j = 0; j < annotations[i].length; j++) {
+                    if (annotations[i][j] instanceof RPCArgument) {
+                        final RPCArgument annotation = (RPCArgument) annotations[i][j];
+                        final String name = annotation.name();
+                        list[i] = annotation;
+                        arguments.put(name, annotation);
+                        continue mainLoop;
+                    }
                 }
 
-                if (arguments[i] == null)
-                    throw new XPMRuntimeException("No annotation for %dth argument of %s", i + 1, method);
-
+                throw new XPMRuntimeException("No annotation for %dth argument of %s", i + 1, method);
             }
         }
 
         @Override
-        public RPCArgument getArgument(int i) {
-            return arguments[i];
+        public Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException {
+            Object[] args = new Object[method.getParameterCount()];
+            Gson gson = new Gson();
+            for(int i = 0; i < args.length; ++i) {
+                final JsonElement jsonElement = p.get(list[i].name());
+                if (jsonElement != null) {
+                    final Type type = method.getGenericParameterTypes()[i];
+                    try {
+                        args[i] = gson.fromJson(jsonElement, type);
+                    } catch(RuntimeException e) {
+                        throw new XPMCommandException(e).addContext("while processing parameter %s", list[i].name());
+                    }
+                } else {
+                    assert !list[i].required();
+                }
+            }
+
+            return method.invoke(o, args);
         }
 
         @Override
-        public Class<?> getType(int i) {
-            return types[i];
-        }
-
-        @Override
-        public int size() {
-            return arguments.length;
+        public Class<?> getDeclaringClass() {
+            return method.getDeclaringClass();
         }
     }
 

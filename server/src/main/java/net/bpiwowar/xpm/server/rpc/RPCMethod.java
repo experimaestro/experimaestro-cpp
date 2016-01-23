@@ -24,13 +24,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Help
+ * Documentation and name for RPC methods
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 15/10/12
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.TYPE, ElementType.METHOD})
 @interface RPCMethod {
     /**
      * Help message

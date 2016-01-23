@@ -202,10 +202,10 @@ $().ready(function () {
     var load_tasks = function () {
         var select = $("#experiment-chooser");
         var experiment = select.find("option:selected").text();
-        xpm.server.call('experiments.resources', experiment,
+        xpm.server.call('experiments.resources', {identifier: experiment},
             function (r) {
-                var date = new Date(r.timestamp * 1000);
-                $("experiment-timestamp").text(date.toDateString());
+                var date = new Date(r.experiment.timestamp * 1000);
+                $("#experiment-timestamp").text(date.toString());
                 $.each(r.resources, function (ix, v) {
                     add_resource(v);
                 });
@@ -453,7 +453,7 @@ $().ready(function () {
             console.debug("Sent ping");
         }, 120000);
 
-        xpm.server.call("listen", [], noop, jsonrpc_error);
+        xpm.server.call("listen", {}, noop, jsonrpc_error);
         get_experiments(xpm.server);
     }
 

@@ -74,4 +74,12 @@ public class XPMResultSet implements AutoCloseable {
             throw new WrappedSQLException(e);
         }
     }
+
+    public long getLong(int columnIndex) {
+        try {
+            return resultSet.getLong(columnIndex);
+        } catch (SQLException e) {
+            throw new WrappedSQLException(e);
+        }
+    }
 }

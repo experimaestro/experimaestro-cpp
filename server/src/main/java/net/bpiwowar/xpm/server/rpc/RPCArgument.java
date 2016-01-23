@@ -22,10 +22,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * An RPC method argument annotation
+ * An RPC actionClass argument annotation
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/3/13
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RPCArgument {

@@ -25,17 +25,13 @@ import net.bpiwowar.xpm.utils.ExceptionalRunnable;
 import net.bpiwowar.xpm.utils.StreamUtils;
 
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.stream.Stream;
 
 /**
  * Utility class to execute statements
  */
-public class XPMStatement {
+public class XPMStatement implements AutoCloseable {
     private final PreparedStatement st;
 
     public XPMStatement(Connection connection, String sql) throws SQLException {
@@ -45,6 +41,10 @@ public class XPMStatement {
             connection.close();
             throw e;
         }
+    }
+
+    public PreparedStatement get() {
+        return st;
     }
 
     public XPMStatement setLong(int index, long id) throws SQLException {
@@ -112,7 +112,13 @@ public class XPMStatement {
         st.close();
     }
 
+    /**
+     * Execute the query and returns the result set
+     * @return
+     * @throws SQLException
+     */
     public XPMResultSet singleResultSet() throws SQLException {
+        st.execute();
         final ResultSet rs = st.getResultSet();
         if (!rs.next()) throw new SQLException("Expected one result only (got 0)");
         if (!rs.isLast()) throw new SQLException("Expected one result only (got > 1)");
@@ -151,5 +157,15 @@ public class XPMStatement {
             throw new WrappedSQLException(e);
         }
 
+    }
+
+    public XPMStatement setString(int index, String value) throws SQLException {
+        st.setString(index, value);
+        return this;
+    }
+
+    public XPMStatement setTimestamp(int index, Timestamp value) throws SQLException {
+        st.setTimestamp(index, value);
+        return this;
     }
 }

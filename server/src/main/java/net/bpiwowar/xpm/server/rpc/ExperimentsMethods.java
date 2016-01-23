@@ -14,9 +14,7 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -28,25 +26,18 @@ public class ExperimentsMethods {
      * Return registered classes
      */
     @RPCMethod(help = "Cleanup old experiments")
-    void cleanup(
+    JsonObject cleanup(
             @RPCArgument(name = "simulate", help = "If true, don't perform the action")
-            boolean simulate,
-            @RPCArgument(name = "identifier", help = "Identifier of the experiment")
-            String identifier
+            boolean simulate
     ) throws SQLException {
-
         // Select all resources that are part of experiments, but not the latest
-
-        // Get all resources from the latest experiment
-        HashSet<Resource> resources = new HashSet<>();
-        final Experiment experiment = Experiment.findByIdentifier(identifier);
-        experiment.resources().forEach(resources::add);
-
-        HashSet<Resource> older = new HashSet<>();
-        experiment.getOlderResources().forEach(older::add);
-
-        older.removeAll(resources);
-
+        JsonObject response = new JsonObject();
+        final Iterator<ExperimentReference> iterator = Experiment.experimentNames().iterator();
+        while (iterator.hasNext()) {
+            final ExperimentReference reference = iterator.next();
+            response.addProperty(reference.identifier, Experiment.deleteOlder(simulate, reference));
+        }
+        return response;
     }
 
     @RPCMethod(help = "Find resources by experiment", name = "resources")

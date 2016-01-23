@@ -22,10 +22,7 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.scheduler.DatabaseObjects;
-import net.bpiwowar.xpm.scheduler.Identifiable;
-import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -199,6 +196,7 @@ public class Experiment implements Identifiable {
 
     /**
      * Returns all resources associated with this experiment
+     *
      * @return The resources as an iterable
      * @throws SQLException
      */
@@ -223,14 +221,23 @@ public class Experiment implements Identifiable {
         }
     }
 
-    public CloseableIterable<Resource> getOlderResources() throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
-        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
-                "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
-                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.identifier=? AND e.timestamp < ?";
-        return resources.find(query, st -> {
-            st.setString(1, this.identifier);
-            st.setTimestamp(2, new Timestamp(this.timestamp));
-        });
+//        public final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
+//                "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
+//                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.identifier=? AND e.timestamp < ?";
+    public static long deleteOlder(boolean simulate, ExperimentReference reference) throws SQLException {
+        final String query = (simulate ? "SELECT COUNT(*)" : "DELETE")
+                + " FROM Experiments WHERE name=? AND timestamp < ?";
+        try(XPMStatement st = Scheduler.statement(query)
+                .setString(1, reference.identifier)
+                .setTimestamp(2, reference.timestamp)) {
+
+            if (simulate) {
+                try(final XPMResultSet set = st.singleResultSet()) {
+                    return set.getLong(1);
+                }
+            }
+
+            return st.executeUpdate();
+        }
     }
 }
