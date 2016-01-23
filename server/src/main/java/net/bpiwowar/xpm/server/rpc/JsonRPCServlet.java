@@ -18,16 +18,12 @@ package net.bpiwowar.xpm.server.rpc;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.eclipse.jetty.server.Server;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.json.simple.parser.ContentHandler;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.eclipse.jetty.server.Server;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
@@ -39,7 +35,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.util.Stack;
 
 /**
  * Json-RPC2 servlet
@@ -71,8 +66,8 @@ public class JsonRPCServlet extends HttpServlet {
                 outputStream.close();
                 return;
             }
-            Object message = JSONValue.parse(queryString);
-            handler.handleJSON((JSONObject) message);
+            JsonParser parser = new JsonParser();
+            handler.handleJSON(parser.parse(queryString).getAsJsonObject());
         } catch (RuntimeException e) {
             LOGGER.error(e, "Error while handling request");
         } finally {
@@ -87,16 +82,11 @@ public class JsonRPCServlet extends HttpServlet {
         try {
             ServletInputStream inputStream = req.getInputStream();
             InputStreamReader reader = new InputStreamReader(inputStream);
+            JsonCallHandler handler = new JsonCallHandler(req, resp);
 
-            JSONParser parser = new JSONParser();
-            JsonStreamHandler handler = new JsonStreamHandler(new JsonCallHandler(req, resp));
-
-            try {
-                parser.parse(reader, handler, true);
-            } catch (ParseException e) {
-                LOGGER.error(e);
-            }
-
+            JsonParser parser = new JsonParser();
+            final JsonObject message = parser.parse(reader).getAsJsonObject();
+            handler.handleJSON(message);
         } finally {
             ServletOutputStream outputStream = resp.getOutputStream();
             outputStream.flush();
@@ -124,85 +114,9 @@ public class JsonRPCServlet extends HttpServlet {
             });
         }
 
-        public void handleJSON(JSONObject message) {
+        public void handleJSON(JsonObject message) {
             jsonRPCMethods.handleJSON(message);
         }
     }
 
-    private class JsonStreamHandler implements ContentHandler {
-        private final JsonCallHandler jsonCallHandler;
-        Stack<Object> stack = new Stack<>();
-
-        public JsonStreamHandler(JsonCallHandler jsonCallHandler) {
-            this.jsonCallHandler = jsonCallHandler;
-        }
-
-        @Override
-        public void startJSON() throws ParseException, IOException {
-            assert stack.isEmpty();
-        }
-
-        @Override
-        public void endJSON() throws ParseException, IOException {
-            assert stack.size() == 1;
-            jsonCallHandler.handleJSON((JSONObject) stack.pop());
-        }
-
-        private void checkArray() {
-            if (stack.size() < 2)
-                return;
-
-            Object container = stack.get(stack.size() - 2);
-            if (container instanceof JSONArray) {
-                ((JSONArray) container).add(stack.pop());
-            }
-        }
-
-
-        @Override
-        public boolean startObject() throws ParseException, IOException {
-            stack.push(new JSONObject());
-            return true;
-        }
-
-        @Override
-        public boolean endObject() throws ParseException, IOException {
-            checkArray();
-            return true;
-        }
-
-        @Override
-        public boolean startObjectEntry(String key) throws ParseException, IOException {
-            stack.push(key);
-            return true;
-        }
-
-        @Override
-        public boolean endObjectEntry() throws ParseException, IOException {
-            Object value = stack.pop();
-            String key = (String) stack.pop();
-            JSONObject object = (JSONObject) stack.peek();
-            object.put(key, value);
-            return true;
-        }
-
-        @Override
-        public boolean startArray() throws ParseException, IOException {
-            stack.push(new JSONArray());
-            return true;
-        }
-
-        @Override
-        public boolean endArray() throws ParseException, IOException {
-            checkArray();
-            return true;
-        }
-
-        @Override
-        public boolean primitive(Object value) throws ParseException, IOException {
-            stack.push(value);
-            checkArray();
-            return true;
-        }
-    }
 }

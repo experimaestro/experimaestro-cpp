@@ -26,6 +26,7 @@ import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import java.io.InputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 /**
  * A wrapper for a result set
@@ -61,6 +62,14 @@ public class XPMResultSet implements AutoCloseable {
     public String getString(int columnIndex) throws WrappedSQLException {
         try {
             return resultSet.getString(columnIndex);
+        } catch (SQLException e) {
+            throw new WrappedSQLException(e);
+        }
+    }
+
+    public Timestamp getTimeStamp(int columnIndex) {
+        try {
+            return resultSet.getTimestamp(columnIndex);
         } catch (SQLException e) {
             throw new WrappedSQLException(e);
         }

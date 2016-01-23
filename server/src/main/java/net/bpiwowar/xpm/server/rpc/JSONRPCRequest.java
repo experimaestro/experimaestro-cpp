@@ -18,7 +18,9 @@ package net.bpiwowar.xpm.server.rpc;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.json.simple.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ public abstract class JSONRPCRequest {
     abstract protected void sendJSONString(String message) throws IOException;
 
     public void endMessage(String requestID, Object result) throws IOException {
-        JSONObject answer = getJSONPartialAnswer(requestID);
+        JsonObject answer = getJSONPartialAnswer(requestID);
 
         if (result instanceof Iterable) {
             List<Object> list = new ArrayList<>();
@@ -44,29 +46,32 @@ public abstract class JSONRPCRequest {
             result = list;
         }
 
-        answer.put("result", result);
+        Gson gson = new Gson();
 
-        sendJSONString(answer.toJSONString());
+        answer.add("result", gson.toJsonTree(result, result.getClass()));
+        sendJSONString(gson.toJson(answer));
 
     }
 
-    private JSONObject getJSONPartialAnswer(String requestID) {
-        JSONObject answer = new JSONObject();
-        answer.put("jsonrpc", "2.0");
-        answer.put("id", requestID);
+    private JsonObject getJSONPartialAnswer(String requestID) {
+        JsonObject answer = new JsonObject();
+        answer.addProperty("jsonrpc", "2.0");
+        answer.addProperty("id", requestID);
         return answer;
     }
 
     void error(String requestID, int code, String message) throws IOException {
-        JSONObject answer = getJSONPartialAnswer(requestID);
+        JsonObject answer = getJSONPartialAnswer(requestID);
 //        answer.put("result", null);
 
-        JSONObject errorMessage = new JSONObject();
-        errorMessage.put("code", code);
-        errorMessage.put("message", message);
-        answer.put("error", errorMessage);
+        JsonObject errorMessage = new JsonObject();
+        errorMessage.add("code", new JsonPrimitive(code));
+        errorMessage.add("message", new JsonPrimitive(message));
+        answer.add("error", errorMessage);
 
-        sendJSONString(answer.toJSONString());
+        Gson gson = new Gson();
+
+        sendJSONString(gson.toJson(answer));
     }
 
     /**

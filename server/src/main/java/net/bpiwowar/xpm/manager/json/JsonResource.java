@@ -61,25 +61,17 @@ public class JsonResource extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         if (options.ignore.contains(Constants.XP_RESOURCE_TYPE)) {
-            writer.write("null");
+            writer.nullValue();
         } else {
             write(writer);
         }
     }
 
     @Override
-    public void writeDescriptorString(Writer writer) throws IOException {
+    public void writeDescriptorString(JsonWriter writer) throws IOException {
 
-    }
-
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write(format("{ \"id\": \"%s\", \"$type\": \"%s\" }",
-                resource.getLocator().toString(),
-                Constants.XP_RESOURCE_TYPE.toString()
-        ));
     }
 
     @Override

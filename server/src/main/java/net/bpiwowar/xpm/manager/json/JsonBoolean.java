@@ -65,11 +65,6 @@ public class JsonBoolean extends Json {
     }
 
     @Override
-    public void write(Writer out) throws IOException {
-        out.write(toString());
-    }
-
-    @Override
     public void write(JsonWriter out) throws IOException {
         out.value(value);
     }
@@ -80,7 +75,7 @@ public class JsonBoolean extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 }

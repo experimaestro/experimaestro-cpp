@@ -22,7 +22,6 @@ import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import org.json.simple.JSONValue;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -59,11 +58,6 @@ public class JsonReal extends Json {
     }
 
     @Override
-    public void write(Writer out) throws IOException {
-        JSONValue.writeJSONString(value, out);
-    }
-
-    @Override
     public void write(JsonWriter out) throws IOException {
         out.value(value);
     }
@@ -79,7 +73,7 @@ public class JsonReal extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 

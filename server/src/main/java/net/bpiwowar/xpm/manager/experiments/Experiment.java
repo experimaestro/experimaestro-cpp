@@ -204,21 +204,33 @@ public class Experiment implements Identifiable {
      */
     public CloseableIterable<Resource> resources() throws SQLException {
         final DatabaseObjects<Resource> resources = Scheduler.get().resources();
-        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status FROM Resources r, ExperimentTasks et, ExperimentResources er " +
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
+                "FROM Resources r, ExperimentTasks et, ExperimentResources er " +
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?";
         return resources.find(query,
                 st -> st.setLong(1, this.getId()));
 
     }
 
-    public static Stream<String> experimentNames() throws WrappedSQLException {
+    public static Stream<ExperimentReference> experimentNames() throws WrappedSQLException {
         try {
             return Scheduler.get()
-                    .statement("SELECT name FROM Experiments GROUP BY name ORDER BY max(timestamp) DESC")
+                    .statement("SELECT name, max(timestamp) FROM Experiments GROUP BY name ORDER BY max(timestamp) DESC")
                     .stream()
-                    .map(rs -> rs.getString(1));
+                    .map(rs -> new ExperimentReference(rs.getString(1), rs.getTimeStamp(2)));
         } catch (SQLException e) {
             throw new WrappedSQLException(e);
         }
+    }
+
+    public CloseableIterable<Resource> getOlderResources() throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
+                "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
+                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.identifier=? AND e.timestamp < ?";
+        return resources.find(query, st -> {
+            st.setString(1, this.identifier);
+            st.setTimestamp(2, new Timestamp(this.timestamp));
+        });
     }
 }

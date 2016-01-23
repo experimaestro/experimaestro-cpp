@@ -28,15 +28,9 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.LanguageContext;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.PathUtils;
-import org.json.simple.JSONValue;
 
 import java.io.IOException;
-import java.io.Writer;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 import static java.lang.String.format;
@@ -69,7 +63,7 @@ public class JsonObject extends Json {
     @Override
     public String toString() {
         return format("{%s}", Output.toString(", ", map.entrySet(),
-                entry -> format("%s: %s", JSONValue.toJSONString(entry.getKey()), entry.getValue())));
+                entry -> format("%s: %s", entry.getKey(), entry.getValue())));
     }
 
     @Override
@@ -174,25 +168,6 @@ public class JsonObject extends Json {
         return TypeName.parse(type.toString());
     }
 
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write('{');
-        boolean first = true;
-        for (Map.Entry<String, Json> entry : map.entrySet()) {
-            if (first)
-                first = false;
-            else
-                out.write(", ");
-
-            out.write(JSONValue.toJSONString(entry.getKey()));
-            out.write(":");
-            if (entry.getValue() == null)
-                out.write("null");
-            else
-                entry.getValue().write(out);
-        }
-        out.write('}');
-    }
 
     @Override
     public void write(JsonWriter out) throws IOException {
@@ -244,9 +219,9 @@ public class JsonObject extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer out, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter out, JsonWriterOptions options) throws IOException {
         if (canIgnore(options)) {
-            out.write("null");
+            out.nullValue();
             return;
         }
 
@@ -271,8 +246,7 @@ public class JsonObject extends Json {
 
         }
 
-        out.write('{');
-        boolean first = true;
+        out.beginObject();
         for (Map.Entry<String, Json> entry : map.entrySet()) {
             Json value = entry.getValue();
             String key = entry.getKey();
@@ -286,16 +260,10 @@ public class JsonObject extends Json {
                     || ignored_keys.contains(key))
                 continue;
 
-            if (first)
-                first = false;
-            else
-                out.write(",");
-
-            out.write(JSONValue.toJSONString(key));
-            out.write(":");
+            out.name(key);
             value.writeDescriptorString(out, options);
         }
-        out.write('}');
+        out.endObject();
     }
 
     @Expose(mode = ExposeMode.FIELDS)

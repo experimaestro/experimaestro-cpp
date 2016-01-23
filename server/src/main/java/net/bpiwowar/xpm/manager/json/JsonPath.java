@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
-import org.json.simple.JSONValue;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -70,21 +69,12 @@ public class JsonPath extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         if (options.ignore.contains(Constants.XP_PATH) || path == null) {
-            writer.write("null");
+            writer.nullValue();
         } else {
-            writer.write('"');
-            writer.write(JSONValue.escape(options.resolver.apply(path)));
-            writer.write('"');
+            writer.value(options.resolver.apply(path));
         }
-    }
-
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write('"');
-        out.write(JSONValue.escape(get().toString()));
-        out.write('"');
     }
 
     @Override

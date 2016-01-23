@@ -24,6 +24,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonWriter;
 import net.bpiwowar.xpm.commands.ParameterFile;
 import net.bpiwowar.xpm.connectors.SingleHostConnector;
+import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
@@ -76,24 +77,29 @@ abstract public class Json {
     /**
      * Write a normalized version of the JSON
      */
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 
     /**
      * Write a normalized version of the JSON
      */
-    public void writeDescriptorString(Writer writer) throws IOException {
-        writeDescriptorString(writer, JsonWriterOptions.DEFAULT_OPTIONS);
+    final public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+        writeDescriptorString(new JsonWriter(writer), options);
     }
 
     /**
-     * Write a JSON representation
+     * Write a normalized version of the JSON
      *
-     * @param out
-     * @throws IOException
+     * @param writer
      */
-    abstract public void write(Writer out) throws IOException;
+    public void writeDescriptorString(JsonWriter writer) throws IOException {
+        writeDescriptorString(writer, JsonWriterOptions.DEFAULT_OPTIONS);
+    }
+
+    public void writeDescriptorString(Writer writer) throws IOException {
+        writeDescriptorString(new JsonWriter(writer));
+    }
 
     /**
      * Write with a structured writer
@@ -109,20 +115,28 @@ abstract public class Json {
 
     @Expose
     public String toSource() {
-        StringWriter writer = new StringWriter();
-        try {
-            write(writer);
+        try (StringWriter writer = new StringWriter();
+             final JsonWriter jsonWriter = new JsonWriter(writer)) {
+            try {
+                write(jsonWriter);
+            } catch (IOException e) {
+                throw new AssertionError("Should not happen: I/O error while serializing to a StringWriter");
+            }
+            return writer.toString();
         } catch (IOException e) {
-            throw new AssertionError("Should not happen: I/O error while serializing to a StringWriter");
+            throw new WrappedException(e);
         }
-        return writer.toString();
     }
 
     @Expose
     public String get_descriptor() throws IOException {
-        StringWriter writer = new StringWriter();
-        writeDescriptorString(writer);
-        return writer.toString();
+        try (StringWriter writer = new StringWriter();
+             final JsonWriter jsonWriter = new JsonWriter(writer)) {
+            writeDescriptorString(jsonWriter);
+            return writer.toString();
+        } catch (IOException e) {
+            throw new WrappedException(e);
+        }
     }
 
     @Expose
@@ -306,5 +320,9 @@ abstract public class Json {
             return object;
         }
         throw new AssertionError("Unknown JSON type " + element);
+    }
+
+    public void write(Writer writer) throws IOException {
+        write(new JsonWriter(writer));
     }
 }

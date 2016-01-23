@@ -21,6 +21,8 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -33,8 +35,6 @@ import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.Time;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -486,10 +486,10 @@ abstract public class Job extends Resource {
     }
 
     @Override
-    public JSONObject toJSON() throws IOException {
+    public JsonObject toJSON() throws IOException {
         jobData();
 
-        JSONObject info = super.toJSON();
+        JsonObject info = super.toJSON();
 
         if (getState() == ResourceState.DONE
                 || getState() == ResourceState.ERROR
@@ -498,32 +498,32 @@ abstract public class Job extends Resource {
             long end = getState() == ResourceState.RUNNING ? System
                     .currentTimeMillis() : getEndTimestamp();
 
-            JSONObject events = new JSONObject();
-            info.put("events", events);
-            info.put("progress", jobData.getProgress());
+            JsonObject events = new JsonObject();
+            info.add("events", events);
+            info.addProperty("progress", jobData.getProgress());
 
-            events.put("start", longDateFormat.format(new Date(start)));
+            events.addProperty("start", longDateFormat.format(new Date(start)));
 
             if (getState() != ResourceState.RUNNING && end >= 0) {
-                events.put("end", longDateFormat.format(new Date(end)));
+                events.addProperty("end", longDateFormat.format(new Date(end)));
                 if (getProcess() != null)
-                    events.put("pid", getProcess().getPID());
+                    events.addProperty("pid", getProcess().getPID());
             }
         }
 
         Collection<Dependency> requiredResources = getDependencies();
         if (!requiredResources.isEmpty()) {
-            JSONArray dependencies = new JSONArray();
-            info.put("dependencies", dependencies);
+            JsonArray dependencies = new JsonArray();
+            info.add("dependencies", dependencies);
 
             for (Dependency dependency : requiredResources) {
                 Resource resource = dependency.getFrom();
 
-                JSONObject dep = new JSONObject();
+                JsonObject dep = new JsonObject();
                 dependencies.add(dep);
-                dep.put("from", resource.getLocator().toString());
-                dep.put("fromId", resource.getId());
-                dep.put("status", dependency.toString());
+                dep.addProperty("from", resource.getLocator().toString());
+                dep.addProperty("fromId", resource.getId());
+                dep.addProperty("status", dependency.toString());
             }
         }
 

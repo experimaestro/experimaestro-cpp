@@ -44,7 +44,6 @@ dependencies {
     compile group: 'com.google.guava', name: 'guava', version: '18.0'
     compile group: 'org.apache.commons', name: 'commons-compress', version: '1.4.1'
     compile group: 'commons-configuration', name: 'commons-configuration', version: '1.6'
-    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
     compile group: 'net.sf.saxon', name: 'Saxon-HE', version: '9.5.1-6'
 
     // Test modules

@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.manager.json;
  */
 
 import com.google.gson.stream.JsonWriter;
-import org.json.simple.JSONValue;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.scripting.Expose;
@@ -71,17 +70,12 @@ public class JsonString extends Json {
     }
 
     @Override
-    public void write(Writer out) throws IOException {
-        JSONValue.writeJSONString(string, out);
-    }
-
-    @Override
     public void write(JsonWriter out) throws IOException {
         out.value(string);
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }
 }

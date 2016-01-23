@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
@@ -35,7 +36,6 @@ import net.bpiwowar.xpm.utils.PathUtils;
 import net.bpiwowar.xpm.utils.db.SQLInsert;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.commons.lang.NotImplementedException;
-import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -432,10 +432,10 @@ public class Resource implements Identifiable {
      * @return
      * @throws IOException
      */
-    public JSONObject toJSON() throws IOException {
-        JSONObject object = new JSONObject();
-        object.put("id", getId());
-        object.put("status", getState().toString());
+    public JsonObject toJSON() throws IOException {
+        JsonObject object = new JsonObject();
+        object.addProperty("id", getId());
+        object.addProperty("status", getState().toString());
         return object;
     }
 

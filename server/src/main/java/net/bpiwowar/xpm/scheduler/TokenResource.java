@@ -18,7 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.json.simple.JSONObject;
+import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -119,12 +119,12 @@ public class TokenResource extends Resource {
     }
 
     @Override
-    public JSONObject toJSON() throws IOException {
-        JSONObject info = super.toJSON();
-        JSONObject tokenInfo = new JSONObject();
-        tokenInfo.put("used", usedTokens);
-        tokenInfo.put("limit", limit);
-        info.put("tokens", tokenInfo);
+    public JsonObject toJSON() throws IOException {
+        JsonObject info = super.toJSON();
+        JsonObject tokenInfo = new JsonObject();
+        tokenInfo.addProperty("used", usedTokens);
+        tokenInfo.addProperty("limit", limit);
+        info.add("tokens", tokenInfo);
         return info;
     }
 

@@ -202,10 +202,12 @@ $().ready(function () {
     var load_tasks = function () {
         var select = $("#experiment-chooser");
         var experiment = select.find("option:selected").text();
-        xpm.server.call('resources-from-experiment', experiment,
+        xpm.server.call('experiments.resources', experiment,
             function (r) {
-                $.each(r, function (e) {
-                    add_resource(r[e]);
+                var date = new Date(r.timestamp * 1000);
+                $("experiment-timestamp").text(date.toDateString());
+                $.each(r.resources, function (ix, v) {
+                    add_resource(v);
                 });
             },
             jsonrpc_error
@@ -217,13 +219,12 @@ $().ready(function () {
      * Get the experiments
      */
     function get_experiments(server) {
-        server.call('experiment-names', {},
+        server.call('experiments.latest-names', {},
             function (r) {
                 var select = $("#experiment-chooser");
                 select.children().remove();
-                $.each(r, function (e) {
-                    var name = r[e];
-                    select.append($e("option").append($t(name)));
+                $.each(r, function (ix, e) {
+                    select.append($e("option").append($t(e.identifier)));
                 });
                 load_tasks();
             },

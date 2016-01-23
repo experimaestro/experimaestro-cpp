@@ -53,17 +53,12 @@ public class JsonTask extends Json {
     }
 
     @Override
-    public void write(Writer out) throws IOException {
-        json.write(out);
-    }
-
-    @Override
     public void write(JsonWriter out) throws IOException {
         json.write(out);
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
+    public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         if (options.mode != JsonWriterMode.PARAMETER_FILE) {
             json.writeDescriptorString(writer, options);
         } else {

@@ -60,16 +60,6 @@ public class JsonNull extends Json {
     }
 
     @Override
-    public void writeDescriptorString(Writer writer, JsonWriterOptions options) throws IOException {
-        writer.write("null");
-    }
-
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write("null");
-    }
-
-    @Override
     public void write(JsonWriter out) throws IOException {
         out.nullValue();
     }

@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.scheduler;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.JsonAdapter;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.Redirect;
@@ -27,9 +28,7 @@ import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.utils.UUIDObject;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -37,7 +36,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -177,12 +175,14 @@ public class CommandLineTask extends Job {
         return builder.start(fake);
     }
 
-    public JSONObject toJSON() throws IOException {
+    public JsonObject toJSON() throws IOException {
         loadData();
-        JSONObject info = super.toJSON();
-        info.put("command", command.toString());
-        info.put("working-directory", workingDirectory);
-        info.put("environment", environment);
+        JsonObject info = super.toJSON();
+        info.addProperty("command", command.toString());
+        info.addProperty("working-directory", workingDirectory);
+        JsonObject jsonEnv = new JsonObject();
+        environment.forEach((k,v) -> jsonEnv.addProperty(k, v));
+        info.add("environment", jsonEnv);
         return info;
     }
 

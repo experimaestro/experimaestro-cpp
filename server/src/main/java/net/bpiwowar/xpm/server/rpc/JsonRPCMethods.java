@@ -21,29 +21,13 @@ package net.bpiwowar.xpm.server.rpc;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.exceptions.CloseException;
-import net.bpiwowar.xpm.exceptions.ContextualException;
-import net.bpiwowar.xpm.exceptions.ExitException;
-import net.bpiwowar.xpm.exceptions.XPMCommandException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.*;
 import net.bpiwowar.xpm.manager.Repositories;
-import net.bpiwowar.xpm.manager.experiments.Experiment;
-import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
-import net.bpiwowar.xpm.scheduler.Dependency;
-import net.bpiwowar.xpm.scheduler.Job;
-import net.bpiwowar.xpm.scheduler.Listener;
-import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.scheduler.ResourceState;
-import net.bpiwowar.xpm.scheduler.Scheduler;
-import net.bpiwowar.xpm.scheduler.SimpleMessage;
+import net.bpiwowar.xpm.scheduler.*;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -58,9 +42,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.eclipse.jetty.server.Server;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptStackElement;
 import org.mozilla.javascript.Scriptable;
@@ -68,12 +49,7 @@ import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
 import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -82,8 +58,9 @@ import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -112,6 +89,7 @@ public class JsonRPCMethods extends HttpServlet {
      * Server
      */
     private Server server;
+    private HashMap<Class<?>, Object> objects = new HashMap<>();
 
     public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) throws IOException {
         initMethods();
@@ -119,6 +97,15 @@ public class JsonRPCMethods extends HttpServlet {
         this.scheduler = scheduler;
         this.repository = repository;
         this.mos = mos;
+        addObjects(this, new DocumentationMethods(), new ExperimentsMethods());
+    }
+
+    public void addObjects(Object... objects) {
+        for (Object object : objects) {
+            this.objects.put(object.getClass(), object);
+
+        }
+
     }
 
     public static void initMethods() throws IOException {
@@ -128,6 +115,7 @@ public class JsonRPCMethods extends HttpServlet {
             // Add methods from other classes
             addMethods(JsonRPCMethods.class);
             addMethods(DocumentationMethods.class);
+            addMethods(ExperimentsMethods.class);
         }
     }
 
@@ -145,14 +133,20 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
-    private int convert(Object p, Arguments description, int score, List args, int index) {
-        Object o;
-        if (p instanceof JSONObject)
+    private int convert(JsonElement p, Arguments description, int score, List args, int index) {
+        BiConsumer<Integer, Supplier> setArguments = (i, v) -> {
+            if (args != null) {
+                args.set(index, v.get());
+            }
+        };
+
+        JsonElement o;
+        if (p instanceof JsonObject)
             // If p is a map, then use the json name of the argument
-            o = ((JSONObject) p).get(description.getArgument(index).name());
-        else if (p instanceof JSONArray)
+            o = ((JsonObject) p).get(description.getArgument(index).name());
+        else if (p instanceof JsonArray)
             // if it is an array, then map it
-            o = ((JSONArray) p).get(index);
+            o = ((JsonArray) p).get(index);
         else {
             // otherwise, suppose it is a one value array
             if (index > 0)
@@ -169,9 +163,10 @@ public class JsonRPCMethods extends HttpServlet {
             return score - 10;
         }
 
+
         if (aType.isArray()) {
-            if (o instanceof JSONArray) {
-                final JSONArray array = (JSONArray) o;
+            if (o instanceof JsonArray) {
+                final JsonArray array = (JsonArray) o;
 
 
                 final ArrayList arrayObjects;
@@ -219,28 +214,41 @@ public class JsonRPCMethods extends HttpServlet {
             return Integer.MIN_VALUE;
         }
 
-        if (aType.isAssignableFrom(o.getClass())) {
-            if (args != null)
-                args.set(index, o);
-            return score;
-        }
 
-        if (o.getClass() == Long.class && aType == Integer.class) {
-            if (args != null)
-                args.set(index, ((Long) o).intValue());
-            return score - 1;
-        }
+        if (o.isJsonPrimitive()) {
+            final JsonPrimitive x = o.getAsJsonPrimitive();
+            if (x.isString()) {
+                if (CharSequence.class.isAssignableFrom(aType)) {
+                    setArguments.accept(index, () -> x.getAsString());
+                    return score;
+                }
+            } else if (x.isNumber()) {
+                if (Number.class.isAssignableFrom(aType)) {
+                    setArguments.accept(index, () -> x.getAsNumber());
+                    return score;
+                }
+            } else if (x.isBoolean()) {
+                if (Boolean.class.isAssignableFrom(aType)) {
+                    setArguments.accept(index, () -> x.getAsNumber());
+                    return score;
+                }
+            } else throw new AssertionError();
 
+
+            if (aType.isAssignableFrom(o.getClass())) {
+                setArguments.accept(index, () -> o);
+                return score;
+            }
+        }
         return Integer.MIN_VALUE;
     }
 
     public void handle(String message) {
         try {
-            JSONObject object;
+            JsonObject object;
             try {
-                Object parse = JSONValue.parse(message);
-                object = (JSONObject) parse;
-
+                JsonParser parser = new JsonParser();
+                object = parser.parse(message).getAsJsonObject();
             } catch (Throwable t) {
                 LOGGER.warn(t, "Error while handling JSON request");
 
@@ -259,21 +267,21 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
-    void handleJSON(JSONObject object) {
+    void handleJSON(JsonObject object) {
         String requestID = null;
 
         try {
-            final Object id = object.get("id");
-            requestID = id == null ? null : id.toString();
+            final JsonElement id = object.get("id");
+            requestID = id == null ? null : id.getAsString();
 
 
-            Object command = object.get("method");
+            Object command = object.get("method").getAsString();
             if (command == null)
                 throw new RuntimeException("No method in JSON");
 
-            final Object p;
-            if (!object.containsKey("params")) {
-                p  = new ArrayList<>();
+            final JsonElement p;
+            if (!object.has("params")) {
+                p = new JsonArray();
             } else {
                 p = object.get("params");
             }
@@ -301,7 +309,8 @@ public class JsonRPCMethods extends HttpServlet {
                 int score = convert(p, argmax, 0, Arrays.asList(args), i);
                 assert score > Integer.MIN_VALUE;
             }
-            Object result = argmax.method.invoke(this, args);
+            final Class<?> declaringClass = argmax.method.getDeclaringClass();
+            Object result = argmax.method.invoke(objects.get(declaringClass), args);
             mos.endMessage(requestID, result);
         } catch (InvocationTargetException e) {
             try {
@@ -369,7 +378,7 @@ public class JsonRPCMethods extends HttpServlet {
      * Information about a job
      */
     @RPCMethod(help = "Returns detailed information about a job (Json format)")
-    public JSONObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException, SQLException {
+    public JsonObject getResourceInformation(@RPCArgument(name = "id") String resourceId) throws IOException, SQLException {
         Resource resource = getResource(resourceId);
 
         if (resource == null)
@@ -416,7 +425,7 @@ public class JsonRPCMethods extends HttpServlet {
      * Run javascript
      */
     @RPCMethod(name = "run-python", help = "Run a python file")
-    public String runPython(@RPCArgument(name = "files") List<JSONArray> files,
+    public String runPython(@RPCArgument(name = "files") List<JsonArray> files,
                             @RPCArgument(name = "environment") Map<String, String> environment,
                             @RPCArgument(name = "debug", required = false) Integer debugPort,
                             @RPCArgument(name = "pythonpath", required = false) String pythonPath) {
@@ -440,7 +449,7 @@ public class JsonRPCMethods extends HttpServlet {
                                  getRequestOutputStream(), getRequestErrorStream())
             ) {
                 Object result = null;
-                for (JSONArray filePointer : files) {
+                for (JsonArray filePointer : files) {
                     boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
                     final String content = isFile ? null : filePointer.get(1).toString();
                     final String filename = filePointer.get(0).toString();
@@ -529,7 +538,7 @@ public class JsonRPCMethods extends HttpServlet {
      * Run javascript
      */
     @RPCMethod(name = "run-javascript", help = "Run a javascript")
-    public String runJSScript(@RPCArgument(name = "files") List<JSONArray> files,
+    public String runJSScript(@RPCArgument(name = "files") List<JsonArray> files,
                               @RPCArgument(name = "environment") Map<String, String> environment,
                               @RPCArgument(name = "debug", required = false) Integer debugPort) {
 
@@ -548,7 +557,7 @@ public class JsonRPCMethods extends HttpServlet {
         // about the execution environment of a script.
         try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, scheduler, loggerRepository, debugPort)) {
             Object result = null;
-            for (JSONArray filePointer : files) {
+            for (JsonArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
                 final String content = isFile ? null : filePointer.get(1).toString();
                 final String filename = filePointer.get(0).toString();
@@ -1016,32 +1025,6 @@ public class JsonRPCMethods extends HttpServlet {
 
     }
 
-    @RPCMethod(help = "Find resources by experiment", name = "resources-from-experiment")
-    public JsonArray findResourceFromExperiment(
-            @RPCArgument(name = "identifier") String identifier
-    ) throws SQLException {
-        JsonArray resources = new JsonArray();
-        final Experiment experiment = Experiment.findByIdentifier(identifier);
-        if (experiment != null) {
-            experiment.resources().forEach(
-                    r -> resources.add(toJson(r))
-            );
-        } else {
-            throw new XPMCommandException("No experiment with identifier [" + identifier + "] found");
-        }
-        return resources;
-    }
-
-    private JsonElement toJson(Resource r) {
-        JsonObject o = new JsonObject();
-        o.add("id", new JsonPrimitive(r.getId()));
-        o.add("locator", new JsonPrimitive(r.getLocator().toString()));
-        o.add("state", new JsonPrimitive(r.getState().toString()));
-        if (r instanceof Job) {
-            o.add("progress", new JsonPrimitive(((Job) r).getProgress()));
-        }
-        return o;
-    }
 
     /**
      * List jobs
@@ -1073,8 +1056,8 @@ public class JsonRPCMethods extends HttpServlet {
      * Get information about experimaestro
      */
     @RPCMethod(help = "Get build information about experimaestro")
-    public Object buildInformation() {
-        return JSONValue.parse(new GsonBuilder().create().toJson(XPMInformation.get()));
+    public XPMInformation buildInformation() {
+        return XPMInformation.get();
     }
 
     /**
@@ -1166,77 +1149,6 @@ public class JsonRPCMethods extends HttpServlet {
         public int size() {
             return arguments.length;
         }
-    }
-
-    @RPCMethod(name = "experiment-list", help = "Get list of experiments")
-    public JsonArray experimentList(
-            @RPCArgument(name = "latest", help = "Only display latest experiment") boolean latest
-    ) throws SQLException, CloseException {
-        JsonArray experiments = new JsonArray();
-        Experiment.experiments(latest).forEach(e -> {
-            final JsonObject experiment = new JsonObject();
-            experiment.add("id", new JsonPrimitive(e.getId()));
-            experiment.add("name", new JsonPrimitive(e.getName()));
-            experiment.add("timestamp", new JsonPrimitive(e.getTimestamp()));
-            experiments.add(experiment);
-        });
-        return experiments;
-    }
-
-    @RPCMethod(name = "experiment-names", help = "Get list of experiment names")
-    public Stream<String> experimentNames() {
-        return Experiment.experimentNames();
-    }
-
-    @RPCMethod(help = "Get list of experiments")
-    public JsonElement experiments() throws SQLException, CloseException {
-        try (final CloseableIterable<Experiment> experiments = Experiment.experiments(false)) {
-            JsonObject response = new JsonObject();
-            final JsonArray nodes = new JsonArray();
-            final JsonArray links = new JsonArray();
-            response.add("nodes", nodes);
-            response.add("links", links);
-
-
-            for (Experiment experiment : experiments) {
-                // Add the nodes
-                IdentityHashMap<Object, Integer> map = new IdentityHashMap<>();
-                List<TaskReference> tasks = experiment.getTasks();
-                for (TaskReference taskReference : tasks) {
-                    addNode(nodes, map, taskReference, taskReference.getTaskId().toString());
-                    for (Resource resource : taskReference.getResources()) {
-                        addNode(nodes, map, resource, resource.getIdentifier());
-                    }
-                }
-
-                // Add the links
-                for (TaskReference taskReference : tasks) {
-                    for (TaskReference reference : taskReference.getChildren()) {
-                        addLink(links, map, taskReference, reference);
-                    }
-                    for (Resource resource : taskReference.getResources()) {
-                        addLink(links, map, taskReference, resource);
-                    }
-                }
-                break;
-            }
-            return response;
-        }
-    }
-
-    private static void addLink(JsonArray links, IdentityHashMap<Object, Integer> map, Object value, Object value2) {
-        final JsonObject link = new JsonObject();
-        links.add(link);
-        link.add("source", new JsonPrimitive(map.get(value)));
-        link.add("target", new JsonPrimitive(map.get(value2)));
-    }
-
-    private static void addNode(JsonArray nodes, IdentityHashMap<Object, Integer> map, Object object, String string) {
-        map.put(object, nodes.size());
-        final JsonObject element = new JsonObject();
-        nodes.add(element);
-        element.add("name", new JsonPrimitive(string));
-        element.add("group", new JsonPrimitive(1));
     }
 
 

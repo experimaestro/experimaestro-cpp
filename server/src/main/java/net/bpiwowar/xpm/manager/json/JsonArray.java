@@ -57,19 +57,6 @@ public class JsonArray extends Json implements Iterable<Json> {
         return format("[%s]", Output.toString(", ", this));
     }
 
-    @Override
-    public void write(Writer out) throws IOException {
-        out.write('[');
-        boolean first = true;
-        for (Json json : this) {
-            if (first)
-                first = false;
-            else
-                out.write(", ");
-            json.write(out);
-        }
-        out.write(']');
-    }
 
     @Override
     public void write(JsonWriter out) throws IOException {
@@ -120,17 +107,12 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
-    public void writeDescriptorString(Writer out, JsonWriterOptions options) throws IOException {
-        out.write('[');
-        boolean first = true;
+    public void writeDescriptorString(JsonWriter out, JsonWriterOptions options) throws IOException {
+        out.beginArray();
         for (Json json : this) {
-            if (first)
-                first = false;
-            else
-                out.write(", ");
             json.writeDescriptorString(out, options);
         }
-        out.write(']');
+        out.endArray();
     }
 
     @Expose

@@ -89,6 +89,9 @@ p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
+p_cleanup = subparsers.add_parser("cleanup", help="Cleanup resources")
+p_cleanup.add_argument("--run", help="Really do it")
+
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
 p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
 p_rm.add_argument('--states', dest="states", help="States")
@@ -159,6 +162,11 @@ class JsonRPCClient:
         self.jsonid = 0
 
     def __getattr__(self, name):
+        self.jsonid += 1
+        return JsonRPCMethod(self.url, name, self.jsonid)
+
+
+    def __getitem__(self, name):
         self.jsonid += 1
         return JsonRPCMethod(self.url, name, self.jsonid)
 
@@ -587,6 +595,11 @@ def command_kill(args):
 def command_generate_files(args):
     client = Configuration(args).getWebSocketServer()
     run_server_command(client, "generateFiles", {"jobs": args.jobid})
+
+
+def command_cleanup(args):
+    server = Configuration(args).getJsonServer()
+    server["experiments.cleanup"]({})
 
 def command_rm(args):
     server = Configuration(args).getJsonServer()
