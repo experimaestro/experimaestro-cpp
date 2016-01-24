@@ -71,7 +71,8 @@ public abstract class Lock implements AutoCloseable, Identifiable {
 
         // Remove from DB
         if (inDatabase()) {
-            Scheduler.statement("DELETE FROM Locks WHERE id=?").setLong(1, id).execute();
+            Scheduler.statement("DELETE FROM Locks WHERE id=?").setLong(1, id)
+                    .execute().close();
         }
     }
 
@@ -113,7 +114,7 @@ public abstract class Lock implements AutoCloseable, Identifiable {
             Scheduler.statement("INSERT INTO LockShares(lock, share) VALUES(?,?)")
                     .setLong(1, getId())
                     .setLong(2, networkShare.getId())
-                    .execute();
+                    .execute().close();
         }
     }
 

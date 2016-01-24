@@ -31,7 +31,7 @@ public class ExperimentsMethods {
             returns = "A map between experiment names and deletion counts")
     static class Cleanup implements JsonCallable {
         @RPCArgument(name = "simulate", required = false, help = "If true, don't perform the action")
-        boolean simulate = false;
+        boolean simulate = true;
 
         @Override
         public Object call() throws Throwable {
@@ -44,6 +44,17 @@ public class ExperimentsMethods {
             }
 
             return response;
+        }
+    }
+
+    @RPCMethod(name = "clean-resources", help = "Removes resources not belonging to any experiment")
+    static class CleanResources implements JsonCallable {
+        @RPCArgument(name = "simulate", required = false, help = "If true, don't perform the action")
+        boolean simulate = true;
+
+        @Override
+        public Object call() throws Throwable {
+            return Experiment.deleteObsoleteResources(simulate);
         }
     }
 

@@ -18,6 +18,8 @@ package net.bpiwowar.xpm.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongRBTreeSet;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -30,6 +32,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -221,18 +224,18 @@ public class Experiment implements Identifiable {
         }
     }
 
-//        public final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
+    //        public final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
 //                "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
 //                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.identifier=? AND e.timestamp < ?";
     public static long deleteOlder(boolean simulate, ExperimentReference reference) throws SQLException {
         final String query = (simulate ? "SELECT COUNT(*)" : "DELETE")
                 + " FROM Experiments WHERE name=? AND timestamp < ?";
-        try(XPMStatement st = Scheduler.statement(query)
+        try (XPMStatement st = Scheduler.statement(query)
                 .setString(1, reference.identifier)
                 .setTimestamp(2, reference.timestamp)) {
 
             if (simulate) {
-                try(final XPMResultSet set = st.singleResultSet()) {
+                try (final XPMResultSet set = st.singleResultSet()) {
                     return set.getLong(1);
                 }
             }
@@ -240,4 +243,66 @@ public class Experiment implements Identifiable {
             return st.executeUpdate();
         }
     }
+
+    /**
+     * Delete resources that are neither part of an experiment nor a dependency
+     * of a resource part of an experiment
+     *
+     * @param simulate
+     */
+    public static List<String> deleteObsoleteResources(boolean simulate) throws SQLException, CloseException {
+        // Retrieve resources ids without experiment
+//        final String query = "SELECT DISTINCT r.id " +
+//                "FROM Resources r LEFT JOIN ExperimentResources er ON er.resource = r.id " +
+//                "WHERE er.resource IS NULL ORDER BY r.id";
+
+        // Order the resources by decreasing id so that we can check right
+        // away if its dependencies are also obsolete
+        final String query = "SELECT DISTINCT r.id, d.toId " +
+                "FROM Resources r " +
+                "LEFT JOIN Dependencies d ON d.fromId=r.id " +
+                "WHERE NOT EXISTS(SELECT * FROM ExperimentResources er WHERE er.resource = r.id) " +
+                "ORDER BY r.id DESC";
+
+        LongRBTreeSet set = new LongRBTreeSet((a,b) -> Long.compare(b, a));
+        try (final XPMStatement st = Scheduler.statement(query)) {
+            st.execute();
+            long oldId = -1;
+            boolean skip = false;
+
+            try (XPMResultSet rs = st.resultSet()) {
+                while (rs.next()) {
+                    final long rid = rs.getLong(1);
+                    if (rid != oldId) {
+                        set.add(rid);
+                        oldId = rid;
+                        skip = false;
+                    } else if (skip) continue;
+
+
+                    final long toId = rs.getLong(2);
+                    if (!rs.wasNull()) {
+                        if (toId < rid) throw new AssertionError("This should not happen (DB hypothesis)...");
+
+
+                        if (!set.contains(toId)) {
+                            set.remove(rid);
+                            skip = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        ArrayList<String> list = new ArrayList<>();
+
+        for (Long rid : set) {
+            final Resource resource = Resource.getById(rid);
+            list.add(resource.getIdentifier());
+            if (!simulate) resource.delete(false);
+        }
+
+        return list;
+    }
+
 }

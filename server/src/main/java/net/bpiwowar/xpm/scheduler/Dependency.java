@@ -205,7 +205,7 @@ abstract public class Dependency implements Serializable {
                 .setInt(1, status.ordinal())
                 .setLong(2, from.id())
                 .setLong(3, to.id())
-                .execute();
+                .execute().close();
         status = DependencyStatus.UNACTIVE;
     }
 

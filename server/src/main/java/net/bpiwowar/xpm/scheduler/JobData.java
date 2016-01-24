@@ -140,7 +140,7 @@ public class JobData {
             if (job.inDatabase()) try {
                 Scheduler.statement("UPDATE Jobs SET unsatisfied=?, holding=? WHERE id=?")
                         .setInt(1, nbUnsatisfied).setInt(2, nbHolding).setLong(3, job.getId())
-                        .execute();
+                        .execute().close();
                 LOGGER.debug("Updated job %s: unsatisfied=%d, holding=%d", job, nbUnsatisfied, nbHolding);
             } catch (SQLException e) {
                 throw new XPMRuntimeException(e, "Could not set progress in database");
@@ -172,7 +172,7 @@ public class JobData {
     protected void updateValue(Object object, String sqlField) {
         if (job.inDatabase()) try {
             Scheduler.statement(format("UPDATE Jobs SET %s=? WHERE id=?", sqlField))
-                    .setObject(1, object).setLong(2, job.getId()).execute();
+                    .setObject(1, object).setLong(2, job.getId()).execute().close();
         } catch (SQLException e) {
             throw new XPMRuntimeException(e, "Could not set progress in database");
         }

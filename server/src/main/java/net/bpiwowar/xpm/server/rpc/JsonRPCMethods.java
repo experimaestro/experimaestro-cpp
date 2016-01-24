@@ -908,17 +908,22 @@ public class JsonRPCMethods extends HttpServlet {
 
         try (final CloseableIterable<Resource> resources = scheduler.resources(set)) {
             for (Resource resource : resources) {
-                Map<String, String> map = new HashMap<>();
-                map.put("type", resource.getClass().getCanonicalName());
-                map.put("state", resource.getState().toString());
-                map.put("name", resource.getLocator().toString());
-                map.put("id", resource.getId().toString());
+                Map<String, String> map = getResourceJSON(resource);
                 list.add(map);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return list;
+    }
+
+    public static Map<String, String> getResourceJSON(Resource resource) {
+        Map<String, String> map = new HashMap<>();
+        map.put("type", resource.getClass().getCanonicalName());
+        map.put("state", resource.getState().toString());
+        map.put("name", resource.getLocator().toString());
+        map.put("id", resource.getId().toString());
+        return map;
     }
 
     /**

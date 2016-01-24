@@ -89,7 +89,10 @@ p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
-p_cleanup = subparsers.add_parser("cleanup", help="Cleanup resources")
+p_cleanup = subparsers.add_parser("cleanup", help="Cleanup obsolete experiments")
+p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
+
+p_cleanup = subparsers.add_parser("clean-resources", help="Remove obsolete resources")
 p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
@@ -599,7 +602,13 @@ def command_generate_files(args):
 
 def command_cleanup(args):
     server = Configuration(args).getJsonServer()
-    print(server["experiments.cleanup"]({"simulate": not args.run}))
+    json.dump(server["experiments.cleanup"]({"simulate": not args.run}), sys.stdout)
+
+
+def command_clean_resources(args):
+    server = Configuration(args).getJsonServer()
+    json.dump(server["experiments.clean-resources"]({"simulate": not args.run}), sys.stdout)
+
 
 def command_rm(args):
     server = Configuration(args).getJsonServer()

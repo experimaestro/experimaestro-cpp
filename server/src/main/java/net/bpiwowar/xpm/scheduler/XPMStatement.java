@@ -75,9 +75,9 @@ public class XPMStatement implements AutoCloseable {
         return this;
     }
 
-    public void execute() throws SQLException {
+    public XPMStatement execute() throws SQLException {
         protect(() -> st.execute());
-        st.close();
+        return this;
     }
 
     public XPMStatement setDouble(int index, double value) throws SQLException {
@@ -105,7 +105,7 @@ public class XPMStatement implements AutoCloseable {
     }
 
     public XPMResultSet resultSet() throws SQLException {
-        return new XPMResultSet(this, st.getResultSet());
+        return new XPMResultSet(st.getResultSet());
     }
 
     public void close() throws SQLException {
@@ -114,6 +114,7 @@ public class XPMStatement implements AutoCloseable {
 
     /**
      * Execute the query and returns the result set
+     *
      * @return
      * @throws SQLException
      */
@@ -122,36 +123,37 @@ public class XPMStatement implements AutoCloseable {
         final ResultSet rs = st.getResultSet();
         if (!rs.next()) throw new SQLException("Expected one result only (got 0)");
         if (!rs.isLast()) throw new SQLException("Expected one result only (got > 1)");
-        return new XPMResultSet(this, rs);
+        return new XPMResultSet(rs);
     }
 
     public Stream<XPMResultSet> stream() throws WrappedSQLException {
+        return stream(true);
+    }
+
+    /**
+     * @param close True if the statement should be closed at the end (the result set is always closed)
+     * @return
+     * @throws WrappedSQLException
+     */
+    public Stream<XPMResultSet> stream(final boolean close) throws WrappedSQLException {
+
         try {
             st.execute();
             final XPMResultSet set = resultSet();
+            ResultSetCloser closer = new ResultSetCloser(close, set);
 
             return StreamUtils.stream(new AbstractIterator<XPMResultSet>() {
                 @Override
                 protected XPMResultSet computeNext() {
                     try {
                         if (set.next()) return set;
-                        if (!st.isClosed()) {
-                            set.close();
-                        }
+                        closer.call();
                         return endOfData();
                     } catch (SQLException e) {
                         throw new WrappedException(e);
                     }
                 }
-            }).onClose(() -> {
-                try {
-                    if (!st.isClosed()) {
-                        set.close();
-                    }
-                } catch (SQLException e) {
-                    throw new WrappedSQLException(e);
-                }
-            });
+            }).onClose(() -> closer.call());
 
         } catch (SQLException e) {
             throw new WrappedSQLException(e);
@@ -167,5 +169,35 @@ public class XPMStatement implements AutoCloseable {
     public XPMStatement setTimestamp(int index, Timestamp value) throws SQLException {
         st.setTimestamp(index, value);
         return this;
+    }
+
+
+    private class ResultSetCloser {
+        private final boolean close;
+        private final XPMResultSet set;
+
+        public ResultSetCloser(boolean close, XPMResultSet set) {
+            this.close = close;
+            this.set = set;
+        }
+
+        public void call() {
+            try {
+                if (close) {
+                    if (!set.isClosed()) {
+                        set.close();
+                    }
+                    if (!st.isClosed()) {
+                        st.close();
+                    }
+                } else {
+                    if (!set.resultSet.isClosed()) {
+                        set.resultSet.close();
+                    }
+                }
+            } catch (SQLException e) {
+                throw new WrappedSQLException(e);
+            }
+        }
     }
 }

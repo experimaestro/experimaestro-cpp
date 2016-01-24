@@ -228,7 +228,7 @@ public abstract class XPMProcess {
             if (inDatabase) {
                 Scheduler.statement("DELETE FROM Processes WHERE resource=?")
                         .setLong(1, job.getId())
-                        .execute();
+                        .execute().close();
             }
         } catch (SQLException | CloseException e) {
             throw new LockException(e);

@@ -32,11 +32,9 @@ import java.sql.Timestamp;
  * A wrapper for a result set
  */
 public class XPMResultSet implements AutoCloseable {
-    private final XPMStatement xpmStatement;
-    private final ResultSet resultSet;
+    final ResultSet resultSet;
 
-    public XPMResultSet(XPMStatement xpmStatement, ResultSet resultSet) {
-        this.xpmStatement = xpmStatement;
+    public XPMResultSet(ResultSet resultSet) {
         this.resultSet = resultSet;
     }
 
@@ -47,7 +45,6 @@ public class XPMResultSet implements AutoCloseable {
     @Override
     public void close() throws SQLException {
         resultSet.close();
-        xpmStatement.close();
     }
 
     public InputStream getBinaryStream(int index) throws SQLException {
@@ -56,8 +53,9 @@ public class XPMResultSet implements AutoCloseable {
 
     /**
      * Get the string for a given column
-     * @see ResultSet#getString(int)
+     *
      * @throws WrappedSQLException
+     * @see ResultSet#getString(int)
      */
     public String getString(int columnIndex) throws WrappedSQLException {
         try {
@@ -81,5 +79,13 @@ public class XPMResultSet implements AutoCloseable {
         } catch (SQLException e) {
             throw new WrappedSQLException(e);
         }
+    }
+
+    public boolean isClosed() throws SQLException {
+        return resultSet.isClosed();
+    }
+
+    public boolean wasNull() throws SQLException {
+        return resultSet.wasNull();
     }
 }
