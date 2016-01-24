@@ -90,7 +90,7 @@ p_information = subparsers.add_parser("information", help="Get information on a 
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
 p_cleanup = subparsers.add_parser("cleanup", help="Cleanup resources")
-p_cleanup.add_argument("--run", help="Really do it")
+p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
 p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")

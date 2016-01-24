@@ -42,4 +42,10 @@ import java.lang.annotation.Target;
      * @return The name of the RPC method or empty string if default (method name)
      */
     String name() default "";
+
+    /**
+     * Describe the return value of the RPC method
+     * @return A string documenting the return value
+     */
+    String returns() default "";
 }

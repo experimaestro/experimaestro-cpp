@@ -14,7 +14,9 @@ import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 
 import java.sql.SQLException;
-import java.util.*;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -23,22 +25,28 @@ import java.util.stream.Stream;
 @JsonRPCMethodsHolder("experiments")
 public class ExperimentsMethods {
     /**
-     * Return registered classes
+     * Delete obsolete experiments
      */
-    @RPCMethod(help = "Cleanup old experiments")
-    JsonObject cleanup(
-            @RPCArgument(name = "simulate", help = "If true, don't perform the action")
-            boolean simulate
-    ) throws SQLException {
-        // Select all resources that are part of experiments, but not the latest
-        JsonObject response = new JsonObject();
-        final Iterator<ExperimentReference> iterator = Experiment.experimentNames().iterator();
-        while (iterator.hasNext()) {
-            final ExperimentReference reference = iterator.next();
-            response.addProperty(reference.identifier, Experiment.deleteOlder(simulate, reference));
+    @RPCMethod(name = "cleanup", help = "Cleanup old experiments",
+            returns = "A map between experiment names and deletion counts")
+    static class Cleanup implements JsonCallable {
+        @RPCArgument(name = "simulate", required = false, help = "If true, don't perform the action")
+        boolean simulate = false;
+
+        @Override
+        public Object call() throws Throwable {
+            // Select all resources that are part of experiments, but not the latest
+            JsonObject response = new JsonObject();
+            final Iterator<ExperimentReference> iterator = Experiment.experimentNames().iterator();
+            while (iterator.hasNext()) {
+                final ExperimentReference reference = iterator.next();
+                response.addProperty(reference.identifier, Experiment.deleteOlder(simulate, reference));
+            }
+
+            return response;
         }
-        return response;
     }
+
 
     @RPCMethod(help = "Find resources by experiment", name = "resources")
     public JsonObject resources(
