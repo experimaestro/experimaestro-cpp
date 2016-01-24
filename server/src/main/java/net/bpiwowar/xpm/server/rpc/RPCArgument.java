@@ -28,7 +28,11 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RPCArgument {
-    String name();
+    /**
+     * The name of the RPC method
+     * @return The name or empty when the name is the name of the field
+     */
+    String name() default "";
 
     /**
      * Required argument

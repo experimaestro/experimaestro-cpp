@@ -22,7 +22,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.exceptions.*;
 import net.bpiwowar.xpm.manager.Repositories;
@@ -51,10 +50,7 @@ import org.python.core.PyException;
 import javax.servlet.http.HttpServlet;
 import java.io.*;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
@@ -71,7 +67,7 @@ import static java.lang.String.format;
 public class JsonRPCMethods extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
 
-    private static Multimap<String, Arguments> methods;
+    private static Multimap<String, RPCCaller> methods;
 
     private final Scheduler scheduler;
 
@@ -109,21 +105,32 @@ public class JsonRPCMethods extends HttpServlet {
             methods = HashMultimap.create();
 
             // Add methods from other classes
-            addMethods(JsonRPCMethods.class);
-            addMethods(DocumentationMethods.class);
-            addMethods(ExperimentsMethods.class);
+            addRPCMethods(JsonRPCMethods.class);
+            addRPCMethods(DocumentationMethods.class);
+            addRPCMethods(ExperimentsMethods.class);
         }
     }
 
-    public static void addMethods(Class<?> jsonRPCMethodsClass) {
+    public static void addRPCMethods(Class<?> jsonRPCMethodsClass) {
         final JsonRPCMethodsHolder def = jsonRPCMethodsClass.getAnnotation(JsonRPCMethodsHolder.class);
+
         for (Method method : jsonRPCMethodsClass.getDeclaredMethods()) {
             final RPCMethod rpcMethod = method.getAnnotation(RPCMethod.class);
             if (rpcMethod != null) {
                 String name = "".equals(rpcMethod.name()) ? method.getName() : rpcMethod.name();
                 if (!def.value().isEmpty())
                     name = def.value() + "." + name;
-                methods.put(name, new MethodDescription(method));
+                methods.put(name, new RPCMethodCaller(method));
+            }
+        }
+
+        for (Class<?> aClass : jsonRPCMethodsClass.getDeclaredClasses()) {
+            if (JsonCallable.class.isAssignableFrom(aClass)) {
+                final RPCMethod rpcMethod = aClass.getAnnotation(RPCMethod.class);
+                String name = rpcMethod == null || "".equals(rpcMethod.name()) ? aClass.getName() : rpcMethod.name();
+                if (!def.value().isEmpty())
+                    name = def.value() + "." + name;
+                methods.put(name, new RPCClassCaller(aClass));
             }
         }
     }
@@ -177,16 +184,17 @@ public class JsonRPCMethods extends HttpServlet {
             }
 
 
-            Collection<Arguments> candidates = methods.get(command);
+            Collection<RPCCaller> candidates = methods.get(command);
             int max = Integer.MIN_VALUE;
-            Arguments argmax = null;
+            RPCCaller argmax = null;
 
             candidateLoop:
-            for (Arguments candidate : candidates) {
+            for (RPCCaller candidate : candidates) {
                 int score = Integer.MAX_VALUE;
-                for (RPCArgument argument : candidate.arguments.values()) {
-                    final boolean has = p.has(argument.name());
-                    if (argument.required() && !has) {
+                for (Object _argument : candidate.arguments.values()) {
+                    ArgumentDescriptor argument = (ArgumentDescriptor) _argument;
+                    final boolean has = p.has(argument.name);
+                    if (argument.required && !has) {
                         continue candidateLoop;
                     }
                     if (!has) --score;
@@ -646,7 +654,7 @@ public class JsonRPCMethods extends HttpServlet {
         return nbUpdated;
     }
 
-    @RPCMethod(help = "Puts back a job into the waiting queue")
+    @RPCMethod(name = "restart", help = "Puts back a job into the waiting queue")
     static public class Restart implements JsonCallable {
         @RPCArgument(name = "id", help = "The id of the job (string or integer)")
         String id;
@@ -887,45 +895,6 @@ public class JsonRPCMethods extends HttpServlet {
         return n;
     }
 
-    @RPCMethod(help = "Puts back a job into the waiting queue")
-    public int restartJob(
-            @RPCArgument(name = "name", help = "The ID of the job") String name,
-            @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated") boolean restartDone,
-            @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done") boolean recursive
-    ) throws Exception {
-        int nbUpdated = 0;
-
-        ResourceState rsrcState;
-        Resource resource;
-        resource = Resource.getByLocator(name);
-
-        if (resource == null)
-            throw new XPMRuntimeException("Job not found [%s]", name);
-
-        rsrcState = resource.getState();
-
-        if (rsrcState == ResourceState.RUNNING)
-            throw new XPMRuntimeException("Job is running [%s]", rsrcState);
-
-        // The job is active, so we have nothing to do
-        if (rsrcState.isActive())
-            return 0;
-
-        if (!restartDone && rsrcState == ResourceState.DONE)
-            return 0;
-
-        ((Job) resource).restart();
-        nbUpdated++;
-
-        // If the job was done, we need to restart the dependences
-        if (recursive && rsrcState == ResourceState.DONE) {
-            nbUpdated += invalidate(resource);
-        }
-        return nbUpdated;
-
-    }
-
-
     /**
      * List jobs
      */
@@ -979,44 +948,55 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    public abstract static class Arguments {
-        public abstract Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException;
+    public static class ArgumentDescriptor {
+        String name;
+        boolean required;
+
+        ArgumentDescriptor(RPCArgument annotation) {
+            this.required = annotation.required();
+            this.name = annotation.name();
+        }
+    }
+
+    public abstract static class RPCCaller<T extends ArgumentDescriptor> {
+        public abstract Object call(Object o, JsonObject p) throws Throwable;
 
         public abstract Class<?> getDeclaringClass();
 
         /**
          * Arguments
          */
-        HashMap<String, RPCArgument> arguments = new HashMap<>();
+        HashMap<String, T> arguments = new HashMap<>();
 
     }
 
+    public static class MethodArgumentDescriptor extends ArgumentDescriptor {
+        int position;
 
-    static public class MethodDescription extends Arguments {
+        public MethodArgumentDescriptor(RPCArgument annotation, int position) {
+            super(annotation);
+            this.position = position;
+        }
+    }
+
+    static public class RPCMethodCaller extends RPCCaller<MethodArgumentDescriptor> {
         /**
          * Method
          */
         Method method;
 
-        /**
-         * Arguments
-         */
-        RPCArgument list[];
 
-
-        public MethodDescription(Method method) {
+        public RPCMethodCaller(Method method) {
             this.method = method;
             final Type[] types = method.getGenericParameterTypes();
             Annotation[][] annotations = method.getParameterAnnotations();
-            list = new RPCArgument[types.length];
             mainLoop:
             for (int i = 0; i < annotations.length; i++) {
                 for (int j = 0; j < annotations[i].length; j++) {
                     if (annotations[i][j] instanceof RPCArgument) {
                         final RPCArgument annotation = (RPCArgument) annotations[i][j];
                         final String name = annotation.name();
-                        list[i] = annotation;
-                        arguments.put(name, annotation);
+                        arguments.put(name, new MethodArgumentDescriptor(annotation, i));
                         continue mainLoop;
                     }
                 }
@@ -1029,18 +1009,17 @@ public class JsonRPCMethods extends HttpServlet {
         public Object call(Object o, JsonObject p) throws InvocationTargetException, IllegalAccessException {
             Object[] args = new Object[method.getParameterCount()];
             Gson gson = new Gson();
-            for(int i = 0; i < args.length; ++i) {
-                final JsonElement jsonElement = p.get(list[i].name());
-                if (jsonElement != null) {
-                    final Type type = method.getGenericParameterTypes()[i];
-                    try {
-                        args[i] = gson.fromJson(jsonElement, type);
-                    } catch(RuntimeException e) {
-                        throw new XPMCommandException(e).addContext("while processing parameter %s", list[i].name());
-                    }
-                } else {
-                    assert !list[i].required();
+            final Type[] types = method.getGenericParameterTypes();
+            int index = 0;
+            for (MethodArgumentDescriptor descriptor : arguments.values()) {
+                final JsonElement jsonElement = p.get(descriptor.name);
+                final Type type = types[index];
+                try {
+                    args[index] = gson.fromJson(jsonElement, type);
+                } catch (RuntimeException e) {
+                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
                 }
+                ++index;
             }
 
             return method.invoke(o, args);
@@ -1053,4 +1032,65 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
+    public static class ClassArgumentDescriptor extends ArgumentDescriptor {
+
+        private final Field field;
+
+        public ClassArgumentDescriptor(RPCArgument annotation, Field field) {
+            super(annotation);
+            final String name = annotation.name();
+            this.name = name.isEmpty() ? field.getName() : name;
+            this.field = field;
+        }
+    }
+
+    private static class RPCClassCaller extends RPCCaller<ClassArgumentDescriptor> {
+        private final Class<?> rpcClass;
+
+        public RPCClassCaller(Class<?> rpcClass) {
+            this.rpcClass = rpcClass;
+            if (!JsonCallable.class.isAssignableFrom(rpcClass)) {
+                throw new AssertionError("An RPC method class should implement the JsonCallable interface");
+            }
+
+            for (Field field : rpcClass.getDeclaredFields()) {
+                final RPCArgument annotation = field.getAnnotation(RPCArgument.class);
+                if (!Modifier.isStatic(rpcClass.getModifiers()))
+                    throw new AssertionError("An RPC method class should be static");
+                if (annotation != null) {
+                    final ClassArgumentDescriptor descriptor = new ClassArgumentDescriptor(annotation, field);
+                    arguments.put(descriptor.name, descriptor);
+                }
+            }
+        }
+
+        @Override
+        public Object call(Object o, JsonObject p) throws Throwable {
+            Gson gson = new Gson();
+            final JsonCallable object = (JsonCallable) rpcClass.newInstance();
+            for (ClassArgumentDescriptor descriptor : arguments.values()) {
+                final JsonElement jsonElement = p.get(descriptor.name);
+                final Type type = descriptor.field.getGenericType();
+                try {
+                    Object value = gson.fromJson(jsonElement, type);
+                    if (!descriptor.field.isAccessible()) {
+                        descriptor.field.setAccessible(true);
+                        descriptor.field.set(object, value);
+                        descriptor.field.setAccessible(false);
+                    } else {
+                        descriptor.field.set(object, value);
+                    }
+                } catch (RuntimeException e) {
+                    throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
+                }
+            }
+
+            return object.call();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return rpcClass;
+        }
+    }
 }
