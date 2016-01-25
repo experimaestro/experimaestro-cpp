@@ -473,9 +473,10 @@ def command_run_python(args):
         files.append(["<post>", args.post])
 
     env = dict(os.environ)
-    for x in args.env:
-        key, value = x.split("=", 1)
-        env.update({key: value})
+    if args.env is not None:
+        for x in args.env:
+            key, value = x.split("=", 1)
+            env.update({key: value})
 
     logging.debug("Running python scripts %s" % [s[0] for s in files])
     params = {"files": files, "environment": env, "pythonpath": pythonpath}
