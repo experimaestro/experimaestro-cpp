@@ -132,7 +132,7 @@ public class PythonRunner implements AutoCloseable {
     /**
      * Gather types, etc.
      */
-    static private void init() {
+    public static void init() {
         if (TYPES == null) {
             TYPES = new HashMap<>();
             WRAPPERS = new HashMap<>();

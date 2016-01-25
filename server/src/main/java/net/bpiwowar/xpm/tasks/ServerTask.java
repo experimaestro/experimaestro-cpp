@@ -24,6 +24,7 @@ package net.bpiwowar.xpm.tasks;
 import bpiwowar.argparser.ArgumentClass;
 import bpiwowar.experiments.AbstractTask;
 import bpiwowar.experiments.TaskDescription;
+import net.bpiwowar.xpm.manager.python.PythonRunner;
 import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
 import net.bpiwowar.xpm.server.rpc.JsonRPCServlet;
 import org.apache.commons.configuration.HierarchicalINIConfiguration;
@@ -121,6 +122,7 @@ public class ServerTask extends AbstractTask {
 
         // Early initialization to detect errors
         JavaScriptRunner.init();
+        PythonRunner.init();
 
         // Main repository
         final Repositories repositories = new Repositories(new File("/").toPath());

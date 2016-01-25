@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -72,9 +73,11 @@ public class Scripting {
     }
 
     static List<Class<?>> TYPES;
+    static HashMap<String, ClassDescription> CLASSES;
 
     /**
      * List all types
+     *
      * @param f The callback function
      */
     public static void forEachType(Consumer<Class> f) {
@@ -82,8 +85,14 @@ public class Scripting {
     }
 
     public static List<Class<?>> getTypes() {
+        init();
+        return TYPES;
+    }
+
+    public static void init() {
         if (TYPES == null) {
             TYPES = new ArrayList<>();
+            CLASSES = new HashMap<>();
             String classname = null;
             try (InputStream in = Scripting.class.getResource("/META-INF/net.bpiwowar.xpm.scripting.xml").openStream()) {
                 DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
@@ -96,6 +105,11 @@ public class Scripting {
                     classname = classes.item(i).getTextContent();
                     final Class<?> aClass = ScriptContext.class.getClassLoader().loadClass(classname);
                     TYPES.add(aClass);
+                    final ClassDescription classDescription = ClassDescription.analyzeClass(aClass);
+                    final String className = classDescription.getClassName();
+                    if (className == null || className.isEmpty())
+                        throw new AssertionError("Class names of registered types should not be null or empty");
+                    CLASSES.put(className, classDescription);
                 }
             } catch (IOException e) {
                 throw new XPMRuntimeException("Cannot find scripting file");
@@ -105,7 +119,6 @@ public class Scripting {
                 throw new XPMRuntimeException(e, "Could not find class %s", classname);
             }
         }
-        return TYPES;
     }
 
     public static void forEachFunction(Consumer<MethodFunction> f) {
@@ -121,5 +134,10 @@ public class Scripting {
         f.accept("logger", new ScriptingLogger("xpm"));
         f.accept("tasks", new Tasks());
         f.accept("xpm", new XPM());
+    }
+
+    public static ClassDescription getClassDescription(String classname) {
+        init();
+        return CLASSES.get(classname);
     }
 }

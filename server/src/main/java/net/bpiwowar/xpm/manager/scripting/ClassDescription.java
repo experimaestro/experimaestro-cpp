@@ -56,7 +56,7 @@ public class ClassDescription {
 
     private Map<String, PropertyAccess> fields = new HashMap<>();
 
-    public ClassDescription(Class<?> theClass) {
+    private ClassDescription(Class<?> theClass) {
         this.wrappedClass = theClass;
     }
 
