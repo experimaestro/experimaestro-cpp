@@ -184,9 +184,6 @@ public class ServerTask extends AbstractTask {
         final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
         context.addServlet(webSocketServletHolder, "/web-socket");
 
-        // --- Add the status servlet
-
-        context.addServlet(new ServletHolder(new StatusServlet(serverSettings, scheduler)), "/status/*");
 
         // --- Add the status servlet
 
