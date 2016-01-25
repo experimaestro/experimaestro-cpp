@@ -126,6 +126,7 @@ public class PythonRunner implements AutoCloseable {
         // Add properties
         xpmModule.__setattr__("tasks", wrap(new Tasks()));
         xpmModule.__setattr__("logger", wrap(new ScriptingLogger("xpm")));
+        xpmModule.__setattr__("env", wrap(environment));
     }
 
     /**
