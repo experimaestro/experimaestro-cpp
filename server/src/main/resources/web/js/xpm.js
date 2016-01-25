@@ -202,44 +202,72 @@ $().ready(function () {
     var load_tasks = function () {
         var select = $("#experiment-chooser");
         var tasks_chooser = $("#task-chooser");
-        tasks_chooser.children().remove();
         xpm.task2resource = {}
         xpm.taskname2id = {};
+        xpm.filtered_tasks = new Set();
         var experiment = select.find("option:selected").text();
+        $("#resources").children().remove();
         xpm.server.call('experiments.resources', {identifier: experiment},
             function (r) {
                 var tasks = r.tasks;
+                var available_tasks = [];
                 var set = new Set();
                 for (var tid in tasks) {
+                    tid = Number.parseInt(tid);
                     xpm.task2resource[tid] = []
 
                     var tname = tasks[tid];
                     if (!set.has(tname)) {
                         xpm.taskname2id[tname] = [tid];
                         set.add(tname);
-                        tasks_chooser
-                            .append(
-                                $e("input").attr("type", "checkbox").attr("id", "task-" + tname).attr("checked", "1")
-                            )
-                            .append(
-                                $e("label").attr("for", "task-" + tname).append($t(tname))
-                            );
+                        available_tasks.push(tname);
                     } else {
                         xpm.taskname2id[tname].push(tid);
                     }
                 }
 
-                tasks_chooser.find("input").button().on("click", function () {
-                    var taskname = this.id.substr(5);
+                function change_state(taskname, display) {
                     var taskids = xpm.taskname2id[taskname];
-                    var checked = $(this).is(':checked');
-
-                    for(var i = 0; i < taskids.length; ++i) {
-                        $.each(xpm.task2resource[taskids[i]], function(ix, e) {
-                            if (checked)  e.css("display", "inherit"); else e.css("display", "none");
-                        });
-
+                    for (var i = 0; i < taskids.length; ++i) {
+                        var resources = xpm.task2resource[taskids[i]];
+                        if (display) xpm.filtered_tasks.add(taskids[i]);
+                        else xpm.filtered_tasks.delete(taskids[i]);
+                        for(var j = 0; j < resources.length; ++j) {
+                            $(resources[j]).css("display", display ? "inherit" : "none");
+                        }
                     }
+                }
+
+                var tag_count = 0;
+                tasks_chooser.tagit({
+                    placeholderText: "Filter by task",
+                    autocomplete: {
+                        source: function (request, response) {
+                            // delegate back to autocomplete, but extract the last term
+                            response($.ui.autocomplete.filter(available_tasks, request.term));
+                        }
+                    },
+                    beforeTagAdded: function (event, ui) {
+                        return ui.tagLabel in xpm.taskname2id;
+                    },
+
+                    afterTagAdded: function (event, ui) {
+                        // Remove everything for the first one
+                        if (tag_count == 0) $("#resources").children().css("display", "none");
+                        ++tag_count;
+                        change_state(ui.tagLabel, true);
+                    },
+
+                    afterTagRemoved: function (event, ui) {
+                        --tag_count;
+                        if (tag_count == 0) {
+                            xpm.filtered_tasks.clear();
+                            $("#resources").children().css("display", "inherit");
+                        } else {
+                            change_state(ui.tagLabel, "none");
+                        }
+                    }
+
                 });
 
                 var date = new Date(r.experiment.timestamp * 1000);
@@ -335,6 +363,10 @@ $().ready(function () {
                 );
 
             item.get(0).state = r.state;
+
+            if (xpm.filtered_tasks.size > 0 && !xpm.filtered_tasks.has(r.taskid)) {
+                item.css("display", "none");
+            }
 
             $("#resources").append(item);
             makelinks(item);
@@ -460,7 +492,7 @@ $().ready(function () {
                 });
     }
 
-    // Links
+// Links
     $(".xpm-resource-list .link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
     $("#header .links a").button();
@@ -478,11 +510,11 @@ $().ready(function () {
     statefilters.button().on("click", click_state);
     statefilters.each(click_state);
 
-    // Transform resource detailed view in tree
+// Transform resource detailed view in tree
     $("#resource-detail-content").jstree();
 
 
-    // Create websocket
+// Create websocket
     var websocket_protocol = window.location.protocol == "https" ? "wss" : "ws";
     var websocket_url = websocket_protocol + "://" + window.location.host + "/web-socket";
 
@@ -572,26 +604,26 @@ $().ready(function () {
     xpm.server.notify("ping");
 
 
-    //var websocket = create_websocket();
+//var websocket = create_websocket();
 
-    //$("#connection").on("click", function () {
-    //    switch (websocket.readyState) {
-    //        case WebSocket.OPEN:
-    //            websocket.close();
-    //            break;
-    //        case WebSocket.CLOSED:
-    //            websocket = create_websocket();
-    //            break;
-    //        default:
-    //            // Do nothing: transition between different
-    //            websocket.onerror = function (e) {
-    //                noty({text: "Web Socket cannot be modified (closing or opening)", type: 'warning', timeout: 5000})
-    //            };
-    //    }
-    //});
+//$("#connection").on("click", function () {
+//    switch (websocket.readyState) {
+//        case WebSocket.OPEN:
+//            websocket.close();
+//            break;
+//        case WebSocket.CLOSED:
+//            websocket = create_websocket();
+//            break;
+//        default:
+//            // Do nothing: transition between different
+//            websocket.onerror = function (e) {
+//                noty({text: "Web Socket cannot be modified (closing or opening)", type: 'warning', timeout: 5000})
+//            };
+//    }
+//});
 
 
-    // Activate tabs
+// Activate tabs
     $(".tab").tabs({
         beforeActivate: function (event, ui) {
             var tabid = ui.newPanel.attr("id");
