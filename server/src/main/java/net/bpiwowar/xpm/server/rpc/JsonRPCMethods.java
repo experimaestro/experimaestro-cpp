@@ -1015,16 +1015,14 @@ public class JsonRPCMethods extends HttpServlet {
             Object[] args = new Object[method.getParameterCount()];
             Gson gson = new Gson();
             final Type[] types = method.getGenericParameterTypes();
-            int index = 0;
             for (MethodArgumentDescriptor descriptor : arguments.values()) {
                 final JsonElement jsonElement = p.get(descriptor.name);
-                final Type type = types[index];
+                final Type type = types[descriptor.position];
                 try {
-                    args[index] = gson.fromJson(jsonElement, type);
+                    args[descriptor.position] = gson.fromJson(jsonElement, type);
                 } catch (RuntimeException e) {
                     throw new XPMCommandException(e).addContext("while processing parameter %s", descriptor.name);
                 }
-                ++index;
             }
 
             return method.invoke(o, args);
