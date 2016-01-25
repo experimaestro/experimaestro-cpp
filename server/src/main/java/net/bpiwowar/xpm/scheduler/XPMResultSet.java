@@ -88,4 +88,8 @@ public class XPMResultSet implements AutoCloseable {
     public boolean wasNull() throws SQLException {
         return resultSet.wasNull();
     }
+
+    public ResultSet get() {
+        return resultSet;
+    }
 }

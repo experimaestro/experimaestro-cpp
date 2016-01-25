@@ -222,7 +222,7 @@ final public class DatabaseObjects<T extends Identifiable> {
         }
     }
 
-    private T getOrCreate(ResultSet result) throws SQLException {
+    public T getOrCreate(ResultSet result) throws SQLException {
         // Get from cache
         long id = result.getLong(1);
         T object = getFromCache(id);
@@ -350,5 +350,4 @@ final public class DatabaseObjects<T extends Identifiable> {
             throw new XPMRuntimeException(e, "Error while deserializing JSON for [%s]", object);
         }
     }
-
 }

@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.manager.experiments;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongRBTreeSet;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedSQLException;
@@ -32,7 +31,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -203,13 +201,24 @@ public class Experiment implements Identifiable {
      * @return The resources as an iterable
      * @throws SQLException
      */
-    public CloseableIterable<Resource> resources() throws SQLException {
+    public List<TaskResource> resources() throws SQLException {
         final DatabaseObjects<Resource> resources = Scheduler.get().resources();
-        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status " +
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status, et.id, et.identifier " +
                 "FROM Resources r, ExperimentTasks et, ExperimentResources er " +
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?";
-        return resources.find(query,
-                st -> st.setLong(1, this.getId()));
+        List<TaskResource> list = new ArrayList<>();
+        Scheduler.statement(query)
+                .setLong(1, this.getId())
+                .stream()
+                .forEach(rs -> {
+                    try {
+                        final Resource resource = resources.getOrCreate(rs.get());
+                        list.add(new TaskResource(rs.getLong(5), rs.getString(6), resource));
+                    } catch (SQLException e) {
+                        throw new WrappedSQLException(e);
+                    }
+                });
+        return list;
 
     }
 
@@ -264,7 +273,7 @@ public class Experiment implements Identifiable {
                 "WHERE NOT EXISTS(SELECT * FROM ExperimentResources er WHERE er.resource = r.id) " +
                 "ORDER BY r.id DESC";
 
-        LongRBTreeSet set = new LongRBTreeSet((a,b) -> Long.compare(b, a));
+        LongRBTreeSet set = new LongRBTreeSet((a, b) -> Long.compare(b, a));
         try (final XPMStatement st = Scheduler.statement(query)) {
             st.execute();
             long oldId = -1;

@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
@@ -58,27 +59,53 @@ public class ExperimentsMethods {
         }
     }
 
+    @RPCMethod(name = "task-references")
+    static class ListTaskReferences implements JsonCallable {
+        @RPCArgument
+        String identifier;
+
+        @RPCArgument
+        long timestamp;
+
+        @Override
+        public Object call() throws Throwable {
+            return null;
+        }
+    }
+
 
     @RPCMethod(help = "Find resources by experiment", name = "resources")
     public JsonObject resources(
             @RPCArgument(name = "identifier") String identifier
     ) throws SQLException {
         JsonObject response = new JsonObject();
-        JsonArray resources = new JsonArray();
-        response.add("resources", resources);
+
         final Experiment experiment = Experiment.findByIdentifier(identifier);
         response.add("experiment", toJson(experiment));
+
+        JsonObject tasks = new JsonObject();
+        response.add("tasks", tasks);
+
+        JsonArray resources = new JsonArray();
+        response.add("resources", resources);
         if (experiment != null) {
-            experiment.resources().forEach(
-                    r -> resources.add(toJson(r))
-            );
+            experiment.resources().forEach(rt -> {
+                final String taskIdString = String.valueOf(rt.taskId);
+                if (!tasks.has(taskIdString)) {
+                    tasks.addProperty(taskIdString, rt.taskIdentifier);
+                }
+                final JsonObject json = toJson(rt.resource);
+                json.addProperty("taskid", rt.taskId);
+                resources.add(json);
+            });
+
         } else {
             throw new XPMCommandException("No experiment with identifier [" + identifier + "] found");
         }
         return response;
     }
 
-    private JsonElement toJson(Resource r) {
+    private JsonObject toJson(Resource r) {
         JsonObject o = new JsonObject();
         o.add("id", new JsonPrimitive(r.getId()));
         o.add("locator", new JsonPrimitive(r.getLocator().toString()));

@@ -201,17 +201,57 @@ $().ready(function () {
      */
     var load_tasks = function () {
         var select = $("#experiment-chooser");
+        var tasks_chooser = $("#task-chooser");
+        tasks_chooser.children().remove();
+        xpm.task2resource = {}
+        xpm.taskname2id = {};
         var experiment = select.find("option:selected").text();
         xpm.server.call('experiments.resources', {identifier: experiment},
             function (r) {
+                var tasks = r.tasks;
+                var set = new Set();
+                for (var tid in tasks) {
+                    xpm.task2resource[tid] = []
+
+                    var tname = tasks[tid];
+                    if (!set.has(tname)) {
+                        xpm.taskname2id[tname] = [tid];
+                        set.add(tname);
+                        tasks_chooser
+                            .append(
+                                $e("input").attr("type", "checkbox").attr("id", "task-" + tname).attr("checked", "1")
+                            )
+                            .append(
+                                $e("label").attr("for", "task-" + tname).append($t(tname))
+                            );
+                    } else {
+                        xpm.taskname2id[tname].push(tid);
+                    }
+                }
+
+                tasks_chooser.find("input").button().on("click", function () {
+                    var taskname = this.id.substr(5);
+                    var taskids = xpm.taskname2id[taskname];
+                    var checked = $(this).is(':checked');
+
+                    for(var i = 0; i < taskids.length; ++i) {
+                        $.each(xpm.task2resource[taskids[i]], function(ix, e) {
+                            if (checked)  e.css("display", "inherit"); else e.css("display", "none");
+                        });
+
+                    }
+                });
+
                 var date = new Date(r.experiment.timestamp * 1000);
                 $("#experiment-timestamp").text(date.toString());
                 $.each(r.resources, function (ix, v) {
-                    add_resource(v);
+                    var r = add_resource(v);
+                    xpm.task2resource[v.taskid].push(r);
                 });
             },
             jsonrpc_error
-        );
+        )
+        ;
     }
 
 
@@ -303,6 +343,8 @@ $().ready(function () {
             if (r.state == "running" && r.progress > 0) {
                 resource_progress(r);
             }
+
+            return item;
         }
     }
 
