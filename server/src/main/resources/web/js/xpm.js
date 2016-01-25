@@ -270,7 +270,7 @@ $().ready(function () {
 
                 });
 
-                var date = new Date(r.experiment.timestamp * 1000);
+                var date = new Date(r.experiment.timestamp);
                 $("#experiment-timestamp").text(date.toString());
                 $.each(r.resources, function (ix, v) {
                     var r = add_resource(v);
@@ -499,6 +499,9 @@ $().ready(function () {
 
     var click_state = function (e) {
         var checked = $(this).is(':checked');
+        //if (e.altKey) {
+        //    console.log("yo");
+        //}
         if (checked) {
             $("#resources").addClass(this.id);
         } else {
@@ -654,12 +657,12 @@ $().ready(function () {
                     jsonrpc_error
                 );
             } else if (tabid == "xpm-help") {
-                xpm.server.call("documentation.classes", [],
+                xpm.server.call("documentation.classes", {},
                     function (r) {
                         var select = $("#help-class-chooser");
                         $.each(r, function (ix, e) {
                             select.append($e("option").text(e));
-                        })
+                        });
                     },
                     jsonrpc_error
                 );

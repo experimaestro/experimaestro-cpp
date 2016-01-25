@@ -10,9 +10,21 @@ import java.util.stream.Stream;
  */
 @JsonRPCMethodsHolder("documentation")
 public class DocumentationMethods {
-    /** Return registered classes */
-    @RPCMethod(help = "Sets a log level")
+    /**
+     * Return registered classes
+     */
+    @RPCMethod(help = "Get the classes pre-defined for scripts")
     public static Stream<String> classes() {
         return Scripting.getTypes().stream().map(t -> ClassDescription.analyzeClass(t).getClassName());
     }
+
+    @RPCMethod(help = "Get the classes pre-defined for scripts")
+    public static void methods(
+            @RPCArgument(name = "classname") String classname
+    ) {
+
+        ClassDescription cd = Scripting.getClassDescription(classname);
+        cd.getMethods();
+    }
+
 }
