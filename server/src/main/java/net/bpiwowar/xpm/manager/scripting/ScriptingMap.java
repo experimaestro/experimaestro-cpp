@@ -25,7 +25,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * A JavaScript wrapper for {@linkplain Path}
+ * A wrapper for {@linkplain Map}
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
@@ -38,13 +38,18 @@ public class ScriptingMap extends WrapperObject<Map> {
     }
 
     @Expose(mode = ExposeMode.FIELDS)
-    public Object get(String value) {
-        return object.get(value);
+    public Object get(String key) {
+        return object.get(key);
     }
 
     @Expose(mode = ExposeMode.FIELDS)
     public void put(Object key, Object value) {
         object.put(key, value);
+    }
+
+    @Expose
+    public Object get(String key, Object defaultValue) {
+        return object.getOrDefault(key, defaultValue);
     }
 
     @Expose()
