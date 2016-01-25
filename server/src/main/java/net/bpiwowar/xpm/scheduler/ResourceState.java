@@ -83,6 +83,7 @@ public enum ResourceState {
      */
     final static EnumSet<ResourceState> FINISHED_STATE
             = EnumSet.of(DONE, ERROR);
+    public static final EnumSet<ResourceState> WAITING_STATES = EnumSet.of(WAITING, READY);
 
     /**
      * Returns true if the resource is not done and
@@ -103,6 +104,14 @@ public enum ResourceState {
         return this == WAITING || this == RUNNING || this == READY;
     }
 
+    /**
+     * Returns whether a job is waiting to run (WAITING or READY)
+     *
+     * @return
+     */
+    public boolean isWaiting() {
+        return this == WAITING ||  this == READY;
+    }
 
     @Override
     public String toString() {

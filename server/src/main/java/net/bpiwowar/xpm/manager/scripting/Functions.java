@@ -44,6 +44,7 @@ import net.bpiwowar.xpm.manager.tasks.TasksLoader;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Hierarchy;
@@ -67,6 +68,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
@@ -388,12 +390,28 @@ public class Functions {
         return null;
     }
 
-    @Expose()
+    @Expose(optional = 1)
     @Help("Set the experiment for all future commands")
-    static public void set_experiment(String dotname) throws ExperimaestroCannotOverwrite, SQLException {
+    static public void set_experiment(
+            @Argument(name = "identifier", help = "Name of the experiment") String identifier,
+            @Argument(name = "holdPrevious") Boolean holdPrevious
+    ) throws ExperimaestroCannotOverwrite, SQLException {
         final ScriptContext scriptContext = ScriptContext.get();
         if (!scriptContext.simulate()) {
-            Experiment experiment = new Experiment(dotname, System.currentTimeMillis());
+            // We first put on hold all the resources belonging to this experiment
+            if (holdPrevious == null || holdPrevious) {
+                for (Resource resource : Experiment.resourcesByIdentifier(identifier, ResourceState.WAITING_STATES)) {
+                    synchronized (resource.getState()) {
+                        if (resource.getState().isWaiting()) {
+                            resource.setState(ResourceState.ON_HOLD);
+                        }
+                    }
+                }
+            }
+
+
+
+            Experiment experiment = new Experiment(identifier, System.currentTimeMillis());
             experiment.save();
             scriptContext.setExperiment(experiment);
         }

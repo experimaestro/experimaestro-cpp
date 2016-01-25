@@ -23,15 +23,24 @@ import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.WrappedSQLException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.scheduler.DatabaseObjects;
+import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.XPMResultSet;
+import net.bpiwowar.xpm.scheduler.XPMStatement;
 import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.Functional;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -219,7 +228,36 @@ public class Experiment implements Identifiable {
                     }
                 });
         return list;
+    }
 
+    /**
+     * Returns all resources associated with this experiment
+     *
+     * @param identifier
+     * @return The resources as an iterable
+     * @throws SQLException
+     */
+    static public List<Resource> resourcesByIdentifier(String identifier, EnumSet<ResourceState> states) throws SQLException {
+        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status, et.id, et.identifier " +
+                "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
+                "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.name=? AND r.status in ("
+                + states.stream().map(s -> Integer.toString(s.value())).collect(Collectors.joining(","))
+                + ")";
+
+        List<Resource> list = new ArrayList<>();
+        Scheduler.statement(query)
+                .setString(1, identifier)
+                .stream()
+                .forEach(rs -> {
+                    try {
+                        final Resource resource = resources.getOrCreate(rs.get());
+                        list.add(resource);
+                    } catch(SQLException e) {
+                        throw new WrappedSQLException(e);
+                    }
+                });
+        return list;
     }
 
     public static Stream<ExperimentReference> experimentNames() throws WrappedSQLException {
