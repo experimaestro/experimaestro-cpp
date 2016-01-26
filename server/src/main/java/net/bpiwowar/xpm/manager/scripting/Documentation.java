@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.manager.scripting;
 
 import net.bpiwowar.xpm.documentation.*;
 import net.bpiwowar.xpm.documentation.Documentation.Printer;
-import net.bpiwowar.xpm.manager.js.JSBaseObject;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
@@ -124,10 +123,6 @@ public class Documentation {
     }
 
     private static String javascriptName(Class<?> aClass) {
-        if (JSBaseObject.class.isAssignableFrom(aClass)) {
-            return ClassDescription.getClassName(aClass);
-        }
-
         if (aClass.isArray())
             return javascriptName(aClass.getComponentType()) + "[]";
 
@@ -190,7 +185,7 @@ public class Documentation {
                 DefinitionList list = new DefinitionList();
                 classes.add(new Text(type.getClassName()), list);
                 type.getMethods().forEach((name, methods) -> {
-                    methods.forEach(method -> documentMethod(list, method));
+//                    methods.for documentMethod(list, methods);
                 });
             });
             printer.write(classes);

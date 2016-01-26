@@ -30,7 +30,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Represents all the methods with the same name within the same object
@@ -71,7 +71,7 @@ public class MethodFunction extends GenericFunction {
         });
     }
 
-    public void add(List<Method> methods) {
+    public void add(Collection<Method> methods) {
         groups.add(new Group(methods));
     }
 
@@ -79,13 +79,13 @@ public class MethodFunction extends GenericFunction {
      * Represent all the methods from a given ancestor (or self)
      */
     static class Group {
-        private List<Method> methods = new ArrayList<>();
+        private Collection<Method> methods = new ArrayList<>();
 
-        Group(List<Method> methods) {
+        Group(Collection<Method> methods) {
             this.methods = methods;
         }
 
-        public List<Method> getMethods() {
+        public Collection<Method> getMethods() {
             return methods;
         }
     }

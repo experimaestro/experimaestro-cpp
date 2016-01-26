@@ -47,23 +47,11 @@ class PythonObject extends PyObject {
     }
 
 
-    private MethodFunction getMethodFunction(Object key) {
-        MethodFunction function = new MethodFunction(key);
-
-        ArrayList<Method> methods = description.getMethods().get(key);
-        if (methods != null && !methods.isEmpty())
-            function.add(methods);
-
-
-        return function;
-    }
-
-
     @Override
     public PyObject __findattr_ex__(String name) {
         // Search for a function
-        MethodFunction function = getMethodFunction(name);
-        if (!function.isEmpty()) {
+        MethodFunction function = description.getMethod(name);
+        if (function != null) {
             return new PythonMethod(object, function);
         }
 
@@ -74,7 +62,7 @@ class PythonObject extends PyObject {
         }
 
         // Search for property accessor
-        function = getMethodFunction(ExposeMode.FIELDS);
+        function = description.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             return PythonRunner.wrap(function.call(pcx, object, null, name));
@@ -96,7 +84,7 @@ class PythonObject extends PyObject {
 
     @Override
     public PyObject __finditem__(PyObject key) {
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = description.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             return PythonRunner.wrap(function.call(pcx, object, null, key));
@@ -107,7 +95,7 @@ class PythonObject extends PyObject {
 
     @Override
     public void __setattr__(String name, PyObject value) {
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = description.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             function.call(pcx, object, null, name, value);
@@ -129,7 +117,7 @@ class PythonObject extends PyObject {
 
     @Override
     public void __setitem__(PyObject key, PyObject value) {
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = description.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             PythonRunner.wrap(function.call(pcx, object, null, key, value));
@@ -140,7 +128,7 @@ class PythonObject extends PyObject {
 
     public boolean __contains__(PyObject o) {
         // FIXME: should have a FIELD_EXIST
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = description.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             final Object call = function.call(pcx, object, null, o);
@@ -152,7 +140,7 @@ class PythonObject extends PyObject {
 
     @Override
     public PyObject __iter__() {
-        MethodFunction function = getMethodFunction(ExposeMode.ITERATOR);
+        MethodFunction function = description.getMethod(ExposeMode.ITERATOR);
         if (function != null && !function.isEmpty()) {
             final PythonContext pcx = new PythonContext();
             final Iterator iterator = (Iterator) function.call(pcx, object, null);
@@ -165,13 +153,10 @@ class PythonObject extends PyObject {
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
-        final ArrayList<Method> methods = description.getMethods().get(ExposeMode.CALL);
-        final String key = "()";
+        final MethodFunction methods = description.getMethods().get(ExposeMode.CALL);
         if (methods != null) {
-            final MethodFunction methodFunction = new MethodFunction(key);
-            methodFunction.add(methods);
             final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(methodFunction.call(pcx, object, null, args));
+            return PythonRunner.wrap(methods.call(pcx, object, null, args));
         }
 
         return super.__call__(args, keywords);
@@ -188,12 +173,10 @@ class PythonObject extends PyObject {
     }
 
     private Object runFunction(ExposeMode mode, Object... args) {
-        final ArrayList<Method> methods = description.getMethods().get(mode);
+        final MethodFunction methods = description.getMethods().get(mode);
         if (methods != null) {
-            final MethodFunction methodFunction = new MethodFunction(mode.toString());
-            methodFunction.add(methods);
             final PythonContext pcx = new PythonContext();
-            return methodFunction.call(pcx, object, null, args);
+            return methods.call(pcx, object, null, args);
         }
         return NOT_FOUND;
     }

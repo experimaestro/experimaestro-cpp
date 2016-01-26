@@ -19,21 +19,19 @@ package net.bpiwowar.xpm.utils;
  */
 
 import com.google.common.collect.AbstractIterator;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.TypeName;
+import net.bpiwowar.xpm.manager.js.JSNamespaceContext;
+import net.bpiwowar.xpm.manager.json.*;
+import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.utils.log.Logger;
 import org.mozilla.javascript.*;
-import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xmlimpl.XMLLibImpl;
 import org.w3c.dom.*;
 import org.w3c.dom.Node;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.js.JSBaseObject;
-import net.bpiwowar.xpm.manager.js.JSNamespaceContext;
-import net.bpiwowar.xpm.manager.json.*;
-import net.bpiwowar.xpm.manager.scripting.*;
-import net.bpiwowar.xpm.scheduler.Resource;
-import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
@@ -161,9 +159,9 @@ public class JSUtils {
 
 
     /**
-     * @see org.mozilla.javascript.RhinoException#getScriptStack()
      * @param ex
      * @return A stack
+     * @see org.mozilla.javascript.RhinoException#getScriptStack()
      */
     static public ScriptStackElement[] getScriptStackTrace(Throwable ex) {
         List<ScriptStackElement> list = new ArrayList<>();
@@ -215,8 +213,7 @@ public class JSUtils {
         if (value instanceof Json)
             return (Json) value;
 
-        // No unwrap for JSBaseObject
-        value = value instanceof JSBaseObject ? value : unwrap(value);
+        value = unwrap(value);
 
         // --- Simple cases
         if (value == null)
@@ -338,7 +335,7 @@ public class JSUtils {
 
     public static Object toDOM(Scriptable scope, Object object, OptionalDocument document) {
         // Unwrap if needed (if this is not a JSBaseObject)
-        if (object instanceof Wrapper && !(object instanceof JSBaseObject))
+        if (object instanceof Wrapper)
             object = ((Wrapper) object).unwrap();
 
         // It is already a DOM node

@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.manager.scripting;
  */
 
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.js.JSBaseObject;
 import net.bpiwowar.xpm.utils.Functional;
 
 import java.lang.reflect.Constructor;
@@ -27,10 +26,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static java.lang.String.format;
+import static net.bpiwowar.xpm.manager.scripting.Functions.format;
 
 /**
  * An abstract class description
@@ -47,17 +47,91 @@ public class ClassDescription {
      */
     String classname;
 
-    private ArrayList<Constructor<?>> constructors = new ArrayList<>();
+    /**
+     * Super class (or null)
+     */
+    ClassDescription superDescription;
+
+    private ConstructorFunction constructors;
 
     /**
      * Maps a string or ExposeMode enum value to a list of methods
      */
-    private Map<Object, ArrayList<Method>> methods = new HashMap<>();
+    private Map<Object, MethodFunction> methods = new HashMap<>();
 
     private Map<String, PropertyAccess> fields = new HashMap<>();
 
-    private ClassDescription(Class<?> theClass) {
-        this.wrappedClass = theClass;
+    private <T> ClassDescription(Class<T> aClass) {
+        final Exposed exposed = aClass.getAnnotation(Exposed.class);
+        if (exposed == null) {
+            throw new AssertionError(format("Class %s is not exposed", aClass));
+        }
+        classname = exposed.value().isEmpty() ? aClass.getSimpleName() : exposed.value();
+
+        this.wrappedClass = aClass;
+
+        // Add fields
+        for (Field field : aClass.getDeclaredFields()) {
+            Property annotation = field.getAnnotation(Property.class);
+            if (annotation != null) {
+                final String name = annotation.value().equals("") ? field.getName() : annotation.value();
+                fields.put(name, new PropertyAccess.FieldAccess(field));
+            }
+        }
+
+
+        for (Method method : aClass.getDeclaredMethods()) {
+            // Exposed case
+            final Expose expose = method.getAnnotation(Expose.class);
+            if (expose != null) {
+                switch (expose.mode()) {
+                    case PROPERTY:
+                        // Property
+                        String name = expose.value();
+                        if (name.isEmpty()) {
+                            throw new XPMRuntimeException("Name cannot be empty for a property [%s]", method);
+                        }
+                        PropertyAccess propertyAccess = fields.get(name);
+                        if (propertyAccess == null) {
+                            fields.put(name, propertyAccess = new PropertyAccess());
+                        }
+                        final int nbArguments = method.getParameters().length;
+                        if (nbArguments == 0) {
+                            // Getter
+                            propertyAccess.getter = Functional.propagateFunction(x -> method.invoke(x));
+                        } else if (nbArguments == 1) {
+                            // Setter
+                            propertyAccess.setter = Functional.propagate((x, v) -> method.invoke(x, v));
+                        } else {
+                            throw new XPMRuntimeException("Cannot determine if [%s] is a getter or setter", method);
+                        }
+                        break;
+
+                    default:
+                        addMethod(method, expose.value(), expose.mode());
+                        break;
+                }
+            }
+        }
+
+        // Adds all the ancestors methods
+        Class<?> superclass = aClass.getSuperclass();
+        if (superclass != null && superclass.getAnnotation(Exposed.class) != null) {
+            this.superDescription = analyzeClass(superclass);
+        }
+
+        // Add constructors
+        ArrayList<Constructor<?>> list = new ArrayList<>();
+        for (Constructor<?> constructor : aClass.getConstructors()) {
+            final Expose expose = constructor.getAnnotation(Expose.class);
+            if (expose != null) {
+                list.add(constructor);
+            }
+        }
+
+        constructors = new ConstructorFunction(classname, list);
+
+
     }
 
     /**
@@ -68,100 +142,21 @@ public class ClassDescription {
      */
     public static ClassDescription analyzeClass(Class<?> aClass) {
         ClassDescription description = CLASS_DESCRIPTION.get(aClass);
-        Map<Object, ArrayList<Method>> map;
+
         synchronized (CLASS_DESCRIPTION) {
             if (description == null) {
-                description = new ClassDescription(aClass);
-                description.classname = getClassName(aClass);
-                CLASS_DESCRIPTION.put(aClass, description);
-
-                map = description.methods;
-                // Add fields
-                for (Field field : aClass.getDeclaredFields()) {
-                    Property annotation = field.getAnnotation(Property.class);
-                    if (annotation != null) {
-                        final String name = annotation.value().equals("") ? field.getName() : annotation.value();
-                        description.fields.put(name, new PropertyAccess.FieldAccess(field));
-                    }
-                }
-
-
-                for (Method method : aClass.getDeclaredMethods()) {
-                    // Exposed case
-                    final Expose expose = method.getAnnotation(Expose.class);
-                    if (expose != null) {
-                        switch (expose.mode()) {
-                            case PROPERTY:
-                                // Property
-                                String name = expose.value();
-                                if (name.isEmpty()) {
-                                    throw new XPMRuntimeException("Name cannot be empty for a property [%s]", method);
-                                }
-                                PropertyAccess propertyAccess = description.fields.get(name);
-                                if (propertyAccess == null) {
-                                    description.fields.put(name, propertyAccess = new PropertyAccess());
-                                }
-                                final int nbArguments = method.getParameters().length;
-                                if (nbArguments == 0) {
-                                    // Getter
-                                    propertyAccess.getter = Functional.propagateFunction(x -> method.invoke(x));
-                                } else if (nbArguments == 1) {
-                                    // Setter
-                                    propertyAccess.setter = Functional.propagate((x, v) -> method.invoke(x, v));
-                                } else {
-                                    throw new XPMRuntimeException("Cannot determine if [%s] is a getter or setter", method);
-                                }
-                                break;
-
-                            default:
-                                addMethod(map, method, expose.value(), expose.mode());
-                                break;
-                        }
-                    }
-                }
-
-                // Adds all the ancestors methods
-                Class<?> superclass = aClass.getSuperclass();
-                if (JSBaseObject.class.isAssignableFrom(superclass) || superclass.getAnnotation(Exposed.class) != null) {
-                    Map<Object, ArrayList<Method>> superclassMethods = analyzeClass(superclass).methods;
-                    for (Map.Entry<Object, ArrayList<Method>> entry : superclassMethods.entrySet()) {
-                        ArrayList<Method> previous = map.get(entry.getKey());
-                        if (previous != null)
-                            previous.addAll(entry.getValue());
-                        else
-                            map.put(entry.getKey(), entry.getValue());
-                    }
-                }
-
-                // Add constructors
-                for (Constructor<?> constructor : aClass.getConstructors()) {
-                    final Expose expose = constructor.getAnnotation(Expose.class);
-                    if (expose != null) {
-                        description.constructors.add(constructor);
-                        continue;
-                    }
-                }
-
-                if (description.constructors.isEmpty() && JSBaseObject.class.isAssignableFrom(aClass)) {
-                    try {
-                        description.constructors.add(aClass.getConstructor());
-                    } catch (NoSuchMethodException e) {
-                        throw new XPMRuntimeException("Could not find any constructor in %s", aClass);
-                    }
-                }
-
-            } // description == null
+                CLASS_DESCRIPTION.put(aClass, description = new ClassDescription(aClass));
+            }
         } // synchronized
         return description;
     }
 
     /**
-     * @param map    The list of methods
      * @param method The method
      * @param name   The name of the method (or empty if using the method name)
      * @param mode   Whether this method is used when the object is "called"
      */
-    private static void addMethod(Map<Object, ArrayList<Method>> map, Method method, String name, ExposeMode mode) {
+    private void addMethod(Method method, String name, ExposeMode mode) {
         if ((method.getModifiers() & Modifier.PUBLIC) == 0)
             throw new AssertionError("The method " + method + " is not public");
 
@@ -185,37 +180,21 @@ public class ClassDescription {
         }
 
         // Add the method
-        addMethod(map, method, key);
+        addMethod(method, key);
     }
 
-    private static void addMethod(Map<Object, ArrayList<Method>> map, Method method, Object key) {
-        ArrayList<Method> methods = map.get(key);
+    private void addMethod(Method method, Object key) {
+        MethodFunction methods = this.methods.get(key);
         if (methods == null) {
-            map.put(key, methods = new ArrayList<>());
+            this.methods.put(key, methods = new MethodFunction(key));
         }
-        methods.add(method);
-    }
-
-    /**
-     * Returns the class name
-     */
-    public static String getClassName(Class<?> aClass) {
-        Exposed exposed = aClass.getAnnotation(Exposed.class);
-        if (exposed != null) {
-            return aClass.getSimpleName();
-        }
-
-        if (!aClass.getSimpleName().startsWith("JS")) {
-            throw new AssertionError(format("Class %s is not exposed (or does not start with JS [deprecated]) as it should", aClass.getName()));
-        }
-
-        return aClass.getSimpleName().substring(2);
+        methods.add(Collections.singleton(method));
     }
 
     /**
      * The class methods
      */
-    public Map<Object, ArrayList<Method>> getMethods() {
+    public Map<Object, MethodFunction> getMethods() {
         return methods;
     }
 
@@ -229,7 +208,7 @@ public class ClassDescription {
     /**
      * The constructors
      */
-    public ArrayList<Constructor<?>> getConstructors() {
+    public ConstructorFunction getConstructors() {
         return constructors;
     }
 
@@ -239,9 +218,18 @@ public class ClassDescription {
 
     /**
      * Returns the class name for a script
+     *
      * @return A string representing the class
      */
     public String getClassName() {
         return classname;
+    }
+
+    public MethodFunction getMethod(Object key) {
+        final MethodFunction methodFunction = methods.get(key);
+        if (methodFunction == null && superDescription != null) {
+            return superDescription.getMethod(key);
+        }
+        return methodFunction;
     }
 }

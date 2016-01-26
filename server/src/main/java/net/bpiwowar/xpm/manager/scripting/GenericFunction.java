@@ -21,7 +21,6 @@ package net.bpiwowar.xpm.manager.scripting;
 import org.mozilla.javascript.ScriptRuntime;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.manager.js.JSBaseObject;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -80,9 +79,6 @@ public abstract class GenericFunction {
         // No method matched... we try to help the user by displaying available ones
         if (argmax == null) {
             String context = "";
-            if (thisObj instanceof JSBaseObject) {
-                context = " in an object of class " + ((JSBaseObject) thisObj).getClassName();
-            }
 
             // Print the best matching methods
             Converter scoredDeclarations[] = new Converter[n];

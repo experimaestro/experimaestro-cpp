@@ -20,23 +20,15 @@ package net.bpiwowar.xpm.manager.js;
 
 import bpiwowar.argparser.utils.Introspection;
 import com.google.common.reflect.TypeToken;
-import org.apache.log4j.Hierarchy;
-import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.NativeJavaArray;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.Ref;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-import org.mozilla.javascript.Undefined;
-import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.Wrapper;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.Functional;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Hierarchy;
+import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
+import org.mozilla.javascript.*;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -49,7 +41,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -92,7 +83,7 @@ public class JavaScriptRunner implements AutoCloseable {
         }
         context = factory.enterContext();
 
-        context.setWrapFactory(JSBaseObject.XPMWrapFactory.INSTANCE);
+        context.setWrapFactory(JavaScriptObject.XPMWrapFactory.INSTANCE);
         this.scriptContext = scriptContext == null ? staticContext.scriptContext() : scriptContext;
 
         // Create scope
@@ -130,9 +121,7 @@ public class JavaScriptRunner implements AutoCloseable {
                 while (urls.hasMoreElements()) {
                     URL url = urls.nextElement();
                     Introspection.addClasses(
-                            aClass -> (ScriptableObject.class.isAssignableFrom(aClass)
-                                    || JSConstructable.class.isAssignableFrom(aClass)
-                                    || JSBaseObject.class.isAssignableFrom(aClass))
+                            aClass -> (ScriptableObject.class.isAssignableFrom(aClass))
                                     && ((aClass.getModifiers() & Modifier.ABSTRACT) == 0)
                                     && !JavaScriptObject.class.equals(aClass),
                             list, packageName, -1, url);
@@ -143,11 +132,11 @@ public class JavaScriptRunner implements AutoCloseable {
 
             // Add the classes to javascript
             for (Class<?> aClass : list) {
-                JSBaseObject.defineClass(XPM_SCOPE, aClass);
+                JavaScriptObject.defineClass(XPM_SCOPE, aClass);
             }
 
             Scripting.forEachType(Functional.propagate(aClass -> {
-                JSBaseObject.defineClass(XPM_SCOPE, aClass);
+                JavaScriptObject.defineClass(XPM_SCOPE, aClass);
                 if (WrapperObject.class.isAssignableFrom(aClass)) {
                     final Class<?> wrappedClass = (Class<?>) ((ParameterizedType) TypeToken.of(aClass)
                             .getSupertype(WrapperObject.class).getType()).getActualTypeArguments()[0];
@@ -191,6 +180,14 @@ public class JavaScriptRunner implements AutoCloseable {
             return Undefined.instance;
         }
 
+        // Exposed objects
+        final Class<?> objectClass = object.getClass();
+        final Exposed exposed = objectClass.getAnnotation(Exposed.class);
+        if (exposed != null) {
+            return new JavaScriptObject(object, ClassDescription.analyzeClass(objectClass));
+        }
+
+
         if (object instanceof Wrapper) {
             object = ((Wrapper) object).unwrap();
         }
@@ -201,7 +198,7 @@ public class JavaScriptRunner implements AutoCloseable {
 
         // Converts integers to doubles (JS has only one numeric type)
         if (object instanceof Number) {
-            return ((Number)object).doubleValue();
+            return ((Number) object).doubleValue();
         }
 
         // Simple types
@@ -229,18 +226,13 @@ public class JavaScriptRunner implements AutoCloseable {
             };
         }
 
-        // Exposed objects
-        final Class<?> objectClass = object.getClass();
-        final Exposed exposed = objectClass.getAnnotation(Exposed.class);
-        if (exposed != null) {
-            return new JavaScriptObject(object);
-        }
 
         // Wrapper case -- go up in the hierarchy
         for (Map.Entry<Class, Constructor> entry : WRAPPERS.entrySet()) {
             if (entry.getKey().isAssignableFrom(objectClass)) {
                 try {
-                    return new JavaScriptObject(entry.getValue().newInstance(object));
+                    final Object newObject = entry.getValue().newInstance(object);
+                    return new JavaScriptObject(newObject, ClassDescription.analyzeClass(newObject.getClass()));
                 } catch (Exception e) {
                     throw new UnsupportedOperationException("Could not wrap object of class " + objectClass, e);
                 }

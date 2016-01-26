@@ -55,17 +55,7 @@ public class Scripting {
     public static MethodFunction[] getMethodFunctions(Class<?> aClass) {
         MutableInt errors = new MutableInt(0);
         final MethodFunction[] methodFunctions = ClassDescription.analyzeClass(aClass).getMethods()
-                .entrySet().stream().map(e -> {
-                    final MethodFunction methodFunction = new MethodFunction(e.getKey());
-                    for (Method method : e.getValue()) {
-                        if ((method.getModifiers() & Modifier.STATIC) == 0) {
-                            LOGGER.error("Method %s is not static", method);
-                            errors.increment();
-                        }
-                    }
-                    methodFunction.add(e.getValue());
-                    return methodFunction;
-                }).toArray(n -> new MethodFunction[n]);
+                .values().stream().toArray(n -> new MethodFunction[n]);
         if (errors.intValue() > 0) {
             throw new RuntimeException("Errors while initializing the list of scripting functions");
         }

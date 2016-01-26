@@ -18,45 +18,34 @@ package net.bpiwowar.xpm.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeJavaClass;
 import org.mozilla.javascript.Scriptable;
-import net.bpiwowar.xpm.manager.scripting.ClassDescription;
-import net.bpiwowar.xpm.manager.scripting.ConstructorFunction;
-import net.bpiwowar.xpm.manager.scripting.MethodFunction;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 
 /**
  * A javascript object representing a class
  */
 public class JavaScriptClass extends NativeJavaClass {
     private final ClassDescription description;
-    private Class<?> javaClass;
 
-    public JavaScriptClass(Class<?> javaClass) {
-        this.description = ClassDescription.analyzeClass(javaClass);
-        this.javaClass = javaClass;
+    public JavaScriptClass(ClassDescription description) {
+        this.description = description;
     }
 
     @Override
     public Scriptable construct(Context cx, Scriptable scope, Object[] args) {
-        ClassDescription description = ClassDescription.analyzeClass((Class) javaClass);
-        String className = ClassDescription.getClassName((Class) javaClass);
-        ConstructorFunction constructorFunction = new ConstructorFunction(className, description.getConstructors());
         final JavaScriptContext jcx = new JavaScriptContext(cx, scope);
-        Object object = constructorFunction.call(jcx, null, null, args);
-        return new JavaScriptObject(object);
+        Object object = description.getConstructors().call(jcx, null, null, args);
+        return new JavaScriptObject(object, description);
     }
 
     @Override
     public Object get(String name, Scriptable start) {
         // Search for a function
-        ArrayList<Method> function = description.getMethods().get(name);
-        if (!function.isEmpty()) {
-            final MethodFunction method = new MethodFunction(name);
-            method.add(function);
+        MethodFunction method = description.getMethods().get(name);
+        if (!method.isEmpty()) {
             return new JavaScriptFunction(null, method);
         }
 

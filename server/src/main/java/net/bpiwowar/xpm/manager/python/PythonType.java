@@ -50,9 +50,7 @@ class PythonType extends PyType {
 
     @Override
     public PyObject __call__(PyObject[] args, String[] keywords) {
-        final ConstructorFunction constructorFunction = new ConstructorFunction(description.getClassName(), description.getConstructors());
-
-        final Object result = constructorFunction.call(new PythonContext(), null, null, args);
+        final Object result = description.getConstructors().call(new PythonContext(), null, null, args);
         return PythonRunner.wrap(result);
     }
 
@@ -61,19 +59,23 @@ class PythonType extends PyType {
         return description.getClassName();
     }
 
+    /**
+     * Get a Python class for a givenjava class
+     * @param clazz The Java class
+     * @return
+     */
     static public PyClass getPyClass(Class<?> clazz) {
         ClassDescription cd = ClassDescription.analyzeClass(clazz);
         final PyStringMap dict = new PyStringMap();
         final Function<PyObject, Object> java_object__ = x -> ((PythonObject) x.__getattr__("__java_object__")).object;
 
-        for (Map.Entry<Object, ArrayList<Method>> objectArrayListEntry : cd.getMethods().entrySet()) {
-            final Object key = objectArrayListEntry.getKey();
+        for (Map.Entry<Object, MethodFunction> entries : cd.getMethods().entrySet()) {
+            final Object key = entries.getKey();
             if (key instanceof String) {
                 final String name = (String) key;
-                final MethodFunction unique_directory = new MethodFunction(name);
-                unique_directory.add(objectArrayListEntry.getValue());
                 final PyFrame frame = Py.getThreadState().frame;
-                final PyFunction pyFunction = new PyFunction(frame.f_globals, null, new InstanceMethod(name, unique_directory, java_object__), null, null);
+                final PyFunction pyFunction = new PyFunction(frame.f_globals, null,
+                        new InstanceMethod(name, entries.getValue(), java_object__), null, null);
                 dict.__setitem__(name, pyFunction);
             }
         }

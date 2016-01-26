@@ -50,14 +50,14 @@ public class JSDirectTask extends Task {
     /**
      * The wrapper for the javascript object
      */
-    private JSTask jsObject;
+    private JSTask object;
 
     public JSDirectTask(TaskFactory taskFactory, Scriptable jsScope,
                         NativeObject jsFactory, Function runFunction, Type outputType) {
 
         super(taskFactory);
         this.jsScope = jsScope;
-        this.jsObject = new JSTask(jsFactory);
+        this.object = new JSTask(jsFactory);
         this.runFunction = runFunction;
         this.outputType = outputType;
     }
@@ -100,8 +100,9 @@ public class JSDirectTask extends Task {
                 }
 
                 // Switch to our context
-                try (ScriptContext ignored = taskContext.copy()) {
-                    ignored.setTask(this);
+                try (ScriptContext newContext = taskContext.copy()) {
+                    newContext.setTask(this);
+                    Scriptable jsObject = (Scriptable)JavaScriptRunner.wrap(cx, jsScope, object);
                     final Object returned = runFunction.call(cx, jsScope, jsObject,
                             new Object[]{jsoninput, resultObject});
 
@@ -142,11 +143,12 @@ public class JSDirectTask extends Task {
 
         JSDirectTask other = (JSDirectTask) _other;
         super.init(other);
-        jsObject = other.jsObject;
+        object = other.object;
         runFunction = other.runFunction;
     }
 
-    public class JSTask extends JSBaseObject {
+    @Exposed
+    public class JSTask {
 
         @Expose
         public JSTask(NativeObject jsFactory) {

@@ -112,12 +112,10 @@ public class PythonRunner implements AutoCloseable {
         // XPM object: wrap properties
         final XPM xpm = new XPM();
         ClassDescription xpmDescription = ClassDescription.analyzeClass(XPM.class);
-        for (Map.Entry<Object, ArrayList<Method>> x : xpmDescription.getMethods().entrySet()) {
+        for (Map.Entry<Object, MethodFunction> x : xpmDescription.getMethods().entrySet()) {
             final Object key = x.getKey();
             if (key instanceof String) {
-                final MethodFunction methodFunction = new MethodFunction(key);
-                methodFunction.add(x.getValue());
-                xpmModule.__setattr__((String) key, new PythonMethod(xpm, methodFunction));
+                xpmModule.__setattr__((String) key, new PythonMethod(xpm, x.getValue()));
             } else {
                 throw new XPMRuntimeException("Could not handle key ", key);
             }
