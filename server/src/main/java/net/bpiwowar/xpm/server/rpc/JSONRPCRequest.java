@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.server.rpc;
  */
 
 import com.google.gson.Gson;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
@@ -48,7 +49,9 @@ public abstract class JSONRPCRequest {
 
         Gson gson = new Gson();
 
-        answer.add("result", gson.toJsonTree(result, result.getClass()));
+        if (result != null) answer.add("result", gson.toJsonTree(result, result.getClass()));
+        else answer.add("result", JsonNull.INSTANCE);
+
         sendJSONString(gson.toJson(answer));
 
     }
