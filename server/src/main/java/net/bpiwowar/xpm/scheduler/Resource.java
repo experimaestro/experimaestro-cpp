@@ -413,18 +413,6 @@ public class Resource implements Identifiable {
         throw new IllegalAccessError("No output file for resources of type " + this.getClass());
     }
 
-    /**
-     * Writes an XML description of the resource
-     *
-     * @param out
-     * @param config The configuration for printing
-     * @deprecated Use {@linkplain #toJSON()}
-     */
-    @Deprecated
-    public void printXML(PrintWriter out, PrintConfig config) {
-        out.format("<div><b>Resource id</b>: %s</h2>", getLocator());
-        out.format("<div><b>Status</b>: %s</div>", getState());
-    }
 
     /**
      * Get a JSON representation of the object

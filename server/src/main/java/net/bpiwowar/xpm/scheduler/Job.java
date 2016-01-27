@@ -530,52 +530,6 @@ abstract public class Job extends Resource {
         return info;
     }
 
-    @Override
-    public void printXML(PrintWriter out, PrintConfig config) {
-        super.printXML(out, config);
-        jobData();
-
-        out.format("<h2>Locking status</h2>%n");
-
-        if (getState() == ResourceState.DONE
-                || getState() == ResourceState.ERROR
-                || getState() == ResourceState.RUNNING) {
-            long start = getStartTimestamp();
-            long end = getState() == ResourceState.RUNNING ? System
-                    .currentTimeMillis() : getEndTimestamp();
-
-            out.format("<div>Started: %s</div>",
-                    longDateFormat.format(new Date(start)));
-
-            if (getState() != ResourceState.RUNNING && end >= 0) {
-                out.format("<div>Ended: %s</div>",
-                        longDateFormat.format(new Date(end)));
-                out.format("<div>Duration: %s</div>",
-                        Time.formatTimeInMilliseconds(end - start));
-                if (getProcess() != null)
-                    out.format("<div>PID: %s</div>", getProcess().getPID());
-            }
-        }
-
-        if (!getDependencies().isEmpty()) {
-            out.format("<h2>Dependencies</h2><ul>");
-            out.format("<div>%d unsatisfied / %d holding dependencie(s)</div>",
-                    jobData.getNbUnsatisfied(), jobData.getNbHolding());
-            for (Dependency dependency : getDependencies()) {
-
-                Resource resource = dependency.getFrom();
-
-                out.format(
-                        "<li><a href=\"%s/resource/%d\">%s</a>: %s</li>",
-                        config.detailURL,
-                        resource.getId(),
-                        resource.getLocator(),
-                        dependency);
-            }
-            out.println("</ul>");
-        }
-    }
-
     /**
      * Add a dependency (requirement) for this job.
      *
