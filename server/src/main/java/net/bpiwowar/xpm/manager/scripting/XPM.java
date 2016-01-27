@@ -83,18 +83,6 @@ public class XPM {
             "at hand, but are generally READ, WRITE, EXCLUSIVE.</dd>" +
             "";
 
-//    static public void log(Level level, Context cx, Scriptable thisObj, Object[] args, Function funObj) {
-//        if (args.length < 1)
-//            throw new XPMRuntimeException("There should be at least one argument for log()");
-//
-//        String format = Context.toString(args[0]);
-//        Object[] objects = new Object[args.length - 1];
-//        for (int i = 1; i < args.length; i++)
-//            objects[i - 1] = unwrap(args[i]);
-//
-//        ((XPM) thisObj).xpm.log(format, objects);
-//    }
-
     final static private Logger LOGGER = Logger.getLogger();
 
     static HashSet<String> COMMAND_LINE_OPTIONS = new HashSet<>(
@@ -219,7 +207,6 @@ public class XPM {
         final ScriptContext scriptContext = context();
         Module module = new Module(cx.qname(description.get("id")));
         module.setName(description.get("name").toString());
-//        module.setDocumentation(description.get("description").toString());
 
         // Set the parent
         final Object parentString = description.get("parent");
@@ -276,21 +263,8 @@ public class XPM {
     public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
                                    @Argument(type = "Array", name = "command") @NotNull List<?> jsargs,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-        Commands commands = new Commands(Command.getCommand(jsargs));
-        return commandlineJob(path, commands, options);
+        return commandlineJob(path, Command.getCommand(jsargs), options);
     }
-
-
-    @Expose(value = "command_line_job", optional = 1)
-    @Help(value = COMMAND_LINE_JOB_HELP)
-    public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
-                                   @Argument(type = "Array", name = "command") @NotNull AbstractCommand command,
-                                   @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-
-        Commands commands = new Commands(command);
-        return commandlineJob(path, commands, options);
-    }
-
 
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
@@ -410,7 +384,7 @@ public class XPM {
     @Expose(value = "command_line_job", optional = 1)
     @Help(value = COMMAND_LINE_JOB_HELP)
     public Resource commandlineJob(@Argument(name = "jobId") Object path,
-                                   Commands commands,
+                                   AbstractCommand command,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
         final ScriptContext scriptContext = context();
         final Logger rootLogger = scriptContext.getLogger("xpm");
@@ -436,9 +410,15 @@ public class XPM {
 
         job = new CommandLineTask((java.nio.file.Path) path);
 
-        commands.setOutputRedirect(Redirect.INHERIT);
+        // Inherit output for main commands
+        command.setOutputRedirect(Redirect.INHERIT);
+        if (command instanceof Commands) {
+            for(AbstractCommand subcommand: command) {
+                subcommand.setOutputRedirect(Redirect.INHERIT);
+            }
+        }
 
-        job.setCommand(commands);
+        job.setCommand(command);
         if (scriptContext.getSubmittedJobs().containsKey(path)) {
             rootLogger.info("Not submitting %s [duplicate]", path);
             if (simulate()) {
