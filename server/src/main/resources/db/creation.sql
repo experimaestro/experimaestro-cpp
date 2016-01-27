@@ -229,7 +229,7 @@ CREATE TABLE ExperimentResources (
   FOREIGN KEY (task) REFERENCES ExperimentTasks
     ON DELETE CASCADE,
   FOREIGN KEY (resource) REFERENCES Resources
-    ON DELETE RESTRICT
+    ON DELETE CASCADE
 );
 
 
