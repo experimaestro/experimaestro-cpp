@@ -42,7 +42,7 @@ public class ConstructorFunction extends GenericFunction {
     }
 
     @Override
-    protected Iterable<ConstructorDeclaration> declarations() {
+    public Iterable<ConstructorDeclaration> declarations() {
         return Iterables.transform(constructors, ConstructorDeclaration::new);
     }
 

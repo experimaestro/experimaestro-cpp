@@ -104,7 +104,16 @@ $().ready(function () {
         }
     }
 
-// --- actions on jobs: restart, remove
+    function show_class_documentation(e) {
+        var classname = $(this).find("option:selected").text();
+        xpm.server.call("documentation.methods", {classname: classname},
+            function(r) {
+                alert(JSON.stringify(r));
+            },
+            jsonrpc_error
+        );
+    }
+    // --- actions on jobs: restart, remove
     var resource_action_callback = function () {
         var name = this.name ? this.name : this.getAttribute("name");
         if (!name) {
@@ -657,9 +666,11 @@ $().ready(function () {
                     jsonrpc_error
                 );
             } else if (tabid == "xpm-help") {
+                var select = $("#help-class-chooser");
+                select.change(show_class_documentation);
+
                 xpm.server.call("documentation.classes", {},
                     function (r) {
-                        var select = $("#help-class-chooser");
                         $.each(r, function (ix, e) {
                             select.append($e("option").text(e));
                         });
