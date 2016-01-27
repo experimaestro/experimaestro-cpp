@@ -588,7 +588,7 @@ def command_list_methods(args):
 
 def command_information(args):
     server = Configuration(args).getJsonServer()
-    json.dump(server.getResourceInformation(args.resourceId[0]), sys.stdout)
+    json.dump(server.getResourceInformation({"id": args.resourceId[0]}), sys.stdout)
     sys.stdout.write("\n")
 
 
