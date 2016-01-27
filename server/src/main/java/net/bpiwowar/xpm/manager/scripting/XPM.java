@@ -276,7 +276,6 @@ public class XPM {
     public Resource commandlineJob(@Argument(name = "jobId") @NotNull Object path,
                                    @Argument(type = "Array", name = "command") @NotNull List<?> jsargs,
                                    @Argument(type = "Map", name = "options") Map<String, Object> options) throws Exception {
-
         Commands commands = new Commands(Command.getCommand(jsargs));
         return commandlineJob(path, commands, options);
     }
@@ -436,6 +435,8 @@ public class XPM {
         }
 
         job = new CommandLineTask((java.nio.file.Path) path);
+
+        commands.setOutputRedirect(Redirect.INHERIT);
 
         job.setCommand(commands);
         if (scriptContext.getSubmittedJobs().containsKey(path)) {
