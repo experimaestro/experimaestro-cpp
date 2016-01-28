@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.server.ServerSettings;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.eclipse.jetty.server.Server;
 
@@ -43,15 +44,10 @@ import java.io.PrintWriter;
  */
 public class JsonRPCServlet extends HttpServlet {
     final static private Logger LOGGER = Logger.getLogger();
+    private final JsonRPCSettings settings;
 
-    private final Scheduler scheduler;
-    private final Repositories repository;
-    private final Server server;
-
-    public JsonRPCServlet(Server server, Scheduler scheduler, Repositories repository) {
-        this.server = server;
-        this.scheduler = scheduler;
-        this.repository = repository;
+    public JsonRPCServlet(Server server, ServerSettings serverSettings, Scheduler scheduler, Repositories repository) {
+        this.settings = new JsonRPCSettings(scheduler, repository, server, serverSettings);
     }
 
     @Override
@@ -105,7 +101,7 @@ public class JsonRPCServlet extends HttpServlet {
             resp.setContentType("application/json");
             resp.setStatus(HttpServletResponse.SC_OK);
 
-            jsonRPCMethods = new JsonRPCMethods(server, scheduler, repository, new JSONRPCRequest() {
+            jsonRPCMethods = new JsonRPCMethods(settings, new JSONRPCRequest() {
                 @Override
                 public void sendJSONString(String message) throws IOException {
                     pw.print(message);

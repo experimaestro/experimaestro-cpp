@@ -175,14 +175,14 @@ public class ServerTask extends AbstractTask {
 
         // --- Add the JSON RPC servlet
 
-        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, scheduler, repositories);
+        final JsonRPCServlet jsonRpcServlet = new JsonRPCServlet(webServer, serverSettings, scheduler, repositories);
         JsonRPCMethods.initMethods();
         final ServletHolder jsonServletHolder = new ServletHolder(jsonRpcServlet);
         context.addServlet(jsonServletHolder, JSON_RPC_PATH);
 
         // --- Add the web socket servlet
 
-        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories);
+        final XPMWebSocketServlet webSocketServlet = new XPMWebSocketServlet(webServer, scheduler, repositories, serverSettings);
         final ServletHolder webSocketServletHolder = new ServletHolder(webSocketServlet);
         context.addServlet(webSocketServletHolder, "/web-socket");
 

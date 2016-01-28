@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.server;
  */
 
 import net.bpiwowar.xpm.exceptions.WrappedException;
+import net.bpiwowar.xpm.server.rpc.JsonRPCSettings;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
@@ -29,24 +30,19 @@ import java.io.IOException;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 26/3/13
  */
 public class XPMWebSocketServlet extends WebSocketServlet {
-    private final Server server;
-    private final Scheduler scheduler;
-    private final Repositories repositories;
+    private final JsonRPCSettings settings;
 
-    public XPMWebSocketServlet(Server server, Scheduler scheduler, Repositories repositories) {
-        this.server = server;
-        this.scheduler = scheduler;
-        this.repositories = repositories;
+    public XPMWebSocketServlet(Server server, Scheduler scheduler, Repositories repositories, ServerSettings serverSettings) {
+        this.settings = new JsonRPCSettings(scheduler, repositories, server, serverSettings);
     }
 
     @Override
     public void configure(WebSocketServletFactory factory) {
         factory.setCreator((req, resp) -> {
             try {
-                return new XPMWebSocketListener(server, scheduler, repositories);
+                return new XPMWebSocketListener(settings);
             } catch (IOException e) {
                 throw new WrappedException(e);
             }

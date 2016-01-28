@@ -613,29 +613,14 @@ $().ready(function () {
         }
     });
 
-    xpm.server.notify("ping");
+    // Get hostname and open the web socket
+    xpm.server.call("hostname", {}, function(r) {
+        // Set host name in title and header
+        $("html head title").append("@" + r);
+        $("#header div.title").append("@" + r);
+    });
 
-
-//var websocket = create_websocket();
-
-//$("#connection").on("click", function () {
-//    switch (websocket.readyState) {
-//        case WebSocket.OPEN:
-//            websocket.close();
-//            break;
-//        case WebSocket.CLOSED:
-//            websocket = create_websocket();
-//            break;
-//        default:
-//            // Do nothing: transition between different
-//            websocket.onerror = function (e) {
-//                noty({text: "Web Socket cannot be modified (closing or opening)", type: 'warning', timeout: 5000})
-//            };
-//    }
-//});
-
-
-// Activate tabs
+    // Activate tabs
     $(".tab").tabs({
         beforeActivate: function (event, ui) {
             var tabid = ui.newPanel.attr("id");

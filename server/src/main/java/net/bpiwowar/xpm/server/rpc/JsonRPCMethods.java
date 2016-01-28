@@ -69,11 +69,9 @@ public class JsonRPCMethods extends HttpServlet {
 
     private static Multimap<String, RPCCaller> methods;
 
-    private final Scheduler scheduler;
-
-    private final Repositories repository;
-
     private final JSONRPCRequest mos;
+
+    private final JsonRPCSettings settings;
 
     HashMap<String, BufferedWriter> writers = new HashMap<>();
 
@@ -85,11 +83,9 @@ public class JsonRPCMethods extends HttpServlet {
     private Server server;
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
-    public JsonRPCMethods(Server server, Scheduler scheduler, Repositories repository, JSONRPCRequest mos) throws IOException {
+    public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException {
         initMethods();
-        this.server = server;
-        this.scheduler = scheduler;
-        this.repository = repository;
+        this.settings = settings;
         this.mos = mos;
         addObjects(this, new DocumentationMethods(), new ExperimentsMethods());
     }
@@ -340,12 +336,12 @@ public class JsonRPCMethods extends HttpServlet {
         try {
             // TODO: should be a one shot repository - ugly
             Repositories repositories = new Repositories(new File("/").toPath());
-            repositories.add(repository, 0);
+            repositories.add(settings.repository, 0);
 
             // Creates and enters a Context. The Context stores information
             // about the execution environment of a script.
             try (PythonRunner pythonContext =
-                         new PythonRunner(environment, repositories, scheduler, loggerRepository, pythonPath,
+                         new PythonRunner(environment, repositories, settings.scheduler, loggerRepository, pythonPath,
                                  getRequestOutputStream(), getRequestErrorStream())
             ) {
                 Object result = null;
@@ -449,13 +445,13 @@ public class JsonRPCMethods extends HttpServlet {
 
         // TODO: should be a one shot repository - ugly
         Repositories repositories = new Repositories(new File("/").toPath());
-        repositories.add(repository, 0);
+        repositories.add(settings.repository, 0);
 
         Router.writer(getRequestErrorStream());
 
         // Creates and enters a Context. The Context stores information
         // about the execution environment of a script.
-        try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, scheduler, loggerRepository, debugPort)) {
+        try (JavaScriptRunner jsXPM = new JavaScriptRunner(repositories, settings.scheduler, loggerRepository, debugPort)) {
             Object result = null;
             for (JsonArray filePointer : files) {
                 boolean isFile = filePointer.size() < 2 || filePointer.get(1) == null;
@@ -594,7 +590,7 @@ public class JsonRPCMethods extends HttpServlet {
     @RPCMethod(help = "Shutdown Experimaestro server")
     public boolean shutdown() {
         // Close the scheduler
-        scheduler.close();
+        settings.scheduler.close();
 
         // Shutdown jetty (after 1s to allow this thread to finish)
         Timer timer = new Timer();
@@ -696,6 +692,12 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
+
+    @RPCMethod
+    public String hostname() {
+        return settings.serverSettings.getName();
+    }
+
     /**
      * Update the status of jobs
      */
@@ -708,7 +710,7 @@ public class JsonRPCMethods extends HttpServlet {
         EnumSet<ResourceState> states = getStates(statesNames);
 
         int nbUpdated = 0;
-        try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
+        try (final CloseableIterable<Resource> resources = settings.scheduler.resources(states)) {
             for (Resource resource : resources) {
                 if (resource.updateStatus()) {
                     nbUpdated++;
@@ -758,7 +760,7 @@ public class JsonRPCMethods extends HttpServlet {
         } else {
             // TODO order the tasks so that dependencies are removed first
             HashSet<Resource> toRemove = new HashSet<>();
-            try (final CloseableIterable<Resource> resources = scheduler.resources(states)) {
+            try (final CloseableIterable<Resource> resources = settings.scheduler.resources(states)) {
                 for (Resource resource : resources) {
                     if (idPattern != null) {
                         if (!idPattern.matcher(resource.getIdentifier()).matches())
@@ -826,13 +828,13 @@ public class JsonRPCMethods extends HttpServlet {
         };
 
         listeners.add(listener);
-        scheduler.addListener(listener);
+        settings.scheduler.addListener(listener);
         return true;
     }
 
     public void close() {
         for (Listener listener : listeners)
-            scheduler.removeListener(listener);
+            settings.scheduler.removeListener(listener);
     }
 
     /**
@@ -848,7 +850,7 @@ public class JsonRPCMethods extends HttpServlet {
                 = EnumSet.of(ResourceState.RUNNING, ResourceState.READY, ResourceState.WAITING);
 
         int n = 0;
-        try (final CloseableIterable<Resource> resources = scheduler.resources(statesSet)) {
+        try (final CloseableIterable<Resource> resources = settings.scheduler.resources(statesSet)) {
             for (Resource resource : resources) {
                 if (resource instanceof Job) {
                     ((Job) resource).stop();
@@ -906,7 +908,7 @@ public class JsonRPCMethods extends HttpServlet {
         List<Map<String, String>> list = new ArrayList<>();
         boolean recursive = _recursive == null ? false : _recursive;
 
-        try (final CloseableIterable<Resource> resources = scheduler.resources(set)) {
+        try (final CloseableIterable<Resource> resources = settings.scheduler.resources(set)) {
             for (Resource resource : resources) {
                 Map<String, String> map = getResourceJSON(resource);
                 list.add(map);

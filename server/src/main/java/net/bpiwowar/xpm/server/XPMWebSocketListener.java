@@ -20,6 +20,7 @@ package net.bpiwowar.xpm.server;
 
 import net.bpiwowar.xpm.server.rpc.JSONRPCRequest;
 import net.bpiwowar.xpm.server.rpc.JsonRPCMethods;
+import net.bpiwowar.xpm.server.rpc.JsonRPCSettings;
 import org.apache.commons.lang.NotImplementedException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
@@ -41,8 +42,8 @@ public class XPMWebSocketListener extends WebSocketAdapter implements WebSocketL
     private final JsonRPCMethods methods;
 
 
-    public XPMWebSocketListener(Server server, Scheduler scheduler, Repositories repositories) throws IOException {
-        this.methods = new JsonRPCMethods(server, scheduler, repositories, new JSONRPCRequest() {
+    public XPMWebSocketListener(JsonRPCSettings settings) throws IOException {
+        this.methods = new JsonRPCMethods(settings, new JSONRPCRequest() {
             @Override
             public void sendJSONString(String message) throws IOException {
                 try {

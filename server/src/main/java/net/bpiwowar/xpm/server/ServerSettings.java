@@ -40,6 +40,10 @@ public class ServerSettings {
      */
     Style style = Style.SMOOTHNESS;
 
+    public String getName() {
+        return name;
+    }
+
     public ServerSettings(Configuration configuration) {
         try {
             name = configuration.getString("name", InetAddress.getLocalHost().getHostName());
