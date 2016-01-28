@@ -61,7 +61,7 @@ public class JavaScriptObject implements Wrapper, Scriptable, Callable {
 
     @Override
     public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-        MethodFunction function = getMethodFunction(ExposeMode.CALL);
+        MethodFunction function = this.classDescription.getMethod(ExposeMode.CALL);
         if (function.isEmpty()) {
             throw new XPMRhinoException("Cannot call object of type %s", getClassName());
         }
@@ -96,7 +96,7 @@ public class JavaScriptObject implements Wrapper, Scriptable, Callable {
     @Override
     public Object get(String name, Scriptable start) {
         // Search for a function
-        MethodFunction function = getMethodFunction(name);
+        MethodFunction function = this.classDescription.getMethod(name);
         if (function != null) {
             return new JavaScriptFunction(thisObject(), function);
         }
@@ -109,7 +109,7 @@ public class JavaScriptObject implements Wrapper, Scriptable, Callable {
         }
 
         // Search for property accessor
-        function = getMethodFunction(ExposeMode.FIELDS);
+        function = this.classDescription.getMethod(ExposeMode.FIELDS);
         if (function != null && !function.isEmpty()) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
             final Object result = function.call(jcx, thisObject(), null, name);
@@ -119,13 +119,9 @@ public class JavaScriptObject implements Wrapper, Scriptable, Callable {
         return NOT_FOUND;
     }
 
-    protected MethodFunction getMethodFunction(Object key) {
-        return this.classDescription.getMethods().get(key);
-    }
-
     @Override
     public Object get(int index, Scriptable start) {
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = this.classDescription.getMethod(ExposeMode.FIELDS);
         if (function != null) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
             final Object result = function.call(jcx, thisObject(), null, index);
@@ -155,7 +151,7 @@ public class JavaScriptObject implements Wrapper, Scriptable, Callable {
         }
 
         // Search for property accessor
-        MethodFunction function = getMethodFunction(ExposeMode.FIELDS);
+        MethodFunction function = this.classDescription.getMethod(ExposeMode.FIELDS);
         if (function != null) {
             final JavaScriptContext jcx = new JavaScriptContext(Context.getCurrentContext(), start);
             function.call(jcx, thisObject(), null, name, value);
