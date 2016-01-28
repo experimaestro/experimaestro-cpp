@@ -222,7 +222,7 @@ def start_jar(args, jarargs):
                                    stderr=stderr,
                                    # FIXME(Nicolas Despres): Same remarks
                                    #  than for daemonlib.daemonize().
-                                   close_fds=False)
+                                   close_fds=True)
 
     def wait_server(pid):
         logging.info("Waiting for server to start (PID=%s)...", pid)
@@ -241,12 +241,9 @@ def start_jar(args, jarargs):
                 logging.debug("%d attempt to ping server...", nattempt)
                 rc = raw_ping(json_server)
             except requests.exceptions.ConnectionError as e:
-                # This test is kind of dirty but for some reasons the
-                # 'requests' module does not use the Built-in ConnectionError
-                # and the 'errno' attribute of the exception always returns
-                # None.
-                if e.args[0].args[1].errno != errno.ECONNREFUSED:
-                    logging.error("Ping failed: %s", e)
+                logging.debug("Ping failed: %s" % type(e.args[0]))
+                # if e.args[0].args[1].errno != errno.ECONNREFUSED:
+                #     logging.error("Ping failed: %s", e)
                 last_error = e
             else:
                 if rc:
@@ -278,7 +275,7 @@ def start_jar(args, jarargs):
         #   debugging to diagnostic that. In theory, closing in a child
         #   process a socket created in the parent is not a problem, but in
         #   our case things seems to work better when we do not close them.
-        close_fds=False)
+        close_fds=True)
 
 class Properties:
     def __init__(self, map=[None, {}]):
