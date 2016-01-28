@@ -140,6 +140,7 @@ abstract public class Job extends Resource {
 
             // Update status
             updateStatus();
+            Scheduler.notifyRunners();
         }
     }
 
