@@ -118,6 +118,16 @@ public class ClassDescription {
         Class<?> superclass = aClass.getSuperclass();
         if (superclass != null && superclass.getAnnotation(Exposed.class) != null) {
             this.superDescription = analyzeClass(superclass);
+
+            // Add methods
+            superDescription.getMethods().forEach((k, m) -> {
+                final MethodFunction methodFunction = methods.get(k);
+                if (methodFunction == null) {
+                    methods.put(k, methodFunction);
+                } else {
+                    methodFunction.add(m);
+                }
+            });
         }
 
         // Add constructors

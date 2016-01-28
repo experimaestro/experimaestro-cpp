@@ -18,6 +18,7 @@ package net.bpiwowar.xpm.manager.scripting;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import org.mozilla.javascript.ScriptRuntime;
 import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
@@ -56,7 +57,7 @@ public abstract class GenericFunction {
      * @param args    The arguments passed
      * @return
      */
-    public Object call(LanguageContext lcx, Object thisObj, HashMap<String, Object> options, Object... args) {
+    public Object call(LanguageContext lcx, Object thisObj, Map<String, Object> options, Object... args) {
         Converter argmax = null;
 
         Arguments arguments = new Arguments(lcx, args, options);
@@ -90,7 +91,7 @@ public abstract class GenericFunction {
             Arrays.sort(scoredDeclarations, (a, b) -> Integer.compare(a.score, b.score));
 
 
-            final Logger logger = ScriptContext.get().getMainLogger();
+            final Logger logger = ScriptContext.mainLogger();
             final String message = String.format("Could not find a matching method for %s(%s)%s",
                     getKey(),
                     Output.toString(", ", args, o -> o.getClass().toString()),
@@ -102,7 +103,8 @@ public abstract class GenericFunction {
             for (Converter scoredDeclaration : scoredDeclarations) {
                 logger.error("[%d] %s", scoredDeclaration.score, scoredDeclaration.declaration);
             }
-            throw ScriptRuntime.typeError(message);
+
+            throw new XPMScriptRuntimeException(message);
         }
 
 
@@ -134,6 +136,7 @@ public abstract class GenericFunction {
         }
 
     }
+
 
     static public final class ArgumentConverter implements Function<Arguments, Object> {
         private final int position;

@@ -75,6 +75,16 @@ public class MethodFunction extends GenericFunction {
         groups.add(new Group(methods));
     }
 
+
+    /**
+     * Add all methods from another function
+     * @param other The other function
+     */
+    public void add(MethodFunction other) {
+        assert key.equals(other.key);
+        this.groups.addAll(other.groups);
+    }
+
     /**
      * Represent all the methods from a given ancestor (or self)
      */

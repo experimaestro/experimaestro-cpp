@@ -453,4 +453,9 @@ final public class ScriptContext implements AutoCloseable {
         return this;
     }
 
+    public static Logger mainLogger() {
+        final ScriptContext sc = ScriptContext.get();
+        if (sc  == null) return LOGGER;
+        return sc.getMainLogger();
+    }
 }
