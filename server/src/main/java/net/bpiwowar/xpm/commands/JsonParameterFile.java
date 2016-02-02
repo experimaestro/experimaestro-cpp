@@ -44,12 +44,7 @@ public class JsonParameterFile extends CommandComponent {
         java.nio.file.Path file = (java.nio.file.Path) environment.getData(this);
         try (OutputStream out = Files.newOutputStream(file);
              OutputStreamWriter jsonWriter = new OutputStreamWriter(out)) {
-            final JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
-                    .ignore$(false)
-                    .ignoreNull(false)
-                    .mode(JsonWriterMode.PARAMETER_FILE)
-                    .simplifyValues(true)
-                    .removeDefault(false)
+            final JsonWriterOptions options = JsonWriterOptions.PARAMETER_OPTIONS.clone()
                     .resolveFile(f -> {
                         try {
                             return environment.resolve(f, null);

@@ -27,26 +27,47 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Created by bpiwowar on 3/10/14.
+ * Options when writing JSON
  */
 public class JsonWriterOptions {
     /**
      * Default set of ignored options
      */
     public static final Set<TypeName> DEFAULT_IGNORE = ImmutableSet.of(Constants.XP_RESOURCE_TYPE, Constants.XP_PATH, Constants.XP_FILE, Constants.XP_DIRECTORY);
+
     public Set<TypeName> ignore = DEFAULT_IGNORE;
-    public static final JsonWriterOptions DEFAULT_OPTIONS = new JsonWriterOptions();
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
     public boolean ignoreNull = true;
     public boolean removeDefault = true;
-
     Function<Path, String> resolver = f -> f.toString();
     public JsonWriterMode mode = JsonWriterMode.DEFAULT;
+
+    /**
+     * Options used for writing parameter files: we only simplify values
+     */
+    public static final JsonWriterOptions PARAMETER_OPTIONS = new JsonWriterOptions(ImmutableSet.of())
+            .simplifyValues(true)
+            .removeDefault(false)
+            .ignore$(false)
+            .ignoreNull(false);
+    public static final JsonWriterOptions DEFAULT_OPTIONS = new JsonWriterOptions();
+
+    @Override
+    public JsonWriterOptions clone() {
+        return new JsonWriterOptions(this.ignore)
+                .simplifyValues(simplifyValues)
+                .ignore$(ignore$)
+                .ignoreNull(ignoreNull)
+                .removeDefault(removeDefault)
+                .resolveFile(resolver)
+                .mode(mode);
+    }
 
     public JsonWriterOptions(Set<TypeName> ignore) {
         this.ignore = ignore;
     }
+
 
     public JsonWriterOptions() {
         this(DEFAULT_IGNORE);

@@ -30,10 +30,15 @@ import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.PathUtils;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 
 import static java.lang.String.format;
+import static net.bpiwowar.xpm.manager.Constants.JSON_KEY_ID;
 
 /**
  * A JSON object (associates a key to a json value)
@@ -76,7 +81,9 @@ public class JsonObject extends Json {
     }
 
 
-    /** Get the value json */
+    /**
+     * Get the value json
+     */
     Json valueAsJson() {
         TypeName parsedType = type();
 
@@ -244,6 +251,7 @@ public class JsonObject extends Json {
             this.valueAsJson().writeDescriptorString(out, options);
             return;
         }
+
 
         Set<String> ignored_keys = new HashSet<>();
         ignored_keys.add(Constants.XP_IGNORE.toString());

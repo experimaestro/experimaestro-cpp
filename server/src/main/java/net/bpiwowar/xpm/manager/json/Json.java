@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.manager.json;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonWriter;
@@ -29,10 +28,19 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.Expose;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.Help;
+import net.bpiwowar.xpm.manager.scripting.LanguageContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
 import net.bpiwowar.xpm.scheduler.Resource;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.nio.file.Path;
@@ -171,11 +179,7 @@ abstract public class Json {
         }
         Writer writer = new OutputStreamWriter(bytes);
         final SingleHostConnector finalConnector = connector;
-        JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
-                .simplifyValues(true)
-                .removeDefault(false)
-                .ignore$(false)
-                .ignoreNull(false)
+        JsonWriterOptions options = JsonWriterOptions.PARAMETER_OPTIONS.clone()
                 .resolveFile(f -> {
                     try {
                         return finalConnector.resolve(f);
@@ -310,7 +314,7 @@ abstract public class Json {
                 final String stringNumber = primitive.getAsString();
                 try {
                     return new JsonInteger(Long.parseLong(stringNumber));
-                } catch(NumberFormatException nfe) {
+                } catch (NumberFormatException nfe) {
                     return new JsonReal(Double.parseDouble(stringNumber));
                 }
 
