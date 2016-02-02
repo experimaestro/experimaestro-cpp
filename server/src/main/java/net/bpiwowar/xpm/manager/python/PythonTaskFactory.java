@@ -82,13 +82,6 @@ class PythonTaskFactory extends TaskFactory {
                     input = new JsonInput(new Type(inputType));
                     break;
 
-                case "alternative":
-                    Type altType = getRepository().getType(inputType);
-                    if (altType == null || !(altType instanceof AlternativeType))
-                        throw new IllegalArgumentException("Type " + inputType + " is not an alternative");
-                    input = new AlternativeInput((AlternativeType) altType);
-                    break;
-
                 case "task":
                     TaskFactory factory = getRepository().getFactory(inputType);
                     if (factory == null)

@@ -99,32 +99,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
         }
 
 
-        // --- Are we an alternative?
-
-        Object altObject = JSUtils.get(jsScope, "alternative", jsObject, null);
-        if (altObject != null) {
-            TypeName altId;
-            if (altObject instanceof Boolean) {
-                if (output == null)
-                    throw new XPMRuntimeException("No output has been defined for an alternative");
-                altId = output.getId();
-            } else if (altObject instanceof TypeName) {
-                altId = (TypeName) altObject;
-            } else
-                throw new NotImplementedException("Cannot handle alternative of type " + altObject.getClass());
-
-
-            Type type = repository.getType(altId);
-            if (type == null || !(type instanceof AlternativeType))
-                throw new XPMRuntimeException(
-                        "Type %s is not an alternative", outTypeName == null ? "null"
-                        : outTypeName.toString());
-
-            ((AlternativeType) type).add(id, this);
-            output = type;
-            return;
-        }
-
         init();
 
     }
@@ -216,13 +190,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
                 case "json":
                     input = new JsonInput(new Type(inputType));
-                    break;
-
-                case "alternative":
-                    Type altType = getRepository().getType(inputType);
-                    if (altType == null || !(altType instanceof AlternativeType))
-                        throw new IllegalArgumentException("Type " + inputType + " is not an alternative");
-                    input = new AlternativeInput((AlternativeType) altType);
                     break;
 
                 case "task":

@@ -293,20 +293,6 @@ public class XPM {
     }
 
 
-    /**
-     * Declare an alternative
-     *
-     * @param qname A qualified name
-     */
-    @Expose("declare_alternative")
-    @Help(value = "Declare a qualified name as an alternative input")
-    public void declareAlternative(Object qname) {
-
-        AlternativeType type = new AlternativeType((TypeName) qname);
-        getRepository().addType(type);
-    }
-
-
     @Expose("publish")
     @Help("Publish the repository on the web server")
     public void publish() throws InterruptedException {
