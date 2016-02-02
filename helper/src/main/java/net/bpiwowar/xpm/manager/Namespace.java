@@ -47,4 +47,9 @@ public class Namespace {
     public String toString() {
         return uri;
     }
+
+    @Expose(mode = ExposeMode.CALL)
+    public TypeName typename(String value) {
+        return new TypeName(uri, value);
+    }
 }

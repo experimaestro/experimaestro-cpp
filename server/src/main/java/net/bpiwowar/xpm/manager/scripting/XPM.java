@@ -104,6 +104,8 @@ public class XPM {
             tokenResource = (TokenResource) resource;
         }
 
+        // Add to experiment
+        ScriptContext.get().postProcess(null, tokenResource);
         return tokenResource;
     }
 

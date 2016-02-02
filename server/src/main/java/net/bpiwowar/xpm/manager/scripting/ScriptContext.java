@@ -22,6 +22,8 @@ import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.DirectLauncher;
 import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.DummyTask;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.Repository;
 import net.bpiwowar.xpm.manager.Task;
@@ -376,53 +378,57 @@ final public class ScriptContext implements AutoCloseable {
     public void postProcess(Task task, Resource resource) {
         if (task == null) task = this.task.get();
         TaskReference taskReference = null;
-
+        if (getExperiment() == null) {
+            throw new XPMScriptRuntimeException("Experiment is not set");
+        }
         try {
-            if (task != null) {
-                // Find the task reference with the same ID that has the same parents,
-                // otherwise create a new task reference
-
-                final TypeName taskId = task.getFactory().getId();
-                IdentityHashSet<TaskReference> set = null;
-                ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
-                for (Dependency dependency : resource.getDependencies()) {
-                    final SubmittedJob dep = submittedJobs.get(dependency.getFrom().getLocator().toString());
-                    if (dep == null) {
-                        continue; // Might be a task without any experiment
-                    }
-                    parentTaskReferences.add(dep.taskReference);
-
-                    if (set == null) {
-                        set = new IdentityHashSet<>();
-                        dep.taskReference.children().stream()
-                                .filter(tr -> tr.getTaskId().equals(taskId))
-                                .forEach(set::add);
-                    } else {
-                        IdentityHashSet<TaskReference> newSet = new IdentityHashSet<>();
-                        dep.taskReference.children().stream()
-                                .filter(set::contains)
-                                .filter(tr -> tr.getTaskId().equals(taskId))
-                                .forEach(newSet::add);
-                        set = newSet;
-                    }
-
-                    if (set == null) break;
-                }
-
-                if (set != null && set.size() > 1) {
-                    throw new AssertionError("More than one task reference configuration");
-                }
-
-                if (set == null || set.isEmpty()) {
-                    taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
-                    taskReference.save();
-                } else {
-                    taskReference = set.iterator().next();
-                }
-
-                // Add resource
-                taskReference.add(resource);
+            if (task == null) {
+                // Create dummy task
+                task = new DummyTask();
             }
+
+            // Find the task reference with the same ID that has the same parents,
+            // otherwise create a new task reference
+            final TypeName taskId = task.getFactory().getId();
+            IdentityHashSet<TaskReference> set = null;
+            ArrayList<TaskReference> parentTaskReferences = new ArrayList<>();
+            for (Dependency dependency : resource.getDependencies()) {
+                final SubmittedJob dep = submittedJobs.get(dependency.getFrom().getLocator().toString());
+                if (dep == null) {
+                    continue; // Might be a task without any experiment
+                }
+                parentTaskReferences.add(dep.taskReference);
+
+                if (set == null) {
+                    set = new IdentityHashSet<>();
+                    dep.taskReference.children().stream()
+                            .filter(tr -> tr.getTaskId().equals(taskId))
+                            .forEach(set::add);
+                } else {
+                    IdentityHashSet<TaskReference> newSet = new IdentityHashSet<>();
+                    dep.taskReference.children().stream()
+                            .filter(set::contains)
+                            .filter(tr -> tr.getTaskId().equals(taskId))
+                            .forEach(newSet::add);
+                    set = newSet;
+                }
+
+                if (set.isEmpty()) break;
+            }
+
+            if (set != null && set.size() > 1) {
+                throw new AssertionError("More than one task reference configuration");
+            }
+
+            if (set == null || set.isEmpty()) {
+                taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
+                taskReference.save();
+            } else {
+                taskReference = set.iterator().next();
+            }
+
+            // Add resource
+            taskReference.add(resource);
         } catch (SQLException e) {
             // FIXME: do something better?
             getMainLogger().error(e, "Error while registering experiment");
