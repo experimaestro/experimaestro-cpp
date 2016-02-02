@@ -25,7 +25,6 @@ import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 
 /**
  * @author B. Piwowarski <benjamin@bpiwowar.net>
- * @date 23/1/13
  */
 public class ArrayValue extends Value {
     /**
@@ -35,11 +34,6 @@ public class ArrayValue extends Value {
 
     public ArrayValue(ArrayInput input) {
         this.input = input;
-    }
-
-    @Override
-    public Value getValue() throws NoSuchParameter {
-        return this;
     }
 
     @Override

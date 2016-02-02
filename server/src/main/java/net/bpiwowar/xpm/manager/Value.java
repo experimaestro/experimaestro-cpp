@@ -60,14 +60,6 @@ public abstract class Value {
     }
 
     /**
-     * Returns the value object corresponding to this path
-     *
-     * @return The value
-     */
-    public abstract Value getValue() throws NoSuchParameter;
-
-
-    /**
      * Set to the given value
      *
      * @param value

@@ -49,12 +49,6 @@ public class JsonValue extends Value {
     }
 
     @Override
-    public Value getValue() {
-        LOGGER.debug("Value set to [%s]", value);
-        return this;
-    }
-
-    @Override
     public void set(Json value) {
         LOGGER.debug("Value set to [%s]", value);
         this.value = value;
