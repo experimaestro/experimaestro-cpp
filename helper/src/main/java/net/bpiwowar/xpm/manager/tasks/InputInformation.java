@@ -1,9 +1,15 @@
 package net.bpiwowar.xpm.manager.tasks;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.stream.JsonReader;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.utils.introspection.ClassInfo;
 import net.bpiwowar.xpm.utils.introspection.FieldInfo;
 
+import java.io.StringReader;
 import java.util.Map;
 
 import static net.bpiwowar.xpm.manager.TypeName.parse;
@@ -17,6 +23,8 @@ public class InputInformation {
     final String help;
     final String copyTo;
     final boolean required;
+    @SerializedName("default")
+    public JsonElement defaultvalue;
 
     public InputInformation(Map<String, String> namespaces, FieldInfo field) {
         JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
@@ -24,6 +32,10 @@ public class InputInformation {
         help = jsonArgument.help();
         required = jsonArgument.required();
         copyTo = jsonArgument.copyTo();
+        if (!jsonArgument.defaultValue().isEmpty()) {
+            final JsonReader jsonReader = new JsonReader(new StringReader(jsonArgument.defaultValue()));
+            defaultvalue = new Gson().fromJson(jsonReader, JsonElement.class);
+        }
     }
 
     private TaskInputType getType(JsonArgument jsonArgument, ClassInfo type, Map<String, String> namespaces) {

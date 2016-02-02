@@ -63,4 +63,7 @@ public @interface JsonArgument {
      * @return The name
      */
     String copyTo() default "";
+
+    /** Default value */
+    String defaultValue() default "";
 }

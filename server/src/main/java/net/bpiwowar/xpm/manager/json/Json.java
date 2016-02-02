@@ -306,7 +306,15 @@ abstract public class Json {
         if (element.isJsonPrimitive()) {
             final JsonPrimitive primitive = element.getAsJsonPrimitive();
             if (primitive.isBoolean()) return JsonBoolean.of(primitive.getAsBoolean());
-            if (primitive.isNumber()) return new JsonReal(primitive.getAsFloat());
+            if (primitive.isNumber()) {
+                final String stringNumber = primitive.getAsString();
+                try {
+                    return new JsonInteger(Long.parseLong(stringNumber));
+                } catch(NumberFormatException nfe) {
+                    return new JsonReal(Double.parseDouble(stringNumber));
+                }
+
+            }
             if (primitive.isString()) return new JsonString(primitive.getAsString());
             throw new AssertionError("Unknown JSON primitive type " + primitive);
         }
