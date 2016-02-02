@@ -165,4 +165,8 @@ public abstract class Input {
         }
         return false;
     }
+
+    public Json getDefault() {
+        return defaultValue;
+    }
 }

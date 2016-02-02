@@ -32,7 +32,7 @@ import java.io.Writer;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class JsonBoolean extends Json {
+public class JsonBoolean extends JsonSimple {
     private final boolean value;
     public final static JsonBoolean TRUE = new JsonBoolean(true);
     public final static JsonBoolean FALSE = new JsonBoolean(false);
@@ -43,11 +43,6 @@ public class JsonBoolean extends Json {
 
     public static JsonBoolean of(boolean value) {
         return value ? TRUE : FALSE;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override

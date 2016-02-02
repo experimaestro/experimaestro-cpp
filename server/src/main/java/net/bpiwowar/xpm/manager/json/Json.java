@@ -54,7 +54,7 @@ abstract public class Json {
     /**
      * Returns true if this Json object is a simple type
      */
-    boolean isSimple() {
+    public boolean isSimple() {
         return true;
     }
 
@@ -98,7 +98,9 @@ abstract public class Json {
     }
 
     public void writeDescriptorString(Writer writer) throws IOException {
-        writeDescriptorString(new JsonWriter(writer));
+        final JsonWriter jsonWriter = new JsonWriter(writer);
+        jsonWriter.setLenient(true);
+        writeDescriptorString(jsonWriter);
     }
 
     /**
@@ -171,6 +173,7 @@ abstract public class Json {
         final SingleHostConnector finalConnector = connector;
         JsonWriterOptions options = new JsonWriterOptions(ImmutableSet.of())
                 .simplifyValues(true)
+                .removeDefault(false)
                 .ignore$(false)
                 .ignoreNull(false)
                 .resolveFile(f -> {
@@ -325,4 +328,6 @@ abstract public class Json {
     public void write(Writer writer) throws IOException {
         write(new JsonWriter(writer));
     }
+
+    public abstract Json annotate(String key, Json value);
 }

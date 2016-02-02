@@ -39,6 +39,8 @@ public class JsonWriterOptions {
     public boolean simplifyValues = true;
     public boolean ignore$ = true;
     public boolean ignoreNull = true;
+    public boolean removeDefault = true;
+
     Function<Path, String> resolver = f -> f.toString();
     public JsonWriterMode mode = JsonWriterMode.DEFAULT;
 
@@ -67,6 +69,11 @@ public class JsonWriterOptions {
 
     public JsonWriterOptions resolveFile(Function<Path, String> resolver) {
         this.resolver = resolver;
+        return this;
+    }
+
+    public JsonWriterOptions removeDefault(boolean removeDefault) {
+        this.removeDefault = removeDefault;
         return this;
     }
 

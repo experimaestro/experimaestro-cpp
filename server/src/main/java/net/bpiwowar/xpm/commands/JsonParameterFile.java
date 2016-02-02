@@ -49,6 +49,7 @@ public class JsonParameterFile extends CommandComponent {
                     .ignoreNull(false)
                     .mode(JsonWriterMode.PARAMETER_FILE)
                     .simplifyValues(true)
+                    .removeDefault(false)
                     .resolveFile(f -> {
                         try {
                             return environment.resolve(f, null);

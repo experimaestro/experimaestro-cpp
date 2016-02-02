@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager;
  */
 
 import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonBoolean;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -52,6 +53,15 @@ public class JsonValue extends Value {
     public void set(Json value) {
         LOGGER.debug("Value set to [%s]", value);
         this.value = value;
+
+        // Checks if this value is the default - in that case
+        final Json json = input.getDefault();
+        if (json != null) {
+            if (json.isSimple() && value.isSimple() && json.get().equals(value.get())) {
+                // Annotate
+                this.value = this.value.annotate(Constants.JSON_KEY_DEFAULT, JsonBoolean.TRUE);
+            }
+        }
     }
 
     @Override

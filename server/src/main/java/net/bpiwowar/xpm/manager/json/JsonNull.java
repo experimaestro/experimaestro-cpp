@@ -29,7 +29,7 @@ import java.io.Writer;
  * Created by bpiwowar on 10/9/14.
  */
 @Exposed
-public class JsonNull extends Json {
+public class JsonNull extends JsonSimple {
     private static JsonNull singleton = new JsonNull();
 
     private JsonNull() {
@@ -37,11 +37,6 @@ public class JsonNull extends Json {
 
     public static JsonNull getSingleton() {
         return singleton;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override

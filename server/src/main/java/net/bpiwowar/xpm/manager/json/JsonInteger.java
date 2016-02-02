@@ -31,7 +31,7 @@ import java.io.IOException;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class JsonInteger extends Json {
+public class JsonInteger extends JsonSimple {
     private long value;
 
     public JsonInteger() {
@@ -39,11 +39,6 @@ public class JsonInteger extends Json {
 
     public JsonInteger(long value) {
         this.value = value;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override

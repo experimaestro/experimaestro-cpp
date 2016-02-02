@@ -44,7 +44,7 @@ import static java.lang.String.format;
 /**
  * Unique path given a JSON
  */
-public class UniquePath {
+public class JsonSignature {
     private final Path uniquePath;
     private final String descriptor;
     private final boolean directoryMode;
@@ -76,7 +76,7 @@ public class UniquePath {
         return DatatypeConverter.printHexBinary(writer.getDigest()).toLowerCase();
     }
 
-    public UniquePath create() throws IOException {
+    public JsonSignature create() throws IOException {
         Files.createDirectories(directoryMode ? uniquePath : uniquePath.getParent());
         try (BufferedWriter out = Files.newBufferedWriter(this.signaturePath)) {
             out.write(this.descriptor);
@@ -101,7 +101,7 @@ public class UniquePath {
      * @throws IOException
      * @throws NoSuchAlgorithmException
      */
-    public UniquePath(Path basedir, String prefix, TypeName id, Json jsonValues, boolean directoryMode) throws IOException, NoSuchAlgorithmException {
+    public JsonSignature(Path basedir, String prefix, TypeName id, Json jsonValues, boolean directoryMode) throws IOException, NoSuchAlgorithmException {
         // Create JSON object, get the description JSON and digest
         JsonObject json = new JsonObject();
         json.put("task", id.toString());

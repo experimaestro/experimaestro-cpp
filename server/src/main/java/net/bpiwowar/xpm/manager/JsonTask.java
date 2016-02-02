@@ -11,6 +11,7 @@ import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.ExposeMode;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.Dependency;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -55,6 +56,11 @@ public class JsonTask extends Json {
     @Override
     public void write(JsonWriter out) throws IOException {
         json.write(out);
+    }
+
+    @Override
+    public Json annotate(String key, Json value) {
+        throw new NotImplementedException();
     }
 
     @Override

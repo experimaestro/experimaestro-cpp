@@ -33,7 +33,7 @@ import static java.lang.String.format;
  * The default interface for JsonPath
  */
 @Exposed
-public class JsonPath extends Json {
+public class JsonPath extends JsonSimple {
     private Path path;
 
     private JsonPath() {
@@ -41,11 +41,6 @@ public class JsonPath extends Json {
 
     public JsonPath(Path path) {
         this.path = path;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override

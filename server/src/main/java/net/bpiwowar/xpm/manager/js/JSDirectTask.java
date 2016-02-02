@@ -181,7 +181,7 @@ public class JSDirectTask extends Task {
             if (prefix == null) {
                 prefix = taskId.getLocalPart();
             }
-            return new UniquePath(basedir, prefix, taskId, cx.toJSON(json), directory)
+            return new JsonSignature(basedir, prefix, taskId, cx.toJSON(json), directory)
                     .create()
                     .getUniquePath();
         }

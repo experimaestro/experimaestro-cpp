@@ -33,16 +33,11 @@ import static java.lang.String.format;
  * Json wrapper over resources
  */
 @Exposed
-public class JsonResource extends Json {
+public class JsonResource extends JsonSimple {
     private Resource resource;
 
     public JsonResource(Resource resource) {
         this.resource = resource;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override

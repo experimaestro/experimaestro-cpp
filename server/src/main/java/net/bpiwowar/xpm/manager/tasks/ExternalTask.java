@@ -85,7 +85,7 @@ public class ExternalTask extends Task {
                 dirPrefix = prefix + "." + dirPrefix;
             }
 
-            uniqueDir = new UniquePath(file, dirPrefix, factory.getId(), json, true).create().getUniquePath();
+            uniqueDir = new JsonSignature(file, dirPrefix, factory.getId(), json, true).create().getUniquePath();
             path = uniqueDir.resolve(factory.getId().getLocalPart());
         } catch (Throwable e) {
             throw new XPMRuntimeException(e).addContext("while computing the unique directory");

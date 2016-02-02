@@ -85,6 +85,11 @@ public class JsonArray extends Json implements Iterable<Json> {
         return this;
     }
 
+    @Override
+    public Json annotate(String key, Json value) {
+        throw new IllegalArgumentException("Cannot annotate a JSON array");
+    }
+
 
     @Override
     public boolean isSimple() {

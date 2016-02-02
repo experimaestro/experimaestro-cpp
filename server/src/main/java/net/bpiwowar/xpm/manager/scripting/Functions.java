@@ -31,7 +31,7 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
-import net.bpiwowar.xpm.manager.UniquePath;
+import net.bpiwowar.xpm.manager.JsonSignature;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
@@ -68,7 +68,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 
 import static net.bpiwowar.xpm.utils.JSUtils.unwrap;
@@ -113,13 +112,13 @@ public class Functions {
     @Expose(context = true)
     public static String digest(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
         Json json = cx.toJSON(jsons);
-        return UniquePath.getDigest(json);
+        return JsonSignature.getDigest(json);
     }
 
     @Expose(context = true)
     public static String descriptor(LanguageContext cx, Object... jsons) throws NoSuchAlgorithmException, IOException {
         Json json = cx.toJSON(jsons);
-        return UniquePath.getDescriptor(json);
+        return JsonSignature.getDescriptor(json);
     }
 
     // Used in scripting languages which cannot use $ as first character

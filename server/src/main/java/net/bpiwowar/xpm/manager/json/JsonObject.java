@@ -76,7 +76,8 @@ public class JsonObject extends Json {
     }
 
 
-    Json getAsJSON() {
+    /** Get the value json */
+    Json valueAsJson() {
         TypeName parsedType = type();
 
         Json value = map.get(Constants.XP_VALUE.toString());
@@ -125,7 +126,7 @@ public class JsonObject extends Json {
 
     @Override
     public Object get() {
-        return getAsJSON().get();
+        return valueAsJson().get();
     }
 
     public void put(String key, String string) {
@@ -201,9 +202,23 @@ public class JsonObject extends Json {
     }
 
     @Override
+    public Json annotate(String key, Json value) {
+        put(key, value);
+        return this;
+    }
+
+    @Override
     public boolean canIgnore(JsonWriterOptions options) {
         if (options.ignore.contains(type())) {
             return true;
+        }
+
+        if (options.removeDefault) {
+            final Json value = map.getOrDefault(Constants.JSON_KEY_DEFAULT, null);
+            if (value != null && value.isSimple()) {
+                final Object o = value.get();
+                if (o instanceof Boolean) return ((Boolean) o);
+            }
         }
 
         if (map.containsKey(Constants.XP_IGNORE.toString())) {
@@ -226,7 +241,7 @@ public class JsonObject extends Json {
         }
 
         if (isSimple() && options.simplifyValues) {
-            this.getAsJSON().writeDescriptorString(out, options);
+            this.valueAsJson().writeDescriptorString(out, options);
             return;
         }
 

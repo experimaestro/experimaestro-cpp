@@ -33,7 +33,7 @@ import java.io.Writer;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class JsonString extends Json {
+public class JsonString extends JsonSimple {
     String string;
 
     public JsonString() {
@@ -41,11 +41,6 @@ public class JsonString extends Json {
 
     public JsonString(String string) {
         this.string = string;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return false;
     }
 
     @Override

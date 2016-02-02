@@ -32,7 +32,7 @@ import java.io.Writer;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @Exposed
-public class JsonReal extends Json {
+public class JsonReal extends JsonSimple {
     /**
      * The wrapped value
      */
@@ -40,11 +40,6 @@ public class JsonReal extends Json {
 
     public JsonReal(double value) {
         this.value = value;
-    }
-
-    @Override
-    public boolean isSimple() {
-        return true;
     }
 
     @Override
