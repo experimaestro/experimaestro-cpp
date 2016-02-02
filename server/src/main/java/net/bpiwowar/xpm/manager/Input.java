@@ -55,10 +55,6 @@ public abstract class Input {
     Json defaultValue;
 
     /**
-     * Unnamed option
-     */
-    boolean unnamed;
-    /**
      * Used when this input is connected, i.e. its value is the
      * result of an XQuery expression based on other inputs
      */
@@ -128,14 +124,6 @@ public abstract class Input {
 
     public void addConnection(Connection connection) {
         connections.add(connection);
-    }
-
-    public boolean isUnnamed() {
-        return unnamed;
-    }
-
-    public void setUnnamed(boolean unnamed) {
-        this.unnamed = unnamed;
     }
 
     public void setNamespace(String namespace) {

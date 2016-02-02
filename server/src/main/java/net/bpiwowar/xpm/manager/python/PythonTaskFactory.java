@@ -128,11 +128,6 @@ class PythonTaskFactory extends TaskFactory {
             // Set required/optional flag
             input.setOptional(optional);
 
-            // Merge
-            boolean merge = toBoolean(definition, "merge");
-            if (merge) {
-                input.setUnnamed(true);
-            }
 
             // Store in the inputs
             inputs.put(inputId, input);

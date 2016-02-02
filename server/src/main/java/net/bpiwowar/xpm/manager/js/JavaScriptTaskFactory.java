@@ -18,9 +18,6 @@ package net.bpiwowar.xpm.manager.js;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
-import org.mozilla.javascript.*;
-import org.mozilla.javascript.Function;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
@@ -29,8 +26,16 @@ import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -237,11 +242,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
 
             // Set required/optional flag
             input.setOptional(optional);
-
-            // Merge
-            boolean merge = JSUtils.toBoolean(scope, definition, "merge");
-            if (merge)
-                input.setUnnamed(true);
 
             // Store in the inputs
             inputs.put(id, input);
