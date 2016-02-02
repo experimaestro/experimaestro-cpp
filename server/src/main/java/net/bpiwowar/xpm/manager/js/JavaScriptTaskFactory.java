@@ -192,21 +192,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
                     input = new JsonInput(new Type(inputType));
                     break;
 
-                case "task":
-                    TaskFactory factory = getRepository().getFactory(inputType);
-                    if (factory == null)
-                        throw new ValueMismatchException("Could not find task factory [%s] for input [%s]",
-                                inputType, id);
-
-                    // The type of this input is either specified (inputType)
-                    // or it is set to the declared output of the task
-                    Type xmlType = fields.contains("type") ?
-                            new Type(TypeName.parse(JSUtils.toString(definition.get("type", jsObject)), null, prefixes))
-                            : factory.getOutput();
-
-                    input = new TaskInput(factory, xmlType);
-                    break;
-
                 default:
                     throw SHOULD_NOT_BE_HERE;
             }
