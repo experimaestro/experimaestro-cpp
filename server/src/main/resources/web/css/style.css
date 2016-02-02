@@ -192,8 +192,8 @@ ul.buttons {
 
 #resources li.state-ready::before {
     content: "ready";
-    background: green;
-    color: white;
+    background: yellow;
+    color: black;
 }
 
 #resources li.state-on_hold::before {
@@ -204,7 +204,7 @@ ul.buttons {
 
 #resources li.state-running::before {
     content: "running";
-    background: green;
+    background: lightgreen;
     color: white;
 }
 
