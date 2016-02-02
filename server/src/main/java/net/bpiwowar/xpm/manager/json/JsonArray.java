@@ -28,7 +28,6 @@ import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.utils.Output;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -68,10 +67,13 @@ public class JsonArray extends Json implements Iterable<Json> {
     }
 
     @Override
-    public Json copy() {
+    public Json copy(boolean full) {
+        if (!full && sealed) {
+            return this;
+        }
         JsonArray newArray = new JsonArray();
         for (Json json : array) {
-            newArray.add(json.copy());
+            newArray.add(json.copy(false));
         }
         return newArray;
     }

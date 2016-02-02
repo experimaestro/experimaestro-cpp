@@ -199,8 +199,9 @@ abstract public class Json {
      * since by default it returns the object itself.
      *
      * @return A new JSON object
+     * @param full If true, the copy is complete; otherwise, we stop when an object is immutable
      */
-    public Json copy() {
+    public Json copy(boolean full) {
         return this;
     }
 

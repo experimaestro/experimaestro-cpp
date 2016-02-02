@@ -238,7 +238,7 @@ public abstract class Task {
         try {
             final Value v = getValue(id);
             if (v == null) throw new XPMRuntimeException("No parameter named %s", id);
-            v.set(value.seal());
+            v.set(value.copy(false));
         } catch (XPMRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());
             throw e;

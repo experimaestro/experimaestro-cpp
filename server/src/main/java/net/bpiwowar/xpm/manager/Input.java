@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.manager;
  */
 
 import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonBoolean;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.log.Logger;
 
@@ -119,7 +120,7 @@ public abstract class Input {
 
     /** Set the default value for this input */
     public void setDefaultValue(Json defaultValue) {
-        this.defaultValue = defaultValue;
+        this.defaultValue = defaultValue.annotate(Constants.JSON_KEY_DEFAULT, JsonBoolean.TRUE).seal();
     }
 
     public void addConnection(Connection connection) {

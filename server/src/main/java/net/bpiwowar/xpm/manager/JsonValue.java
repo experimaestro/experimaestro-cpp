@@ -62,6 +62,8 @@ public class JsonValue extends Value {
                 this.value = this.value.annotate(Constants.JSON_KEY_DEFAULT, JsonBoolean.TRUE);
             }
         }
+
+        this.value = this.value.seal();
     }
 
     @Override

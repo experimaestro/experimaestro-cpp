@@ -38,7 +38,6 @@ import java.util.TreeMap;
 import java.util.function.BiConsumer;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.manager.Constants.JSON_KEY_ID;
 
 /**
  * A JSON object (associates a key to a json value)
@@ -193,9 +192,13 @@ public class JsonObject extends Json {
     }
 
     @Override
-    public Json copy() {
+    public Json copy(boolean full) {
+        if (!full && sealed) {
+            return this;
+        }
+
         final JsonObject copy = new JsonObject();
-        this.map.forEach((x, y) -> copy.put(x, y.copy()));
+        this.map.forEach((x, y) -> copy.put(x, y.copy(false)));
         return copy;
     }
 
@@ -213,6 +216,8 @@ public class JsonObject extends Json {
         put(key, value);
         return this;
     }
+
+
 
     @Override
     public boolean canIgnore(JsonWriterOptions options) {

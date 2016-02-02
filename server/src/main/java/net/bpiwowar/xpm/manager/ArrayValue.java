@@ -38,7 +38,7 @@ public class ArrayValue extends Value {
 
     @Override
     public void set(Json value) {
-        this.array = (JsonArray) value;
+        this.array = (JsonArray) value.seal();
     }
 
     @Override
