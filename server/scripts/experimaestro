@@ -90,7 +90,8 @@ p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
 
-p_cleanup = subparsers.add_parser("cleanup", help="Cleanup obsolete experiments")
+p_cleanup = subparsers.add_parser("clean", help="Cleanup obsolete experiments")
+p_cleanup.add_argument("--resources", default=False, action="store_true", help="Remove also resources")
 p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
 p_cleanup = subparsers.add_parser("clean-resources", help="Remove obsolete resources")
@@ -604,9 +605,9 @@ def command_generate_files(args):
     run_server_command(client, "generateFiles", {"jobs": args.jobid})
 
 
-def command_cleanup(args):
+def command_clean(args):
     server = Configuration(args).getJsonServer()
-    json.dump(server["experiments.cleanup"]({"simulate": not args.run}), sys.stdout)
+    json.dump(server["experiments.clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}), sys.stdout)
 
 
 def command_clean_resources(args):

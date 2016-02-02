@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.XPMCommandException;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
@@ -28,20 +27,31 @@ public class ExperimentsMethods {
     /**
      * Delete obsolete experiments
      */
-    @RPCMethod(name = "cleanup", help = "Cleanup old experiments",
+    @RPCMethod(name = "clean-experiments", help = "Cleanup old experiments",
             returns = "A map between experiment names and deletion counts")
-    static class Cleanup implements JsonCallable {
+    static class CleanupExperiments implements JsonCallable {
         @RPCArgument(name = "simulate", required = false, help = "If true, don't perform the action")
         boolean simulate = true;
 
+        @RPCArgument(name = "remove-resources")
+        boolean removeResources;
+
         @Override
-        public Object call() throws Throwable {
+        public JsonObject call() throws Throwable {
             // Select all resources that are part of experiments, but not the latest
             JsonObject response = new JsonObject();
+            JsonObject experiments = new JsonObject();
+            response.add("experiments", experiments);
             final Iterator<ExperimentReference> iterator = Experiment.experimentNames().iterator();
             while (iterator.hasNext()) {
                 final ExperimentReference reference = iterator.next();
                 response.addProperty(reference.identifier, Experiment.deleteOlder(simulate, reference));
+            }
+
+            if (removeResources) {
+                final CleanResources cleanResources = new CleanResources();
+                cleanResources.simulate = simulate;
+                response.add("resources", cleanResources.call());
             }
 
             return response;
@@ -54,8 +64,10 @@ public class ExperimentsMethods {
         boolean simulate = true;
 
         @Override
-        public Object call() throws Throwable {
-            return Experiment.deleteObsoleteResources(simulate);
+        public JsonArray call() throws Throwable {
+            JsonArray array = new JsonArray();
+            Experiment.deleteObsoleteResources(simulate).forEach(s -> array.add(new JsonPrimitive(s)));
+            return array;
         }
     }
 
@@ -68,7 +80,7 @@ public class ExperimentsMethods {
         long timestamp;
 
         @Override
-        public Object call() throws Throwable {
+        public JsonObject call() throws Throwable {
             return null;
         }
     }

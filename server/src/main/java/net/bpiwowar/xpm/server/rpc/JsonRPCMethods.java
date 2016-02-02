@@ -662,7 +662,7 @@ public class JsonRPCMethods extends HttpServlet {
         boolean recursive;
 
         @Override
-        public Object call() throws Throwable {
+        public Integer call() throws Throwable {
             int nbUpdated = 0;
             Resource resource = getResource(id);
             if (resource == null)
