@@ -4,7 +4,6 @@ package net.bpiwowar.xpm.manager;
 import com.google.common.collect.ImmutableMap;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.manager.tasks.JsonType;
 
 import java.util.Map;
 
@@ -40,7 +39,7 @@ public class DummyTask extends Task {
 
     final static public DummyTask INSTANCE = new DummyTask();
 
-    public DummyTask() {
+    private DummyTask() {
         super(FACTORY);
     }
 

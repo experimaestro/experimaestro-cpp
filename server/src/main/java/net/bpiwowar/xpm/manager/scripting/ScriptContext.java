@@ -384,7 +384,7 @@ final public class ScriptContext implements AutoCloseable {
         try {
             if (task == null) {
                 // Create dummy task
-                task = new DummyTask();
+                task = DummyTask.INSTANCE;
             }
 
             // Find the task reference with the same ID that has the same parents,
