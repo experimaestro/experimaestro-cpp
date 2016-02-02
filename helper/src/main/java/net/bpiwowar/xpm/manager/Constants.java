@@ -31,6 +31,8 @@ import java.util.TreeMap;
  */
 public class Constants {
     public static final String XPM_NOTIFICATION_URL = "XPM_NOTIFICATION_URL";
+
+    /** Marks whether the value is a default value */
     public static final String JSON_KEY_DEFAULT = "$default";
     // Set of all atomic types
     public static HashSet<TypeName> ATOMIC_TYPES = new HashSet<>();
