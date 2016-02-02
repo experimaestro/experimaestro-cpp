@@ -20,7 +20,6 @@ package net.bpiwowar.xpm.manager;
 
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.CommandOutput;
-import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.exceptions.ExperimaestroException;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
@@ -41,7 +40,6 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -59,14 +57,9 @@ public abstract class Task {
     protected TaskFactory factory;
 
     /**
-     * List of sub-tasks
+     * List of inputs
      */
     protected Map<String, Value> values = new TreeMap<>();
-
-    /**
-     * Sub-tasks without name (subset of the map {@link #values}).
-     */
-    protected Set<String> notNamedValues = new TreeSet<>();
 
     protected Task() {
     }
@@ -169,15 +162,6 @@ public abstract class Task {
             Value value = values.get(key);
 
             try {
-
-                // Process connection
-                try {
-                    value.processConnections(this);
-                } catch (XPMRuntimeException e) {
-                    e.addContext("While connecting from [%s] in task [%s]", key, factory.id);
-                    throw e;
-                }
-
                 // Process the value (run the task, etc.)
                 value.process(taskContext);
 
@@ -250,9 +234,11 @@ public abstract class Task {
      * @param value The value to be set (this should be an XML fragment)
      * @return True if the parameter was set and false otherwise
      */
-    public final void setParameter(DotName id, Json value) throws NoSuchParameter {
+    public final void setParameter(String id, Json value) throws NoSuchParameter {
         try {
-            getValue(id).set(value.seal());
+            final Value v = getValue(id);
+            if (v == null) throw new XPMRuntimeException("No parameter named %s", id);
+            v.set(value.seal());
         } catch (XPMRuntimeException e) {
             e.addContext("While setting parameter %s of %s", id, factory.getId());
             throw e;
@@ -271,8 +257,9 @@ public abstract class Task {
      * @param id
      * @param value
      */
-    public void setParameter(DotName id, String value) throws NoSuchParameter {
+    public void setParameter(String id, String value) throws NoSuchParameter {
         final Value v = getValue(id);
+        if (v == null) throw new NoSuchParameter(id);
         final Json doc = ValueType.wrapString(value, null);
         v.set(doc);
     }
@@ -280,32 +267,10 @@ public abstract class Task {
     /**
      * Returns the {@linkplain} object corresponding to the
      *
-     * @param id
-     * @return
-     * @throws NoSuchParameter
+     * @return The value or null if no such input exists
      */
-    public final Value getValue(DotName id) throws NoSuchParameter {
-        String name = id.get(0);
-
-        // Look at merged inputs
-        if (!notNamedValues.isEmpty()) {
-            for (String vname : notNamedValues) {
-                try {
-                    Value v = values.get(vname);
-                    return v.getValue(id);
-                } catch (NoSuchParameter e) {
-                }
-            }
-
-        }
-
-        // Look at our inputs
-        Value inputValue = values.get(name);
-        if (inputValue == null)
-            throw new NoSuchParameter("Task %s has no input [%s]", factory.id,
-                    name);
-
-        return inputValue.getValue(id.offset(1));
+    public final Value getValue(String name)  {
+        return values.get(name);
     }
 
     /**
@@ -317,12 +282,7 @@ public abstract class Task {
             String key = entry.getKey();
             final Value value = entry.getValue().newValue();
             values.put(key, value);
-
-            // Add to the unnamed options
-            if (entry.getValue().isUnnamed())
-                notNamedValues.add(entry.getKey());
         }
-
     }
 
     /**
@@ -355,9 +315,6 @@ public abstract class Task {
         // Copy the factory
         factory = other.factory;
 
-        // shallow copy for this field, since it won't change
-        notNamedValues = other.notNamedValues;
-
         // Deep copy
         for (Entry<String, Value> entry : other.values.entrySet()) {
             values.put(entry.getKey(), entry.getValue().copy());
@@ -366,8 +323,7 @@ public abstract class Task {
 
     @Expose(value = "set")
     public void set(String id, Object value) throws NoSuchParameter {
-        DotName qid = DotName.parse(id);
-        setParameter(qid, ValueType.wrap(JSUtils.unwrap(value)));
+        setParameter(id, ValueType.wrap(JSUtils.unwrap(value)));
     }
 
     @Expose("run")
@@ -445,7 +401,4 @@ public abstract class Task {
         return json;
     }
 
-    public Value getValue(String key) {
-        return getValues().get(key);
-    }
 }

@@ -18,7 +18,6 @@ package net.bpiwowar.xpm.manager;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.utils.log.Logger;
@@ -50,9 +49,7 @@ public class JsonValue extends Value {
     }
 
     @Override
-    public Value getValue(DotName id) {
-        if (id.size() != 0)
-            throw new XPMRuntimeException("Cannot handle qualified names [%s]");
+    public Value getValue() {
         LOGGER.debug("Value set to [%s]", value);
         return this;
     }

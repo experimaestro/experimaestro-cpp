@@ -29,6 +29,7 @@ import net.bpiwowar.xpm.commands.CommandContext;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.sf.saxon.s9api.QName;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
@@ -291,7 +292,6 @@ public class XPM {
         json.put(Constants.XP_RESOURCE.toString(), new JsonResource(resource));
         return resource;
     }
-
 
     @Expose("publish")
     @Help("Publish the repository on the web server")

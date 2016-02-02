@@ -243,21 +243,6 @@ public class JavaScriptTaskFactory extends TaskFactory {
             if (merge)
                 input.setUnnamed(true);
 
-            // Process connections
-            if (definition.has("connect", definition)) {
-                NativeObject connect = (NativeObject) definition.get("connect", definition);
-                for (Map.Entry<Object, Object> connection : connect.entrySet()) {
-                    DotName to = DotName.parse(connection.getKey().toString());
-                    Object value = connection.getValue();
-                    if (value instanceof NativeFunction) {
-                        NativeFunction f = (NativeFunction) value;
-                        String[] names = XPMHelper.getParamNames(f);
-                        input.addConnection(new JSConnection(new DotName(id, to), scope, f, names));
-                    } else
-                        throw new IllegalArgumentException("Cannot handle object of type " + value.getClass());
-                }
-            }
-
             // Store in the inputs
             inputs.put(id, input);
         }

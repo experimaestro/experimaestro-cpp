@@ -217,7 +217,7 @@ public abstract class TaskFactory {
         final Task task = create();
         map.entrySet().stream().forEach(e -> {
             try {
-                task.setParameter(DotName.parse(e.getKey()), cx.toJSON(e.getValue()));
+                task.setParameter(e.getKey(), cx.toJSON(e.getValue()));
             } catch (NoSuchParameter noSuchParameter) {
                 throw new XPMScriptRuntimeException(noSuchParameter);
             }

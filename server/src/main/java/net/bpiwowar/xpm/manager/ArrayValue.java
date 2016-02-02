@@ -38,11 +38,8 @@ public class ArrayValue extends Value {
     }
 
     @Override
-    public Value getValue(DotName id) throws NoSuchParameter {
-        if (id.isEmpty())
-            return this;
-
-        throw new NoSuchParameter("Unknown parameter name: " + id.toString());
+    public Value getValue() throws NoSuchParameter {
+        return this;
     }
 
     @Override

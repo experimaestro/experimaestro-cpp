@@ -62,10 +62,9 @@ public abstract class Value {
     /**
      * Returns the value object corresponding to this path
      *
-     * @param id The ID
      * @return The value
      */
-    public abstract Value getValue(DotName id) throws NoSuchParameter;
+    public abstract Value getValue() throws NoSuchParameter;
 
 
     /**
@@ -90,23 +89,6 @@ public abstract class Value {
      * @return A valid XML document or null if not set
      */
     public abstract Json get();
-
-    /**
-     * This method is called once by a {@link Task} after {@link #process(ScriptContext)}.
-     *
-     * @param task
-     */
-    void processConnections(Task task) throws NoSuchParameter {
-        LOGGER.debug("Processing %d connections for [%s]", input.connections.size(), task.factory.getId());
-        // Do not process if we do not have connections...
-        for (Connection connection : input.connections) {
-            LOGGER.debug("Processing connection [%s]", connection);
-            Value destination = task.getValue(connection.to);
-            Json json = connection.computeValue(task);
-            destination.set(json);
-        }
-    }
-
 
     final public Value copy() {
         try {

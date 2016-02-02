@@ -121,6 +121,7 @@ public abstract class Input {
         out.println(documentation);
     }
 
+    /** Set the default value for this input */
     public void setDefaultValue(Json defaultValue) {
         this.defaultValue = defaultValue;
     }
