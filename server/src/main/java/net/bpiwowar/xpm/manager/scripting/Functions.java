@@ -30,8 +30,8 @@ import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
-import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.JsonSignature;
+import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
@@ -409,7 +409,6 @@ public class Functions {
             }
 
 
-
             Experiment experiment = new Experiment(identifier, System.currentTimeMillis());
             experiment.save();
             scriptContext.setExperiment(experiment);
@@ -474,10 +473,22 @@ public class Functions {
     }
 
     @Expose
+    @Help("Find all tags and return a hash map")
     static public Map<String, Object> find_tags(Json json) {
         HashMap<String, Object> tags = new HashMap<>();
         find_tags(json, tags);
         return tags;
+    }
+
+    @Expose(context = true)
+    @Help("Find all tags and add it to the base object")
+    static public Json retrieve_tags(LanguageContext cx, JsonObject json) {
+        final Map<String, Object> tags = find_tags(json);
+        if (json.sealed()) {
+            json = (JsonObject) json.copy(false);
+        }
+        json.put(Constants.JSON_TAGS_NAME, Json.toJSON(cx, tags));
+        return json;
     }
 
     private static void find_tags(Json json, HashMap<String, Object> tags) {

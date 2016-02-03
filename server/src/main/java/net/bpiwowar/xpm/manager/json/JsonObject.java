@@ -211,6 +211,10 @@ public class JsonObject extends Json {
         return this;
     }
 
+    public boolean sealed() {
+        return sealed;
+    }
+
     @Override
     public Json annotate(String key, Json value) {
         put(key, value);
