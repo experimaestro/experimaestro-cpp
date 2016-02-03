@@ -2,26 +2,40 @@
 title: Connectors and Launchers
 ---
 
-Connectors describe a computational resource, as for example a single computer (*single host connector*) or a cluster. It provides
-information on how to access the file system and launch processes.
+[Connectors](#connectors) describe a computational resource, as for example a single computer (*single host connector*) or a set of computers. It provides information on how to access the file system and execute commands. At the moment, the following connectors are defined:
 
-# General description
+- Localhost
+- SSH
+
+**Launchers** are used to launch commands:
+
+- Direct launcher: standard command launching
+- OAR: uses OAR to launch jobs on a cluster
+
+<a name="connectors"></a>
+# Connectors 
 
 A connector defines:
 
 * The main connector used to manage the state of a resource associated with this connector;
 * A way to select a single host connector given some computational requirements (e.g. 1G memory);
 
-# Accessing a file system
+## Localhost
 
-In the simplest case, standard `Commons VFS` files system can be accessed.
+## SSH
 
-# Executing a command
+
+<a name="launchers"></a>
+# Launchers 
 
 Connectors are used to connect to a specific computer in order to execute a command or access a file system.
 Here is the list of available connectors:
 
+## Direct launcher
 * `DirectLauncher`: Executes a command via a shell script
+
+## OAR
+
 * `OARLauncher`: Launches a job through OAR
 
 # Finding and describing resources
@@ -39,3 +53,14 @@ Defines a set of connectors
 ## Localhost
 
 ## SSH
+
+
+# Launcher
+
+  Launchers are used to define how a command is executed.
+  Here is the list of available launchers:
+
+  * ShLauncher: runs commands using the `sh` shell
+
+  * OARLauncher: runs commands using [OAR](http://oar.imag.fr)
+

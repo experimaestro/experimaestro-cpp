@@ -34,7 +34,8 @@ import static java.lang.String.format;
 /**
  * TaskReference as implemented by a javascript object
  *
- * FIXME: is this really used?
+ * This an instance by the create() method of a JS factory
+ *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 public class TaskJavascript extends Task {

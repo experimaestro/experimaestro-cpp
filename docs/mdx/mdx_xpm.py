@@ -12,50 +12,34 @@ def highlight(divid, language, code):
     formatter = HtmlFormatter(linenos=False)
     return "<div id='%s'>%s</div>" % (divid, pygments.highlight(code, lexer, formatter))
 
+re_start = re.compile(r'\[\[\[(.*)')
+re_end = re.compile(r'\]\]\]')
 
 class MyPreprocessor(Preprocessor):
     def run(self, lines):
         new_lines = []
-
-        inside = None
-        code = ""
+        inside = False
+        startdivid = 0
         divid = 0
-
+        tabnames = []
 
         for line in lines:
-            m_start = re.compile(r'\[\[\[\s*(?:(\{.*)|(\w+))').match(line)
-            m_end = re.compile(r'\]\]\]').match(line)
+            m_start = re_start.match(line)
+            m_end = re_end.match(line)
             if m_start:
-                if inside is None:
-                    inside = []
-                    divid += 1
-                    new_lines.append("<div class='tabs'><ul>")
-                else:
-                    inside.append(highlight(currentid, language, code))
-                code = ""
-                jsonstring = m_start.group(1)
-                language = m_start.group(2)
-                if jsonstring is None:
-                    title = language
-                else:
-                    try:
-                        data = json.loads(jsonstring)
-                        title = data["title"]
-                        language = data["language"]
-                    except ValueError:
-                        title = "Bad JSON"
-                        language = "none"
-                currentid = "xpmlg-%s-%s" % (divid, language)
-                new_lines.append("<li><a href='#{0}'>{1}</a></li>".format(currentid, title))
+                if len(tabnames) > 0:
+                    new_lines.append("""</div>""")
+                new_lines.append("""<div id="tab_{0}">""".format(divid))
+                tabnames.append((divid, m_start.group(1)))
+                divid += 1
+                inside=True
             elif m_end:
-                new_lines.append("</ul>")
-                for l in inside:
-                    new_lines.append(l)
-                new_lines.append(highlight(currentid, language, code))
-                new_lines.append("</div>")
-                inside = None
-            elif inside is not None:
-                code = code + line + "\n"
+                s = """</div><div class='tabs'><ul>"""
+                for htmlid, tabname in tabnames:
+                    s += """<li><a href="#tab_{}">{}</a></li>""".format(htmlid, tabname)
+                s += """</ul></div>"""
+                new_lines.append(s)
+                tabnames = []
             else:
                 new_lines.append(line)
 

@@ -6,20 +6,10 @@ Tasks are simple objects that can be configured and run. Specific behaviours dep
 
 A task is characterised by the following:
 
-1. It is uniquely identified by a qualified name (URI + name) and a group name;
-1. It is configured by a set of XML documents, each associated to a given name and,
-        optionally, to a given XML type. A parameter can also be another task, in which case
+1. It is uniquely identified by a qualified name;
+1. It is configured by a set of JSON elements, each associated to a given name and,
+        optionally, to a given JSON type. A parameter can also be another task, in which case
         the subtask will be run and its output will be used as the parameter.
-1. It can be run and its output is valid XML document
-
-
-# Launcher
-
-  Launchers are used to define how a command is executed. 
-  Here is the list of available launchers:
-  
-  * ShLauncher: runs commands using the `sh` shell
-  
-  * OARLauncher: runs commands using [OAR](http://oar.imag.fr)
+1. It can be run and its output is JSON
 
 

@@ -56,11 +56,17 @@ pip3 install -r server/scripts/requirements.txt
 You need a working *Java* installation (version ≥ 1.8) on your machine. [Gradle](https://gradle.org) is
 used for building but is not a requirement.
 
-[[[{"language": "sh", "title": "*nix"}
+[[[*nix
+
+```sh
 # From the project's root directory.
 ./gradlew installDist
-[[[{"language": "bat", "title": "windows"}
+```
+[[[windows
+
+```bat
 gradlew.bat installDist
+```
 ]]]
 
 This will build and install all the dependencies into `server/build/install/experimaestro-server`. The command `experimaestro` is located in `server/build/install/experimaestro-server/bin/experimaestro`.
