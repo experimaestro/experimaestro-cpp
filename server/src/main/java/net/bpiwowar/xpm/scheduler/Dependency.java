@@ -185,6 +185,13 @@ abstract public class Dependency implements Serializable {
         try {
             lock = _lock(pid);
             assert lock != null;
+
+            Scheduler.statement("UPDATE Dependencies SET lock=? WHERE fromId=? and toId=?")
+                    .setLong(1, lock.getId())
+                    .setLong(2, from.id())
+                    .setLong(3, to.id())
+                    .execute().close();
+
             return lock;
         } catch (Throwable e) {
             throw new LockException(e);

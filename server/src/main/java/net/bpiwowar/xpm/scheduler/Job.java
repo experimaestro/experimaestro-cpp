@@ -33,12 +33,10 @@ import net.bpiwowar.xpm.utils.FileNameTransformer;
 import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
-import net.bpiwowar.xpm.utils.Time;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -239,8 +237,6 @@ abstract public class Job extends Resource {
     synchronized final public void run() throws Exception {
         // Those locks are transfered to the process
         ArrayList<Lock> locks = new ArrayList<>();
-        // Those locks are used only in case of problem to unlock everything
-        ArrayList<Lock> depLocks = new ArrayList<>();
 
         jobData();
 
@@ -285,8 +281,7 @@ abstract public class Job extends Resource {
                 for (Dependency dependency : getDependencies()) {
                     try {
                         LOGGER.debug("Running preparation - locking dependency [%s]", dependency);
-                        final Lock lock = dependency.lock(pid);
-                        depLocks.add(lock);
+                        dependency.lock(pid);
                         LOGGER.debug("Running preparation - locked dependency [%s]", dependency);
                     } catch (LockException e) {
                         // Update & store this dependency
@@ -330,20 +325,35 @@ abstract public class Job extends Resource {
             LOGGER.error(e, "Caught exception for %s", this);
             throw new RuntimeException(e);
         } finally {
-            // Dispose of the locks that we own
             if (locks != null) {
+                LOGGER.info("An error occurred: killing process and unlocking job %s", this);
+
+                // Dispose of process
                 if (getProcess() != null) {
                     LOGGER.info("An error occurred: disposing process");
                     getProcess().destroy();
                 }
 
-                LOGGER.info("An error occurred: disposing locks");
-                for (Lock lock : Iterables.concat(locks, depLocks)) {
+                // Dispose of dependency locks
+                for (Dependency dependency : getDependencies()) {
                     try {
-                        LOGGER.info("Disposing of lock %s", lock);
-                        lock.close();
+                        if (dependency.hasLock()) {
+                            dependency.unlock();
+                        }
                     } catch (Throwable e) {
-                        LOGGER.error(e, "Could not close lock %s", lock);
+                        LOGGER.error(e, "Could not close lock of dependency %s", dependency);
+                    }
+                }
+
+                // Dispose of locks
+                if (locks != null) {
+                    for (Lock lock : Iterables.concat(locks)) {
+                        try {
+                            LOGGER.info("Disposing of lock %s", lock);
+                            lock.close();
+                        } catch (Throwable e) {
+                            LOGGER.error(e, "Could not close lock %s", lock);
+                        }
                     }
                 }
             }
