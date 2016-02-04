@@ -480,14 +480,20 @@ public class Functions {
         return tags;
     }
 
-    @Expose(context = true)
+    @Expose(context = true, optional = 1, optionalsAtStart = true)
     @Help("Find all tags and add it to the base object")
-    static public Json retrieve_tags(LanguageContext cx, JsonObject json) {
+    static public Json retrieve_tags(
+            LanguageContext cx,
+            @Argument(name = "key", help = "The key in the returned JSON")
+            String key,
+            @Argument(name = "json", help = "The JSON to inspect")
+            JsonObject json
+    ) {
         final Map<String, Object> tags = find_tags(json);
         if (json.sealed()) {
             json = (JsonObject) json.copy(false);
         }
-        json.put(Constants.JSON_TAGS_NAME, Json.toJSON(cx, tags));
+        json.put(key != null ? key : Constants.JSON_TAGS_NAME, Json.toJSON(cx, tags));
         return json;
     }
 

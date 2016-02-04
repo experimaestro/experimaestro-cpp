@@ -67,8 +67,10 @@ public class Constants {
     public static final TypeName XP_RESOURCE = new TypeName(null, "$resource");
     /// Ignored value
     public static final TypeName XP_IGNORE = new TypeName(null, "$ignore");
+    /** Tag */
     public static final String JSON_TAG_NAME = "$tag";
-    public static final String JSON_TAGS_NAME = "$tags";
+    /** Default value for retrieve tags key */
+    public static final String JSON_TAGS_NAME = "tags";
 
     public static final String XPM_SIGNATURE = "signature.xpm";
     public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
