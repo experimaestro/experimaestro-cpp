@@ -21,20 +21,27 @@ package net.bpiwowar.xpm.manager.tasks;
 import net.bpiwowar.xpm.commands.AbstractCommand;
 import net.bpiwowar.xpm.commands.CommandOutput;
 import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.NoSuchParameter;
 import net.bpiwowar.xpm.exceptions.ValueMismatchException;
 import net.bpiwowar.xpm.exceptions.XPMAssertionError;
-import org.apache.log4j.Level;
-import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.*;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.JsonSignature;
+import net.bpiwowar.xpm.manager.Parameters;
+import net.bpiwowar.xpm.manager.Task;
 import net.bpiwowar.xpm.manager.json.Json;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.json.JsonPath;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
-import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.scheduler.CommandLineTask;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.XPMStatement;
 import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.log4j.Level;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
@@ -111,7 +118,8 @@ public class ExternalTask extends Task {
             if (old != null) {
                 old.updateStatus();
             }
-            ScriptContext scriptContext = ScriptContext.get();;
+            ScriptContext scriptContext = ScriptContext.get();
+            ;
             if (old != null && !old.canBeReplaced()) {
                 taskLogger.log(old.getState() == ResourceState.DONE ?
                         Level.DEBUG : Level.INFO, "Cannot overwrite task %s [%d]", old.getLocator(), old.getId());
@@ -150,14 +158,25 @@ public class ExternalTask extends Task {
                         job.save();
                     }
 
+                    final String uniqueDirString = uniqueDir.toUri().toString();
+
+                    // Retrieve already registered paths
+                    if (old != null) {
+                        try (XPMStatement st = Scheduler.statement("DELETE FROM path FROM ResourcePaths WHERE id=? and path <> ?")) {
+                            st.setLong(1, job.getId());
+                            st.setString(2, uniqueDirString);
+                            st.execute();
+                        }
+                    }
+
                     try (PreparedStatement st = Scheduler.prepareStatement("INSERT INTO ResourcePaths(id, path) VALUES(?,?)")) {
                         st.setLong(1, job.getId());
-                        st.setString(2, uniqueDir.toUri().toString());
+                        st.setString(2, uniqueDirString);
                         st.execute();
-                    } catch(SQLIntegrityConstraintViolationException e) {
-                        LOGGER.debug(e, "constraint violation while storing path for %s", this);
+                    } catch (SQLIntegrityConstraintViolationException e) {
+                        taskLogger.debug(e, "constraint violation while storing path for %s", this);
                     } catch (SQLException e) {
-                        LOGGER.error(e, "while storing path for resource %s", this);
+                        taskLogger.warn(e, "while storing path for resource %s: directory deletion will not work", this);
                     }
 
                     taskLogger.info("Stored task %s [%s]", job.getLocator(), job.getId());
