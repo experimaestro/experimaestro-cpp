@@ -74,6 +74,11 @@ public abstract class Input {
     private String[] groups;
 
     /**
+     * Whether dependencies should be automatically processed for this object
+     */
+    private boolean nestedDependencies;
+
+    /**
      * New input type
      *
      * @param type the type
@@ -93,6 +98,14 @@ public abstract class Input {
 
     public void setOptional(boolean optional) {
         this.optional = optional;
+    }
+
+    public boolean nestedDependencies() {
+        return nestedDependencies;
+    }
+
+    public void nestedDependencies(boolean nestedDependencies) {
+        this.nestedDependencies = nestedDependencies;
     }
 
     /**

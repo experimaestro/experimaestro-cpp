@@ -66,4 +66,10 @@ public @interface JsonArgument {
 
     /** Default value */
     String defaultValue() default "";
+
+    /**
+     * Whether to check dependencies within the object
+     * @return True if dependencies within the JSON object/array should be checked
+     */
+    boolean dependencies() default false;
 }

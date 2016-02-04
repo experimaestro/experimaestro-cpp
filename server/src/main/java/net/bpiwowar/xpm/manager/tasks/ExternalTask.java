@@ -162,7 +162,7 @@ public class ExternalTask extends Task {
 
                     // Retrieve already registered paths
                     if (old != null) {
-                        try (XPMStatement st = Scheduler.statement("DELETE FROM path FROM ResourcePaths WHERE id=? and path <> ?")) {
+                        try (XPMStatement st = Scheduler.statement("DELETE FROM ResourcePaths WHERE id=? and path <> ?")) {
                             st.setLong(1, job.getId());
                             st.setString(2, uniqueDirString);
                             st.execute();

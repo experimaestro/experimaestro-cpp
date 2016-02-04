@@ -119,4 +119,8 @@ public abstract class Value {
     public Json getAsInput() {
         return get();
     }
+
+    public boolean nestedDependencies() {
+        return input.nestedDependencies();
+    }
 }

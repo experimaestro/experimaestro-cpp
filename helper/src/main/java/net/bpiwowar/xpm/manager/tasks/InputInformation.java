@@ -2,7 +2,6 @@ package net.bpiwowar.xpm.manager.tasks;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import net.bpiwowar.xpm.manager.Constants;
@@ -26,12 +25,16 @@ public class InputInformation {
     @SerializedName("default")
     public JsonElement defaultvalue;
 
+    @SerializedName("inner-dependencies")
+    final boolean nestedDependencies;
+
     public InputInformation(Map<String, String> namespaces, FieldInfo field) {
         JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
         this.type = getType(jsonArgument, field.getType(), namespaces);
         help = jsonArgument.help();
         required = jsonArgument.required();
         copyTo = jsonArgument.copyTo();
+        nestedDependencies = jsonArgument.dependencies();
         if (!jsonArgument.defaultValue().isEmpty()) {
             final JsonReader jsonReader = new JsonReader(new StringReader(jsonArgument.defaultValue()));
             defaultvalue = new Gson().fromJson(jsonReader, JsonElement.class);

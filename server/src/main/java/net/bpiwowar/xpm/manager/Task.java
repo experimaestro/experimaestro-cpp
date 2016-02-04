@@ -348,8 +348,10 @@ public abstract class Task {
         // Add streams and dependencies
         final HashMap<Object, CommandOutput> streams = new HashMap<>();
 
+        /** Get JsonTask objects and process them */
         getValues().values().stream()
-                .map(e -> e.get()).filter(e -> e instanceof JsonTask)
+                .map(e -> e.get())
+                .filter(e -> e instanceof JsonTask)
                 .forEach(e -> {
                     final JsonTask jsonTask = (JsonTask) e;
                     // Add dependencies for these command

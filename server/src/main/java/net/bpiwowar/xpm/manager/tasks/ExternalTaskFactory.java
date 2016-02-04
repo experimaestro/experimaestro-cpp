@@ -2,13 +2,14 @@ package net.bpiwowar.xpm.manager.tasks;
 
 import com.google.gson.JsonElement;
 import net.bpiwowar.xpm.commands.CommandOutput;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.*;
 import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonArray;
 import net.bpiwowar.xpm.manager.json.JsonObject;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.scheduler.Dependency;
 import net.bpiwowar.xpm.scheduler.DependencyParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -51,6 +52,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             input.setDocumentation(field.help);
             input.setOptional(!field.required);
             input.setCopyTo(field.copyTo);
+            input.nestedDependencies(field.nestedDependencies);
             if (field.defaultvalue != null && !field.defaultvalue.isJsonNull()) {
                 input.setDefaultValue(Json.toJSON(field.defaultvalue));
             }
@@ -96,42 +98,65 @@ public abstract class ExternalTaskFactory extends TaskFactory {
         return task;
     }
 
+    /**
+     * Build the command
+     *
+     * @param streams  The input streams
+     * @param task     The task
+     * @param simulate True if in simulation mode (no action is taken)
+     * @return The command to execute
+     */
     public Commands commands(HashMap<Object, CommandOutput> streams, Task task, boolean simulate) {
         // Add our command
         Commands commands = build(task);
 
-        // Check dependencies
+        // Add dependencies
         if (!simulate) {
             for (Value value : task.getValues().values()) {
                 Json element = value.get();
-                if (element instanceof JsonObject) {
-                    JsonObject object = (JsonObject) element;
-                    final Json r = object.get(Constants.XP_RESOURCE.toString());
-                    if (r == null) continue;
 
-                    final Object o = r.get();
-                    Resource resource;
-                    if (o instanceof Resource) {
-                        resource = (Resource) o;
-                    } else {
-                        try {
-                            resource = Resource.getByLocator(NetworkShare.uriToPath(o.toString()));
-                        } catch (SQLException e) {
-                            throw new XPMRuntimeException(e, "Error while searching the resource %s the task %s depends upon",
-                                    o.toString(), getId());
-                        }
-                        if (resource == null) {
-                            throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
-                                    o.toString(), getId());
-                        }
+                // Check for dependencies within the array or object
+                if (value.nestedDependencies()) {
+                    if (element instanceof JsonObject) {
+                        ((JsonObject) element).values().forEach(j -> fillDependencies(commands, j));
+                    } else if (element instanceof JsonArray) {
+                        ((JsonArray) element).forEach(j -> fillDependencies(commands, j));
                     }
-                    final Dependency lock = resource.createDependency((DependencyParameters) null);
-                    commands.addDependency(lock);
                 }
+
+                fillDependencies(commands, element);
             }
         }
 
         return commands;
+    }
+
+    public void fillDependencies(Commands commands, Json element) {
+        if (element instanceof JsonObject) {
+            JsonObject object = (JsonObject) element;
+
+            final Json r = object.get(Constants.XP_RESOURCE.toString());
+            if (r == null) return;
+
+            final Object o = r.get();
+            Resource resource;
+            if (o instanceof Resource) {
+                resource = (Resource) o;
+            } else {
+                try {
+                    resource = Resource.getByLocator(NetworkShare.uriToPath(o.toString()));
+                } catch (SQLException e) {
+                    throw new XPMRuntimeException(e, "Error while searching the resource %s the task %s depends upon",
+                            o.toString(), getId());
+                }
+                if (resource == null) {
+                    throw new XPMRuntimeException("Cannot find the resource %s the task %s depends upon",
+                            o.toString(), getId());
+                }
+            }
+            final Dependency lock = resource.createDependency((DependencyParameters) null);
+            commands.addDependency(lock);
+        }
     }
 
     protected abstract Commands build(Task task);
