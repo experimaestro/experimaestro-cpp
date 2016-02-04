@@ -94,10 +94,10 @@ public final class Logger extends org.apache.log4j.Logger {
     }
 
     public void debug(Throwable t, String format, Object... values) {
-        if (repository.isDisabled(Level.INFO_INT))
+        if (repository.isDisabled(Level.DEBUG_INT))
             return;
-        if (isEnabledFor(Level.INFO))
-            forcedLog(FQCN, Level.INFO, String.format(format, values), t);
+        if (isEnabledFor(Level.DEBUG))
+            forcedLog(FQCN, Level.DEBUG, String.format(format, values), t);
     }
 
     public void info(String format, Object... values) {
