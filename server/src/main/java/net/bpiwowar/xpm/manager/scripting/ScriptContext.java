@@ -416,10 +416,6 @@ final public class ScriptContext implements AutoCloseable {
                 if (set.isEmpty()) break;
             }
 
-            if (set != null && set.size() > 1) {
-                throw new AssertionError("More than one task reference configuration");
-            }
-
             if (set == null || set.isEmpty()) {
                 taskReference = new TaskReference(taskId, experiment.get(), parentTaskReferences);
                 taskReference.save();
