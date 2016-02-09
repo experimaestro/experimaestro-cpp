@@ -52,7 +52,7 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             input.setDocumentation(field.help);
             input.setOptional(!field.required);
             input.setCopyTo(field.copyTo);
-            input.nestedDependencies(field.nestedDependencies);
+            input.nestedDependencies(field.dependencies);
             if (field.defaultvalue != null && !field.defaultvalue.isJsonNull()) {
                 input.setDefaultValue(Json.toJSON(field.defaultvalue));
             }
@@ -115,28 +115,35 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             for (Value value : task.getValues().values()) {
                 Json element = value.get();
 
-                // Check for dependencies within the array or object
-                if (value.nestedDependencies()) {
-                    if (element instanceof JsonObject) {
-                        ((JsonObject) element).values().forEach(j -> fillDependencies(commands, j));
-                    } else if (element instanceof JsonArray) {
-                        ((JsonArray) element).forEach(j -> fillDependencies(commands, j));
-                    }
-                }
-
-                fillDependencies(commands, element);
+                fillDependencies(commands, element, value.nestedDependencies() ? Integer.MAX_VALUE : 1);
             }
         }
 
         return commands;
     }
 
-    public void fillDependencies(Commands commands, Json element) {
+    /**
+     * @param commands
+     * @param element
+     * @param levels   Recursiion levels
+     */
+    public void fillDependencies(Commands commands, Json element, int levels) {
+        if (element == null) {
+            return;
+        }
+
         if (element instanceof JsonObject) {
             JsonObject object = (JsonObject) element;
 
             final Json r = object.get(Constants.XP_RESOURCE.toString());
-            if (r == null) return;
+            if (r == null) {
+                if (levels > 1) {
+                    object.values().forEach(j -> fillDependencies(commands, j, levels - 1));
+                }
+                // Just stop
+                return;
+
+            }
 
             final Object o = r.get();
             Resource resource;
@@ -156,6 +163,10 @@ public abstract class ExternalTaskFactory extends TaskFactory {
             }
             final Dependency lock = resource.createDependency((DependencyParameters) null);
             commands.addDependency(lock);
+        } else if (element instanceof JsonArray) {
+            if (levels > 1) {
+                ((JsonArray) element).forEach(j -> fillDependencies(commands, j, levels - 1));
+            }
         }
     }
 

@@ -69,7 +69,7 @@ public @interface JsonArgument {
 
     /**
      * Whether to check dependencies within the object
-     * @return True if dependencies within the JSON object/array should be checked
+     * @return True if dependencies should be found
      */
-    boolean dependencies() default false;
+    boolean dependencies() default true;
 }

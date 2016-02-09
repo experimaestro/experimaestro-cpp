@@ -76,7 +76,7 @@ public abstract class Input {
     /**
      * Whether dependencies should be automatically processed for this object
      */
-    private boolean nestedDependencies;
+    private boolean nestedDependencies = true;
 
     /**
      * New input type

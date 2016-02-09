@@ -25,8 +25,7 @@ public class InputInformation {
     @SerializedName("default")
     public JsonElement defaultvalue;
 
-    @SerializedName("inner-dependencies")
-    final boolean nestedDependencies;
+    final boolean dependencies;
 
     public InputInformation(Map<String, String> namespaces, FieldInfo field) {
         JsonArgument jsonArgument = field.getAnnotation(JsonArgument.class);
@@ -34,7 +33,7 @@ public class InputInformation {
         help = jsonArgument.help();
         required = jsonArgument.required();
         copyTo = jsonArgument.copyTo();
-        nestedDependencies = jsonArgument.dependencies();
+        dependencies = jsonArgument.dependencies();
         if (!jsonArgument.defaultValue().isEmpty()) {
             final JsonReader jsonReader = new JsonReader(new StringReader(jsonArgument.defaultValue()));
             defaultvalue = new Gson().fromJson(jsonReader, JsonElement.class);
