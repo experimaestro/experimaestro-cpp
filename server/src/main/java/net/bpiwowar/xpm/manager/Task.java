@@ -358,6 +358,7 @@ public abstract class Task {
                     final AbstractCommand subcommand = jsonTask.getCommand();
 
                     subcommand.dependencies().forEach(commands::addDependency);
+                    subcommand.setOutputRedirect(null); // No output redirect for those
                     streams.put(null, subcommand.output());
                 });
 
