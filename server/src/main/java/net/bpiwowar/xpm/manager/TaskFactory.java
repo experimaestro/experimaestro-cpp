@@ -224,4 +224,9 @@ public abstract class TaskFactory {
         });
         return task;
     }
+
+    @Override
+    public String toString() {
+        return this.getId().toString();
+    }
 }
