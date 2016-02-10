@@ -322,7 +322,7 @@ $().ready(function () {
                 $.each(r, function (ix, e) {
                     select.append($e("option").append($t(e.identifier)));
                 });
-                load_experiment();
+                load_experiment(0);
             },
 
             jsonrpc_error
@@ -439,7 +439,7 @@ $().ready(function () {
     };
 
     // When changing, load experiment
-    $("#experiment-chooser").change(load_experiment);
+    $("#experiment-chooser").change(function() { load_experiment(0) });
 
     function showexperiments(element) {
         var width = 960,
