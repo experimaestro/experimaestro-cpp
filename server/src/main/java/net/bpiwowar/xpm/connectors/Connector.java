@@ -184,6 +184,7 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
 
     public abstract Path resolve(String path) throws IOException;
 
+    @Expose
     final public String resolve(Path path) throws IOException {
         return resolve(path, null);
     }
