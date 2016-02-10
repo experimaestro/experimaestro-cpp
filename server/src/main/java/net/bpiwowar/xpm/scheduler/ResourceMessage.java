@@ -23,24 +23,31 @@ package net.bpiwowar.xpm.scheduler;
  *
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
-public class SimpleMessage extends Message {
-    /** The resource */
-    Resource resource;
-
+public class ResourceMessage extends Message {
     /** The resource ID */
-    private Long resourceID;
+    private Long id;
 
-    public SimpleMessage(Type type, Resource resource) {
-        super(type);
-        this.resourceID = resource.getId();
-        this.resource = resource;
+    String locator;
+    double progress;
+    ResourceState state;
+
+    private ResourceMessage(Event event, Resource resource) {
+        super(event);
+        this.id = resource.getId();
+        this.locator = resource.getLocator().toString();
+        this.progress = resource instanceof Job ? ((Job) resource).getProgress() : 0;
+        this.state = resource.getState();
     }
 
-    public Resource getResource() {
-        return resource;
+    public static ResourceMessage added(Resource resource) {
+        return new ResourceMessage(Event.RESOURCE_ADDED, resource);
     }
 
-    public Long getResourceID() {
-        return resourceID;
+    public static Message changed(Resource resource) {
+        return new ResourceMessage(Event.STATE_CHANGED, resource);
+    }
+
+    public static ResourceMessage removed(Resource resource) {
+        return new ResourceMessage(Event.RESOURCE_REMOVED, resource);
     }
 }

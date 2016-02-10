@@ -19,16 +19,19 @@
 $().ready(function () {
     "use strict";
 
-    var xpm = new Object();
+    var xpm = {};
     xpm.request = function (name, params) {
         xpm.server.call(name, params.params, params.success, params.error)
-    }
+    };
 
     function noop() {
     }
 
 
-    // custom css expression for a case-insensitive contains()
+    /**
+     * custom css expression for a case-insensitive contains()
+     * @return {boolean}
+     */
     $.expr[':'].Contains = function (a, i, m) {
         return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
     };
@@ -104,15 +107,16 @@ $().ready(function () {
         }
     }
 
-    function show_class_documentation(e) {
+    function show_class_documentation() {
         var classname = $(this).find("option:selected").text();
         xpm.server.call("documentation.methods", {classname: classname},
-            function(r) {
+            function (r) {
                 alert(JSON.stringify(r));
             },
             jsonrpc_error
         );
     }
+
     // --- actions on jobs: restart, remove
     var resource_action_callback = function () {
         var name = this.name ? this.name : this.getAttribute("name");
@@ -175,12 +179,12 @@ $().ready(function () {
                         $(this).dialog("close");
                         xpm.request('remove', {
                             params: {"id": r.id, "recursive": false},
-                            success: function (resp) {
+                            success: function () {
                                 // We just notify - but wait for the server notification to
                                 // remove the job from the interface
                                 noty({text: "Successful delete", type: 'success', timeout: 5000});
                             },
-                            error: jsonrpc_error,
+                            error: jsonrpc_error
                         });
                     },
                     "Cancel": function () {
@@ -203,20 +207,28 @@ $().ready(function () {
             }
             window.getSelection().removeAllRanges();
         }
+    };
+
+
+    function current_experiment() {
+        return {
+            name: $("#experiment-chooser").find("option:selected").text(),
+            time: $("#experiment-timestamp").get(0).xpm_timestamp
+        };
     }
 
     /**
      * Load tasks
      */
-    var load_tasks = function () {
+    var load_experiment = function (timestamp) {
         var select = $("#experiment-chooser");
         var tasks_chooser = $("#task-chooser");
-        xpm.task2resource = {}
+        xpm.task2resource = {};
         xpm.taskname2id = {};
         xpm.filtered_tasks = new Set();
         var experiment = select.find("option:selected").text();
         $("#resources").children().remove();
-        xpm.server.call('experiments.resources', {identifier: experiment},
+        xpm.server.call('experiments.resources', {identifier: experiment, timestamp: timestamp},
             function (r) {
                 var tasks = r.tasks;
                 var available_tasks = [];
@@ -241,7 +253,7 @@ $().ready(function () {
                         var resources = xpm.task2resource[taskids[i]];
                         if (display) xpm.filtered_tasks.add(taskids[i]);
                         else xpm.filtered_tasks.delete(taskids[i]);
-                        for(var j = 0; j < resources.length; ++j) {
+                        for (var j = 0; j < resources.length; ++j) {
                             $(resources[j]).css("display", display ? "inherit" : "none");
                         }
                     }
@@ -280,7 +292,10 @@ $().ready(function () {
                 });
 
                 var date = new Date(r.experiment.timestamp);
-                $("#experiment-timestamp").text(date.toString());
+                var ts = $("#experiment-timestamp");
+                ts.text(date.toString());
+                console.log("New timestamp: " + r.experiment.timestamp);
+                ts.get(0).xpm_timestamp = r.experiment.timestamp;
                 $.each(r.resources, function (ix, v) {
                     var r = add_resource(v);
                     xpm.task2resource[v.taskid].push(r);
@@ -303,7 +318,7 @@ $().ready(function () {
                 $.each(r, function (ix, e) {
                     select.append($e("option").append($t(e.identifier)));
                 });
-                load_tasks();
+                load_experiment();
             },
 
             jsonrpc_error
@@ -337,7 +352,7 @@ $().ready(function () {
                 pb.progressbar("option", "value", r.progress * 100);
             }
         }
-    }
+    };
 
     function change_counter(state, delta) {
         var c = $("#state-" + state + "-count");
@@ -345,6 +360,8 @@ $().ready(function () {
     }
 
     var add_resource = function (r) {
+        r.state = r.state.toLowerCase();
+        console.log("Adding resource with id " + r.id + " and state " + r.state);
         var e = $("#R" + r.id);
 
         if (e.length > 0) {
@@ -387,7 +404,7 @@ $().ready(function () {
 
             return item;
         }
-    }
+    };
 
     var resource_link_callback = function () {
         var resourcePath = $(this).text();
@@ -399,9 +416,10 @@ $().ready(function () {
                 $("#resource-detail-path").text(resourcePath);
 
                 // Set the content
-                $("#resource-detail-content").jstree(true).destroy();
-                $("#resource-detail-content").empty().append(json2html(r));
-                $("#resource-detail-content").jstree();
+                var rdc = $("#resource-detail-content");
+                rdc.jstree(true).destroy();
+                rdc.empty().append(json2html(r));
+                rdc.jstree();
 
                 $(function () {
                     $("#resource-detail").dialog({
@@ -416,9 +434,8 @@ $().ready(function () {
         return false;
     };
 
-
-    $("#experiment-chooser").change(load_tasks);
-
+    // When changing, load experiment
+    $("#experiment-chooser").change(load_experiment);
 
     function showexperiments(element) {
         var width = 960,
@@ -439,8 +456,8 @@ $().ready(function () {
             "method": "experiments",
             "params": {},
             "jsonrpc": "2.0",
-            "id": 1,
-        }
+            "id": 1
+        };
 
         d3.xhr("/json-rpc")
             .responseType("json")
@@ -501,28 +518,25 @@ $().ready(function () {
                 });
     }
 
-// Links
+    // Links
     $(".xpm-resource-list .link").on("click", resource_action_callback);
     $(".xpm-resource-list a").on("click", resource_link_callback);
-    $("#header .links a").button();
+    $("#header").find(".links a").button();
 
     var click_state = function (e) {
         var checked = $(this).is(':checked');
-        //if (e.altKey) {
-        //    console.log("yo");
-        //}
         if (checked) {
             $("#resources").addClass(this.id);
         } else {
             $("#resources").removeClass(this.id);
         }
-    }
+    };
 
-    var statefilters = $("#state-chooser li input");
+    var statefilters = $("#state-chooser").find("li input");
     statefilters.button().on("click", click_state);
     statefilters.each(click_state);
 
-// Transform resource detailed view in tree
+    // Transform resource detailed view in tree
     $("#resource-detail-content").jstree();
 
 
@@ -541,17 +555,19 @@ $().ready(function () {
 
         xpm.server.call("listen", {}, noop, jsonrpc_error);
         get_experiments(xpm.server);
-    }
+    };
 
-    xpm.handle_message = function (e) {
+    xpm.handle_message = function (resp) {
         //console.debug("Received: " + e.data);
-        var r = $.parseJSON(e.data);
+        var r = $.parseJSON(resp.data);
         if (r.error) {
-            console.error("Error: " + e.data);
+            console.error("Error: " + resp.data);
             return;
         }
         if (!r.result)
             return;
+
+        // Process result
         r = r.result;
         if (r.event) switch (r.event) {
             case "STATE_CHANGED":
@@ -594,6 +610,21 @@ $().ready(function () {
                 add_resource(r);
                 break;
 
+            case "EXPERIMENT_RESOURCE_ADDED":
+                var current = current_experiment();
+                if (current.name == r.name && current.time == r.timestamp) {
+                    add_resource(r.resource);
+                }
+                break;
+
+            case "EXPERIMENT_ADDED":
+                // If this is the current experiment, remove everything
+                var current = current_experiment();
+                if (r.name == current.name) {
+                    load_experiment(r.timestamp);
+                }
+                break;
+
             default:
                 console.warn("Unhandled notification " + r.event);
                 break;
@@ -614,10 +645,10 @@ $().ready(function () {
     });
 
     // Get hostname and open the web socket
-    xpm.server.call("hostname", {}, function(r) {
+    xpm.server.call("hostname", {}, function (r) {
         // Set host name in title and header
         $("html head title").append("@" + r);
-        $("#header div.title").append("@" + r);
+        $("#header").find("div.title").append("@" + r);
     });
 
     // Activate tabs

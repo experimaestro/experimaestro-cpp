@@ -24,7 +24,7 @@ import net.bpiwowar.xpm.scheduler.Message;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
-import net.bpiwowar.xpm.scheduler.SimpleMessage;
+import net.bpiwowar.xpm.scheduler.ResourceMessage;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import javax.servlet.ServletException;
@@ -100,7 +100,7 @@ public class NotificationServlet extends XPMServlet {
 
                     if (job.getState() == ResourceState.RUNNING) {
                         job.setProgress(progress);
-                        Scheduler.get().notify(new SimpleMessage(Message.Type.PROGRESS, job));
+                        Scheduler.get().notify(new ResourceProgressMessage(job));
                     }
                 }
             }

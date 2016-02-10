@@ -373,7 +373,7 @@ abstract public class Job extends Resource {
     public void notify(Message message) throws SQLException {
         LOGGER.debug("Notification [%s] for job [%s]", message, this);
 
-        switch (message.getType()) {
+        switch (message.getEvent()) {
             case RESOURCE_REMOVED:
                 break;
 

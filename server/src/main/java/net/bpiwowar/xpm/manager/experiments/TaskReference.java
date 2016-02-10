@@ -112,7 +112,7 @@ public class TaskReference implements Identifiable {
             st.setLong(2, resource.getId());
             st.execute();
         }
-
+        new ExperimentResourceAddedMessage(this, resource).send();
         resources.add(resource);
     }
 

@@ -28,7 +28,7 @@ public class EndOfJobMessage extends Message {
     public long timestamp;
 
     public EndOfJobMessage(int code, long timestamp) {
-        super(Type.END_OF_JOB);
+        super(Event.END_OF_JOB);
         this.code = code;
         this.timestamp = timestamp;
     }

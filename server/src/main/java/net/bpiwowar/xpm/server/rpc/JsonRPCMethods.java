@@ -786,40 +786,8 @@ public class JsonRPCMethods extends HttpServlet {
     public boolean listen() {
         Listener listener = message -> {
             try {
-                HashMap<String, Object> map = new HashMap<>();
-                map.put("event", message.getType().toString());
-
-                if (message instanceof SimpleMessage) {
-                    final SimpleMessage simpleMessage = (SimpleMessage) message;
-                    final Resource resource = simpleMessage.getResource();
-                    final Long resourceID = simpleMessage.getResourceID();
-                    if (resourceID == null) {
-                        return;
-                    }
-
-                    map.put("id", resourceID);
-                    Path locator = resource.getLocator();
-                    if (locator != null)
-                        map.put("locator", locator.toString());
-
-                    switch (message.getType()) {
-                        case STATE_CHANGED:
-                            map.put("state", resource.getState().toString());
-                            break;
-
-                        case PROGRESS:
-                            map.put("progress", ((Job) resource).getProgress());
-                        case RESOURCE_REMOVED:
-                            break;
-
-                        case RESOURCE_ADDED:
-                            map.put("state", resource.getState().toString());
-                            break;
-                    }
-
-                    mos.message(map);
-                }
-
+                // Just serialize and output
+                mos.message(message);
             } catch (IOException e) {
                 LOGGER.error(e, "Could not output");
             } catch (RuntimeException e) {
@@ -1064,7 +1032,10 @@ public class JsonRPCMethods extends HttpServlet {
                     throw new AssertionError("An RPC method class should be static");
                 if (annotation != null) {
                     final ClassArgumentDescriptor descriptor = new ClassArgumentDescriptor(annotation, field);
-                    arguments.put(descriptor.name, descriptor);
+                    final ClassArgumentDescriptor old = arguments.put(descriptor.name, descriptor);
+                    if (old != null) {
+                        throw new XPMRuntimeException("Parameter %s was already defined for %s", descriptor.name, rpcClass);
+                    }
                 }
             }
         }

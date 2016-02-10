@@ -87,46 +87,56 @@ public class ExperimentsMethods {
 
 
     @RPCMethod(help = "Find resources by experiment", name = "resources")
-    public JsonObject resources(
-            @RPCArgument(name = "identifier") String identifier
-    ) throws SQLException {
-        JsonObject response = new JsonObject();
+    static class FindResources implements JsonCallable {
+        @RPCArgument(name = "identifier")
+        String identifier;
 
-        final Experiment experiment = Experiment.findByIdentifier(identifier);
-        response.add("experiment", toJson(experiment));
+        @RPCArgument(name = "timestamp", required = false)
+        Long timestamp;
 
-        JsonObject tasks = new JsonObject();
-        response.add("tasks", tasks);
+        @Override
+        public Object call() throws Throwable {
+            JsonObject response = new JsonObject();
 
-        JsonArray resources = new JsonArray();
-        response.add("resources", resources);
-        if (experiment != null) {
-            experiment.resources().forEach(rt -> {
-                final String taskIdString = String.valueOf(rt.taskId);
-                if (!tasks.has(taskIdString)) {
-                    tasks.addProperty(taskIdString, rt.taskIdentifier);
-                }
-                final JsonObject json = toJson(rt.resource);
-                json.addProperty("taskid", rt.taskId);
-                resources.add(json);
-            });
+            final Experiment experiment = timestamp != null && timestamp > 0 ?
+                    Experiment.find(identifier, timestamp) : Experiment.findByIdentifier(identifier);
+            response.add("experiment", ExperimentsMethods.toJson(experiment));
 
-        } else {
-            throw new XPMCommandException("No experiment with identifier [" + identifier + "] found");
+            JsonObject tasks = new JsonObject();
+            response.add("tasks", tasks);
+
+            JsonArray resources = new JsonArray();
+            response.add("resources", resources);
+            if (experiment != null) {
+                experiment.resources().forEach(rt -> {
+                    final String taskIdString = String.valueOf(rt.taskId);
+                    if (!tasks.has(taskIdString)) {
+                        tasks.addProperty(taskIdString, rt.taskIdentifier);
+                    }
+                    final JsonObject json = toJson(rt.resource);
+                    json.addProperty("taskid", rt.taskId);
+                    resources.add(json);
+                });
+
+            } else {
+                throw new XPMCommandException("No experiment with identifier [" + identifier + "] found");
+            }
+            return response;
         }
-        return response;
+
+        static private JsonObject toJson(Resource r) {
+            JsonObject o = new JsonObject();
+            o.add("id", new JsonPrimitive(r.getId()));
+            o.add("locator", new JsonPrimitive(r.getLocator().toString()));
+            o.add("state", new JsonPrimitive(r.getState().toString()));
+            if (r instanceof Job) {
+                o.add("progress", new JsonPrimitive(((Job) r).getProgress()));
+            }
+            return o;
+        }
+
     }
 
-    private JsonObject toJson(Resource r) {
-        JsonObject o = new JsonObject();
-        o.add("id", new JsonPrimitive(r.getId()));
-        o.add("locator", new JsonPrimitive(r.getLocator().toString()));
-        o.add("state", new JsonPrimitive(r.getState().toString()));
-        if (r instanceof Job) {
-            o.add("progress", new JsonPrimitive(((Job) r).getProgress()));
-        }
-        return o;
-    }
 
     @RPCMethod(name = "latest-names", help = "Get list of experiment names")
     public Stream<ExperimentReference> latestNames() {

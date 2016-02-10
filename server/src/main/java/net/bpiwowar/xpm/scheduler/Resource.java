@@ -38,7 +38,6 @@ import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.commons.lang.NotImplementedException;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystemException;
@@ -259,7 +258,7 @@ public class Resource implements Identifiable {
      * @param message The message
      */
     public void notify(Message message) throws SQLException {
-        switch (message.getType()) {
+        switch (message.getEvent()) {
             case RESOURCE_REMOVED:
                 break;
         }
@@ -387,7 +386,7 @@ public class Resource implements Identifiable {
             Scheduler.get().addChangedResource(this);
         }
 
-        Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+        Scheduler.get().notify(ResourceMessage.changed(this));
 
         return true;
     }
@@ -503,7 +502,7 @@ public class Resource implements Identifiable {
             LOGGER.debug("Adding a new resource [%s] in database [id=%d/%x]", resource, id, System.identityHashCode(resource));
 
             // Notify
-            Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, resource));
+            ResourceMessage.added(resource).send();
         }
 
 
@@ -537,7 +536,7 @@ public class Resource implements Identifiable {
         }
 
         // Remove
-        final SimpleMessage message = new SimpleMessage(Message.Type.RESOURCE_REMOVED, this);
+        final ResourceMessage message = ResourceMessage.removed(this);
         clean(true);
         Scheduler.get().resources().delete(this);
 
@@ -655,9 +654,9 @@ public class Resource implements Identifiable {
         LOGGER.debug("Resource %s saved/updated", this);
         if (update && old.getState() != getState()) {
             Scheduler.get().addChangedResource(this);
-            Scheduler.get().notify(new SimpleMessage(Message.Type.STATE_CHANGED, this));
+            ResourceMessage.changed(this).send();
         } else if (!update) {
-            Scheduler.get().notify(new SimpleMessage(Message.Type.RESOURCE_ADDED, this));
+            ResourceMessage.added(this).send();
         }
 
         if (getState() == ResourceState.READY) {

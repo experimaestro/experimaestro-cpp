@@ -25,13 +25,13 @@ import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.scheduler.DatabaseObjects;
 import net.bpiwowar.xpm.scheduler.Identifiable;
+import net.bpiwowar.xpm.scheduler.Message;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.scheduler.XPMResultSet;
 import net.bpiwowar.xpm.scheduler.XPMStatement;
 import net.bpiwowar.xpm.utils.CloseableIterable;
-import net.bpiwowar.xpm.utils.Functional;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.ResultSet;
@@ -118,6 +118,9 @@ public class Experiment implements Identifiable {
             st.setString(1, identifier);
             st.setTimestamp(2, new Timestamp(timestamp));
         });
+
+        // Notify listeners
+        new ExperimentMessage(Message.Event.EXPERIMENT_ADDED, this).send();
     }
 
 
@@ -196,6 +199,16 @@ public class Experiment implements Identifiable {
         final String query = format("%s WHERE name=? ORDER BY timestamp DESC LIMIT 1", SELECT_BEGIN);
         final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
         return experiments.findUnique(query, st -> st.setString(1, name));
+    }
+
+
+    public static Experiment find(String identifier, long timestamp) throws SQLException {
+        final String query = format("%s WHERE name=? AND timestamp=?", SELECT_BEGIN);
+        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        return experiments.findUnique(query, st -> {
+            st.setString(1, identifier);
+            st.setTimestamp(2, new Timestamp(timestamp));
+        });
     }
 
     public static CloseableIterable<Experiment> findAllByIdentifier(String name) throws SQLException {

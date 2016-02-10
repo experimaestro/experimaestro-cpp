@@ -28,7 +28,7 @@ final public class DependencyChangedMessage extends Message {
     DependencyStatus newStatus;
 
     public DependencyChangedMessage(Dependency dependency, DependencyStatus oldStatus, DependencyStatus newStatus) {
-        super(Type.DEPENDENCY_CHANGED);
+        super(Event.DEPENDENCY_CHANGED);
         this.dependency = dependency;
         this.oldStatus = oldStatus;
         this.newStatus = newStatus;

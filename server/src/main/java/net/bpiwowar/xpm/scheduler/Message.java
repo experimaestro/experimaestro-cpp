@@ -22,17 +22,21 @@ package net.bpiwowar.xpm.scheduler;
  * A message between resources
  */
 abstract public class Message {
-    private Type type;
+    private Event event;
 
-    public Message(Type type) {
-        this.type = type;
+    public Message(Event event) {
+        this.event = event;
     }
 
-    public Type getType() {
-        return type;
+    public Event getEvent() {
+        return event;
     }
 
-    public enum Type {
+    public void send() {
+        Scheduler.get().notify(this);
+    }
+
+    public enum Event {
         STORED_IN_DATABASE,
         STATE_CHANGED,
         END_OF_JOB,
@@ -40,6 +44,8 @@ abstract public class Message {
         PROGRESS,
 
         RESOURCE_ADDED,
-        RESOURCE_REMOVED
+        RESOURCE_REMOVED,
+
+        EXPERIMENT_RESOURCE_ADDED, EXPERIMENT_ADDED
     }
 }
