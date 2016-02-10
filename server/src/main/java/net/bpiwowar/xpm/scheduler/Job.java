@@ -524,17 +524,17 @@ abstract public class Job extends Resource {
 
         Collection<Dependency> requiredResources = getDependencies();
         if (!requiredResources.isEmpty()) {
-            JsonArray dependencies = new JsonArray();
+            JsonObject dependencies = new JsonObject();
             info.add("dependencies", dependencies);
 
             for (Dependency dependency : requiredResources) {
                 Resource resource = dependency.getFrom();
 
                 JsonObject dep = new JsonObject();
-                dependencies.add(dep);
-                dep.addProperty("from", resource.getLocator().toString());
-                dep.addProperty("fromId", resource.getId());
-                dep.addProperty("status", dependency.toString());
+                dependencies.add(resource.getId().toString(), dep);
+                dep.addProperty("from-id", resource.getId());
+                dep.addProperty("status", dependency.status.toString());
+                dep.addProperty("locked", dependency.hasLock());
             }
         }
 
