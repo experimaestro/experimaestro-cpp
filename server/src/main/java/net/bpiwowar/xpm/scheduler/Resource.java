@@ -561,7 +561,6 @@ public class Resource implements Identifiable {
             throw new ExperimaestroCannotOverwrite("Cannot replace %s [state is %s]", this, getState());
         }
 
-        this.clean(false);
         resource.save(Scheduler.get().resources(), this);
 
         // Not in DB anymore

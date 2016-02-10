@@ -134,7 +134,9 @@ abstract public class Job extends Resource {
         if (!getState().isActive()) {
             // Set state status waiting
             setState(ResourceState.WAITING);
-            clean(false);
+            if (getState().isFinished()) {
+                clean(false);
+            }
 
             // Update status
             updateStatus();
