@@ -18,14 +18,19 @@ package net.bpiwowar.xpm.manager.python;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.python.core.*;
 import net.bpiwowar.xpm.manager.scripting.ClassDescription;
-import net.bpiwowar.xpm.manager.scripting.ConstructorFunction;
 import net.bpiwowar.xpm.manager.scripting.MethodFunction;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.python.core.Py;
+import org.python.core.PyClass;
+import org.python.core.PyFrame;
+import org.python.core.PyFunction;
+import org.python.core.PyObject;
+import org.python.core.PyString;
+import org.python.core.PyStringMap;
+import org.python.core.PyTuple;
+import org.python.core.PyType;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -57,6 +62,17 @@ class PythonType extends PyType {
     @Override
     public String getName() {
         return description.getClassName();
+    }
+
+
+    @Override
+    public PyObject __findattr_ex__(String name) {
+        // Search for a function
+        final PyObject attribute = PythonUtils.getAttribute(name, null, description);
+        if (attribute == null) {
+            noAttributeError(name);
+        }
+        return attribute;
     }
 
     /**

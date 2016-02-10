@@ -26,8 +26,6 @@ import net.bpiwowar.xpm.manager.scripting.PropertyAccess;
 import org.python.core.PyObject;
 import org.python.core.PyString;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
@@ -50,27 +48,11 @@ class PythonObject extends PyObject {
     @Override
     public PyObject __findattr_ex__(String name) {
         // Search for a function
-        MethodFunction function = description.getMethod(name);
-        if (function != null) {
-            return new PythonMethod(object, function);
+        final PyObject attribute = PythonUtils.getAttribute(name, object, description);
+        if (attribute == null) {
+            noAttributeError(name);
         }
-
-        // Search for a property
-        final PropertyAccess propertyAccess = description.getFields().get(name);
-        if (propertyAccess != null) {
-            return PythonRunner.wrap(propertyAccess.get(object).get(null));
-        }
-
-        // Search for property accessor
-        function = description.getMethod(ExposeMode.FIELDS);
-        if (function != null && !function.isEmpty()) {
-            final PythonContext pcx = new PythonContext();
-            return PythonRunner.wrap(function.call(pcx, object, null, name));
-        }
-
-
-        noAttributeError(name);
-        return null;
+        return attribute;
     }
 
 

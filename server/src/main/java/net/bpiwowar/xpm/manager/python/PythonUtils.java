@@ -3,6 +3,10 @@ package net.bpiwowar.xpm.manager.python;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.TypeName;
 import net.bpiwowar.xpm.manager.json.*;
+import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.ExposeMode;
+import net.bpiwowar.xpm.manager.scripting.MethodFunction;
+import net.bpiwowar.xpm.manager.scripting.PropertyAccess;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.manager.scripting.ScriptingPath;
 import net.bpiwowar.xpm.scheduler.Resource;
@@ -131,5 +135,28 @@ public class PythonUtils {
                 return null;
             }
         };
+    }
+
+    static public PyObject getAttribute(String name, Object object, ClassDescription description) {
+        MethodFunction function = description.getMethod(name);
+        if (function != null) {
+            return new PythonMethod(object, function);
+        }
+
+        // Search for a property
+        final PropertyAccess propertyAccess = description.getFields().get(name);
+        if (propertyAccess != null) {
+            return PythonRunner.wrap(propertyAccess.get(object).get(null));
+        }
+
+        // Search for property accessor
+        function = description.getMethod(ExposeMode.FIELDS);
+        if (function != null && !function.isEmpty()) {
+            final PythonContext pcx = new PythonContext();
+            return PythonRunner.wrap(function.call(pcx, object, null, name));
+        }
+
+
+        return null;
     }
 }
