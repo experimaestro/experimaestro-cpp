@@ -143,7 +143,7 @@ public class JavaScriptChecker extends XPMEnvironment {
     @Test()
     public void evaluate() throws Throwable {
         try {
-            jcx.evaluateReader(Files.newBufferedReader(file), file.toString(), 1, null);
+            jcx.evaluateReader(Files.newBufferedReader(file), file, 1, null);
             scope = jcx.scope;
         } catch(Throwable e) {
             LOGGER.error(e, "Error while running %s", file.toString());

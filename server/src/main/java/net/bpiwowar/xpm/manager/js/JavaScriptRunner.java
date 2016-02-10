@@ -21,14 +21,27 @@ package net.bpiwowar.xpm.manager.js;
 import bpiwowar.argparser.utils.Introspection;
 import com.google.common.reflect.TypeToken;
 import net.bpiwowar.xpm.manager.Repository;
-import net.bpiwowar.xpm.manager.scripting.*;
+import net.bpiwowar.xpm.manager.scripting.ClassDescription;
+import net.bpiwowar.xpm.manager.scripting.Exposed;
+import net.bpiwowar.xpm.manager.scripting.ScriptContext;
+import net.bpiwowar.xpm.manager.scripting.Scripting;
+import net.bpiwowar.xpm.manager.scripting.ScriptingReference;
+import net.bpiwowar.xpm.manager.scripting.StaticContext;
 import net.bpiwowar.xpm.manager.scripting.Wrapper;
+import net.bpiwowar.xpm.manager.scripting.WrapperObject;
+import net.bpiwowar.xpm.manager.scripting.XPM;
 import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.Functional;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Hierarchy;
 import org.eclipse.wst.jsdt.debug.rhino.debugger.RhinoDebugger;
-import org.mozilla.javascript.*;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.NativeJavaArray;
+import org.mozilla.javascript.Ref;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -37,7 +50,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.net.URL;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -262,13 +275,14 @@ public class JavaScriptRunner implements AutoCloseable {
         Context.exit();
     }
 
-    public Object evaluateReader(Reader reader, String filename, int lineno, Object security) throws Exception {
-        ScriptContext.get().setCurrentScriptPath(Paths.get(filename));
-        return context.evaluateReader(scope, reader, filename, lineno, security);
+    public Object evaluateReader(Reader reader, Path path, int lineno, Object security) throws Exception {
+        ScriptContext.get().setCurrentScriptPath(path);
+        return context.evaluateReader(scope, reader, path.toString(), lineno, security);
     }
 
-    public Object evaluateString(String content, String filename, int lineno, Object security) throws Exception {
-        return context.evaluateString(scope, content, filename, lineno, security);
+    public Object evaluateString(String content, Path path, int lineno, Object security) throws Exception {
+        ScriptContext.get().setCurrentScriptPath(path);
+        return context.evaluateString(scope, content, path.toString(), lineno, security);
     }
 
 }

@@ -460,10 +460,10 @@ public class JsonRPCMethods extends HttpServlet {
 
                 final LocalhostConnector connector = Scheduler.get().getLocalhostConnector();
                 Path locator = connector.resolve(filename);
-                if (isFile)
-                    result = jsXPM.evaluateReader(new FileReader(filename), filename, 1, null);
-                else
-                    result = jsXPM.evaluateString(content, filename, 1, null);
+                if (isFile) {
+                    result = jsXPM.evaluateReader(new FileReader(filename), locator, 1, null);
+                } else
+                    result = jsXPM.evaluateString(content, locator, 1, null);
 
             }
 

@@ -804,8 +804,11 @@ public class Resource implements Identifiable {
 
     synchronized public void updatedDependency(Dependency dep) throws SQLException {
         if (ingoingDependencies != null) {
-            dep = ingoingDependencies.get(dep.getFrom());
-            assert dep != null;
+            Dependency _dep = ingoingDependencies.get(dep.getFrom());
+            if (_dep == null) {
+                // Invalid cache since something changed...
+                ingoingDependencies = null;
+            }
         }
 
         DependencyStatus beforeState = dep.status;

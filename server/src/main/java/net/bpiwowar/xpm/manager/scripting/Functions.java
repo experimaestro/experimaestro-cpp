@@ -187,19 +187,18 @@ public class Functions {
 
     private static Object include(LanguageContext cx, java.nio.file.Path scriptPath, boolean repositoryMode) throws Exception {
         try (InputStream inputStream = Files.newInputStream(scriptPath); ScriptContext sc = context().copy(repositoryMode, true)) {
-            sc.setCurrentScriptPath(scriptPath);
 
             Scriptable scope;
             final String sourceName = scriptPath.toString();
 
             if (cx instanceof JavaScriptContext) {
                 scope = ((JavaScriptContext) cx).scope();
-
+                sc.setCurrentScriptPath(scriptPath);
                 final Object result = Context.getCurrentContext().evaluateReader(scope, new InputStreamReader(inputStream), sourceName, 1, null);
                 return repositoryMode ? sc.properties : result;
             } else {
                 try (JavaScriptRunner jsXPM = new JavaScriptRunner(sc.getRepository(), sc.getScheduler(), (Hierarchy) sc.getMainLogger().getLoggerRepository(), null, sc)) {
-                    final Object result = jsXPM.evaluateReader(new InputStreamReader(inputStream), sourceName, 1, null);
+                    final Object result = jsXPM.evaluateReader(new InputStreamReader(inputStream), scriptPath, 1, null);
                     return repositoryMode ? sc.properties : result;
                 }
             }
