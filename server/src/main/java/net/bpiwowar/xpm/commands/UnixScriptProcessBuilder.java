@@ -68,12 +68,12 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     /**
      * File where the exit code is written
      */
-    private String exitCodePath;
+    private Path exitCodePath;
 
     /**
      * File where the exit code is written
      */
-    private String donePath;
+    private Path donePath;
 
     /**
      * If cleanup should be performed on script exit
@@ -110,9 +110,8 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     final public XPMProcess start(boolean fake) throws LaunchException, IOException {
-        final Path runFile = launcher.getMainConnector().resolveFile(path);
-        final Path donePath_ = donePath != null ? launcher.getMainConnector().resolveFile(donePath) : null;
-        final Path exitCodePath_ = exitCodePath != null ? launcher.getMainConnector().resolveFile(exitCodePath) : null;
+        final Path runFile = path;
+        String pathString = launcher.getMainConnector().resolve(path);
         final Path basepath = runFile.getParent();
         final String baseName = runFile.getFileName().toString();
 
@@ -207,7 +206,7 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             exitWriter.format("code=$?%n");
             exitWriter.format("if test $code -ne 0; then%n");
             if (exitCodePath != null)
-                exitWriter.format(" echo $code > \"%s\"%n", protect(env.resolve(exitCodePath_, basepath), QUOTED_SPECIAL));
+                exitWriter.format(" echo $code > \"%s\"%n", protect(env.resolve(exitCodePath, basepath), QUOTED_SPECIAL));
             exitWriter.format(" exit $code%n");
             exitWriter.format("fi%n");
 
@@ -242,16 +241,16 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.print(exitScript);
 
             if (exitCodePath != null)
-                writer.format("echo 0 > \"%s\"%n", protect(env.resolve(exitCodePath_, basepath), QUOTED_SPECIAL));
+                writer.format("echo 0 > \"%s\"%n", protect(env.resolve(exitCodePath, basepath), QUOTED_SPECIAL));
             if (donePath != null)
-                writer.format("touch \"%s\"%n", protect(env.resolve(donePath_, basepath), QUOTED_SPECIAL));
+                writer.format("touch \"%s\"%n", protect(env.resolve(donePath, basepath), QUOTED_SPECIAL));
 
             writer.close();
 
             // Set the file as executable
             Files.setPosixFilePermissions(runFile, PosixFilePermissions.fromString("rwxr-x---"));
 
-            processBuilder.command(protect(path, SHELL_SPECIAL));
+            processBuilder.command(protect(pathString, SHELL_SPECIAL));
 
             processBuilder.detach(true);
             processBuilder.redirectOutput(output);
@@ -376,12 +375,12 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
 
     @Override
     public void exitCodeFile(Path exitCodeFile) throws IOException {
-        exitCodePath = launcher.resolve(exitCodeFile);
+        exitCodePath = exitCodeFile;
     }
 
     @Override
-    public void doneFile(Path doneFile) throws IOException {
-        donePath = launcher.resolve(doneFile);
+    public void doneFile(Path donePath) throws IOException {
+        this.donePath = donePath;
     }
 
     public void setDoCleanup(boolean doCleanup) {

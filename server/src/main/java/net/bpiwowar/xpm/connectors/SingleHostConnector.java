@@ -125,9 +125,9 @@ abstract public class SingleHostConnector extends Connector {
             return null;
         }
 
-        if (!contains(path.getFileSystem())) {
-            throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", path, this));
-        }
+//        if (!contains(path.getFileSystem())) {
+//            throw new FileSystemException(format("Cannot resolve file %s within filesystem %s", path, this));
+//        }
 
         return path.toAbsolutePath().toString();
     }

@@ -51,7 +51,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     /**
      * Local path to the script file
      */
-    protected String path;
+    protected Path path;
     /**
      * The environment
      */
@@ -69,7 +69,7 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
     public XPMScriptProcessBuilder(Launcher launcher, Path scriptFile, AbstractProcessBuilder processBuilder) throws IOException {
         this.launcher = launcher;
         this.scriptFile = scriptFile;
-        this.path = launcher.getConnector().resolve(scriptFile);
+        this.path = scriptFile;
         this.processBuilder = processBuilder == null ? launcher.processBuilder() : processBuilder;
     }
 

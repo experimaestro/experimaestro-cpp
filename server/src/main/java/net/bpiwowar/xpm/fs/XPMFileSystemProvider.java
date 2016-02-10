@@ -159,7 +159,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        throw new NotImplementedException();
+        return Files.getFileAttributeView(resolvePath(path), type, options);
     }
 
     @Override
