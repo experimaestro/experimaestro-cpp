@@ -312,7 +312,7 @@ public class XPMPath implements Path {
 
     @Override
     public Path toRealPath(LinkOption... options) throws IOException {
-        throw new NotImplementedException();
+        return XPMFileSystemProvider.instance.resolvePath(this);
     }
 
     @Override

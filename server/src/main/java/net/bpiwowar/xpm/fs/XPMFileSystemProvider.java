@@ -47,7 +47,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     public static final String SCHEME = "shares";
     final static private Logger LOGGER = Logger.getLogger();
-    public static FileSystemProvider instance = new XPMFileSystemProvider();
+    public static XPMFileSystemProvider instance = new XPMFileSystemProvider();
 
     @Override
     public String getScheme() {
@@ -82,7 +82,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
         return channel;
     }
 
-    protected Path resolvePath(Path path) {
+    Path resolvePath(Path path) {
         XPMPath _path = (XPMPath) path;
 
         NetworkShare share = null;
