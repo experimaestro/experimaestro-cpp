@@ -172,7 +172,7 @@ ul.buttons {
     display: none;
 }
 
-
+#resources li.notintask { display: none !important; }
 #resources.checkbox-state-waiting li.state-waiting {  display: block; }
 #resources.checkbox-state-ready li.state-ready {  display: block; }
 #resources.checkbox-state-running li.state-running {  display: block; }

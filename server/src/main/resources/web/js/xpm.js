@@ -254,7 +254,11 @@ $().ready(function () {
                         if (display) xpm.filtered_tasks.add(taskids[i]);
                         else xpm.filtered_tasks.delete(taskids[i]);
                         for (var j = 0; j < resources.length; ++j) {
-                            $(resources[j]).css("display", display ? "inherit" : "none");
+                            if (display) {
+                                $(resources[j]).removeClass("notintask");
+                            } else {
+                                $(resources[j]).addClass("notintask");
+                            }
                         }
                     }
                 }
@@ -274,7 +278,7 @@ $().ready(function () {
 
                     afterTagAdded: function (event, ui) {
                         // Remove everything for the first one
-                        if (tag_count == 0) $("#resources").children().css("display", "none");
+                        if (tag_count == 0) $("#resources").children().addClass("notintask");
                         ++tag_count;
                         change_state(ui.tagLabel, true);
                     },
@@ -283,7 +287,7 @@ $().ready(function () {
                         --tag_count;
                         if (tag_count == 0) {
                             xpm.filtered_tasks.clear();
-                            $("#resources").children().css("display", "inherit");
+                            $("#resources").children().removeClass("notintask");
                         } else {
                             change_state(ui.tagLabel, "none");
                         }
@@ -391,7 +395,7 @@ $().ready(function () {
             item.get(0).state = r.state;
 
             if (xpm.filtered_tasks.size > 0 && !xpm.filtered_tasks.has(r.taskid)) {
-                item.css("display", "none");
+                item.addClass("notintask");
             }
 
             $("#resources").append(item);
