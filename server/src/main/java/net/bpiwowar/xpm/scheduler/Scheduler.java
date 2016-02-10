@@ -20,14 +20,6 @@ package net.bpiwowar.xpm.scheduler;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import net.bpiwowar.xpm.manager.experiments.TaskReference;
-import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
-import org.apache.commons.dbcp2.PoolableConnection;
-import org.apache.commons.dbcp2.PoolableConnectionFactory;
-import org.apache.commons.dbcp2.PoolingDataSource;
-import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.commons.pool2.ObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPool;
 import net.bpiwowar.xpm.connectors.Connector;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
 import net.bpiwowar.xpm.connectors.NetworkShare;
@@ -40,11 +32,19 @@ import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
+import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.Heap;
 import net.bpiwowar.xpm.utils.ThreadCount;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
+import org.apache.commons.dbcp2.PoolableConnection;
+import org.apache.commons.dbcp2.PoolableConnectionFactory;
+import org.apache.commons.dbcp2.PoolingDataSource;
+import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -169,7 +169,9 @@ final public class Scheduler {
 
     private DatabaseObjects<Connector> connectors;
 
-    /** Current version of the database (used to run incremental SQL script updates) */
+    /**
+     * Current version of the database (used to run incremental SQL script updates)
+     */
     final static int DBVERSION = 1;
 
     private XPMConnector xpmConnector;
@@ -408,7 +410,9 @@ final public class Scheduler {
      * @param listener The listener status add
      */
     public void addListener(Listener listener) {
-        listeners.add(listener);
+        synchronized (listeners) {
+            listeners.add(listener);
+        }
     }
 
     /**
@@ -417,18 +421,22 @@ final public class Scheduler {
      * @param listener The listener status remove
      */
     public void removeListener(Listener listener) {
-        listeners.remove(listener);
+        synchronized (listeners) {
+            listeners.remove(listener);
+        }
     }
 
     /**
      * Notify
      */
     public void notify(Message message) {
-        for (Listener listener : listeners) {
-            try {
-                listener.notify(message);
-            } catch (RuntimeException e) {
-                LOGGER.warn("Exception when notifying %s / %s", message, e);
+        synchronized (listeners) {
+            for (Listener listener : listeners) {
+                try {
+                    listener.notify(message);
+                } catch (RuntimeException e) {
+                    LOGGER.warn("Exception when notifying %s / %s", message, e);
+                }
             }
         }
     }
