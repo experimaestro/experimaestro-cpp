@@ -20,16 +20,18 @@ package net.bpiwowar.xpm.commands;
 
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.WrappedIOException;
 import net.bpiwowar.xpm.exceptions.XPMRhinoException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Base class for command builders
@@ -130,10 +132,53 @@ public abstract class AbstractCommandBuilder {
         return this;
     }
 
+    /**
+     * Execute and returns the full output
+     *
+     * @param errLogger
+     * @return
+     * @throws IOException
+     * @throws LaunchException
+     * @throws InterruptedException
+     */
     public String execute(Logger errLogger) throws IOException, LaunchException, InterruptedException {
+        final StringBuilder sb = new StringBuilder();
+        final XPMProcess p = execute(errLogger, is -> {
+            try (BufferedReader input = new BufferedReader(new InputStreamReader(is))) {
+                int len = 0;
+                char[] buffer = new char[8192];
+                while ((len = input.read(buffer, 0, buffer.length)) >= 0) {
+                    sb.append(buffer, 0, len);
+                }
+            } catch (IOException e) {
+                throw new WrappedIOException(e);
+            }
+        });
 
+        int error = p.waitFor();
+        if (error != 0) {
+            errLogger.warn("Output was: %s", sb.toString());
+            throw new XPMRhinoException("Command returned an error code %d", error);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Execute and returns the full output
+     *
+     * @param errLogger
+     * @return
+     * @throws IOException
+     * @throws LaunchException
+     * @throws InterruptedException
+     */
+    public XPMProcess execute(Logger errLogger, Consumer<InputStream> inputHandler) throws IOException, LaunchException, InterruptedException {
+        // Settings
+        output = Redirect.PIPE;
+        error = Redirect.PIPE;
         detach(false);
 
+        // Start process
         XPMProcess p = start();
 
         if (errLogger != null) {
@@ -148,21 +193,8 @@ public abstract class AbstractCommandBuilder {
             }.start();
         }
 
-        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        int len = 0;
-        char[] buffer = new char[8192];
-        StringBuilder sb = new StringBuilder();
-        while ((len = input.read(buffer, 0, buffer.length)) >= 0) {
-            sb.append(buffer, 0, len);
-        }
-        input.close();
+        inputHandler.accept(p.getInputStream());
 
-        int error = p.waitFor();
-        if (error != 0) {
-            errLogger.warn("Output was: %s", sb.toString());
-            throw new XPMRhinoException("Command returned an error code %d", error);
-        }
-        return sb.toString();
+        return p;
     }
-
 }

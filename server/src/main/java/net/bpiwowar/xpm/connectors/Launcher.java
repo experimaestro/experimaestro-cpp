@@ -21,16 +21,18 @@ package net.bpiwowar.xpm.connectors;
 import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
 import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.WrappedIOException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
 import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.manager.scripting.ScriptContext;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
-import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.JsonAbstract;
 import net.bpiwowar.xpm.utils.log.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -163,13 +165,21 @@ public abstract class Launcher implements Serializable {
             AbstractProcessBuilder builder = processBuilder();
             builder.command("env");
             final Logger logger = ScriptContext.get().getMainLogger();
-            final String result = builder.execute(logger);
             launcherEnvironment = new HashMap<>();
-            for (String s : result.split("[\r\n]+")) {
-                final int i = s.indexOf('=');
-                final String _key = s.substring(0, i);
-                final String value = s.substring(i + 1);
-                launcherEnvironment.put(_key, value);
+            int code = builder.execute(logger, is -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+                    reader.lines().forEach(s -> {
+                        final int i = s.indexOf('=');
+                        final String _key = s.substring(0, i);
+                        final String value = s.substring(i + 1);
+                        launcherEnvironment.put(_key, value);
+                    });
+                } catch (IOException e) {
+                    throw new WrappedIOException(e);
+                }
+            }).waitFor();
+            if (code != 0) {
+                throw new IOException("Error while retrieving environment [code "+code+"]");
             }
         }
         return launcherEnvironment.get(key);
