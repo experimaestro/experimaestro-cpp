@@ -433,6 +433,9 @@ public class Resource implements Identifiable {
      *                   files are removed (error, done, etc.)
      */
     public void clean(boolean removeFile) {
+        if (state == ResourceState.RUNNING) {
+            throw new XPMRuntimeException("Cannot clean resource %s since it is running", this);
+        }
         if (removeFile) {
             try (PreparedStatement st = Scheduler.prepareStatement("SELECT path FROM ResourcePaths WHERE id=?")) {
                 st.setLong(1, resourceID);
