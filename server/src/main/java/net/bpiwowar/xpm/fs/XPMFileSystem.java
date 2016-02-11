@@ -131,14 +131,17 @@ public class XPMFileSystem extends FileSystem {
         final String path = fields[2];
 
         String[] parts = path.split(XPMFileSystem.PATH_SEPARATOR + "+", 0);
-        boolean absolute = parts[0].isEmpty();
+        boolean absolute = parts.length == 0 || parts[0].isEmpty();
 
         // Get the rest of the path
         int offset = absolute ? 1 : 0;
         int newLength = parts.length - offset;
-        String[] _parts = new String[newLength];
-        System.arraycopy(parts, offset, _parts, 0, newLength);
 
-        return new XPMPath(fields[0], fields[1], absolute, _parts);
+        if (newLength > 0) {
+            String[] _parts = new String[newLength];
+            System.arraycopy(parts, offset, _parts, 0, newLength);
+            return new XPMPath(fields[0], fields[1], absolute, _parts);
+        }
+        return new XPMPath(fields[0], fields[1], absolute);
     }
 }
