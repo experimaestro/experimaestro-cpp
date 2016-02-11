@@ -228,9 +228,12 @@ public class SSHConnector extends SingleHostConnector {
      */
     private Session getSession() throws JSchException, IOException {
         if (_session == null) {
-            _session = sessions.get(this);
+            _session = this.identifier != null ? sessions.get(this) : null;
             if (_session == null) {
-                sessions.put(this, _session = new SSHSession());
+                _session = new SSHSession();
+                if (this.identifier != null) {
+                    sessions.put(this, _session);
+                }
             }
         }
 
