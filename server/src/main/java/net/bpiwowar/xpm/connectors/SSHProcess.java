@@ -102,7 +102,9 @@ public class SSHProcess extends XPMProcess {
 
 
     @Override
-    public boolean isRunning(boolean checkFiles) {
-        return channel.isConnected();
+    public boolean isRunning(boolean checkFiles) throws Exception {
+        if (channel != null)
+            return channel.isConnected();
+        return super.isRunning(checkFiles);
     }
 }
