@@ -894,7 +894,7 @@ final public class Scheduler {
 
 
                         try (CloseableIterator<Dependency> dependencies = fromResource.getOutgoingDependencies(true)) {
-                            LOGGER.info("Notifying dependencies from %s", fromResource);
+                            LOGGER.debug("Notifying dependencies from %s", fromResource);
 
                             while (dependencies.hasNext()) {
                                 Dependency dep = dependencies.next();

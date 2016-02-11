@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -69,13 +70,17 @@ public class FileLock extends Lock {
         super(id);
     }
 
+    public FileLock(Path lockPath, boolean wait) throws LockException {
+        this(lockPath, wait ? Long.MAX_VALUE : 0);
+    }
+
     /**
      * Lock a file. If the file exists, waits for it to be deleted.
      *
      * @param lockPath
      * @throws IOException
      */
-    public FileLock(Path lockPath, boolean wait) throws LockException {
+    public FileLock(Path lockPath, long wait) throws LockException {
         this.lockFile = lockPath;
         try {
             while (true) {
@@ -87,17 +92,18 @@ public class FileLock extends Lock {
                     LOGGER.debug("Created lock file %s", lockFile);
                     break;
                 } catch (FileAlreadyExistsException e) {
-                    if (!wait) {
+                    if (wait <= 0) {
                         throw new LockException("The lock file %s already exists", lockPath);
                     }
 
                     try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
                         lockPath.getParent().register(watcher, StandardWatchEventKinds.ENTRY_DELETE);
                         LOGGER.debug("Waiting for lock file %s", lockFile);
-                        watcher.take();
+                        watcher.poll(wait, TimeUnit.SECONDS);
                     } catch (NoSuchFileException f) {
                         // file was deleted before we started to monitor it
                     }
+                    wait = -1; // Don't wait anymore
                 }
             }
         } catch (IOException | InterruptedException e) {
@@ -106,15 +112,11 @@ public class FileLock extends Lock {
     }
 
     public FileLock(File lockFile) throws LockException {
-        this(lockFile.toPath(), true);
+        this(lockFile.toPath(), -1);
     }
 
     public FileLock(String lockFile) throws LockException {
-        this(new File(lockFile).toPath(), true);
-    }
-
-    public FileLock(String lockFile, boolean wait) throws LockException {
-        this(new File(lockFile).toPath(), wait);
+        this(new File(lockFile).toPath(), -1);
     }
 
     /*
@@ -155,6 +157,9 @@ public class FileLock extends Lock {
     }
 
     public static FileLock of(Path path, boolean wait) throws LockException {
+        return new FileLock(path, wait ? Long.MAX_VALUE : -1);
+    }
+    public static FileLock of(Path path, long wait) throws LockException {
         return new FileLock(path, wait);
     }
 }

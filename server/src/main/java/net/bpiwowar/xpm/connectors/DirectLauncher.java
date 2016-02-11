@@ -38,6 +38,8 @@ public class DirectLauncher extends Launcher {
 
     @Override
     public AbstractProcessBuilder processBuilder() {
-        return connector.getMainConnector().processBuilder();
+        final AbstractProcessBuilder builder = connector.getMainConnector().processBuilder();
+        builder.environment(environment);
+        return builder;
     }
 }

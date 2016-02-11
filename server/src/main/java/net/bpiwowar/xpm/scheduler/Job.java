@@ -34,6 +34,7 @@ import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.hsqldb.persist.LockFile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -136,6 +137,12 @@ abstract public class Job extends Resource {
             setState(ResourceState.WAITING);
             if (getState().isFinished()) {
                 clean(false);
+            } else {
+                // Remove blocking files
+                try(FileLock lock = FileLock.of(LOCK_EXTENSION.transform(getLocator()), 5)) {
+                    Files.deleteIfExists(DONE_EXTENSION.transform(getLocator()));
+                    Files.deleteIfExists(CODE_EXTENSION.transform(getLocator()));
+                }
             }
 
             // Update status
