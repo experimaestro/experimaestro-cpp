@@ -227,7 +227,12 @@ $().ready(function () {
         xpm.taskname2id = {};
         xpm.filtered_tasks = new Set();
         var experiment = select.find("option:selected").text();
+
+        // Remove resources and counts
         $("#resources").children().remove();
+        $("#state-chooser").find(".state-count").text(0);
+
+
         xpm.server.call('experiments.resources', {identifier: experiment, timestamp: timestamp},
             function (r) {
                 var tasks = r.tasks;
@@ -577,7 +582,7 @@ $().ready(function () {
             case "STATE_CHANGED":
                 // Get the resource
                 var e = $("#R" + r.id);
-
+                r.state = r.state.toLowerCase();
                 if (e.length > 0) {
                     // Remove progress bars
                     e.removeClass("with-progressbar");
