@@ -100,7 +100,7 @@ public class NotificationServlet extends XPMServlet {
 
                     if (job.getState() == ResourceState.RUNNING) {
                         job.setProgress(progress);
-                        Scheduler.get().notify(new ResourceProgressMessage(job));
+                        Scheduler.get().notify(ResourceMessage.progress(job));
                     }
                 }
             }

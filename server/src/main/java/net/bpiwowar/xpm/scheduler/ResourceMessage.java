@@ -50,4 +50,8 @@ public class ResourceMessage extends Message {
     public static ResourceMessage removed(Resource resource) {
         return new ResourceMessage(Event.RESOURCE_REMOVED, resource);
     }
+
+    public static Message progress(Job resource) {
+        return new ResourceMessage(Event.PROGRESS, resource);
+    }
 }
