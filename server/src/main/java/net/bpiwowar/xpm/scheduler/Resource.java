@@ -73,6 +73,10 @@ public class Resource implements Identifiable {
 
     public static SQLInsert SQL_INSERT = new SQLInsert("Resources", true, "id", "type", "path", "status", "oldStatus", "data");
 
+    /**
+     * Extension for the PID file (its interpretation depends on the launcher)
+     */
+    public static final FileNameTransformer PID_FILE = new FileNameTransformer("", ".pid");
 
     /**
      * Extension for the lock file

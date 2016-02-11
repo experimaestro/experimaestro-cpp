@@ -167,6 +167,7 @@ public class CommandLineTask extends Job {
         // Add command
         builder.command(command);
 
+        builder.pidFile(Resource.PID_FILE.transform(getLocator()));
         builder.exitCodeFile(Resource.CODE_EXTENSION.transform(getLocator()));
         builder.doneFile(Resource.DONE_EXTENSION.transform(getLocator()));
         builder.removeLock(Resource.LOCK_EXTENSION.transform(getLocator()));

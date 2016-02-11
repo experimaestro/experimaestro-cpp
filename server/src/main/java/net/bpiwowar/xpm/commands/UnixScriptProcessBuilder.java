@@ -85,6 +85,9 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
      */
     private Commands preprocessCommands = null;
 
+    /** PID file (or null) */
+    private Path pidFile;
+
     /**
      * Commands
      *
@@ -131,6 +134,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.println("set -o pipefail");
             writer.println();
 
+            if (pidFile != null) {
+                writer.format("echo $? > \"%s\"%n", protect(env.resolve(pidFile, null), QUOTED_SPECIAL));
+            }
+
             writer.println();
             if (environment() != null) {
                 for (Map.Entry<String, String> pair : environment().entrySet())
@@ -159,6 +166,10 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
             writer.format(" echo Cleaning up 1>&2%n");
             // Remove traps
             writer.format(" trap - 0%n");
+
+            if (pidFile != null) {
+                writer.format(" rm -f %s;%n", env.resolve(pidFile, basepath));
+            }
 
             // Remove locks
             for (String file : lockFiles) {
@@ -376,6 +387,11 @@ public class UnixScriptProcessBuilder extends XPMScriptProcessBuilder {
     @Override
     public void exitCodeFile(Path exitCodeFile) throws IOException {
         exitCodePath = exitCodeFile;
+    }
+
+    @Override
+    public void pidFile(Path pidFile) {
+        this.pidFile = pidFile;
     }
 
     @Override

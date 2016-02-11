@@ -95,6 +95,8 @@ public abstract class XPMScriptProcessBuilder extends AbstractCommandBuilder {
 
     public abstract void exitCodeFile(Path exitCodeFile) throws IOException;
 
+    public abstract void pidFile(Path transform);
+
     public abstract void doneFile(Path doneFile) throws IOException;
 
     public URL getNotificationURL() {
