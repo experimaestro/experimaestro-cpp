@@ -67,6 +67,7 @@ final public class NetworkShare implements Identifiable {
     }
 
     public NetworkShare(Long id, String host, String name) {
+        this.id = id;
         this.host = host;
         this.name = name;
     }
