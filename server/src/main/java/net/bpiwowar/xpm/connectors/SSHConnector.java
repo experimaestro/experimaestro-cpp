@@ -42,6 +42,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
@@ -187,7 +188,11 @@ public class SSHConnector extends SingleHostConnector {
             Map<String, Object> environment = new HashMap<>();
             environment.put("defaultSessionFactory", sessionFactory);
 
-            filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
+            try {
+                filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
+            } catch(FileSystemAlreadyExistsException e) {
+                filesystem = (UnixSshFileSystem) FileSystems.getFileSystem(uri);
+            }
             return filesystem;
         } catch (URISyntaxException e) {
             throw new IOException(e);
