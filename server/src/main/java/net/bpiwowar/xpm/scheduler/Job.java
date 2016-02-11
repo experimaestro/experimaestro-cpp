@@ -579,8 +579,8 @@ abstract public class Job extends Resource {
 
         // Check the done file
         final Path path = getLocator();
-        final Path doneFile = DONE_EXTENSION.transform(path);
         final Path codeFile = CODE_EXTENSION.transform(path);
+        final Path lockFile = LOCK_EXTENSION.transform(path);
         final XPMProcess process = getProcess();
 
         if (Files.exists(codeFile)) {
@@ -594,6 +594,11 @@ abstract public class Job extends Resource {
                 if (this instanceof Job) {
                     jobData().setEndTimestamp(Files.getLastModifiedTime(codeFile).toMillis());
                 }
+            }
+        } else if (Files.exists(lockFile)) {
+            ResourceState newState = ResourceState.RUNNING;
+            if (setState(newState)) {
+                changes = true;
             }
         } else {
             if (getState().isFinished()) {

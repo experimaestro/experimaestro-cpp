@@ -710,6 +710,8 @@ final public class Scheduler {
                             try {
                                 Job job = (Job) resource;
                                 synchronized (job) {
+                                    job.updateStatus();
+
                                     if (!job.checkProcess()) {
                                         continue;
                                     }
@@ -746,9 +748,7 @@ final public class Scheduler {
                                     } catch (LockException e) {
                                         // We could not lock the resources: update the job state
                                         LOGGER.info("Could not lock all the resources for job %s [%s]", job, e.getMessage());
-                                        job.setState(ResourceState.WAITING);
                                         job.updateStatus();
-                                        LOGGER.info("Finished launching %s", job);
                                     } catch (Throwable t) {
                                         LOGGER.warn(t, "Got a trouble while launching job [%s]", job);
                                         job.setState(ResourceState.ERROR);
