@@ -21,13 +21,26 @@ package net.bpiwowar.xpm.server.rpc;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.bpiwowar.xpm.connectors.LocalhostConnector;
-import net.bpiwowar.xpm.exceptions.*;
+import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ContextualException;
+import net.bpiwowar.xpm.exceptions.ExitException;
+import net.bpiwowar.xpm.exceptions.XPMCommandException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.Repositories;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
 import net.bpiwowar.xpm.manager.python.PythonRunner;
-import net.bpiwowar.xpm.scheduler.*;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.Job;
+import net.bpiwowar.xpm.scheduler.Listener;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
 import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
@@ -48,9 +61,18 @@ import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
 import javax.servlet.http.HttpServlet;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
@@ -703,17 +725,29 @@ public class JsonRPCMethods extends HttpServlet {
      */
     @RPCMethod(help = "Force the update of all the jobs statuses. Returns the number of jobs whose update resulted" +
             " in a change of state")
-    public int updateJobs(
-            @RPCArgument(name = "recursive", required = false) Boolean _recursive,
+    public Map<String, Enum<ResourceState>> updateJobs(
+            @RPCArgument(name = "resources", required = false) String[] resourceNames,
             @RPCArgument(name = "states", required = false) String[] statesNames
     ) throws Exception {
         EnumSet<ResourceState> states = getStates(statesNames);
+        Map<String, Enum<ResourceState>> updated = new HashMap<>();
 
-        int nbUpdated = 0;
+        if (resourceNames.length > 0) {
+            for (String resourceName : resourceNames) {
+                final Resource resource = getResource(resourceName);
+                if (states.contains(resource.getState())) {
+                    if (resource.updateStatus()) {
+                        updated.put(resource.getIdentifier(), resource.getState());
+                    }
+                }
+            }
+            return updated;
+        }
+
         try (final CloseableIterable<Resource> resources = settings.scheduler.resources(states)) {
             for (Resource resource : resources) {
                 if (resource.updateStatus()) {
-                    nbUpdated++;
+                    updated.put(resource.getIdentifier(), resource.getState());
                 } else {
                 }
             }
@@ -723,7 +757,7 @@ public class JsonRPCMethods extends HttpServlet {
         // Just in case
         Scheduler.notifyRunners();
 
-        return nbUpdated;
+        return updated;
 
     }
 

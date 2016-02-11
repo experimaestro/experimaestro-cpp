@@ -72,7 +72,7 @@ for p in [p_run_js, p_run_python]:
 
 job_specification = argparse.ArgumentParser(add_help=False)
 job_specification.add_argument('--states', dest="states", help="States")
-job_specification.add_argument('group', nargs='?', help="The group to list", default="")
+job_specification.add_argument('resources', nargs='*', help="The resources", default=[])
 job_specification.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be included?")
 
 subparsers.add_parser("update", help="Update jobs", parents=[job_specification])
@@ -536,8 +536,8 @@ def run_server_command(client, command, params):
 
 def command_update(args):
     server = Configuration(args).getJsonServer()
-    print("%d updated job(s)" % server.updateJobs({
-        "group": args.group,
+    print("Updated job(s): %s" % server.updateJobs({
+        "resources": args.resources,
         "recursive": args.recursive,
         "states": get_states(args.states)
     }))
@@ -545,7 +545,7 @@ def command_update(args):
 
 def command_ls(args):
     server = Configuration(args).getJsonServer()
-    response = server.listJobs({"group": args.group, "states": get_states(args.states), "recursive": args.recursive})
+    response = server.listJobs({"resources": args.resources, "states": get_states(args.states), "recursive": args.recursive})
     for l in response:
         if args.color:
             state = l.get("state", "?").upper()
