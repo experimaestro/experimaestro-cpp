@@ -543,7 +543,7 @@ public class OARLauncher extends Launcher {
                     options.setPrivateKey("oarkey", key);
                     options.strictHostChecking(false);
                     options.setUseSSHAgent(false);
-                    information.connector = new SSHConnector(oarUser, information.hostname, oarPort, options);
+                    information.connector = new SSHConnector(null, oarUser, information.hostname, oarPort, options);
                 }
             }
         }

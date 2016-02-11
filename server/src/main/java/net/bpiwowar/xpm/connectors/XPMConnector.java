@@ -44,6 +44,10 @@ public class XPMConnector extends SingleHostConnector {
         super(ID);
     }
 
+    @Override
+    protected void replaceBy(Connector connector) {
+    }
+
     public XPMConnector(Long id, String uri) {
         super(id);
     }

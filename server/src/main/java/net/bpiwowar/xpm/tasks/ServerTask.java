@@ -47,10 +47,13 @@ import net.bpiwowar.xpm.server.*;
 import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.File;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static java.lang.String.format;
 
 /**
  * The server displays information about the tasks and responds to XML RPC tasks
@@ -119,6 +122,10 @@ public class ServerTask extends AbstractTask {
 
         File taskmanagerDirectory = new File(property);
         scheduler = new Scheduler(taskmanagerDirectory);
+
+        final String baseURL = format("http://%s:%d", InetAddress.getLocalHost().getHostName(), port);
+        LOGGER.info("Server URL is %s", baseURL);
+        scheduler.setURL(baseURL);
 
         // Early initialization to detect errors
         JavaScriptRunner.init();

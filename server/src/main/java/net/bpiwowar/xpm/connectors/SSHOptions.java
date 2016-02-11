@@ -25,6 +25,7 @@ import com.jcraft.jsch.agentproxy.USocketFactory;
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector;
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory;
 import com.pastdev.jsch.SessionFactory;
+import net.bpiwowar.xpm.manager.scripting.Argument;
 import org.apache.commons.lang.NotImplementedException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
@@ -112,7 +113,7 @@ public class SSHOptions extends ConnectorOptions {
     }
 
     @Expose("set_stream_proxy")
-    public void setStreamProxy(String uri, SSHOptions sshOptions) {
+    public void setStreamProxy(@Argument(name = "uri") String uri, @Argument(name = "options") SSHOptions sshOptions) {
         try {
             proxy = new NCProxyConfiguration(uri, sshOptions);
         } catch (URISyntaxException e) {
@@ -120,7 +121,8 @@ public class SSHOptions extends ConnectorOptions {
         }
     }
 
-    public void setStreamProxy(SSHConnector proxy) {
+    @Expose("set_stream_proxy")
+    public void setStreamProxy(@Argument(name = "proxy") SSHConnector proxy) {
         this.proxy = new NCProxyConfiguration(proxy.options);
     }
 
@@ -203,8 +205,9 @@ public class SSHOptions extends ConnectorOptions {
     }
 
     @Expose("check_host")
-    public void checkHost(boolean check) {
+    public SSHOptions checkHost(boolean check) {
         this.checkHost = check;
+        return this;
     }
 
     public SSHOptions copy() {

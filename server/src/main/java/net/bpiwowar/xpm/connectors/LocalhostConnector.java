@@ -63,6 +63,11 @@ public class LocalhostConnector extends SingleHostConnector {
     }
 
     @Override
+    protected void replaceBy(Connector connector) {
+        // do nothing
+    }
+
+    @Override
     public Path resolve(String path) {
         return new File(path).toPath();
     }

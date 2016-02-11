@@ -177,6 +177,7 @@ final public class Scheduler {
     private XPMConnector xpmConnector;
 
     private final PoolingDataSource<PoolableConnection> dataSource;
+    private String URL;
 
     /**
      * Initialise the task manager
@@ -249,13 +250,13 @@ final public class Scheduler {
             locks = new DatabaseObjects<>("Locks", Lock::create);
 
             // Find or create localhost launcher
-            localhostConnector = (LocalhostConnector) Connector.findByURI(LocalhostConnector.IDENTIFIER);
+            localhostConnector = (LocalhostConnector) Connector.findByIdentifier(LocalhostConnector.IDENTIFIER);
             if (localhostConnector == null) {
                 localhostConnector = new LocalhostConnector();
                 localhostConnector.save();
             }
 
-            xpmConnector = (XPMConnector) Connector.findByURI(XPMConnector.ID);
+            xpmConnector = (XPMConnector) Connector.findByIdentifier(XPMConnector.ID);
             if (xpmConnector == null) {
                 xpmConnector = new XPMConnector();
                 xpmConnector.save();
@@ -631,6 +632,23 @@ final public class Scheduler {
         return taskReferences;
     }
 
+    /**
+     * Sets the base URL for the web server
+     * @param URL The base URL
+     */
+    public void setURL(String URL) {
+        this.URL = URL;
+    }
+
+
+    /**
+     * Gets the base URL
+     * @return The base URL
+     */
+    public String getURL() {
+        return URL;
+    }
+
     final static private class MessagePackage extends Heap.DefaultElement<MessagePackage> implements Comparable<MessagePackage> {
         public Message message;
 
@@ -920,10 +938,10 @@ final public class Scheduler {
         @Override
         public void run() {
             try (Connection ignored = getConnection()) {
+                // TODO schedule latter if updated
                 try (final CloseableIterable<Resource> resources = Scheduler.this.resources(EnumSet.of(ResourceState.RUNNING))) {
                     for (Resource resource : resources) {
                         Job job = (Job) resource;
-
                         try {
                             XPMProcess process = job.getProcess();
                             if (process != null && !process.isRunning(true)) {

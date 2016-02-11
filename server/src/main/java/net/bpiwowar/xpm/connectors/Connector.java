@@ -73,12 +73,12 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * The string identifier
      */
     @GsonSerialization(serialize = false)
-    private String identifier;
+    protected String identifier;
 
     /**
      * Whether data has been loaded from database
      */
-    transient private boolean dataLoaded;
+    transient boolean dataLoaded;
 
     public Connector(String identifier) {
         this.identifier = identifier;
@@ -110,8 +110,8 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * Return a new connector from an URI
      */
     @Expose(optional = 1)
-    public static Connector create(String uriString, ConnectorOptions options) throws URISyntaxException, SQLException {
-        return create(new URI(uriString), options);
+    public static Connector create(String identifier, String uriString, ConnectorOptions options) throws URISyntaxException, SQLException {
+        return create(identifier, new URI(uriString), options);
     }
 
     @Expose()
@@ -119,12 +119,12 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
         return new DirectLauncher(this);
     }
 
-    public static Connector create(URI uri, ConnectorOptions options) throws SQLException {
+    public static Connector create(String identifier, URI uri, ConnectorOptions options) throws SQLException {
         Connector connector;
 
         switch (uri.getScheme()) {
             case "ssh":
-                connector = new SSHConnector(uri, options);
+                connector = new SSHConnector(identifier, uri, options);
                 break;
             case "local":
             case "file":
@@ -134,9 +134,17 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
                 throw new IllegalArgumentException("Unknown connector scheme: " + uri.getScheme());
         }
 
-        Connector dbConnector = Connector.findByURI(connector.getIdentifier());
+        // Replace if in DB
+        final String connectorURI = connector.getIdentifier();
+        Connector dbConnector =  Connector.findByIdentifier(connectorURI);
+        if (dbConnector != null) {
+            dbConnector.replaceBy(connector);
+            dbConnector.save();
+        }
         return dbConnector == null ? connector : dbConnector;
     }
+
+    protected abstract void replaceBy(Connector connector);
 
     /**
      * Retrieves a connector with some requirements
@@ -209,20 +217,27 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      * @throws SQLException If something goes wrong
      */
     public void save() throws SQLException {
-        save(Scheduler.get().connectors(), null);
+        save(Scheduler.get().connectors());
     }
 
-    public void save(DatabaseObjects<Connector> connectors, Connector old) throws SQLException {
+    public void save(DatabaseObjects<Connector> connectors) throws SQLException {
         try (InputStream jsonInputStream = new JsonSerializationInputStream(out -> {
             try (JsonWriter writer = new JsonWriter(out)) {
                 saveJson(writer);
             }
         })) {
-            connectors.save(this, "INSERT INTO Connectors(type, uri, data) VALUES(?, ?, ?)", st -> {
+            final String query = inDatabase() ?
+                    "UPDATE Connectors SET type=?, uri=?, data=? WHERE id=?"
+                    :
+                    "INSERT INTO Connectors(type, uri, data) VALUES(?, ?, ?)";
+            connectors.save(this, query, st -> {
                 st.setLong(1, DatabaseObjects.getTypeValue(getClass()));
                 st.setString(2, getIdentifier());
                 st.setBlob(3, jsonInputStream);
-            }, old != null);
+                if (inDatabase()) {
+                    st.setLong(4, getId());
+                }
+            }, inDatabase());
         } catch (IOException e) {
             throw new XPMRuntimeException(e, "Unexpected I/O error");
         }
@@ -269,9 +284,9 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
     public static final String SELECT_QUERY = "SELECT id, type, uri FROM Connectors";
 
 
-    public static Connector findByURI(String uri) throws SQLException {
+    public static Connector findByIdentifier(String identifier) throws SQLException {
         final String query = format("%s WHERE uri=?", SELECT_QUERY);
-        return Scheduler.get().connectors().findUnique(query, st -> st.setString(1, uri));
+        return Scheduler.get().connectors().findUnique(query, st -> st.setString(1, identifier));
     }
 
     public static Connector findById(long id) throws SQLException {

@@ -98,43 +98,44 @@ public class SSHConnector extends SingleHostConnector {
     /**
      * Used for serialization
      */
-    public SSHConnector(Long id, String uri) {
-        this(URI.create(uri), null);
+    public SSHConnector(Long id, String identifier) {
+        super(identifier);
         setId(id);
     }
 
-    public SSHConnector(String username, String hostname) {
-        this(username, hostname, 0, null);
-    }
-
-    /**
-     * Construct from a username, hostname, port triplet
-     *
-     * @param username
-     * @param hostname
-     * @param port
-     */
-    public SSHConnector(String username, String hostname, int port) {
-        this(username, hostname, port, null);
-    }
-
-
-    public SSHConnector(URI uri, ConnectorOptions options) {
-        this(uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
+    public SSHConnector(String identifier, URI uri, ConnectorOptions options) {
+        this(identifier, uri.getUserInfo(), uri.getHost(), uri.getPort(), options);
         this.basePath = uri.getPath();
         if (this.basePath.isEmpty()) {
             basePath = "/";
         }
+        dataLoaded = true;
+    }
+
+    @Override
+    protected void replaceBy(Connector connector) {
+        final SSHConnector sshConnector = (SSHConnector) connector;
+        this.options = sshConnector.options;
+        this.basePath = sshConnector.basePath;
+        this.temporaryPath = sshConnector.temporaryPath;
+        this.dataLoaded = sshConnector.dataLoaded;
+        if (_session != null && !_session.isConnected()) {
+            synchronized (sessions) {
+                this._session = null;
+                sessions.remove(this);
+            }
+        }
     }
 
     /**
+     * @param identifier The identifier
      * @param username
      * @param hostname
      * @param port
      * @param options
      */
-    public SSHConnector(String username, String hostname, int port, ConnectorOptions options) {
-        super(String.format("ssh://%s:%d@%s", username, port, hostname));
+    public SSHConnector(String identifier, String username, String hostname, int port, ConnectorOptions options) {
+        super(identifier);
         this.options = options != null ? ((SSHOptions) options).copy() : new SSHOptions();
 
         this.options.setHostName(hostname);
@@ -253,6 +254,10 @@ public class SSHConnector extends SingleHostConnector {
 
         void init() throws JSchException, IOException {
             session = options.getSessionFactory().newSession();
+        }
+
+        boolean isConnected() {
+            return session != null && session.isConnected();
         }
 
     }

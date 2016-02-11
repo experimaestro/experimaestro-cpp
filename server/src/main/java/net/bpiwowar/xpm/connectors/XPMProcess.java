@@ -261,7 +261,7 @@ public abstract class XPMProcess {
     public boolean isRunning(boolean checkFiles) throws Exception {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
-        LOGGER.info("Job %s is running: %s", this.job, exists);
+        LOGGER.debug("Job %s is running: %s", this.job, exists);
         return exists;
     }
 

@@ -514,4 +514,10 @@ public class Functions {
         }
     }
 
+    @Expose
+    @Help("Returns the notification URL")
+    static public String notification_url() {
+        return Scheduler.get().getURL();
+    }
+
 }
