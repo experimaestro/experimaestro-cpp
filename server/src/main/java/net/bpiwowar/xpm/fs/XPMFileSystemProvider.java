@@ -112,7 +112,7 @@ public class XPMFileSystemProvider extends FileSystemProvider {
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        throw new NotImplementedException();
+        return Files.newDirectoryStream(resolvePath(dir), filter);
     }
 
     @Override
