@@ -110,10 +110,12 @@ public class TokenResource extends Resource {
         return String.format("%s [%d/%d]", super.toDetailedString(), usedTokens, limit);
     }
 
+    @Expose
     public int getLimit() {
         return limit;
     }
 
+    @Expose("used")
     public int getUsedTokens() {
         return usedTokens;
     }
