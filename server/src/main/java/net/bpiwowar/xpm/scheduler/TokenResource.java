@@ -141,6 +141,9 @@ public class TokenResource extends Resource {
             used = rs.getInt(1);
         }
 
+        if (getState().isBlocking()) {
+            setState(ResourceState.DONE);
+        }
         if (used != this.usedTokens) {
             this.usedTokens = used;
             return true;
