@@ -88,4 +88,8 @@ public class PathUtils {
         }
         return Paths.get(uri);
     }
+
+    public static String quotedProtect(String email) {
+        return protect(email, QUOTED_SPECIAL);
+    }
 }

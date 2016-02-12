@@ -18,20 +18,22 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import com.jcraft.jsch.JSchException;
+import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
 import net.bpiwowar.xpm.commands.UnixScriptProcessBuilder;
 import net.bpiwowar.xpm.commands.XPMScriptProcessBuilder;
-import org.w3c.dom.Document;
 import net.bpiwowar.xpm.exceptions.LaunchException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
-import net.bpiwowar.xpm.commands.Commands;
+import net.bpiwowar.xpm.manager.scripting.Help;
 import net.bpiwowar.xpm.scheduler.LauncherParameters;
 import net.bpiwowar.xpm.scheduler.Resource;
 import net.bpiwowar.xpm.utils.Output;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.w3c.dom.Document;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,8 +41,17 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.*;
-import java.nio.file.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.FileSystemException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,9 +60,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static net.bpiwowar.xpm.utils.PathUtils.QUOTED_SPECIAL;
-import static net.bpiwowar.xpm.utils.PathUtils.SHELL_SPECIAL;
-import static net.bpiwowar.xpm.utils.PathUtils.protect;
+import static net.bpiwowar.xpm.utils.PathUtils.quotedProtect;
 
 /**
  * A command line launcher with OAR
@@ -104,6 +113,11 @@ public class OARLauncher extends Launcher {
     private boolean useJobKey = true;
 
     private ShortLivedInformation information;
+
+    /**
+     * Notification email
+     */
+    private String email;
 
     /**
      * Construction from a connector
@@ -252,7 +266,7 @@ public class OARLauncher extends Launcher {
 
             if (shortLived || !detach) {
                 // Check if the process is still alive
-                ensureShortLived();
+                ensureShortLived(false);
 
                 final AbstractProcessBuilder builder = useJobKey ? information.connector.processBuilder() : connector.processBuilder();
 
@@ -267,12 +281,12 @@ public class OARLauncher extends Launcher {
                     command.add(information.hostname);
                     if (OARLauncher.this.environment != null) {
                         OARLauncher.this.environment.forEach(
-                                (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                                (k, v) -> command.add(format("export %s=%s;", k, quotedProtect(v)))
                         );
                     }
                     if (environment() != null) {
                         environment().forEach(
-                                (k, v) -> command.add(format("export %s=%s;", k, protect(v, QUOTED_SPECIAL)))
+                                (k, v) -> command.add(format("export %s=%s;", k, quotedProtect(v)))
                         );
                     }
                 } else {
@@ -297,20 +311,37 @@ public class OARLauncher extends Launcher {
                 if (error != null) builder.redirectError(error);
                 if (output != null) builder.redirectOutput(output);
 
-                final XPMProcess process = builder.start();
-                return process;
+                try {
+                    final XPMProcess process = builder.start();
+                    return process;
+                } catch(LaunchException e) {
+                    if (e.getCause() instanceof JSchException) {
+                        if (e.getCause().getMessage().contains("many authentication failures")) {
+                            // Invalidate
+                            LOGGER.warn("Authentification failure: invalidating short live handler and restarting");
+                            LOGGER.error("Not doing it --- looop");
+//                            ensureShortLived(true);
+//                            return start(false);
+                        }
+                    }
+                    LOGGER.error(e, "Error while launching process");
+                    throw e;
+                }
 
             } else {
                 // Use a full OAR process
 
                 final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getLocator()));
-                final String runpath = protect(path, SHELL_SPECIAL);
+                final String runpath = quotedProtect(path);
 
                 ArrayList<String> command = new ArrayList<>();
 
                 command.add(oarCommand);
                 if (useNotify) {
                     command.add(format("--exec:%s", path));
+                }
+                if (email != null) {
+                    command.add(format("--notify \"mail:%s\"", quotedProtect(email)));
                 }
                 addOutputOption("stdout", command, output);
                 addOutputOption("stderr", command, error);
@@ -378,7 +409,7 @@ public class OARLauncher extends Launcher {
          * </ol>
          */
         // TODO: Should open an SSH session (for this, we need to get the environment variable set by oarsh)
-        private void ensureShortLived() throws IOException, LaunchException {
+        private void ensureShortLived(boolean forceRestart) throws IOException, LaunchException {
             // Get the short lived job ending time
             final Path directory = connector.resolve(shortLivedJobDirectory);
             final Path jobKeyFile = directory.resolve("information.key");
@@ -397,7 +428,7 @@ public class OARLauncher extends Launcher {
 
             // Starts the job if necessary
             long timestamp = System.currentTimeMillis() / 1000;
-            if ((information.remainingTime + timestamp) > information.endTimestamp) {
+            if ((information.remainingTime + timestamp) > information.endTimestamp || forceRestart) {
                 final Path infopath = directory.resolve("information.env");
                 final Path commandpath = directory.resolve("command.sh");
                 final Path lockPath = directory.resolve("information.lock");
@@ -461,6 +492,8 @@ public class OARLauncher extends Launcher {
                 // The job outputs the environment and sleeps...
 
                 Files.deleteIfExists(donePath);
+                Files.deleteIfExists(infopath);
+                Files.deleteIfExists(jobKeyFile);
                 final AbstractProcessBuilder builder = connector.processBuilder();
                 ArrayList<String> args = new ArrayList<>();
                 args.addAll(Arrays.asList(
@@ -554,6 +587,12 @@ public class OARLauncher extends Launcher {
     @Expose("use_notify")
     public void setUseNotify(boolean useNotify) {
         this.useNotify = useNotify;
+    }
+
+    @Expose("email")
+    @Help("Send a notification email. Process it to notify experimaestro when a job status changes.")
+    public void email(String email) {
+        this.email = email;
     }
 
     @Expose
