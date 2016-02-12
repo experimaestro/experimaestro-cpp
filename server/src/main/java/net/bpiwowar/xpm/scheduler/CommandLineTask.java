@@ -181,9 +181,12 @@ public class CommandLineTask extends Job {
         JsonObject info = super.toJSON();
         info.addProperty("command", command.toString());
         info.addProperty("working-directory", workingDirectory);
-        JsonObject jsonEnv = new JsonObject();
-        environment.forEach((k,v) -> jsonEnv.addProperty(k, v));
-        info.add("environment", jsonEnv);
+
+        if (environment != null) {
+            JsonObject jsonEnv = new JsonObject();
+            environment.forEach((k, v) -> jsonEnv.addProperty(k, v));
+            info.add("environment", jsonEnv);
+        }
         return info;
     }
 
