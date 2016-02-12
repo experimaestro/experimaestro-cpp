@@ -133,5 +133,9 @@ public abstract class Lock implements AutoCloseable, Identifiable {
         }
     }
 
+    @Override
+    public String toString() {
+        return format("Lock(%d)", id);
+    }
 }
 
