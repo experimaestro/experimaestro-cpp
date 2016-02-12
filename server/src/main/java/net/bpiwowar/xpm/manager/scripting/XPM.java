@@ -132,6 +132,9 @@ public class XPM {
     static public TokenResource token(@Argument(name = "path", help = "The path of the resource") String path
     ) throws ExperimaestroCannotOverwrite, SQLException, URISyntaxException {
         final Resource resource = Resource.getByLocator(NetworkShare.uriToPath(path));
+        if (resource == null) {
+            return null;
+        }
         if (!(resource instanceof TokenResource))
             throw new AssertionError(String.format("Resource %s exists and is not a token", path));
 
