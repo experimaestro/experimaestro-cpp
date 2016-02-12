@@ -123,18 +123,24 @@ public class SSHOptions extends ConnectorOptions {
 
     @Expose("set_stream_proxy")
     public void setStreamProxy(@Argument(name = "proxy") SSHConnector proxy) {
-        this.proxy = new NCProxyConfiguration(proxy.options);
+        this.proxy = new NCProxyConfiguration(proxy.options());
     }
 
 
 
     public DefaultSessionFactory getSessionFactory() throws IOException {
-        DefaultSessionFactory factory = new DefaultSessionFactory();
+        DefaultSessionFactory factory = new DefaultSessionFactory(useSSHAgent);
 
         // Set basic options
         factory.setHostname(hostname);
         factory.setUsername(username);
         factory.setPort(port);
+        if (useSSHAgent) {
+            factory.setIdentityRepository(createSSHAgentIdentityRepository());
+        } else {
+
+        }
+
         for(IdentityOption io: identities) {
             try {
                 factory.jsch.addIdentity(io.keyName, io.prvKey, null, null);
@@ -148,10 +154,6 @@ public class SSHOptions extends ConnectorOptions {
 //        // Use root file system
         if (compression != null) {
             throw new NotImplementedException();
-        }
-
-        if (useSSHAgent) {
-            factory.setIdentityRepository(createSSHAgentIdentityRepository());
         }
 
         if (proxy != null) {

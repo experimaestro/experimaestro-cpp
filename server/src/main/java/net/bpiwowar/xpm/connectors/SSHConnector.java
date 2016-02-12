@@ -42,7 +42,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
@@ -81,10 +80,7 @@ public class SSHConnector extends SingleHostConnector {
      */
     private String basePath = "/";
 
-    /**
-     * Connection options
-     */
-    SSHOptions options = new SSHOptions();
+    private SSHOptions options = new SSHOptions();
 
     /**
      * Cached SSH session
@@ -116,7 +112,7 @@ public class SSHConnector extends SingleHostConnector {
     @Override
     protected void replaceBy(Connector connector) {
         final SSHConnector sshConnector = (SSHConnector) connector;
-        this.options = sshConnector.options;
+        this.options = sshConnector.options();
         this.basePath = sshConnector.basePath;
         this.temporaryPath = sshConnector.temporaryPath;
         this.dataLoaded = sshConnector.dataLoaded;
@@ -139,10 +135,10 @@ public class SSHConnector extends SingleHostConnector {
         super(identifier);
         this.options = options != null ? ((SSHOptions) options).copy() : new SSHOptions();
 
-        this.options.setHostName(hostname);
-        this.options.setUserName(username);
+        this.options().setHostName(hostname);
+        this.options().setUserName(username);
         if (port > 0) {
-            this.options.setPort(port);
+            this.options().setPort(port);
         }
     }
 
@@ -158,7 +154,7 @@ public class SSHConnector extends SingleHostConnector {
     @Override
     public String getHostName() {
         loadData();
-        return options.getHostName();
+        return options().getHostName();
     }
 
     @Override
@@ -175,7 +171,7 @@ public class SSHConnector extends SingleHostConnector {
         loadData();
 
         try {
-            URI uri = new URI(SSH_UNIX_SCHEME + "://" + options.getUserName() + "@" + options.getHostName() + ":" + options.getPort() + basePath);
+            URI uri = new URI(SSH_UNIX_SCHEME + "://" + options().getUserName() + "@" + options().getHostName() + ":" + options().getPort() + basePath);
 
             try {
                 return FileSystems.getFileSystem(uri);
@@ -183,14 +179,14 @@ public class SSHConnector extends SingleHostConnector {
                 // just ignore
             }
 
-            final DefaultSessionFactory sessionFactory = options.getSessionFactory();
+            final DefaultSessionFactory sessionFactory = options().getSessionFactory();
 
             Map<String, Object> environment = new HashMap<>();
             environment.put("defaultSessionFactory", sessionFactory);
 
             try {
                 filesystem = (UnixSshFileSystem) FileSystems.newFileSystem(uri, environment);
-            } catch(FileSystemAlreadyExistsException e) {
+            } catch(RuntimeException e) {
                 filesystem = (UnixSshFileSystem) FileSystems.getFileSystem(uri);
             }
             return filesystem;
@@ -251,6 +247,14 @@ public class SSHConnector extends SingleHostConnector {
     }
 
     /**
+     * Connection options
+     */
+    SSHOptions options() {
+        loadData();
+        return options;
+    }
+
+    /**
      * an SSH session
      */
     class SSHSession {
@@ -261,7 +265,7 @@ public class SSHConnector extends SingleHostConnector {
         }
 
         void init() throws JSchException, IOException {
-            session = options.getSessionFactory().newSession();
+            session = options().getSessionFactory().newSession();
         }
 
         boolean isConnected() {
@@ -357,8 +361,8 @@ public class SSHConnector extends SingleHostConnector {
 
 
                 String command = commandBuilder.toString();
-                LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, options.getUserName(),
-                        options.getHostName());
+                LOGGER.info("Executing command [%s] with SSH connector (%s@%s)", command, options().getUserName(),
+                        options().getHostName());
                 channel.setCommand(command);
                 channel.setPty(!detach());
 
