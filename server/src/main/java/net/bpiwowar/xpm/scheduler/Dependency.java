@@ -79,7 +79,9 @@ abstract public class Dependency implements Serializable {
     protected Dependency() {
     }
 
-    /** Construct from database */
+    /**
+     * Construct from database
+     */
     protected Dependency(long fromId, long toId, Lock lock, DependencyStatus status) {
         this.from = new ResourceReference(fromId);
         this.to = new ResourceReference(toId);
@@ -184,8 +186,9 @@ abstract public class Dependency implements Serializable {
         LOGGER.debug("Locking dependency %s", this);
         try {
             lock = _lock(pid);
+            lock.save(); // Save to DB
             assert lock != null;
-
+            assert lock.getId() != null;
             Scheduler.statement("UPDATE Dependencies SET lock=? WHERE fromId=? and toId=?")
                     .setLong(1, lock.getId())
                     .setLong(2, from.id())
@@ -194,6 +197,14 @@ abstract public class Dependency implements Serializable {
 
             return lock;
         } catch (Throwable e) {
+            // Unlock
+            if (lock != null && lock.inDatabase()) {
+                try {
+                    lock.close();
+                } catch (SQLException e1) {
+                    LOGGER.error("Could not remove lock %s", lock);
+                }
+            }
             throw new LockException(e);
         }
     }
@@ -243,9 +254,9 @@ abstract public class Dependency implements Serializable {
                 .setLong(5, from.id())
                 .setLong(6, to.id());
 
-        int updated =  st.executeUpdate();
+        int updated = st.executeUpdate();
 
-                LOGGER.debug("Dependency %s - updated rows = %d", this, updated);
+        LOGGER.debug("Dependency %s - updated rows = %d", this, updated);
     }
 
     public long getToId() {
@@ -273,4 +284,6 @@ abstract public class Dependency implements Serializable {
     public long getFromId() {
         return from.id();
     }
+
+
 }

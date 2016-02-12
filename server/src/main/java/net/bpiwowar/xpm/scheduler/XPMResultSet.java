@@ -92,4 +92,8 @@ public class XPMResultSet implements AutoCloseable {
     public ResultSet get() {
         return resultSet;
     }
+
+    public int getInt(int columnIndex) throws SQLException {
+        return resultSet.getInt(columnIndex);
+    }
 }
