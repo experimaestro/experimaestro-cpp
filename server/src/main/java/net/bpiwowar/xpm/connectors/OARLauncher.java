@@ -330,13 +330,15 @@ public class OARLauncher extends Launcher {
 
             } else {
                 // Use a full OAR process
-
+                final String name = job.getLocator().getFileName().toString();
                 final String path = connector.resolve(Resource.RUN_EXTENSION.transform(job.getLocator()));
                 final String runpath = quotedProtect(path);
 
                 ArrayList<String> command = new ArrayList<>();
 
                 command.add(oarCommand);
+                command.add("--name");
+                command.add('"' + quotedProtect(name) + '"');
                 if (useNotify) {
                     command.add(format("--exec:%s", path));
                 }
