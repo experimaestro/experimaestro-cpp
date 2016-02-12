@@ -289,6 +289,7 @@ final public class Scheduler {
                     if (job.getProcess() != null) {
                         job.getProcess().init(job);
                     } else {
+                        // FIXME: should do something smarter
                         job.setState(ResourceState.ERROR);
                         LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
                     }
