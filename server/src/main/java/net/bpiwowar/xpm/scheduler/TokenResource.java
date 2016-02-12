@@ -82,7 +82,7 @@ public class TokenResource extends Resource {
      * @param path  The token path
      * @param limit The maximum number of tokens
      */
-    public TokenResource(Path path, int limit)  {
+    public TokenResource(Path path, int limit) {
         super(path);
         this.limit = limit;
         this.usedTokens = 0;
@@ -132,11 +132,13 @@ public class TokenResource extends Resource {
     synchronized protected boolean doUpdateStatus() throws Exception {
         LOGGER.debug("Updating token resource");
         int used = 0;
-        for (Dependency dependency : getDependencies()) {
-            if (dependency.hasLock()) {
-                LOGGER.debug("Dependency [%s] has lock", dependency);
-                used++;
-            }
+        final String sql = "SELECT sum(td.tokens) FROM Dependencies d, TokenDependencies td WHERE LOCK IS NOT NULL " +
+                "AND td.fromid=? AND d.fromid=? AND d.toid = td.toid";
+        try (final XPMStatement execute = Scheduler.statement(sql)
+                .setLong(1, this.getId()).setLong(2, this.getId());
+             XPMResultSet rs = execute.singleResultSet()
+        ) {
+            used = rs.getInt(1);
         }
 
         if (used != this.usedTokens) {
@@ -165,8 +167,8 @@ public class TokenResource extends Resource {
     /**
      * Unlock a resource
      *
-     * @return
      * @param tokens
+     * @return
      */
     synchronized void unlock(int tokens) throws SQLException {
         if (usedTokens >= tokens) {
