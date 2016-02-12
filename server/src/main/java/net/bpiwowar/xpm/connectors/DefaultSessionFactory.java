@@ -16,6 +16,9 @@ import com.jcraft.jsch.agentproxy.ConnectorFactory;
 import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
 import com.pastdev.jsch.SessionFactory;
 import com.pastdev.jsch.Slf4jBridge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -26,15 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.apache.commons.lang.NotImplementedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class DefaultSessionFactory implements SessionFactory {
     private static Logger logger = LoggerFactory.getLogger(DefaultSessionFactory.class);
-    public static final String PROPERTY_JSCH_DOT_SSH = "jsch.dotSsh";
-    public static final String PROPERTY_JSCH_KNOWN_HOSTS_FILE = "jsch.knownHosts.file";
-    public static final String PROPERTY_JSCH_PRIVATE_KEY_FILES = "jsch.privateKey.files";
     private Map<String, String> config;
     private File dotSshDir;
     private String hostname;
@@ -43,17 +39,19 @@ public class DefaultSessionFactory implements SessionFactory {
     private Proxy proxy;
     private String username;
 
-    public DefaultSessionFactory() {
-        this((String)null, (String)null, (Integer)null);
+    public DefaultSessionFactory(boolean useAgent) {
+        this(null, null, null, useAgent);
     }
 
-    public DefaultSessionFactory(String username, String hostname, Integer port) {
+    public DefaultSessionFactory(String username, String hostname, Integer port, boolean useAgent) {
         this.port = 22;
         JSch.setLogger(new Slf4jBridge());
         this.jsch = new JSch();
 
         try {
-            this.setDefaultIdentities();
+            if (useAgent) {
+                this.setDefaultIdentities();
+            }
         } catch (JSchException var6) {
             logger.warn("Unable to set default identities: ", var6);
         }
@@ -79,7 +77,7 @@ public class DefaultSessionFactory implements SessionFactory {
         if(port == null) {
             this.port = 22;
         } else {
-            this.port = port.intValue();
+            this.port = port;
         }
 
     }
@@ -94,7 +92,7 @@ public class DefaultSessionFactory implements SessionFactory {
     }
 
     private void clearIdentityRepository() throws JSchException {
-        this.jsch.setIdentityRepository((IdentityRepository)null);
+        this.jsch.setIdentityRepository(null);
         this.jsch.removeAllIdentity();
     }
 
@@ -134,7 +132,7 @@ public class DefaultSessionFactory implements SessionFactory {
 
             while(i$.hasNext()) {
                 String key = (String)i$.next();
-                session.setConfig(key, (String)this.config.get(key));
+                session.setConfig(key, this.config.get(key));
             }
         }
 
@@ -213,9 +211,8 @@ public class DefaultSessionFactory implements SessionFactory {
             File[] var10 = new File[]{new File(this.dotSshDir(), "id_rsa"), new File(this.dotSshDir(), "id_dsa"), new File(this.dotSshDir(), "id_ecdsa")};
             int var11 = var10.length;
 
-            for(int i$ = 0; i$ < var11; ++i$) {
-                File file = var10[i$];
-                if(file.exists()) {
+            for (File file : var10) {
+                if (file.exists()) {
                     var9.add(file.getAbsolutePath());
                 }
             }
