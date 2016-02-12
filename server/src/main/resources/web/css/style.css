@@ -241,6 +241,9 @@ ul.buttons {
     display: none;
 }
 
+#resources li.state-on_hold .resource-actions:hover i.fa[name="restart"] {
+    display: inline;
+}
 #resources li.state-error .resource-actions:hover i.fa[name="restart"] {
     display: inline;
 }
