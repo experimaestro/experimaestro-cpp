@@ -35,6 +35,7 @@ import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
 import org.hsqldb.persist.LockFile;
+import org.omg.PortableInterceptor.HOLDING;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -616,6 +617,9 @@ abstract public class Job extends Resource {
                     if (!process.isRunning(true)) {
                         Scheduler.get().sendMessage(this, new EndOfJobMessage(process.exitValue(false), process.exitTime()));
                     }
+                } else {
+                    // Null process, no lockfile: reset
+                    setState(ResourceState.ON_HOLD);
                 }
             }
         }
