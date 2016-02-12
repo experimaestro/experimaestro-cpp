@@ -28,7 +28,41 @@ import net.bpiwowar.xpm.commands.Command;
 import net.bpiwowar.xpm.commands.CommandContext;
 import net.bpiwowar.xpm.commands.Commands;
 import net.bpiwowar.xpm.commands.Redirect;
+import net.bpiwowar.xpm.connectors.AbstractProcessBuilder;
+import net.bpiwowar.xpm.connectors.Connector;
+import net.bpiwowar.xpm.connectors.Launcher;
+import net.bpiwowar.xpm.connectors.NetworkShare;
+import net.bpiwowar.xpm.connectors.SingleHostConnector;
+import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.ValueMismatchException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoException;
+import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
+import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
+import net.bpiwowar.xpm.manager.Constants;
+import net.bpiwowar.xpm.manager.JsonSignature;
+import net.bpiwowar.xpm.manager.Module;
+import net.bpiwowar.xpm.manager.Repository;
+import net.bpiwowar.xpm.manager.Task;
+import net.bpiwowar.xpm.manager.TaskFactory;
+import net.bpiwowar.xpm.manager.TypeName;
+import net.bpiwowar.xpm.manager.js.JavaScriptContext;
+import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
+import net.bpiwowar.xpm.manager.json.Json;
+import net.bpiwowar.xpm.manager.json.JsonObject;
+import net.bpiwowar.xpm.manager.json.JsonResource;
+import net.bpiwowar.xpm.scheduler.CommandLineTask;
+import net.bpiwowar.xpm.scheduler.Dependency;
+import net.bpiwowar.xpm.scheduler.DependencyParameters;
+import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
+import net.bpiwowar.xpm.scheduler.Scheduler;
+import net.bpiwowar.xpm.scheduler.TokenResource;
+import net.bpiwowar.xpm.server.TasksServlet;
+import net.bpiwowar.xpm.utils.JSUtils;
+import net.bpiwowar.xpm.utils.Output;
+import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
+import net.bpiwowar.xpm.utils.log.Logger;
 import org.apache.log4j.Level;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
@@ -36,24 +70,6 @@ import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
-import net.bpiwowar.xpm.connectors.*;
-import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
-import net.bpiwowar.xpm.exceptions.ValueMismatchException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoException;
-import net.bpiwowar.xpm.exceptions.XPMRhinoIllegalArgumentException;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
-import net.bpiwowar.xpm.manager.*;
-import net.bpiwowar.xpm.manager.js.JavaScriptContext;
-import net.bpiwowar.xpm.manager.js.JavaScriptTaskFactory;
-import net.bpiwowar.xpm.manager.json.Json;
-import net.bpiwowar.xpm.manager.json.JsonObject;
-import net.bpiwowar.xpm.manager.json.JsonResource;
-import net.bpiwowar.xpm.scheduler.*;
-import net.bpiwowar.xpm.server.TasksServlet;
-import net.bpiwowar.xpm.utils.JSUtils;
-import net.bpiwowar.xpm.utils.Output;
-import net.bpiwowar.xpm.utils.io.LoggerPrintWriter;
-import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -107,6 +123,20 @@ public class XPM {
         // Add to experiment
         ScriptContext.get().postProcess(null, tokenResource);
         return tokenResource;
+    }
+
+    /**
+     * Get (but no create)
+     */
+    @Expose
+    static public TokenResource token(@Argument(name = "path", help = "The path of the resource") String path
+    ) throws ExperimaestroCannotOverwrite, SQLException, URISyntaxException {
+        final Resource resource = Resource.getByLocator(NetworkShare.uriToPath(path));
+        if (!(resource instanceof TokenResource))
+            throw new AssertionError(String.format("Resource %s exists and is not a token", path));
+
+        // Add to experiment
+        return (TokenResource) resource;
     }
 
     protected static ScriptContext context() {
@@ -167,6 +197,7 @@ public class XPM {
     public ScriptingLogger getLoggerJS(String name) {
         return new ScriptingLogger(name);
     }
+
     @Expose(value = "get_logger", languages = Languages.PYTHON)
     public ScriptingLogger getLoggerPython(String name) {
         return new ScriptingLogger(name);
@@ -400,7 +431,7 @@ public class XPM {
         // Inherit output for main commands
         command.setOutputRedirect(Redirect.INHERIT);
         if (command instanceof Commands) {
-            for(AbstractCommand subcommand: command) {
+            for (AbstractCommand subcommand : command) {
                 subcommand.setOutputRedirect(Redirect.INHERIT);
             }
         }
