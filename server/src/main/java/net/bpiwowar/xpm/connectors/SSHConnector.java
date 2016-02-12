@@ -133,6 +133,7 @@ public class SSHConnector extends SingleHostConnector {
      */
     public SSHConnector(String identifier, String username, String hostname, int port, ConnectorOptions options) {
         super(identifier);
+        dataLoaded = true;
         this.options = options != null ? ((SSHOptions) options).copy() : new SSHOptions();
 
         this.options().setHostName(hostname);
