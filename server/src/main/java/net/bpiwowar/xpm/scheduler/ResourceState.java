@@ -65,6 +65,12 @@ public enum ResourceState {
     final static EnumSet<ResourceState> UPDATABLE_STATES
             = EnumSet.of(READY, ON_HOLD, ERROR, WAITING);
 
+    /*
+    * Running or pre-running states
+    */
+    public final static EnumSet<ResourceState> RUNNABLE_STATES
+            = EnumSet.of(READY, WAITING, RUNNING);
+
     /**
      * States in which a resource can be notified
      */

@@ -36,6 +36,24 @@ jarname = "experimaestro-%s.jar" % version
 
 # --- Create the argument parser
 
+class StatesCompleter(object):
+    def __init__(self):
+        self.choices = set(["DONE", "ERROR", "ON_HOLD", "RUNNING", "READY", "WAITING"])
+
+    def __call__(self, prefix, **kwargs):
+        ix = prefix.rfind(",")
+        if ix != -1:
+            search = prefix[ix+1:]
+            prefix = prefix[:ix+1]
+        else:
+            search = prefix
+            prefix = ""
+
+        return (prefix + c for c in self.choices if c.startswith(search))
+
+statesCompleter = StatesCompleter()
+
+
 # create the top-level parser
 
 parser = argparse.ArgumentParser(description='experimaestro script.')
@@ -106,6 +124,10 @@ p_rm.add_argument('jobid', nargs="*", help="The job ids")
 
 p_kill = subparsers.add_parser("kill", help="Kill a job")
 p_kill.add_argument('jobid', nargs="+", help="The job URIs or IDs")
+
+p_xp_kill = subparsers.add_parser("experiment-kill", help="Kill jobs from an experiment")
+p_xp_kill.add_argument('--states', dest="states", default="WAITING,READY,RUNNING", help="States").completer = statesCompleter
+p_xp_kill.add_argument('experimentid', help="The experiment ID")
 
 p_generate_files = subparsers.add_parser("generate-files", help="Generate files")
 p_generate_files.add_argument('jobid', nargs="+", help="The job URIs or IDs")
@@ -598,7 +620,12 @@ def command_restart(args):
 def command_kill(args):
     server = Configuration(args).getJsonServer()
     n = server.kill({"jobs": args.jobid})
-    print("Killed %d jobs" % n)
+    logging.info("Killed %d jobs" % n)
+
+def command_experiment_kill(args):
+    server = Configuration(args).getJsonServer()
+    n = server["experiments.kill"]({"identifier": args.experimentid, "states": get_states(args.states)})
+    logging.info("Killed %d jobs" % n)
 
 def command_generate_files(args):
     client = Configuration(args).getWebSocketServer()

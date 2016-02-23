@@ -11,9 +11,12 @@ import net.bpiwowar.xpm.manager.experiments.ExperimentReference;
 import net.bpiwowar.xpm.manager.experiments.TaskReference;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.Resource;
+import net.bpiwowar.xpm.scheduler.ResourceState;
 import net.bpiwowar.xpm.utils.CloseableIterable;
+import net.bpiwowar.xpm.utils.log.Logger;
 
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +26,12 @@ import java.util.stream.Stream;
  * Methods related to experiments
  */
 @JsonRPCMethodsHolder("experiments")
-public class ExperimentsMethods {
+public class ExperimentsMethods extends BaseJsonRPCMethods {
+
+    public ExperimentsMethods(JSONRPCRequest mos) {
+        super(mos);
+    }
+
     /**
      * Delete obsolete experiments
      */
@@ -213,5 +221,32 @@ public class ExperimentsMethods {
         nodes.add(element);
         element.add("name", new JsonPrimitive(string));
         element.add("group", new JsonPrimitive(1));
+    }
+
+    @RPCMethod(name = "kill", help = "Kill all jobs from an experiment")
+    public class Kill implements JsonCallable {
+        @RPCArgument
+        String identifier;
+
+        @RPCArgument
+        EnumSet<ResourceState> states = ResourceState.RUNNABLE_STATES;
+
+        @Override
+        public Object call() throws Throwable {
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+            int n = 0;
+            for (Resource resource : Experiment.resourcesByIdentifier(identifier, states)) {
+                try {
+                    if (resource instanceof Job) {
+                        if (((Job) resource).stop()) {
+                            n++;
+                        }
+                    }
+                } catch (Throwable throwable) {
+                    logger.error("Error while killing job [%s]", resource);
+                }
+            }
+            return n;
+        }
     }
 }

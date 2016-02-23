@@ -68,6 +68,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -86,16 +87,12 @@ import static java.lang.String.format;
  * @author B. Piwowarski <benjamin@bpiwowar.net>
  */
 @JsonRPCMethodsHolder("")
-public class JsonRPCMethods extends HttpServlet {
+public class JsonRPCMethods extends BaseJsonRPCMethods {
     final static private Logger LOGGER = Logger.getLogger();
 
     private static Multimap<String, RPCCaller> methods;
 
-    private final JSONRPCRequest mos;
-
     private final JsonRPCSettings settings;
-
-    HashMap<String, BufferedWriter> writers = new HashMap<>();
 
     HashSet<Listener> listeners = new HashSet<>();
 
@@ -106,10 +103,10 @@ public class JsonRPCMethods extends HttpServlet {
     private HashMap<Class<?>, Object> objects = new HashMap<>();
 
     public JsonRPCMethods(JsonRPCSettings settings, JSONRPCRequest mos) throws IOException {
+        super(mos);
         initMethods();
         this.settings = settings;
-        this.mos = mos;
-        addObjects(this, new DocumentationMethods(), new ExperimentsMethods());
+        addObjects(this, new DocumentationMethods(), new ExperimentsMethods(mos));
     }
 
     public void addObjects(Object... objects) {
@@ -548,64 +545,6 @@ public class JsonRPCMethods extends HttpServlet {
     }
 
 
-    private Hierarchy getScriptLogger() {
-//        final RootLogger root = new RootLogger(Level.INFO);
-        final Logger root = new Logger("root");
-        root.setLevel(Level.INFO);
-        final Hierarchy loggerRepository = new Hierarchy(root) {
-            public Logger getLogger(String name) {
-                return (Logger) this.getLogger(name, new DefaultFactory());
-            }
-        };
-        BufferedWriter stringWriter = getRequestErrorStream();
-
-        PatternLayout layout = new PatternLayout("%-6p [%c] %m%n");
-        WriterAppender appender = new WriterAppender(layout, stringWriter);
-        root.addAppender(appender);
-        return loggerRepository;
-    }
-
-    /**
-     * Return the output stream for the request
-     */
-    private BufferedWriter getRequestOutputStream() {
-        return getRequestStream("out");
-    }
-
-    /**
-     * Return the error stream for the request
-     */
-    private BufferedWriter getRequestErrorStream() {
-        return getRequestStream("err");
-    }
-
-    /**
-     * Return a stream with the given ID
-     */
-    private BufferedWriter getRequestStream(final String id) {
-        BufferedWriter bufferedWriter = writers.get(id);
-        if (bufferedWriter == null) {
-            bufferedWriter = new BufferedWriter(new Writer() {
-                @Override
-                public void write(char[] cbuf, int off, int len) throws IOException {
-                    ImmutableMap<String, String> map = ImmutableMap.of("stream", id, "value", new String(cbuf, off, len));
-                    mos.message(map);
-                }
-
-                @Override
-                public void flush() throws IOException {
-                }
-
-                @Override
-                public void close() throws IOException {
-                    throw new UnsupportedOperationException();
-                }
-            });
-            writers.put(id, bufferedWriter);
-        }
-        return bufferedWriter;
-    }
-
     /**
      * Shutdown the server
      */
@@ -880,23 +819,29 @@ public class JsonRPCMethods extends HttpServlet {
         }
     }
 
-    @RPCMethod(help = "Kill one or more jobs")
-    public int kill(@RPCArgument(name = "jobs", required = true) String[] JobIds) {
-        final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
-        int n = 0;
-        for (String id : JobIds) {
-            try {
-                final Resource resource = getResource(id);
-                if (resource instanceof Job) {
-                    if (((Job) resource).stop()) {
-                        n++;
+    @RPCMethod(name = "kill", help = "Kill one or more jobs")
+    public class Kill implements JsonCallable {
+        @RPCArgument
+        String jobs[];
+
+        @Override
+        public Object call() throws Throwable {
+            final Logger logger = (Logger) getScriptLogger().getLogger("rpc");
+            int n = 0;
+            for (String id : jobs) {
+                try {
+                    final Resource resource = getResource(id);
+                    if (resource instanceof Job) {
+                        if (((Job) resource).stop()) {
+                            n++;
+                        }
                     }
+                } catch (Throwable throwable) {
+                    logger.error("Error while killing jbo [%s]", id);
                 }
-            } catch (Throwable throwable) {
-                logger.error("Error while killing jbo [%s]", id);
             }
+            return n;
         }
-        return n;
     }
 
     /**
@@ -1053,6 +998,7 @@ public class JsonRPCMethods extends HttpServlet {
 
     private static class RPCClassCaller extends RPCCaller<ClassArgumentDescriptor> {
         private final Class<?> rpcClass;
+        private final Constructor<?> constructor;
 
         public RPCClassCaller(Class<?> rpcClass) {
             this.rpcClass = rpcClass;
@@ -1060,10 +1006,19 @@ public class JsonRPCMethods extends HttpServlet {
                 throw new AssertionError("An RPC method class should implement the JsonCallable interface");
             }
 
+            try {
+                if (!Modifier.isStatic(rpcClass.getModifiers())) {
+                    constructor = rpcClass.getConstructor(rpcClass.getEnclosingClass());
+                } else {
+                    constructor = null; // rpcClass.getConstructor();
+                }
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+
             for (Field field : rpcClass.getDeclaredFields()) {
                 final RPCArgument annotation = field.getAnnotation(RPCArgument.class);
-                if (!Modifier.isStatic(rpcClass.getModifiers()))
-                    throw new AssertionError("An RPC method class should be static");
+
                 if (annotation != null) {
                     final ClassArgumentDescriptor descriptor = new ClassArgumentDescriptor(annotation, field);
                     final ClassArgumentDescriptor old = arguments.put(descriptor.name, descriptor);
@@ -1077,7 +1032,13 @@ public class JsonRPCMethods extends HttpServlet {
         @Override
         public Object call(Object o, JsonObject p) throws Throwable {
             Gson gson = new Gson();
-            final JsonCallable object = (JsonCallable) rpcClass.newInstance();
+            final JsonCallable object;
+            if (!Modifier.isStatic(rpcClass.getModifiers())) {
+                object = (JsonCallable) constructor.newInstance(o);
+            } else {
+                object = (JsonCallable) rpcClass.newInstance();
+            }
+
             for (ClassArgumentDescriptor descriptor : arguments.values()) {
                 final JsonElement jsonElement = p.get(descriptor.name);
                 final Type type = descriptor.field.getGenericType();
@@ -1100,7 +1061,7 @@ public class JsonRPCMethods extends HttpServlet {
 
         @Override
         public Class<?> getDeclaringClass() {
-            return rpcClass;
+            return rpcClass.getEnclosingClass();
         }
     }
 }
