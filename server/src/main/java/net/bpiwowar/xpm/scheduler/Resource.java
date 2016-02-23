@@ -596,7 +596,7 @@ public class Resource implements Identifiable {
         }
     }
 
-    synchronized protected void save(DatabaseObjects<Resource> resources, Resource old) throws SQLException {
+    synchronized protected void save(DatabaseObjects<Resource, Void> resources, Resource old) throws SQLException {
         LOGGER.debug("Saving resource %s [old=%s]", this, old);
 
         boolean update = old != null;
@@ -685,7 +685,7 @@ public class Resource implements Identifiable {
         return Scheduler.get().resources().findUnique(SELECT_BEGIN + " WHERE path=?", st -> st.setString(1, path));
     }
 
-    static protected Resource create(DatabaseObjects<Resource> ignored, ResultSet result) {
+    static protected Resource create(DatabaseObjects<Resource, Void> ignored, ResultSet result, Void ignored2) {
         try {
             long id = result.getLong(1);
             long type = result.getLong(2);
@@ -708,13 +708,13 @@ public class Resource implements Identifiable {
      * Iterator on resources
      */
     static public CloseableIterable<Resource> resources() throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         return resources.find(SELECT_BEGIN, st -> {
         });
     }
 
     public static CloseableIterable<Resource> find(EnumSet<ResourceState> states) throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         StringBuilder sb = new StringBuilder();
         sb.append(SELECT_BEGIN);
         sb.append(" WHERE status in (");
@@ -736,7 +736,7 @@ public class Resource implements Identifiable {
     }
 
     static public Resource getById(long resourceId) throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         final Resource r = resources.getFromCache(resourceId);
         if (r != null) {
             return r;

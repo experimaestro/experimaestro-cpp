@@ -30,21 +30,21 @@ import java.sql.SQLException;
 @TypeIdentifier("token")
 public class TokenLock extends Lock {
     // The resource
-    private TokenResource resource;
+    transient private TokenResource resource;
 
     // Tokens to
     int tokens = 1;
 
     /// From database
-    public TokenLock(long id) {
+    public TokenLock(long id, Dependency dependency) throws SQLException {
         super(id);
+        resource = (TokenResource) dependency.getFrom();
     }
 
     public TokenLock(TokenResource resource, int tokens) {
         this.resource = resource;
         this.tokens = tokens;
     }
-
 
     @Override
     public void doClose() throws LockException {

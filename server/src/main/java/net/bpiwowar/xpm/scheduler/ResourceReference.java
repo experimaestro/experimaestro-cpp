@@ -28,7 +28,7 @@ import java.sql.SQLException;
 public class ResourceReference {
     private Long id;
 
-    private Resource resource;
+    transient private Resource resource;
 
     public ResourceReference(Resource resource) {
         this.resource = resource;

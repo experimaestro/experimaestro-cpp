@@ -274,9 +274,10 @@ abstract public class Dependency implements Serializable {
         final long type = rs.getLong(3);
         final DependencyStatus dependencyStatus = DependencyStatus.fromId(rs.getShort(4));
         Long lockId = rs.getLong(5);
-        Lock lock = rs.wasNull() ? null : Lock.findById(lockId);
+        if (rs.wasNull()) lockId = null;
         long fromId = rs.getLong(1);
-        final Dependency dependency = REGISTRY.newInstance(type, fromId, rs.getLong(2), lock, dependencyStatus);
+        final Dependency dependency = REGISTRY.newInstance(type, fromId, rs.getLong(2), null, dependencyStatus);
+        if (lockId != null) dependency.lock = Lock.findById(lockId, dependency);
         DatabaseObjects.loadFromJson(GsonConverter.defaultBuilder, dependency, rs.getBinaryStream(6));
         return dependency;
     }

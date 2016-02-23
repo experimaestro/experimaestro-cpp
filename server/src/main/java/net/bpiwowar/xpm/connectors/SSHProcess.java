@@ -22,6 +22,7 @@ import com.jcraft.jsch.ChannelExec;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -84,7 +85,9 @@ public class SSHProcess extends XPMProcess {
 
     @Override
     public int exitValue(boolean checkFile) {
-        return channel.getExitStatus();
+        if (channel != null)
+            return channel.getExitStatus();
+        return super.exitValue(checkFile);
     }
 
     @Override

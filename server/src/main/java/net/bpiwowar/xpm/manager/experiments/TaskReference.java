@@ -121,7 +121,7 @@ public class TaskReference implements Identifiable {
      */
     public void save() throws SQLException {
         final Scheduler scheduler = Scheduler.get();
-        DatabaseObjects<TaskReference> references = scheduler.taskReferences();
+        DatabaseObjects<TaskReference, Void> references = scheduler.taskReferences();
         references.save(this, "INSERT INTO ExperimentTasks(identifier, experiment) VALUES(?, ?)", st -> {
             st.setString(1, taskId.toString());
             st.setLong(2, experiment.getId());
@@ -163,7 +163,7 @@ public class TaskReference implements Identifiable {
         this.id = id;
     }
 
-    public static TaskReference create(DatabaseObjects<TaskReference> db, ResultSet result) {
+    public static TaskReference create(DatabaseObjects<TaskReference, Void> db, ResultSet result, Void ignored) {
         try {
             long id = result.getLong(1);
             String identifier = result.getString(2);
@@ -182,7 +182,7 @@ public class TaskReference implements Identifiable {
      * Iterator on experiments
      */
     static public CloseableIterable<TaskReference> find(Experiment experiment) throws SQLException {
-        final DatabaseObjects<TaskReference> references = Scheduler.get().taskReferences();
+        final DatabaseObjects<TaskReference, Void> references = Scheduler.get().taskReferences();
         return references.find(SELECT_BEGIN + " WHERE experiment = ?", st -> st.setLong(1, experiment.getId()));
     }
 
@@ -204,7 +204,7 @@ public class TaskReference implements Identifiable {
     }
 
     private ArrayList<TaskReference> getHierarchy(boolean parents) {
-        final DatabaseObjects<TaskReference> references = Scheduler.get().taskReferences();
+        final DatabaseObjects<TaskReference, Void> references = Scheduler.get().taskReferences();
 
         ArrayList<TaskReference> list = new ArrayList<>();
 
@@ -225,7 +225,7 @@ public class TaskReference implements Identifiable {
     public List<Resource> getResources() {
         if (resources != null) {
             ArrayList<Resource> list = new ArrayList<>();
-            final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+            final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
             try {
                 resources.find(Resource.SELECT_BEGIN + ", ExperimentResources WHERE id=resource AND task=?", st -> st.setLong(1, this.getId()))
                         .forEach(list::add);

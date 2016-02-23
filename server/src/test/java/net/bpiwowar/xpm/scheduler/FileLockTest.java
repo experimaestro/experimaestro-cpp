@@ -44,7 +44,7 @@ public class FileLockTest extends XPMEnvironment {
         lock.save();
 
         Scheduler.get().locks().forget(lock.getId());
-        final FileLock otherLock = (FileLock)Lock.findById(lock.getId());
+        final FileLock otherLock = (FileLock)Lock.findById(lock.getId(), null);
 
         assert otherLock.path().equals(lock.path());
     }

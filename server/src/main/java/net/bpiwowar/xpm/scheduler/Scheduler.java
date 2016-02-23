@@ -114,7 +114,10 @@ final public class Scheduler {
      */
     private final MessengerThread messengerThread;
 
-    private final DatabaseObjects<Lock> locks;
+    /**
+     * Locks database objects manager
+     */
+    private final DatabaseObjects<Lock, Dependency> locks;
 
     private LocalhostConnector localhostConnector;
 
@@ -153,7 +156,7 @@ final public class Scheduler {
     /**
      * Resources
      */
-    private DatabaseObjects<Resource> resources;
+    private DatabaseObjects<Resource, Void> resources;
 
     /**
      * The queue for notifications
@@ -163,16 +166,16 @@ final public class Scheduler {
     /**
      * The network shares
      */
-    private DatabaseObjects<NetworkShare> networkShares;
-    private DatabaseObjects<Experiment> experiments;
-    private DatabaseObjects<TaskReference> taskReferences;
+    private DatabaseObjects<NetworkShare, Void> networkShares;
+    private DatabaseObjects<Experiment, Void> experiments;
+    private DatabaseObjects<TaskReference, Void> taskReferences;
 
-    private DatabaseObjects<Connector> connectors;
+    private DatabaseObjects<Connector, Void> connectors;
 
     /**
      * Current version of the database (used to run incremental SQL script updates)
      */
-    final static int DBVERSION = 1;
+    final static int DBVERSION = 2;
 
     private XPMConnector xpmConnector;
 
@@ -227,6 +230,7 @@ final public class Scheduler {
                     }
                 } else {
                     while (version < DBVERSION) {
+                        LOGGER.info("Upgrading database to version", version + 1);
                         String resourcename = format("/db/update-%04d.sql", version);
                         try (final InputStream stream = Scheduler.class.getResourceAsStream(resourcename);
                              final Reader reader = new InputStreamReader(stream)) {
@@ -523,7 +527,7 @@ final public class Scheduler {
         LOGGER.info("Scheduler stopped");
     }
 
-    public DatabaseObjects<Resource> resources() {
+    public DatabaseObjects<Resource, Void> resources() {
         return resources;
     }
 
@@ -549,7 +553,7 @@ final public class Scheduler {
         }
     }
 
-    public DatabaseObjects<NetworkShare> networkShares() {
+    public DatabaseObjects<NetworkShare, Void> networkShares() {
         return networkShares;
     }
 
@@ -590,7 +594,7 @@ final public class Scheduler {
         }
     }
 
-    public DatabaseObjects<Connector> connectors() {
+    public DatabaseObjects<Connector, Void> connectors() {
         return connectors;
     }
 
@@ -621,15 +625,15 @@ final public class Scheduler {
         return new XPMStatement(getConnection(), sql);
     }
 
-    public DatabaseObjects<Lock> locks() {
+    public DatabaseObjects<Lock, Dependency> locks() {
         return locks;
     }
 
-    public DatabaseObjects<Experiment> experiments() {
+    public DatabaseObjects<Experiment, Void> experiments() {
         return experiments;
     }
 
-    public DatabaseObjects<TaskReference> taskReferences() {
+    public DatabaseObjects<TaskReference, Void> taskReferences() {
         return taskReferences;
     }
 

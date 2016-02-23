@@ -113,7 +113,7 @@ public class Experiment implements Identifiable {
     }
 
     public void save() throws SQLException {
-        DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         experiments.save(this, "INSERT INTO Experiments(name, timestamp) VALUES(?, ?)", st -> {
             st.setString(1, identifier);
             st.setTimestamp(2, new Timestamp(timestamp));
@@ -124,7 +124,7 @@ public class Experiment implements Identifiable {
     }
 
 
-    public static Experiment create(DatabaseObjects<Experiment> db, ResultSet result) {
+    public static Experiment create(DatabaseObjects<Experiment, Void> db, ResultSet result, Void ignored) {
 
         try {
             long id = result.getLong(1);
@@ -145,7 +145,7 @@ public class Experiment implements Identifiable {
      * @param latest
      */
     static public CloseableIterable<Experiment> experiments(boolean latest) throws SQLException {
-        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         String query = latest ? "SELECT max(id), name, max(timestamp) FROM Experiments GROUP BY name "
                 : "SELECT id, name, timestamp FROM Experiments ORDER BY timestamp DESC";
         return experiments.find(query, st -> {
@@ -158,7 +158,7 @@ public class Experiment implements Identifiable {
      * @param resource The resource to add
      */
     public void add(Resource resource) throws SQLException {
-        DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         experiments.save(this, "INSERT INTO ExperimentTasks(id, identifier, experiment, parent) VALUES(?, ?, ?, ?)", st -> {
             st.setLong(1, id);
 
@@ -166,7 +166,7 @@ public class Experiment implements Identifiable {
     }
 
     public static Experiment findById(long id) throws SQLException {
-        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         final Experiment fromCache = experiments.getFromCache(id);
         if (fromCache != null) {
             return fromCache;
@@ -197,14 +197,14 @@ public class Experiment implements Identifiable {
 
     public static Experiment findByIdentifier(String name) throws SQLException {
         final String query = format("%s WHERE name=? ORDER BY timestamp DESC LIMIT 1", SELECT_BEGIN);
-        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         return experiments.findUnique(query, st -> st.setString(1, name));
     }
 
 
     public static Experiment find(String identifier, long timestamp) throws SQLException {
         final String query = format("%s WHERE name=? AND timestamp=?", SELECT_BEGIN);
-        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         return experiments.findUnique(query, st -> {
             st.setString(1, identifier);
             st.setTimestamp(2, new Timestamp(timestamp));
@@ -213,7 +213,7 @@ public class Experiment implements Identifiable {
 
     public static CloseableIterable<Experiment> findAllByIdentifier(String name) throws SQLException {
         final String query = format("%s WHERE name=? ORDER BY timestamp DESC", SELECT_BEGIN);
-        final DatabaseObjects<Experiment> experiments = Scheduler.get().experiments();
+        final DatabaseObjects<Experiment, Void> experiments = Scheduler.get().experiments();
         return experiments.find(query, st -> st.setString(1, name));
     }
 
@@ -224,7 +224,7 @@ public class Experiment implements Identifiable {
      * @throws SQLException
      */
     public List<TaskResource> resources() throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status, et.id, et.identifier " +
                 "FROM Resources r, ExperimentTasks et, ExperimentResources er " +
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=?";
@@ -251,7 +251,7 @@ public class Experiment implements Identifiable {
      * @throws SQLException
      */
     static public List<Resource> resourcesByIdentifier(String identifier, EnumSet<ResourceState> states) throws SQLException {
-        final DatabaseObjects<Resource> resources = Scheduler.get().resources();
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
         final String query = "SELECT DISTINCT r.id, r.type, r.path, r.status, et.id, et.identifier " +
                 "FROM Resources r, ExperimentTasks et, ExperimentResources er, Experiments e " +
                 "WHERE er.resource = r.id AND et.id=er.task AND et.experiment=e.id AND e.name=? AND r.status in ("
