@@ -18,15 +18,18 @@ package net.bpiwowar.xpm.connectors;
  * along with experimaestro.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import org.apache.commons.lang.NotImplementedException;
-import org.w3c.dom.Document;
-import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
+import net.bpiwowar.xpm.exceptions.ConnectorException;
+import net.bpiwowar.xpm.exceptions.LaunchException;
+import net.bpiwowar.xpm.exceptions.WrappedException;
 import net.bpiwowar.xpm.scheduler.Job;
 import net.bpiwowar.xpm.scheduler.TypeIdentifier;
 import net.bpiwowar.xpm.utils.log.Logger;
+import org.apache.commons.lang.NotImplementedException;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.FileSystemException;
 
 /**
  * An OAR process
@@ -63,8 +66,22 @@ public class OARProcess extends XPMProcess {
     }
 
     @Override
+    public boolean isRunning(boolean checkFiles) throws ConnectorException {
+        OARStat oarStat = new OARStat(getConnector(), pid, true);
+        return oarStat.isRunning();
+    }
+
+    @Override
     public void destroy() {
-        throw new NotImplementedException();
+        try {
+            // First check that we are running
+            final AbstractProcessBuilder builder = getConnector().processBuilder();
+            builder.command("oardel", pid);
+            builder.detach(false);
+            builder.execute(LOGGER);
+        } catch (Exception e) {
+            throw new WrappedException(e);
+        }
     }
 
 }

@@ -19,6 +19,7 @@ package net.bpiwowar.xpm.connectors;
  */
 
 import net.bpiwowar.xpm.exceptions.CloseException;
+import net.bpiwowar.xpm.exceptions.ConnectorException;
 import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.locks.Lock;
 import net.bpiwowar.xpm.scheduler.ConstructorRegistry;
@@ -257,7 +258,7 @@ public abstract class XPMProcess {
      * @param checkFiles
      * @return True if the job is running
     */
-    public boolean isRunning(boolean checkFiles) {
+    public boolean isRunning(boolean checkFiles) throws ConnectorException {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
         LOGGER.debug("Job %s is running: %s", this.job, exists);
