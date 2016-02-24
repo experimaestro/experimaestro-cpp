@@ -161,7 +161,7 @@ final public class DatabaseObjects<T extends Identifiable, Information> {
                         }
 
                         // Construct
-                        return getOrCreate(result);
+                        return getOrCreate(result, information);
                     }
                 }
             }

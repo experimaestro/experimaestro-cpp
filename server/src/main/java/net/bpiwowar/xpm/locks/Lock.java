@@ -53,7 +53,7 @@ import static java.lang.String.format;
 @JsonAbstract
 public abstract class Lock implements AutoCloseable, Identifiable {
     static protected ConstructorRegistry<Lock> REGISTRY
-            = new ConstructorRegistry(new Class[]{ Long.TYPE }).add(TokenLock.class, FileLock.class, StatusLock.class);
+            = new ConstructorRegistry(new Class[]{ Long.TYPE, Dependency.class }).add(TokenLock.class, FileLock.class, StatusLock.class);
 
     private Long id;
     public static final String SELECT_QUERY = "SELECT id, type, data FROM Locks";
