@@ -117,7 +117,7 @@ class WaitingJobProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws Exception {
+    public boolean isRunning(boolean checkFiles) {
         return action.duration < System.currentTimeMillis() - timestamp;
     }
 

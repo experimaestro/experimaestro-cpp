@@ -256,9 +256,8 @@ public abstract class XPMProcess {
      *
      * @param checkFiles
      * @return True if the job is running
-     * @throws Exception
-     */
-    public boolean isRunning(boolean checkFiles) throws Exception {
+    */
+    public boolean isRunning(boolean checkFiles) {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
         LOGGER.debug("Job %s is running: %s", this.job, exists);

@@ -80,7 +80,7 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws Exception {
+    public boolean isRunning(boolean checkFiles) {
         if (!checkFiles && process != null) {
             return ProcessUtils.isRunning(process);
         }

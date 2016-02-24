@@ -160,17 +160,6 @@ public abstract class Connector implements Comparable<Connector>, Identifiable {
      */
     public abstract SingleHostConnector getMainConnector();
 
-
-//    /**
-//     * Create a file with a thread safe mechanism
-//     *
-//     * @param path
-//     * @return A lock object
-//     * @throws LockException
-//     */
-//    public abstract Lock createLockFile(String path) throws LockException;
-//
-
     /**
      * Returns true if the connector can execute commands
      */

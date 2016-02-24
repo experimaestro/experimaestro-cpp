@@ -366,13 +366,12 @@ public class SSHConnector extends SingleHostConnector {
                         options().getHostName());
                 channel.setCommand(command);
                 channel.setPty(!detach());
-
                 channel.connect();
             } catch (JSchException | IOException e) {
                 throw new LaunchException(e);
             }
 
-            return new SSHProcess(SSHConnector.this, job(), channel);
+            return new SSHProcess(SSHConnector.this, job(), channel, detach());
         }
     }
 
