@@ -543,6 +543,7 @@ abstract public class Job extends Resource {
                 JsonObject dep = new JsonObject();
                 dependencies.add(resource.getId().toString(), dep);
                 dep.addProperty("from-id", resource.getId());
+                dep.addProperty("from", resource.getLocator().toString());
                 dep.addProperty("status", dependency.status.toString());
                 dep.addProperty("locked", dependency.hasLock());
             }
