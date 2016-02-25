@@ -115,6 +115,9 @@ p_cleanup.add_argument("--run", default=False, action="store_true", help="Really
 p_cleanup = subparsers.add_parser("clean-resources", help="Remove obsolete resources")
 p_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
 
+p_lock_cleanup = subparsers.add_parser("lock-cleanup", help="Cleanup dandling locks")
+p_lock_cleanup.add_argument("--run", default=False, action="store_true", help="Really do it")
+
 p_rm = subparsers.add_parser("rm", help="Remove a resource")
 p_rm.add_argument('--regexp', dest="regexp", action="store_true", default=False, help="If the provided id are regular expressions")
 p_rm.add_argument('--states', dest="states", help="States")
@@ -635,6 +638,10 @@ def command_generate_files(args):
 def command_clean(args):
     server = Configuration(args).getJsonServer()
     json.dump(server["experiments.clean-experiments"]({"simulate": not args.run, "remove-resources": args.resources}), sys.stdout)
+
+def command_lock_cleanup(args):
+    server = Configuration(args).getJsonServer()
+    json.dump(server["cleanup-locks"]({"simulate": not args.run}), sys.stdout)
 
 
 def command_clean_resources(args):
