@@ -444,7 +444,7 @@ public class OARLauncher extends Launcher {
                     } else {
                         LOGGER.info("Killing old job [%s]", information.jobId);
                         final AbstractProcessBuilder builder = connector.processBuilder();
-                        builder.command("oardel", information.jobId);
+                        builder.command("oardel", "--signal", "TERM",  information.jobId);
                         builder.detach(false);
                         final XPMProcess process = builder.start();
                         try {

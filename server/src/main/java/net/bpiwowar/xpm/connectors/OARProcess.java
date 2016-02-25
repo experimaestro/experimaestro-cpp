@@ -76,7 +76,7 @@ public class OARProcess extends XPMProcess {
         try {
             // First check that we are running
             final AbstractProcessBuilder builder = getConnector().processBuilder();
-            builder.command("oardel", pid);
+            builder.command("oardel", "--signal", "TERM", pid);
             builder.detach(false);
             builder.execute(LOGGER);
         } catch (Exception e) {
