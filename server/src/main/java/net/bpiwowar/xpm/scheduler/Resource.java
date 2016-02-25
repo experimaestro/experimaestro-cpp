@@ -23,6 +23,7 @@ import net.bpiwowar.xpm.connectors.Launcher;
 import net.bpiwowar.xpm.connectors.NetworkShare;
 import net.bpiwowar.xpm.exceptions.CloseException;
 import net.bpiwowar.xpm.exceptions.ExperimaestroCannotOverwrite;
+import net.bpiwowar.xpm.exceptions.LockException;
 import net.bpiwowar.xpm.exceptions.XPMRuntimeException;
 import net.bpiwowar.xpm.manager.scripting.Expose;
 import net.bpiwowar.xpm.manager.scripting.Exposed;
@@ -481,6 +482,52 @@ public class Resource implements Identifiable {
         assert put == null;
         return put;
     }
+
+
+    /**
+     * Cleanup old locks
+     * <p>
+     * Used when database becomes corrupted for whatever reason
+     */
+    static public int cleanupLocks(boolean simulate) throws SQLException {
+        String query = "SELECT r.id, r.type, r.path, r.status FROM Resources r WHERE r.status <> ? "
+                + " AND EXISTS(SELECT * FROM Dependencies d WHERE d.toid = r.id AND lock IS NOT NULL)";
+        final DatabaseObjects<Resource, Void> resources = Scheduler.get().resources();
+        int count = 0;
+
+        try (XPMStatement st = Scheduler.statement(query).setLong(1, ResourceState.RUNNING.value()).execute();
+             XPMResultSet rs = st.resultSet()) {
+            while (rs.next()) {
+                final Resource resource = resources.getOrCreate(rs.resultSet);
+                synchronized (resource) {
+                    // We are not running, but have locks... remove them!
+                    if (resource.getState() != ResourceState.RUNNING) {
+                        if (resource instanceof Job && ((Job) resource).getProcess() != null) {
+                            LOGGER.error("Job is not running but has a process... not doing anything!");
+                            continue;
+                        }
+
+                        for (Dependency dependency : resource.ingoingDependencies().values()) {
+                            if (dependency.hasLock()) {
+                                try {
+                                    if (!simulate) dependency.unlock();
+                                    ++count;
+                                    LOGGER.info("Unlocked %s", dependency);
+                                } catch(LockException e) {
+                                    LOGGER.error("Could not unlock %s", dependency);
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    ;
+
 
     /**
      * Store a resource

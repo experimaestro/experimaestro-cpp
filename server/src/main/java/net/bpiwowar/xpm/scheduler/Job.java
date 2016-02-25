@@ -520,16 +520,16 @@ abstract public class Job extends Resource {
                     .currentTimeMillis() : getEndTimestamp();
 
             JsonObject events = new JsonObject();
-            info.add("events", events);
+            info.add("process", events);
             info.addProperty("progress", jobData.getProgress());
 
             events.addProperty("start", longDateFormat.format(new Date(start)));
 
             if (getState() != ResourceState.RUNNING && end >= 0) {
                 events.addProperty("end", longDateFormat.format(new Date(end)));
-                if (getProcess() != null)
-                    events.addProperty("pid", getProcess().getPID());
             }
+            if (getProcess() != null)
+                events.addProperty("pid", getProcess().getPID());
         }
 
         Collection<Dependency> requiredResources = getDependencies();
@@ -585,6 +585,13 @@ abstract public class Job extends Resource {
     synchronized protected boolean doUpdateStatus() throws Exception {
         LOGGER.debug("Updating status for [%s]", this);
         boolean changes = super.doUpdateStatus();
+
+        // Check process
+        if (getProcess() != null) {
+            if (getProcess().check(true)) {
+                return true;
+            }
+        }
 
         // Check the done file
         final Path path = getLocator();

@@ -257,7 +257,7 @@ public abstract class XPMProcess {
      *
      * @param checkFiles
      * @return True if the job is running
-    */
+     */
     public boolean isRunning(boolean checkFiles) throws ConnectorException {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
@@ -300,15 +300,18 @@ public abstract class XPMProcess {
      * Asynchronous check the state of the job monitor
      *
      * @param checkFiles Whether files should be checked rather than the process
+     * @return true if the process was stopped
      */
-    synchronized public void check(boolean checkFiles) throws Exception {
+    synchronized public boolean check(boolean checkFiles) throws Exception {
         if (!isRunning(checkFiles)) {
             // We are not running: send a message
             LOGGER.info("End of job [%s]", job);
             final Path file = Resource.CODE_EXTENSION.transform(job.getLocator());
             final long time = Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1;
             Scheduler.get().sendMessage(job, new EndOfJobMessage(exitValue(checkFiles), time));
+            return true;
         }
+        return false;
     }
 
     /**

@@ -19,7 +19,6 @@ package net.bpiwowar.xpm.server.rpc;
  */
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -45,14 +44,11 @@ import net.bpiwowar.xpm.utils.CloseableIterable;
 import net.bpiwowar.xpm.utils.CloseableIterator;
 import net.bpiwowar.xpm.utils.JSUtils;
 import net.bpiwowar.xpm.utils.XPMInformation;
-import net.bpiwowar.xpm.utils.log.DefaultFactory;
 import net.bpiwowar.xpm.utils.log.Logger;
 import net.bpiwowar.xpm.utils.log.Router;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.WriterAppender;
 import org.eclipse.jetty.server.Server;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptStackElement;
@@ -60,13 +56,10 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.python.core.PyException;
 
-import javax.servlet.http.HttpServlet;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -611,6 +604,11 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         return nbUpdated;
     }
 
+    @RPCMethod(name = "cleanup-locks")
+    static public void cleanupLocks(@RPCArgument(name = "simulate") boolean simulate) throws SQLException {
+        Resource.cleanupLocks(simulate);
+    }
+
     @RPCMethod(name = "restart", help = "Puts back a job into the waiting queue")
     static public class Restart implements JsonCallable {
         @RPCArgument(name = "id", help = "The id of the job (string or integer)")
@@ -635,8 +633,11 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
             // The job is active, so we have nothing to do
-            if (rsrcState.isActive())
+            if (rsrcState.isActive()) {
+                // Just notify in case
+                Scheduler.notifyRunners();
                 return 0;
+            }
 
             if (!restartDone && rsrcState == ResourceState.DONE)
                 return 0;
