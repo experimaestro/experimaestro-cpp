@@ -241,6 +241,12 @@ ul.buttons {
     display: none;
 }
 
+#resources .resource-actions:hover i.fa[name="kill"] {
+    display: none;
+}
+#resources li.state-running .resource-actions:hover i.fa[name="kill"] {
+    display: inline;
+}
 #resources li.state-on_hold .resource-actions:hover i.fa[name="restart"] {
     display: inline;
 }

@@ -194,6 +194,34 @@ $().ready(function () {
             });
         }
 
+        else if (name == "kill") {
+            $("#kill-confirm").dialog({
+                resizable: false,
+                height: 140,
+                modal: true,
+                open: function () {
+                    $(this).siblings('.ui-dialog-buttonpane').find('button:eq(1)').focus();
+                },
+                buttons: {
+                    "Yes, I understand": function () {
+                        $(this).dialog("close");
+                        xpm.request('kill', {
+                            params: {"jobs": [r.id]},
+                            success: function () {
+                                // We just notify - but wait for the server notification to
+                                // remove the job from the interface
+                                noty({text: "Successfully killed job " + r.id, type: 'success', timeout: 5000});
+                            },
+                            error: jsonrpc_error
+                        });
+                    },
+                    "Cancel": function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
         else if (name == "copyfolderpath") {
             var range = document.createRange();
             var node = r.node.find("a span.locator")[0].childNodes[0];
@@ -390,6 +418,7 @@ $().ready(function () {
                     .append($("<span class='resource-id'>" + r.id + "</span>"))
                     .append($("<i class=\"fa fa-folder-o link\" title='Copy folder path' name='copyfolderpath'></i>"))
                     .append($("<i class=\"fa fa-retweet link\" title='Restart job' name='restart'></i>"))
+                    .append($("<i class=\"fa fa-stop link\" title='Kill job' name='kill'></i>"))
                     .append($("<i class=\"fa fa-trash-o link\" title='Delete resource' name='delete'></i>"))
                 ).append(
                     $e("div")
