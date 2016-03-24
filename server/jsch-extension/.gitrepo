@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:bpiwowar/jsch-extension.git
+	branch = master
+	commit = 61d5cb8e594c0593e971c7b7ad338e7c59c68119
+	parent = d0f63a15507dcf475de372f8f33dc834513416e6
+	cmdver = 0.3.0
