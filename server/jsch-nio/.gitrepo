@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:bpiwowar/jsch-nio.git
+	branch = master
+	commit = d742afcb5938dbe89bc13b4961a95d32b89d70b0
+	parent = 86b3c2fcbba6788aed947f92b2834da97efe7e92
+	cmdver = 0.3.0
