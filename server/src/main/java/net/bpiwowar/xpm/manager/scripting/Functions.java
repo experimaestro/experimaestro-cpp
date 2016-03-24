@@ -471,6 +471,18 @@ public class Functions {
         return jsonObject;
     }
 
+    @Expose(context = true)
+    @Help("Adds a tag " + Constants.JSON_TAGS_NAME + " to the JSON")
+    static public Json tag(LanguageContext cx, JsonObject json, String key, String value) {
+        JsonObject tags = (JsonObject) json.get(Constants.JSON_TAGS_NAME);
+        if (tags == null) {
+            json.put(Constants.JSON_TAGS_NAME, tags = new JsonObject());
+        }
+
+        tags.put(key, value);
+        return json;
+    }
+
     @Expose
     @Help("Find all tags and return a hash map")
     static public Map<String, Object> find_tags(Json json) {
