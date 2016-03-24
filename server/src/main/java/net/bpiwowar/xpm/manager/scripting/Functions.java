@@ -472,14 +472,20 @@ public class Functions {
     }
 
     @Expose(context = true)
-    @Help("Adds a tag " + Constants.JSON_TAGS_NAME + " to the JSON")
+    @Help("Adds a tag " + Constants.JSON_TAG_NAME + " to the JSON with a given value")
     static public Json tag(LanguageContext cx, JsonObject json, String key, String value) {
-        JsonObject tags = (JsonObject) json.get(Constants.JSON_TAGS_NAME);
+        Json tags =  json.get(Constants.JSON_TAG_NAME);
         if (tags == null) {
-            json.put(Constants.JSON_TAGS_NAME, tags = new JsonObject());
+            json.put(Constants.JSON_TAG_NAME, tags = new JsonObject());
+        } else {
+            if (!tags.is_object()) {
+                final String tagName = tags.get().toString();
+                json.put(Constants.JSON_TAG_NAME, tags = new JsonObject());
+                tags.asObject().put(tagName, json.get().toString());
+            }
         }
 
-        tags.put(key, value);
+        tags.asObject().put(key, value);
         return json;
     }
 
@@ -512,11 +518,19 @@ public class Functions {
         if (json.is_object()) {
             final JsonObject object = (JsonObject) json;
             if (object.containsKey(Constants.JSON_TAG_NAME)) {
-                final String key = object.get(Constants.JSON_TAG_NAME).get().toString();
-                try {
-                    tags.put(key, object.get());
-                } catch(RuntimeException e) {
-                    throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
+                final Json jsonTags = object.get(Constants.JSON_TAG_NAME);
+                if (jsonTags.isSimple()) {
+                    final String key = jsonTags.get().toString();
+                    try {
+                        tags.put(key, object.get());
+                    } catch (RuntimeException e) {
+                        throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
+                    }
+                } else if (jsonTags.is_object()) {
+                    final JsonObject jsonObject = jsonTags.asObject();
+                    jsonObject.entrySet().forEach(e -> {
+                        tags.put(e.getKey(), e.getValue().get().toString());
+                    });
                 }
             }
 
