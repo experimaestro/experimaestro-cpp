@@ -61,4 +61,11 @@ public class XPMRuntimeException extends RuntimeException implements ContextualE
         return context;
     }
 
+    final public static RuntimeException context(RuntimeException e, String format, Object... values) {
+        String s = format(format, values);
+        if (e instanceof XPMRuntimeException) {
+            return ((XPMRuntimeException) e).addContext(s);
+        }
+        return new WrappedException(e).addContext(s);
+    }
 }

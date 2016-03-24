@@ -512,7 +512,12 @@ public class Functions {
         if (json.is_object()) {
             final JsonObject object = (JsonObject) json;
             if (object.containsKey(Constants.JSON_TAG_NAME)) {
-                tags.put(object.get(Constants.JSON_TAG_NAME).get().toString(), object.get());
+                final String key = object.get(Constants.JSON_TAG_NAME).get().toString();
+                try {
+                    tags.put(key, object.get());
+                } catch(RuntimeException e) {
+                    throw XPMRuntimeException.context(e, "while getting tag value for %s", key);
+                }
             }
 
             for (Json v : object.values()) {
