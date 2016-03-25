@@ -12,6 +12,7 @@ sourceSets {
 
 dependencies {
     compile project(':experimaestro-helper')
+    compile project(':jsch-nio')
 
     // Web & JsonRPC server
     compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.3.7.v20160115'
@@ -36,8 +37,8 @@ dependencies {
 
     // SSH / SFTP
     compile group: 'com.github.jnr', name: 'jnr-unixsocket', version: '0.3'
-    compile group: 'com.jcraft', name: 'jsch', version: '0.1.52'
-    compile group: 'net.bpiwowar', name: 'jsch-nio', version: '0.1.8-SNAPSHOT'
+//    compile group: 'com.jcraft', name: 'jsch', version: '0.1.52'
+//    compile group: 'net.bpiwowar', name: 'jsch-nio', version: '0.1.8-SNAPSHOT'
 
     // General purpose modules
     compile group: 'it.unimi.dsi', name: 'fastutil', version: '6.5.15'
