@@ -129,8 +129,8 @@ $().ready(function () {
 
         if (name == "restart") {
             var request = function (restartDone) {
-                xpm.request('restart', {
-                    params: {"id": r.id, "restart-done": restartDone, "recursive": true},
+                xpm.request('invalidate', {
+                    params: {"ids": [r.id], "keep-done": !restartDone, "recursive": true, "restart": true},
                     success: function (resp) {
                         noty({
                             text: "Succesful restart (" + resp.result + " jobs restarted)",

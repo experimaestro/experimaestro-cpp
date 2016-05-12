@@ -96,18 +96,18 @@ class WaitingJobProcess extends XPMProcess {
             }
         }
 
-        // Schedule a restart
+        // Schedule a invalidate
 
         if (action.restart > 0) {
             scheduler.schedule(() -> {
                 LOGGER.debug("Restarting job %s[%d]", job.getId());
                 try {
                     ((WaitingJob) job).status().currentIndex++;
-                    job.restart();
+                    job.invalidate(true);
                     // Take one
                     ((WaitingJob) job).status().counter.del();
                 } catch (Exception e) {
-                    throw new AssertionError("Could not restart job", e);
+                    throw new AssertionError("Could not invalidate job", e);
                 }
             }, action.restart, TimeUnit.MILLISECONDS);
         }
@@ -117,7 +117,7 @@ class WaitingJobProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) {
+    public boolean isRunning(boolean fullCheck) {
         return action.duration < System.currentTimeMillis() - timestamp;
     }
 
@@ -167,7 +167,7 @@ class WaitingJobProcess extends XPMProcess {
         // Exit code
         int code;
 
-        // Waiting time before restart (0 = no restart)
+        // Waiting time before invalidate (0 = no invalidate)
         long restart;
 
         Action() {
@@ -181,7 +181,7 @@ class WaitingJobProcess extends XPMProcess {
 
         @Override
         public String toString() {
-            return String.format("Action(duration=%dms, code=%d, restart=%dms)", duration, code, restart);
+            return String.format("Action(duration=%dms, code=%d, invalidate=%dms)", duration, code, restart);
         }
 
         public Action waitLock(int lockID) {

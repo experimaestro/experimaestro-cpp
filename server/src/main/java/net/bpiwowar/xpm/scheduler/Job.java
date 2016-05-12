@@ -21,7 +21,6 @@ package net.bpiwowar.xpm.scheduler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.bpiwowar.xpm.connectors.XPMProcess;
 import net.bpiwowar.xpm.exceptions.LockException;
@@ -34,10 +33,9 @@ import net.bpiwowar.xpm.utils.GsonSerialization;
 import net.bpiwowar.xpm.utils.Holder;
 import net.bpiwowar.xpm.utils.ProcessUtils;
 import net.bpiwowar.xpm.utils.log.Logger;
-import org.hsqldb.persist.LockFile;
-import org.omg.PortableInterceptor.HOLDING;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -130,17 +128,29 @@ abstract public class Job extends Resource {
      * Restart the job
      * <p>
      * Put the state into waiting mode and clean all the output files
+     *
+     * @param restart True if jobs should be restarted, otherwise put it in error
      */
-    synchronized public void restart() throws Exception {
+    synchronized public void invalidate(boolean restart) throws Exception {
         // Don't do anything if the job is already running
         if (!getState().isActive()) {
             // Set state status waiting
-            setState(ResourceState.WAITING);
+            setState(restart ? ResourceState.WAITING : ResourceState.ERROR);
+
             if (getState().isFinished()) {
                 clean(false);
+
+                if (!restart) {
+                    // Put back the error file
+                    try (final BufferedWriter writer = Files.newBufferedWriter(CODE_EXTENSION.transform(getLocator()))) {
+                        writer.write(1);
+                        writer.write('\n');
+                    }
+                }
+
             } else {
                 // Remove blocking files
-                try(FileLock lock = FileLock.of(LOCK_EXTENSION.transform(getLocator()), 5)) {
+                try (FileLock lock = FileLock.of(LOCK_EXTENSION.transform(getLocator()), 5)) {
                     Files.deleteIfExists(DONE_EXTENSION.transform(getLocator()));
                     Files.deleteIfExists(CODE_EXTENSION.transform(getLocator()));
                 }

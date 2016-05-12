@@ -159,7 +159,7 @@ public class WaitingJob extends Job {
         actions.clear();
         actions.add(action);
         try {
-            restart();
+            invalidate(true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

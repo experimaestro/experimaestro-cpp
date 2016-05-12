@@ -577,7 +577,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
     }
 
     // Restart all the job (recursion)
-    static private int invalidate(Resource resource) throws Exception {
+    static private int invalidate(Resource resource, boolean restart) throws Exception {
         int nbUpdated = 0;
         try (final CloseableIterator<Dependency> deps = resource.getOutgoingDependencies(false)) {
 
@@ -586,7 +586,7 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                 final Resource to = dependency.getTo();
                 LOGGER.info("Invalidating %s", to);
 
-                invalidate(to);
+                invalidate(to, restart);
 
                 final ResourceState state = to.getState();
                 if (state == ResourceState.RUNNING)
@@ -595,9 +595,9 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
                     nbUpdated++;
                     // We invalidate grand-children if the child was done
                     if (state == ResourceState.DONE) {
-                        invalidate(to);
+                        invalidate(to, restart);
                     }
-                    ((Job) to).restart();
+                    ((Job) to).invalidate(restart);
                 }
             }
         }
@@ -609,45 +609,52 @@ public class JsonRPCMethods extends BaseJsonRPCMethods {
         Resource.cleanupLocks(simulate);
     }
 
-    @RPCMethod(name = "restart", help = "Puts back a job into the waiting queue")
+    @RPCMethod(name = "invalidate", help = "Puts back a job into the waiting queue")
     static public class Restart implements JsonCallable {
-        @RPCArgument(name = "id", help = "The id of the job (string or integer)")
-        String id;
+        @RPCArgument(name = "ids", help = "The id of the job(s) (string or integer)")
+        String[] ids;
 
-        @RPCArgument(name = "restart-done", help = "Whether done jobs should be invalidated")
-        boolean restartDone;
+        @RPCArgument(name = "keep-done", help = "Whether done jobs should be invalidated")
+        boolean keepDone;
 
-        @RPCArgument(name = "recursive", help = "Whether we should invalidate dependent results when the job was done")
-        boolean recursive;
+        @RPCArgument(name = "recursive", required = false, help = "Whether we should invalidate dependent results when the job was done")
+        boolean recursive = true;
+
+        @RPCArgument(name = "restart", help = "Whether we should restart the job (false = error)")
+        boolean restart = true;
 
         @Override
         public Integer call() throws Throwable {
             int nbUpdated = 0;
-            Resource resource = getResource(id);
-            if (resource == null)
-                throw new XPMRuntimeException("Job not found [%s]", id);
 
-            final ResourceState rsrcState = resource.getState();
+            for (String id : ids) {
+                Resource resource = getResource(id);
+                if (resource == null)
+                    throw new XPMRuntimeException("Job not found [%s]", id);
 
-            if (rsrcState == ResourceState.RUNNING)
-                throw new XPMRuntimeException("Job is running [%s]", rsrcState);
+                final ResourceState rsrcState = resource.getState();
 
-            // The job is active, so we have nothing to do
-            if (rsrcState.isActive()) {
-                // Just notify in case
-                Scheduler.notifyRunners();
-                return 0;
-            }
+                if (rsrcState == ResourceState.RUNNING)
+                    throw new XPMRuntimeException("Job is running [%s]", rsrcState);
 
-            if (!restartDone && rsrcState == ResourceState.DONE)
-                return 0;
+                // The job is active, so we have nothing to do
+                if (rsrcState.isActive()) {
+                    // Just notify in case
+                    Scheduler.notifyRunners();
+                    continue;
+                }
 
-            ((Job) resource).restart();
-            nbUpdated++;
+                if (keepDone && rsrcState == ResourceState.DONE)
+                    continue;
 
-            // If the job was done, we need to restart the dependences
-            if (recursive && rsrcState == ResourceState.DONE) {
-                nbUpdated += invalidate(resource);
+                ((Job) resource).invalidate(restart);
+                nbUpdated++;
+
+                // If the job was done, we need to invalidate the dependences
+                if (recursive && rsrcState == ResourceState.DONE) {
+                    nbUpdated += invalidate(resource, restart);
+                }
+
             }
 
             return nbUpdated;

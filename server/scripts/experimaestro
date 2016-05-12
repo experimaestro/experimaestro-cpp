@@ -100,10 +100,11 @@ p_ls.add_argument("--color", action="store_true", default=False, help="Whether t
 
 subparsers.add_parser("list-methods", help="List Json RPC methods")
 
-p_restart = subparsers.add_parser("restart", help="Restart a job")
-p_restart.add_argument('--recursive', dest="recursive", action="store_true", default=False, help="Should dependent resources be restarted?")
-p_restart.add_argument('--restart-done', dest="restart_done", action="store_true", default=False, help="Should done jobs be restarted?")
-p_restart.add_argument('resourceId', nargs=1, help='The resource URI')
+p_invalidate = subparsers.add_parser("invalidate", help="Invalidate a job")
+p_invalidate.add_argument('--no-recursion', dest="recursive", action="store_false", default=True, help="Should dependent resources be restarted?")
+p_invalidate.add_argument('--keep-done', dest="keep_done", action="store_true", default=False, help="Keep done jobs as is")
+p_invalidate.add_argument('--restart', dest="restart", action="store_true", default=False, help="Set the job state to error instead of waiting")
+p_invalidate.add_argument('resourceIds', nargs="+", help='The resource URI')
 
 p_information = subparsers.add_parser("information", help="Get information on a resource")
 p_information.add_argument('resourceId', nargs=1, help='The resource URI')
@@ -615,9 +616,10 @@ def command_information(args):
     sys.stdout.write("\n")
 
 
-def command_restart(args):
+def command_invalidate(args):
     server = Configuration(args).getJsonServer()
-    print(server.restart({ "id": args.resourceId[0], "recursive": args.recursive, "restart-done": args.restart_done}))
+    json_args = { "ids": args.resourceIds, "restart": args.restart, "recursive": args.recursive, "keep-done": args.keep_done}
+    print(server.invalidate(json_args))
 
 
 def command_kill(args):
