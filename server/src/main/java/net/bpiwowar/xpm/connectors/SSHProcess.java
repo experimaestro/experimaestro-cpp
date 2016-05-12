@@ -129,11 +129,11 @@ public class SSHProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws ConnectorException {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
         if (channel != null) {
             // If the channel is not connected, we check if in detached mode using files
-            return channel.isConnected() || (detached && super.isRunning(checkFiles));
+            return channel.isConnected() || (detached && super.isRunning(fullCheck));
         }
-        return super.isRunning(checkFiles);
+        return super.isRunning(fullCheck);
     }
 }

@@ -66,7 +66,7 @@ public class OARProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws ConnectorException {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
         OARStat oarStat = new OARStat(getConnector(), pid, true);
         return oarStat.isRunning();
     }

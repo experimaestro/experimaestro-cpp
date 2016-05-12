@@ -255,10 +255,10 @@ public abstract class XPMProcess {
     /**
      * Check if the job is running
      *
-     * @param checkFiles
+     * @param fullCheck True if a real check should be done
      * @return True if the job is running
      */
-    public boolean isRunning(boolean checkFiles) throws ConnectorException {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
         // We have no process, check
         final boolean exists = Files.exists(Job.LOCK_EXTENSION.transform(job.getLocator()));
         LOGGER.debug("Job %s is running: %s", this.job, exists);

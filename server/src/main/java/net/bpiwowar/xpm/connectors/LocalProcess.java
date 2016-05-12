@@ -81,12 +81,12 @@ public class LocalProcess extends XPMProcess {
     }
 
     @Override
-    public boolean isRunning(boolean checkFiles) throws ConnectorException {
-        if (!checkFiles && process != null) {
+    public boolean isRunning(boolean fullCheck) throws ConnectorException {
+        if (process != null) {
             return ProcessUtils.isRunning(process);
         }
 
-        return super.isRunning(checkFiles);
+        return super.isRunning(fullCheck);
     }
 
     @Override
