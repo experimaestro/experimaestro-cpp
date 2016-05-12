@@ -612,7 +612,13 @@ abstract public class Job extends Resource {
         if (Files.exists(codeFile)) {
             final ResourceState newState;
             try (final BufferedReader bufferedReader = Files.newBufferedReader(codeFile)) {
-                int code = Integer.parseInt(bufferedReader.readLine());
+                int code = 1;
+                final String line = bufferedReader.readLine();
+                try {
+                    code = Integer.parseInt(line);
+                } catch (NumberFormatException e) {
+                    LOGGER.info("Could not check exit code file (number format exception for [%s]) %s", line, this);
+                }
                 newState = code == 0 ? ResourceState.DONE : ResourceState.ERROR;
             }
             if (setState(newState)) {
