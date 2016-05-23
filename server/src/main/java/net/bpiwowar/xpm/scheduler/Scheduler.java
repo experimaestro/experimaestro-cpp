@@ -390,7 +390,7 @@ final public class Scheduler {
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
             try {
-                process.check(false);
+                process.isStopped(false);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
             } finally {

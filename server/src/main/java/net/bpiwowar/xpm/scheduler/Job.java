@@ -598,7 +598,7 @@ abstract public class Job extends Resource {
 
         // Check process
         if (getProcess() != null) {
-            if (getProcess().check(true)) {
+            if (getProcess().isStopped(true)) {
                 return true;
             }
         }
@@ -617,7 +617,7 @@ abstract public class Job extends Resource {
                 try {
                     code = Integer.parseInt(line);
                 } catch (NumberFormatException e) {
-                    LOGGER.info("Could not check exit code file (number format exception for [%s]) %s", line, this);
+                    LOGGER.info("Could not isStopped exit code file (number format exception for [%s]) %s", line, this);
                 }
                 newState = code == 0 ? ResourceState.DONE : ResourceState.ERROR;
             }
@@ -648,7 +648,7 @@ abstract public class Job extends Resource {
             }
         }
 
-        // If DONE or ERROR, check that process is removed
+        // If DONE or ERROR, isStopped that process is removed
         if (process != null && (getState() == ResourceState.DONE || getState() == ResourceState.ERROR)) {
             if (process.isRunning(true)) {
                 LOGGER.error("Incoherency: process is running but resource is DONE/ERROR");
