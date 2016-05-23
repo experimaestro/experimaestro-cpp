@@ -32,6 +32,7 @@ import net.bpiwowar.xpm.exceptions.XPMScriptRuntimeException;
 import net.bpiwowar.xpm.manager.Constants;
 import net.bpiwowar.xpm.manager.JsonSignature;
 import net.bpiwowar.xpm.manager.TypeName;
+import net.bpiwowar.xpm.manager.UserCache;
 import net.bpiwowar.xpm.manager.experiments.Experiment;
 import net.bpiwowar.xpm.manager.js.JavaScriptContext;
 import net.bpiwowar.xpm.manager.js.JavaScriptRunner;
@@ -82,7 +83,7 @@ public class Functions {
     @Expose(context = true, value = "merge")
     static public Map merge(LanguageContext cx,
                             @Argument(name = "objects", types = {Map.class, Json.class})
-                            Object... objects) {
+                                    Object... objects) {
         Map<String, Object> returned = new HashMap<>();
 
         for (Object object : objects) {
@@ -210,9 +211,9 @@ public class Functions {
     @Expose
     static public String format(
             @Argument(name = "format", type = "String", help = "The string used to format")
-            String format,
+                    String format,
             @Argument(name = "arguments...", type = "Object", help = "A list of objects")
-            Object... args) {
+                    Object... args) {
         return String.format(format, args);
     }
 
@@ -240,15 +241,15 @@ public class Functions {
     @Expose(optional = 1)
     @Help("Defines a new relationship between a network share and a path on a connector")
     static public void define_share(@Argument(name = "host", help = "The logical host")
-                                    String host,
+                                            String host,
                                     @Argument(name = "share")
-                                    String share,
+                                            String share,
                                     @Argument(name = "connector")
-                                    SingleHostConnector connector,
+                                            SingleHostConnector connector,
                                     @Argument(name = "path")
-                                    String path,
+                                            String path,
                                     @Argument(name = "priority")
-                                    Integer priority) throws SQLException {
+                                            Integer priority) throws SQLException {
         Scheduler.defineShare(host, share, connector, path, priority == null ? 0 : priority);
     }
 
@@ -474,7 +475,7 @@ public class Functions {
     @Expose(context = true)
     @Help("Adds a tag " + Constants.JSON_TAG_NAME + " to the JSON with a given value")
     static public Json tag(LanguageContext cx, JsonObject json, String key, String value) {
-        Json tags =  json.get(Constants.JSON_TAG_NAME);
+        Json tags = json.get(Constants.JSON_TAG_NAME);
         if (tags == null) {
             json.put(Constants.JSON_TAG_NAME, tags = new JsonObject());
         } else {
@@ -502,9 +503,9 @@ public class Functions {
     static public Json retrieve_tags(
             LanguageContext cx,
             @Argument(name = "key", help = "The key in the returned JSON")
-            String key,
+                    String key,
             @Argument(name = "json", help = "The JSON to inspect")
-            JsonObject json
+                    JsonObject json
     ) {
         final Map<String, Object> tags = find_tags(json);
         if (json.sealed()) {
@@ -549,6 +550,20 @@ public class Functions {
     @Help("Returns the notification URL")
     static public String notification_url() {
         return Scheduler.get().getURL() + "/notification";
+    }
+
+    @Expose
+    static public void cache(@Argument(name = "id") String id,
+                             @Argument(name = "key") Json key,
+                             @Argument(name = "value") Json value,
+                             @Argument(name = "duration") long duration) throws NoSuchAlgorithmException, SQLException, IOException {
+        UserCache.store(id, duration, key, value);
+    }
+
+    @Expose
+    static public Json cache(@Argument(name = "id") String id,
+                             @Argument(name = "key") Json key) throws NoSuchAlgorithmException, SQLException, IOException {
+        return UserCache.retrieve(id, key);
     }
 
 }

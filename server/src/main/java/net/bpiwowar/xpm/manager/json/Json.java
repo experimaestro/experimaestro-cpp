@@ -303,6 +303,9 @@ abstract public class Json {
 
     }
 
+    @Override
+    public abstract boolean equals(Object obj);
+
     public static Json toJSON(JsonElement element) {
         if (element.isJsonNull()) {
             return JsonNull.getSingleton();

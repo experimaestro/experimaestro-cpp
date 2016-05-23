@@ -70,6 +70,11 @@ public class JsonString extends JsonSimple {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonString && ((JsonString) obj).string.equals(string);
+    }
+
+    @Override
     public void writeDescriptorString(JsonWriter writer, JsonWriterOptions options) throws IOException {
         write(writer);
     }

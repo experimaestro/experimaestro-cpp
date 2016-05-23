@@ -25,7 +25,12 @@ import net.bpiwowar.xpm.utils.ExceptionalRunnable;
 import net.bpiwowar.xpm.utils.StreamUtils;
 
 import java.io.InputStream;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.stream.Stream;
 
 /**
@@ -119,9 +124,18 @@ public class XPMStatement implements AutoCloseable {
      * @throws SQLException
      */
     public XPMResultSet singleResultSet() throws SQLException {
+        return singleResultSet(false);
+    }
+
+
+    public XPMResultSet singleResultSet(boolean allowEmpty) throws SQLException {
         st.execute();
         final ResultSet rs = st.getResultSet();
-        if (!rs.next()) throw new SQLException("Expected one result only (got 0)");
+        if (!rs.next()) if (allowEmpty) {
+            st.close();
+            return null;
+        } else
+            throw new SQLException("Expected one result only (got 0)");
         if (!rs.isLast()) throw new SQLException("Expected one result only (got > 1)");
         return new XPMResultSet(rs);
     }

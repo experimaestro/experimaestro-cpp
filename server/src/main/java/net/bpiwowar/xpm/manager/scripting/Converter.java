@@ -100,6 +100,14 @@ public class Converter {
             }
         }
 
+        // cast to long
+        if (targetType == Long.class && object instanceof Number) {
+            if ((((Number) object).longValue()) == ((Number) object).doubleValue()) {
+                return input -> ((Number) input).longValue();
+            }
+        }
+
+
         // JSON inputs
         if (Json.class.isAssignableFrom(targetType)) {
             if (object instanceof Map

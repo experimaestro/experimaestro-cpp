@@ -60,6 +60,11 @@ public class JsonNull extends JsonSimple {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonNull;
+    }
+
+    @Override
     public String toString() {
         return "null";
     }

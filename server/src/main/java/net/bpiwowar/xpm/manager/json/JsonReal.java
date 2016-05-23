@@ -58,6 +58,11 @@ public class JsonReal extends JsonSimple {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonReal && ((JsonReal) obj).value == value;
+    }
+
+    @Override
     public TypeName type() {
         return Constants.XP_REAL;
     }

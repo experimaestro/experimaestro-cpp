@@ -59,7 +59,7 @@ public class JavaTasksIntrospection {
     }
 
     public static void addToRepository(Repository repository, Path[] classpath, Path cachepath) throws ExperimaestroException, IOException {
-        // First check if cache is OK
+        // First isStopped if cache is OK
         if (cachepath != null) {
             boolean validCache = Files.exists(cachepath);
 

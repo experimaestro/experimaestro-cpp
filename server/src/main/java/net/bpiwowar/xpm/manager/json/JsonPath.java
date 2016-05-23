@@ -84,4 +84,9 @@ public class JsonPath extends JsonSimple {
 
         out.endObject();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof JsonPath) && path.equals(((JsonPath) obj).path);
+    }
 }

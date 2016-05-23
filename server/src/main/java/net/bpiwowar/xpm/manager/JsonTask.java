@@ -59,6 +59,11 @@ public class JsonTask extends Json {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonTask && ((JsonTask) obj).json.equals(json);
+    }
+
+    @Override
     public Json annotate(String key, Json value) {
         throw new NotImplementedException();
     }

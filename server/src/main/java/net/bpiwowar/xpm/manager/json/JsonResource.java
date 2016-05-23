@@ -82,4 +82,9 @@ public class JsonResource extends JsonSimple {
         out.endObject();
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonResource && ((JsonResource) obj).resource.equals(resource);
+    }
+
 }

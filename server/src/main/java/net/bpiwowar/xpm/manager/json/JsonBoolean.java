@@ -65,6 +65,11 @@ public class JsonBoolean extends JsonSimple {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonBoolean && ((JsonBoolean) obj).value == value;
+    }
+
+    @Override
     public TypeName type() {
         return Constants.XP_BOOLEAN;
     }
