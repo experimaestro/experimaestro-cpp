@@ -286,26 +286,43 @@ final public class Scheduler {
             messengerThread.start();
             runningThreadsCounter.add();
 
-            // Loop over resources in state RUNNING
-            try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
-                for (Resource resource : resources) {
-                    Job job = (Job) resource;
-                    if (job.getProcess() != null) {
-                        job.getProcess().init(job);
-                    } else {
-                        // FIXME: should do something smarter
-                        job.setState(ResourceState.ERROR);
-                        LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
-                    }
-                    job.updateStatus();
-                }
-            }
+            // Scheduler initialization
+            new Thread("scheduler start") {
+                @Override
+                public void run() {
+                    // Loop over resources in state RUNNING
+                    try (final CloseableIterable<Resource> resources = resources(EnumSet.of(ResourceState.RUNNING))) {
+                        for (Resource resource : resources) {
+                            try {
+                                Job job = (Job) resource;
+                                if (job.getProcess() != null) {
+                                    job.getProcess().init(job);
+                                } else {
+                                    // FIXME: should do something smarter
+                                    job.setState(ResourceState.ERROR);
+                                    LOGGER.error("No process attached to running job [%s]. New status is: %s", job, job.getState());
+                                }
+                                job.updateStatus();
 
-            // Loop over resources for which we need to notify (Scheduler stopped before or within the process)
-            try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
-                    + " WHERE oldStatus != status", null)) {
-                changed.forEach(r -> addChangedResource(r));
-            }
+                            } catch (SQLException e) {
+                                LOGGER.warn(e, "SQL exception while updating job %s", resource);
+                            }
+                        }
+                    } catch (SQLException e) {
+                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                    } catch (CloseException e) {
+                        LOGGER.warn(e, "Error while closing the iterator");
+                    }
+
+                    // Loop over resources for which we need to notify (Scheduler stopped before or during the process)
+                    try (final CloseableIterable<Resource> changed = resources.find(Resource.SELECT_BEGIN
+                            + " WHERE oldStatus != status", null)) {
+                        changed.forEach(r -> addChangedResource(r));
+                    } catch (SQLException | CloseException e) {
+                        LOGGER.error(e, "Could not retrieve the list of jobs");
+                    }
+                }
+            }.start();
 
 
             // Start the thread that start the jobs
@@ -390,7 +407,7 @@ final public class Scheduler {
     public ScheduledFuture<?> schedule(final XPMProcess process, int rate, TimeUnit units) {
         return scheduler.scheduleAtFixedRate(() -> {
             try {
-                process.isStopped(false);
+                process.isRunning(false);
             } catch (Exception e) {
                 LOGGER.error(e, "Error while checking job [%s]: %s", process.getJob());
             } finally {
@@ -639,6 +656,7 @@ final public class Scheduler {
 
     /**
      * Sets the base URL for the web server
+     *
      * @param URL The base URL
      */
     public void setURL(String URL) {
@@ -648,6 +666,7 @@ final public class Scheduler {
 
     /**
      * Gets the base URL
+     *
      * @return The base URL
      */
     public String getURL() {
