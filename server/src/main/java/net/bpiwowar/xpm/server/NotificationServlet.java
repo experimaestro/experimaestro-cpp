@@ -86,7 +86,7 @@ public class NotificationServlet extends XPMServlet {
                     if (process != null) {
                         try {
                             int count = 0;
-                            while (!process.isStopped(true) && count++ < retries) {
+                            while (process.isRunning(true) && count++ < retries) {
                                 synchronized (this) {
                                     Thread.sleep(500);
                                 }
